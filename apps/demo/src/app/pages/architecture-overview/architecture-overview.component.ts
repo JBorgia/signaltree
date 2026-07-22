@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
 import type { CodeFile } from '../../examples/shared/components/example-shell';
@@ -22,6 +22,7 @@ interface SavingsMetric {
   standalone: true,
   imports: [CommonModule, CodeTabsComponent],
   templateUrl: './architecture-overview.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './architecture-overview.component.scss',
 })
 export class ArchitectureOverviewComponent {

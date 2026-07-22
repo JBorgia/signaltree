@@ -1,4 +1,4 @@
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { persistence, signalTree } from '@signaltree/core';
 
@@ -25,6 +25,7 @@ type Themes = 'light' | 'dark' | 'system';
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './persistence-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './persistence-demo.component.scss',
 })
 export class PersistenceDemoComponent implements OnDestroy {

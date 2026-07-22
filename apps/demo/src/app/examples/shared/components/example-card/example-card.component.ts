@@ -10,6 +10,7 @@ import {
   ViewChild,
   ViewContainerRef,
   inject,
+  ChangeDetectionStrategy
 } from '@angular/core';
 
 import type { ExampleMeta } from '../../../core/models';
@@ -23,6 +24,7 @@ import type { ExampleMeta } from '../../../core/models';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './example-card.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './example-card.component.scss',
 })
 export class ExampleCardComponent implements AfterViewInit, OnDestroy {

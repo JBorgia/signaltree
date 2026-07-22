@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
@@ -21,6 +21,7 @@ import type { CodeFile } from '../../examples/shared/components/example-shell';
   standalone: true,
   imports: [CommonModule, RouterModule, CodeTabsComponent],
   templateUrl: './built-for-ai.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './built-for-ai.component.scss',
 })
 export class BuiltForAIComponent {

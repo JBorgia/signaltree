@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { devTools, signalTree } from '@signaltree/core';
 
@@ -61,6 +61,7 @@ store.$.todos.update((t) => [...t, { id: 1, text: 'New', completed: false }]);`;
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './devtools-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './devtools-demo.component.scss',
 })
 export class DevtoolsDemoComponent {

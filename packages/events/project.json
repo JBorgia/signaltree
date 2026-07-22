@@ -60,8 +60,7 @@
           "rxjs"
         ],
         "deleteOutputPath": true,
-        "generatePackageJson": false,
-        "useLegacyTypescriptPlugin": false
+        "generatePackageJson": false
       },
       "configurations": {
         "production": {

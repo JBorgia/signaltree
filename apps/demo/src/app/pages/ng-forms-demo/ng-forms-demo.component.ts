@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
 import { createFormTree, email, FormValidationError, minLength, pattern, required } from '@signaltree/ng-forms';
 
@@ -36,6 +36,7 @@ interface ProfileForm extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ExampleComponent],
   templateUrl: './ng-forms-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ng-forms-demo.component.scss',
 })
 export class NgFormsDemoComponent {

@@ -32,7 +32,11 @@
           "packages/ng-forms/src/signals/index.ts"
         ],
         "assets": [
-          { "input": "packages/ng-forms", "glob": "README.md", "output": "." },
+          {
+            "input": "packages/ng-forms",
+            "glob": "README.md",
+            "output": "."
+          },
           {
             "input": "packages/ng-forms",
             "glob": "package.json",
@@ -47,7 +51,6 @@
         "rollupConfig": "packages/ng-forms/rollup.config.mjs",
         "deleteOutputPath": true,
         "buildLibsFromSource": true,
-        "useLegacyTypescriptPlugin": false,
         "generatePackageJson": false
       }
     },

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 export type CompareLib =
@@ -23,6 +23,7 @@ interface CompareOption {
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './migration-recipe.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './migration-recipe.component.scss',
 })
 export class MigrationRecipeComponent {

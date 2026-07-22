@@ -10,5 +10,8 @@
     "moduleResolution": "node",
     "outDir": "../../dist/packages/shared/dist",
     "declarationDir": "../../dist/packages/shared/dist"
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": false
   }
 }

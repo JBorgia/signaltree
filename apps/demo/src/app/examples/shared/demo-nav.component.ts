@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -7,6 +7,7 @@ import { RouterModule } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './demo-nav.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './demo-nav.component.scss',
 })
 export class DemoNavComponent {

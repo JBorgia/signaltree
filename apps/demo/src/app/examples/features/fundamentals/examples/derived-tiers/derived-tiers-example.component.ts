@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { derivedFrom, entityMap, signalTree, WithDerived } from '@signaltree/core';
 
 import { ExampleComponent } from '../../../../shared/components/example-shell';
@@ -214,6 +214,7 @@ interface CartItem {
       </section>
     </st-example>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       .example-section {

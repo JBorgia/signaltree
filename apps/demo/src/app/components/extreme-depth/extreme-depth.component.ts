@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { signalTree } from '@signaltree/core';
@@ -57,6 +57,7 @@ interface ExtremeDepthStructure {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './extreme-depth.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './extreme-depth.component.scss',
 })
 export class ExtremeDepthComponent implements OnInit {

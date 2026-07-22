@@ -51,7 +51,6 @@
         "rollupConfig": "packages/callable-syntax/rollup.config.mjs",
         "deleteOutputPath": true,
         "buildLibsFromSource": false,
-        "useLegacyTypescriptPlugin": false,
         "generatePackageJson": false
       }
     },

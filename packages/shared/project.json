@@ -33,7 +33,6 @@
         "rollupConfig": "packages/shared/rollup.config.mjs",
         "deleteOutputPath": true,
         "buildLibsFromSource": false,
-        "useLegacyTypescriptPlugin": false,
         "generatePackageJson": false
       }
     },

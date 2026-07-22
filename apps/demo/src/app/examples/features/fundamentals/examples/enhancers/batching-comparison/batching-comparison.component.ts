@@ -1,4 +1,4 @@
-import { Component, effect, inject, Injector, signal } from '@angular/core';
+import { Component, effect, inject, Injector, signal, ChangeDetectionStrategy } from '@angular/core';
 import { batching, signalTree } from '@signaltree/core';
 
 import { ExampleComponent } from '../../../../../shared/components/example-shell';
@@ -8,6 +8,7 @@ import { ExampleComponent } from '../../../../../shared/components/example-shell
   standalone: true,
   imports: [ExampleComponent],
   templateUrl: './batching-comparison.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './batching-comparison.component.scss',
 })
 export class BatchingComparisonComponent {

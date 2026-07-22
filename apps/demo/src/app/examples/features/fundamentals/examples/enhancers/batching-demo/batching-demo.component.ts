@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect } from '@angular/core';
+import { Component, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { batching, signalTree } from '@signaltree/core';
 
@@ -89,6 +89,7 @@ class BatchProcessor {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './batching-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './batching-demo.component.scss',
 })
 export class BatchingDemoComponent {

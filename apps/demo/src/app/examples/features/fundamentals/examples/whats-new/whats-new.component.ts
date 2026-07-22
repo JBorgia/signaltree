@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [RouterLink],
   templateUrl: './whats-new.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './whats-new.component.scss',
 })
 export class WhatsNewComponent {}

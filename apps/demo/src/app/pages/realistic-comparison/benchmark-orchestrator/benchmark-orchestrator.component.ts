@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, effect, ElementRef, inject, isDevMode, OnDestroy, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, effect, ElementRef, inject, isDevMode, OnDestroy, signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -220,6 +220,7 @@ interface BenchmarkService {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './benchmark-orchestrator.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './benchmark-orchestrator.component.scss',
 })
 export class BenchmarkOrchestratorComponent

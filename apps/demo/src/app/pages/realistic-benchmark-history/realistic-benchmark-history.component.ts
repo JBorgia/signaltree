@@ -5,6 +5,7 @@ import {
   OnInit,
   signal,
   ViewEncapsulation,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
@@ -22,6 +23,7 @@ import {
   imports: [CommonModule, FormsModule, BenchmarkResultsTableComponent],
   templateUrl: './realistic-benchmark-history.component.html',
   styleUrl: './realistic-benchmark-history.component.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   encapsulation: ViewEncapsulation.None, // Disable view encapsulation for modal to work
 })
 export class RealisticBenchmarkHistoryComponent implements OnInit {

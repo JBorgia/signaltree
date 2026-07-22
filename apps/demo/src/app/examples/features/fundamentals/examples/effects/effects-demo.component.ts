@@ -1,4 +1,4 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -26,6 +26,7 @@ interface Notification {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './effects-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './effects-demo.component.scss',
 })
 export class EffectsDemoComponent {

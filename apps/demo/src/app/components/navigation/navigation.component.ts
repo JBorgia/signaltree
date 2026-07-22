@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import {
@@ -34,6 +34,7 @@ export interface ExternalLink {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './navigation.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './navigation.component.scss',
 })
 export class NavigationComponent {

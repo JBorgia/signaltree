@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { linked, signalTree } from '@signaltree/core';
 
 import {
@@ -84,6 +84,7 @@ const SEED: Item[] = [
       </section>
     </st-example>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       .demo {

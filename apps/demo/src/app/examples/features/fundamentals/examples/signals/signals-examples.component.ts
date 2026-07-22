@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -11,6 +11,7 @@ import {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './signals-examples.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './signals-examples.component.scss',
 })
 export class SignalsExamplesComponent {

@@ -651,7 +651,7 @@
             </div>
             <div class="sync-item">
               <h4>Angular FormGroup</h4>
-              <st-state-inspector [value]="feedbackFormGroup?.value" />
+              <st-state-inspector [value]="$safeNavigationMigration(feedbackFormGroup?.value)" />
             </div>
           </div>
           <p class="sync-note">

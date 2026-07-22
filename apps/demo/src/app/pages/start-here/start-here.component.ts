@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 interface NextStepCard {
@@ -15,6 +15,7 @@ interface NextStepCard {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './start-here.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './start-here.component.scss',
 })
 export class StartHereComponent {

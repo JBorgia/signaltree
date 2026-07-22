@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
 import { ExampleComponent } from '../../../../shared/components/example-shell';
@@ -55,6 +55,7 @@ interface TestState {
   standalone: true,
   imports: [CommonModule, ExampleComponent],
   templateUrl: './effect-reactivity-test.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './effect-reactivity-test.component.scss',
 })
 export class EffectReactivityTestComponent {

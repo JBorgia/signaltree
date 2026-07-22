@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, OnDestroy, signal } from '@angular/core';
+import { Component, computed, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import {
   entityMap,
@@ -37,6 +37,7 @@ const SEEDS: Item[] = [
   standalone: true,
   imports: [CommonModule, RouterModule, CodeTabsComponent],
   templateUrl: './entity-collection.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './entity-collection.component.scss',
 })
 export class EntityCollectionShowcaseComponent implements OnDestroy {

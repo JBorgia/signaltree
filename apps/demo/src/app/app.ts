@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { NavigationComponent } from './components/navigation/navigation.component';
@@ -47,6 +47,7 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
       </main>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       /* ── App Shell Grid ─────────────────────────────────────────────────── */

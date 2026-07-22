@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 
@@ -41,6 +41,7 @@ interface FormState {
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './forms-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './forms-demo.component.scss',
 })
 export class FormsDemoComponent {

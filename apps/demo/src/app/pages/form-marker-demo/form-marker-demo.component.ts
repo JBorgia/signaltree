@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { form, FormSignal, signalTree, validators } from '@signaltree/core';
 import { formBridge } from '@signaltree/ng-forms';
@@ -49,6 +49,7 @@ interface ListingWizard {
     StateInspectorComponent,
   ],
   templateUrl: './form-marker-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './form-marker-demo.component.scss',
 })
 export class FormMarkerDemoComponent {

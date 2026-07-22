@@ -148,7 +148,7 @@
             <span class="metric-label">CPU Performance</span>
             <span class="metric-value"
               >{{
-                calibrationData()?.cpuOpsPerMs | number : '1.0-0'
+                $safeNavigationMigration(calibrationData()?.cpuOpsPerMs) | number : '1.0-0'
               }}
               ops/ms</span
             >
@@ -163,7 +163,7 @@
             <span class="metric-label">Memory Available</span>
             <span class="metric-value"
               >{{
-                calibrationData()?.availableMemoryMB | number : '1.0-0'
+                $safeNavigationMigration(calibrationData()?.availableMemoryMB) | number : '1.0-0'
               }}
               MB</span
             >
@@ -177,7 +177,7 @@
           <div class="calibration-metric">
             <span class="metric-label">Recommended Test Size</span>
             <span class="metric-value"
-              >{{ calibrationData()?.recommendedSize | number }} items</span
+              >{{ $safeNavigationMigration(calibrationData()?.recommendedSize) | number }} items</span
             >
           </div>
           <div class="calibration-metric">

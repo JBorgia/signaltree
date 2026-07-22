@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
@@ -24,6 +24,7 @@ interface ProfileForm {
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './schema-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './schema-demo.component.scss',
 })
 export class SchemaDemoComponent {

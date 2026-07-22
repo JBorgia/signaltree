@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { clearStoragePrefix, signalTree, stored } from '@signaltree/core';
 
@@ -77,6 +77,7 @@ function migrateV2toV3(v2: UserSettingsV2): UserSettingsV3 {
   standalone: true,
   imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './stored-versioning-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './stored-versioning-demo.component.scss',
 })
 export class StoredVersioningDemoComponent {

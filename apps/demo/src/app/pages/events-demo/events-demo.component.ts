@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
     BaseEvent,
@@ -68,6 +68,7 @@ type DemoEvent = TradeProposalCreated | TradeAccepted | UserRegistered;
   standalone: true,
   imports: [CommonModule, FormsModule, CodeTabsComponent, StateInspectorComponent],
   templateUrl: './events-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './events-demo.component.scss',
 })
 export class EventsDemoComponent {

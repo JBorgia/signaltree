@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
@@ -27,6 +27,7 @@ interface DocQuickLink {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './documentation.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './documentation.component.scss',
 })
 export class DocumentationComponent implements OnInit {

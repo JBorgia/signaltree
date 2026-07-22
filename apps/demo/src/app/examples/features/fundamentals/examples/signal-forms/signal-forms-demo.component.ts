@@ -6,6 +6,7 @@ import {
   inject,
   Injector,
   signal,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { signalTree, toWritableSignal } from '@signaltree/core';
@@ -44,6 +45,7 @@ interface UserProfile {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ExampleComponent],
   templateUrl: './signal-forms-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './signal-forms-demo.component.scss',
 })
 export class SignalFormsDemoComponent {

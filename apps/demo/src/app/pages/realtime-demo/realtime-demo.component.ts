@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, OnDestroy, signal } from '@angular/core';
+import { Component, computed, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
 
@@ -103,6 +103,7 @@ class SimulatedRealtimeAdapter {
   standalone: true,
   imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './realtime-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './realtime-demo.component.scss',
 })
 export class RealtimeDemoComponent implements OnDestroy {

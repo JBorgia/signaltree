@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import { enterprise, UpdateResult } from '@signaltree/enterprise';
 
@@ -61,6 +61,7 @@ interface DashboardState extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, ExampleComponent],
   templateUrl: './enterprise-enhancer.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './enterprise-enhancer.component.scss',
 })
 export class EnterpriseEnhancerComponent {

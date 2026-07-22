@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal, Signal } from '@angular/core';
+import { Component, computed, signal, Signal, ChangeDetectionStrategy } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
@@ -77,6 +77,7 @@ interface Row {
       </section>
     </st-example>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       .demo {

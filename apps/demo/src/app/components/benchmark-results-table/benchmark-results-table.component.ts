@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 export interface BenchmarkResult {
   name: string;
@@ -22,6 +22,7 @@ export interface BenchmarkResult {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './benchmark-results-table.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './benchmark-results-table.component.scss',
 })
 export class BenchmarkResultsTableComponent {

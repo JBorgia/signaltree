@@ -8,5 +8,8 @@
     "sourceMap": false,
     "outDir": "../../dist/packages/guardrails/dist",
     "declarationDir": "../../dist/packages/guardrails/dist"
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": false
   }
 }

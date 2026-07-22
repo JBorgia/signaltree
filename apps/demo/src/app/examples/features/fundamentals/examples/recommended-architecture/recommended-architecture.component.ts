@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -139,6 +139,7 @@ export class AppComponent {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './recommended-architecture.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './recommended-architecture.component.scss',
 })
 export class RecommendedArchitectureComponent {

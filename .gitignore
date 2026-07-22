@@ -91,3 +91,7 @@ tmp/
 *.tgz
 .version_backup
 .release_backup/
+
+.nx/polygraph
+.nx/self-healing
+.nx/migrate-runs

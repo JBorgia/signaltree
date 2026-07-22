@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
@@ -75,6 +75,7 @@ const ALL_PLANTS: Plant[] = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './marker-zoo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './marker-zoo.component.scss',
 })
 export class MarkerZooComponent {

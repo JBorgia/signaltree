@@ -10,6 +10,7 @@
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "dependsOn": ["generate-versions"],
+      "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/demo",
         "browser": "apps/demo/src/main.ts",
@@ -92,12 +93,12 @@
           "extractLicenses": false,
           "sourceMap": true
         }
-      },
-      "defaultConfiguration": "production"
+      }
     },
     "serve": {
       "continuous": true,
       "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
       "configurations": {
         "production": {
           "buildTarget": "demo:build:production"
@@ -105,8 +106,7 @@
         "development": {
           "buildTarget": "demo:build:development"
         }
-      },
-      "defaultConfiguration": "development"
+      }
     },
     "extract-i18n": {
       "executor": "@angular/build:extract-i18n",
@@ -122,7 +122,8 @@
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
         "jestConfig": "apps/demo/jest.config.ts",
-        "passWithNoTests": true
+        "passWithNoTests": true,
+        "tsConfig": "apps/demo/tsconfig.spec.json"
       }
     },
     "generate-versions": {

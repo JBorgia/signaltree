@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { AppComponent } from './app';
 import { NavigationComponent } from './components/navigation/navigation.component';
 
 // Simple home component for testing routing
 @Component({
   selector: 'app-test-home',
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: '<div>Test Home</div>',
 })
 class TestHomeComponent {}

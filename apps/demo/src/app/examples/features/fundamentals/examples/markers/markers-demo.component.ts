@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   entityMap,
@@ -38,6 +38,7 @@ interface MarkersState {
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './markers-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './markers-demo.component.scss',
 })
 export class MarkersDemoComponent {

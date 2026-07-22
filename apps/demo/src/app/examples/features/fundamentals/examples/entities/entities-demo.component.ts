@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
 
@@ -33,6 +33,7 @@ interface EntitiesState {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './entities-demo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './entities-demo.component.scss',
 })
 export class EntitiesDemoComponent {

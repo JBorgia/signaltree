@@ -36,7 +36,10 @@
       "@signaltree/schema/*": ["packages/schema/src/*"],
       "@signaltree/shared": ["packages/shared/src/index.ts"],
       "@signaltree/shared/*": ["packages/shared/src/*"]
-    }
+    },
+    "strict": false,
+    "noUncheckedSideEffectImports": false,
+    "ignoreDeprecations": "6.0"
   },
   "include": ["types.d.ts"],
   "exclude": ["node_modules", "tmp"]

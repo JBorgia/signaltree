@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideStore } from '@ngxs/store';
@@ -29,7 +29,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
     provideRouteMetadata(),
-    provideHttpClient(),
+    provideHttpClient(withXhr()),
     // Provide ECharts core for ngx-echarts
     provideEchartsCore({ echarts }),
     // Provide NgXs store for state management benchmarks

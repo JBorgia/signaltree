@@ -10,5 +10,8 @@
     "moduleResolution": "node",
     "outDir": "../../dist/packages/callable-syntax/dist",
     "declarationDir": "../../dist/packages/callable-syntax/dist"
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": false
   }
 }

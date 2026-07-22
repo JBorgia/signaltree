@@ -8,5 +8,8 @@
     "sourceMap": false,
     "outDir": "../../dist/packages/schema/dist",
     "declarationDir": "../../dist/packages/schema/dist"
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": false
   }
 }

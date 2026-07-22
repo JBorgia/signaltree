@@ -3,7 +3,6 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/guardrails/src",
-  "implicitDependencies": ["core"],
   "release": {
     "version": {
       "manifestRootsToUpdate": ["dist/{projectRoot}"],
@@ -11,6 +10,7 @@
       "fallbackCurrentVersionResolver": "disk"
     }
   },
+  "implicitDependencies": ["core"],
   "targets": {
     "build": {
       "executor": "@nx/rollup:rollup",
@@ -52,7 +52,6 @@
         "rollupConfig": "packages/guardrails/rollup.config.mjs",
         "deleteOutputPath": true,
         "buildLibsFromSource": true,
-        "useLegacyTypescriptPlugin": false,
         "generatePackageJson": false
       }
     },
