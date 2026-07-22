@@ -1,4 +1,4 @@
-## 11.5.2 (2026-07-22)
+## 11.5.2 / 11.5.3 (2026-07-22)
 
 > Second sweep of the bug classes found in 11.5.0/11.5.1 — this time across
 > every package, with browser-interaction coverage of all 43 demo routes.
