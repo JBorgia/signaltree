@@ -16,6 +16,24 @@
 - Interactive browser sweep: all 43 routes loaded and every visible button clicked against the production build — no handler crashes, no blank controls, no rendering artifacts (remaining "undefined" text hits are TypeScript code samples in docs).
 - Walker sweep verdicts (correct as-is): materialize-markers, intercept-leaf-signals, utils unwrap/applyState, signal-tree recursiveUpdate, lazy-tree, merge-derived, form-bridge; NG0600-safe markers: stored, status, asyncSource, entityMap loader.
 
+## 11.5.2 (2026-07-22)
+
+> Audit round 2: hunting the two bug CLASSES behind 11.5.1's finds
+> (accessor-walks that skip callable nodes; signal writes during lazy marker
+> materialization) surfaced three more real bugs — two of which made
+> `@signaltree/enterprise`'s headline feature silently inert for nested state.
+
+### Fixed
+
+- **`@signaltree/enterprise` was inert for nested state** — three walkers in the diff/patch pipeline gated on `typeof === 'object'`, but SignalTree NodeAccessors are callable: `PathIndex.buildFromTree` bailed at every nested namespace (nothing below the root was ever indexed), `applyPatch`'s fallback navigation returned `false` for any nested path (silent no-op), and `DiffEngine.traverse` treated accessor-vs-object as a whole-subtree REPLACE. `updateOptimized()` on nested paths now applies correctly, writes through leaf signals so reactivity fires, and reports granular `changedPaths` (`['profile.name']`, not `['profile']`). Existing specs never caught this because they used flat state or hand-built plain-object fixtures — new regression specs run the real pipeline against nested `signalTree` state.
+- **`asyncStream` auto-start deferred off materialization** (`@signaltree/core`, unpublished marker) — `start()` wrote loading/data/error signals synchronously in the factory; markers materialize during template rendering, so template-first access would throw NG0600. Now `queueMicrotask`-deferred like `asyncSource` and `entityMap`. (The marker is intentionally not exported yet — zero published exposure.)
+- **`form({ persist })` returning-user NG0600 landmine** (`@signaltree/core`) — storage hydration was a synchronous `valuesSignal.set()` in the factory, guarded by "storage has data": invisible to every fresh-browser test, but a returning user with a persisted draft whose form materializes during render would throw NG0600. Hydration now happens through the signal's initial value (pure read).
+- **Demo: serialization Copy button** now handles clipboard permission rejection instead of logging an unhandled error.
+
+### Audit trail
+
+Swept all packages for both classes: `materialize-markers`, `intercept-leaf-signals`, `utils`, `signal-tree`, `lazy-tree`, `merge-derived`, `form-bridge`, guardrails, events, and ng-forms walkers verified correct (they check for callables or walk plain state); `stored`/`status`/`asyncSource`/`entityMap` materialization verified write-free or deferred; all demo `effect()` calls verified in injection contexts. Interactive browser sweep: all 43 routes, every visible button clicked, zero errors.
+
 ## 11.5.1 (2026-07-22)
 
 ### Fixed

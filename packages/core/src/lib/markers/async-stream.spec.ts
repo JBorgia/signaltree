@@ -164,7 +164,9 @@ describe('createAsyncStreamSignal (standalone factory)', () => {
         return new Subject<string>(); // never completes
       },
     });
-    // auto-started via config.stream
+    // auto-start is deferred off the materialization pass (NG0600-safe) —
+    // flush the microtask before observing it
+    await Promise.resolve();
     expect(signals.length).toBe(1);
     expect(signals[0].aborted).toBe(false);
 
