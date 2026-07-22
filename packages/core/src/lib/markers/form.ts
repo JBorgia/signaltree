@@ -636,6 +636,22 @@ export function createFormSignal<T extends Record<string, unknown>>(
     enumerable: false,
   });
 
+  // @internal — the raw values signal, used by ng-forms' Signal Forms bridge
+  // (markerSignalForm) as the FieldTree model so Angular's form() and the
+  // marker share one source of truth. Writes through this signal bypass the
+  // marker's validate-on-write wrappers; pair with __validateSync.
+  Object.defineProperty(formSignalFn, '__model', {
+    value: valuesSignal,
+    enumerable: false,
+  });
+
+  // @internal — re-run sync validators (all fields, or just the given ones)
+  // so bridges can keep `errors`/`valid` live after direct model writes.
+  Object.defineProperty(formSignalFn, '__validateSync', {
+    value: (fields?: Array<keyof T>) => validateSync(fields),
+    enumerable: false,
+  });
+
   // v10.4 — .data() alias. Identical to calling the marker itself.
   // Absorbs the form-vocab hallucination ("how do I read form values?
   // .data()") observed in the v10.3.3 AI-codegen benchmark as the last
@@ -826,13 +842,13 @@ export const validators = {
    */
   when:
     <T>(condition: (form: T) => boolean, validator: Validator<unknown>) =>
-    (value: unknown, form?: T): string | null => {
+    (value: unknown, form?: Record<string, unknown>): string | null => {
       if (!form) {
         // Form context not available - skip validation
         return null;
       }
-      if (condition(form)) {
-        return validator(value);
+      if (condition(form as unknown as T)) {
+        return validator(value, form);
       }
       return null;
     },

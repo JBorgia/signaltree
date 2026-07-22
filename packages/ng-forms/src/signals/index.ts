@@ -10,3 +10,7 @@
  */
 
 export { signalFormBridge, applySignalTreeSchemas } from './bridge';
+export {
+  markerSignalForm,
+  type MarkerSignalFormOptions,
+} from './marker-bridge';
