@@ -14,7 +14,6 @@
  */
 
 import {
-  effect,
   inject,
   Injector,
   runInInjectionContext,
@@ -36,7 +35,6 @@ type MarkerValidator = (
 
 interface FormMarkerInternals<T extends Record<string, unknown>> {
   __model?: WritableSignal<T>;
-  __validateSync?: (fields?: Array<keyof T>) => void;
   __config?: {
     validators?: Partial<Record<string, MarkerValidator | MarkerValidator[]>>;
   };
@@ -60,9 +58,8 @@ export interface MarkerSignalFormOptions {
  *   either API are immediately visible to the other.
  * - The marker's sync validators run as Signal Forms validators; errors
  *   appear on field state as `{ kind: 'signalTree', message }`.
- * - The marker's `errors()`/`valid()` signals stay live for FieldTree-side
- *   writes (a small effect re-runs the marker's sync validation on model
- *   changes).
+ * - The marker's `errors()`/`valid()` signals are computed over the shared
+ *   model, so FieldTree-side writes are reflected immediately.
  * - Async marker validators are NOT auto-installed; run them via the
  *   marker's `validate()`/`submit()`, or register Signal Forms
  *   `validateAsync`/`validateHttp` rules yourself.
@@ -141,17 +138,7 @@ export function markerSignalForm<T extends Record<string, unknown>>(
     })
   );
 
-  // FieldTree edits write to the raw model signal, bypassing the marker's
-  // validate-on-write wrappers — re-run sync validation so the marker's own
-  // errors()/valid() stay truthful for non-Signal-Forms consumers.
-  if (internals.__validateSync) {
-    runInInjectionContext(injector, () =>
-      effect(() => {
-        model();
-        internals.__validateSync?.();
-      })
-    );
-  }
-
+  // No sync-back needed: the marker's errors()/valid() are computed over the
+  // same model signal, so FieldTree-side edits are reflected immediately.
   return fieldTree;
 }

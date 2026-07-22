@@ -194,10 +194,12 @@ export interface FormSignal<T extends Record<string, unknown>> {
   /**
    * Whether all fields are valid.
    *
-   * Sync validators run on init and on every write (`set`, `patch`, field
-   * `.set()`/`.update()`), so this signal is always live — an empty form
-   * with `required` validators reports invalid immediately. Async
-   * validators only run via `validate()`, `validateField()`, or `submit()`.
+   * `errors` (and therefore `valid`) is COMPUTED from the current values —
+   * sync validators re-run reactively on any change through any API, so an
+   * empty form with `required` validators reports invalid immediately and
+   * cross-field rules re-evaluate when siblings change. Async validators
+   * run via `validate()`/`validateField()`/`submit()`; their results merge
+   * in while the checked value is unchanged (they self-invalidate on edit).
    */
   valid: Signal<boolean>;
   /** Whether any field has been modified */
@@ -330,9 +332,14 @@ export function createFormSignal<T extends Record<string, unknown>>(
     }, {} as Record<keyof T, boolean>)
   );
 
-  /** Per-field errors */
-  const errorsSignal: WritableSignal<Partial<Record<keyof T, string | null>>> =
-    signal({});
+  /**
+   * Async validator results, keyed by field. Each entry records the value it
+   * was computed FOR — a stale entry (value has since changed) is ignored by
+   * the `errors` computed, so async errors self-invalidate on edit.
+   */
+  const asyncErrorsSignal: WritableSignal<
+    Partial<Record<keyof T, { value: unknown; error: string | null }>>
+  > = signal({});
 
   /** Submitting state */
   const submittingSignal: WritableSignal<boolean> = signal(false);
@@ -340,6 +347,51 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // ==================
   // COMPUTED SIGNALS
   // ==================
+
+  /** Run the sync validators for one field against a values snapshot. */
+  function runSyncValidators(field: keyof T, values: T): string | null {
+    const fieldValidators = config.validators?.[field];
+    if (!fieldValidators) return null;
+    const list = Array.isArray(fieldValidators)
+      ? fieldValidators
+      : [fieldValidators];
+    for (const validator of list) {
+      const error = validator(
+        values[field],
+        values as Record<string, unknown>
+      );
+      if (error) return error;
+    }
+    return null;
+  }
+
+  /**
+   * Per-field errors, derived from the current values — sync validators are
+   * PURE and re-run reactively on every values change (an empty form with
+   * `required` validators is invalid from the start, and cross-field rules
+   * like `validators.when` re-evaluate when any sibling changes). Async
+   * validator results (from `validate()`/`validateField()`/`submit()`) are
+   * merged in when sync passes and the value hasn't changed since the check.
+   *
+   * Derived (not written) on purpose: markers materialize lazily, often
+   * during template rendering, and writing a signal there throws NG0600.
+   */
+  const errors = computed<Partial<Record<keyof T, string | null>>>(() => {
+    const values = valuesSignal();
+    const asyncErrs = asyncErrorsSignal();
+    const result: Partial<Record<keyof T, string | null>> = {};
+    for (const key of Object.keys(initial) as Array<keyof T>) {
+      let error = runSyncValidators(key, values);
+      if (!error) {
+        const asyncEntry = asyncErrs[key];
+        if (asyncEntry && asyncEntry.value === values[key]) {
+          error = asyncEntry.error;
+        }
+      }
+      result[key] = error ?? null;
+    }
+    return result;
+  });
 
   const dirty = computed(() => {
     const current = valuesSignal();
@@ -350,12 +402,12 @@ export function createFormSignal<T extends Record<string, unknown>>(
   });
 
   const valid = computed(() => {
-    const errs = errorsSignal();
+    const errs = errors();
     return Object.values(errs).every((e) => e === null || e === undefined);
   });
 
   const errorList = computed(() => {
-    const errs = errorsSignal();
+    const errs = errors();
     return Object.values(errs).filter(
       (e): e is string => e !== null && e !== undefined
     );
@@ -401,12 +453,11 @@ export function createFormSignal<T extends Record<string, unknown>>(
     persistTimeout = setTimeout(saveToStorage, config.persistDebounceMs ?? 500);
   }
 
-  // Load on init
+  // Load on init. No validation seeding needed: `errors` is a computed over
+  // the values signal, so validity is live from the first read — and there
+  // are no signal writes here, which matters because markers materialize
+  // lazily, often during template rendering (NG0600).
   loadFromStorage();
-  // Seed sync validation so `valid` reflects the validators from the start —
-  // an empty form with required fields reports invalid immediately instead of
-  // "valid until proven invalid". (validateSync is hoisted; see VALIDATION.)
-  validateSync();
 
   // ==================
   // DEEP FIELD ACCESS
@@ -422,15 +473,12 @@ export function createFormSignal<T extends Record<string, unknown>>(
       set(v: V): void;
       update(fn: (c: V) => V): void;
     };
-    const fieldKey = path.split('.')[0] as keyof T;
     accessor.set = (v: V) => {
       setValue(v);
-      validateSync([fieldKey]);
       schedulePersist();
     };
     accessor.update = (fn: (c: V) => V) => {
       setValue(fn(getValue()));
-      validateSync([fieldKey]);
       schedulePersist();
     };
     return accessor;
@@ -471,50 +519,22 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // VALIDATION
   // ==================
 
-  /** Run the sync validators for one field against the current values. */
-  function runSyncValidators(field: keyof T): string | null {
-    const validators = config.validators?.[field];
-    if (!validators) return null;
-    const value = valuesSignal()[field];
-    const formValues = valuesSignal() as Record<string, unknown>;
-    const validatorArray = Array.isArray(validators)
-      ? validators
-      : [validators];
-    for (const validator of validatorArray) {
-      const error = validator(value, formValues);
-      if (error) return error;
-    }
-    return null;
-  }
-
-  /**
-   * Synchronously validate the given fields (or all fields) and update
-   * `errors`. Runs sync validators only — async validators run via
-   * `validate()` / `validateField()` / `submit()`.
-   */
-  function validateSync(fields?: Array<keyof T>): void {
-    const targets = fields ?? (Object.keys(initial) as Array<keyof T>);
-    errorsSignal.update((errs) => {
-      const next = { ...errs };
-      for (const field of targets) {
-        next[field] = runSyncValidators(field);
-      }
-      return next;
-    });
-  }
-
   async function validateField(field: keyof T): Promise<boolean> {
-    const asyncValidator = config.asyncValidators?.[field];
-
-    let error: string | null = runSyncValidators(field);
+    const value = valuesSignal()[field];
+    const syncError = runSyncValidators(field, valuesSignal());
 
     // Async validator (only if sync passed)
-    if (!error && asyncValidator) {
-      error = await asyncValidator(valuesSignal()[field]);
+    const asyncValidator = config.asyncValidators?.[field];
+    if (!syncError && asyncValidator) {
+      const asyncError = await asyncValidator(value);
+      asyncErrorsSignal.update((errs) => ({
+        ...errs,
+        [field]: { value, error: asyncError },
+      }));
+      return asyncError === null;
     }
 
-    errorsSignal.update((errs) => ({ ...errs, [field]: error }));
-    return error === null;
+    return syncError === null;
   }
 
   async function validateAll(): Promise<boolean> {
@@ -638,17 +658,10 @@ export function createFormSignal<T extends Record<string, unknown>>(
 
   // @internal — the raw values signal, used by ng-forms' Signal Forms bridge
   // (markerSignalForm) as the FieldTree model so Angular's form() and the
-  // marker share one source of truth. Writes through this signal bypass the
-  // marker's validate-on-write wrappers; pair with __validateSync.
+  // marker share one source of truth. `errors`/`valid` are computed over
+  // this signal, so they stay live for writes from either side.
   Object.defineProperty(formSignalFn, '__model', {
     value: valuesSignal,
-    enumerable: false,
-  });
-
-  // @internal — re-run sync validators (all fields, or just the given ones)
-  // so bridges can keep `errors`/`valid` live after direct model writes.
-  Object.defineProperty(formSignalFn, '__validateSync', {
-    value: (fields?: Array<keyof T>) => validateSync(fields),
     enumerable: false,
   });
 
@@ -660,13 +673,11 @@ export function createFormSignal<T extends Record<string, unknown>>(
 
   formSignalFn.set = (values: Partial<T>): void => {
     valuesSignal.update((curr) => ({ ...curr, ...values }));
-    validateSync(Object.keys(values) as Array<keyof T>);
     schedulePersist();
   };
 
   formSignalFn.patch = (values: Partial<T>): void => {
     valuesSignal.update((curr) => ({ ...curr, ...values }));
-    validateSync(Object.keys(values) as Array<keyof T>);
     schedulePersist();
   };
 
@@ -678,7 +689,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
         return acc;
       }, {} as Record<keyof T, boolean>)
     );
-    validateSync();
+    asyncErrorsSignal.set({});
     wizard?.reset();
     schedulePersist();
   };
@@ -708,7 +719,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
         return acc;
       }, {} as Record<keyof T, boolean>)
     );
-    validateSync();
+    asyncErrorsSignal.set({});
     schedulePersist();
   };
 
@@ -717,7 +728,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
   formSignalFn.dirty = dirty;
   formSignalFn.submitting = submittingSignal.asReadonly();
   formSignalFn.touched = touchedSignal.asReadonly();
-  formSignalFn.errors = errorsSignal.asReadonly();
+  formSignalFn.errors = errors;
   formSignalFn.errorList = errorList;
 
   // Validation methods
@@ -766,7 +777,6 @@ export function createFormSignal<T extends Record<string, unknown>>(
 
   formSignalFn.reload = (): void => {
     loadFromStorage();
-    validateSync();
   };
 
   formSignalFn.clearStorage = (): void => {
@@ -834,7 +844,9 @@ export const validators = {
   pattern:
     (regex: RegExp, message = 'Invalid format') =>
     (value: unknown) =>
-      typeof value === 'string' && !regex.test(value) ? message : null,
+      typeof value === 'string' && value !== '' && !regex.test(value)
+        ? message
+        : null,
 
   /**
    * Conditional validator - only validates when condition is met.

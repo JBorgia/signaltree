@@ -1,3 +1,11 @@
+## 11.5.1 (2026-07-22)
+
+### Fixed
+
+- **`form()` marker: NG0600 on first render** (`@signaltree/core`) — 11.4.1's validate-on-write seeded validation with a signal WRITE inside the marker factory, and markers materialize lazily — often during template rendering — so the first render of a page using `form()` threw `NG0600: Writing to signals is not allowed while Angular renders` and every binding after the throw stayed blank (live on /form-marker: empty Form State panel, blank submit button). `errors`/`valid`/`errorList` are now COMPUTED over the values signal: no write hooks anywhere, validity live through every write path (including FieldTree edits via `markerSignalForm` — its sync-back effect is gone), and cross-field rules re-evaluate when any sibling changes. Async validator results merge in while the checked value is unchanged, so they self-invalidate on edit.
+- **`validators.pattern` no longer flags empty values** — emptiness is `required()`'s job (matches Angular semantics and the 11.4.1 email fix); an optional phone field with a pattern no longer errors when blank.
+- **Browser-rendered regression specs** for /form-marker and /marker-zoo (the NG0600 class is invisible to build/typecheck and to specs that never render the page), plus a full 43-route console-error sweep against the production build in CI-verifiable form.
+
 ## 11.5.0 (2026-07-21)
 
 > Angular 22 + real Signal Forms support. The workspace now builds against
