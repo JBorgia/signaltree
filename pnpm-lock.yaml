@@ -435,9 +435,6 @@ importers:
       '@angular/forms':
         specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
         version: 22.0.7(@angular/common@22.0.7(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2)(zone.js@0.16.2))(rxjs@7.8.2))(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2)(zone.js@0.16.2))(@angular/platform-browser@22.0.7(@angular/common@22.0.7(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2)(zone.js@0.16.2))(rxjs@7.8.2))(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2)(zone.js@0.16.2)))(rxjs@7.8.2)
-      '@standard-schema/spec':
-        specifier: ^1.0.0
-        version: 1.1.0
       rxjs:
         specifier: ^7.0.0
         version: 7.8.2
