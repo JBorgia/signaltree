@@ -773,7 +773,10 @@ declare const vi: { fn: (impl?: any) => any; mock: (mod: string, factory?: any) 
   const compilerOptions = {
     target: ts.ScriptTarget.ES2021,
     module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.NodeJs,
+    // Angular 22 dropped physical subpath dirs; node10 resolution can't see
+    // `exports` maps, so fences importing @angular/core/testing etc. need
+    // bundler resolution (matches the workspace tsconfigs).
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
     strict: true,
     // Snippets are examples; they need to type-check, not pass lint rules
     // unrelated to API shape.
