@@ -2,18 +2,19 @@
   <header>
     <h1>SignalTree + Angular Forms</h1>
     <p>
-      <strong>Tree-structured signal forms for Angular 21+.</strong> This demo
+      <strong>Tree-structured signal forms for Angular 22+.</strong> This demo
       showcases why <code>@signaltree/ng-forms</code> is essential for complex,
-      production-ready forms—going far beyond what Angular 21's native
+      production-ready forms—going far beyond what Angular 22's native
       <code>FormField&lt;T&gt;</code> provides.
     </p>
     <div class="value-callout">
-      <h2>🌲 Why use ng-forms over Angular 21 signal forms?</h2>
+      <h2>🌲 Why use ng-forms over Angular 22 signal forms?</h2>
       <ul>
         <li>
-          <strong>Tree Structure:</strong> Nested objects (user.profile,
-          user.address) with typed path access—Angular 21 only supports flat
-          fields
+          <strong>Tree Integration:</strong> Form state lives inside your
+          SignalTree store (entities, async state, and forms in one tree) with
+          typed path access—Angular 22's FieldTree nests fine but is a
+          standalone model, not part of your store
         </li>
         <li>
           <strong>Auto-Persistence:</strong> Built-in
@@ -22,27 +23,29 @@
         </li>
         <li>
           <strong>Wizard Support:</strong> Multi-step forms with automatic field
-          visibility—would require custom implementation in Angular 21
+          visibility—would require custom implementation in Angular 22
         </li>
         <li>
           <strong>History Tracking:</strong> Undo/redo out of the box—not
-          available in Angular 21
+          available in Angular 22
         </li>
         <li>
           <strong>Reactive Bridge:</strong> Works with existing
-          <code>FormGroup</code>/<code>FormControl</code>—Angular 21 is a new
+          <code>FormGroup</code>/<code>FormControl</code>—Angular 22 is a new
           API requiring migration
         </li>
         <li>
           <strong>Declarative Config:</strong> Centralized
           <code>fieldConfigs</code> with glob patterns
-          (<code>payment.card.*</code>)—Angular 21 requires per-field setup
+          (<code>payment.card.*</code>)—Angular 22 requires per-field setup
         </li>
       </ul>
       <p class="hint">
-        <strong>Use both!</strong> Angular 21 <code>FormField</code> for simple
+        <strong>Use both!</strong> Angular 22 <code>FormField</code> for simple
         login forms. ng-forms for nested checkout flows, wizards, and forms with
-        persistence.
+        persistence. Want them wired together on one field? See the
+        <code>/signal-forms</code> demo for the native-interop bridges
+        (<code>markerSignalForm()</code> and <code>signalFormBridge()</code>).
       </p>
     </div>
   </header>
@@ -83,7 +86,7 @@
             This form uses
             <code>persistKey: 'signaltree-ng-forms-demo'</code> with
             <code>localStorage</code>. Every change you make auto-saves after
-            120ms of inactivity. Refresh the page—your data persists! Angular 21's
+            120ms of inactivity. Refresh the page—your data persists! Angular 22's
             native signal forms don't include persistence; you'd build this from
             scratch.
           </p>
@@ -140,7 +143,7 @@
                 }
                 <p class="hint small">
                   <strong>Async validation:</strong> Email uniqueness checked with
-                  180ms debounce. Angular 21 supports async validation but
+                  180ms debounce. Angular 22 supports async validation but
                   requires manual debouncing per field. ng-forms centralizes it
                   via <code>fieldConfigs</code>.
                 </p>
@@ -170,7 +173,7 @@
               <p>
                 <strong>Try it:</strong> Switch role to "Team manager" above. The
                 company fields below enable automatically via
-                <code>conditionals</code> config. Angular 21 has no built-in
+                <code>conditionals</code> config. Angular 22 has no built-in
                 conditional logic—you'd implement this with reactive code.
               </p>
             </div>
@@ -220,7 +223,7 @@
               <h3>🌲 Nested Tree Structure</h3>
               <p>
                 This fieldset is a nested group:
-                <code>profile.$.preferences.newsletter()</code>. Angular 21 signal
+                <code>profile.$.preferences.newsletter()</code>. Angular 22 signal
                 forms are flat—no built-in nesting. ng-forms mirrors your data
                 model with typed paths like <code>'preferences.newsletter'</code>.
               </p>
@@ -248,7 +251,7 @@
               <p>
                 Add/remove phone numbers dynamically. Validation applies via glob
                 pattern
-                <code>'phoneNumbers.*.value'</code>. Angular 21 supports arrays
+                <code>'phoneNumbers.*.value'</code>. Angular 22 supports arrays
                 but requires manual per-index validation logic. ng-forms handles
                 this declaratively.
               </p>
@@ -389,7 +392,7 @@
               (<code>profile.form</code>), enabling incremental migration.
             </p>
             <p>
-              Angular 21's <code>FormField</code> is a new API requiring rewrite.
+              Angular 22's <code>FormField</code> is a new API requiring rewrite.
               ng-forms lets you keep existing templates while adding signal
               capabilities.
             </p>
@@ -399,12 +402,12 @@
 
       <aside class="inspector">
         <article class="summary-card comparison">
-          <h3>Angular 21 vs ng-forms</h3>
+          <h3>Angular 22 vs ng-forms</h3>
           <table>
             <thead>
               <tr>
                 <th>Feature</th>
-                <th>Angular 21</th>
+                <th>Angular 22</th>
                 <th>ng-forms</th>
               </tr>
             </thead>
@@ -442,7 +445,7 @@
             </tbody>
           </table>
           <p class="hint">
-            <strong>Both are valuable!</strong> Use Angular 21 for simple forms.
+            <strong>Both are valuable!</strong> Use Angular 22 for simple forms.
             Use ng-forms for complex enterprise scenarios.
           </p>
         </article>
@@ -480,7 +483,7 @@
             wizard.previousStep();
           wizard.currentStep(); // Signal</code></pre>
           <p class="hint">
-            Angular 21 has no wizard support. You'd build step management
+            Angular 22 has no wizard support. You'd build step management
             manually.
           </p>
         </article>

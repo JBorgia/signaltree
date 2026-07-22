@@ -160,7 +160,7 @@ tree.redo();
 pnpm add @signaltree/core @signaltree/ng-forms
 ```
 
-> **Compatibility**: Angular 17+ with TypeScript 5.5+. Angular 21+ recommended for best experience. Works alongside Angular's native signal forms—use both where appropriate.
+> **Compatibility**: Angular 20+ with TypeScript 5.5+ for the classic package; Angular 22+ for the `@signaltree/ng-forms/signals` subpath (stable Signal Forms bridges). Works alongside Angular's native Signal Forms—use both where appropriate.
 
 ## Quick start
 
@@ -295,11 +295,11 @@ form.form.controls.user.controls.name.value;  // string
 - **Signal ↔ Observable bridge**: Convert signals to RxJS streams for interoperability
 - **Template-driven adapter**: `SignalValueDirective` bridges standalone signals with `ngModel`
 
-## Angular 21 Interoperability
+## Angular 22 Interoperability
 
-**ng-forms complements Angular 21's native signal forms**—use both in the same app:
+**ng-forms complements Angular 22's native Signal Forms**—use both in the same app. As of v11.5, `@signaltree/ng-forms/signals` also bridges the two directly, so you don't have to choose between them for a given field:
 
-### Use Angular 21 `FormField<T>` for:
+### Use Angular 22 `FormField<T>` for:
 
 - ✅ Simple, flat forms (login, search)
 - ✅ Single-field validation
@@ -317,13 +317,14 @@ form.form.controls.user.controls.name.value;  // string
 ### Hybrid Example: Simple Fields + Complex Tree
 
 ```typescript
-import { formField } from '@angular/forms';
+import { Component, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { createFormTree } from '@signaltree/ng-forms';
 
-@Component({...})
+@Component({ imports: [FormField], ... })
 class CheckoutComponent {
-  // Simple field: Use Angular 21 native
-  promoCode = formField('');
+  // Simple field: Use Angular 22 native Signal Forms
+  promoCode = form(signal(''));
 
   // Complex nested state: Use ng-forms
   checkout = createFormTree({
@@ -341,6 +342,70 @@ class CheckoutComponent {
   // Both work together seamlessly
 }
 ```
+
+Template: `<input [formField]="promoCode" />` alongside the ng-forms-driven `checkout` fields.
+
+### Bridge: `form()` marker → Signal Forms `FieldTree`
+
+When you want a `form()` marker's validators to run natively inside a Signal Forms
+template (`[formField]`), wrap it with `markerSignalForm()`—no copying, the FieldTree's
+model IS the marker's values signal:
+
+```typescript
+import { Component, inject, Injector } from '@angular/core';
+import { FormField } from '@angular/forms/signals';
+import { signalTree, form, validators } from '@signaltree/core';
+import { markerSignalForm } from '@signaltree/ng-forms/signals';
+
+@Component({
+  imports: [FormField],
+  template: `<input [formField]="profile.name" />`,
+})
+class ProfileComponent {
+  private injector = inject(Injector);
+
+  tree = signalTree({
+    profile: form({
+      initial: { name: '', email: '' },
+      validators: { name: validators.required('Required') },
+    }),
+  });
+
+  // FieldTree shares the marker's values signal; marker sync validators run as
+  // Signal Forms validators (errors carry `kind: 'signalTree'`).
+  profile = markerSignalForm(this.tree.$.profile, { injector: this.injector });
+}
+```
+
+Async marker validators aren't auto-installed—keep running them via the marker's
+`validate()`/`submit()`, or add Signal Forms `validateAsync` rules yourself. Requires
+Angular 22+.
+
+### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
+
+If you register Zod/Valibot/ArkType schemas via `@signaltree/schema`, `signalFormBridge()`
+wires them into a Signal Forms `FieldTree` automatically via `validateStandardSchema`:
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { schemas } from '@signaltree/schema';
+import { signalFormBridge } from '@signaltree/ng-forms/signals';
+import { z } from 'zod';
+
+const tree = signalTree({ user: { name: '', email: '' } }).with(
+  schemas({
+    schemas: {
+      'user.name': z.string().min(2),
+      'user.email': z.string().email(),
+    },
+  })
+);
+
+const userForm = signalFormBridge<{ name: string; email: string }>(tree, 'user', tree.$.user);
+// userForm is a FieldTree with validation auto-wired from the schema registry.
+```
+
+Both bridges are exported from `@signaltree/ng-forms/signals` and require Angular 22+.
 
 ### Connecting to Reactive Forms
 
@@ -452,13 +517,13 @@ History tracking works at the FormGroup level so it plays nicely with external u
 
 Use `SignalValueDirective` to keep standalone signals and `ngModel` fields aligned in legacy sections while new pages migrate to forms-first APIs.
 
-## When to use ng-forms vs Angular 21 signal forms
+## When to use ng-forms vs Angular 22 signal forms
 
 | Scenario                                   | Recommendation                           |
 | ------------------------------------------ | ---------------------------------------- |
-| Login form (2-3 fields)                    | ✅ Angular 21 `FormField`                |
-| Search bar with filters                    | ✅ Angular 21 `FormField`                |
-| User profile with nested address           | ✅ **ng-forms** (tree structure)         |
+| Login form (2-3 fields)                    | ✅ Angular 22 `FormField`                |
+| Search bar with filters                    | ✅ Angular 22 `FormField`                |
+| Form state inside your store tree          | ✅ **ng-forms** (tree integration)       |
 | Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard)   |
 | Multi-step onboarding (5+ steps)           | ✅ **ng-forms** (wizard API)             |
 | Form with auto-save drafts                 | ✅ **ng-forms** (built-in persistence)   |
@@ -467,7 +532,7 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 | Dynamic form with conditional fields       | ✅ **ng-forms** (conditionals config)    |
 | Form synced with global app state          | ✅ **ng-forms** (SignalTree integration) |
 
-**Rule of thumb**: If your form data is a nested object or needs workflow features (persistence/wizards/history), use ng-forms. For simple flat forms, Angular 21's native signal forms are perfect.
+**Rule of thumb**: If your form state should live inside your SignalTree store, or needs workflow features (persistence/wizards/history), use ng-forms. For standalone forms — flat or nested — Angular 22's native Signal Forms are excellent. Need both on the same field? Use the `@signaltree/ng-forms/signals` bridges above.
 
 ## Migration from createFormTree()
 
@@ -534,7 +599,7 @@ tree.getAngularForm('profile')?.formGroup; // FormGroup
 ## Links
 
 - [SignalTree Documentation](https://signaltree.io)
-- [Angular 21 Migration Guide](./ANGULAR21-MIGRATION.md)
+- [Migrating from createFormTree()](#migration-from-createformtree)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Demo Application](https://signaltree.io/examples)

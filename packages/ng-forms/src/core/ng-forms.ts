@@ -784,8 +784,9 @@ function createAbstractControl(
  * Connects a FormControl to a WritableSignal with bidirectional sync.
  * Prefers Angular 20+ Signal Forms connect() API when available.
  *
- * @deprecated Manual bridge support (fallback for Angular 17-19) will be removed
- * when Angular 21 is released. Upgrade to Angular 20.3+ to use native Signal Forms.
+ * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
+ * now that Angular 22 ships stable Signal Forms. Prefer `markerSignalForm()`
+ * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
  */
 function connectControlAndSignal(
   control: FormControl,
@@ -817,8 +818,9 @@ function connectControlAndSignal(
     }
   }
 
-  // Fallback: Manual bidirectional bridge for Angular 17-19
-  // @deprecated Will be removed when Angular 21 is released
+  // Fallback: Manual bidirectional bridge for pre-20.3 Angular (no connect() API)
+  // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
+  // markerSignalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
 
   // Emit deprecation warning in dev mode (once per session)
   if (isDevEnvironment() && !hasShownLegacyWarning) {
@@ -911,8 +913,9 @@ function connectControlAndSignal(
  * Connects a FormArray to an EnhancedArraySignal with bidirectional sync.
  * Prefers Angular 20+ Signal Forms connect() API when available.
  *
- * @deprecated Manual bridge support (fallback for Angular 17-19) will be removed
- * when Angular 21 is released. Upgrade to Angular 20.3+ to use native Signal Forms.
+ * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
+ * now that Angular 22 ships stable Signal Forms. Prefer `markerSignalForm()`
+ * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
  */
 function connectFormArrayAndSignal(
   formArray: FormArray,
@@ -950,8 +953,9 @@ function connectFormArrayAndSignal(
     }
   }
 
-  // Fallback: Manual bidirectional bridge for Angular 17-19
-  // @deprecated Will be removed when Angular 21 is released
+  // Fallback: Manual bidirectional bridge for pre-20.3 Angular (no connect() API)
+  // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
+  // markerSignalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
   let updatingFromControl = false;
   let updatingFromSignal = false;
 
@@ -1010,7 +1014,9 @@ function connectFormArrayAndSignal(
  * Syncs a FormArray structure with a signal array value.
  * Used by the manual bridge fallback for Angular 17-19.
  *
- * @deprecated Will be removed when Angular 21 is released and manual bridge support is dropped.
+ * @deprecated Legacy path now that Angular 22 ships stable Signal Forms — manual
+ * bridge support will be dropped in favor of `markerSignalForm()` from
+ * `@signaltree/ng-forms/signals`.
  */
 function syncFormArrayFromValue(
   formArray: FormArray,
