@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { linked, signalTree } from '@signaltree/core';
 
@@ -31,7 +31,7 @@ const SEED: Item[] = [
 @Component({
   selector: 'app-linked-derived-demo',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   template: `
     <st-example
       heading="Derived-but-writable — linked()"

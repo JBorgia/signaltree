@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -13,7 +13,7 @@ interface NextStepCard {
 @Component({
   selector: 'app-start-here',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterModule],
   templateUrl: './start-here.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './start-here.component.scss',

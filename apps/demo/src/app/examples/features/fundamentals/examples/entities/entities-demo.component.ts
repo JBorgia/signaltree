@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
@@ -31,7 +31,7 @@ interface EntitiesState {
 @Component({
   selector: 'app-entities-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './entities-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './entities-demo.component.scss',

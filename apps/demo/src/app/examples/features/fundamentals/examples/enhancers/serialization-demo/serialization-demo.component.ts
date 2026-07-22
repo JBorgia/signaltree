@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { serialization, signalTree } from '@signaltree/core';
 
@@ -71,7 +71,7 @@ interface SerializableMethods {
 @Component({
   selector: 'app-serialization-demo',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   templateUrl: './serialization-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './serialization-demo.component.scss',

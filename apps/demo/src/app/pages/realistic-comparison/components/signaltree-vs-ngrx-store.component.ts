@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { createSelector } from '@ngrx/store';
 import {
@@ -22,7 +22,7 @@ interface BenchmarkResult {
 @Component({
   selector: 'app-signaltree-vs-ngrx-store',
   standalone: true,
-  imports: [CommonModule, PerformanceGraphComponent],
+  imports: [PerformanceGraphComponent],
   template: `
     <!-- Running overlay with spinner and progress -->
     @if(running()){

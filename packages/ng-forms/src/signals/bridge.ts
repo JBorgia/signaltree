@@ -5,20 +5,22 @@
  * `FieldTree`, automatically calling `validateStandardSchema` for every leaf
  * path the schema enhancer owns under the form's root.
  *
- * **Requires Angular 22+** (`@angular/forms` ships Signal Forms via the
+ * **Requires Angular 22+** (`@angular/forms` ships stable Signal Forms via the
  * `./signals` subpath starting in v22.0.0).
  *
  * Apps on Angular 20/21 can still install `@signaltree/schema` and read errors
- * manually via `tree.schemas.errorsAt(path)()`; the bridge only activates when
- * Angular 22's Signal Forms primitives are available at runtime.
+ * manually via `tree.schemas.errorsAt(path)()`; this subpath simply won't
+ * resolve without Angular 22's `@angular/forms/signals`.
  *
  * @packageDocumentation
  */
 
 import type { WritableSignal } from '@angular/core';
-// These imports resolve to @angular/forms@22+ at the user's install site.
-// Local builds use the dev-dep copy in this package.
-import { form, validateStandardSchema } from '@angular/forms/signals';
+import {
+  form,
+  validateStandardSchema,
+  type FieldTree,
+} from '@angular/forms/signals';
 import { toWritableSignal, type ISignalTree } from '@signaltree/core';
 import type { SchemaMethods } from '@signaltree/schema';
 
@@ -32,7 +34,7 @@ import type { SchemaMethods } from '@signaltree/schema';
  *
  * @example
  * ```ts
- * import { form } from '@angular/forms';
+ * import { form } from '@angular/forms/signals';
  * import { toWritableSignal } from '@signaltree/core';
  * import { applySignalTreeSchemas } from '@signaltree/ng-forms/signals';
  *
@@ -44,12 +46,12 @@ import type { SchemaMethods } from '@signaltree/schema';
  * @public
  */
 export function applySignalTreeSchemas(
-  // The `fieldRoot` is a Signal Forms SchemaPath at the type level — we use
-  // `unknown` here because the path-segment navigation is dynamic and the
-  // bridge can't statically know the SignalTree shape.
+  // At the type level this is a Signal Forms SchemaPathTree; the bridge
+  // navigates it dynamically (path segments come from the runtime schema
+  // registry), so the static SignalTree shape isn't known here.
   fieldRoot: unknown,
   tree: ISignalTree<unknown> & SchemaMethods,
-  rootPath = '',
+  rootPath = ''
 ): void {
   const bound = tree.schemas.boundPaths();
   const prefix = rootPath ? rootPath + '.' : '';
@@ -67,7 +69,8 @@ export function applySignalTreeSchemas(
     if (!schema) continue;
 
     // Navigate the field tree to the sub-path via property access.
-    // FieldTree exposes nested fields as own properties keyed by the model shape.
+    // SchemaPathTree exposes nested fields as own properties keyed by the
+    // model shape.
     const segments = subPath.split('.');
     let cursor: unknown = fieldRoot;
     for (const seg of segments) {
@@ -78,9 +81,8 @@ export function applySignalTreeSchemas(
 
     if (cursor === null || cursor === undefined) continue;
 
-    // `validateStandardSchema` takes a SchemaPath. The TS type narrowing here
-    // is bounded by the runtime walk; in practice users get correctly-typed
-    // FieldTrees via `form<TModel>(...)`.
+    // The runtime walk bounds the type narrowing; users get correctly-typed
+    // FieldTrees from `form<TModel>(...)` regardless.
     validateStandardSchema(cursor as never, schema as never);
   }
 }
@@ -109,8 +111,8 @@ export function applySignalTreeSchemas(
  *   }),
  * );
  *
- * const userForm = signalFormBridge(tree, 'user', tree.$.user);
- * // userForm() is a FieldTree<User> with validation auto-wired.
+ * const userForm = signalFormBridge<User>(tree, 'user', tree.$.user);
+ * // userForm is a FieldTree<User> with validation auto-wired.
  * ```
  *
  * @public
@@ -118,15 +120,17 @@ export function applySignalTreeSchemas(
 export function signalFormBridge<TModel>(
   tree: ISignalTree<unknown> & SchemaMethods,
   rootPath: string,
-  subtree: unknown,
-) {
+  subtree: unknown
+): FieldTree<TModel> {
   // toWritableSignal expects a NodeAccessor; subtree is typed as `unknown`
   // because the SignalTree shape isn't statically inferrable here. Users
   // pass `tree.$.<subtree>` which is a NodeAccessor at runtime.
   const writable = toWritableSignal(
-    subtree as Parameters<typeof toWritableSignal>[0],
-  ) as WritableSignal<TModel>;
+    subtree as Parameters<typeof toWritableSignal>[0]
+  ) as unknown as WritableSignal<TModel>;
   return form<TModel>(writable, (fieldRoot: unknown) => {
     applySignalTreeSchemas(fieldRoot, tree, rootPath);
-  });
+    // The schema callback's parameter is typed by Angular as
+    // SchemaPathTree<TModel>; the cast above keeps the dynamic walk honest.
+  }) as FieldTree<TModel>;
 }

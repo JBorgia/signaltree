@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 
@@ -68,7 +68,7 @@ const age = tree.$.user.profile.age();`;
 @Component({
   selector: 'app-callable-syntax-demo',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   templateUrl: './callable-syntax-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './callable-syntax-demo.component.scss',

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { derivedFrom, entityMap, signalTree, WithDerived } from '@signaltree/core';
 
@@ -143,7 +143,7 @@ interface CartItem {
 @Component({
   selector: 'app-derived-tiers-example',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   template: `
     <st-example heading="Derived Tiers Example">
       <div intro>

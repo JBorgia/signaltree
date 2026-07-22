@@ -14,182 +14,190 @@
         <strong
           >Catch performance issues during development, not in
           production.</strong
-        >
-        Most state management libraries provide zero visibility into hot paths,
-        budget violations, or architectural anti-patterns until users complain.
-        Guardrails gives you real-time feedback.
-      </p>
-      <div class="key-benefits">
-        <div class="benefit">
-          <h3>⚡ Performance Budgets</h3>
-          <p>
-            Set thresholds for update frequency, computation time, and state
-            size. Get warnings before issues reach production.
-          </p>
+          >
+          Most state management libraries provide zero visibility into hot paths,
+          budget violations, or architectural anti-patterns until users complain.
+          Guardrails gives you real-time feedback.
+        </p>
+        <div class="key-benefits">
+          <div class="benefit">
+            <h3>⚡ Performance Budgets</h3>
+            <p>
+              Set thresholds for update frequency, computation time, and state
+              size. Get warnings before issues reach production.
+            </p>
+          </div>
+          <div class="benefit">
+            <h3>🔥 Hot Path Detection</h3>
+            <p>
+              Automatically identify code paths that update too frequently.
+              NgRx/Redux require custom profiling; guardrails show it live.
+            </p>
+          </div>
+          <div class="benefit">
+            <h3>🛡️ Custom Rules</h3>
+            <p>
+              Enforce team conventions (no PII in state, max nesting depth, naming
+              patterns). Violations surface immediately in dev tools.
+            </p>
+          </div>
         </div>
-        <div class="benefit">
-          <h3>🔥 Hot Path Detection</h3>
-          <p>
-            Automatically identify code paths that update too frequently.
-            NgRx/Redux require custom profiling; guardrails show it live.
-          </p>
-        </div>
-        <div class="benefit">
-          <h3>🛡️ Custom Rules</h3>
-          <p>
-            Enforce team conventions (no PII in state, max nesting depth, naming
-            patterns). Violations surface immediately in dev tools.
-          </p>
-        </div>
+        <p class="zero-cost">
+          <strong>Zero production overhead:</strong> Guardrails is automatically
+          excluded from production bundles. Akita/Elf DevTools stay in bundles;
+          NgRx requires manual plugin exclusion. Guardrails is 100% dev-only by
+          design.
+        </p>
       </div>
-      <p class="zero-cost">
-        <strong>Zero production overhead:</strong> Guardrails is automatically
-        excluded from production bundles. Akita/Elf DevTools stay in bundles;
-        NgRx requires manual plugin exclusion. Guardrails is 100% dev-only by
-        design.
-      </p>
-    </div>
 
-    <p class="report-timestamp" *ngIf="reportTimestamp() as timestamp">
-      Last report generated at <strong>{{ timestamp }}</strong>
-    </p>
-  </header>
+      @if (reportTimestamp(); as timestamp) {
+        <p class="report-timestamp">
+          Last report generated at <strong>{{ timestamp }}</strong>
+        </p>
+      }
+    </header>
 
-  @if (guardrailsAvailable()) {
-  <section class="action-panel">
-    <button type="button" (click)="runHealthyScenario()">
-      Record Baseline Update
-    </button>
-    <button type="button" (click)="triggerHotPath()">Trigger Hot Path</button>
-    <button type="button" (click)="triggerBudgetBreach()">
-      Stress Budgets
-    </button>
-    <button type="button" (click)="triggerRuleViolation()">
-      Trigger Sensitive Data Rule
-    </button>
-    <button type="button" (click)="runSuppressedScenario()">
-      Run Suppressed Hydrate
-    </button>
-    <button type="button" class="secondary" (click)="resetDemo()">
-      Reset Demo
-    </button>
-  </section>
+    @if (guardrailsAvailable()) {
+      <section class="action-panel">
+        <button type="button" (click)="runHealthyScenario()">
+          Record Baseline Update
+        </button>
+        <button type="button" (click)="triggerHotPath()">Trigger Hot Path</button>
+        <button type="button" (click)="triggerBudgetBreach()">
+          Stress Budgets
+        </button>
+        <button type="button" (click)="triggerRuleViolation()">
+          Trigger Sensitive Data Rule
+        </button>
+        <button type="button" (click)="runSuppressedScenario()">
+          Run Suppressed Hydrate
+        </button>
+        <button type="button" class="secondary" (click)="resetDemo()">
+          Reset Demo
+        </button>
+      </section>
 
-  <section class="metrics-grid">
-    <div class="metric-card">
-      <span class="metric-label">Total Updates</span>
-      <span class="metric-value">{{ stats()?.updateCount ?? 0 }}</span>
-    </div>
-    <div class="metric-card">
-      <span class="metric-label">Avg Update Time</span>
-      <span class="metric-value"
-        >{{ stats()?.avgUpdateTime ?? 0 | number : '1.0-2' }} ms</span
-      >
-    </div>
-    <div class="metric-card">
-      <span class="metric-label">P95 Update Time</span>
-      <span class="metric-value"
-        >{{ stats()?.p95UpdateTime ?? 0 | number : '1.0-2' }} ms</span
-      >
-    </div>
-    <div class="metric-card">
-      <span class="metric-label">Violations</span>
-      <span class="metric-value">{{ stats()?.violationCount ?? 0 }}</span>
-    </div>
-    <div class="metric-card">
-      <span class="metric-label">Hot Paths</span>
-      <span class="metric-value">{{ stats()?.hotPathCount ?? 0 }}</span>
-    </div>
-  </section>
-
-  @if (budgetEntries().length) {
-  <section class="budget-section">
-    <h2>Budget Usage</h2>
-    <div class="budget-grid">
-      <div
-        class="budget-card"
-        *ngFor="let entry of budgetEntries(); trackBy: trackBudget"
-        [class.budget-warning]="entry.status === 'warning'"
-        [class.budget-error]="entry.status === 'error'"
-      >
-        <div class="budget-label">{{ entry.label }}</div>
-        <div class="budget-usage">{{ entry.usage | number : '1.0-0' }}%</div>
-        <div class="budget-detail">
-          {{ entry.current | number : '1.0-2' }} /
-          {{ entry.limit | number : '1.0-2' }}
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Total Updates</span>
+          <span class="metric-value">{{ stats()?.updateCount ?? 0 }}</span>
         </div>
-      </div>
-    </div>
-  </section>
-  }
+        <div class="metric-card">
+          <span class="metric-label">Avg Update Time</span>
+          <span class="metric-value"
+            >{{ stats()?.avgUpdateTime ?? 0 | number : '1.0-2' }} ms</span
+            >
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">P95 Update Time</span>
+            <span class="metric-value"
+              >{{ stats()?.p95UpdateTime ?? 0 | number : '1.0-2' }} ms</span
+              >
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Violations</span>
+              <span class="metric-value">{{ stats()?.violationCount ?? 0 }}</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Hot Paths</span>
+              <span class="metric-value">{{ stats()?.hotPathCount ?? 0 }}</span>
+            </div>
+          </section>
 
-  <section class="issues-section">
-    <h2>Active Issues</h2>
-    @if (issues().length) {
-    <ul class="issues-list">
-      <li
-        *ngFor="let issue of issues(); trackBy: trackIssue"
-        [class]="issueSeverityClass(issue)"
-      >
-        <div class="issue-header">
-          <span class="issue-message">{{ issue.message }}</span>
-          <span class="issue-count">×{{ issue.count }}</span>
-        </div>
-        <div class="issue-meta">
-          Path: {{ issue.path || 'root' }} @if (issue.metadata?.['rule']) { ·
-          Rule: {{ issue.metadata?.['rule'] }}
+          @if (budgetEntries().length) {
+            <section class="budget-section">
+              <h2>Budget Usage</h2>
+              <div class="budget-grid">
+                @for (entry of budgetEntries(); track trackBudget($index, entry)) {
+                  <div
+                    class="budget-card"
+                    [class.budget-warning]="entry.status === 'warning'"
+                    [class.budget-error]="entry.status === 'error'"
+                    >
+                    <div class="budget-label">{{ entry.label }}</div>
+                    <div class="budget-usage">{{ entry.usage | number : '1.0-0' }}%</div>
+                    <div class="budget-detail">
+                      {{ entry.current | number : '1.0-2' }} /
+                      {{ entry.limit | number : '1.0-2' }}
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
           }
-        </div>
-      </li>
-    </ul>
-    } @else {
-    <p class="empty-state">
-      No violations detected — run a scenario to generate insights.
-    </p>
-    }
-  </section>
 
-  <section class="hotpaths-section">
-    <h2>Hot Paths</h2>
-    @if (hotPaths().length) {
-    <ul class="hotpaths-list">
-      <li *ngFor="let hotPath of hotPaths(); trackBy: trackHotPath">
-        <div class="hotpath-title">{{ formatHotPathLabel(hotPath) }}</div>
-        <div class="hotpath-meta">
-          Heat: {{ hotPath.heatScore | number : '1.0-0' }} · Avg:
-          {{ hotPath.avgDuration | number : '1.0-2' }} ms · P95:
-          {{ hotPath.p95Duration | number : '1.0-2' }} ms
-        </div>
-      </li>
-    </ul>
-    } @else {
-    <p class="empty-state">
-      No hot paths yet — try the hot path scenario above.
-    </p>
-    }
-  </section>
-  } @else {
-  <section class="prod-message">
-    <p>
-      Guardrails is disabled in production builds. Run
-      <code>pnpm nx serve demo --configuration=development</code> and open
-      <code>/guardrails</code> to explore the live monitoring experience.
-    </p>
-  </section>
-  }
+          <section class="issues-section">
+            <h2>Active Issues</h2>
+            @if (issues().length) {
+              <ul class="issues-list">
+                @for (issue of issues(); track trackIssue($index, issue)) {
+                  <li
+                    [class]="issueSeverityClass(issue)"
+                    >
+                    <div class="issue-header">
+                      <span class="issue-message">{{ issue.message }}</span>
+                      <span class="issue-count">×{{ issue.count }}</span>
+                    </div>
+                    <div class="issue-meta">
+                      Path: {{ issue.path || 'root' }} @if (issue.metadata?.['rule']) { ·
+                      Rule: {{ issue.metadata?.['rule'] }}
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty-state">
+              No violations detected — run a scenario to generate insights.
+            </p>
+          }
+        </section>
 
-  <section class="scenario-log">
-    <h2>Scenario Log</h2>
-    @if (scenarioLog().length) {
-    <ul>
-      <li *ngFor="let entry of scenarioLog(); trackBy: trackScenario">
-        {{ entry }}
-      </li>
-    </ul>
-    } @else {
-    <p class="empty-state">
-      Use the controls above to start generating telemetry.
-    </p>
-    }
-  </section>
-</div>
+        <section class="hotpaths-section">
+          <h2>Hot Paths</h2>
+          @if (hotPaths().length) {
+            <ul class="hotpaths-list">
+              @for (hotPath of hotPaths(); track trackHotPath($index, hotPath)) {
+                <li>
+                  <div class="hotpath-title">{{ formatHotPathLabel(hotPath) }}</div>
+                  <div class="hotpath-meta">
+                    Heat: {{ hotPath.heatScore | number : '1.0-0' }} · Avg:
+                    {{ hotPath.avgDuration | number : '1.0-2' }} ms · P95:
+                    {{ hotPath.p95Duration | number : '1.0-2' }} ms
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty-state">
+              No hot paths yet — try the hot path scenario above.
+            </p>
+          }
+        </section>
+      } @else {
+        <section class="prod-message">
+          <p>
+            Guardrails is disabled in production builds. Run
+            <code>pnpm nx serve demo --configuration=development</code> and open
+            <code>/guardrails</code> to explore the live monitoring experience.
+          </p>
+        </section>
+      }
+
+      <section class="scenario-log">
+        <h2>Scenario Log</h2>
+        @if (scenarioLog().length) {
+          <ul>
+            @for (entry of scenarioLog(); track trackScenario($index, entry)) {
+              <li>
+                {{ entry }}
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty-state">
+            Use the controls above to start generating telemetry.
+          </p>
+        }
+      </section>
+    </div>

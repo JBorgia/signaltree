@@ -6,6 +6,7 @@ import {
   getBatchQueueSize,
   hasPendingUpdates,
 } from './batching';
+import { signalTree } from '../../lib/signal-tree';
 
 function createFakeTree(initial: any) {
   let state = initial;
@@ -108,6 +109,56 @@ describe('batching behavior', () => {
       // But only one notification scheduled
       vi.advanceTimersByTime(100);
       expect(notificationCount).toBe(1);
+    });
+  });
+
+  describe('setter wrapping reaches callable accessors', () => {
+    // Regression: NodeAccessors are typeof 'function', and wrapSignalSetters
+    // used to skip non-objects entirely — so no leaf setter was ever wrapped
+    // and coalesce() never deduped. Count actual writes by wrapping the raw
+    // setter BEFORE the enhancer, then assert coalesce applies only the last.
+    it('coalesce() dedupes same-path writes down to one applied write', () => {
+      const base = signalTree({ counter: 0 });
+      let applied = 0;
+      const counter = base.$.counter as unknown as { set(v: number): void };
+      const rawSet = counter.set.bind(counter);
+      counter.set = (v: number) => {
+        applied++;
+        rawSet(v);
+      };
+
+      const tree = base.with(
+        batching({ enabled: true, notificationDelayMs: 0 })
+      );
+      tree.coalesce(() => {
+        for (let i = 0; i < 100; i++) tree.$.counter.set(i + 1);
+      });
+
+      expect(tree.$.counter()).toBe(100);
+      expect(applied).toBe(1);
+    });
+
+    it('wraps nested leaf setters too', () => {
+      const base = signalTree({ a: { b: { value: 0 } } });
+      let applied = 0;
+      const leaf = base.$.a.b.value as unknown as { set(v: number): void };
+      const rawSet = leaf.set.bind(leaf);
+      leaf.set = (v: number) => {
+        applied++;
+        rawSet(v);
+      };
+
+      const tree = base.with(
+        batching({ enabled: true, notificationDelayMs: 0 })
+      );
+      tree.coalesce(() => {
+        tree.$.a.b.value.set(1);
+        tree.$.a.b.value.set(2);
+        tree.$.a.b.value.set(3);
+      });
+
+      expect(tree.$.a.b.value()).toBe(3);
+      expect(applied).toBe(1);
     });
   });
 });

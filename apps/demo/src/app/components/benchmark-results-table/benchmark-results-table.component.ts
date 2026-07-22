@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 export interface BenchmarkResult {
@@ -20,7 +20,7 @@ export interface BenchmarkResult {
 @Component({
   selector: 'app-benchmark-results-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './benchmark-results-table.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './benchmark-results-table.component.scss',

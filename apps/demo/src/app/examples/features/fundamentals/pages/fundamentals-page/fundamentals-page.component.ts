@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,7 +15,7 @@ import type { FilterState } from '../../../../core/models';
 @Component({
   selector: 'app-fundamentals-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ExampleCardComponent],
+  imports: [FormsModule, RouterModule, ExampleCardComponent],
   templateUrl: './fundamentals-page.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './fundamentals-page.component.scss',

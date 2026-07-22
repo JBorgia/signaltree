@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -19,7 +19,7 @@ import type { CodeFile } from '../../examples/shared/components/example-shell';
 @Component({
   selector: 'app-built-for-ai',
   standalone: true,
-  imports: [CommonModule, RouterModule, CodeTabsComponent],
+  imports: [RouterModule, CodeTabsComponent],
   templateUrl: './built-for-ai.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './built-for-ai.component.scss',

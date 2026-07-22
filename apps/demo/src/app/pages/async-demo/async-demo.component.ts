@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { asyncQuery, asyncSource, signalTree } from '@signaltree/core';
@@ -25,7 +25,7 @@ const ALL_USERS: User[] = [
 @Component({
   selector: 'app-async-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, CodeTabsComponent],
+  imports: [FormsModule, CodeTabsComponent],
   templateUrl: './async-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './async-demo.component.scss',

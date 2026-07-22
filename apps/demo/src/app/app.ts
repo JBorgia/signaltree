@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -7,7 +7,7 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterModule, NavigationComponent],
+  imports: [RouterModule, NavigationComponent],
   template: `
     <div class="app-shell">
       <!-- Full-width top bar — desktop only -->

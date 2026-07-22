@@ -5,7 +5,7 @@
     [state]="stateSnapshot()"
     stateLabel="Live state (counter + user)"
     [code]="codeFiles"
-  >
+    >
     <!-- Explanation (rich markup → intro slot) -->
     <div intro class="explanation-card">
       <h2>📖 What This Demo Shows</h2>
@@ -75,21 +75,21 @@
                 (click)="increment()"
                 class="btn-primary"
                 title="Increment counter"
-              >
+                >
                 ➕ Increment
               </button>
               <button
                 (click)="decrement()"
                 class="btn-danger"
                 title="Decrement counter"
-              >
+                >
                 ➖ Decrement
               </button>
               <button
                 (click)="reset()"
                 class="btn-secondary"
                 title="Reset counter to 0"
-              >
+                >
                 ↻ Reset
               </button>
             </div>
@@ -107,7 +107,7 @@
                 (input)="updateUserName($event)"
                 class="form-input"
                 placeholder="Enter user name..."
-              />
+                />
             </div>
             <div class="form-group">
               <label for="userEmail" class="label">Email</label>
@@ -118,7 +118,7 @@
                 (input)="updateUserEmail($event)"
                 class="form-input"
                 placeholder="Enter email address..."
-              />
+                />
             </div>
             <div class="checkbox-group">
               <input
@@ -126,7 +126,7 @@
                 type="checkbox"
                 [checked]="this.store.$.user.preferences.notifications()"
                 (change)="toggleNotifications()"
-              />
+                />
               <label for="notifications">🔔 Enable Notifications</label>
             </div>
           </div>
@@ -141,13 +141,13 @@
                 placeholder="Enter a new todo..."
                 class="form-input"
                 (keyup.enter)="addTodo()"
-              />
+                />
               <button
                 (click)="addTodo()"
                 [disabled]="!newTodoText.trim()"
                 class="btn-success"
                 title="Add new todo"
-              >
+                >
                 ➕ Add
               </button>
             </div>
@@ -155,7 +155,7 @@
               (click)="addMultipleTodos()"
               class="btn-purple full-width"
               title="Add 5 random todos for testing"
-            >
+              >
               🎲 Add 5 Random Todos
             </button>
           </div>
@@ -208,21 +208,21 @@
                 (click)="logState()"
                 class="btn-info"
                 title="Log current state to console"
-              >
+                >
                 📋 Log Current State
               </button>
               <button
                 (click)="takeSnapshot()"
                 class="btn-purple"
                 title="Save a snapshot of current state"
-              >
+                >
                 📸 Take Snapshot ({{ snapshots.length }})
               </button>
               <button
                 (click)="resetMetrics()"
                 class="btn-warning"
                 title="Reset all performance metrics"
-              >
+                >
                 ↻ Reset Metrics
               </button>
             </div>
@@ -230,38 +230,38 @@
 
           <!-- State Snapshots -->
           @if (snapshots.length > 0) {
-          <div class="snapshots-group">
-            <h3>💾 Saved Snapshots</h3>
-            <div class="snapshots-list">
-              @for (snapshot of snapshots; track snapshot.timestamp; let i =
-              $index) {
-              <div class="snapshot-item">
-                <div class="snapshot-info">
-                  <div class="snapshot-title">Snapshot #{{ i + 1 }}</div>
-                  <div class="snapshot-time">
-                    {{ formatTimestamp(snapshot.timestamp) }}
+            <div class="snapshots-group">
+              <h3>💾 Saved Snapshots</h3>
+              <div class="snapshots-list">
+                @for (snapshot of snapshots; track snapshot.timestamp; let i =
+                  $index) {
+                  <div class="snapshot-item">
+                    <div class="snapshot-info">
+                      <div class="snapshot-title">Snapshot #{{ i + 1 }}</div>
+                      <div class="snapshot-time">
+                        {{ formatTimestamp(snapshot.timestamp) }}
+                      </div>
+                    </div>
+                    <div class="snapshot-actions">
+                      <button
+                        (click)="restoreSnapshot(i)"
+                        class="btn-primary btn-xs"
+                        title="Restore this snapshot"
+                        >
+                        ↻ Restore
+                      </button>
+                      <button
+                        (click)="deleteSnapshot(i)"
+                        class="btn-danger btn-xs"
+                        title="Delete this snapshot"
+                        >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div class="snapshot-actions">
-                  <button
-                    (click)="restoreSnapshot(i)"
-                    class="btn-primary btn-xs"
-                    title="Restore this snapshot"
-                  >
-                    ↻ Restore
-                  </button>
-                  <button
-                    (click)="deleteSnapshot(i)"
-                    class="btn-danger btn-xs"
-                    title="Delete this snapshot"
-                  >
-                    ×
-                  </button>
-                </div>
+                }
               </div>
-              }
             </div>
-          </div>
           }
         </div>
       </div>
@@ -275,79 +275,81 @@
         <div class="history-header">
           <span class="history-count"
             >{{ actionHistory.length }} actions recorded</span
-          >
-          <div class="history-controls">
-            <button
-              (click)="replayActions()"
-              [disabled]="actionHistory.length === 0 || replaying"
-              class="btn-success btn-sm"
             >
-              {{ replaying ? '▶️ Replaying...' : '▶️ Replay All' }}
-            </button>
-            <button
-              (click)="clearHistory()"
-              [disabled]="actionHistory.length === 0"
-              class="btn-secondary btn-sm"
-            >
-              Clear History
-            </button>
-          </div>
-        </div>
-
-        <div class="history-list">
-          @for (action of actionHistory; track action.timestamp; let i = $index)
-          {
-          <div class="history-item">
-            <div class="history-badge">{{ i + 1 }}</div>
-            <div class="history-details">
-              <div class="history-name">{{ action.name }}</div>
-              <div class="history-meta">
-                {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
-              </div>
-            </div>
-            <button
-              (click)="replaySingleAction(i)"
-              class="btn-info btn-xs"
-              title="Replay this action"
-            >
-              ↻
-            </button>
-          </div>
-          } @if (actionHistory.length === 0) {
-          <div class="no-history">No actions recorded yet</div>
-          }
-        </div>
-      </div>
-    </div>
-
-    <!-- Todos (interactive; counter + user JSON now shown in the state inspector) -->
-    <div class="section-card state-view-card">
-      <h2>🔍 Live Todos</h2>
-      <p class="card-description">Inspect and edit todos in real-time</p>
-      <div class="todos-column">
-        <h3>Todos ({{ todos().length }})</h3>
-        <div class="todos-display">
-          <ul class="todos-list">
-            <li *ngFor="let todo of todos(); let i = index" class="todo-item">
-              <span [class.completed]="todo.completed">
-                {{ todo.text }}
-              </span>
-              <div class="todo-actions">
-                <button
-                  (click)="toggleTodo(todo.id)"
-                  class="btn-info btn-xs"
-                  [attr.aria-pressed]="todo.completed"
+            <div class="history-controls">
+              <button
+                (click)="replayActions()"
+                [disabled]="actionHistory.length === 0 || replaying"
+                class="btn-success btn-sm"
                 >
-                  {{ todo.completed ? 'Undo' : 'Done' }}
-                </button>
-                <button (click)="removeTodo(todo.id)" class="btn-danger btn-xs">
-                  ×
+                {{ replaying ? '▶️ Replaying...' : '▶️ Replay All' }}
+              </button>
+              <button
+                (click)="clearHistory()"
+                [disabled]="actionHistory.length === 0"
+                class="btn-secondary btn-sm"
+                >
+                Clear History
+              </button>
+            </div>
+          </div>
+
+          <div class="history-list">
+            @for (action of actionHistory; track action.timestamp; let i = $index)
+              {
+              <div class="history-item">
+                <div class="history-badge">{{ i + 1 }}</div>
+                <div class="history-details">
+                  <div class="history-name">{{ action.name }}</div>
+                  <div class="history-meta">
+                    {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
+                  </div>
+                </div>
+                <button
+                  (click)="replaySingleAction(i)"
+                  class="btn-info btn-xs"
+                  title="Replay this action"
+                  >
+                  ↻
                 </button>
               </div>
-            </li>
-          </ul>
+              } @if (actionHistory.length === 0) {
+              <div class="no-history">No actions recorded yet</div>
+            }
+          </div>
         </div>
       </div>
-    </div>
-  </st-example>
-</div>
+
+      <!-- Todos (interactive; counter + user JSON now shown in the state inspector) -->
+      <div class="section-card state-view-card">
+        <h2>🔍 Live Todos</h2>
+        <p class="card-description">Inspect and edit todos in real-time</p>
+        <div class="todos-column">
+          <h3>Todos ({{ todos().length }})</h3>
+          <div class="todos-display">
+            <ul class="todos-list">
+              @for (todo of todos(); track todo; let i = $index) {
+                <li class="todo-item">
+                  <span [class.completed]="todo.completed">
+                    {{ todo.text }}
+                  </span>
+                  <div class="todo-actions">
+                    <button
+                      (click)="toggleTodo(todo.id)"
+                      class="btn-info btn-xs"
+                      [attr.aria-pressed]="todo.completed"
+                      >
+                      {{ todo.completed ? 'Undo' : 'Done' }}
+                    </button>
+                    <button (click)="removeTodo(todo.id)" class="btn-danger btn-xs">
+                      ×
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </st-example>
+  </div>

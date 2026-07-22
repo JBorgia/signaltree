@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
@@ -66,7 +66,7 @@ type DemoEvent = TradeProposalCreated | TradeAccepted | UserRegistered;
 @Component({
   selector: 'app-events-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, CodeTabsComponent, StateInspectorComponent],
+  imports: [FormsModule, CodeTabsComponent, StateInspectorComponent],
   templateUrl: './events-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './events-demo.component.scss',

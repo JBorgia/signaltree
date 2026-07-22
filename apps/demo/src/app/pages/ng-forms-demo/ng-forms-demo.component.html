@@ -53,417 +53,440 @@
     [state]="preview()"
     stateLabel="Live State Preview"
     [code]="codeFiles"
-  >
-  <div class="content-grid">
-    <section class="form-panel">
-      <div class="status-row">
-        <div class="status-chips">
-          <span class="chip" [class.active]="profile.dirty()">Dirty</span>
-          <span class="chip" [class.active]="!profile.dirty()">Pristine</span>
-          <span class="chip" [class.success]="profile.valid()">Valid</span>
-          <span class="chip" [class.active]="hasPendingAsync()">
-            Async checks
-          </span>
-          <span class="chip" [class.active]="profile.submitting()">
-            Submitting
-          </span>
-        </div>
-        <div class="completion">
-          <span class="completion-label">Completion</span>
-          <div class="meter">
-            <div class="bar" [style.width.%]="completionPercent()"></div>
+    >
+    <div class="content-grid">
+      <section class="form-panel">
+        <div class="status-row">
+          <div class="status-chips">
+            <span class="chip" [class.active]="profile.dirty()">Dirty</span>
+            <span class="chip" [class.active]="!profile.dirty()">Pristine</span>
+            <span class="chip" [class.success]="profile.valid()">Valid</span>
+            <span class="chip" [class.active]="hasPendingAsync()">
+              Async checks
+            </span>
+            <span class="chip" [class.active]="profile.submitting()">
+              Submitting
+            </span>
           </div>
-          <span>{{ completionPercent() }}%</span>
+          <div class="completion">
+            <span class="completion-label">Completion</span>
+            <div class="meter">
+              <div class="bar" [style.width.%]="completionPercent()"></div>
+            </div>
+            <span>{{ completionPercent() }}%</span>
+          </div>
         </div>
-      </div>
 
-      <div class="demo-callout persistence">
-        <h3>💾 Auto-Persistence in Action</h3>
-        <p>
-          This form uses
-          <code>persistKey: 'signaltree-ng-forms-demo'</code> with
-          <code>localStorage</code>. Every change you make auto-saves after
-          120ms of inactivity. Refresh the page—your data persists! Angular 21's
-          native signal forms don't include persistence; you'd build this from
-          scratch.
-        </p>
-        <p>
-          <button type="button" class="clear-storage" (click)="clearStorage()">
-            Clear saved demo data
-          </button>
-        </p>
-      </div>
+        <div class="demo-callout persistence">
+          <h3>💾 Auto-Persistence in Action</h3>
+          <p>
+            This form uses
+            <code>persistKey: 'signaltree-ng-forms-demo'</code> with
+            <code>localStorage</code>. Every change you make auto-saves after
+            120ms of inactivity. Refresh the page—your data persists! Angular 21's
+            native signal forms don't include persistence; you'd build this from
+            scratch.
+          </p>
+          <p>
+            <button type="button" class="clear-storage" (click)="clearStorage()">
+              Clear saved demo data
+            </button>
+          </p>
+        </div>
 
-      <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
-        <fieldset>
-          <legend>Identity</legend>
-          <div class="field-grid">
-            <div class="field">
-              <label for="name">Full name</label>
-              <input
-                id="name"
-                type="text"
-                formControlName="name"
-                placeholder="Ada Lovelace"
-                autocomplete="name"
-              />
-              <p *ngIf="nameError" class="error">{{ nameError }}</p>
-            </div>
-
-            <div class="field">
-              <label for="email">Email</label>
-              <div class="inline-field">
+        <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
+          <fieldset>
+            <legend>Identity</legend>
+            <div class="field-grid">
+              <div class="field">
+                <label for="name">Full name</label>
                 <input
-                  id="email"
-                  type="email"
-                  formControlName="email"
-                  placeholder="ada@signaltree.dev"
-                  autocomplete="email"
-                />
-                <span *ngIf="hasPendingAsync()" class="hint" aria-live="polite">
-                  Validating…
-                </span>
+                  id="name"
+                  type="text"
+                  formControlName="name"
+                  placeholder="Ada Lovelace"
+                  autocomplete="name"
+                  />
+                @if (nameError) {
+                  <p class="error">{{ nameError }}</p>
+                }
               </div>
-              <p *ngIf="emailError" class="error">{{ emailError }}</p>
-              <p
-                *ngIf="profile.getFieldAsyncError('email')()"
-                class="error async"
-              >
-                {{ profile.getFieldAsyncError('email')() }}
-              </p>
-              <p class="hint small">
-                <strong>Async validation:</strong> Email uniqueness checked with
-                180ms debounce. Angular 21 supports async validation but
-                requires manual debouncing per field. ng-forms centralizes it
-                via <code>fieldConfigs</code>.
+
+              <div class="field">
+                <label for="email">Email</label>
+                <div class="inline-field">
+                  <input
+                    id="email"
+                    type="email"
+                    formControlName="email"
+                    placeholder="ada@signaltree.dev"
+                    autocomplete="email"
+                    />
+                  @if (hasPendingAsync()) {
+                    <span class="hint" aria-live="polite">
+                      Validating…
+                    </span>
+                  }
+                </div>
+                @if (emailError) {
+                  <p class="error">{{ emailError }}</p>
+                }
+                @if (profile.getFieldAsyncError('email')()) {
+                  <p
+                    class="error async"
+                    >
+                    {{ profile.getFieldAsyncError('email')() }}
+                  </p>
+                }
+                <p class="hint small">
+                  <strong>Async validation:</strong> Email uniqueness checked with
+                  180ms debounce. Angular 21 supports async validation but
+                  requires manual debouncing per field. ng-forms centralizes it
+                  via <code>fieldConfigs</code>.
+                </p>
+              </div>
+
+              <div class="field">
+                <label for="role">Collaboration mode</label>
+                <select id="role" formControlName="role">
+                  <option value="individual">Individual contributor</option>
+                  <option value="manager">Team manager</option>
+                </select>
+              </div>
+
+              <div class="field checkbox">
+                <label>
+                  <input type="checkbox" formControlName="receiveUpdates" />
+                  Keep me posted on product updates
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset formGroupName="company">
+            <legend>Company context</legend>
+            <div class="demo-callout conditional">
+              <h3>🔀 Conditional Fields</h3>
+              <p>
+                <strong>Try it:</strong> Switch role to "Team manager" above. The
+                company fields below enable automatically via
+                <code>conditionals</code> config. Angular 21 has no built-in
+                conditional logic—you'd implement this with reactive code.
               </p>
             </div>
+            @if (!isManager()) {
+              <p class="hint">
+                Switch to "Team manager" to activate company planning inputs.
+              </p>
+            }
+            <div class="field-grid">
+              <div class="field">
+                <label for="company-name">Company name</label>
+                <input
+                  id="company-name"
+                  type="text"
+                  formControlName="name"
+                  placeholder="SignalTree Labs"
+                  autocomplete="organization"
+                  />
+                @if (profile.getFieldError('company.name')()) {
+                  <p class="error">
+                    {{ profile.getFieldError('company.name')() }}
+                  </p>
+                }
+              </div>
 
-            <div class="field">
-              <label for="role">Collaboration mode</label>
-              <select id="role" formControlName="role">
-                <option value="individual">Individual contributor</option>
-                <option value="manager">Team manager</option>
-              </select>
+              <div class="field">
+                <label for="company-size">Team size</label>
+                <select id="company-size" formControlName="size">
+                  @for (size of companySizeOptions; track size) {
+                    <option [value]="size">
+                      {{ size }} teammates
+                    </option>
+                  }
+                </select>
+                @if (profile.getFieldError('company.size')()) {
+                  <p class="error">
+                    {{ profile.getFieldError('company.size')() }}
+                  </p>
+                }
+              </div>
             </div>
+          </fieldset>
 
-            <div class="field checkbox">
-              <label>
-                <input type="checkbox" formControlName="receiveUpdates" />
-                Keep me posted on product updates
+          <fieldset formGroupName="preferences">
+            <legend>Notification preferences</legend>
+            <div class="demo-callout nested">
+              <h3>🌲 Nested Tree Structure</h3>
+              <p>
+                This fieldset is a nested group:
+                <code>profile.$.preferences.newsletter()</code>. Angular 21 signal
+                forms are flat—no built-in nesting. ng-forms mirrors your data
+                model with typed paths like <code>'preferences.newsletter'</code>.
+              </p>
+            </div>
+            <div class="field-grid preferences">
+              <label class="checkbox">
+                <input type="checkbox" formControlName="newsletter" />
+                Weekly newsletter
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" formControlName="productUpdates" />
+                Product releases
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" formControlName="betaProgram" />
+                Experimental beta program
               </label>
             </div>
-          </div>
-        </fieldset>
+          </fieldset>
 
-        <fieldset formGroupName="company">
-          <legend>Company context</legend>
-          <div class="demo-callout conditional">
-            <h3>🔀 Conditional Fields</h3>
-            <p>
-              <strong>Try it:</strong> Switch role to "Team manager" above. The
-              company fields below enable automatically via
-              <code>conditionals</code> config. Angular 21 has no built-in
-              conditional logic—you'd implement this with reactive code.
-            </p>
-          </div>
-          <p class="hint" *ngIf="!isManager()">
-            Switch to "Team manager" to activate company planning inputs.
-          </p>
-          <div class="field-grid">
-            <div class="field">
-              <label for="company-name">Company name</label>
-              <input
-                id="company-name"
-                type="text"
-                formControlName="name"
-                placeholder="SignalTree Labs"
-                autocomplete="organization"
-              />
-              <p *ngIf="profile.getFieldError('company.name')()" class="error">
-                {{ profile.getFieldError('company.name')() }}
+          <fieldset formArrayName="phoneNumbers">
+            <legend>Phone numbers</legend>
+            <div class="demo-callout array">
+              <h3>📋 Dynamic FormArray</h3>
+              <p>
+                Add/remove phone numbers dynamically. Validation applies via glob
+                pattern
+                <code>'phoneNumbers.*.value'</code>. Angular 21 supports arrays
+                but requires manual per-index validation logic. ng-forms handles
+                this declaratively.
               </p>
             </div>
+            @for (
+              phone of phoneControls.controls;
+              track $index;
+              let i = $index
+            ) {
+              <div
+                class="phone-row"
+                [formGroupName]="i"
+                >
+                <label class="sr-only" [for]="'phone-label-' + i">Label</label>
+                <select [id]="'phone-label-' + i" formControlName="label">
+                  @for (label of phoneLabelOptions; track label) {
+                    <option [value]="label">
+                      {{ label | titlecase }}
+                    </option>
+                  }
+                </select>
+                <label class="sr-only" [for]="'phone-value-' + i">Number</label>
+                <input
+                  [id]="'phone-value-' + i"
+                  type="tel"
+                  formControlName="value"
+                  placeholder="+1 415 555 0134"
+                  autocomplete="tel"
+                  />
+                <button
+                  type="button"
+                  class="remove"
+                  (click)="removePhoneNumber(i)"
+                  [disabled]="phoneControls.length === 1"
+                  aria-label="Remove phone number"
+                  >
+                  Remove
+                </button>
+                @if (phoneError(i)) {
+                  <p class="error small">{{ phoneError(i) }}</p>
+                }
+                @if (phoneAsyncError(i)) {
+                  <p class="error small async">
+                    {{ phoneAsyncError(i) }}
+                  </p>
+                }
+              </div>
+            }
 
+            <button type="button" class="add" (click)="addPhoneNumber()">
+              + Add another number
+            </button>
+          </fieldset>
+
+          <fieldset>
+            <legend>Notes</legend>
             <div class="field">
-              <label for="company-size">Team size</label>
-              <select id="company-size" formControlName="size">
-                <option *ngFor="let size of companySizeOptions" [value]="size">
-                  {{ size }} teammates
-                </option>
-              </select>
-              <p *ngIf="profile.getFieldError('company.size')()" class="error">
-                {{ profile.getFieldError('company.size')() }}
-              </p>
+              <label for="notes">Collaboration goals</label>
+              <textarea
+                id="notes"
+                rows="4"
+                formControlName="notes"
+                placeholder="Share how your team plans to use SignalTree."
+              ></textarea>
+              @if (profile.getFieldError('notes')()) {
+                <p class="error">
+                  {{ profile.getFieldError('notes')() }}
+                </p>
+              }
             </div>
-          </div>
-        </fieldset>
+          </fieldset>
 
-        <fieldset formGroupName="preferences">
-          <legend>Notification preferences</legend>
-          <div class="demo-callout nested">
-            <h3>🌲 Nested Tree Structure</h3>
-            <p>
-              This fieldset is a nested group:
-              <code>profile.$.preferences.newsletter()</code>. Angular 21 signal
-              forms are flat—no built-in nesting. ng-forms mirrors your data
-              model with typed paths like <code>'preferences.newsletter'</code>.
-            </p>
-          </div>
-          <div class="field-grid preferences">
-            <label class="checkbox">
-              <input type="checkbox" formControlName="newsletter" />
-              Weekly newsletter
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" formControlName="productUpdates" />
-              Product releases
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" formControlName="betaProgram" />
-              Experimental beta program
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset formArrayName="phoneNumbers">
-          <legend>Phone numbers</legend>
-          <div class="demo-callout array">
-            <h3>📋 Dynamic FormArray</h3>
-            <p>
-              Add/remove phone numbers dynamically. Validation applies via glob
-              pattern
-              <code>'phoneNumbers.*.value'</code>. Angular 21 supports arrays
-              but requires manual per-index validation logic. ng-forms handles
-              this declaratively.
-            </p>
-          </div>
-          <div
-            class="phone-row"
-            *ngFor="
-              let phone of phoneControls.controls;
-              let i = index;
-              trackBy: trackByIndex
-            "
-            [formGroupName]="i"
-          >
-            <label class="sr-only" [for]="'phone-label-' + i">Label</label>
-            <select [id]="'phone-label-' + i" formControlName="label">
-              <option *ngFor="let label of phoneLabelOptions" [value]="label">
-                {{ label | titlecase }}
-              </option>
-            </select>
-
-            <label class="sr-only" [for]="'phone-value-' + i">Number</label>
-            <input
-              [id]="'phone-value-' + i"
-              type="tel"
-              formControlName="value"
-              placeholder="+1 415 555 0134"
-              autocomplete="tel"
-            />
-
+          <div class="actions">
+            <button type="submit" [disabled]="status() === 'saving'">
+              {{ submissionLabel }}
+            </button>
             <button
               type="button"
-              class="remove"
-              (click)="removePhoneNumber(i)"
-              [disabled]="phoneControls.length === 1"
-              aria-label="Remove phone number"
-            >
-              Remove
+              (click)="validateAll()"
+              [disabled]="status() === 'saving'"
+              >
+              Check validation
             </button>
+            <button
+              type="button"
+              class="reset"
+              (click)="reset()"
+              [disabled]="status() === 'saving'"
+              >
+              Reset
+            </button>
+          </div>
 
-            <p *ngIf="phoneError(i)" class="error small">{{ phoneError(i) }}</p>
-            <p *ngIf="phoneAsyncError(i)" class="error small async">
-              {{ phoneAsyncError(i) }}
+          <p class="status" [class.error]="status() === 'error'">
+            Status: {{ status() }}
+          </p>
+
+          <div class="validation-summary">
+            <div>
+              <h3>Sync validation</h3>
+              @if (errorEntries().length) {
+                <ul>
+                  @for (error of errorEntries(); track error) {
+                    <li>
+                      <code>{{ error[0] }}</code>
+                      <span>— {{ error[1] }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="hint">No sync validation issues detected.</p>
+              }
+            </div>
+            <div>
+              <h3>Async validation</h3>
+              @if (asyncErrorEntries().length) {
+                <ul>
+                  @for (error of asyncErrorEntries(); track error) {
+                    <li>
+                      <code>{{ error[0] }}</code>
+                      <span>— {{ error[1] }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="hint">No async validation issues detected.</p>
+              }
+            </div>
+          </div>
+
+          <div class="demo-callout bridge">
+            <h3>🔗 Reactive Forms Bridge</h3>
+            <p>
+              This demo uses <code>[formGroup]="profile.form"</code> and
+              <code>formControlName</code> directives—the same reactive forms API
+              you already know. ng-forms provides <strong>both</strong> signals
+              (<code>profile.$.name()</code>) and reactive controls
+              (<code>profile.form</code>), enabling incremental migration.
+            </p>
+            <p>
+              Angular 21's <code>FormField</code> is a new API requiring rewrite.
+              ng-forms lets you keep existing templates while adding signal
+              capabilities.
             </p>
           </div>
+        </form>
+      </section>
 
-          <button type="button" class="add" (click)="addPhoneNumber()">
-            + Add another number
-          </button>
-        </fieldset>
+      <aside class="inspector">
+        <article class="summary-card comparison">
+          <h3>Angular 21 vs ng-forms</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Angular 21</th>
+                <th>ng-forms</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Nested objects</td>
+                <td>❌ Flat only</td>
+                <td>✅ Tree structure</td>
+              </tr>
+              <tr>
+                <td>Persistence</td>
+                <td>❌ Manual</td>
+                <td>✅ Built-in</td>
+              </tr>
+              <tr>
+                <td>Wizard flows</td>
+                <td>❌ Custom</td>
+                <td>✅ First-class API</td>
+              </tr>
+              <tr>
+                <td>History/undo</td>
+                <td>❌ Not available</td>
+                <td>✅ Built-in</td>
+              </tr>
+              <tr>
+                <td>Reactive bridge</td>
+                <td>⚠️ Separate API</td>
+                <td>✅ FormGroup compatible</td>
+              </tr>
+              <tr>
+                <td>Declarative config</td>
+                <td>⚠️ Per-field</td>
+                <td>✅ Centralized + globs</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="hint">
+            <strong>Both are valuable!</strong> Use Angular 21 for simple forms.
+            Use ng-forms for complex enterprise scenarios.
+          </p>
+        </article>
 
-        <fieldset>
-          <legend>Notes</legend>
-          <div class="field">
-            <label for="notes">Collaboration goals</label>
-            <textarea
-              id="notes"
-              rows="4"
-              formControlName="notes"
-              placeholder="Share how your team plans to use SignalTree."
-            ></textarea>
-            <p *ngIf="profile.getFieldError('notes')()" class="error">
-              {{ profile.getFieldError('notes')() }}
+        @if (lastSaved(); as saved) {
+          <article class="summary-card">
+            <h3>Last Saved Payload</h3>
+            <p><strong>Name:</strong> {{ saved.name }}</p>
+            <p><strong>Email:</strong> {{ saved.email }}</p>
+            <p><strong>Role:</strong> {{ saved.role | titlecase }}</p>
+            <p>
+              <strong>Updates opt-in:</strong>
+              {{ saved.receiveUpdates ? 'Enabled' : 'Disabled' }}
             </p>
-          </div>
-        </fieldset>
+            <p>
+              <strong>Numbers:</strong>
+              {{ saved.phoneNumbers.length }} stored
+            </p>
+          </article>
+        }
 
-        <div class="actions">
-          <button type="submit" [disabled]="status() === 'saving'">
-            {{ submissionLabel }}
-          </button>
-          <button
-            type="button"
-            (click)="validateAll()"
-            [disabled]="status() === 'saving'"
-          >
-            Check validation
-          </button>
-          <button
-            type="button"
-            class="reset"
-            (click)="reset()"
-            [disabled]="status() === 'saving'"
-          >
-            Reset
-          </button>
-        </div>
-
-        <p class="status" [class.error]="status() === 'error'">
-          Status: {{ status() }}
-        </p>
-
-        <div class="validation-summary">
-          <div>
-            <h3>Sync validation</h3>
-            <ng-container *ngIf="errorEntries().length; else noSyncErrors">
-              <ul>
-                <li *ngFor="let error of errorEntries()">
-                  <code>{{ error[0] }}</code>
-                  <span>— {{ error[1] }}</span>
-                </li>
-              </ul>
-            </ng-container>
-          </div>
-          <div>
-            <h3>Async validation</h3>
-            <ng-container
-              *ngIf="asyncErrorEntries().length; else noAsyncErrors"
-            >
-              <ul>
-                <li *ngFor="let error of asyncErrorEntries()">
-                  <code>{{ error[0] }}</code>
-                  <span>— {{ error[1] }}</span>
-                </li>
-              </ul>
-            </ng-container>
-          </div>
-        </div>
-
-        <div class="demo-callout bridge">
-          <h3>🔗 Reactive Forms Bridge</h3>
+        <article class="summary-card wizard-promo">
+          <h3>🧙 Need Multi-Step Forms?</h3>
           <p>
-            This demo uses <code>[formGroup]="profile.form"</code> and
-            <code>formControlName</code> directives—the same reactive forms API
-            you already know. ng-forms provides <strong>both</strong> signals
-            (<code>profile.$.name()</code>) and reactive controls
-            (<code>profile.form</code>), enabling incremental migration.
+            This demo shows a single-page form. For wizard flows (onboarding,
+            checkout), use <code>createWizardForm()</code>:
           </p>
-          <p>
-            Angular 21's <code>FormField</code> is a new API requiring rewrite.
-            ng-forms lets you keep existing templates while adding signal
-            capabilities.
+          <pre><code>const wizard = createWizardForm([
+            {{ '{' }} fields: ['profile.name', 'profile.email'] {{ '}' }},
+            {{ '{' }} fields: ['company.name', 'company.size'] {{ '}' }},
+            {{ '{' }} fields: ['preferences.*'] {{ '}' }}
+            ], initialValues);
+
+            wizard.nextStep();  // Auto-shows next fields
+            wizard.previousStep();
+          wizard.currentStep(); // Signal</code></pre>
+          <p class="hint">
+            Angular 21 has no wizard support. You'd build step management
+            manually.
           </p>
-        </div>
-      </form>
-    </section>
-
-    <aside class="inspector">
-      <article class="summary-card comparison">
-        <h3>Angular 21 vs ng-forms</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Angular 21</th>
-              <th>ng-forms</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Nested objects</td>
-              <td>❌ Flat only</td>
-              <td>✅ Tree structure</td>
-            </tr>
-            <tr>
-              <td>Persistence</td>
-              <td>❌ Manual</td>
-              <td>✅ Built-in</td>
-            </tr>
-            <tr>
-              <td>Wizard flows</td>
-              <td>❌ Custom</td>
-              <td>✅ First-class API</td>
-            </tr>
-            <tr>
-              <td>History/undo</td>
-              <td>❌ Not available</td>
-              <td>✅ Built-in</td>
-            </tr>
-            <tr>
-              <td>Reactive bridge</td>
-              <td>⚠️ Separate API</td>
-              <td>✅ FormGroup compatible</td>
-            </tr>
-            <tr>
-              <td>Declarative config</td>
-              <td>⚠️ Per-field</td>
-              <td>✅ Centralized + globs</td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="hint">
-          <strong>Both are valuable!</strong> Use Angular 21 for simple forms.
-          Use ng-forms for complex enterprise scenarios.
-        </p>
-      </article>
-
-      <article class="summary-card" *ngIf="lastSaved() as saved">
-        <h3>Last Saved Payload</h3>
-        <p><strong>Name:</strong> {{ saved.name }}</p>
-        <p><strong>Email:</strong> {{ saved.email }}</p>
-        <p><strong>Role:</strong> {{ saved.role | titlecase }}</p>
-        <p>
-          <strong>Updates opt-in:</strong>
-          {{ saved.receiveUpdates ? 'Enabled' : 'Disabled' }}
-        </p>
-        <p>
-          <strong>Numbers:</strong>
-          {{ saved.phoneNumbers.length }} stored
-        </p>
-      </article>
-
-      <article class="summary-card wizard-promo">
-        <h3>🧙 Need Multi-Step Forms?</h3>
-        <p>
-          This demo shows a single-page form. For wizard flows (onboarding,
-          checkout), use <code>createWizardForm()</code>:
-        </p>
-        <pre><code>const wizard = createWizardForm([
-  {{ '{' }} fields: ['profile.name', 'profile.email'] {{ '}' }},
-  {{ '{' }} fields: ['company.name', 'company.size'] {{ '}' }},
-  {{ '{' }} fields: ['preferences.*'] {{ '}' }}
-], initialValues);
-
-wizard.nextStep();  // Auto-shows next fields
-wizard.previousStep();
-wizard.currentStep(); // Signal</code></pre>
-        <p class="hint">
-          Angular 21 has no wizard support. You'd build step management
-          manually.
-        </p>
-      </article>
-    </aside>
-  </div>
+        </article>
+      </aside>
+    </div>
   </st-example>
 </div>
 
-<ng-template #noSyncErrors>
-  <p class="hint">No sync validation issues detected.</p>
-</ng-template>
 
-<ng-template #noAsyncErrors>
-  <p class="hint">No async validation issues detected.</p>
-</ng-template>

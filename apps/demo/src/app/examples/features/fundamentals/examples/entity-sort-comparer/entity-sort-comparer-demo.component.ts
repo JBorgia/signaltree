@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
@@ -27,7 +27,7 @@ interface LeaderboardState {
 @Component({
   selector: 'app-entity-sort-comparer-demo',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   template: `
     <st-example heading="Auto-sorted collection — sortComparer" [headingLevel]="1">
       <p intro class="muted">

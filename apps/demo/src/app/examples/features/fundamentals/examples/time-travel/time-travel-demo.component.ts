@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, timeTravel } from '@signaltree/core';
@@ -40,7 +40,7 @@ interface TimeTravelInterface {
 @Component({
   selector: 'app-time-travel-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExampleComponent],
+  imports: [FormsModule, ExampleComponent],
   templateUrl: './time-travel-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './time-travel-demo.component.scss',

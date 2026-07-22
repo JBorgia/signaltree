@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -21,7 +21,7 @@ interface CompareOption {
 @Component({
   selector: 'app-migration-recipe',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   templateUrl: './migration-recipe.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './migration-recipe.component.scss',

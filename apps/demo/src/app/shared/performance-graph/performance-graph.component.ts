@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +11,7 @@ import { NgxEchartsDirective } from 'ngx-echarts';
 @Component({
   selector: 'app-performance-graph',
   standalone: true,
-  imports: [CommonModule, NgxEchartsDirective],
+  imports: [NgxEchartsDirective],
   template: `
     <div
       class="graph-container"

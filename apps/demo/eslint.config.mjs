@@ -27,6 +27,12 @@ export default [
           style: 'kebab-case',
         },
       ],
+      // The Angular 22 migration stamped explicit
+      // `ChangeDetectionStrategy.Eager` on every demo component that relied
+      // on the old implicit default, to preserve runtime behavior. Converting
+      // the demo app to OnPush wholesale is tracked separately; until then
+      // this rule would flag ~50 behavior-preserving stamps.
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
     },
   },
   {

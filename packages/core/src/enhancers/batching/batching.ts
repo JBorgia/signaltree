@@ -144,7 +144,12 @@ export function batching(
      * Signal values still update immediately (synchronous).
      */
     const wrapSignalSetters = (node: any, path = ''): void => {
-      if (!node || typeof node !== 'object') return;
+      // NodeAccessors and leaf signals are CALLABLE (typeof 'function');
+      // rejecting functions here would skip every accessor in the tree and
+      // leave batch()/coalesce() silently inert.
+      if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+        return;
+      }
 
       // If this node has a set method, wrap it
       if (typeof node.set === 'function' && !node.__batchingWrapped) {
@@ -201,11 +206,17 @@ export function batching(
         node.__batchingUpdateWrapped = true;
       }
 
-      // Recurse into child nodes
+      // Recurse into child nodes. NodeAccessors (and leaf signals) are
+      // CALLABLE — typeof 'function' — so the walk must descend into
+      // functions too, not just plain objects; otherwise no leaf setter is
+      // ever wrapped and batch()/coalesce() silently do nothing.
       for (const key of Object.keys(node)) {
         if (key.startsWith('_') || key === 'set' || key === 'update') continue;
         const child = node[key];
-        if (child && typeof child === 'object') {
+        if (
+          child &&
+          (typeof child === 'object' || typeof child === 'function')
+        ) {
           wrapSignalSetters(child, path ? `${path}.${key}` : key);
         }
       }

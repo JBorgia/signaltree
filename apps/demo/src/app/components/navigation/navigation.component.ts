@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -32,7 +32,7 @@ export interface ExternalLink {
 @Component({
   selector: 'app-navigation',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterModule],
   templateUrl: './navigation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './navigation.component.scss',

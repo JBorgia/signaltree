@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -25,7 +25,7 @@ interface DocQuickLink {
 @Component({
   selector: 'app-documentation',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterModule],
   templateUrl: './documentation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './documentation.component.scss',

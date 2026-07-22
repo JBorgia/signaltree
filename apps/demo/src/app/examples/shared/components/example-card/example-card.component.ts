@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
   AfterViewInit,
   Component,
@@ -22,7 +22,7 @@ import type { ExampleMeta } from '../../../core/models';
 @Component({
   selector: 'app-example-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './example-card.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './example-card.component.scss',

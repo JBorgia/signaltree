@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, signal, Signal, ChangeDetectionStrategy } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
@@ -33,7 +33,7 @@ interface Row {
 @Component({
   selector: 'app-granular-reactivity-demo',
   standalone: true,
-  imports: [CommonModule, ExampleComponent],
+  imports: [ExampleComponent],
   template: `
     <st-example heading="Granular reactivity — how many derivations re-run?" [headingLevel]="1">
       <p intro class="muted">

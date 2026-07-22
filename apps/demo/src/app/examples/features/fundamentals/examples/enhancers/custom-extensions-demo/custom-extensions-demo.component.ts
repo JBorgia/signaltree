@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, Signal, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ISignalTree, registerMarkerProcessor, signalTree } from '@signaltree/core';
@@ -306,7 +306,7 @@ interface Task {
 @Component({
   selector: 'app-custom-extensions-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, CodeTabsComponent],
+  imports: [FormsModule, CodeTabsComponent],
   templateUrl: './custom-extensions-demo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './custom-extensions-demo.component.scss',

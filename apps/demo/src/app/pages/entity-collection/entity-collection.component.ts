@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import {
@@ -35,7 +35,7 @@ const SEEDS: Item[] = [
 @Component({
   selector: 'app-entity-collection-showcase',
   standalone: true,
-  imports: [CommonModule, RouterModule, CodeTabsComponent],
+  imports: [RouterModule, CodeTabsComponent],
   templateUrl: './entity-collection.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './entity-collection.component.scss',

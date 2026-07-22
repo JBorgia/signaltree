@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
@@ -20,7 +20,7 @@ interface SavingsMetric {
 @Component({
   selector: 'app-architecture-overview',
   standalone: true,
-  imports: [CommonModule, CodeTabsComponent],
+  imports: [CodeTabsComponent],
   templateUrl: './architecture-overview.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './architecture-overview.component.scss',

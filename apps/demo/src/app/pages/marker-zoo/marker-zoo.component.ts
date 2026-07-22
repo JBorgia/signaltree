@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -73,7 +73,7 @@ const ALL_PLANTS: Plant[] = [
 @Component({
   selector: 'app-marker-zoo',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
+  imports: [FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './marker-zoo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './marker-zoo.component.scss',

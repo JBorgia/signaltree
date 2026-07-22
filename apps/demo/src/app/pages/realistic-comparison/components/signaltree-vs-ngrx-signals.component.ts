@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import {
@@ -59,7 +59,7 @@ interface DeepNestedState {
 @Component({
   selector: 'app-signaltree-vs-ngrx-signals',
   standalone: true,
-  imports: [CommonModule, PerformanceGraphComponent],
+  imports: [PerformanceGraphComponent],
   template: `
     <!-- Running overlay with spinner and progress -->
     @if(isRunning()){
