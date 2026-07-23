@@ -259,17 +259,11 @@ else
     exit 1
 fi
 
-# 9c. Verify No Hand-Rolled Tree-Walker Guards
-print_step "Checking for duplicated callable-node walker guards"
-if bash scripts/verify-no-adhoc-walkers.sh 2>&1 | tee /tmp/verify-walkers.log; then
-    print_success "No hand-rolled traversable-node guards found"
-else
-    print_error "Found a hand-rolled 'object or function' guard outside utils.ts"
-    cat /tmp/verify-walkers.log
-    print_info "Use isTraversableNode() from packages/core/src/lib/utils.ts instead"
-    print_info "— this is the exact bug class behind the v11.4/11.5 batching()/updateOptimized() regressions"
-    exit 1
-fi
+# 9c. (removed) The hand-rolled-walker-guard grep script was deleted: a
+# pipefail/exit-status bug made it structurally unable to flag violations
+# (verified 2026-07-23 — it greenlit four live ones). Its job moved to an
+# ESLint no-restricted-syntax rule (AST-based, runs in editor + lint) and the
+# walker-conformance specs. See docs/rfcs/0004-v12-optimal-iteration.md §3 V-P1.
 
 # 10. Bundle Size Analysis (Warning Only)
 print_header "10. Bundle Size Analysis"

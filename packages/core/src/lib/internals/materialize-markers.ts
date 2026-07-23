@@ -220,8 +220,7 @@ export function materializeMarkers(
   notifier?: PathNotifier,
   path: string[] = []
 ): void {
-  if (node == null) return;
-  if (typeof node !== 'object' && typeof node !== 'function') return;
+  if (!isTraversableNode(node)) return;
   if (isSignal(node)) return;
 
   // Handle NodeAccessors (functions with properties)

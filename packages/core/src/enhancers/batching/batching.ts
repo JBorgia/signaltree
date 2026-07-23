@@ -148,7 +148,10 @@ export function batching(
       // NodeAccessors and leaf signals are CALLABLE (typeof 'function');
       // rejecting functions here would skip every accessor in the tree and
       // leave batch()/coalesce() silently inert.
-      if (!isTraversableNode(node)) {
+      // The `as unknown` cast intentionally defeats the type guard's
+      // narrowing: `node` must stay `any` for the setter wrapping below —
+      // the guard is a runtime gate here, not a type refinement.
+      if (!isTraversableNode(node as unknown)) {
         return;
       }
 

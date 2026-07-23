@@ -35,6 +35,33 @@ export default [
     },
   },
   {
+    // Ban hand-rolled traversable-node guards outside the shared predicate.
+    // NodeAccessors and leaf signals are `typeof 'function'`; a walker guard
+    // that pairs a typeof-'object' check with a typeof-'function' check in one
+    // logical expression is re-deriving isTraversableNode() by hand — the bug
+    // class behind the v11.4/11.5 inert-feature regressions (batching,
+    // enterprise diff/patch, updateOptimized). AST-based, so quote style,
+    // `==` vs `===`, and line wrapping can't dodge it (the deleted bash-grep
+    // predecessor was dodged by all three and never flagged anything).
+    // Known limitation: esquery cannot bind the two typeof operands to the
+    // SAME variable, so `typeof opts === 'object' && typeof cb === 'function'`
+    // (different variables) also flags — zero in-tree instances today; if one
+    // ever appears legitimately, eslint-disable-next-line it with a comment.
+    files: ['packages/*/src/**/*.ts'],
+    ignores: ['**/*.spec.ts', 'packages/core/src/lib/utils.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'LogicalExpression:has(BinaryExpression[operator=/^[!=]==?$/]:has(UnaryExpression[operator="typeof"]) > Literal[value="object"]):has(BinaryExpression[operator=/^[!=]==?$/]:has(UnaryExpression[operator="typeof"]) > Literal[value="function"]) BinaryExpression[operator=/^[!=]==?$/]:has(UnaryExpression[operator="typeof"]) > Literal[value="object"]',
+          message:
+            "Hand-rolled 'object or function' walker guard — use isTraversableNode() from @signaltree/core (packages/core/src/lib/utils.ts) instead. See docs/rfcs/0004-v12-optimal-iteration.md §3 V-P1.",
+        },
+      ],
+    },
+  },
+  {
     files: [
       '**/*.ts',
       '**/*.tsx',

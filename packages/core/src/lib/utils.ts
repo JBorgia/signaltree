@@ -69,9 +69,15 @@ export function isAnySignal(value: unknown): boolean {
  * {@link isAnySignal}, which check for a *specific* shape. Use this as the
  * "should I keep walking?" guard before those narrower checks decide what
  * to do with the value.
+ *
+ * Typed as a guard narrowing to `object` (which in TypeScript includes
+ * callables), so callers can pass the value to `Object.keys()` /
+ * `WeakSet#has()` without re-asserting what the guard already proved.
  */
-export function isTraversableNode(value: unknown): boolean {
-  return value != null && (typeof value === 'object' || typeof value === 'function');
+export function isTraversableNode(value: unknown): value is object {
+  return (
+    value != null && (typeof value === 'object' || typeof value === 'function')
+  );
 }
 
 /**

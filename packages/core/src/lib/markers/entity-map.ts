@@ -15,7 +15,11 @@ export { isEntityMapMarker };
  * this code is tree-shaken from your bundle. Passing a `load` (plus optional
  * `staleTime`/`equal`/`swr`/`tags`/`persist`) turns the collection into a
  * single-scope freshness-managed, self-loading one; the loader machinery lives in `./entity-loader`
- * and is only pulled in when `load` is used.
+ * — a separate module for code organization, NOT a tree-shake boundary: it is
+ * statically imported here, so it ships with `entityMap` whether or not `load`
+ * is configured (~1.5 KB min+gzip of removable machinery; measured 2026-07-23,
+ * RFC 0005 §6 — the injected-helper split that would reclaim it is archived as
+ * the fallback design pending new evidence).
  */
 
 import type {

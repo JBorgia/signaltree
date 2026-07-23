@@ -5,8 +5,22 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { isObservable, type Observable, Subscription } from 'rxjs';
+import type { Observable, Subscription } from 'rxjs';
+
+/**
+ * rxjs-free Observable check: the loader accepts `Promise | Observable`, and
+ * a Promise never has `.subscribe`, so the duck test is unambiguous here.
+ * Keeps rxjs (and rxjs-interop) TYPE-ONLY dependencies of the loader — no
+ * runtime module edge for Promise-only consumers (RFC 0005 §6). The former
+ * `takeUntilDestroyed` pipe was redundant: the `destroyRef.onDestroy` hook
+ * below (registered before any subscribe) unsubscribes `currentSub` first,
+ * and every settle callback additionally guards `destroyed`/run-id.
+ */
+function isSubscribable<T>(
+  v: Promise<T> | Observable<T>
+): v is Observable<T> {
+  return typeof (v as { subscribe?: unknown }).subscribe === 'function';
+}
 
 import { isTraversableNode } from '../utils';
 import type { EntitySignal } from '../types';
@@ -380,9 +394,8 @@ export function attachLoader<
 
     if (result !== undefined && !settled) {
       const r = result;
-      if (isObservable(r)) {
-        const obs = destroyRef ? r.pipe(takeUntilDestroyed(destroyRef)) : r;
-        currentSub = obs.subscribe({
+      if (isSubscribable(r)) {
+        currentSub = r.subscribe({
           next: (rows) => settleSuccess(rows),
           error: (err) => settleError(err),
           complete: () => {

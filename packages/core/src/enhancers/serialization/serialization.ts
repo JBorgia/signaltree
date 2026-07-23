@@ -610,13 +610,17 @@ export function serialization(
             continue;
           }
 
+          // Recurse only into a traversable target that isn't a writable
+          // leaf: a callable carrying `set` is a leaf signal (handled above
+          // via targetSignal), never a branch to descend into.
+          const isWritableCallable = (v: object): boolean =>
+            typeof v === 'function' && 'set' in v;
           if (
             sourceValue &&
             typeof sourceValue === 'object' &&
             !Array.isArray(sourceValue) &&
-            direct &&
-            (typeof direct === 'object' ||
-              (typeof direct === 'function' && !('set' in direct))) &&
+            isTraversableNode(direct) &&
+            !isWritableCallable(direct) &&
             !isSignal(direct)
           ) {
             updateSignals(

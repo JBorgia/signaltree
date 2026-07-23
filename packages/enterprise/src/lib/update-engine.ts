@@ -1,5 +1,5 @@
 import { isSignal } from '@angular/core';
-import { isTraversableNode } from '@signaltree/core';
+import { isBuiltInObject, isTraversableNode } from '@signaltree/core';
 
 import { ChangeType, DiffEngine } from './diff-engine';
 import { PathIndex } from './path-index';
@@ -413,11 +413,10 @@ export class OptimizedUpdateEngine {
       leaf.set(value);
       return true;
     }
-    if (
-      (typeof node === 'object' || typeof node === 'function') &&
-      value &&
-      typeof value === 'object'
-    ) {
+    // `node` is a tree position (may be a callable NodeAccessor) — use the
+    // shared traversable guard. `value` is plain patch data — object-only is
+    // correct there and deliberately NOT the traversable-node check.
+    if (isTraversableNode(node) && value && typeof value === 'object') {
       let changed = false;
       for (const [key, child] of Object.entries(
         value as Record<string, unknown>
@@ -444,6 +443,22 @@ export class OptimizedUpdateEngine {
     // Handle null / primitives after previous checks
     if (a === null || b === null) return false;
     if (typeof a !== 'object') return false;
+
+    // Built-in objects (Date/Map/Set/RegExp/Error/...) are ATOMIC leaves in
+    // SignalTree's model. The JSON.stringify fallback below serializes ANY
+    // Map/Set to '{}', which made two different Maps compare "equal" -- so
+    // applyPatch dropped the replacement write while diff() had already
+    // reported changed:true (adversarial review, 2026-07-23). Dates/RegExps
+    // compare by value; other built-ins by reference (a === b was checked
+    // above): a false "not equal" costs one redundant signal write, a false
+    // "equal" silently drops the user's data.
+    if (isBuiltInObject(a) || isBuiltInObject(b)) {
+      if (a instanceof Date && b instanceof Date)
+        return a.getTime() === b.getTime();
+      if (a instanceof RegExp && b instanceof RegExp)
+        return a.source === b.source && a.flags === b.flags;
+      return false;
+    }
 
     // Shallow object/array fast path: compare keys/length then selected entries
     // Avoid expensive JSON stringify for common small structures.
