@@ -529,3 +529,24 @@ future decision, NOT renamed (each needs its own deprecation plan):
 4. Core lower-priority: `enable*` vs legacy `with*` vs plain-noun enhancers
    (three shapes, one concept); `derivedFrom` vs `externalDerived` (both
    index-public).
+
+## 7. M3 acceptance-test result (2026-07-23 — first run in project history)
+
+Protocol: fresh agent grounded ONLY in llms.txt/llms-full.txt; five
+representative tasks; first-attempt code compiled and unit-tested exactly as
+written; strict scoring. Result: **3/5 PASS, 1 PARTIAL (one mechanical fix),
+1 FAIL — 60% first-attempt success** vs the audit's ~0% baseline and >80%
+target.
+
+What passed with zero fixes: scoped cache-aware entityMap store (incl.
+per-scope freshness semantics), loadOrThrow guard with error handling,
+invalidateTag push-invalidation — the surfaces that got the full doc
+treatment. What failed/partialed: the two surfaces shipped LAST —
+asReadonly (docs were name-only, one version-table row) and the
+form<T> Record-constraint gotcha. Lesson for §5: doc debt concentrates in
+whatever shipped most recently; M3 catches it before release, which is
+exactly its job. One genuine library type gap found: ReadonlyView's marker
+rows dropped derived state merged into marker nodes (fix + typing-spec case
+in the M3 follow-up pass). Over-teaching check: zero claims failed
+verification. Ranked fixes applied in the follow-up commit; M3 re-run
+recommended after (target: 5/5 on this task set).

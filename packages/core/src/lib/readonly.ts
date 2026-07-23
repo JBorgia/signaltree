@@ -174,6 +174,23 @@ export interface ReadonlyNodeAccessor<T> {
   (): T;
 }
 
+/**
+ * Extra members deep-merged INTO a marker node by `.derived()` (e.g.
+ * `.derived($ => ({ plants: { total: computed(…) } }))` where `plants` is a
+ * loading `entityMap`). The marker dispatch rows re-sign the node to a
+ * Pick-allowlist view, which on its own would silently swallow those
+ * intersection extras (the readonly×merged-derived gap) — so every marker row
+ * intersects its readonly marker view with the {@link ReadonlyView}-mapped
+ * remainder beyond the marker interface: derived `Signal`s survive,
+ * `WritableSignal` extras demote to `Signal`, unknown functions degrade to
+ * `{}` (fail-safe — a function we can't classify may mutate, so it is not
+ * offered). Resolves to `unknown` (identity under `&`) when there are no
+ * extras, so marker-only nodes keep types exactly equal to their views.
+ */
+type ReadonlyExtras<N, Base> = keyof Omit<N, keyof Base> extends never
+  ? unknown
+  : ReadonlyView<Omit<N, keyof Base>>;
+
 // =============================================================================
 // PER-MARKER READ-ONLY VIEWS
 // =============================================================================
@@ -268,6 +285,9 @@ export type ReadonlyAsyncStreamSignal<C, S> = {
  * Per-member dispatch for {@link ReadonlyView}.
  *
  * ORDER IS LOAD-BEARING — these surfaces structurally overlap:
+ * - Every marker row intersects {@link ReadonlyExtras} so derived state
+ *   deep-merged INTO the marker node (`.derived($ => ({ plants: { total } }))`)
+ *   survives the Pick-allowlist re-signing instead of being swallowed.
  * - Marker surfaces come first: every marker signal is callable and/or
  *   structurally satisfies `NodeAccessor` (a single `(): T` call signature
  *   satisfies all three `NodeAccessor` overloads under TS's fewer-params
@@ -298,21 +318,24 @@ type ReadonlyViewOf<T> = T extends EntitySignal<
   infer K extends string | number
 > &
   EntityLoaderSurface<infer P>
-  ? ReadonlyLoadingEntitySignal<E, K, P>
+  ? ReadonlyLoadingEntitySignal<E, K, P> &
+      ReadonlyExtras<T, EntitySignal<E, K> & EntityLoaderSurface<P>>
   : T extends EntitySignal<infer E, infer K extends string | number>
-  ? ReadonlyEntitySignal<E, K>
+  ? ReadonlyEntitySignal<E, K> & ReadonlyExtras<T, EntitySignal<E, K>>
   : T extends StatusSignal<infer Err>
-  ? ReadonlyStatusSignal<Err>
+  ? ReadonlyStatusSignal<Err> & ReadonlyExtras<T, StatusSignal<Err>>
   : T extends FormSignal<infer F>
-  ? ReadonlyFormSignal<F>
+  ? ReadonlyFormSignal<F> & ReadonlyExtras<T, FormSignal<F>>
   : T extends StoredSignal<infer V>
-  ? ReadonlyStoredSignal<V>
+  ? ReadonlyStoredSignal<V> & ReadonlyExtras<T, StoredSignal<V>>
   : T extends AsyncQuerySignal<infer In, infer Out>
-  ? ReadonlyAsyncQuerySignal<In, Out>
+  ? ReadonlyAsyncQuerySignal<In, Out> &
+      ReadonlyExtras<T, AsyncQuerySignal<In, Out>>
   : T extends AsyncStreamSignal<infer C, infer S>
-  ? ReadonlyAsyncStreamSignal<C, S>
+  ? ReadonlyAsyncStreamSignal<C, S> &
+      ReadonlyExtras<T, AsyncStreamSignal<C, S>>
   : T extends AsyncSourceSignal<infer V>
-  ? ReadonlyAsyncSourceSignal<V>
+  ? ReadonlyAsyncSourceSignal<V> & ReadonlyExtras<T, AsyncSourceSignal<V>>
   : T extends CallableWritableSignal<infer V>
   ? Signal<V>
   : T extends Signal<infer V>

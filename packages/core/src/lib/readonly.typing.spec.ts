@@ -76,6 +76,8 @@ const tree = signalTree({
   branch: { leaf: 'x', deep: { n: 1 } },
   users: entityMap<User, number>(),
   cached: entityMap<User, number>({ load: () => Promise.resolve([] as User[]) }),
+  // M3 fixture shape: loading entityMap that a later .derived() merges INTO.
+  plants: entityMap<User, number>({ load: () => Promise.resolve([] as User[]) }),
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
   profile: form<Profile>({ initial: { name: '', email: '' } }),
@@ -89,6 +91,9 @@ const tree = signalTree({
   doubled: computed(() => $.count() * 2),
   draft: linked(() => $.count()),
   group: { total: computed(() => $.count() + 1) },
+  // Derived deep-merged INTO a marker node (the readonly×merged-derived gap):
+  // the marker dispatch row must preserve this beyond its Pick allowlist.
+  plants: { total: computed(() => $.plants.count()) },
 }));
 
 const ro = asReadonly(tree);
@@ -98,6 +103,7 @@ type RO$ = RO['$'];
 // Runtime-reachable member types used in assertions below.
 type ROUsers = RO$['users'];
 type ROCached = RO$['cached'];
+type ROPlants = RO$['plants'];
 type ROStatus = RO$['load'];
 type ROForm = RO$['profile'];
 type ROStored = RO$['theme'];
@@ -166,6 +172,18 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROCached, 'loadOrThrow'>>,
   Expect<NotOffered<ROCached, 'refresh'>>,
   Expect<NotOffered<ROCached, 'invalidate'>>,
+
+  // derived merged INTO a marker node survives the readonly view
+  // (readonly×merged-derived gap, M3): the extra key is kept as a Signal…
+  Expect<Equal<ROPlants['total'], Signal<number>>>,
+  // …the marker's own readers remain readable…
+  Expect<Equal<ROPlants['all'], Signal<User[]>>>,
+  Expect<Equal<ROPlants['loading'], Signal<boolean>>>,
+  // …and the mutators/triggers are still not offered.
+  Expect<NotOffered<ROPlants, 'upsertOne'>>,
+  Expect<NotOffered<ROPlants, 'setAll'>>,
+  Expect<NotOffered<ROPlants, 'load'>>,
+  Expect<NotOffered<ROPlants, 'refresh'>>,
 
   // ---------------------------------------------------------------------------
   // (e) status / form / stored / async readers remain readable

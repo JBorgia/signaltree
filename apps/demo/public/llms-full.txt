@@ -140,6 +140,43 @@ export class Counter {
 
 The factory runs in an injection context — it may `inject()` other services and chain `.with(enhancer())` / `.derived(...)`. `defineStore` tree-shakes out when unused (zero bundle cost if you don't import it). Use it for the common case; the `APP_TREE` `InjectionToken` + Ops-service pattern (later in this doc) remains the choice for large app-wide facades that split methods across multiple services.
 
+### Read-only views — `asReadonly()` / `ReadonlyStore` (v11.6+)
+
+`asReadonly(tree)` narrows a tree to a read-only surface. It is a **standalone import from `@signaltree/core`** and is **type-only, zero runtime cost** — it returns the exact same runtime object (an identity function), typed so that no write path is *offered*. It does not defend against a deliberate `as any` bypass; it protects the common case where a developer or AI agent reaches for a `.set()`/mutator that simply isn't on the injected type. Pair it with an `@Injectable` Ops service that keeps the writable tree for the write path.
+
+```typescript
+import { signalTree, entityMap, asReadonly } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const tree = signalTree({
+  count: 0,
+  users: entityMap<User, number>(),
+}).derived(($) => ({ doubled: computed(() => $.count() * 2) }));
+
+const reader = asReadonly(tree);   // ReadonlyStore — SAME object, narrower type
+reader.$.count();                  // ✅ all reads work
+reader.$.doubled();                // ✅ derived computeds survive
+reader.$.users.all();              // ✅ entity queries survive
+reader();                          // ✅ zero-arg snapshot read
+// reader.$.count.set(1);          // ❌ compile error — not offered
+// reader.$.users.upsertOne(u);    // ❌ compile error — not offered
+```
+
+**What's stripped (not offered on the type):** marker mutators (`entityMap` `addOne`/`upsertOne`/`setAll`/`removeWhere`/…, `status` setters, `form` `set`/`patch`/`reset`/`submit`/`validate`/`touch`, `stored` `set`/`clear`/`reload`), cache-aware loader triggers (`load`/`loadOrThrow`/`refresh`/`invalidate`), leaf `.set()`/`.update()`, branch write call signatures, and the tree-level write-adjacent API (`with()`, `bind()`, `updateAndReport()`, `registerCleanup()`). `WritableSignal` readers (`status.state`, `asyncQuery.input`, `linked()` values) demote to plain `Signal`s, and `byId()` is re-signed to return a read-only entity node.
+
+**What survives:** every read — leaf/branch/snapshot reads, marker reader signals (`loading()`, `loaded()`, `error()`, `all()`, `data()`, `errors`, `valid`, …), **all derived computeds** — including derived state deep-merged INTO a marker node (e.g. a computed `total` merged alongside a loading `entityMap` stays readable on the readonly view) — and lifecycle (`destroy()`, `destroyed`).
+
+**DI sugar:** `defineStore(factory, { expose: 'readonly' })` — `inject(MyStore)` then resolves to the `ReadonlyStore` view (same tree object at runtime). Only accepted when the factory returns a real `signalTree(...)`; a plain-object factory with `expose: 'readonly'` is a compile error, not a silent no-op.
+
+```typescript
+export const CatalogStore = defineStore(
+  () => signalTree({ plants: entityMap<Plant, string>({ load: () => api.list$() }) }),
+  { expose: 'readonly', providedIn: 'root' }
+);
+// inject(CatalogStore).$.plants.all()      ✅ read
+// inject(CatalogStore).$.plants.setAll([]) ❌ compile error — not offered
+```
+
 ---
 
 ## Markers
@@ -286,6 +323,8 @@ tree.$.customers.refresh();             // force reload of the last-loaded scope
 tree.$.customers.params();              // Signal<{ regionUrl: string } | undefined> — the typed loaded scope
 ```
 
+The scoped form of `loadOrThrow(params)` mirrors `load(params)` exactly (same scope/freshness/single-flight guard), differing only in rejecting with the loader's error instead of just setting `.error()`.
+
 Freshness (`staleTime`) is evaluated **per-scope**, not globally — switching scope marks the collection stale and refetches even if the previous scope was still fresh, compared via `equal` (default: structural value comparison, so `{ regionUrl }` object literals compare by value). Concurrency: same-scope-concurrent calls single-flight (one request); a scope that is **not equal** to the in-flight one supersedes it (last-request-wins) — the stale result never writes into state, though its promise still resolves. `clearOnParamsChange` (default `false`) controls whether the previous scope's rows stay visible during the switch (default keeps them until the new load settles). `persist` write-through uses a per-scope storage key. Scoped collections are implicitly lazy (no scope to auto-load) — call `load(params)` explicitly. This is a **single-scope cache**; a multi-scope LRU is explicitly deferred (RFC 0003 §5). The parameterless (global) form above is unaffected — `P` defaults to `void`, 100% backward compatible.
 
 **NG0600 fix (v11.4).** A non-lazy, cache-aware `entityMap`'s initial auto-load — and any offline-first `persist` seed — used to run synchronously during marker materialization, which is frequently a template read *during* Angular's render pass; that could throw `NG0600: Writing to signals is not allowed while Angular renders`. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection read first inside a template is render-safe. Observable consequence: auto-load is now asynchronous — data arrives on the next microtask rather than synchronously at construction. The same fix (and the same observable timing change) was applied to `asyncSource`.
@@ -355,6 +394,37 @@ Supports versioning and migration functions via the third argument. Use for indi
 
 Tree-integrated form marker, **exported from `@signaltree/core`** (not from `@signaltree/ng-forms`). Materializes into a form signal exposing field state, validation status, and submit/reset helpers. Requires `{ initial: T, validators?, asyncValidators?, wizard? }`. `@signaltree/ng-forms` is a separate **bridge package** — `signalForm()` binds a marker to Angular Signal Forms (Angular 22+, see the next section), and `createFormTree()`/`formBridge()` bind tree state to Reactive Forms `FormGroup` — useful but not required.
 
+**Typing gotcha:** `form<T>` (and `signalForm`) constrain `T extends Record<string, unknown>` — declare the model as a `type` alias (`type Profile = { name: string; email: string }`), NOT an `interface` (interfaces lack the implicit index signature and fail the constraint).
+
+**Materialized value surface** (the full `FormSignal<T>` API):
+
+```typescript
+const f = store.$.profileForm; // a form<Profile>({ initial: … }) marker at any path
+// Values
+f();                       // T — current values (callable read)
+f.data();                  // T — v10.4 alias of the call form (agents reach for .data())
+f.$.name();                // deep per-field signal access; f.$.name.set('Ada') on the writable surface
+f.set({ name: 'Ada' });    // set values (Partial<T>)
+f.patch({ email: 'x@y' }); // patch specific fields (Partial<T>)
+f.reset();                 // back to initial values
+f.clear();                 // clear to empty values
+// Validation state (callable Signals)
+f.valid();                 // boolean — computed from current values (sync validators re-run reactively)
+f.dirty();                 // boolean
+f.submitting();            // boolean
+f.touched();               // Record<keyof T, boolean>
+f.errors();                // Partial<Record<keyof T, string | null>>
+f.errorList();             // string[]
+// Validation triggers
+await f.validate();        // Promise<boolean> — all fields (runs async validators too)
+await f.validateField('name'); // Promise<boolean> — one field
+f.touch('name'); f.touchAll();
+// Submit
+await f.submit(async (values) => api.save(values)); // sets submitting, validates, calls handler
+// Wizard (only when wizard config provided): f.wizard?.currentStep() / next() / prev() / goTo() / …
+// Persistence (when persist key configured): f.persistNow() / f.reload() / f.clearStorage()
+```
+
 ### Angular Signal Forms bridge — `signalForm()` (`@signaltree/ng-forms/signals`, Angular 22+)
 
 **This is the Signal Forms story** (v11.6+; on 11.5.x the same capability shipped under the now-deprecated names `markerSignalForm`/`signalFormBridge`). `signalForm()` is one name with two overloads, one per validation source:
@@ -391,7 +461,7 @@ class ProfileComponent {
 }
 ```
 
-Options (`SignalFormOptions`): `injector` (required only outside an injection context) and `nativeErrors`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects); the default flips in the next major.
+Options (`SignalFormOptions`): `injector` (required only outside an injection context) and `nativeErrors`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects); the default flips in the next major.
 
 **Single-authority async rule:** async validation is **NOT unified** between the two systems. The marker's `asyncValidators`/`validateField()`/`submit()` path and Signal Forms' `validateAsync`/`validateHttp` are independent — pick ONE as the authority for a given bridged form (using both on one field can leave the marker's `valid()` and the FieldTree's `valid()` disagreeing during an async validation window). A one-time dev warning fires when a bridged marker has `asyncValidators` configured.
 
@@ -563,6 +633,8 @@ export type AppTree = ReturnType<typeof createAppTree>;   // use THIS for inject
 **Why the `as` casts in the state literal:** `null as number | null` and `'light' as 'light' | 'dark'` widen the inferred leaf type so `.set(42)` / `.set('dark')` type-check. Without the cast, TypeScript infers `null` and `'light'` (the literal), and any other value is a type error. This is the most common SignalTree type mistake agents make.
 
 **Why two type aliases:** `AppTreeBase` (bare `signalTree(state)`) is structurally *narrower* than `AppTree` (post-`.derived().with()`). `inject(APP_TREE)` must be typed `AppTree` — using `AppTreeBase` there drops the enhancer methods and fails with `TS2769`/`TS2339` when you call `.undo()` or `.batch()`. Use `AppTreeBase` only as the `derivedFrom<>()` parameter.
+
+**Form models are `type` aliases, not `interface`s:** `form<T>`/`signalForm` require `T extends Record<string, unknown>`; a `type Profile = {...}` satisfies it, an `interface Profile {...}` does not (no implicit index signature).
 
 ---
 
