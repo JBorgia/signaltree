@@ -49,7 +49,7 @@ export const FORM_MARKER = Symbol('FORM_MARKER');
  * cross-field validators (e.g. `validators.when`) can inspect sibling fields.
  *
  * The optional `validatorKind` property is a semantic identifier ('required',
- * 'email', …) that bridges — like `markerSignalForm()` — can use as the
+ * 'email', …) that bridges — like `signalForm()` — can use as the
  * Signal Forms error `kind` instead of a generic bridge-source literal. Every
  * built-in `validators.*` factory tags its returned closure with this, and
  * `validators.when` forwards the wrapped validator's kind; custom validators
@@ -683,7 +683,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
   });
 
   // @internal — the raw values signal, used by ng-forms' Signal Forms bridge
-  // (markerSignalForm) as the FieldTree model so Angular's form() and the
+  // (signalForm) as the FieldTree model so Angular's form() and the
   // marker share one source of truth. `errors`/`valid` are computed over
   // this signal, so they stay live for writes from either side.
   Object.defineProperty(formSignalFn, '__model', {
@@ -839,7 +839,7 @@ function defaultEquality(a: unknown, b: unknown): boolean {
  * is never mutated, so tagging a shared validator instance for one form
  * cannot leak the kind into other forms using the same instance.
  *
- * Bridges (e.g. ng-forms' `markerSignalForm`) surface the kind as the Signal
+ * Bridges (e.g. ng-forms' `signalForm`) surface the kind as the Signal
  * Forms error `kind` instead of the generic `'signalTree'` fallback.
  *
  * Note: `withKind` carries only the kind, NOT `validatorParams` — re-tagging

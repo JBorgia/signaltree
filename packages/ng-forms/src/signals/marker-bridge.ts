@@ -56,8 +56,8 @@ interface FormMarkerInternals<T extends Record<string, unknown>> {
   };
 }
 
-/** Options for {@link markerSignalForm}. */
-export interface MarkerSignalFormOptions {
+/** Options for the marker form of {@link signalForm}. */
+export interface SignalFormOptions {
   /**
    * Injector to create the form and the marker-sync effect in. Optional when
    * called from an injection context (component field initializers,
@@ -79,6 +79,13 @@ export interface MarkerSignalFormOptions {
    */
   nativeErrors?: boolean;
 }
+
+/**
+ * @deprecated Renamed to {@link SignalFormOptions} in 11.6.0 (the
+ * `signalForm()` naming unification). This alias will be removed in the next
+ * major.
+ */
+export type MarkerSignalFormOptions = SignalFormOptions;
 
 /**
  * Map a built-in validator failure to Angular's branded error factory.
@@ -126,8 +133,8 @@ function brandedError(
 let warnedAsyncAuthority = false;
 
 /**
- * Create an Angular Signal Forms `FieldTree` from a SignalTree `form()`
- * marker.
+ * Implementation of the marker form of `signalForm()` (see
+ * `./signal-form.ts` for the public entry and full JSDoc).
  *
  * - The FieldTree's model IS the marker's values signal — edits through
  *   either API are immediately visible to the other.
@@ -139,7 +146,7 @@ let warnedAsyncAuthority = false;
  *   `validatorKind` fall back to the generic `'signalTree'`. With
  *   `{ nativeErrors: true }`, built-in validator failures are emitted as
  *   Angular's branded error classes instead (see
- *   {@link MarkerSignalFormOptions.nativeErrors}).
+ *   {@link SignalFormOptions.nativeErrors}).
  * - The marker's `errors()`/`valid()` signals are computed over the shared
  *   model, so FieldTree-side writes are reflected immediately.
  * - **Async validators are NOT unified between the two systems.** The
@@ -151,48 +158,17 @@ let warnedAsyncAuthority = false;
  *   `fieldTree.field().valid()` disagreeing during an async validation
  *   window, since each only reflects its own validator set.
  *
- * @example
- * ```ts
- * import { Component } from '@angular/core';
- * import { FormField } from '@angular/forms/signals';
- * import { signalTree, form, validators } from '@signaltree/core';
- * import { markerSignalForm } from '@signaltree/ng-forms/signals';
- *
- * @Component({
- *   imports: [FormField],
- *   template: `
- *     <input [formField]="profile.name" />
- *     @if (profile.name().errors().length) { <span>…</span> }
- *   `,
- * })
- * class ProfileComponent {
- *   readonly tree = signalTree({
- *     onboarding: {
- *       profile: form<{ name: string; email: string }>({
- *         initial: { name: '', email: '' },
- *         validators: {
- *           name: validators.required('Required'),
- *           email: [validators.required('Required'), validators.email()],
- *         },
- *       }),
- *     },
- *   });
- *
- *   readonly profile = markerSignalForm(this.tree.$.onboarding.profile);
- * }
- * ```
- *
- * @public
+ * @internal
  */
-export function markerSignalForm<T extends Record<string, unknown>>(
+export function markerSignalFormImpl<T extends Record<string, unknown>>(
   formSignal: FormSignal<T>,
-  options: MarkerSignalFormOptions = {}
+  options: SignalFormOptions = {}
 ): FieldTree<T> {
   const internals = formSignal as unknown as FormMarkerInternals<T>;
   const model = internals.__model;
   if (!model) {
     throw new Error(
-      '[SignalTree] markerSignalForm() needs a form() marker from ' +
+      '[SignalTree] signalForm() needs a form() marker from ' +
         '@signaltree/core@>=11.5 (missing internal model signal).'
     );
   }
@@ -211,7 +187,7 @@ export function markerSignalForm<T extends Record<string, unknown>>(
   ) {
     warnedAsyncAuthority = true;
     console.warn(
-      '[SignalTree] markerSignalForm(): this form() marker has ' +
+      '[SignalTree] signalForm(): this form() marker has ' +
         'asyncValidators configured. Async validation is not unified ' +
         'between the marker and Signal Forms — pick one authority: the ' +
         "marker's validateField()/submit() path OR Signal Forms " +
@@ -257,4 +233,37 @@ export function markerSignalForm<T extends Record<string, unknown>>(
   // No sync-back needed: the marker's errors()/valid() are computed over the
   // same model signal, so FieldTree-side edits are reflected immediately.
   return fieldTree;
+}
+
+/** One-time guard for the markerSignalForm deprecation warning. */
+let warnedMarkerAliasDeprecated = false;
+
+/**
+ * Create an Angular Signal Forms `FieldTree` from a SignalTree `form()`
+ * marker.
+ *
+ * @deprecated Renamed to `signalForm()` in 11.6.0 — same signature, same
+ * behavior: `signalForm(tree.$.path.to.marker, options?)`. This alias will
+ * be removed in the next major. Import `signalForm` from
+ * `@signaltree/ng-forms/signals`.
+ *
+ * @public
+ */
+export function markerSignalForm<T extends Record<string, unknown>>(
+  formSignal: FormSignal<T>,
+  options: SignalFormOptions = {}
+): FieldTree<T> {
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    !warnedMarkerAliasDeprecated
+  ) {
+    warnedMarkerAliasDeprecated = true;
+    console.warn(
+      '[SignalTree] markerSignalForm() is deprecated — renamed to ' +
+        'signalForm() in 11.6.0 (same signature, same behavior). Import ' +
+        "signalForm from '@signaltree/ng-forms/signals'. This alias will " +
+        'be removed in the next major.'
+    );
+  }
+  return markerSignalFormImpl(formSignal, options);
 }

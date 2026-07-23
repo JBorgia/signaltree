@@ -782,7 +782,7 @@ function createAbstractControl(
  * Prefers Angular 20+ Signal Forms connect() API when available.
  *
  * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
- * now that Angular 22 ships stable Signal Forms. Prefer `markerSignalForm()`
+ * now that Angular 22 ships stable Signal Forms. Prefer `signalForm()`
  * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
  */
 function connectControlAndSignal(
@@ -817,7 +817,7 @@ function connectControlAndSignal(
 
   // Fallback: Manual bidirectional bridge for Angular 20.0-20.2 (no connect() API yet)
   // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
-  // markerSignalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
+  // signalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
 
   // Emit deprecation warning in dev mode (once per session)
   if (isDevEnvironment() && !hasShownLegacyWarning) {
@@ -912,7 +912,7 @@ function connectControlAndSignal(
  * Prefers Angular 20+ Signal Forms connect() API when available.
  *
  * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
- * now that Angular 22 ships stable Signal Forms. Prefer `markerSignalForm()`
+ * now that Angular 22 ships stable Signal Forms. Prefer `signalForm()`
  * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
  */
 function connectFormArrayAndSignal(
@@ -953,7 +953,7 @@ function connectFormArrayAndSignal(
 
   // Fallback: Manual bidirectional bridge for pre-20.3 Angular (no connect() API)
   // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
-  // markerSignalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
+  // signalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
   let updatingFromControl = false;
   let updatingFromSignal = false;
 
@@ -1013,7 +1013,7 @@ function connectFormArrayAndSignal(
  * Used by the manual bridge fallback on Angular 20.0-20.2 (pre-`connect()`).
  *
  * @deprecated Legacy path now that Angular 22 ships stable Signal Forms — manual
- * bridge support will be dropped in favor of `markerSignalForm()` from
+ * bridge support will be dropped in favor of `signalForm()` from
  * `@signaltree/ng-forms/signals`.
  */
 function syncFormArrayFromValue(

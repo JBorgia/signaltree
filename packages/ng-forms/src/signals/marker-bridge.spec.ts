@@ -8,8 +8,12 @@ import {
   RequiredValidationError,
 } from '@angular/forms/signals';
 import { form, signalTree, validators } from '@signaltree/core';
+import { schemas } from '@signaltree/schema';
+import { z } from 'zod';
 
+import { signalFormBridge } from './bridge';
 import { markerSignalForm } from './marker-bridge';
+import { signalForm } from './signal-form';
 
 interface Profile extends Record<string, unknown> {
   name: string;
@@ -33,11 +37,11 @@ function buildTree() {
   });
 }
 
-describe('markerSignalForm', () => {
+describe('signalForm (marker form)', () => {
   function create() {
     const tree = buildTree();
     const injector = TestBed.inject(Injector);
-    const fieldTree = markerSignalForm(tree.$.onboarding.profile, {
+    const fieldTree = signalForm(tree.$.onboarding.profile, {
       injector,
     });
     return { tree, fieldTree };
@@ -108,7 +112,7 @@ describe('markerSignalForm', () => {
           },
         }),
       });
-      const fieldTree = markerSignalForm(tree.$.checkout, {
+      const fieldTree = signalForm(tree.$.checkout, {
         injector: TestBed.inject(Injector),
       });
 
@@ -135,7 +139,7 @@ describe('markerSignalForm', () => {
           },
         }),
       });
-      const fieldTree = markerSignalForm(tree.$.ship, {
+      const fieldTree = signalForm(tree.$.ship, {
         injector: TestBed.inject(Injector),
       });
 
@@ -166,7 +170,7 @@ describe('markerSignalForm', () => {
           },
         }),
       });
-      return markerSignalForm(tree.$.signup, {
+      return signalForm(tree.$.signup, {
         injector: TestBed.inject(Injector),
         ...(nativeErrors ? { nativeErrors } : {}),
       });
@@ -207,7 +211,7 @@ describe('markerSignalForm', () => {
           },
         }),
       });
-      const fieldTree = markerSignalForm(tree.$.checkout, {
+      const fieldTree = signalForm(tree.$.checkout, {
         injector: TestBed.inject(Injector),
         nativeErrors: true,
       });
@@ -258,7 +262,7 @@ describe('markerSignalForm', () => {
             }),
           });
 
-        markerSignalForm(makeTree().$.profile, {
+        signalForm(makeTree().$.profile, {
           injector: TestBed.inject(Injector),
         });
         expect(warn).toHaveBeenCalledTimes(1);
@@ -266,7 +270,7 @@ describe('markerSignalForm', () => {
         expect(warn.mock.calls[0][0]).toMatch(/validateAsync/);
 
         // Second bridge with async validators: one-time warning, no repeat
-        markerSignalForm(makeTree().$.profile, {
+        signalForm(makeTree().$.profile, {
           injector: TestBed.inject(Injector),
         });
         expect(warn).toHaveBeenCalledTimes(1);
@@ -308,7 +312,7 @@ describe('markerSignalForm', () => {
         },
       }),
     });
-    const fieldTree = markerSignalForm(tree.$.ship, {
+    const fieldTree = signalForm(tree.$.ship, {
       injector: TestBed.inject(Injector),
     });
 
@@ -325,7 +329,7 @@ describe('markerSignalForm', () => {
 
   it('throws a helpful error for non-marker inputs', () => {
     expect(() =>
-      markerSignalForm({} as never, { injector: TestBed.inject(Injector) })
+      signalForm({} as never, { injector: TestBed.inject(Injector) })
     ).toThrow(/form\(\) marker/);
   });
 
@@ -344,5 +348,132 @@ describe('markerSignalForm', () => {
 
     tree.$.onboarding.profile.patch({ name: 'Zed' });
     expect(plain.name().value()).toBe('Zed');
+  });
+
+  describe('overload resolution', () => {
+    it('marker call shape — signalForm(marker, opts) — produces a working FieldTree', () => {
+      const tree = buildTree();
+      const fieldTree = signalForm(tree.$.onboarding.profile, {
+        injector: TestBed.inject(Injector),
+      });
+
+      // Marker path taken: marker validators run as Signal Forms validators
+      expect(fieldTree.name().valid()).toBe(false);
+      expect(fieldTree.name().errors()[0].kind).toBe('required');
+
+      // Shared model both directions
+      fieldTree.name().value.set('Ada');
+      expect(tree.$.onboarding.profile().name).toBe('Ada');
+      tree.$.onboarding.profile.patch({ email: 'ada@acme.test' });
+      expect(fieldTree.email().value()).toBe('ada@acme.test');
+    });
+
+    it('schema call shape — signalForm(tree, rootPath, subtree) — produces a working FieldTree', async () => {
+      interface Account {
+        username: string;
+        age: number;
+      }
+      const tree = signalTree({
+        account: { username: '', age: 0 } as Account,
+      }).with(
+        schemas({
+          schemas: {
+            'account.username': z.string().min(3, 'Too short'),
+          },
+        })
+      );
+
+      const fieldTree = TestBed.runInInjectionContext(() =>
+        signalForm<Account>(tree, 'account', tree.$.account)
+      );
+
+      // Schema path taken: FieldTree is bound to the SignalTree subtree
+      fieldTree.username().value.set('ada');
+      expect(tree.$.account.username()).toBe('ada');
+      tree.$.account.username.set('grace');
+      await stable();
+      expect(fieldTree.username().value()).toBe('grace');
+    });
+  });
+
+  describe('deprecated aliases (removal in the next major)', () => {
+    it('markerSignalForm still works and fires its deprecation warning exactly once', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+        /* silence */
+      });
+      try {
+        const tree = buildTree();
+        const fieldTree = markerSignalForm(tree.$.onboarding.profile, {
+          injector: TestBed.inject(Injector),
+        });
+
+        // Alias delegates to the same implementation
+        tree.$.onboarding.profile.patch({ name: 'Alias' });
+        expect(fieldTree.name().value()).toBe('Alias');
+
+        const deprecations = warn.mock.calls.filter(([msg]) =>
+          /markerSignalForm\(\) is deprecated/.test(String(msg))
+        );
+        expect(deprecations).toHaveLength(1);
+        expect(deprecations[0][0]).toMatch(/signalForm/);
+
+        // Second use: no repeat warning (module-level one-time flag)
+        markerSignalForm(buildTree().$.onboarding.profile, {
+          injector: TestBed.inject(Injector),
+        });
+        expect(
+          warn.mock.calls.filter(([msg]) =>
+            /markerSignalForm\(\) is deprecated/.test(String(msg))
+          )
+        ).toHaveLength(1);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('signalFormBridge still works and fires its deprecation warning exactly once', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+        /* silence */
+      });
+      try {
+        interface Account {
+          username: string;
+        }
+        const makeTree = () =>
+          signalTree({ account: { username: '' } as Account }).with(
+            schemas({
+              schemas: { 'account.username': z.string().min(3) },
+            })
+          );
+
+        const tree = makeTree();
+        const fieldTree = TestBed.runInInjectionContext(() =>
+          signalFormBridge<Account>(tree, 'account', tree.$.account)
+        );
+
+        // Alias delegates to the same implementation
+        fieldTree.username().value.set('ada');
+        expect(tree.$.account.username()).toBe('ada');
+
+        const deprecations = warn.mock.calls.filter(([msg]) =>
+          /signalFormBridge\(\) is deprecated/.test(String(msg))
+        );
+        expect(deprecations).toHaveLength(1);
+        expect(deprecations[0][0]).toMatch(/signalForm/);
+
+        // Second use: no repeat warning (module-level one-time flag)
+        const tree2 = makeTree();
+        TestBed.runInInjectionContext(() =>
+          signalFormBridge<Account>(tree2, 'account', tree2.$.account)
+        );
+        expect(
+          warn.mock.calls.filter(([msg]) =>
+            /signalFormBridge\(\) is deprecated/.test(String(msg))
+          )
+        ).toHaveLength(1);
+      } finally {
+        warn.mockRestore();
+      }
+    });
   });
 });

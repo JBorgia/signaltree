@@ -510,3 +510,22 @@ never resolves after destroy. Both belong to the step-3 loader work.
 Step-3 review note: `when()`-wrapped built-ins now bridge their real kind
 (`'required'` etc.) instead of `'signalTree'` in DEFAULT mode — sanctioned
 by §4 step 3; needs an explicit 11.6.0 changelog line at release.
+
+### S0 execution note (2026-07-23): orphan-sweep findings beyond the bridge rename
+
+Renamed this pass: `markerSignalForm`/`signalFormBridge` → unified
+`signalForm()` (deprecated warned aliases; demo/docs updated). Flagged for
+future decision, NOT renamed (each needs its own deprecation plan):
+1. **`createFormTree` cross-package collision** — exported by BOTH
+   `@signaltree/ng-forms` (form-tree factory) and `@signaltree/guardrails`
+   (preset tree). Worst orphan found; same name, different things.
+2. **ng-forms root exports bare validator names** (`required`, `email`,
+   `min`, `compose`, `debounce`, …) while core namespaces the same concept
+   under `validators.*` — two vocabularies; bare `compose`/`debounce` are
+   collision-prone.
+3. **`createRealtimeEnhancer`** sits in the `create*` factory family while
+   every other enhancer is a plain noun (`schemas`, `guardrails`,
+   `enterprise`, `batching`).
+4. Core lower-priority: `enable*` vs legacy `with*` vs plain-noun enhancers
+   (three shapes, one concept); `derivedFrom` vs `externalDerived` (both
+   index-public).
