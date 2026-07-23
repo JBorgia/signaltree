@@ -167,6 +167,40 @@ between two scopes refetches each time rather than serving a cached second scope
 multi-scope LRU (instant back-toggle between recently seen scopes) is explicitly deferred — see RFC
 0003 §5 — and layers on top of this without an API break if it ships later.
 
+## 7. Imperative error handling
+
+Template/signal consumers want `load()`'s always-resolves guarantee (no unhandled rejection just
+from reading a collection), but a route guard, resolver, or other imperative call site usually
+wants a normal `await`/`try-catch`. Use `loadOrThrow()` there — same freshness/in-flight guard as
+`load()`, but it rejects with the loader's error instead of only surfacing it through `.error()`:
+
+```typescript
+export const plantsResolver: ResolveFn<boolean> = async () => {
+  const store = inject(PlantStore);
+  try {
+    await store.tree.$.plants.loadOrThrow();
+    return true;
+  } catch (err) {
+    return false; // or redirect
+  }
+};
+```
+
+For a forced reload (bypassing the freshness guard) where you'd rather branch on state than catch,
+pair `refresh()` with an `.error()` check instead:
+
+```typescript
+await this.tree.$.plants.refresh();
+if (this.tree.$.plants.error()) {
+  // handle the failed refresh — rows are unchanged, the old data (if any) is still there
+}
+```
+
+There is no `refreshOrThrow()`: a failed load never becomes fresh (`lastLoadedAt` only advances on
+success), so retrying after an error is already what `loadOrThrow()` does — `refresh()`'s only
+distinct job is forcing a reload of *already-fresh* data, which has nothing to do with retrying a
+failure (see [RFC 0004](../rfcs/0004-v12-optimal-iteration.md) §3 V-P4).
+
 ## Anti-patterns
 
 - **Don't** stack TanStack Query / a second document cache alongside `entityMap` — you'd get the

@@ -63,6 +63,7 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `is`-prefix predicate aliases (`.isLoading`/`.isLoaded`/`.isError`/`.isNotLoaded`/`.isEmpty`) **removed** — use bare names (**breaking**) | 11.0.0 |
 | `entityMap` gains cache-aware (single-scope) loading (`load`) + `invalidateTag()` | 11.2.0 (shipped as a separate `entityCollection` marker) |
 | `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
+| `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views; `markerSignalForm` `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` | 11.6.0 (unreleased) |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -251,6 +252,7 @@ const store = signalTree({
 
 // Cache-aware loading:
 await store.$.plants.load();     // GUARDED — no-op if fresh OR already in-flight; N concurrent callers => ONE fetch
+await store.$.plants.loadOrThrow(); // same guard as load(), but rejects with the loader's error instead of only setting .error() — for imperative await/try-catch call sites; load() never rejects
 await store.$.plants.refresh();  // force reload, ignores staleTime, still single-in-flight
 store.$.plants.invalidate();     // mark stale only (does not fetch); next load() refetches
 
