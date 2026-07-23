@@ -51,11 +51,9 @@ describe('guardrails factories — dev gate is functional (not the noop)', () =>
           hotPaths: { enabled: false },
           memoryLeaks: { enabled: false },
           reporting: {
-            // NOTE: `console: false` cannot be set here — maybeReport()
-            // returns early on it, which (pre-existing quirk) silences
-            // customReporter too. Leaving `console` unset keeps the console
-            // quiet (reportToConsole requires it truthy) while still
-            // delivering reports to customReporter.
+            // `console` unset keeps the console channel quiet; customReporter
+            // fires regardless of the console setting (fixed in 11.6.0 — it
+            // used to be silenced by `console: false`'s early return).
             interval: 20,
             customReporter: (r) => reports.push(r),
           },

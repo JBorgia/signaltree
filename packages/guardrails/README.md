@@ -80,6 +80,29 @@ This contract is pinned by `scripts/verify-guardrails-default-condition.mjs`
 (`npm run validate:guardrails-exports`), which resolves the built package with
 Node's real resolver under each condition set.
 
+## Change detection — plain-object trees need polling
+
+Guardrails picks its change-detection strategy at attach time, preferring the
+core PathNotifier (event-driven, zero polling). **The PathNotifier only fires
+for entity-collection writes** (plus plain leaf writes when the devtools
+enhancer is attached, since devtools installs a leaf-signal interceptor). A
+tree of plain objects and signals with neither produces no notifier events —
+monitoring is **change-blind**: budgets, hot paths, and custom rules never
+run. Guardrails emits a one-time dev warning when this strategy is selected.
+
+For trees without entity collections, force the polling strategy:
+
+```typescript
+guardrails({
+  changeDetection: { disablePathNotifier: true }, // 50ms dev-only polling
+  customRules: [...],
+});
+```
+
+Automatic fallback isn't possible: entity nodes hide behind the lazy proxy
+tree, and devtools (which would make plain leaves observable) may attach after
+guardrails does — so there is no reliable attach-time detection.
+
 ## Configuration
 
 See [docs/guardrails](../../docs/guardrails) for complete documentation.

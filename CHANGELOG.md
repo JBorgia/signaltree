@@ -33,6 +33,14 @@
   but rejects with the loader's error for imperative `await`/`try-catch` call
   sites (`load()` never rejects). There is deliberately no `refreshOrThrow`
   (see the cookbook's imperative error-handling recipe).
+- **Export-parity barrel gate** — `tools/verify-built-barrels.mjs` now also
+  compares each built `dist/index.js` barrel's export names against its
+  source `src/index.ts` barrel (esbuild metafile on both sides) and fails
+  with the exact missing/extra names. The resolution-only smoke let the
+  three stale stub barrels (realtime/ng-forms/guardrails, below) pass —
+  they resolved fine while missing exports. Negative-tested (hand-dropping
+  an export from a dist barrel fails the gate); wired where the gate
+  already ran: pre-publish step 7b and `validate.yml`.
 - **`@signaltree/core/authoring` subpath** — enhancer/marker-author plumbing
   moved off the root barrel (`withWriteContext`, `getActiveWriteContext`,
   `interceptLeafSignals`, `getPathNotifier`, `registerMarkerProcessor`,
@@ -53,6 +61,9 @@
 - **`enhancers/entities/` tombstone** — unexported v7-era source that only
   threw "entities() has been removed"; `entityMap` markers have been
   auto-processed since v7.
+- **`core/src/lib/dev-proxy.ts`** — `wrapWithDevProxy`/`shouldUseDevProxy`
+  had zero consumers and no barrel export (the "helpful missing-method
+  hints" it promised never fired anywhere); dead code deleted.
 
 ### Deprecated
 
@@ -60,8 +71,7 @@
   instead (the README's own guidance); removal next major. Known limitation,
   documented rather than fixed: `tree.effect()`/`tree.subscribe()` call
   `effect()` with no injector handling and throw NG0203 outside injection
-  contexts. One-time dev-mode warning on use; the dev-proxy hint for
-  `effect`/`subscribe` now points at native `effect()`.
+  contexts. One-time dev-mode warning on use.
 
 ### Fixed
 
@@ -96,6 +106,26 @@
   Promise loaders, mutation-verified).
 - **ng-forms legacy-bridge dev warning** no longer claims removal "in v6.0"
   (five majors ago).
+- **`@signaltree/guardrails` reporting was largely dead** — three defects,
+  each pinned by a mutation-verified spec: (1) `reporting.console: false`
+  early-returned out of the report cycle, silencing `customReporter` too —
+  the custom channel now fires regardless of the console setting; (2)
+  console reporting gated on a `context.issues` array nothing ever populated
+  (issues live in `issueMap`), so `reportToConsole` was unreachable — the
+  gate now reads the issueMap-derived report; (3) `mode: 'throw'` violations
+  from custom rules were swallowed by `evaluateRule`'s rule-error safety net
+  and degraded to a `console.warn` — deliberate guardrails throws are now
+  branded and rethrown past that catch (async rules surface as unhandled
+  rejections). Also: with no reporting channel configured, issues are no
+  longer silently cleared every interval — they accumulate for `getReport()`.
+- **Plain-object trees are change-blind under guardrails' default
+  PathNotifier strategy** (it only fires for entity collections, or leaf
+  writes when devtools' interceptor is attached) — now surfaced honestly:
+  a one-time dev warning when the strategy is selected, plus README/JSDoc
+  guidance to force polling via `changeDetection: { disablePathNotifier:
+  true }`. Automatic fallback was rejected: entity nodes hide behind the
+  lazy proxy tree and devtools may attach after guardrails, so attach-time
+  detection is unreliable in both directions.
 
 ### Documentation & tooling
 

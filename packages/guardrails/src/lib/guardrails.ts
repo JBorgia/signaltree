@@ -129,7 +129,6 @@ interface GuardrailsContext<T = Record<string, unknown>> {
   tree: ISignalTree<T>;
   config: GuardrailsConfig<T>;
   stats: RuntimeStats;
-  issues: GuardrailIssue[];
   hotPaths: HotPath[];
   currentUpdate: PendingUpdate | null;
   suppressed: boolean;
@@ -150,9 +149,30 @@ const MAX_TIMING_SAMPLES = 1000;
 const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
 
 /**
+ * Brand for errors thrown deliberately by `mode: 'throw'`. evaluateRule()
+ * catches rule errors so a buggy rule can't halt the app — this brand lets
+ * the guardrails-mode throw pass back out of that catch instead of being
+ * degraded to a console.warn.
+ */
+const GUARDRAILS_THROW = Symbol.for('signaltree.guardrails.throw');
+
+function isGuardrailsThrow(error: unknown): error is Error {
+  return (
+    error instanceof Error &&
+    (error as Error & { [GUARDRAILS_THROW]?: boolean })[GUARDRAILS_THROW] ===
+      true
+  );
+}
+
+/**
  * Creates a guardrails enhancer for dev-only monitoring
  * Uses reactive subscription when in Angular context (zero polling),
  * falls back to polling-based detection in non-Angular environments (tests)
+ *
+ * NOTE: the default (PathNotifier) change-detection strategy only observes
+ * entity-collection writes — plain-object trees are change-blind under it
+ * (a one-time dev warning is emitted). For trees without entity collections,
+ * force polling with `changeDetection: { disablePathNotifier: true }`.
  */
 export function guardrails(
   config: GuardrailsConfig<any> = {}
@@ -173,7 +193,6 @@ export function guardrails(
       tree: tree as unknown as ISignalTree<any>,
       config: config as GuardrailsConfig<any>,
       stats,
-      issues: [],
       hotPaths: [],
       currentUpdate: null,
       suppressed: false,
@@ -222,8 +241,20 @@ export function guardrails(
  */
 export const withGuardrails = Object.assign(guardrails, {});
 
+/** Once-per-process flag for the plain-object change-blindness warning. */
+let warnedChangeBlindPlainTrees = false;
+
 /**
  * Start change detection - tries PathNotifier first, then reactive subscription, finally polling
+ *
+ * CAVEAT (PathNotifier strategy): the PathNotifier only receives events from
+ * entity collections (and from plain leaf writes only when the devtools
+ * enhancer has installed its leaf-signal interceptor). A tree of plain
+ * objects/signals with neither produces NO notifier events — monitoring is
+ * change-blind. There is no clean attach-time detection: entity nodes hide
+ * behind the lazy proxy tree, and devtools may attach after guardrails. So we
+ * warn once in dev instead; set `changeDetection.disablePathNotifier: true`
+ * to force the polling strategy for plain-object trees.
  */
 function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
   // Strategy 1: Try PathNotifier for event-driven detection (zero polling, precise paths)
@@ -237,6 +268,17 @@ function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
             handlePathNotifierChange(context, path, value, prev);
           }
         );
+        if (!warnedChangeBlindPlainTrees && isDevEnvironment()) {
+          warnedChangeBlindPlainTrees = true;
+          console.warn(
+            '[Guardrails] Using PathNotifier change detection: guardrails ' +
+              'monitoring is change-blind for plain-object trees (the ' +
+              'notifier only fires for entity collections, or for leaf ' +
+              'writes when devtools is attached). If this tree has no ' +
+              'entity collections, enable polling via ' +
+              '`changeDetection: { disablePathNotifier: true }`.'
+          );
+        }
         // Success! Using PathNotifier - no polling, precise path tracking
         return unsubscribe;
       }
@@ -675,6 +717,9 @@ function evaluateRule<T>(
           }
         })
         .catch((error) => {
+          // Rethrow deliberate mode:'throw' violations (surfaces as an
+          // unhandled rejection for async rules — the honest signal).
+          if (isGuardrailsThrow(error)) throw error;
           console.warn(`[Guardrails] Rule ${rule.name} rejected:`, error);
         });
       return;
@@ -684,6 +729,9 @@ function evaluateRule<T>(
       handleFailure();
     }
   } catch (error) {
+    // A deliberate mode:'throw' violation must not be swallowed by the
+    // rule-error safety net — rethrow it past this catch.
+    if (isGuardrailsThrow(error)) throw error;
     // Rule threw, log but don't halt
     console.warn(`[Guardrails] Rule ${rule.name} threw error:`, error);
   }
@@ -713,7 +761,10 @@ function addIssue<T>(
   }
 
   if (context.config.mode === 'throw') {
-    throw new Error(`[Guardrails] ${issue.message}`);
+    const error = new Error(`[Guardrails] ${issue.message}`);
+    (error as Error & { [GUARDRAILS_THROW]?: boolean })[GUARDRAILS_THROW] =
+      true;
+    throw error;
   }
 }
 
@@ -789,20 +840,29 @@ function checkMemory<T>(context: GuardrailsContext<T>): void {
 }
 
 function maybeReport<T>(context: GuardrailsContext<T>): void {
-  if (context.config.reporting?.console === false) return;
+  const reporting = context.config.reporting;
+  const wantsConsole = Boolean(reporting?.console);
+  const customReporter = reporting?.customReporter;
+
+  // No delivery channel configured: keep accumulating so getReport() still
+  // sees the issues (don't clear what was never reported anywhere).
+  if (!wantsConsole && !customReporter) return;
 
   const report = generateReport(context);
 
-  if (context.config.reporting?.customReporter) {
-    context.config.reporting.customReporter(report);
+  // customReporter fires regardless of the console setting — `console: false`
+  // only silences the console channel, not the custom one.
+  if (customReporter) {
+    customReporter(report);
   }
 
-  if (context.config.reporting?.console && context.issues.length > 0) {
-    reportToConsole(report, context.config.reporting.console === 'verbose');
+  // Issues live in issueMap; report.issues is derived from it (the old
+  // `context.issues` gate was never populated, so console reporting was dead).
+  if (wantsConsole && report.issues.length > 0) {
+    reportToConsole(report, reporting?.console === 'verbose');
   }
 
   // Clear issues after reporting
-  context.issues = [];
   context.issueMap.clear();
 }
 
