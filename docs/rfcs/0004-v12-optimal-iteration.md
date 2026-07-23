@@ -615,3 +615,11 @@ barrels (the resolution-only smoke let stubs pass — same §5 rule-2 lesson);
 guardrails pre-existing defects (console reporting dead, mode:'throw'
 swallowed, plain-object trees change-blind via PathNotifier); dev-proxy is
 unreferenced dead code.
+
+### §5 override record (2026-07-23)
+
+Owner explicitly overrode the §5 rule-1 cooling period for the 11.6.0
+release ("Override §5 and publish now", asked and answered): all other
+ratchet steps (adversarial reviews at design and implementation time,
+negative-tested gates, M3 acceptance at 80%) were completed; the cooling
+window alone was waived by owner decision.
