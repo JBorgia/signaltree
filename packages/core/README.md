@@ -1187,7 +1187,7 @@ export const myDerived = derivedFrom<AppTreeBase>()(($) => ({
 
 ## Built-in Markers
 
-SignalTree provides built-in markers that handle common state patterns Angular doesn't provide out of the box: `entityMap` (gains single-scope freshness-managed self-loading via an optional `load` config, v11.2+/v11.4+), `status`, `stored`, and `form` (plus the async markers `asyncSource` / `asyncQuery`). All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
+SignalTree provides built-in markers that handle common state patterns Angular doesn't provide out of the box: `entityMap` (gains cache-aware (single-scope) self-loading via an optional `load` config, v11.2+/v11.4+), `status`, `stored`, and `form` (plus the async markers `asyncSource` / `asyncQuery`). All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
 
 ### 9) `entityMap<E, K>()` - Normalized Collections
 
@@ -1269,9 +1269,9 @@ const tree = signalTree({
 tree.$.users.upsertOne(user, { selectId: (u) => u.odataId });
 ```
 
-#### Single-scope freshness-managed / self-loading `entityMap` (v11.4+)
+#### Cache-aware / self-loading `entityMap` (v11.4+)
 
-Pass `load` in `entityMap`'s config and it gains a self-loading, single-scope freshness-managed surface — reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection. Full `entityMap` surface **plus** a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. It retains only the current scope (switching scope A → B → A refetches A, not a multi-key cache). There is no separate `entityCollection` marker (it was folded into `entityMap` in v11.4.0 — a plain `entityMap<E, K>()` with no `load` is unaffected). See [RFC 0002](../../docs/rfcs/0002-entity-collection.md), [RFC 0003](../../docs/rfcs/0003-keyed-entity-collection.md), and the [cookbook](../../docs/guides/entity-collection-cookbook.md).
+Pass `load` in `entityMap`'s config and it gains a self-loading, cache-aware surface — reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection. Full `entityMap` surface **plus** a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. It retains only the current scope (switching scope A → B → A refetches A, not a multi-key cache). There is no separate `entityCollection` marker (it was folded into `entityMap` in v11.4.0 — a plain `entityMap<E, K>()` with no `load` is unaffected). See [RFC 0002](../../docs/rfcs/0002-entity-collection.md), [RFC 0003](../../docs/rfcs/0003-keyed-entity-collection.md), and the [cookbook](../../docs/guides/entity-collection-cookbook.md).
 
 ```typescript
 import { signalTree, entityMap, invalidateTag } from '@signaltree/core';
@@ -1317,7 +1317,7 @@ tree.$.customers.params(); // Signal<{ regionUrl: string } | undefined> — the 
 
 Freshness (`staleTime`) is evaluated per-scope, not globally: switching `regionUrl` marks the collection stale and refetches even if the old scope was still fresh. `.refresh(params?)` forces a reload (omit `params` to redo the last scope); `clearOnParamsChange` (default `false`) controls whether old rows stay visible during the scope switch. This is a **single-scope cache** — only the most recent scope's rows are retained; a multi-scope LRU is deferred (RFC 0003 §5). The parameterless (global) form above is unaffected — `P` defaults to `void`.
 
-**NG0600 fix (v11.4):** a non-lazy, freshness-managed `entityMap`'s auto-load — and any offline-first `persist` seed — is deferred to a microtask off the synchronous materialization/render pass, so reading a non-lazy collection first inside a template no longer throws `NG0600: Writing to signals is not allowed while Angular renders`. Auto-load is now asynchronous (data arrives on the next microtask instead of during construction). The same fix applies to `asyncSource`.
+**NG0600 fix (v11.4):** a non-lazy, cache-aware `entityMap`'s auto-load — and any offline-first `persist` seed — is deferred to a microtask off the synchronous materialization/render pass, so reading a non-lazy collection first inside a template no longer throws `NG0600: Writing to signals is not allowed while Angular renders`. Auto-load is now asynchronous (data arrives on the next microtask instead of during construction). The same fix applies to `asyncSource`.
 
 ### 10) `status()` - Manual Async State
 

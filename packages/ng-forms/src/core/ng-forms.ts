@@ -824,7 +824,7 @@ function connectControlAndSignal(
     hasShownLegacyWarning = true;
     console.warn(
       '[@signaltree/ng-forms] FormControl.connect() was not found — falling back to the ' +
-        'manual bridge, which is deprecated and will be removed in v6.0. ' +
+        'manual bridge, which is deprecated and will be removed in the next major release. ' +
         'Please upgrade to Angular 20.3+ to use native Signal Forms. ' +
         'See MIGRATION.md for the upgrade path.'
     );

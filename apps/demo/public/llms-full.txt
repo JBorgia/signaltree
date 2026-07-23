@@ -61,8 +61,8 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `security` config requires the `security()` wrapper from `@signaltree/core/security` (**breaking**) | 11.0.0 |
 | lazy signals opt-in via `lazy()` from `@signaltree/core/lazy` (**breaking** — was automatic) | 11.0.0 |
 | `is`-prefix predicate aliases (`.isLoading`/`.isLoaded`/`.isError`/`.isNotLoaded`/`.isEmpty`) **removed** — use bare names (**breaking**) | 11.0.0 |
-| `entityMap` gains single-scope freshness-managed loading (`load`) + `invalidateTag()` | 11.2.0 (shipped as a separate `entityCollection` marker) |
-| `entityMap` gains single-scope freshness-managed loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
+| `entityMap` gains cache-aware (single-scope) loading (`load`) + `invalidateTag()` | 11.2.0 (shipped as a separate `entityCollection` marker) |
+| `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -224,12 +224,13 @@ store.$.users.byId(id)?.name(); // Signal-backed field read
 
 **Dev-mode guardrails (warn-only, tree-shaken in prod):** `[ST2001]` entities resolving to a `null`/`undefined` id (give them an `id` or `selectId`); `[ST2002]` a method from another library (`.upsert`/`.addEntities`/`.next`) → use the SignalTree name. All errors/warnings carry stable `[ST####]` codes — see `docs/errors/README.md`.
 
-### `entityMap<Entity, Key>(config)` — single-scope freshness-managed self-loading (v11.2+)
+### `entityMap<Entity, Key>(config)` — cache-aware self-loading (v11.2+)
 
-Pass `load` in `entityMap`'s config and it becomes a **single-scope freshness-managed collection that loads itself.** Reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection — the composition the v3 audit found every consumer re-implementing (and forgetting the freshness guard, causing redundant fetches). Full `entityMap` surface PLUS a loader, load status, a freshness guard, single-flight dedup, tag invalidation, and optional offline-first persistence. (There is no separate `entityCollection` marker — it shipped that way in 11.2.0 and was folded into `entityMap` in 11.4.0; a plain `entityMap<E, K>()` with no `load` is unaffected.)
+Pass `load` in `entityMap`'s config and it becomes a **cache-aware collection that loads itself.** Reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection — the composition the v3 audit found every consumer re-implementing (and forgetting the freshness guard, causing redundant fetches). Full `entityMap` surface PLUS a loader, load status, a freshness guard, single-flight dedup, tag invalidation, and optional offline-first persistence. (There is no separate `entityCollection` marker — it shipped that way in 11.2.0 and was folded into `entityMap` in 11.4.0; a plain `entityMap<E, K>()` with no `load` is unaffected.)
 
 ```typescript
-import { signalTree, entityMap, invalidateTag, createIndexedDBAdapter } from '@signaltree/core';
+import { signalTree, entityMap, invalidateTag } from '@signaltree/core';
+import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 const store = signalTree({
   plants: entityMap<Plant, string>({
@@ -248,7 +249,7 @@ const store = signalTree({
 
 // Full entityMap surface: store.$.plants.all() / byId(id) / where(pred) / addOne(...) / setAll(...) / ...
 
-// Single-scope freshness-managed loading:
+// Cache-aware loading:
 await store.$.plants.load();     // GUARDED — no-op if fresh OR already in-flight; N concurrent callers => ONE fetch
 await store.$.plants.refresh();  // force reload, ignores staleTime, still single-in-flight
 store.$.plants.invalidate();     // mark stale only (does not fetch); next load() refetches
@@ -265,7 +266,7 @@ invalidateTag(store, 'plants');  // marks every collection carrying the tag stal
 
 Auto-loads on first `tree.$` access (like other markers) unless `lazy: true`. Keep HTTP-level caching (ETag / conditional GET) in the browser + `HttpClient` — `staleTime` decides whether to *ask*, the ETag decides whether the answer costs bytes. Full recipe (HTTP-cache interplay + SSE/SignalR): `docs/guides/entity-collection-cookbook.md`.
 
-### entityMap — scoped single-scope freshness-managed form (v11.4+)
+### entityMap — scoped cache-aware form (v11.4+)
 
 Add a third type param `P` and give `load` a parameter to parameterize the collection by scope (region, customer, tenant, …) — see [RFC 0003](../rfcs/0003-keyed-entity-collection.md). `load` now takes the scope params; a loader that **declares a parameter** makes the collection **SCOPED**.
 
@@ -284,7 +285,7 @@ tree.$.customers.params();              // Signal<{ regionUrl: string } | undefi
 
 Freshness (`staleTime`) is evaluated **per-scope**, not globally — switching scope marks the collection stale and refetches even if the previous scope was still fresh, compared via `equal` (default: structural value comparison, so `{ regionUrl }` object literals compare by value). Concurrency: same-scope-concurrent calls single-flight (one request); a scope that is **not equal** to the in-flight one supersedes it (last-request-wins) — the stale result never writes into state, though its promise still resolves. `clearOnParamsChange` (default `false`) controls whether the previous scope's rows stay visible during the switch (default keeps them until the new load settles). `persist` write-through uses a per-scope storage key. Scoped collections are implicitly lazy (no scope to auto-load) — call `load(params)` explicitly. This is a **single-scope cache**; a multi-scope LRU is explicitly deferred (RFC 0003 §5). The parameterless (global) form above is unaffected — `P` defaults to `void`, 100% backward compatible.
 
-**NG0600 fix (v11.4).** A non-lazy, freshness-managed `entityMap`'s initial auto-load — and any offline-first `persist` seed — used to run synchronously during marker materialization, which is frequently a template read *during* Angular's render pass; that could throw `NG0600: Writing to signals is not allowed while Angular renders`. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection read first inside a template is render-safe. Observable consequence: auto-load is now asynchronous — data arrives on the next microtask rather than synchronously at construction. The same fix (and the same observable timing change) was applied to `asyncSource`.
+**NG0600 fix (v11.4).** A non-lazy, cache-aware `entityMap`'s initial auto-load — and any offline-first `persist` seed — used to run synchronously during marker materialization, which is frequently a template read *during* Angular's render pass; that could throw `NG0600: Writing to signals is not allowed while Angular renders`. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection read first inside a template is render-safe. Observable consequence: auto-load is now asynchronous — data arrives on the next microtask rather than synchronously at construction. The same fix (and the same observable timing change) was applied to `asyncSource`.
 
 > **Revision note:** this section describes the **11.4.0** shape. The original 11.3.0 release shipped this as a separate `entityCollection` marker with a `key: (params) => unknown[]` config function, a `currentKey: Signal<string | null>` accessor, and `clearOnKeyChange` — both the marker boundary and that config shape were corrected same-day (see RFC 0003 §0): `key`/`currentKey`/`clearOnKeyChange` became `equal`/`params`/`clearOnParamsChange` (it duplicated a serialized-key source of truth, collided with `persist.key`, and was inconsistent with the `equal`-comparator convention `asyncQuery`/`asyncStream` already use), and the `entityCollection` marker itself was removed and folded into `entityMap({ load })` (a separate marker wasn't earning its keep once `entityMap`'s config could carry the loader options).
 

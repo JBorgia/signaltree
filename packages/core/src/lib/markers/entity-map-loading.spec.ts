@@ -71,7 +71,7 @@ describe('plain entityMap (no load) has no loader surface', () => {
   });
 });
 
-describe('entityMap({ load }) — global single-scope freshness-managed', () => {
+describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
   it('auto-load is deferred off the render pass (NG0600-safe), then populates', async () => {
     let calls = 0;
     const tree = signalTree({

@@ -26,10 +26,10 @@ import { isTraversableNode } from '../utils';
 import type { EntitySignal } from '../types';
 
 /**
- * Single-scope freshness-managed loading for `entityMap`.
+ * Cache-aware (single-scope) loading for `entityMap`.
  *
  * `entityMap({ load, staleTime, … })` turns a plain normalized collection into a
- * self-loading, single-scope freshness-managed one: a loader, load status, a per-scope freshness
+ * self-loading, cache-aware one: a loader, load status, a per-scope freshness
  * guard, single-flight dedup, tag-based invalidation, and optional offline-first
  * persistence — all attached to the same `EntitySignal` surface. This module holds
  * the loader machinery so a plain `entityMap()` (no `load`) never pulls it in
@@ -87,7 +87,7 @@ export type EntityPersist =
     };
 
 /**
- * Single-scope freshness-managed loading options for {@link entityMap}. Presence of `load` turns a
+ * Cache-aware loading options for {@link entityMap}. Presence of `load` turns a
  * plain collection into a loading one.
  */
 export interface EntityLoadOptions<E, P = void> {
@@ -225,7 +225,7 @@ function nowMs(): number {
 // =============================================================================
 
 /**
- * Attach the single-scope freshness-managed loader surface (see {@link EntityLoaderSurface}) onto an
+ * Attach the cache-aware loader surface (see {@link EntityLoaderSurface}) onto an
  * existing {@link EntitySignal}. Called by `entityMap`'s materializer when `load`
  * is configured.
  *
