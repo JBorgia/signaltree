@@ -169,6 +169,20 @@ else
     print_step "New version will be: $NEW_VERSION"
 fi
 
+# Preflight: refuse to publish a version CHANGELOG.md does not document.
+# Blocking, no skip path (RFC 0004 §4 step 6 — gates survive here only when
+# they sit on the publish path). Self-test first: a gate that cannot fail is
+# presumed inert (§5 rule 2).
+print_step "Checking CHANGELOG.md has an entry for $NEW_VERSION..."
+if ! bash scripts/verify-changelog-entry.sh --self-test; then
+    print_error "CHANGELOG gate self-test failed — refusing to trust the gate"
+    exit 1
+fi
+if ! bash scripts/verify-changelog-entry.sh "$NEW_VERSION"; then
+    print_error "CHANGELOG.md lacks a heading for $NEW_VERSION — document the release first"
+    exit 1
+fi
+
 # Confirm with user (unless non-interactive)
 if [ "$NON_INTERACTIVE" = false ]; then
     echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION (keep-version=${KEEP_VERSION})? (y/N)${NC}"

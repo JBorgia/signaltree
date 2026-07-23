@@ -360,6 +360,77 @@ else
     exit 1
 fi
 
+# Note: the former `validate:doc-snippets` gate (scripts/validate-doc-snippets.js)
+# was DELETED 2026-07-23: zero `// @check` markers were ever adopted in 3 months,
+# so it validated nothing — the twice-proven orphan-gate rot pattern
+# (RFC 0004 §3 V-P6). Doc code-blocks are covered by the blocking skill
+# code-block lint (section 7a) and the taught-symbol gate below (13a).
+
+# 13a. Taught-Symbol Verification (BLOCKING)
+# Reverse diff: every symbol llms-full.txt claims is importable from
+# @signaltree/core (root or subpath) must exist in the built d.ts of that
+# exact entry point (catches phantom/removed APIs — the hallucination vector).
+# Golden API list: ~30 curated capabilities must be BOTH exported AND taught
+# (catches "shipped a capability, never taught it"). Needs the core build
+# (step 7). Self-test runs first: a gate that cannot fail is presumed inert
+# (RFC 0004 §5 rule 2).
+print_header "13a. Taught-Symbol Verification"
+print_step "Self-testing the taught-symbol gate (negative test)"
+if node scripts/verify-taught-symbols.js --self-test 2>&1 | tee /tmp/taught-symbols-selftest.log; then
+    print_success "Taught-symbol gate self-test passed (gate can fail)"
+else
+    print_error "Taught-symbol gate self-test FAILED — the gate is inert, refusing to continue"
+    cat /tmp/taught-symbols-selftest.log
+    exit 1
+fi
+print_step "Checking llms-full.txt taught symbols against built @signaltree/core d.ts"
+if node scripts/verify-taught-symbols.js 2>&1 | tee /tmp/taught-symbols.log; then
+    print_success "All taught symbols exist; golden API list exported AND taught"
+else
+    print_error "Taught-symbol verification failed — doc teaches a phantom API or a capability is untaught"
+    cat /tmp/taught-symbols.log
+    exit 1
+fi
+
+# 13b. Version-Claims Verification (BLOCKING)
+# Check-only: canonical claim sites (README.md, packages/core/README.md,
+# llms.txt, llms-full.txt, install.md) must match the authoritative Angular
+# range in packages/core/package.json peerDependencies. Precedent: install.md
+# said "derived from peerDependencies" and still drifted a full major.
+print_header "13b. Version-Claims Verification"
+print_step "Self-testing the version-claims gate (negative test)"
+if node scripts/verify-version-claims.js --self-test 2>&1 | tee /tmp/version-claims-selftest.log; then
+    print_success "Version-claims gate self-test passed (gate can fail)"
+else
+    print_error "Version-claims gate self-test FAILED — the gate is inert, refusing to continue"
+    cat /tmp/version-claims-selftest.log
+    exit 1
+fi
+print_step "Checking Angular version claims against peerDependencies"
+if node scripts/verify-version-claims.js 2>&1 | tee /tmp/version-claims.log; then
+    print_success "All canonical claim sites match peerDependencies"
+else
+    print_error "Version-claim drift detected — fix the claim sites to match peerDependencies"
+    cat /tmp/version-claims.log
+    exit 1
+fi
+
+# 13c. Size-Claims Verification (BLOCKING)
+# Formerly an orphan npm script (8 months, never in any workflow — RFC 0004
+# §3 V-P6); wired here 2026-07-23 after refreshing the stale claims in
+# consolidated-bundle-analysis.js. Negative test: empirically proven able to
+# fail — it fired on all four packages' stale claims the day it was wired.
+# Needs the production builds from step 7.
+print_header "13c. Size-Claims Verification"
+print_step "Verifying full-package size claims (±5%)"
+if node scripts/verify-size-claims.js 2>&1 | tee /tmp/size-claims.log; then
+    print_success "Size claims verified"
+else
+    print_error "Size claims drifted >5% from measured — update consolidated-bundle-analysis.js claims deliberately"
+    cat /tmp/size-claims.log
+    exit 1
+fi
+
 # Final Summary
 print_header "Validation Summary"
 

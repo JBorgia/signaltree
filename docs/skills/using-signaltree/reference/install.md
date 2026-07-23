@@ -4,9 +4,9 @@ Version and install steps derived from each package's `peerDependencies` in `pac
 
 ## Required runtime
 
-- **Angular 20 or 21** — every Angular-consuming package declares
-  `@angular/core: ^20.0.0 || ^21.0.0` in `peerDependencies`. SignalTree runs on
-  both Angular 20 and 21 unchanged.
+- **Angular 20, 21, or 22** — every Angular-consuming package declares
+  `@angular/core: ^20.0.0 || ^21.0.0 || ^22.0.0` in `peerDependencies`.
+  SignalTree runs on Angular 20, 21, and 22 unchanged.
 - **TypeScript** — whatever your Angular project already pins.
 - **Node / package manager** — your normal Angular toolchain.
 
@@ -25,7 +25,7 @@ npm install @signaltree/core
 > **pnpm workspaces:** plain `pnpm add @signaltree/core` from the workspace root fails with `ERR_PNPM_ADDING_TO_ROOT`. Use `-w` for the workspace root, or `--filter <pkg>` to scope to one workspace package.
 
 Required peer deps (from `packages/core/package.json`):
-`@angular/core ^20.0.0 || ^21.0.0`, `tslib ^2.0.0`. `@angular/compiler`, `@angular/platform-browser-dynamic`, and `zone.js` are declared optional peers.
+`@angular/core ^20.0.0 || ^21.0.0 || ^22.0.0`, `tslib ^2.0.0`. `@angular/compiler`, `@angular/platform-browser-dynamic`, and `zone.js` are declared optional peers.
 
 ## Optional packages
 
@@ -37,7 +37,7 @@ Install only what you need. Each package declares `@signaltree/core` as a peer.
 npm install @signaltree/ng-forms
 ```
 
-Adds `@angular/forms ^20.0.0 || ^21.0.0` and `rxjs ^7.0.0` as peers. Read [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md).
+Adds `@angular/forms ^20.0.0 || ^21.0.0 || ^22.0.0` and `rxjs ^7.0.0` as peers. Read [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md).
 
 ### `@signaltree/enterprise`
 
@@ -45,7 +45,7 @@ Adds `@angular/forms ^20.0.0 || ^21.0.0` and `rxjs ^7.0.0` as peers. Read [`../n
 npm install @signaltree/enterprise
 ```
 
-Licensed under BSL-1.1 (see the package `package.json`). Peers: `@angular/core ^20.0.0 || ^21.0.0`, `@signaltree/core`. Read [`../enterprise/SKILL.md`](../enterprise/SKILL.md).
+Licensed under BSL-1.1 (see the package `package.json`). Peers: `@angular/core ^20.0.0 || ^21.0.0 || ^22.0.0`, `@signaltree/core`. Read [`../enterprise/SKILL.md`](../enterprise/SKILL.md).
 
 ### `@signaltree/callable-syntax`
 
@@ -94,7 +94,7 @@ npm install @signaltree/events zod
 npm install @signaltree/realtime
 ```
 
-Peers: `@angular/core ^20.0.0 || ^21.0.0`, `@signaltree/core ^9.0.0`, `tslib ^2.0.0`. `@supabase/supabase-js ^2.0.0` and `firebase` are **optional** peers — install the one that matches your backend. Read [`../realtime/SKILL.md`](../realtime/SKILL.md).
+Peers: `@angular/core ^20.0.0 || ^21.0.0 || ^22.0.0`, `@signaltree/core ^9.0.0`, `tslib ^2.0.0`. `@supabase/supabase-js ^2.0.0` and `firebase` are **optional** peers — install the one that matches your backend. Read [`../realtime/SKILL.md`](../realtime/SKILL.md).
 
 ## Verifying the install
 

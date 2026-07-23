@@ -190,7 +190,8 @@ function auditImportClaims(docText, entryExports) {
 // d.ts on 2026-07-23. Candidates deliberately NOT listed because they are
 // exported but untaught today — add them when the step-8 (S1) doc pass teaches
 // them: toWritableSignal, composeEnhancers, asyncStream (also unshipped, see
-// KNOWN_UNSHIPPED), loadOrThrow (unreleased).
+// KNOWN_UNSHIPPED). Note: loadOrThrow/load are loader-surface METHODS, not
+// importable symbols — not golden-eligible.
 const GOLDEN_API = [
   // root entry point
   { name: 'signalTree', entry: '' },
