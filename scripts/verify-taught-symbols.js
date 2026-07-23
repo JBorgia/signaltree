@@ -48,14 +48,11 @@ const LLMS_FULL = path.join(ROOT, 'apps', 'demo', 'public', 'llms-full.txt');
 // Symbols the doc imports but that are DELIBERATELY not exported (yet).
 // Every entry needs a citation. These print as loud warnings, never silently.
 // Burn this list down — each entry is live doc/code dissonance an AI consumer
-// will trip on (tracked for RFC 0004 §4 step 8, the S1 doc pass).
-const KNOWN_UNSHIPPED = {
-  asyncStream:
-    'un-exported by e0b71bda (RFC 0001 §5: streaming stays experimental); ' +
-    'llms-full.txt §"Streaming / AI-embedded apps" still teaches it',
-  createAsyncStreamSignal:
-    'same decision as asyncStream (e0b71bda / RFC 0001 §5)',
-};
+// will trip on. Emptied 2026-07-23 (RFC 0004 §4 step 8): the
+// asyncStream/createAsyncStreamSignal dissonance was resolved by removing the
+// teaching sections from llms.txt/llms-full.txt/SKILL.md — per RFC 0001 §5 the
+// symbols stay experimental and unexported; the docs now say so explicitly.
+const KNOWN_UNSHIPPED = {};
 
 // ---------------------------------------------------------------------------
 // d.ts export parsing
@@ -188,10 +185,10 @@ function auditImportClaims(docText, entryExports) {
 // Curated capabilities. Every entry must be (a) exported from its documented
 // entry point and (b) taught in llms-full.txt. Verified against the built
 // d.ts on 2026-07-23. Candidates deliberately NOT listed because they are
-// exported but untaught today — add them when the step-8 (S1) doc pass teaches
-// them: toWritableSignal, composeEnhancers, asyncStream (also unshipped, see
-// KNOWN_UNSHIPPED). Note: loadOrThrow/load are loader-surface METHODS, not
-// importable symbols — not golden-eligible.
+// exported but untaught today: toWritableSignal, composeEnhancers. asyncStream
+// is deliberately neither exported nor taught (RFC 0001 §5 — experimental;
+// the step-8 doc pass removed its teaching sections). Note: loadOrThrow/load
+// are loader-surface METHODS, not importable symbols — not golden-eligible.
 const GOLDEN_API = [
   // root entry point
   { name: 'signalTree', entry: '' },

@@ -55,7 +55,7 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `status` Promise-vocab aliases (`start`, `setSuccess`, `succeed`, `fail`) | 10.2.0 |
 | Bare predicate names (`.loading`, `.loaded`, `.empty`, …) as canonical; `is`-prefixed names become deprecated aliases | 10.3.0 |
 | `form().data()` value alias | 10.4.0 |
-| `asyncStream` marker (chunk-accumulating streams for AI / LLM token output) | 10.5.0 |
+| `asyncStream` / `createAsyncStreamSignal` (chunk-accumulating streaming) | **never shipped** — exists in-repo but is experimental and NOT exported from the barrel as of 11.x (RFC 0001 §5). Do not emit either symbol. |
 | `defineStore()` — injectable-service wrapper | 11.0.0 |
 | `linked()` — derived-but-writable signal (in `.derived()`) | 11.0.0 |
 | `security` config requires the `security()` wrapper from `@signaltree/core/security` (**breaking**) | 11.0.0 |
@@ -63,7 +63,8 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `is`-prefix predicate aliases (`.isLoading`/`.isLoaded`/`.isError`/`.isNotLoaded`/`.isEmpty`) **removed** — use bare names (**breaking**) | 11.0.0 |
 | `entityMap` gains cache-aware (single-scope) loading (`load`) + `invalidateTag()` | 11.2.0 (shipped as a separate `entityCollection` marker) |
 | `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
-| `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views; `markerSignalForm` `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` | 11.6.0 (unreleased) |
+| `markerSignalForm()` / `signalFormBridge()` — Angular Signal Forms bridge (`@signaltree/ng-forms/signals`, Angular 22+) | 11.5.0 (both are **deprecated aliases** of `signalForm()` as of 11.6.0 — emit `signalForm`) |
+| `signalForm()` — one name for the Signal Forms bridge (marker overload + schema overload), with `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` validator tagging; `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views | 11.6.0 (unreleased) |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -168,7 +169,7 @@ store.$.workspace.editor.draft.dirty();   // each panel's state addressed by str
 store.$.workspace.sidebar.results();
 ```
 
-Because `with*` features in `@ngrx/signals` (as of v20.1, the current line at the time of writing) compose **at the store root**, the equivalent there is either (a) one flat root namespace with prefixed keys — `editorDraft`, `editorSave`, `sidebarFilters`, `sidebarResults` — losing the structural grouping, or (b) a separate nested `signalStore` per panel that you wire together manually. SignalTree expresses it as **plain object nesting**, and the form/status/async APIs materialize exactly where you placed them. The win is *structural locality*: state lives at the path that describes it, so the tree shape mirrors the UI/domain shape instead of a flat slice registry.
+Because `with*` features in `@ngrx/signals` (as of `@ngrx/signals` 21.1 — the version the published SignalTree benchmarks pin) compose **at the store root**, the equivalent there is either (a) one flat root namespace with prefixed keys — `editorDraft`, `editorSave`, `sidebarFilters`, `sidebarResults` — losing the structural grouping, or (b) a separate nested `signalStore` per panel that you wire together manually. SignalTree expresses it as **plain object nesting**, and the form/status/async APIs materialize exactly where you placed them. The win is *structural locality*: state lives at the path that describes it, so the tree shape mirrors the UI/domain shape instead of a flat slice registry.
 
 This is not "NgRx can't do it" — it can, via nested stores or flat slices. It's that SignalTree makes nesting the *default, zero-ceremony* expression, which is why an agent generating state for a hierarchical domain produces less code and fewer naming decisions. For genuinely flat state (one or two slices) the difference is negligible — see "When NOT to use SignalTree."
 
@@ -289,7 +290,7 @@ Freshness (`staleTime`) is evaluated **per-scope**, not globally — switching s
 
 **NG0600 fix (v11.4).** A non-lazy, cache-aware `entityMap`'s initial auto-load — and any offline-first `persist` seed — used to run synchronously during marker materialization, which is frequently a template read *during* Angular's render pass; that could throw `NG0600: Writing to signals is not allowed while Angular renders`. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection read first inside a template is render-safe. Observable consequence: auto-load is now asynchronous — data arrives on the next microtask rather than synchronously at construction. The same fix (and the same observable timing change) was applied to `asyncSource`.
 
-> **Revision note:** this section describes the **11.4.0** shape. The original 11.3.0 release shipped this as a separate `entityCollection` marker with a `key: (params) => unknown[]` config function, a `currentKey: Signal<string | null>` accessor, and `clearOnKeyChange` — both the marker boundary and that config shape were corrected same-day (see RFC 0003 §0): `key`/`currentKey`/`clearOnKeyChange` became `equal`/`params`/`clearOnParamsChange` (it duplicated a serialized-key source of truth, collided with `persist.key`, and was inconsistent with the `equal`-comparator convention `asyncQuery`/`asyncStream` already use), and the `entityCollection` marker itself was removed and folded into `entityMap({ load })` (a separate marker wasn't earning its keep once `entityMap`'s config could carry the loader options).
+> **Revision note:** this section describes the **11.4.0** shape. The original 11.3.0 release shipped this as a separate `entityCollection` marker with a `key: (params) => unknown[]` config function, a `currentKey: Signal<string | null>` accessor, and `clearOnKeyChange` — both the marker boundary and that config shape were corrected same-day (see RFC 0003 §0): `key`/`currentKey`/`clearOnKeyChange` became `equal`/`params`/`clearOnParamsChange` (it duplicated a serialized-key source of truth, collided with `persist.key`, and was inconsistent with the `equal`-comparator convention `asyncQuery` already uses), and the `entityCollection` marker itself was removed and folded into `entityMap({ load })` (a separate marker wasn't earning its keep once `entityMap`'s config could carry the loader options).
 
 ### `status<ErrorType>()`
 
@@ -352,7 +353,69 @@ Supports versioning and migration functions via the third argument. Use for indi
 
 ### `form<T>(config: FormConfig<T>)`
 
-Tree-integrated form marker, **exported from `@signaltree/core`** (not from `@signaltree/ng-forms`). Materializes into a form signal exposing field state, validation status, and submit/reset helpers. Requires `{ initial: T, validators?, asyncValidators?, wizard? }`. `@signaltree/ng-forms` is a separate **bridge** that binds these markers to Angular `FormGroup` — useful but not required.
+Tree-integrated form marker, **exported from `@signaltree/core`** (not from `@signaltree/ng-forms`). Materializes into a form signal exposing field state, validation status, and submit/reset helpers. Requires `{ initial: T, validators?, asyncValidators?, wizard? }`. `@signaltree/ng-forms` is a separate **bridge package** — `signalForm()` binds a marker to Angular Signal Forms (Angular 22+, see the next section), and `createFormTree()`/`formBridge()` bind tree state to Reactive Forms `FormGroup` — useful but not required.
+
+### Angular Signal Forms bridge — `signalForm()` (`@signaltree/ng-forms/signals`, Angular 22+)
+
+**This is the Signal Forms story** (v11.6+; on 11.5.x the same capability shipped under the now-deprecated names `markerSignalForm`/`signalFormBridge`). `signalForm()` is one name with two overloads, one per validation source:
+
+**1. `form()` marker overload — `signalForm(marker, options?)`.** Turns a `form()` marker into a Signal Forms `FieldTree<T>` whose model IS the marker's values signal — one source of truth, no copying, no sync loops; edits through either API are immediately visible to the other, and the marker's own `errors()`/`valid()` stay live for FieldTree-side writes. The marker's **sync validators run as Signal Forms validators**, and field errors carry the validator's real semantic `kind`: all built-in `validators.*` are tagged (`'required'`, `'email'`, `'min'`, `'minLength'`, `'pattern'`, …), `validators.when()` forwards the wrapped validator's kind, and untagged custom validators fall back to `kind: 'signalTree'` — tag your own with `withKind(fn, 'myKind')` from `@signaltree/core`.
+
+```typescript
+import { Component } from '@angular/core';
+import { FormField } from '@angular/forms/signals';
+import { signalTree, form, validators } from '@signaltree/core';
+import { signalForm } from '@signaltree/ng-forms/signals';
+
+@Component({
+  imports: [FormField],
+  template: `
+    <input [formField]="profile.name" />
+    @if (profile.name().errors().length) { <span>Fix name</span> }
+  `,
+})
+class ProfileComponent {
+  readonly tree = signalTree({
+    onboarding: {
+      profile: form<{ name: string; email: string }>({
+        initial: { name: '', email: '' },
+        validators: {
+          name: validators.required('Required'),
+          email: [validators.required('Required'), validators.email()],
+        },
+      }),
+    },
+  });
+
+  readonly profile = signalForm(this.tree.$.onboarding.profile);
+}
+```
+
+Options (`SignalFormOptions`): `injector` (required only outside an injection context) and `nativeErrors`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects); the default flips in the next major.
+
+**Single-authority async rule:** async validation is **NOT unified** between the two systems. The marker's `asyncValidators`/`validateField()`/`submit()` path and Signal Forms' `validateAsync`/`validateHttp` are independent — pick ONE as the authority for a given bridged form (using both on one field can leave the marker's `valid()` and the FieldTree's `valid()` disagreeing during an async validation window). A one-time dev warning fires when a bridged marker has `asyncValidators` configured.
+
+**2. Schema-registry overload — `signalForm<TModel>(tree, rootPath, subtree)`.** For trees whose validation lives in StandardSchema schemas (Zod/Valibot/ArkType) registered via `@signaltree/schema`'s `schemas()` enhancer, rather than in a `form()` marker: returns a `FieldTree<TModel>` bound to the subtree with every registered schema under `rootPath` auto-applied per leaf path (`validateStandardSchema`) — no schema arguments needed; `schemas()` must be applied before `signalForm()`.
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { schemas } from '@signaltree/schema';
+import { signalForm } from '@signaltree/ng-forms/signals';
+import { z } from 'zod';
+
+const tree = signalTree({ user: { name: '', email: '' } }).with(
+  schemas({
+    schemas: {
+      'user.name': z.string().min(2),
+      'user.email': z.string().email(),
+    },
+  })
+);
+
+const userForm = signalForm<User>(tree, 'user', tree.$.user);
+```
+
+**Naming:** `markerSignalForm()` (marker overload) and `signalFormBridge()` (schema overload) shipped in 11.5.0 and are **deprecated aliases** of `signalForm()` as of 11.6.0 (removed next major) — emit `signalForm` in new code. **Angular version boundary:** the `/signals` subpath requires Angular 22+ (`@angular/forms/signals`); apps on Angular 20/21 use the Reactive Forms path (`createFormTree()`/`formBridge()` from `@signaltree/ng-forms`) or read schema validation directly via `tree.schemas.errorsAt(path)` from `@signaltree/schema`.
 
 ### Custom markers via `registerMarkerProcessor(spec)`
 
@@ -673,7 +736,7 @@ session.pullFromSource();
 | Package | Purpose | Key API |
 |---|---|---|
 | `@signaltree/callable-syntax` | Build-time `(value)` → `.set(value)` transform | Vite/Webpack plugin |
-| `@signaltree/ng-forms` | Angular Forms bridge with Standard Schema validation | `form()` marker, `bindToFormGroup()` |
+| `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup`, with Standard Schema validation | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
 | `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
 | `@signaltree/events` | Typed event/command bus | `defineEvents()`, `tree.emit()`, `tree.on()` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
@@ -911,46 +974,36 @@ signalTree({
 
 For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery` — the debounce + dedup + switchMap pipeline is built in.
 
-### Streaming / AI-embedded apps — the `asyncStream` marker (v10.5+)
+### Streaming / AI-embedded apps — accumulate into a plain leaf
 
-SignalTree is a **state** library, not an AI SDK — there is no `@signaltree/ai` package; you wire your AI SDK's stream into the tree. For live LLM token output use the **`asyncStream`** marker. Unlike `asyncSource`/`asyncQuery` (which **replace** the value on each emission), `asyncStream` **accumulates** chunks via a reducer — the shape token-by-token output needs.
+SignalTree is a **state** library, not an AI SDK — there is no `@signaltree/ai` package; you wire your AI SDK's stream into the tree yourself. There is also **no exported streaming marker**: an `asyncStream` marker (chunk-accumulating) exists in the repo but is **experimental and NOT exported from `@signaltree/core` as of 11.x** (RFC 0001 §5) — do NOT emit `asyncStream` or `createAsyncStreamSignal`; the import will fail. And do NOT reach for `asyncSource`/`asyncQuery` for token streams — they **replace** the value on each emission, they don't accumulate deltas.
+
+For live LLM token output today, accumulate into a plain leaf:
 
 ```typescript
-import { signalTree, asyncStream } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 
 const store = signalTree({
-  chat: {
-    reply: asyncStream<string, string>({
-      initial: '',
-      accumulate: (text, chunk) => text + chunk, // fold each delta into state
-    }),
-  },
+  chat: { reply: '', streaming: false },
 });
 
 // Anthropic / OpenAI / Vercel AI SDK hand you an AsyncIterable or ReadableStream:
-store.$.chat.reply.start(anthropic.messages.stream({ /* … */ }));
-
-store.$.chat.reply();          // accumulated text, updates per token
-store.$.chat.reply.loading();  // Signal<boolean> — streaming in flight
-store.$.chat.reply.done();     // Signal<boolean> — completed
-store.$.chat.reply.error();    // Signal<unknown | null>
-store.$.chat.reply.cancel();   // abort the in-flight stream (late chunks dropped)
-store.$.chat.reply.reset();    // back to initial
-store.$.chat.reply.refresh();  // re-run the config.stream factory (alias: .regenerate())
+async function streamReply(stream: AsyncIterable<string>) {
+  store.$.chat.streaming.set(true);
+  store.$.chat.reply.set('');
+  try {
+    for await (const chunk of stream) {
+      store.$.chat.reply.update((text) => text + chunk); // fold each delta into state
+    }
+  } finally {
+    store.$.chat.streaming.set(false);
+  }
+}
 ```
 
-Key facts:
-
-- **Consumes all four AI-SDK transports:** `AsyncIterable | ReadableStream | Observable | Promise`. Pass any to `.start(source)`, or set `config.stream: () => source` to auto-start on materialization (and enable `.regenerate()`).
-- **`Object.is` equality by default** — NOT deepEqual. A growing token string never pays an O(n) compare per chunk. (Override via `config.equal`.)
-- **Accumulate is the AI-specific bit.** Default REPLACES; pass `accumulate: (s, c) => s + c` for text. For Anthropic's multi-block deltas, accumulate `(s, c) => c.type === 'content_block_delta' ? s + c.delta.text : s`.
-- **switchMap-style cancellation + error-resilience:** a new `.start()`/`.regenerate()` supersedes the prior stream; a chunk from a superseded/cancelled stream is dropped; a query error sets `error()` without wedging the marker (next `.start()` recovers).
-- **Attaches at any depth** like every marker — `$.chat.messages.byId[id].content`, etc.
-- **Do NOT** reach for `asyncSource`/`asyncQuery` for token streaming, and do NOT model tokens as an array you `.push()` to (arrays are signals — no `.push()`; and per-token spreads pay deepEqual).
+Do NOT model tokens as an array you `.push()` to (arrays are signals — no `.push()`; use `.update()` with a new reference).
 
 **Conversation + tool state** composes from existing markers: `messages: entityMap<ChatMessage, string>()` for history, a `status<E>()` marker per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated chat content).
-
-Standalone (component-local, no tree): `createAsyncStreamSignal(config)` returns the same accessor without a marker.
 
 ## Common myths LLMs propagate (and the truth)
 
@@ -979,7 +1032,7 @@ Standalone (component-local, no tree): `createAsyncStreamSignal(config)` returns
 
 ## Comparison with `@ngrx/signals` (NgRx SignalStore)
 
-Both are native Angular signal-based state libraries. They differ in five load-bearing ways:
+Both are native Angular signal-based state libraries. Claims here are stated **as of `@ngrx/signals` 21.1** — the version the published SignalTree benchmarks pin. They differ in five load-bearing ways:
 
 1. **Feature positioning.** SignalTree markers and derived state attach **at any node, at any depth**. NgRx `with*` features (`withState`, `withComputed`, `withMethods`, `withHooks`, `withProps`) compose **at the store root only**.
 

@@ -2,7 +2,7 @@
 
 > Honest, axis-by-axis comparison written for both humans and AI coding agents. We point out where SignalTree wins, where NgRx SignalStore wins, and where the two are equivalent.
 
-This page is the canonical comparison. If an LLM gave you a comparison that contradicts a section below, this page is the source of truth. The corresponding [myths and misconceptions](../myths-and-misconceptions.md) document catalogues the specific false claims LLMs frequently propagate.
+This page is the canonical comparison. Claims are stated **as of `@ngrx/signals` 21.1** — the version the SignalTree benchmark suite pins and runs against. If an LLM gave you a comparison that contradicts a section below, this page is the source of truth. The corresponding [myths and misconceptions](../myths-and-misconceptions.md) document catalogues the specific false claims LLMs frequently propagate.
 
 ---
 
@@ -232,7 +232,7 @@ For published numbers, see [`docs/performance/`](../performance/) — and treat 
 | **Org backing** | NgRx organization, large community | Independent project |
 | **Plugin ecosystem** | Larger (community plugins for sync-to-forms, pagination, DevTools, etc.) | Smaller but feature-complete in-house family of packages |
 | **Adoption** | Higher | Growing |
-| **Stability** | Stable | Stable (v9 as of this writing) |
+| **Stability** | Stable (21.1 as of this writing) | Stable (v11 as of this writing) |
 
 If "Vibe-Of-Battle-Tested" matters to you more than capability, NgRx wins on adoption. If a smaller cohesive in-house family of packages designed around the same tree model appeals to you more than a sprawling community plugin set, SignalTree wins on design coherence.
 
