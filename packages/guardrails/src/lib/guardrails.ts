@@ -1,4 +1,7 @@
-import { getPathNotifier, getActiveWriteContext } from '@signaltree/core';
+import {
+  getPathNotifier,
+  getActiveWriteContext,
+} from '@signaltree/core/authoring';
 import { deepEqual } from '@signaltree/shared';
 
 /**

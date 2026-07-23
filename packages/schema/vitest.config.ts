@@ -20,6 +20,10 @@ export default defineConfig({
         find: /^@signaltree\/core$/,
         replacement: resolve(__dirname, '../core/src/index.ts'),
       },
+      {
+        find: /^@signaltree\/core\/authoring$/,
+        replacement: resolve(__dirname, '../core/src/authoring.ts'),
+      },
     ],
   },
   define: {

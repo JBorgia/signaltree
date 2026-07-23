@@ -90,12 +90,6 @@ const packages = [
     claimed: 1350,
   },
   {
-    name: 'core/enhancers/entities',
-    path: 'dist/packages/core/dist/enhancers/entities/lib/entities.js',
-    maxSize: 1250,
-    claimed: 1230,
-  },
-  {
     name: 'core/enhancers/middleware',
     path: 'dist/packages/core/dist/enhancers/middleware/lib/middleware.js',
     maxSize: 2000,

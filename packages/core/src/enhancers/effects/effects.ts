@@ -9,6 +9,10 @@ import { effect as angularEffect, untracked } from '@angular/core';
 import type { ISignalTree, EffectsMethods, EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
+declare const ngDevMode: boolean | undefined;
+
+let warnedEffectsDeprecated = false;
+
 export interface EffectsConfig {
   /** Enable/disable effects (default: true) */
   enabled?: boolean;
@@ -17,28 +21,28 @@ export interface EffectsConfig {
 /**
  * Enhances a SignalTree with effect capabilities.
  *
+ * @deprecated Use Angular's native `effect()` instead — a SignalTree is made
+ * of ordinary Angular signals, so `effect(() => tree.$.path())` (or reading
+ * the whole tree via `tree()`) gives you the same reactivity with proper
+ * injection-context handling. Removal planned for the next major release.
+ *
+ * Known limitation (will not be fixed): `tree.effect()`/`tree.subscribe()`
+ * call Angular's `effect()` without any injector handling, so calling them
+ * outside an injection context throws NG0203. Native `effect()` lets you pass
+ * `{ injector }` explicitly.
+ *
  * @param config - Effects configuration
  * @returns Polymorphic enhancer function
  *
  * @example
  * ```typescript
- * const tree = signalTree({ count: 0 })
- *   .with(effects());
+ * // Deprecated:
+ * const tree = signalTree({ count: 0 }).with(effects());
+ * tree.effect(state => console.log('Count changed:', state.count));
  *
- * // Register an effect with cleanup
- * const cleanup = tree.effect(state => {
- *   console.log('Count changed:', state.count);
- *   return () => console.log('Cleanup');
- * });
- *
- * // Or use subscribe for simpler cases
- * const unsub = tree.subscribe(state => {
- *   console.log('State:', state);
- * });
- *
- * // Later: cleanup
- * cleanup();
- * unsub();
+ * // Preferred (native Angular):
+ * const tree = signalTree({ count: 0 });
+ * effect(() => console.log('Count changed:', tree.$.count()));
  * ```
  */
 
@@ -46,6 +50,17 @@ export function effects(
   config: EffectsConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & EffectsMethods<T> {
   const { enabled = true } = config;
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    !warnedEffectsDeprecated
+  ) {
+    warnedEffectsDeprecated = true;
+    console.warn(
+      '[SignalTree] effects() is deprecated and will be removed in the next major release. ' +
+        "Use Angular's native effect() instead: effect(() => tree.$.path()). " +
+        'Note: tree.effect()/tree.subscribe() throw NG0203 outside injection contexts.'
+    );
+  }
   const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & EffectsMethods<T> => {
     type S = T;
     const cleanupFns: Array<() => void> = [];

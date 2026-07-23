@@ -24,7 +24,8 @@
           "packages/core/src/security.ts",
           "packages/core/src/lazy.ts",
           "packages/core/src/edit-session.ts",
-          "packages/core/src/storage.ts"
+          "packages/core/src/storage.ts",
+          "packages/core/src/authoring.ts"
         ],
         "tsConfig": "packages/core/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/core",

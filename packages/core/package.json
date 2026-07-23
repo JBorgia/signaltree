@@ -34,6 +34,11 @@
       "import": "./dist/storage.js",
       "default": "./dist/storage.js"
     },
+    "./authoring": {
+      "types": "./src/authoring.d.ts",
+      "import": "./dist/authoring.js",
+      "default": "./dist/authoring.js"
+    },
     "./package.json": "./package.json"
   },
   "peerDependencies": {

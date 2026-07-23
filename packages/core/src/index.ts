@@ -82,7 +82,6 @@ export type {
 
   // Enhancer system types
   Enhancer,
-  EnhancerMeta,
   EnhancerWithMeta,
   // ChainResult removed in v6
   // WithMethod removed in v6 (single-enhancer runtime)
@@ -107,12 +106,24 @@ export type {
   UpdateMetadata,
 } from './lib/types';
 
+/**
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
+ */
+export type { EnhancerMeta } from './lib/types';
+
 // ============================================
 // WRITE CONTEXT (enhancer plumbing, ambient channel for UpdateMetadata)
 // ============================================
 // Synchronous ambient channel for tagging writes with UpdateMetadata.
 // Used by enhancers (guardrails, validation, time-travel/devtools replay) to
 // observe and react to write intent without changing Angular's WritableSignal API.
+/**
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
+ */
 export { withWriteContext, getActiveWriteContext } from './lib/write-context';
 
 // ============================================
@@ -120,6 +131,11 @@ export { withWriteContext, getActiveWriteContext } from './lib/write-context';
 // ============================================
 // Used by enhancers that need to observe every leaf write (devtools,
 // time-travel, validation). Application code should not use this directly.
+/**
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
+ */
 export { interceptLeafSignals } from './lib/internals/intercept-leaf-signals';
 
 // Entity helpers (runtime)
@@ -134,7 +150,7 @@ export type {
 } from './lib/internals/derived-types';
 
 // Derived helper (v7.2) - for defining derived functions in separate files with proper typing
-export { derivedFrom, externalDerived } from './lib/internals/derived-types';
+export { derivedFrom } from './lib/internals/derived-types';
 
 /**
  * Derived-but-writable signal, comparable to NgRx SignalStore's `withLinkedState`.
@@ -179,10 +195,11 @@ export {
 } from './lib/markers/stored';
 
 // Form marker (v7.2) - tree-integrated forms with validation
+// createFormSignal moved to '@signaltree/core/authoring' in 11.6.0
+// (authoring-only factory, zero application consumers).
 export {
   form,
   isFormMarker,
-  createFormSignal,
   validators,
   withKind,
   FORM_MARKER,
@@ -198,10 +215,11 @@ export {
 } from './lib/markers/form';
 
 // Async-source marker (v9.5) - load-and-expose async primitive
+// createAsyncSourceSignal moved to '@signaltree/core/authoring' in 11.6.0
+// (authoring-only factory, zero application consumers).
 export {
   asyncSource,
   isAsyncSourceMarker,
-  createAsyncSourceSignal,
   ASYNC_SOURCE_MARKER,
   type AsyncSourceMarker,
   type AsyncSourceSignal,
@@ -210,10 +228,11 @@ export {
 } from './lib/markers/async-source';
 
 // Async-query marker (v9.5) - input-driven debounced query primitive
+// createAsyncQuerySignal moved to '@signaltree/core/authoring' in 11.6.0
+// (authoring-only factory, zero application consumers).
 export {
   asyncQuery,
   isAsyncQueryMarker,
-  createAsyncQuerySignal,
   ASYNC_QUERY_MARKER,
   type AsyncQueryMarker,
   type AsyncQuerySignal,
@@ -245,6 +264,11 @@ export type {
 // ./lib/markers/async-stream.ts; re-export here to promote it when warranted.
 
 // Marker processing (v7) - extensibility
+/**
+ * @deprecated Use '@signaltree/core/authoring' — marker-author plumbing moved
+ * off the root barrel in 11.6.0. This root re-export will be removed in the
+ * next major.
+ */
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';
 
 // ============================================
@@ -262,11 +286,17 @@ export {
   isTraversableNode,
   toWritableSignal,
 
-  // Helper functions - Path parsing and composition
+  // Helper functions - Path parsing
   parsePath,
-  composeEnhancers,
   isBuiltInObject,
 } from './lib/utils';
+
+/**
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
+ */
+export { composeEnhancers } from './lib/utils';
 
 // ============================================
 // EDIT SESSION (subpath: @signaltree/core/edit-session)
@@ -276,6 +306,11 @@ export {
 // Import from there to reduce main bundle size.
 
 // PathNotifier exports - For internal use by enhancers (e.g., guardrails)
+/**
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
+ */
 export { getPathNotifier } from './lib/path-notifier';
 
 // ============================================
@@ -295,11 +330,17 @@ export { getPathNotifier } from './lib/path-notifier';
  * Enhancer creation and composition utilities
  * @see {@link createEnhancer} for creating enhancers with metadata
  * @see {@link resolveEnhancerOrder} for dependency resolution
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
  */
 export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
 
 /**
  * Enhancer metadata symbol for third-party compatibility
+ * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
+ * moved off the root barrel in 11.6.0. This root re-export will be removed in
+ * the next major.
  */
 export { ENHANCER_META } from './lib/types';
 
@@ -321,7 +362,11 @@ export type { BatchingConfig, BatchingMethods } from './lib/types';
 
 /**
  * Effects enhancer for reactive side effects and subscriptions
- * @see {@link effects} for Angular effect-based subscriptions on tree state
+ * @deprecated Use Angular's native `effect()` instead — a SignalTree is made
+ * of ordinary Angular signals, so `effect(() => tree.$.path())` gives the
+ * same reactivity with proper injection-context handling. Removal planned for
+ * the next major release. Known limitation: `tree.effect()`/`tree.subscribe()`
+ * throw NG0203 outside injection contexts.
  */
 export { effects } from './enhancers/effects/effects';
 export type { EffectsConfig } from './enhancers/effects/effects';
@@ -376,7 +421,7 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/consta
  *
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications
- * - `effects(config?)` - Reactive side effects and subscriptions
+ * - `effects(config?)` - DEPRECATED: use Angular's native `effect()` instead
  * - `timeTravel(config?)` - Undo/redo
  * - `devTools(config?)` - Redux DevTools integration
  * - `serialization(config?)` - State serialization
@@ -384,7 +429,7 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/consta
  *
  * **Derived State:**
  * - `.derived($)` - Add computed state to tree
- * - `derivedFrom()` / `externalDerived()` - Helpers for separate files
+ * - `derivedFrom()` - Helper for separate files
  *
  * @example Basic Usage
  * ```typescript

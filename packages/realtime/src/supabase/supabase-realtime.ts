@@ -1,4 +1,4 @@
-import { createRealtimeEnhancer, RealtimeAdapter } from '../create-realtime-enhancer';
+import { realtime, RealtimeAdapter } from '../create-realtime-enhancer';
 import {
     CleanupFn,
     RealtimeEnhancerOptions,
@@ -51,7 +51,7 @@ function normalizeEventType(type: string): RealtimeEventType {
  * Creates a Supabase realtime adapter.
  *
  * @param client - Supabase client instance
- * @returns RealtimeAdapter for use with createRealtimeEnhancer
+ * @returns RealtimeAdapter for use with realtime()
  */
 export function createSupabaseAdapter(client: SupabaseClient): RealtimeAdapter {
   let mainChannel: RealtimeChannel | null = null;
@@ -285,5 +285,5 @@ export function supabaseRealtime<TConfig extends object>(
   tree: ISignalTree<T>
 ) => ISignalTree<T> & { realtime: RealtimeEnhancerResult } {
   const adapter = createSupabaseAdapter(client);
-  return createRealtimeEnhancer(adapter, config, options);
+  return realtime(adapter, config, options);
 }

@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { batching } from '../../enhancers/batching/batching';
 import { devTools } from '../../enhancers/devtools/devtools';
-import { entities } from '../../enhancers/entities/entities';
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../types';
 

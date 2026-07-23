@@ -134,14 +134,19 @@ export interface EntityLoadOptions<E, P = void> {
  * requires `load(params)`.
  */
 export interface EntityLoaderSurface<P = void> {
-  /** Guarded load: no-op if fresh OR the same scope is already in flight. */
+  /**
+   * Guarded load: no-op if fresh OR the same scope is already in flight.
+   * If the materializing injector is destroyed while a load is in flight,
+   * the promise resolves (rows are dropped, `loading()` flips false).
+   */
   load(params: P): Promise<void>;
   /**
    * Same as `load()`, but rejects with the loader's error instead of only
    * surfacing it through `.error()`. `load()` always resolves — even on
    * failure — so template/signal consumers never see an unhandled rejection;
    * `loadOrThrow()` is for imperative call sites that want conventional
-   * `await`/`try-catch` orchestration instead.
+   * `await`/`try-catch` orchestration instead. Destroy during flight resolves
+   * (not rejects): `.error()` stays null — a torn-down scope is not a failure.
    */
   loadOrThrow(params: P): Promise<void>;
   /** Force a reload, ignoring `staleTime`/scope-match. Omit `params` to re-run the last scope. */
@@ -291,9 +296,20 @@ export function attachLoader<
     destroyed = true;
     currentSub?.unsubscribe();
     currentSub = null;
+    // Settle any caller-held `load()` promise. RESOLVE, not reject: `load()`
+    // never rejects (errors surface via `.error()`), and after destroy the
+    // settle callbacks are guarded out, so without this the promise would
+    // hang forever. `loadOrThrow()` callers also resolve cleanly: its
+    // post-await check reads `errorSignal`, which stays null — a destroyed
+    // scope is "load ended with no data and no error", not a failure.
+    const pendingResolve = inFlightResolve;
     inFlight = null;
     hasInFlight = false;
     inFlightResolve = null;
+    pendingResolve?.();
+    // The in-flight fetch will never settle now — don't leave `loading()`
+    // stuck true on a destroyed (but still readable) tree.
+    loadingSignal.set(false);
   });
 
   const scopeStorageKey = (params: P): string => {

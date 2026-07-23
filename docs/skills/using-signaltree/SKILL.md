@@ -107,7 +107,7 @@ Full signatures: [`reference/core.md`](reference/core.md).
 Deep dives:
 
 - [`reference/core.md`](reference/core.md) — `signalTree()` signatures, `$` proxy, markers, enhancer composition, reads/writes.
-- [`reference/patterns.md`](reference/patterns.md) — idiomatic creation, templates, `computed()`/`effect()` interop, bulk updates, `derivedFrom`/`externalDerived`, **hybrid migration via legacy facade adapters**, lifetime caveats for root-provided Ops.
+- [`reference/patterns.md`](reference/patterns.md) — idiomatic creation, templates, `computed()`/`effect()` interop, bulk updates, `derivedFrom`, **hybrid migration via legacy facade adapters**, lifetime caveats for root-provided Ops.
 - [`reference/testing.md`](reference/testing.md) — `provideAppTreeForTesting()` recipe, mocking matrix (tree vs ops vs facade), common test-bed pitfalls.
 - [`reference/anti-patterns.md`](reference/anti-patterns.md) — what not to do.
 - [`reference/install.md`](reference/install.md) — Angular version requirement, install commands.

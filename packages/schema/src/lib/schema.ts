@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
-import { interceptLeafSignals, type ISignalTree } from '@signaltree/core';
+import { type ISignalTree } from '@signaltree/core';
+import { interceptLeafSignals } from '@signaltree/core/authoring';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { SchemaConfig, SchemaMethods } from './types';

@@ -162,7 +162,7 @@ grows:
    `tier-ticket-workflow.derived.ts`, `tier-ui-aggregates.derived.ts` survive
    refactors. `tier-1`, `tier-2`, … force a rename whenever a tier moves.
 2. **Type each tier function against the tree shape it actually sees.** Use
-   `derivedFrom<TTree>()` (alias `externalDerived<TTree>()`) to declare the
+   `derivedFrom<TTree>()` to declare the
    tier in its own file with a fully typed `$`, and `WithDerived<…>` to
    describe the tree shape after each tier so subsequent tiers can reference
    what came before.
@@ -192,10 +192,10 @@ export type AppTreeWithTicketWorkflow = WithDerived<AppTreeWithEntityResolution,
 // @skip-lint - relative import to sibling app-tree file shown above.
 // tree/derived/tier-entity-resolution.derived.ts
 import { computed } from '@angular/core';
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
-export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+export const entityResolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
   tickets: {
     active: computed(() => {
       const id = $.tickets.activeId();
@@ -209,11 +209,11 @@ export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
 // @skip-lint - relative import to sibling app-tree file shown above.
 // tree/derived/tier-ticket-workflow.derived.ts
 import { computed } from '@angular/core';
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeWithEntityResolution } from '../app-tree';
 
 // Sees `tickets.active` from the previous tier, fully typed.
-export const ticketWorkflowDerived = externalDerived<AppTreeWithEntityResolution>()(($) => ({
+export const ticketWorkflowDerived = derivedFrom<AppTreeWithEntityResolution>()(($) => ({
   tickets: {
     canAdvance: computed(() => $.tickets.active() != null),
   },

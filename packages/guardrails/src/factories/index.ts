@@ -1,9 +1,23 @@
-import { guardrails, rules } from '../noop';
+import { guardrails as realGuardrails } from '../lib/guardrails';
+import { rules as realRules } from '../lib/rules';
+import { guardrails as noopGuardrails, rules as noopRules } from '../noop';
 
 import type { ISignalTree, TreeConfig, Enhancer } from '@signaltree/core';
 
 import type { GuardrailsConfig, GuardrailRule } from '../lib/types';
 declare const ngDevMode: boolean | undefined;
+
+// The factories used to import '../noop' statically, which made every
+// factory-created tree's guardrails INERT even in development — the second
+// root cause behind the site-audit "guardrails dead" finding (RFC 0004 §8).
+// Pick at build/run time instead: Angular prod builds define ngDevMode=false,
+// so bundlers fold this to the noop and DCE the real implementation; dev
+// builds get functional guardrails. This also lets the "./factories" export
+// serve ONE artifact under both conditions (the old production mapping
+// pointed at noop.js, which doesn't export the factory names at all).
+const __DEV__ = typeof ngDevMode === 'undefined' || ngDevMode;
+const guardrails = __DEV__ ? realGuardrails : noopGuardrails;
+const rules = __DEV__ ? realRules : noopRules;
 
 interface GlobalProcess {
   env?: Record<string, string | undefined>;
@@ -158,7 +172,7 @@ export function createPerformanceTree<T extends Record<string, unknown>>(
 /**
  * Form tree with validation rules
  */
-export function createFormTree<T extends Record<string, unknown>>(
+export function createGuardedFormTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   formName: string
@@ -173,6 +187,34 @@ export function createFormTree<T extends Record<string, unknown>>(
       ],
     } as GuardrailsConfig<T>,
   });
+}
+
+let warnedCreateFormTree = false;
+
+/**
+ * @deprecated Renamed to {@link createGuardedFormTree} — this name collides
+ * with `createFormTree` from `@signaltree/ng-forms` (the established
+ * form-tree factory), so importing both packages forced call-site aliasing.
+ * The behavior is identical; only the name changed (matching the sibling
+ * `create*Tree` factories here). Removal in the next major.
+ */
+export function createFormTree<T extends Record<string, unknown>>(
+  signalTree: SignalTreeFactory<T>,
+  initial: T,
+  formName: string
+): ISignalTree<T> {
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    !warnedCreateFormTree
+  ) {
+    warnedCreateFormTree = true;
+    console.warn(
+      '[SignalTree] guardrails: createFormTree is deprecated — use ' +
+        'createGuardedFormTree. (Renamed to avoid colliding with ' +
+        "@signaltree/ng-forms' createFormTree.)"
+    );
+  }
+  return createGuardedFormTree(signalTree, initial, formName);
 }
 
 /**

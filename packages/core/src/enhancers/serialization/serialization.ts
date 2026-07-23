@@ -5,6 +5,7 @@ import { ISignalTree } from '../../lib/types';
 import type { EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
+import type { StorageAdapter } from './storage-adapters';
 
 /**
  * SignalTree Serialization Module
@@ -954,14 +955,14 @@ export function enableSerialization(): <T>(
   });
 }
 
-/**
- * Storage adapter interface for persistence
- */
-export interface StorageAdapter {
-  getItem(key: string): string | null | Promise<string | null>;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
-}
+// Storage adapters live in ./storage-adapters (so '@signaltree/core/storage'
+// doesn't enter through this enhancer module); re-exported here to keep this
+// module's public surface unchanged.
+export {
+  createStorageAdapter,
+  createIndexedDBAdapter,
+  type StorageAdapter,
+} from './storage-adapters';
 
 /**
  * Persistence configuration
@@ -1229,87 +1230,8 @@ export const withPersistence = Object.assign(
   {}
 );
 
-/**
- * Create a custom storage adapter
- */
-export function createStorageAdapter(
-  getItem: (key: string) => string | null | Promise<string | null>,
-  setItem: (key: string, value: string) => void | Promise<void>,
-  removeItem: (key: string) => void | Promise<void>
-): StorageAdapter {
-  return { getItem, setItem, removeItem };
-}
-
-/**
- * IndexedDB storage adapter for large state trees
- */
-export function createIndexedDBAdapter(
-  dbName = 'SignalTreeDB',
-  storeName = 'states'
-): StorageAdapter {
-  let db: IDBDatabase | null = null;
-
-  const openDB = async (): Promise<IDBDatabase> => {
-    if (db) return db;
-
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(dbName, 1);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        db = request.result;
-        resolve(db);
-      };
-
-      request.onupgradeneeded = (event) => {
-        const database = (event.target as IDBOpenDBRequest).result;
-        if (!database.objectStoreNames.contains(storeName)) {
-          database.createObjectStore(storeName);
-        }
-      };
-    });
-  };
-
-  return {
-    async getItem(key: string): Promise<string | null> {
-      const database = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = database.transaction([storeName], 'readonly');
-        const store = transaction.objectStore(storeName);
-        const request = store.get(key);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result || null);
-      });
-    },
-
-    async setItem(key: string, value: string): Promise<void> {
-      const database = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = database.transaction([storeName], 'readwrite');
-        const store = transaction.objectStore(storeName);
-        const request = store.put(value, key);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve();
-      });
-    },
-
-    async removeItem(key: string): Promise<void> {
-      const database = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = database.transaction([storeName], 'readwrite');
-        const store = transaction.objectStore(storeName);
-        const request = store.delete(key);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve();
-      });
-    },
-  };
-}
-
-// Type-only exports (none)
+// createStorageAdapter / createIndexedDBAdapter moved to ./storage-adapters
+// (re-exported near the StorageAdapter type above — public surface unchanged).
 
 // The primary `serialization()` and `persistence()` implementations are
 // declared above. Legacy `serialization` / `persistence` aliases

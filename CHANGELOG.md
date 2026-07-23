@@ -33,8 +33,46 @@
   but rejects with the loader's error for imperative `await`/`try-catch` call
   sites (`load()` never rejects). There is deliberately no `refreshOrThrow`
   (see the cookbook's imperative error-handling recipe).
+- **`@signaltree/core/authoring` subpath** — enhancer/marker-author plumbing
+  moved off the root barrel (`withWriteContext`, `getActiveWriteContext`,
+  `interceptLeafSignals`, `getPathNotifier`, `registerMarkerProcessor`,
+  `createEnhancer`, `resolveEnhancerOrder`, `composeEnhancers`,
+  `ENHANCER_META`/`EnhancerMeta`, and the `createFormSignal`/
+  `createAsyncSourceSignal`/`createAsyncQuerySignal` factories), leaving a
+  root barrel teachable end-to-end. Root re-exports remain for one minor as
+  deprecated aliases (the three zero-consumer `create*Signal` factories are
+  authoring-only and were removed from the root outright). Internally, the
+  serialization enhancer's storage adapters also split into their own module
+  so `@signaltree/core/storage` no longer enters through the 1300-line
+  enhancer file (public surface unchanged).
+
+### Removed
+
+- **`externalDerived`** — deprecated alias of `derivedFrom` whose JSDoc
+  promised removal in v8; use `derivedFrom`.
+- **`enhancers/entities/` tombstone** — unexported v7-era source that only
+  threw "entities() has been removed"; `entityMap` markers have been
+  auto-processed since v7.
+
+### Deprecated
+
+- **`effects()`** — use Angular's native `effect(() => tree.$.path())`
+  instead (the README's own guidance); removal next major. Known limitation,
+  documented rather than fixed: `tree.effect()`/`tree.subscribe()` call
+  `effect()` with no injector handling and throw NG0203 outside injection
+  contexts. One-time dev-mode warning on use; the dev-proxy hint for
+  `effect`/`subscribe` now points at native `effect()`.
 
 ### Fixed
+
+- **`@signaltree/realtime`'s main barrel had NEVER actually built** — nx's
+  rollup input map keys entries by basename, so the `supabase/index.ts`
+  additional entry silently overwrote the main `src/index.ts` entry; a
+  local rollup plugin papered over it by fabricating `dist/index.js` from a
+  hardcoded export list, so every published version shipped a stale stub
+  (and would have silently resurrected removed APIs forever). Input keys
+  are now unique, the fabrication plugin is deleted, and the built barrel
+  is the real module (`tools/verify-built-barrels.mjs` guards it).
 
 - **`@signaltree/enterprise`: built-in leaf replacement was silently
   inert** — DiffEngine recursed into `Date`/`Map`/`Set` leaves as empty

@@ -1,7 +1,10 @@
 import { entityMap, signalTree } from '@signaltree/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createRealtimeEnhancer, RealtimeAdapter } from './create-realtime-enhancer';
+import { realtime, RealtimeAdapter } from './create-realtime-enhancer';
+// The deprecated alias lives in the barrel (rollup shook it out of the impl
+// module when it lived there — see index.ts).
+import { createRealtimeEnhancer } from './index';
 import { CleanupFn, ConnectionStatus, RealtimeEvent, RealtimeSubscription } from './types';
 
 interface TestEntity {
@@ -144,6 +147,13 @@ describe('createRealtimeEnhancer()', () => {
     it('should create an enhancer function', () => {
       const adapter = createMockAdapter();
       const enhancer = createRealtimeEnhancer(adapter, {});
+
+      expect(typeof enhancer).toBe('function');
+    });
+
+    it('exports the canonical noun-form `realtime()` (createRealtimeEnhancer is a deprecated alias)', () => {
+      const adapter = createMockAdapter();
+      const enhancer = realtime(adapter, {});
 
       expect(typeof enhancer).toBe('function');
     });

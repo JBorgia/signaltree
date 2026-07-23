@@ -647,7 +647,7 @@ Enhancers add cross-cutting capabilities. Chain via `.with()`. Each is opt-in, t
 | `batching()` | `tree.batch(fn)`, `tree.coalesce(fn)` | Group multiple synchronous writes; coalesce rapid updates |
 | `devTools(config?)` | Redux DevTools integration with path-based actions | Development/debugging |
 | `timeTravel({ maxHistorySize })` | `tree.undo()`, `tree.redo()`, history navigation | Undo/redo, form wizards, canvas apps |
-| `effects()` | `tree.effect(fn)`, `tree.subscribe(fn)` | Side effects and external observers |
+| `effects()` | `tree.effect(fn)`, `tree.subscribe(fn)` | DEPRECATED — use Angular's native `effect(() => tree.$.path())` instead; removal planned for the next major. `tree.effect()`/`tree.subscribe()` throw NG0203 outside injection contexts |
 | `persistence(config)` | Auto save/load via storage adapters (localStorage, IndexedDB, custom) | Whole-tree persistence with adapters |
 | `serialization()` | JSON serialize/deserialize with Date/Map/Set preservation | Snapshotting, export/import |
 
@@ -810,7 +810,7 @@ session.pullFromSource();
 | `@signaltree/callable-syntax` | Build-time `(value)` → `.set(value)` transform | Vite/Webpack plugin |
 | `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup`, with Standard Schema validation | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
 | `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
-| `@signaltree/events` | Typed event/command bus | `defineEvents()`, `tree.emit()`, `tree.on()` |
+| `@signaltree/events` | Standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — does NOT integrate with the signal tree | `createEventSchema()`, `EventBusModule` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
 | `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
 | `@signaltree/enterprise` | Diff-based `updateOptimized()` for very large trees | `optimized()` enhancer |

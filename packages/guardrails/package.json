@@ -18,7 +18,7 @@
         "import": "./dist/noop.js",
         "default": "./dist/noop.js"
       },
-      "default": "./dist/noop.js"
+      "default": "./dist/index.js"
     },
     "./factories": {
       "types": "./src/factories/index.d.ts",
@@ -27,10 +27,10 @@
         "default": "./dist/factories/index.js"
       },
       "production": {
-        "import": "./dist/noop.js",
-        "default": "./dist/noop.js"
+        "import": "./dist/factories/index.js",
+        "default": "./dist/factories/index.js"
       },
-      "default": "./dist/noop.js"
+      "default": "./dist/factories/index.js"
     },
     "./noop": {
       "types": "./src/noop.d.ts",

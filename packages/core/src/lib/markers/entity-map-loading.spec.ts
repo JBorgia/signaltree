@@ -657,6 +657,78 @@ describe('loader teardown (materializing injector destroyed)', () => {
     expect(tree.$.plants.all()).toEqual([]);
     expect(tree.$.plants.loaded()).toBe(false);
   });
+
+  it('settles a caller-held load() promise and clears loading() on destroy (Observable loader)', async () => {
+    // RFC 0005 §6 addendum: destroy used to null `inFlightResolve` without
+    // invoking it — a caller's `await tree.$.plants.load()` hung forever and
+    // `loading()` stuck true. Destroy must resolve (never reject — load()'s
+    // contract) and flip loading() false.
+    const subject = new Subject<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => subject.asObservable(),
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    let held!: Promise<void>;
+    runInInjectionContext(env, () => {
+      held = tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    await held; // pre-fix: hangs forever (test would time out)
+    expect(tree.$.plants.loading()).toBe(false);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('settles caller-held load()/loadOrThrow() promises and clears loading() on destroy (Promise loader)', async () => {
+    const d = deferred<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => d.promise,
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    let held!: Promise<void>;
+    let heldOrThrow!: Promise<void>;
+    runInInjectionContext(env, () => {
+      held = tree.$.plants.load();
+      heldOrThrow = tree.$.plants.loadOrThrow(); // dedups onto the same flight
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    await held; // pre-fix: hangs forever
+    // loadOrThrow resolves too (does not reject): a torn-down scope is not a
+    // loader failure — `.error()` stays null, so its post-await check passes.
+    await expect(heldOrThrow).resolves.toBeUndefined();
+    expect(tree.$.plants.error()).toBeNull();
+    expect(tree.$.plants.loading()).toBe(false);
+
+    // A late resolution is still dropped by the `destroyed` settle guard.
+    d.resolve([P1, P2]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loading()).toBe(false);
+  });
 });
 
 describe('entityMap loading — typing (compile-time)', () => {

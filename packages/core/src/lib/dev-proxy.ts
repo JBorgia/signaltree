@@ -2,10 +2,18 @@ import type { ISignalTree } from './types';
 
 const ENHANCER_METHOD_MAP: Record<
   string,
-  { enhancer: string }
+  { enhancer?: string; message?: string }
 > = {
-  effect: { enhancer: 'effects()' },
-  subscribe: { enhancer: 'effects()' },
+  effect: {
+    message:
+      "effect() is not available — use Angular's native effect(() => tree.$.path()) instead. " +
+      '(The effects() enhancer that provided it is deprecated.)',
+  },
+  subscribe: {
+    message:
+      "subscribe() is not available — use Angular's native effect(() => tree.$.path()) instead. " +
+      '(The effects() enhancer that provided it is deprecated.)',
+  },
   batch: { enhancer: 'batching()' },
   batchUpdate: { enhancer: 'batching()' },
   undo: { enhancer: 'timeTravel()' },
@@ -13,7 +21,6 @@ const ENHANCER_METHOD_MAP: Record<
   getHistory: { enhancer: 'timeTravel()' },
   connectDevTools: { enhancer: 'devTools()' },
   disconnectDevTools: { enhancer: 'devTools()' },
-  entities: { enhancer: 'entities()' },
 };
 
 export function wrapWithDevProxy<T>(tree: ISignalTree<T>): ISignalTree<T> {
@@ -24,7 +31,9 @@ export function wrapWithDevProxy<T>(tree: ISignalTree<T>): ISignalTree<T> {
       const info = ENHANCER_METHOD_MAP[String(prop)];
       if (info)
         return () => {
-          throw new Error(`${String(prop)}() requires ${info.enhancer}`);
+          throw new Error(
+            info.message ?? `${String(prop)}() requires ${info.enhancer}`
+          );
         };
       return undefined;
     },
