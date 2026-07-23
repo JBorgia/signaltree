@@ -137,88 +137,13 @@ export type TreeNode<T> = {
     : CallableWritableSignal<T[K]>;
 };
 
-/**
- * Read-only counterpart to {@link NodeAccessor} — only the zero-arg read
- * form. Used by `defineStore(factory, { expose: 'readonly' })` to produce an
- * injected type with no reachable write call signature.
- */
-export interface ReadonlyNodeAccessor<T> {
-  (): T;
-}
-
-/**
- * Read-only counterpart to {@link TreeNode} — recursively converts leaf
- * `CallableWritableSignal`s to plain `Signal`s and branches to
- * {@link ReadonlyNodeAccessor}, mirroring `TreeNode`'s shape exactly.
- *
- * Marker-typed nodes (`EntitySignal`, `StatusSignal`, `FormSignal`, …) are
- * passed through UNCHANGED — their named mutator methods (`upsertOne`,
- * `setLoading`, …) are not stripped. There's no structural way to identify
- * "the writer members" across arbitrary marker types generically; a
- * per-marker read-only view is a reasonable future addition, not attempted
- * here. See `defineStore`'s `expose: 'readonly'` documentation.
- */
-export type ReadonlyTreeNode<T> = {
-  [K in keyof T]: T[K] extends LoadingEntityMapMarker<
-    infer LE,
-    infer LK,
-    infer LP
-  >
-    ? LoadingEntitySignal<LE, LK, LP>
-    : T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
-    : T[K] extends StatusMarker<infer Err>
-    ? StatusSignal<Err>
-    : T[K] extends StoredMarker<infer V>
-    ? StoredSignal<V>
-    : T[K] extends FormMarker<infer F>
-    ? FormSignal<F>
-    : T[K] extends AsyncSourceMarker<infer V>
-    ? AsyncSourceSignal<V>
-    : T[K] extends AsyncQueryMarker<infer In, infer Out>
-    ? AsyncQuerySignal<In, Out>
-    : T[K] extends AsyncStreamMarker<infer Chunk, infer State>
-    ? AsyncStreamSignal<Chunk, State>
-    : T[K] extends Primitive
-    ? Signal<T[K]>
-    : T[K] extends readonly unknown[]
-    ? Signal<T[K]>
-    : T[K] extends
-        | Date
-        | RegExp
-        | Map<any, any>
-        | Set<any>
-        | Error
-        | ((...args: unknown[]) => unknown)
-    ? Signal<T[K]> // Built-in objects → treat as atomic values
-    : T[K] extends object
-    ? ReadonlyNodeAccessor<T[K]> & ReadonlyTreeNode<T[K]>
-    : Signal<T[K]>;
-};
-
-/**
- * The injected type for `defineStore(factory, { expose: 'readonly' })` — a
- * deliberately minimal reader surface: read-only `$` reads plus lifecycle
- * (`destroy()`/`destroyed`), with no reachable write path. This is a
- * type-only narrowing — `defineStore` returns the exact same runtime object
- * either way; see the `expose` option's own documentation for why a
- * compile-time-only guard is the right call here, matching this codebase's
- * existing "typed consumers get a compile error; untyped/JS gets a runtime
- * guard where one exists" posture (see the `security` config handling in
- * `signal-tree.ts`).
- *
- * Deliberately excludes `with()` (adds enhancers — a construction-time
- * capability, not a state read), `bind()` (returns a writable
- * {@link NodeAccessor}), and `updateAndReport()` (writes state) — all three
- * would otherwise let a "reader" reach a write path.
- */
-export interface ReadonlyStore<T> {
-  (): T;
-  readonly $: ReadonlyTreeNode<T>;
-  readonly destroyed: Signal<boolean>;
-  destroy(): void;
-  registerCleanup(fn: EnhancerCleanup): void;
-}
+// NOTE: The read-only view types (`ReadonlyView`, `ReadonlyStore`,
+// `ReadonlyNodeAccessor`, the per-marker `Readonly*Signal` views and their
+// reader-key allowlists, and `asReadonly()`) live in `./readonly.ts`. They
+// are computed over a tree's ACCUMULATED `$` type (the builder's `TAccum`),
+// not over the source `T` — a source-computed view drops every `.derived()`
+// computed (RFC 0004 F1), which is why no `ReadonlyTreeNode<T>` mirror of
+// `TreeNode<T>` exists here.
 
 // Base SignalTree minimal interface
 // v6: primary runtime tree type is `SignalTree<T>`; a deprecated alias
@@ -591,7 +516,7 @@ export interface EntityMapMarker<E, K extends string | number> {
 }
 
 /**
- * A single-scope freshness-managed (loading) entityMap marker — produced by `entityMap({ load, … })`.
+ * A cache-aware (single-scope) loading entityMap marker — produced by `entityMap({ load, … })`.
  * Materializes into an {@link EntitySignal} plus the loader surface
  * ({@link EntityLoaderSurface}). Distinguished from a plain marker by `__hasLoad`
  * so the type resolver can add the loader methods only when `load` is configured.
@@ -608,7 +533,7 @@ export interface LoadingEntityMapMarker<
 }
 
 /**
- * An {@link EntitySignal} augmented with the single-scope freshness-managed loader surface — the
+ * An {@link EntitySignal} augmented with the cache-aware (single-scope) loader surface — the
  * materialized form of `entityMap({ load, … })`.
  */
 export type LoadingEntitySignal<

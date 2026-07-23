@@ -43,7 +43,7 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 
 For anything beyond a prototype, wrap the tree in a service and expose **`$` reads + Ops methods**: keep `computed()` / `.derived()` for reads and `@Injectable` Ops services for writes and async. This keeps agent-generated code architecturally sound, not just API-correct. See [Recommended Architecture](docs/architecture/signaltree-architecture-guide.md#recommended-architecture-tldr).
 
-For components that should only ever read the store, `defineStore(factory, { expose: 'readonly' })` narrows the injected type to a read-only surface (`$` reads plus `destroy()`/`destroyed`) — no `.set()`/`.update()`/branch-write call signature reachable on the injected type. This is a compile-time narrowing, not a runtime proxy — pair it with a separate Ops service for the write path.
+For components that should only ever read the store, `asReadonly(tree)` narrows the tree to a `ReadonlyStore` — read-only `$` over the tree's full accumulated type (leaf `Signal` reads, `.derived()` computeds preserved, `linked()` narrowed to `Signal`) plus `destroy()`/`destroyed`. Marker surfaces are genuinely narrowed to per-marker reader allowlists: entity mutators (`upsertOne`, `removeWhere`, …), loader triggers (`load`/`refresh`/`invalidate`), `status` setters, and `form` writes are not offered on the readonly type, and `byId()` is re-signed to a read-only entity node (deep `Signal` leaves, no `.set`). `defineStore(factory, { expose: 'readonly' })` is sugar over the same view for injected stores. This is a compile-time narrowing only — the same runtime object, no runtime guard — so it stops the type system from *offering* a write, not a determined `as any`; pair it with a separate Ops service for the write path.
 
 ## When to Use SignalTree
 
@@ -156,7 +156,7 @@ store.$.loadingState.setLoaded();
 store.$.loadingState.loading(); // Signal<boolean> (the `is`-prefix aliases — .isLoading() etc. — were removed in v11.0.0)
 ```
 
-Passing `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`) to `entityMap()` turns the collection into a single-scope freshness-managed, self-loading one — a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence, all on the same marker. It retains only the current scope — switching scope A → B → A refetches A rather than serving from a multi-key cache. There is no separate `entityCollection` marker — the short-lived v11.2/11.3 marker of that name was folded into `entityMap` in v11.4.0. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
+Passing `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`) to `entityMap()` turns the collection into a cache-aware (single-scope), self-loading one — a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence, all on the same marker. It retains only the current scope — switching scope A → B → A refetches A rather than serving from a multi-key cache. There is no separate `entityCollection` marker — the short-lived v11.2/11.3 marker of that name was folded into `entityMap` in v11.4.0. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
 
 ## Composition model
 

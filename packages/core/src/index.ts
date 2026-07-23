@@ -26,6 +26,39 @@ export { signalTree } from './lib/signal-tree';
  */
 export { defineStore, type DefineStoreConfig } from './lib/define-store';
 
+/**
+ * Type-only read-only narrowing of a tree — same runtime object, no write
+ * path offered on the type. The primary readonly surface;
+ * `defineStore(factory, { expose: 'readonly' })` is sugar over the same view.
+ * @see {@link asReadonly}
+ */
+export {
+  asReadonly,
+  // Per-marker reader-key allowlists (const) — the `Pick` sources for the
+  // readonly views; importable by parity fixtures.
+  ENTITY_READERS,
+  ENTITY_LOADER_READERS,
+  STATUS_READERS,
+  FORM_READERS,
+  FORM_WIZARD_READERS,
+  STORED_READERS,
+  ASYNC_SOURCE_READERS,
+  ASYNC_QUERY_READERS,
+  type ReadonlyStore,
+  type ReadonlyView,
+  type ReadonlyNodeAccessor,
+  type ReadonlyEntityNode,
+  type ReadonlyEntitySignal,
+  type ReadonlyEntityLoaderSurface,
+  type ReadonlyLoadingEntitySignal,
+  type ReadonlyStatusSignal,
+  type ReadonlyFormSignal,
+  type ReadonlyFormWizard,
+  type ReadonlyStoredSignal,
+  type ReadonlyAsyncSourceSignal,
+  type ReadonlyAsyncQuerySignal,
+} from './lib/readonly';
+
 // ============================================
 // TYPE EXPORTS
 // ============================================
@@ -39,9 +72,6 @@ export type {
   CallableWritableSignal,
   AccessibleNode,
   NodeAccessor,
-  ReadonlyNodeAccessor,
-  ReadonlyTreeNode,
-  ReadonlyStore,
   Primitive,
   NotFn,
 
@@ -190,8 +220,8 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
-// Single-scope freshness-managed loading for entityMap (RFC 0002/0003). `entityMap({ load, … })`
-// turns a plain collection into a self-loading, freshness-managed one; `invalidateTag`
+// Cache-aware (single-scope) loading for entityMap (RFC 0002/0003). `entityMap({ load, … })`
+// turns a plain collection into a self-loading, cache-aware one; `invalidateTag`
 // is the push-invalidation seam. `entityMap` is exported above (from ./lib/types).
 export {
   invalidateTag,
