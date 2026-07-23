@@ -83,8 +83,12 @@ Angular Signal Forms bridge (Angular 22+, v11.6+) — not an enhancer; `signalFo
 
 ```ts
 import { signalForm } from '@signaltree/ng-forms/signals';
+import { signalTree, form } from '@signaltree/core';
 
-readonly profile = signalForm(this.tree.$.onboarding.profile); // FieldTree<T>
+const tree = signalTree({
+  onboarding: { profile: form({ initial: { name: '' } }) },
+});
+const profile = signalForm(tree.$.onboarding.profile); // FieldTree<{ name: string }>
 // template: <input [formField]="profile.name" /> — marker validators run as Signal Forms
 // validators with real error kinds; { nativeErrors: true } emits Angular's branded errors.
 // Async validation is NOT unified — pick ONE authority (marker submit() path OR validateAsync).

@@ -62,6 +62,7 @@ const SIGNALTREE_PATH_MAP = {
   '@signaltree/enterprise': ['dist/packages/enterprise/src/index.d.ts'],
   '@signaltree/ng-forms': ['dist/packages/ng-forms/src/index.d.ts'],
   '@signaltree/ng-forms/audit': ['dist/packages/ng-forms/src/audit/index.d.ts'],
+  '@signaltree/ng-forms/signals': ['dist/packages/ng-forms/src/signals/index.d.ts'],
   '@signaltree/callable-syntax': [
     'dist/packages/callable-syntax/src/index.d.ts',
   ],
