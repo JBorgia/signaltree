@@ -1,3 +1,88 @@
+## 11.6.0 (unreleased)
+
+> The first release to pass the full RFC 0004 §5 ratchet: every change below
+> went design-review → implement → adversarial review → fix before landing,
+> and the release was measured by the M3 fresh-agent acceptance test
+> (80% strict first-attempt success against the llms docs, up from ~0%
+> baseline; RFC 0004 §7).
+
+### Added
+
+- **`signalForm()` (`@signaltree/ng-forms/signals`)** — one name for the
+  Angular Signal Forms bridge, with two overloads: `signalForm(marker,
+  options?)` for `form()` markers and `signalForm(tree, rootPath, subtree)`
+  for schema-registry trees. `markerSignalForm`/`signalFormBridge` remain as
+  deprecated warned aliases (removal next major); `SignalFormOptions` is the
+  canonical options type.
+- **`nativeErrors` option on the Signal Forms bridge** — built-in validator
+  failures emit Angular's branded error factories (`requiredError`,
+  `minError`, `patternError`, …), so `instanceof NgValidationError` and typed
+  `getError()` genuinely work. Default `false` (additive); the default flips
+  in the next major.
+- **`asReadonly(tree)` / `ReadonlyStore`** — type-only read-only views over
+  the tree's accumulated type: leaf `.set`/`.update` and every marker mutator
+  (`upsertOne`, `setLoading`, loader triggers, …) are genuinely absent from
+  the type; derived computeds survive, including derived state deep-merged
+  into marker nodes; `byId` re-signed as deep-readonly. `defineStore(factory,
+  { expose: 'readonly' })` is honest sugar over the same type — misuse on a
+  non-builder factory is a compile error, never a silent no-op.
+- **`withKind()`** — tag custom validators with a semantic kind for the
+  Signal Forms bridge (wraps, never mutates); `validators.when()` now
+  forwards the wrapped validator's kind and constraint params.
+- **`entityMap` loader: `loadOrThrow(params?)`** — same guard as `load()`,
+  but rejects with the loader's error for imperative `await`/`try-catch` call
+  sites (`load()` never rejects). There is deliberately no `refreshOrThrow`
+  (see the cookbook's imperative error-handling recipe).
+
+### Fixed
+
+- **`@signaltree/enterprise`: built-in leaf replacement was silently
+  inert** — DiffEngine recursed into `Date`/`Map`/`Set` leaves as empty
+  objects and `isEqual`'s JSON.stringify fallback saw every Map/Set as
+  `{}`, so `updateOptimized` reported `changed: true` while dropping the
+  write. Built-ins now diff and compare as the atomic leaves core
+  materializes them as; Map/Set/Date regression tests added.
+- **`SignalTreeBuilder` type omitted `destroyed`/`registerCleanup`** — both
+  exist at runtime on every `signalTree()` return and were documented, but
+  doc-faithful code failed to compile (found by M3 run 2).
+- **When-wrapped built-in validators now bridge their real kind** — a
+  `validators.when(cond, validators.required())` field reports
+  `kind: 'required'` instead of the generic `'signalTree'`. Breaking only
+  for consumers matching `kind === 'signalTree'` on when-wrapped fields
+  (bridge was public for two days in 11.5.x).
+- **rxjs is now a type-only dependency of the entityMap loader**
+  (`takeUntilDestroyed` was redundant with the loader's own `onDestroy`
+  teardown — now pinned by destroy-path tests for both Observable and
+  Promise loaders, mutation-verified).
+- **ng-forms legacy-bridge dev warning** no longer claims removal "in v6.0"
+  (five majors ago).
+
+### Documentation & tooling
+
+- **The Signal Forms story now exists on every AI-facing surface**
+  (llms.txt, llms-full.txt, SKILL.md) — previously zero mentions, while the
+  docs simultaneously taught three phantom APIs (`asyncStream` root import,
+  `bindToFormGroup`, `createIndexedDBAdapter` at root — all resolved; the
+  persist example now compiles as taught, from `@signaltree/core/storage`).
+- **Verified-docs gates** wired as blocking pre-publish sections, each with
+  a self-test proving it can fail: taught-symbols reverse diff + 30-symbol
+  golden list, Angular-version-claims check, CHANGELOG-entry gate (this
+  entry exists because the gate refused to release without it).
+  `validate:doc-snippets` deleted (validated nothing for three months);
+  `validate:size-claims` wired blocking after refreshing 8-month-stale
+  claims to measured values.
+- **One loader vocabulary**: "cache-aware (single-scope)" everywhere, with
+  the A→B→A refetch clarifier; the tree-shaking claim on the loader module
+  corrected to the measured truth (~1.5 KB min+gzip ships with `entityMap`
+  regardless of `load`; RFC 0005 §6 keeps the shape and archives the
+  injected-helper split as the fallback design).
+- **Walker-conformance suites** across core/enterprise/schema/ng-forms
+  (deep callable-branch fixtures with markers and built-in leaves) plus an
+  ESLint AST rule replacing the inert grep script — the fixture family whose
+  absence hid the entire v11.4/11.5 inert-walker bug class.
+- NgRx comparison claims re-stamped to the actually benchmarked
+  `@ngrx/signals` 21.1.
+
 ## 11.5.2 / 11.5.3 (2026-07-22)
 
 > Second sweep of the bug classes found in 11.5.0/11.5.1 — this time across
