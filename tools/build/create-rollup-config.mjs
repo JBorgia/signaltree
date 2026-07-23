@@ -58,6 +58,31 @@ export function createLibraryRollupConfig({
   };
 
   return (config, options = {}) => {
+    // Re-key the entry input map by src-relative path. @nx/rollup keys it by
+    // entry BASENAME (with-nx.js createInput: `input[parse(entry).name]`), so
+    // an additionalEntryPoint like `src/foo/index.ts` silently OVERWRITES the
+    // main `src/index.ts` — both key as "index" — and the main barrel never
+    // builds. That shipped broken barrels in realtime, ng-forms, and
+    // guardrails (papered over by per-package "barrel-index-plugin" hacks that
+    // fabricated dist/index.js from hardcoded, stale export lists). Output
+    // filenames are unaffected: with preserveModules they derive from
+    // facadeModuleId, not input keys.
+    if (options.main) {
+      const entries = [options.main, ...(options.additionalEntryPoints ?? [])];
+      const input = {};
+      for (const entry of entries) {
+        const full = path.isAbsolute(entry)
+          ? entry
+          : path.join(workspaceRoot, entry);
+        const key = path
+          .relative(srcRoot, full)
+          .replace(/\\/g, '/')
+          .replace(/\.[jt]sx?$/i, '');
+        input[key] = full;
+      }
+      config = { ...config, input };
+    }
+
     const outputs = Array.isArray(config.output)
       ? config.output
       : [config.output ?? {}];
@@ -251,6 +276,9 @@ declare const DEFAULT_PATH_CACHE_SIZE: number;
     return {
       ...config,
       plugins: [resolveSharedPlugin, ...plugins, inlineSharedTypesPlugin],
+      // Entry barrels must keep their re-exports even when the module body is
+      // empty after bundling (pure re-export barrels).
+      preserveEntrySignatures: 'exports-only',
       output: Array.isArray(config.output) ? updatedOutputs : updatedOutputs[0],
       treeshake: {
         ...(config.treeshake || {}),

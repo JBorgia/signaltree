@@ -603,3 +603,15 @@ release):
    @signaltree/events (6.2k LOC, zero core imports — standalone product
    under the scope, agents will assume tree integration that doesn't
    exist).
+
+### §8 execution close-out (2026-07-23)
+
+Queue executed (owner-directed). Biggest find: the nx-rollup basename
+collision silently prevented THREE packages' main barrels from ever
+building (realtime, ng-forms, guardrails) — per-package fabrication plugins
+shipped stale stubs instead. Root-fixed in the shared rollup config.
+Remaining queued (found during review): an export-PARITY gate for built
+barrels (the resolution-only smoke let stubs pass — same §5 rule-2 lesson);
+guardrails pre-existing defects (console reporting dead, mode:'throw'
+swallowed, plain-object trees change-blind via PathNotifier); dev-proxy is
+unreferenced dead code.

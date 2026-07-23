@@ -5,40 +5,14 @@ import { createLibraryRollupConfig } from '../../tools/build/create-rollup-confi
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 
-const baseConfig = createLibraryRollupConfig({
+// NOTE (2026-07-23): this config used to carry a "barrel-index-plugin" that
+// fabricated dist/index.js (`export * from './lib/guardrails.js'` + rules)
+// whenever the real barrel was missing. The barrel was missing because
+// @nx/rollup keyed the input map by basename, so `src/factories/index.ts`
+// overwrote `src/index.ts`. The fabricated `export *` also leaked internals
+// (resolveGuardrailsActive, withGuardrails) that the source barrel hides.
+// The shared helper now re-keys entries by src-relative path, so the real
+// barrel always builds; the fabrication hack is gone.
+export default createLibraryRollupConfig({
   packageRoot,
 });
-
-/**
- * Plugin to ensure the main index.ts barrel file is always generated,
- * even when it contains only re-exports that Rollup would normally tree-shake.
- */
-const barrelIndexPlugin = {
-  name: 'barrel-index-plugin',
-  generateBundle(options, bundle) {
-    // If index.js doesn't exist (because Rollup optimized it away), create it
-    // by re-exporting from the actual modules
-    if (!Object.keys(bundle).some((k) => k.includes('dist/index'))) {
-      const indexContent = `export * from './lib/guardrails.js';
-export * from './lib/rules.js';
-`;
-      bundle['dist/index.js'] = {
-        type: 'asset',
-        fileName: 'dist/index.js',
-        source: indexContent,
-      };
-    }
-  },
-};
-
-export default (config, options = {}) => {
-  const result = baseConfig(config, options);
-
-  // Add the barrel index plugin to ensure main entry point is generated
-  if (!result.plugins) {
-    result.plugins = [];
-  }
-  result.plugins.push(barrelIndexPlugin);
-
-  return result;
-};
