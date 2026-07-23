@@ -30,13 +30,13 @@ const packages = [
       'dist/packages/core/fesm2022/signaltree-core.mjs',
     ],
     maxSize: 30000,
-    claimed: 34450,
+    claimed: 42261,
   },
   {
     name: 'enterprise',
     path: 'dist/packages/enterprise/dist/index.js',
     maxSize: 8000,
-    claimed: 5700,
+    claimed: 6026,
   },
   {
     name: 'ng-forms',
@@ -51,13 +51,13 @@ const packages = [
     name: 'callable-syntax',
     path: 'dist/packages/callable-syntax/dist/index.js',
     maxSize: 3000,
-    claimed: 2000,
+    claimed: 1494,
   },
   {
     name: 'shared',
     path: 'dist/packages/shared/dist/index.js',
     maxSize: 4200,
-    claimed: 3000,
+    claimed: 2501,
   },
   {
     name: 'guardrails',
@@ -88,12 +88,6 @@ const packages = [
     path: 'dist/packages/core/dist/enhancers/time-travel/lib/time-travel.js',
     maxSize: 1950,
     claimed: 1350,
-  },
-  {
-    name: 'core/enhancers/entities',
-    path: 'dist/packages/core/dist/enhancers/entities/lib/entities.js',
-    maxSize: 1250,
-    claimed: 1230,
   },
   {
     name: 'core/enhancers/middleware',

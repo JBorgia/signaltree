@@ -7,6 +7,6 @@
 export {
   createStorageAdapter,
   createIndexedDBAdapter,
-} from './enhancers/serialization/serialization';
+} from './enhancers/serialization/storage-adapters';
 
-export type { StorageAdapter } from './enhancers/serialization/serialization';
+export type { StorageAdapter } from './enhancers/serialization/storage-adapters';

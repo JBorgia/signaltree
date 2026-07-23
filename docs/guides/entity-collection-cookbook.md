@@ -1,6 +1,6 @@
 # Cookbook: `entityMap({ load })` + HTTP caching + push invalidation
 
-`entityMap`'s cache-aware loading (v11.2+, [RFC 0002](../rfcs/0002-entity-collection.md);
+`entityMap`'s cache-aware (single-scope) loading (v11.2+, [RFC 0002](../rfcs/0002-entity-collection.md);
 scoped form and the `entityCollection`→`entityMap` fold in v11.4+, [RFC 0003](../rfcs/0003-keyed-entity-collection.md))
 is the cache-aware collection loader: passing `load` in `entityMap(config)` adds load status +
 a freshness guard + single-flight dedup + tag invalidation + optional offline-first persistence
@@ -112,7 +112,8 @@ collections that share a tag (e.g. `tags: ['catalog']` on both `plants` and `see
 Seed instantly from IndexedDB on startup, then revalidate in the background:
 
 ```typescript
-import { entityMap, createIndexedDBAdapter } from '@signaltree/core';
+import { entityMap } from '@signaltree/core';
+import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 plants: entityMap<PlantDto, string>({
   load: () => this.http.get<PlantDto[]>('/api/plants'),
@@ -165,6 +166,40 @@ This is a **single-scope cache**: only the most recently loaded scope's rows are
 between two scopes refetches each time rather than serving a cached second scope instantly. A
 multi-scope LRU (instant back-toggle between recently seen scopes) is explicitly deferred — see RFC
 0003 §5 — and layers on top of this without an API break if it ships later.
+
+## 7. Imperative error handling
+
+Template/signal consumers want `load()`'s always-resolves guarantee (no unhandled rejection just
+from reading a collection), but a route guard, resolver, or other imperative call site usually
+wants a normal `await`/`try-catch`. Use `loadOrThrow()` there — same freshness/in-flight guard as
+`load()`, but it rejects with the loader's error instead of only surfacing it through `.error()`:
+
+```typescript
+export const plantsResolver: ResolveFn<boolean> = async () => {
+  const store = inject(PlantStore);
+  try {
+    await store.tree.$.plants.loadOrThrow();
+    return true;
+  } catch (err) {
+    return false; // or redirect
+  }
+};
+```
+
+For a forced reload (bypassing the freshness guard) where you'd rather branch on state than catch,
+pair `refresh()` with an `.error()` check instead:
+
+```typescript
+await this.tree.$.plants.refresh();
+if (this.tree.$.plants.error()) {
+  // handle the failed refresh — rows are unchanged, the old data (if any) is still there
+}
+```
+
+There is no `refreshOrThrow()`: a failed load never becomes fresh (`lastLoadedAt` only advances on
+success), so retrying after an error is already what `loadOrThrow()` does — `refresh()`'s only
+distinct job is forcing a reload of *already-fresh* data, which has nothing to do with retrying a
+failure (see [RFC 0004](../rfcs/0004-v12-optimal-iteration.md) §3 V-P4).
 
 ## Anti-patterns
 

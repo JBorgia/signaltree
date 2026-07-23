@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+import { isBuiltInObject } from '@signaltree/core';
+
 import type { Path } from './path-index';
 
 /**
@@ -191,8 +193,14 @@ export class DiffEngine {
       return; // No change anywhere below
     }
 
-    // Handle primitives
-    if (typeof upd !== 'object' || upd === null) {
+    // Handle primitives — and built-in objects (Date/RegExp/Map/Set/Error),
+    // which SignalTree materializes as ATOMIC leaf signals. Recursing into a
+    // Date as if it were a plain branch finds zero own enumerable keys and
+    // reports "no changes" — making a built-in leaf replacement silently
+    // inert in updateOptimized (caught by the walker-conformance suite,
+    // 2026-07-23). Diff must mirror core's leaf model: compare whole, emit
+    // one UPDATE.
+    if (typeof upd !== 'object' || upd === null || isBuiltInObject(upd)) {
       if (!opts.equalityFn(curr, upd)) {
         changes.push({
           type: curr === undefined ? ChangeType.ADD : ChangeType.UPDATE,

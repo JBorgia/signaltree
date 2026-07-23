@@ -5,6 +5,7 @@ export default {
   coverageDirectory: '../../coverage/packages/ng-forms',
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
+    '^@signaltree/schema$': '<rootDir>/../../packages/schema/src/index.ts',
     '^@signaltree/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },
   transform: {

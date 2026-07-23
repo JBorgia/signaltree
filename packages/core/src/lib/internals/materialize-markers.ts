@@ -1,7 +1,7 @@
 import { isSignal } from '@angular/core';
 
 import { getPathNotifier, PathNotifier } from '../path-notifier';
-import { isNodeAccessor } from '../utils';
+import { isNodeAccessor, isTraversableNode } from '../utils';
 
 /**
  * Unified Marker Processing
@@ -220,8 +220,7 @@ export function materializeMarkers(
   notifier?: PathNotifier,
   path: string[] = []
 ): void {
-  if (node == null) return;
-  if (typeof node !== 'object' && typeof node !== 'function') return;
+  if (!isTraversableNode(node)) return;
   if (isSignal(node)) return;
 
   // Handle NodeAccessors (functions with properties)
@@ -236,7 +235,7 @@ export function materializeMarkers(
     return notifier;
   };
 
-  const keys = Object.keys(node);
+  const keys = Object.keys(node as object);
 
   for (const key of keys) {
     const value = (node as Record<string, unknown>)[key];
@@ -292,15 +291,14 @@ export function hasMarkers(
   node: unknown,
   visited = new WeakSet<object>()
 ): boolean {
-  if (node == null) return false;
-  if (typeof node !== 'object' && typeof node !== 'function') return false;
+  if (!isTraversableNode(node)) return false;
   if (isSignal(node)) return false;
 
   // Prevent infinite loops
-  if (typeof node === 'object' && visited.has(node)) return false;
-  if (typeof node === 'object') visited.add(node);
+  if (typeof node === 'object' && visited.has(node as object)) return false;
+  if (typeof node === 'object') visited.add(node as object);
 
-  const keys = Object.keys(node);
+  const keys = Object.keys(node as object);
 
   for (const key of keys) {
     const value = (node as Record<string, unknown>)[key];
@@ -313,10 +311,7 @@ export function hasMarkers(
     }
 
     // Recurse into nested objects/accessors
-    if (
-      value != null &&
-      (typeof value === 'object' || typeof value === 'function')
-    ) {
+    if (isTraversableNode(value)) {
       if (hasMarkers(value, visited)) {
         return true;
       }

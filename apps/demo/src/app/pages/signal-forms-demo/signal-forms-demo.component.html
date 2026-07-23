@@ -2,12 +2,12 @@
   <st-example
     heading="Angular Signal Forms × SignalTree"
     [headingLevel]="1"
-    intro="Angular 22's stable Signal Forms and SignalTree share one model — no copying, no sync. Two integration paths: a form() marker as a FieldTree (markerSignalForm), and @signaltree/schema registrations auto-applied to a FieldTree (signalFormBridge)."
+    intro="Angular 22's stable Signal Forms and SignalTree share one model — no copying, no sync. One entry point, signalForm(), with two call shapes: a form() marker as a FieldTree, and @signaltree/schema registrations auto-applied to a FieldTree."
   >
     <section class="demo-grid">
       <!-- Path 1: form() marker ↔ FieldTree -->
       <article class="card">
-        <h2><code>markerSignalForm()</code> — form() marker as a FieldTree</h2>
+        <h2><code>signalForm(marker)</code> — form() marker as a FieldTree</h2>
         <p class="hint">
           The FieldTree's model IS the marker's values signal. Type below, or
           write through the marker API — both stay in sync because there is
@@ -65,7 +65,7 @@
 
       <!-- Path 2: schema registrations ↔ FieldTree -->
       <article class="card">
-        <h2><code>signalFormBridge()</code> — schemas auto-applied</h2>
+        <h2><code>signalForm(tree, rootPath, subtree)</code> — schemas auto-applied</h2>
         <p class="hint">
           Zod schemas registered with <code>@signaltree/schema</code> at
           <code>account.username</code> and <code>account.age</code> are wired

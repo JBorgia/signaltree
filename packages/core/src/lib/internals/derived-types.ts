@@ -150,8 +150,3 @@ export function derivedFrom<TTree extends { $: object }>(): <
   return <TReturn extends object>(fn: ($: TTree['$']) => TReturn) =>
     fn as ($: any) => TReturn;
 }
-
-/**
- * @deprecated Use `derivedFrom` instead. Will be removed in v8.
- */
-export const externalDerived = derivedFrom;

@@ -58,10 +58,10 @@ export interface RealtimeAdapter {
  * };
  *
  * const tree = signalTree({ ... })
- *   .with(createRealtimeEnhancer(myAdapter, config));
+ *   .with(realtime(myAdapter, config));
  * ```
  */
-export function createRealtimeEnhancer<TConfig extends object>(
+export function realtime<TConfig extends object>(
   adapter: RealtimeAdapter,
   config: RealtimeConfig<TConfig>,
   options: RealtimeEnhancerOptions = {}

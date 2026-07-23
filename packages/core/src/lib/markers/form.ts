@@ -47,11 +47,29 @@ export const FORM_MARKER = Symbol('FORM_MARKER');
  *
  * Receives the current form values as an optional second argument so
  * cross-field validators (e.g. `validators.when`) can inspect sibling fields.
+ *
+ * The optional `validatorKind` property is a semantic identifier ('required',
+ * 'email', …) that bridges — like `signalForm()` — can use as the
+ * Signal Forms error `kind` instead of a generic bridge-source literal. Every
+ * built-in `validators.*` factory tags its returned closure with this, and
+ * `validators.when` forwards the wrapped validator's kind; custom validators
+ * may set it too (see {@link withKind}), or leave it unset to fall back to
+ * the bridge's generic kind.
+ *
+ * `validatorParams` is internal: built-in factories with a constraint value
+ * (`min`, `max`, `minLength`, `maxLength`, `pattern`) record it here so
+ * bridges can construct Angular's branded validation errors (e.g.
+ * `minError(min, { message })`), which carry the constraint as a typed
+ * property.
  */
-export type Validator<T> = (
+export type Validator<T> = ((
   value: T,
   formValues?: Record<string, unknown>
-) => string | null;
+) => string | null) & {
+  validatorKind?: string;
+  /** @internal — constraint values for branded-error bridges. */
+  validatorParams?: Record<string, unknown>;
+};
 
 /**
  * Async validator function
@@ -665,7 +683,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
   });
 
   // @internal — the raw values signal, used by ng-forms' Signal Forms bridge
-  // (markerSignalForm) as the FieldTree model so Angular's form() and the
+  // (signalForm) as the FieldTree model so Angular's form() and the
   // marker share one source of truth. `errors`/`valid` are computed over
   // this signal, so they stay live for writes from either side.
   Object.defineProperty(formSignalFn, '__model', {
@@ -814,55 +832,153 @@ function defaultEquality(a: unknown, b: unknown): boolean {
 // VALIDATORS (Common validators)
 // =============================================================================
 
+/**
+ * Tag a validator with a semantic kind (see {@link Validator}).
+ *
+ * Returns a NEW closure that delegates to `validator` — the passed function
+ * is never mutated, so tagging a shared validator instance for one form
+ * cannot leak the kind into other forms using the same instance.
+ *
+ * Bridges (e.g. ng-forms' `signalForm`) surface the kind as the Signal
+ * Forms error `kind` instead of the generic `'signalTree'` fallback.
+ *
+ * Note: `withKind` carries only the kind, NOT `validatorParams` — re-tagging
+ * a built-in (e.g. `withKind(validators.min(5), 'custom')`) loses branded
+ * emission under `nativeErrors` and falls back to plain `{kind, message}`;
+ * `validators.when()` forwards both.
+ *
+ * @example
+ * ```typescript
+ * const noProfanity = withKind(
+ *   (value: unknown) =>
+ *     typeof value === 'string' && BANNED.some((w) => value.includes(w))
+ *       ? 'Keep it clean'
+ *       : null,
+ *   'profanity'
+ * );
+ *
+ * form<Post>({
+ *   initial: { title: '' },
+ *   validators: { title: noProfanity },
+ * });
+ * // Bridged errors: { kind: 'profanity', message: 'Keep it clean' }
+ * ```
+ */
+export function withKind<T>(
+  validator: Validator<T>,
+  kind: string
+): Validator<T> {
+  const wrapped: Validator<T> = (value, formValues) =>
+    validator(value, formValues);
+  wrapped.validatorKind = kind;
+  return wrapped;
+}
+
+/**
+ * `withKind` + constraint params for the built-in factories — params let
+ * branded-error bridges construct Angular's typed validation errors
+ * (`minError(min, …)` etc.). Internal: `withKind` wraps rather than mutates,
+ * so tagging here never touches a caller-owned closure.
+ * @internal
+ */
+function withKindAndParams<T>(
+  validator: Validator<T>,
+  kind: string,
+  params: Record<string, unknown>
+): Validator<T> {
+  const wrapped = withKind(validator, kind);
+  wrapped.validatorParams = params;
+  return wrapped;
+}
+
 export const validators = {
-  required:
-    (message = 'This field is required') =>
-    (value: unknown) =>
-      value === null || value === undefined || value === '' ? message : null,
+  required: (message = 'This field is required') =>
+    withKind(
+      (value: unknown) =>
+        value === null || value === undefined || value === '' ? message : null,
+      'required'
+    ),
 
-  minLength: (min: number, message?: string) => (value: unknown) =>
-    typeof value === 'string' && value.length < min
-      ? message ?? `Must be at least ${min} characters`
-      : null,
+  minLength: (min: number, message?: string) =>
+    withKindAndParams(
+      (value: unknown) =>
+        typeof value === 'string' && value.length < min
+          ? message ?? `Must be at least ${min} characters`
+          : null,
+      'minLength',
+      { minLength: min }
+    ),
 
-  maxLength: (max: number, message?: string) => (value: unknown) =>
-    typeof value === 'string' && value.length > max
-      ? message ?? `Must be at most ${max} characters`
-      : null,
+  maxLength: (max: number, message?: string) =>
+    withKindAndParams(
+      (value: unknown) =>
+        typeof value === 'string' && value.length > max
+          ? message ?? `Must be at most ${max} characters`
+          : null,
+      'maxLength',
+      { maxLength: max }
+    ),
 
-  min: (min: number, message?: string) => (value: unknown) =>
-    typeof value === 'number' && value < min
-      ? message ?? `Must be at least ${min}`
-      : null,
+  min: (min: number, message?: string) =>
+    withKindAndParams(
+      (value: unknown) =>
+        typeof value === 'number' && value < min
+          ? message ?? `Must be at least ${min}`
+          : null,
+      'min',
+      { min }
+    ),
 
-  max: (max: number, message?: string) => (value: unknown) =>
-    typeof value === 'number' && value > max
-      ? message ?? `Must be at most ${max}`
-      : null,
+  max: (max: number, message?: string) =>
+    withKindAndParams(
+      (value: unknown) =>
+        typeof value === 'number' && value > max
+          ? message ?? `Must be at most ${max}`
+          : null,
+      'max',
+      { max }
+    ),
 
-  email:
-    (message = 'Invalid email address') =>
-    (value: unknown) =>
-      typeof value === 'string' &&
-      value !== '' &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        ? message
-        : null,
+  email: (message = 'Invalid email address') =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'string' &&
+        value !== '' &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+          ? message
+          : null,
+      'email'
+    ),
 
-  pattern:
-    (regex: RegExp, message = 'Invalid format') =>
-    (value: unknown) =>
-      typeof value === 'string' && value !== '' && !regex.test(value)
-        ? message
-        : null,
+  pattern: (regex: RegExp, message = 'Invalid format') =>
+    withKindAndParams(
+      (value: unknown) =>
+        typeof value === 'string' && value !== '' && !regex.test(value)
+          ? message
+          : null,
+      'pattern',
+      { pattern: regex }
+    ),
 
   /**
    * Conditional validator - only validates when condition is met.
    * Note: Requires form context to be passed during validation.
+   *
+   * `when` has no validator identity of its own — it delegates to the inner
+   * `validator`, so the returned closure FORWARDS the inner validator's
+   * `validatorKind` (and internal `validatorParams`), if any. A
+   * `when(cond, validators.required())` therefore bridges as
+   * `kind: 'required'`; wrapping an untagged custom validator still falls
+   * back to the bridge's generic kind.
    */
-  when:
-    <T>(condition: (form: T) => boolean, validator: Validator<unknown>) =>
-    (value: unknown, form?: Record<string, unknown>): string | null => {
+  when: <T>(
+    condition: (form: T) => boolean,
+    validator: Validator<unknown>
+  ): Validator<unknown> => {
+    const wrapped: Validator<unknown> = (
+      value: unknown,
+      form?: Record<string, unknown>
+    ): string | null => {
       if (!form) {
         // Form context not available - skip validation
         return null;
@@ -871,5 +987,13 @@ export const validators = {
         return validator(value, form);
       }
       return null;
-    },
+    };
+    if (validator.validatorKind !== undefined) {
+      wrapped.validatorKind = validator.validatorKind;
+    }
+    if (validator.validatorParams !== undefined) {
+      wrapped.validatorParams = validator.validatorParams;
+    }
+    return wrapped;
+  },
 };

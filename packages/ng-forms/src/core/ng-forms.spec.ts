@@ -89,6 +89,14 @@ describe('NgForms', () => {
       expect(form.dirty()).toBe(true);
     });
 
+    it('should set a nested field via a dotted path (regression: getSignalAtPath used to bail on NodeAccessor branches, which are typeof "function")', () => {
+      const form = (createFormTree as any)(initialFormData);
+
+      form.setValue('preferences.theme', 'dark');
+
+      expect(form.$.preferences.theme()).toBe('dark');
+    });
+
     it('should support form reset', async () => {
       const form = createFormTree(initialFormData);
 

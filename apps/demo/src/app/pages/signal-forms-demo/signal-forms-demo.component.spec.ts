@@ -16,7 +16,7 @@ describe('SignalFormsDemoComponent', () => {
     fixture.detectChanges();
     const component = fixture.componentInstance;
 
-    // markerSignalForm: empty required form → both APIs agree it's invalid
+    // signalForm (marker shape): empty required form → both APIs agree it's invalid
     expect(component.profile().valid()).toBe(false);
     expect(component.tree.$.onboarding.profile.valid()).toBe(false);
 

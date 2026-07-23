@@ -11,7 +11,7 @@
 
 ## 0. One-paragraph summary
 
-`@signaltree/schema` is a new enhancer that lets users register [StandardSchemaV1](https://github.com/standard-schema/standard-schema)-compatible schemas against dotted leaf paths (including `*` wildcards for entity collections) and exposes per-path and tree-wide error signals. The enhancer is **async-first** and **observe-only** — it reports verdicts, never blocks writes. A new ambient write-context channel in `@signaltree/core` lets enhancers tag writes with `UpdateMetadata` without changing Angular's `WritableSignal` API. The `@signaltree/ng-forms` package gains a `signalFormBridge` that reads schemas from the schema enhancer's registry (single source of truth) and binds them into Angular Signal Forms.
+`@signaltree/schema` is a new enhancer that lets users register [StandardSchemaV1](https://github.com/standard-schema/standard-schema)-compatible schemas against dotted leaf paths (including `*` wildcards for entity collections) and exposes per-path and tree-wide error signals. The enhancer is **async-first** and **observe-only** — it reports verdicts, never blocks writes. A new ambient write-context channel in `@signaltree/core` lets enhancers tag writes with `UpdateMetadata` without changing Angular's `WritableSignal` API. The `@signaltree/ng-forms` package gains a Signal Forms bridge — planned here as `signalFormBridge`, shipped and then unified under `signalForm()` in 11.6.0 (`signalFormBridge` remains a deprecated alias until the next major) — that reads schemas from the schema enhancer's registry (single source of truth) and binds them into Angular Signal Forms.
 
 ---
 
@@ -42,7 +42,7 @@
 - `interceptLeafSignals` callback signature widened to pass an optional `UpdateMetadata` argument captured from the active write context.
 - `@signaltree/guardrails` updated to read `getActiveWriteContext()` first, fall back to its existing `extractMetadata(payload)` payload-sniffing.
 - `@signaltree/core/devtools` time-travel `applyState` wrapped in `withWriteContext({ intent: 'system', source: 'time-travel' })`.
-- `signalFormBridge` in `@signaltree/ng-forms` — bridges Angular Signal Forms `FieldTree` nodes against the schema enhancer registry. Per §9, the API-capability spike comes first and determines the bridge's shape.
+- `signalForm` (planned as `signalFormBridge`) in `@signaltree/ng-forms` — bridges Angular Signal Forms `FieldTree` nodes against the schema enhancer registry. Per §9, the API-capability spike comes first and determines the bridge's shape.
 - Docs (PR4): root README mention, `@signaltree/schema` README, AI skill under `docs/skills/using-signaltree/`, integration guides.
 
 ### 2.2 Out of scope (v1)
@@ -65,7 +65,7 @@
 | D3 | **Write-sequence guard with per-path version counters.** Each leaf has a monotonic `version`; each schema dispatch captures `version`; on settle, stale verdicts (captured ≠ current) are discarded. Generalized to **ancestor-run records** for one-run→N-leaves cases (see §6.3). | Without the guard, a slow schema run for write A can clobber the verdict for a newer write B. |
 | D4 | **Fixed precedence for ancestor vs specific schemas.** Specific schema owns its leaf; ancestor schema only writes/clears errors for leaves no specific schema claims. Determined at attach time via a `leafOwner` map. | Two unsynchronized clocks (ancestor version, leaf version) cannot last-write-wins coherently. Fixed precedence collapses to one clock per leaf. |
 | D5 | **Ambient write-context channel** (`withWriteContext`) in core. Enhancers consume via `getActiveWriteContext()`. Synchronous capture only — does **not** survive `await` boundaries. | Angular's `WritableSignal.set(value)` signature cannot be widened to carry metadata. An ambient channel is the only seam that doesn't fork the signal API. |
-| D6 | **Single registration site by type-shape.** `signalFormBridge` requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schemas.schemaFor(path)`. There is no `schemas` argument on the bridge. | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline. |
+| D6 | **Single registration site by type-shape.** `signalForm` (planned as `signalFormBridge`) requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schemas.schemaFor(path)`. There is no `schemas` argument on the bridge. | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline. |
 | D7 | **Lazy wildcard match-on-write.** Patterns compile to a matcher at attach. On every leaf write, the matcher is consulted; first match (longest-specific) lazily instantiates `PathState`. No upfront entity enumeration, no add/remove event subscription. | Verification confirmed `entityMap` exposes no add/remove notifications. Lazy match avoids both that gap and the O(n) enumeration cost on 1000-item lists. Eviction is deferred — small leak, ship `tree.schemas.compact()` as the manual control. |
 | D8 | **Per-path signal memoization in a path-keyed `Map`,** with optional eviction via `tree.schemas.compact()`. `errorsAt`, `isValidAt`, `isPendingAt` return the same `Signal` for the same path across calls. | Without memoization, `errorsAt(userId)` inside a list renderer creates a new `computed` per render — classic leak. |
 | D9 | **PR3 default is per-field binding, not whole-object.** Whole-object Signal Forms binding is the optimization branch, attempted only if measured. | H1/H2/H3 of the v2 hypotheses share a root cause: whole-object replacement. Per-field binding makes three of four pass trivially. The actual unknown is whether Signal Forms permits external per-field writables — that's the PR3 API-capability spike, not the perf benchmark. |
@@ -150,7 +150,7 @@ export interface SchemaMethods<T> {
     /** Evict `PathState` and memoized signals for paths that no longer exist in the tree. Manual GC. */
     compact(): void;
 
-    // --- Bridge integration (signalFormBridge consumer) ---
+    // --- Bridge integration (signalForm consumer) ---
 
     /** Internal: resolve the schema bound to a leaf path (after wildcard expansion). Returns `undefined` if no schema claims this leaf. */
     schemaFor(leafPath: string): StandardSchemaV1 | undefined;
@@ -248,7 +248,7 @@ export function signalFormBridge(
 ) => ISignalTree<T> & SchemaMethods<T> & SignalFormMethods;
 ```
 
-The `& SchemaMethods<T>` constraint on the input tree is load-bearing — it forces the user to apply `schemas()` before `signalFormBridge()`, which is what makes single-registration enforceable at the type level (D6).
+The `& SchemaMethods<T>` constraint on the input tree is load-bearing — it forces the user to apply `schemas()` before the bridge (shipped as `signalForm()`), which is what makes single-registration enforceable at the type level (D6).
 
 ---
 
@@ -769,7 +769,7 @@ The spike has three possible outcomes, not two. Force-binarizing it would pressu
 
 **Branch B — ambiguous pass.** Steps 1–4 work but require non-trivial wiring — e.g., a wrapper signal that re-introduces a coercion hop, or per-field binding only works through a `linkedSignal`-style adapter that adds a microtask. The auto-bridge becomes lossy or surprising. Ship a **documented manual-wiring path** instead: README shows how to wire `errorsAt(path)` into a hand-built Signal Form, plus a small helper (`bindLeafToField(tree, leafPath, field)`) that does the common case in ~5 lines. No auto-bridge enhancer; users opt in to the wiring per form. This is the most likely real outcome for an experimental Angular API.
 
-**Branch C — clean fail.** Steps 3 or 4 don't work — Signal Forms only supports whole-object binding. v1 ships **without** `signalFormBridge`. Users continue to use the existing `formBridge` (ReactiveForms) with the validation enhancer's `errorsAt(path)` wired manually. Document the limitation; track Signal Forms API evolution; revisit in next minor.
+**Branch C — clean fail.** Steps 3 or 4 don't work — Signal Forms only supports whole-object binding. v1 ships **without** the Signal Forms bridge (`signalForm`). Users continue to use the existing `formBridge` (ReactiveForms) with the validation enhancer's `errorsAt(path)` wired manually. Document the limitation; track Signal Forms API evolution; revisit in next minor.
 
 The spike PR documents which branch was reached and why. PR4 docs ship for whichever branch landed.
 
@@ -892,7 +892,7 @@ If per-field bridge ships:
 PR1: lift UpdateMetadata + write-context channel
   └─→ PR2: @signaltree/schema
         └─→ PR3 spike: Signal Forms per-field capability
-              ├── PASS → PR3: signalFormBridge per-field
+              ├── PASS → PR3: signalForm per-field bridge
               │           └─→ PR4: docs
               └── FAIL → PR4: docs (without bridge, with limitation note)
 ```

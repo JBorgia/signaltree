@@ -1,4 +1,5 @@
 import type { UpdateMetadata } from '../types';
+import { isTraversableNode } from '../utils';
 import { getActiveWriteContext } from '../write-context';
 
 /**
@@ -45,14 +46,13 @@ export function interceptLeafSignals(
 
   const walk = (node: unknown, pathPrefix: string, depth: number): void => {
     if (depth > maxDepth) return;
-    if (node === null || node === undefined) return;
-    if (typeof node !== 'function' && typeof node !== 'object') return;
-    if (seen.has(node as object)) return;
-    seen.add(node as object);
+    if (!isTraversableNode(node)) return;
+    if (seen.has(node)) return;
+    seen.add(node);
 
     let keys: string[];
     try {
-      keys = Object.keys(node as object);
+      keys = Object.keys(node);
     } catch {
       return;
     }
@@ -64,8 +64,7 @@ export function interceptLeafSignals(
       } catch {
         continue;
       }
-      if (child === null || child === undefined) continue;
-      if (typeof child !== 'function' && typeof child !== 'object') continue;
+      if (!isTraversableNode(child)) continue;
 
       const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 

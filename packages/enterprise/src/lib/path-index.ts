@@ -1,4 +1,5 @@
 import { isSignal } from '@angular/core';
+import { isTraversableNode } from '@signaltree/core';
 
 /**
  * PathIndex - Fast signal lookup using Trie data structure
@@ -292,7 +293,7 @@ export class PathIndex<T extends object = WritableSignal<any>> {
     // properties — gating on 'object' alone silently skipped every nested
     // namespace, so nothing below the root was ever indexed (same root cause
     // as the batching wrapSignalSetters bug).
-    if (typeof tree !== 'object' && typeof tree !== 'function') {
+    if (!isTraversableNode(tree)) {
       return;
     }
 

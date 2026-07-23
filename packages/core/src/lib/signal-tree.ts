@@ -493,10 +493,6 @@ function create<T extends object>(
    *   - Integrates with browser devtools and logs state changes.
    *   - Options: `treeName`, `enableBrowserDevTools`, `enableLogging`, `performanceThreshold`, `enabled`.
    *
-   * - `entities(config?: EntitiesEnhancerConfig)`
-   *   - Enables entity map support for normalized collections.
-   *   - Options: `enabled`.
-   *
    * - `serialization(config?: SerializationConfig)`
    *   - Adds state serialization and persistence helpers.
    *   - Options: `includeMetadata`, `replacer`, `reviver`, `preserveTypes`, `maxDepth`.
@@ -504,7 +500,7 @@ function create<T extends object>(
    * @template R The return type of the enhancer (usually the enhanced tree).
    * @param enhancer A function that takes the current tree and returns an enhanced tree.
    * @returns The enhanced tree with additional methods or capabilities.
-   * @see BatchingConfig, TimeTravelConfig, DevToolsConfig, EntitiesEnhancerConfig, SerializationConfig
+   * @see BatchingConfig, TimeTravelConfig, DevToolsConfig, SerializationConfig
    */
   Object.defineProperty(tree, 'with', {
     value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {

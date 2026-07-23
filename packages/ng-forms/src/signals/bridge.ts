@@ -21,8 +21,10 @@ import {
   validateStandardSchema,
   type FieldTree,
 } from '@angular/forms/signals';
-import { toWritableSignal } from '@signaltree/core';
+import { isTraversableNode, toWritableSignal } from '@signaltree/core';
 import type { SchemaMethods } from '@signaltree/schema';
+
+declare const ngDevMode: boolean | undefined;
 
 /**
  * Walk `tree.schemas.boundPaths()` under the given root and bind each
@@ -74,8 +76,7 @@ export function applySignalTreeSchemas(
     const segments = subPath.split('.');
     let cursor: unknown = fieldRoot;
     for (const seg of segments) {
-      if (cursor === null || cursor === undefined) break;
-      if (typeof cursor !== 'object' && typeof cursor !== 'function') break;
+      if (!isTraversableNode(cursor)) break;
       cursor = (cursor as Record<string, unknown>)[seg];
     }
 
@@ -88,36 +89,17 @@ export function applySignalTreeSchemas(
 }
 
 /**
- * Build a Signal Forms `FieldTree` bound to a SignalTree subtree with all
- * registered schemas auto-applied.
+ * Implementation of the schema form of `signalForm()` (see
+ * `./signal-form.ts` for the public entry and full JSDoc).
  *
- * Reads from the tree's schema registry — no schema arguments needed. The
- * bridge enforces single-source-of-truth at the type level via the
- * `& SchemaMethods` constraint on the `tree` parameter.
+ * Builds a Signal Forms `FieldTree` bound to a SignalTree subtree with all
+ * registered schemas auto-applied. Reads from the tree's schema registry —
+ * no schema arguments needed. Single-source-of-truth is enforced at the type
+ * level via the `SchemaMethods` constraint on the `tree` parameter.
  *
- * @example
- * ```ts
- * import { signalTree } from '@signaltree/core';
- * import { schemas } from '@signaltree/schema';
- * import { signalFormBridge } from '@signaltree/ng-forms/signals';
- * import { z } from 'zod';
- *
- * const tree = signalTree({ user: { name: '', email: '' } }).with(
- *   schemas({
- *     schemas: {
- *       'user.name': z.string().min(2),
- *       'user.email': z.string().email(),
- *     },
- *   }),
- * );
- *
- * const userForm = signalFormBridge<User>(tree, 'user', tree.$.user);
- * // userForm is a FieldTree<User> with validation auto-wired.
- * ```
- *
- * @public
+ * @internal
  */
-export function signalFormBridge<TModel>(
+export function signalFormBridgeImpl<TModel>(
   tree: SchemaMethods,
   rootPath: string,
   subtree: unknown
@@ -133,4 +115,38 @@ export function signalFormBridge<TModel>(
     // The schema callback's parameter is typed by Angular as
     // SchemaPathTree<TModel>; the cast above keeps the dynamic walk honest.
   }) as FieldTree<TModel>;
+}
+
+/** One-time guard for the signalFormBridge deprecation warning. */
+let warnedBridgeAliasDeprecated = false;
+
+/**
+ * Build a Signal Forms `FieldTree` bound to a SignalTree subtree with all
+ * registered schemas auto-applied.
+ *
+ * @deprecated Renamed to `signalForm()` in 11.6.0 — same signature, same
+ * behavior: `signalForm<TModel>(tree, rootPath, subtree)`. This alias will
+ * be removed in the next major. Import `signalForm` from
+ * `@signaltree/ng-forms/signals`.
+ *
+ * @public
+ */
+export function signalFormBridge<TModel>(
+  tree: SchemaMethods,
+  rootPath: string,
+  subtree: unknown
+): FieldTree<TModel> {
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    !warnedBridgeAliasDeprecated
+  ) {
+    warnedBridgeAliasDeprecated = true;
+    console.warn(
+      '[SignalTree] signalFormBridge() is deprecated — renamed to ' +
+        'signalForm() in 11.6.0 (same signature, same behavior). Import ' +
+        "signalForm from '@signaltree/ng-forms/signals'. This alias will " +
+        'be removed in the next major.'
+    );
+  }
+  return signalFormBridgeImpl<TModel>(tree, rootPath, subtree);
 }

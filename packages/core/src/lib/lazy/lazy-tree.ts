@@ -65,10 +65,12 @@ export function createLazySignalTree<T extends object>(
       if (isSignal(value)) return value;
 
       // Check if value is already an EntitySignal (materialized by entities())
-      // EntitySignal has addOne and all methods
+      // EntitySignal has addOne and all methods. Duck-typed on the methods
+      // alone — no `typeof value === 'object'` gate, so this keeps matching
+      // if the EntitySignal shape ever becomes callable (typeof 'function'),
+      // the miss-pattern behind the v11.4/11.5 inert-walker bug class.
       if (
-        value &&
-        typeof value === 'object' &&
+        value != null &&
         typeof (value as { addOne?: unknown }).addOne === 'function' &&
         typeof (value as { all?: unknown }).all === 'function'
       ) {

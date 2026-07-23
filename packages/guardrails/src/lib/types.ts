@@ -32,7 +32,13 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
 
   /** Change detection strategy */
   changeDetection?: {
-    /** Disable PathNotifier (force polling or subscription) */
+    /**
+     * Disable PathNotifier (force polling or subscription).
+     *
+     * The PathNotifier only fires for entity-collection writes (plus plain
+     * leaf writes when devtools is attached) — for plain-object trees the
+     * default strategy is change-blind. Set `true` to force polling there.
+     */
     disablePathNotifier?: boolean;
   };
 

@@ -296,10 +296,10 @@ export function selectionState() {
 
 // store/tree/derived/tier-entity-resolution.derived.ts — selectCurrentTicket becomes a derived tier
 import { computed } from '@angular/core';
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
-export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+export const entityResolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
   tickets: {
     current: computed(() => {
       const id = $.selected.ticketId();

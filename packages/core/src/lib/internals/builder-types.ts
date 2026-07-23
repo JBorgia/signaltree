@@ -51,6 +51,19 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
   // From ISignalTree
   bind(thisArg?: unknown): (value?: TSource) => TSource | void;
   destroy(): void;
+  /**
+   * Whether this tree has been destroyed. Present at runtime on every
+   * `signalTree()` return (copied from the ISignalTree lifecycle in
+   * signal-tree.ts) but was missing from this builder type — the docs
+   * correctly taught it while `signalTree({...}).destroyed` failed to
+   * compile (M3 acceptance test, run 2, 2026-07-23).
+   */
+  readonly destroyed: Signal<boolean>;
+  /**
+   * Register a cleanup function called on tree destroy. Same runtime-present
+   * but type-missing gap as `destroyed` — see note above.
+   */
+  registerCleanup(fn: () => void): void;
 
   /**
    * Add a layer of derived state.

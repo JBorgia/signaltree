@@ -1,4 +1,10 @@
-import { of } from 'rxjs';
+import {
+  createEnvironmentInjector,
+  EnvironmentInjector,
+  runInInjectionContext,
+} from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { of, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { signalTree } from '../signal-tree';
@@ -71,7 +77,7 @@ describe('plain entityMap (no load) has no loader surface', () => {
   });
 });
 
-describe('entityMap({ load }) — global cache-aware', () => {
+describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
   it('auto-load is deferred off the render pass (NG0600-safe), then populates', async () => {
     let calls = 0;
     const tree = signalTree({
@@ -146,6 +152,54 @@ describe('entityMap({ load }) — global cache-aware', () => {
     await tree.$.plants.load();
     expect(tree.$.plants.error()).toBeInstanceOf(Error);
     expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  describe('loadOrThrow()', () => {
+    it('resolves normally on success, same as load()', async () => {
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => Promise.resolve([P1]),
+          selectId,
+          lazy: true,
+        }),
+      });
+      await expect(tree.$.plants.loadOrThrow()).resolves.toBeUndefined();
+      expect(tree.$.plants.all()).toEqual([P1]);
+      expect(tree.$.plants.error()).toBeNull();
+    });
+
+    it('rejects with the loader error instead of only setting .error()', async () => {
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => Promise.reject(new Error('boom')),
+          selectId,
+          lazy: true,
+        }),
+      });
+      await expect(tree.$.plants.loadOrThrow()).rejects.toThrow('boom');
+      expect(tree.$.plants.error()).toBeInstanceOf(Error);
+      expect(tree.$.plants.loaded()).toBe(false);
+    });
+
+    it('does not throw a stale error on a guarded no-op call once fresh', async () => {
+      let calls = 0;
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => {
+            calls++;
+            return Promise.resolve([P1]);
+          },
+          selectId,
+          staleTime: '1h',
+          lazy: true,
+        }),
+      });
+      await tree.$.plants.loadOrThrow();
+      expect(calls).toBe(1);
+      // Second call is a guarded no-op (still fresh) — must not throw.
+      await expect(tree.$.plants.loadOrThrow()).resolves.toBeUndefined();
+      expect(calls).toBe(1);
+    });
   });
 
   describe('staleTime', () => {
@@ -259,6 +313,32 @@ describe('invalidateTag()', () => {
     await tree.$.orders.load();
     expect(plantCalls).toBe(2);
     expect(orderCalls).toBe(1);
+  });
+
+  it('walks into nested branches to find tagged collections (regression: invalidateTag used to gate on typeof === object, silently skipping NodeAccessor branches)', async () => {
+    let plantCalls = 0;
+    const tree = signalTree({
+      catalog: {
+        nursery: {
+          plants: entityMap<Plant, string>({
+            load: () => {
+              plantCalls++;
+              return of([P1]);
+            },
+            selectId,
+            staleTime: '1h',
+            tags: ['plants'],
+          }),
+        },
+      },
+    });
+    tree.$.catalog.nursery.plants.all();
+    await Promise.resolve();
+    expect(plantCalls).toBe(1);
+
+    expect(invalidateTag(tree, 'plants')).toBe(1);
+    await tree.$.catalog.nursery.plants.load();
+    expect(plantCalls).toBe(2);
   });
 
   it('returns 0 for an unknown tag', () => {
@@ -503,6 +583,151 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
     expect(store.get(`cust::${stableStringify({ region: 'west' })}`)).toBe(
       JSON.stringify(EAST)
     );
+  });
+});
+
+describe('loader teardown (materializing injector destroyed)', () => {
+  // Pins the RFC 0005 §6 claim that removing the `takeUntilDestroyed` pipe
+  // lost nothing: the loader's `DestroyRef.onDestroy` hook unsubscribes the
+  // in-flight Observable, and settle callbacks guard `destroyed`.
+  it('drops rows emitted after destroy — no write, no throw', () => {
+    const subject = new Subject<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => subject.asObservable(),
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    // Materialize the loading entityMap (and start the load) INSIDE the
+    // child injection context so the loader binds its DestroyRef to `env`.
+    runInInjectionContext(env, () => {
+      void tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+    expect(subject.observed).toBe(true);
+
+    env.destroy();
+
+    // Destroy unsubscribed the in-flight source…
+    expect(subject.observed).toBe(false);
+    // …so a late emission neither applies rows nor throws.
+    expect(() => subject.next([P1, P2])).not.toThrow();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('drops rows resolved after destroy (Promise loader) — settle guard', async () => {
+    // Promises cannot be unsubscribed, so this pins the `destroyed` guard in
+    // settleSuccess — the only line standing between a late resolution and a
+    // post-destroy write.
+    const d = deferred<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => d.promise,
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    // Materialize the loading entityMap (and start the load) INSIDE the
+    // child injection context so the loader binds its DestroyRef to `env`.
+    runInInjectionContext(env, () => {
+      void tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    // Resolve AFTER destroy: rows must not be applied.
+    d.resolve([P1, P2]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('settles a caller-held load() promise and clears loading() on destroy (Observable loader)', async () => {
+    // RFC 0005 §6 addendum: destroy used to null `inFlightResolve` without
+    // invoking it — a caller's `await tree.$.plants.load()` hung forever and
+    // `loading()` stuck true. Destroy must resolve (never reject — load()'s
+    // contract) and flip loading() false.
+    const subject = new Subject<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => subject.asObservable(),
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    let held!: Promise<void>;
+    runInInjectionContext(env, () => {
+      held = tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    await held; // pre-fix: hangs forever (test would time out)
+    expect(tree.$.plants.loading()).toBe(false);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('settles caller-held load()/loadOrThrow() promises and clears loading() on destroy (Promise loader)', async () => {
+    const d = deferred<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => d.promise,
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    let held!: Promise<void>;
+    let heldOrThrow!: Promise<void>;
+    runInInjectionContext(env, () => {
+      held = tree.$.plants.load();
+      heldOrThrow = tree.$.plants.loadOrThrow(); // dedups onto the same flight
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    await held; // pre-fix: hangs forever
+    // loadOrThrow resolves too (does not reject): a torn-down scope is not a
+    // loader failure — `.error()` stays null, so its post-await check passes.
+    await expect(heldOrThrow).resolves.toBeUndefined();
+    expect(tree.$.plants.error()).toBeNull();
+    expect(tree.$.plants.loading()).toBe(false);
+
+    // A late resolution is still dropped by the `destroyed` settle guard.
+    d.resolve([P1, P2]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loading()).toBe(false);
   });
 });
 

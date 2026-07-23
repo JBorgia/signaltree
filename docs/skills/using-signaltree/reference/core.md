@@ -329,10 +329,9 @@ Utilities you may need when composing enhancers yourself:
 
 ## Derived state helpers
 
-Two helpers for declaring derived functions in separate files without losing type inference:
+One helper for declaring derived functions in separate files without losing type inference:
 
 - `derivedFrom<TTree>()` — returns a function that accepts `($) => derived`. Explicitly types `TTree` while inferring the return.
-- `externalDerived` — alias of `derivedFrom`.
 
 ```ts
 import { derivedFrom } from '@signaltree/core';

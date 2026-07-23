@@ -137,6 +137,14 @@ export type TreeNode<T> = {
     : CallableWritableSignal<T[K]>;
 };
 
+// NOTE: The read-only view types (`ReadonlyView`, `ReadonlyStore`,
+// `ReadonlyNodeAccessor`, the per-marker `Readonly*Signal` views and their
+// reader-key allowlists, and `asReadonly()`) live in `./readonly.ts`. They
+// are computed over a tree's ACCUMULATED `$` type (the builder's `TAccum`),
+// not over the source `T` — a source-computed view drops every `.derived()`
+// computed (RFC 0004 F1), which is why no `ReadonlyTreeNode<T>` mirror of
+// `TreeNode<T>` exists here.
+
 // Base SignalTree minimal interface
 // v6: primary runtime tree type is `SignalTree<T>`; a deprecated alias
 // `SignalTree<T>` is provided at the end of this file for compatibility.
@@ -508,7 +516,7 @@ export interface EntityMapMarker<E, K extends string | number> {
 }
 
 /**
- * A cache-aware (loading) entityMap marker — produced by `entityMap({ load, … })`.
+ * A cache-aware (single-scope) loading entityMap marker — produced by `entityMap({ load, … })`.
  * Materializes into an {@link EntitySignal} plus the loader surface
  * ({@link EntityLoaderSurface}). Distinguished from a plain marker by `__hasLoad`
  * so the type resolver can add the loader methods only when `load` is configured.
@@ -525,7 +533,7 @@ export interface LoadingEntityMapMarker<
 }
 
 /**
- * An {@link EntitySignal} augmented with the cache-aware loader surface — the
+ * An {@link EntitySignal} augmented with the cache-aware (single-scope) loader surface — the
  * materialized form of `entityMap({ load, … })`.
  */
 export type LoadingEntitySignal<

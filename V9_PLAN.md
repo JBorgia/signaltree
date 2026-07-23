@@ -121,7 +121,7 @@ Enhancers (one function each):
 
 Derived state:
 
-- `derivedFrom`, `externalDerived`, and associated types
+- `derivedFrom` and associated types
 
 Essential utilities:
 

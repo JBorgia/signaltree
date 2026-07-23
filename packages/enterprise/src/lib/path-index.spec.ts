@@ -258,9 +258,13 @@ describe("PathIndex", () => {
       }
       const retrieveTime = performance.now() - retrieveStart;
 
-      // Both operations should be reasonably fast
-      expect(indexTime).toBeLessThan(100); // Indexing 1000 items < 100ms
-      expect(retrieveTime).toBeLessThan(50); // Retrieving 1000 items < 50ms
+      // SMOKE bound, not a benchmark: catches accidental O(n^2)-class
+      // regressions (which land in the hundreds of ms), while staying green
+      // under parallel CI load. The old 50ms bound flaked at 85ms whenever
+      // nx ran the full task graph concurrently (observed 2026-07-23);
+      // real perf gates belong in the benchmark suite, not unit tests.
+      expect(indexTime).toBeLessThan(500);
+      expect(retrieveTime).toBeLessThan(250);
     });
 
     it("should have O(k) lookup time regardless of total size", () => {

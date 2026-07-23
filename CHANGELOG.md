@@ -1,3 +1,158 @@
+## 11.6.0 (unreleased)
+
+> The first release to pass the full RFC 0004 §5 ratchet: every change below
+> went design-review → implement → adversarial review → fix before landing,
+> and the release was measured by the M3 fresh-agent acceptance test
+> (80% strict first-attempt success against the llms docs, up from ~0%
+> baseline; RFC 0004 §7).
+
+### Added
+
+- **`signalForm()` (`@signaltree/ng-forms/signals`)** — one name for the
+  Angular Signal Forms bridge, with two overloads: `signalForm(marker,
+  options?)` for `form()` markers and `signalForm(tree, rootPath, subtree)`
+  for schema-registry trees. `markerSignalForm`/`signalFormBridge` remain as
+  deprecated warned aliases (removal next major); `SignalFormOptions` is the
+  canonical options type.
+- **`nativeErrors` option on the Signal Forms bridge** — built-in validator
+  failures emit Angular's branded error factories (`requiredError`,
+  `minError`, `patternError`, …), so `instanceof NgValidationError` and typed
+  `getError()` genuinely work. Default `false` (additive); the default flips
+  in the next major.
+- **`asReadonly(tree)` / `ReadonlyStore`** — type-only read-only views over
+  the tree's accumulated type: leaf `.set`/`.update` and every marker mutator
+  (`upsertOne`, `setLoading`, loader triggers, …) are genuinely absent from
+  the type; derived computeds survive, including derived state deep-merged
+  into marker nodes; `byId` re-signed as deep-readonly. `defineStore(factory,
+  { expose: 'readonly' })` is honest sugar over the same type — misuse on a
+  non-builder factory is a compile error, never a silent no-op.
+- **`withKind()`** — tag custom validators with a semantic kind for the
+  Signal Forms bridge (wraps, never mutates); `validators.when()` now
+  forwards the wrapped validator's kind and constraint params.
+- **`entityMap` loader: `loadOrThrow(params?)`** — same guard as `load()`,
+  but rejects with the loader's error for imperative `await`/`try-catch` call
+  sites (`load()` never rejects). There is deliberately no `refreshOrThrow`
+  (see the cookbook's imperative error-handling recipe).
+- **Export-parity barrel gate** — `tools/verify-built-barrels.mjs` now also
+  compares each built `dist/index.js` barrel's export names against its
+  source `src/index.ts` barrel (esbuild metafile on both sides) and fails
+  with the exact missing/extra names. The resolution-only smoke let the
+  three stale stub barrels (realtime/ng-forms/guardrails, below) pass —
+  they resolved fine while missing exports. Negative-tested (hand-dropping
+  an export from a dist barrel fails the gate); wired where the gate
+  already ran: pre-publish step 7b and `validate.yml`.
+- **`@signaltree/core/authoring` subpath** — enhancer/marker-author plumbing
+  moved off the root barrel (`withWriteContext`, `getActiveWriteContext`,
+  `interceptLeafSignals`, `getPathNotifier`, `registerMarkerProcessor`,
+  `createEnhancer`, `resolveEnhancerOrder`, `composeEnhancers`,
+  `ENHANCER_META`/`EnhancerMeta`, and the `createFormSignal`/
+  `createAsyncSourceSignal`/`createAsyncQuerySignal` factories), leaving a
+  root barrel teachable end-to-end. Root re-exports remain for one minor as
+  deprecated aliases (the three zero-consumer `create*Signal` factories are
+  authoring-only and were removed from the root outright). Internally, the
+  serialization enhancer's storage adapters also split into their own module
+  so `@signaltree/core/storage` no longer enters through the 1300-line
+  enhancer file (public surface unchanged).
+
+### Removed
+
+- **`externalDerived`** — deprecated alias of `derivedFrom` whose JSDoc
+  promised removal in v8; use `derivedFrom`.
+- **`enhancers/entities/` tombstone** — unexported v7-era source that only
+  threw "entities() has been removed"; `entityMap` markers have been
+  auto-processed since v7.
+- **`core/src/lib/dev-proxy.ts`** — `wrapWithDevProxy`/`shouldUseDevProxy`
+  had zero consumers and no barrel export (the "helpful missing-method
+  hints" it promised never fired anywhere); dead code deleted.
+
+### Deprecated
+
+- **`effects()`** — use Angular's native `effect(() => tree.$.path())`
+  instead (the README's own guidance); removal next major. Known limitation,
+  documented rather than fixed: `tree.effect()`/`tree.subscribe()` call
+  `effect()` with no injector handling and throw NG0203 outside injection
+  contexts. One-time dev-mode warning on use.
+
+### Fixed
+
+- **`@signaltree/realtime`'s main barrel had NEVER actually built** — nx's
+  rollup input map keys entries by basename, so the `supabase/index.ts`
+  additional entry silently overwrote the main `src/index.ts` entry; a
+  local rollup plugin papered over it by fabricating `dist/index.js` from a
+  hardcoded export list, so every published version shipped a stale stub
+  (and would have silently resurrected removed APIs forever). Input keys
+  are now unique (root-fixed in the shared rollup config for all three
+  affected packages), the fabrication plugins are deleted — ng-forms'
+  published barrel had been missing `ngFormValidators` while its own d.ts
+  declared it — and CI runs the barrel gate.
+
+- **`@signaltree/enterprise`: built-in leaf replacement was silently
+  inert** — DiffEngine recursed into `Date`/`Map`/`Set` leaves as empty
+  objects and `isEqual`'s JSON.stringify fallback saw every Map/Set as
+  `{}`, so `updateOptimized` reported `changed: true` while dropping the
+  write. Built-ins now diff and compare as the atomic leaves core
+  materializes them as; Map/Set/Date regression tests added.
+- **`SignalTreeBuilder` type omitted `destroyed`/`registerCleanup`** — both
+  exist at runtime on every `signalTree()` return and were documented, but
+  doc-faithful code failed to compile (found by M3 run 2).
+- **When-wrapped built-in validators now bridge their real kind** — a
+  `validators.when(cond, validators.required())` field reports
+  `kind: 'required'` instead of the generic `'signalTree'`. Breaking only
+  for consumers matching `kind === 'signalTree'` on when-wrapped fields
+  (bridge was public for two days in 11.5.x).
+- **rxjs is now a type-only dependency of the entityMap loader**
+  (`takeUntilDestroyed` was redundant with the loader's own `onDestroy`
+  teardown — now pinned by destroy-path tests for both Observable and
+  Promise loaders, mutation-verified).
+- **ng-forms legacy-bridge dev warning** no longer claims removal "in v6.0"
+  (five majors ago).
+- **`@signaltree/guardrails` reporting was largely dead** — three defects,
+  each pinned by a mutation-verified spec: (1) `reporting.console: false`
+  early-returned out of the report cycle, silencing `customReporter` too —
+  the custom channel now fires regardless of the console setting; (2)
+  console reporting gated on a `context.issues` array nothing ever populated
+  (issues live in `issueMap`), so `reportToConsole` was unreachable — the
+  gate now reads the issueMap-derived report; (3) `mode: 'throw'` violations
+  from custom rules were swallowed by `evaluateRule`'s rule-error safety net
+  and degraded to a `console.warn` — deliberate guardrails throws are now
+  branded and rethrown past that catch (async rules surface as unhandled
+  rejections). Also: with no reporting channel configured, issues are no
+  longer silently cleared every interval — they accumulate for `getReport()`.
+- **Plain-object trees are change-blind under guardrails' default
+  PathNotifier strategy** (it only fires for entity collections, or leaf
+  writes when devtools' interceptor is attached) — now surfaced honestly:
+  a one-time dev warning when the strategy is selected, plus README/JSDoc
+  guidance to force polling via `changeDetection: { disablePathNotifier:
+  true }`. Automatic fallback was rejected: entity nodes hide behind the
+  lazy proxy tree and devtools may attach after guardrails, so attach-time
+  detection is unreliable in both directions.
+
+### Documentation & tooling
+
+- **The Signal Forms story now exists on every AI-facing surface**
+  (llms.txt, llms-full.txt, SKILL.md) — previously zero mentions, while the
+  docs simultaneously taught three phantom APIs (`asyncStream` root import,
+  `bindToFormGroup`, `createIndexedDBAdapter` at root — all resolved; the
+  persist example now compiles as taught, from `@signaltree/core/storage`).
+- **Verified-docs gates** wired as blocking pre-publish sections, each with
+  a self-test proving it can fail: taught-symbols reverse diff + 30-symbol
+  golden list, Angular-version-claims check, CHANGELOG-entry gate (this
+  entry exists because the gate refused to release without it).
+  `validate:doc-snippets` deleted (validated nothing for three months);
+  `validate:size-claims` wired blocking after refreshing 8-month-stale
+  claims to measured values.
+- **One loader vocabulary**: "cache-aware (single-scope)" everywhere, with
+  the A→B→A refetch clarifier; the tree-shaking claim on the loader module
+  corrected to the measured truth (~1.5 KB min+gzip ships with `entityMap`
+  regardless of `load`; RFC 0005 §6 keeps the shape and archives the
+  injected-helper split as the fallback design).
+- **Walker-conformance suites** across core/enterprise/schema/ng-forms
+  (deep callable-branch fixtures with markers and built-in leaves) plus an
+  ESLint AST rule replacing the inert grep script — the fixture family whose
+  absence hid the entire v11.4/11.5 inert-walker bug class.
+- NgRx comparison claims re-stamped to the actually benchmarked
+  `@ngrx/signals` 21.1.
+
 ## 11.5.2 / 11.5.3 (2026-07-22)
 
 > Second sweep of the bug classes found in 11.5.0/11.5.1 — this time across

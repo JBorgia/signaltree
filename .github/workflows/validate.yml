@@ -1,0 +1,55 @@
+name: Validate
+
+# Runs the full gate set (§5 rule 3): lint, typecheck, tests, builds, and the
+# doc-truth verifiers (taught symbols + version claims) on every PR and every
+# push to main. Previously no CI ran these gates at all.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Lint, typecheck, test, build, verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Lint
+        run: pnpm run lint:all
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test:all
+
+      - name: Build
+        run: pnpm run build:all
+
+      - name: Verify built barrels resolve (all 8 packages)
+        run: node tools/verify-built-barrels.mjs
+
+      - name: Verify guardrails conditional exports (default → real build)
+        run: node scripts/verify-guardrails-default-condition.mjs
+
+      - name: Verify taught symbols
+        run: node scripts/verify-taught-symbols.js
+
+      - name: Verify version claims
+        run: node scripts/verify-version-claims.js

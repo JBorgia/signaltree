@@ -214,7 +214,7 @@ This pattern ensures:
 
 | Marker                           | Purpose                                       | Materialized Type              |
 | -------------------------------- | ---------------------------------------------- | ------------------------------- |
-| `entityMap<E, K>()`              | Entity collections with CRUD; pass `load` in config for cache-aware self-loading (RFC 0002/0003) | `EntitySignal<E, K>`            |
+| `entityMap<E, K>()`              | Entity collections with CRUD; pass `load` in config for cache-aware (single-scope) self-loading (RFC 0002/0003) | `EntitySignal<E, K>`            |
 | `status<E>()`                    | Async loading state                           | `StatusSignal<E>`               |
 | `stored<T>(key, default)`        | localStorage persistence                      | `StoredSignal<T>`               |
 

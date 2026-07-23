@@ -9,36 +9,22 @@ const baseConfig = createLibraryRollupConfig({
   packageRoot,
 });
 
-/**
- * Plugin to ensure the main index.ts barrel file is always generated,
- * even when it contains only re-exports that Rollup would normally tree-shake.
- */
-const barrelIndexPlugin = {
-  name: 'barrel-index-plugin',
-  generateBundle(options, bundle) {
-    // If index.js doesn't exist (because Rollup optimized it away), create it
-    if (!Object.keys(bundle).some((k) => k.includes('dist/index'))) {
-      const indexContent = `export { createConnectionState, ConnectionStatus } from './connection-state.js';
-export { createRealtimeEnhancer } from './create-realtime-enhancer.js';
-export * from './types.js';
-`;
-      bundle['dist/index.js'] = {
-        type: 'asset',
-        fileName: 'dist/index.js',
-        source: indexContent,
-      };
-    }
-  },
-};
-
 export default (config, options = {}) => {
   const result = baseConfig(config, options);
 
-  // Add the barrel index plugin to ensure main entry point is generated
-  if (!result.plugins) {
-    result.plugins = [];
-  }
-  result.plugins.push(barrelIndexPlugin);
+  // ROOT CAUSE FIX (2026-07-23): @nx/rollup keys the input map by entry
+  // BASENAME, so the additionalEntryPoint `src/supabase/index.ts` and the
+  // main `src/index.ts` both key as "index" — and the supabase entry
+  // silently OVERWROTE the main barrel, which therefore never built at all.
+  // A former "barrel-index-plugin" here papered over that by fabricating
+  // dist/index.js from a hardcoded (and by now stale) export list, silently
+  // resurrecting removed APIs. Deleted; instead, key the entries uniquely so
+  // both actually build.
+  result.input = {
+    index: path.join(packageRoot, 'src/index.ts'),
+    'supabase/index': path.join(packageRoot, 'src/supabase/index.ts'),
+  };
+  result.preserveEntrySignatures = 'exports-only';
 
   return result;
 };

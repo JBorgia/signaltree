@@ -14,8 +14,12 @@ export { isEntityMapMarker };
  * Self-registering marker for entity collections. If you never use `entityMap()`,
  * this code is tree-shaken from your bundle. Passing a `load` (plus optional
  * `staleTime`/`equal`/`swr`/`tags`/`persist`) turns the collection into a
- * cache-aware, self-loading one; the loader machinery lives in `./entity-loader`
- * and is only pulled in when `load` is used.
+ * cache-aware (single-scope), self-loading one; the loader machinery lives in `./entity-loader`
+ * — a separate module for code organization, NOT a tree-shake boundary: it is
+ * statically imported here, so it ships with `entityMap` whether or not `load`
+ * is configured (~1.5 KB min+gzip of removable machinery; measured 2026-07-23,
+ * RFC 0005 §6 — the injected-helper split that would reclaim it is archived as
+ * the fallback design pending new evidence).
  */
 
 import type {
@@ -158,10 +162,11 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  *
  * Passing a `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`/
  * `clearOnParamsChange`) makes the collection **cache-aware** — it loads itself,
- * exposes `.load()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
+ * exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
  * .lastLoadedAt()/.params()`, guards refetches by `staleTime`, coalesces
  * concurrent loads, and (with a loader that declares a param) is scoped per
- * `params`. Without `load` it's a plain normalized client collection.
+ * `params` (one scope retained at a time — not a multi-key cache). Without
+ * `load` it's a plain normalized client collection.
  *
  * @example Plain (client-side)
  * ```typescript

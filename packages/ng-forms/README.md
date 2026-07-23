@@ -348,14 +348,14 @@ Template: `<input [formField]="promoCode" />` alongside the ng-forms-driven `che
 ### Bridge: `form()` marker → Signal Forms `FieldTree`
 
 When you want a `form()` marker's validators to run natively inside a Signal Forms
-template (`[formField]`), wrap it with `markerSignalForm()`—no copying, the FieldTree's
+template (`[formField]`), wrap it with `signalForm()`—no copying, the FieldTree's
 model IS the marker's values signal:
 
 ```typescript
 import { Component, inject, Injector } from '@angular/core';
 import { FormField } from '@angular/forms/signals';
 import { signalTree, form, validators } from '@signaltree/core';
-import { markerSignalForm } from '@signaltree/ng-forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
 
 @Component({
   imports: [FormField],
@@ -372,24 +372,30 @@ class ProfileComponent {
   });
 
   // FieldTree shares the marker's values signal; marker sync validators run as
-  // Signal Forms validators (errors carry `kind: 'signalTree'`).
-  profile = markerSignalForm(this.tree.$.profile, { injector: this.injector });
+  // Signal Forms validators (errors carry `kind: 'required'`/`'email'`/… for
+  // built-in validators, or `kind: 'signalTree'` for untagged custom ones).
+  profile = signalForm(this.tree.$.profile, { injector: this.injector });
 }
 ```
 
-Async marker validators aren't auto-installed—keep running them via the marker's
-`validate()`/`submit()`, or add Signal Forms `validateAsync` rules yourself. Requires
-Angular 22+.
+**Async validation is not unified between the two systems.** The marker's own
+async path (`asyncValidators`/`validateField()`/`validateAll()`/`submit()`) and
+the FieldTree's native Signal Forms `validateAsync`/`validateHttp` are
+independent — this bridge does not connect them. Pick one as the authority for
+a given bridged form; using both on the same field can leave the marker's
+`valid()` and the FieldTree's `valid()` disagreeing during an async validation
+window. Requires Angular 22+.
 
 ### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
 
-If you register Zod/Valibot/ArkType schemas via `@signaltree/schema`, `signalFormBridge()`
-wires them into a Signal Forms `FieldTree` automatically via `validateStandardSchema`:
+If you register Zod/Valibot/ArkType schemas via `@signaltree/schema`, the
+`signalForm(tree, rootPath, subtree)` call shape wires them into a Signal Forms
+`FieldTree` automatically via `validateStandardSchema`:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
-import { signalFormBridge } from '@signaltree/ng-forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
 import { z } from 'zod';
 
 const tree = signalTree({ user: { name: '', email: '' } }).with(
@@ -401,11 +407,13 @@ const tree = signalTree({ user: { name: '', email: '' } }).with(
   })
 );
 
-const userForm = signalFormBridge<{ name: string; email: string }>(tree, 'user', tree.$.user);
+const userForm = signalForm<{ name: string; email: string }>(tree, 'user', tree.$.user);
 // userForm is a FieldTree with validation auto-wired from the schema registry.
 ```
 
-Both bridges are exported from `@signaltree/ng-forms/signals` and require Angular 22+.
+Both call shapes of `signalForm()` are exported from `@signaltree/ng-forms/signals`
+and require Angular 22+. (The pre-11.6 names `markerSignalForm()` and
+`signalFormBridge()` remain as deprecated aliases until the next major.)
 
 ### Connecting to Reactive Forms
 

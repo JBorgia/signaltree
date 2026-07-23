@@ -8,10 +8,7 @@ import {
 import { RouterModule } from '@angular/router';
 import { FormField } from '@angular/forms/signals';
 import { form, signalTree, validators } from '@signaltree/core';
-import {
-  markerSignalForm,
-  signalFormBridge,
-} from '@signaltree/ng-forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
 import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
@@ -34,11 +31,13 @@ interface Account {
 /**
  * Angular 22 Signal Forms × SignalTree.
  *
- * Two integration paths, both live on this page:
- *  1. `markerSignalForm` — a `form()` marker becomes a Signal Forms
+ * One entry point — `signalForm()` — with two call shapes, both live on
+ * this page:
+ *  1. `signalForm(marker)` — a `form()` marker becomes a Signal Forms
  *     `FieldTree` sharing the marker's values signal as its model.
- *  2. `signalFormBridge` — `@signaltree/schema` registrations (Zod here)
- *     auto-wire into a FieldTree via `validateStandardSchema`.
+ *  2. `signalForm(tree, rootPath, subtree)` — `@signaltree/schema`
+ *     registrations (Zod here) auto-wire into a FieldTree via
+ *     `validateStandardSchema`.
  */
 @Component({
   selector: 'app-signal-forms-demo',
@@ -67,7 +66,7 @@ export class SignalFormsDemoComponent {
     },
   });
 
-  readonly profile = markerSignalForm(this.tree.$.onboarding.profile, {
+  readonly profile = signalForm(this.tree.$.onboarding.profile, {
     injector: this.injector,
   });
 
@@ -88,7 +87,7 @@ export class SignalFormsDemoComponent {
     })
   );
 
-  readonly account = signalFormBridge<Account>(
+  readonly account = signalForm<Account>(
     this.schemaTree,
     'account',
     this.schemaTree.$.account
@@ -111,7 +110,7 @@ export class SignalFormsDemoComponent {
       label: 'marker-bridge.ts',
       language: 'typescript',
       source: `import { form, signalTree, validators } from '@signaltree/core';
-import { markerSignalForm } from '@signaltree/ng-forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
 import { RouterModule } from '@angular/router';
 import { FormField } from '@angular/forms/signals';
 
@@ -128,7 +127,7 @@ const tree = signalTree({
 });
 
 // FieldTree whose model IS the marker's values signal
-readonly profile = markerSignalForm(tree.$.onboarding.profile);
+readonly profile = signalForm(tree.$.onboarding.profile);
 
 // Template: <input [formField]="profile.name" />
 // Both APIs stay live:
@@ -143,7 +142,7 @@ readonly profile = markerSignalForm(tree.$.onboarding.profile);
       language: 'typescript',
       source: `import { signalTree } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
-import { signalFormBridge } from '@signaltree/ng-forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
 import { z } from 'zod';
 
 const tree = signalTree({
@@ -158,7 +157,7 @@ const tree = signalTree({
 );
 
 // FieldTree with every registered schema auto-applied
-readonly account = signalFormBridge<Account>(
+readonly account = signalForm<Account>(
   tree, 'account', tree.$.account
 );`,
     },

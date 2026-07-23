@@ -193,7 +193,7 @@ supabaseRealtime(supabase, config, {
 Create adapters for other realtime providers:
 
 ```typescript
-import { createRealtimeEnhancer, RealtimeAdapter } from '@signaltree/realtime';
+import { realtime, RealtimeAdapter } from '@signaltree/realtime';
 
 const customAdapter: RealtimeAdapter = {
   async connect() {
@@ -225,8 +225,12 @@ const customAdapter: RealtimeAdapter = {
 };
 
 const tree = signalTree({ ... })
-  .with(createRealtimeEnhancer(customAdapter, config));
+  .with(realtime(customAdapter, config));
 ```
+
+> **Renamed:** `createRealtimeEnhancer` is now `realtime()` — noun-form, like
+> every other SignalTree enhancer. The old name remains as a deprecated alias
+> until the next major.
 
 ## TypeScript
 

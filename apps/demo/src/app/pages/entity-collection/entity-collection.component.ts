@@ -333,7 +333,8 @@ source.addEventListener('catalog.changed', () => {
     {
       label: 'offline-first.ts',
       language: 'typescript',
-      source: `import { entityMap, createIndexedDBAdapter } from '@signaltree/core';
+      source: `import { entityMap } from '@signaltree/core';
+import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 plants: entityMap<Plant, string>({
   load: () => plantApi.list$(),

@@ -2,6 +2,8 @@
 
 Event-driven architecture infrastructure for SignalTree applications. Provides a complete event bus system with validation, subscribers, error classification, and real-time sync.
 
+> **Scope:** `@signaltree/events` is a standalone full-stack event bus — it does NOT integrate with the signal tree (no tree methods, enhancers, or markers; you wire the bus and your trees together in application code).
+
 ## Installation
 
 ```bash

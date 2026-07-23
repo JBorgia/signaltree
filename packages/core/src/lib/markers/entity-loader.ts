@@ -5,13 +5,28 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { isObservable, type Observable, Subscription } from 'rxjs';
+import type { Observable, Subscription } from 'rxjs';
 
+/**
+ * rxjs-free Observable check: the loader accepts `Promise | Observable`, and
+ * a Promise never has `.subscribe`, so the duck test is unambiguous here.
+ * Keeps rxjs (and rxjs-interop) TYPE-ONLY dependencies of the loader — no
+ * runtime module edge for Promise-only consumers (RFC 0005 §6). The former
+ * `takeUntilDestroyed` pipe was redundant: the `destroyRef.onDestroy` hook
+ * below (registered before any subscribe) unsubscribes `currentSub` first,
+ * and every settle callback additionally guards `destroyed`/run-id.
+ */
+function isSubscribable<T>(
+  v: Promise<T> | Observable<T>
+): v is Observable<T> {
+  return typeof (v as { subscribe?: unknown }).subscribe === 'function';
+}
+
+import { isTraversableNode } from '../utils';
 import type { EntitySignal } from '../types';
 
 /**
- * Cache-aware loading for `entityMap`.
+ * Cache-aware (single-scope) loading for `entityMap`.
  *
  * `entityMap({ load, staleTime, … })` turns a plain normalized collection into a
  * self-loading, cache-aware one: a loader, load status, a per-scope freshness
@@ -119,8 +134,21 @@ export interface EntityLoadOptions<E, P = void> {
  * requires `load(params)`.
  */
 export interface EntityLoaderSurface<P = void> {
-  /** Guarded load: no-op if fresh OR the same scope is already in flight. */
+  /**
+   * Guarded load: no-op if fresh OR the same scope is already in flight.
+   * If the materializing injector is destroyed while a load is in flight,
+   * the promise resolves (rows are dropped, `loading()` flips false).
+   */
   load(params: P): Promise<void>;
+  /**
+   * Same as `load()`, but rejects with the loader's error instead of only
+   * surfacing it through `.error()`. `load()` always resolves — even on
+   * failure — so template/signal consumers never see an unhandled rejection;
+   * `loadOrThrow()` is for imperative call sites that want conventional
+   * `await`/`try-catch` orchestration instead. Destroy during flight resolves
+   * (not rejects): `.error()` stays null — a torn-down scope is not a failure.
+   */
+  loadOrThrow(params: P): Promise<void>;
   /** Force a reload, ignoring `staleTime`/scope-match. Omit `params` to re-run the last scope. */
   refresh(params?: P): Promise<void>;
   /** Mark the current scope stale. Does not fetch — the next `load()` does. */
@@ -268,9 +296,20 @@ export function attachLoader<
     destroyed = true;
     currentSub?.unsubscribe();
     currentSub = null;
+    // Settle any caller-held `load()` promise. RESOLVE, not reject: `load()`
+    // never rejects (errors surface via `.error()`), and after destroy the
+    // settle callbacks are guarded out, so without this the promise would
+    // hang forever. `loadOrThrow()` callers also resolve cleanly: its
+    // post-await check reads `errorSignal`, which stays null — a destroyed
+    // scope is "load ended with no data and no error", not a failure.
+    const pendingResolve = inFlightResolve;
     inFlight = null;
     hasInFlight = false;
     inFlightResolve = null;
+    pendingResolve?.();
+    // The in-flight fetch will never settle now — don't leave `loading()`
+    // stuck true on a destroyed (but still readable) tree.
+    loadingSignal.set(false);
   });
 
   const scopeStorageKey = (params: P): string => {
@@ -371,9 +410,8 @@ export function attachLoader<
 
     if (result !== undefined && !settled) {
       const r = result;
-      if (isObservable(r)) {
-        const obs = destroyRef ? r.pipe(takeUntilDestroyed(destroyRef)) : r;
-        currentSub = obs.subscribe({
+      if (isSubscribable(r)) {
+        currentSub = r.subscribe({
           next: (rows) => settleSuccess(rows),
           error: (err) => settleError(err),
           complete: () => {
@@ -467,6 +505,12 @@ export function attachLoader<
     return beginLoad(resolved);
   }
 
+  async function loadOrThrow(params: P): Promise<void> {
+    await load(params);
+    const err = errorSignal();
+    if (err != null) throw err;
+  }
+
   function invalidate(): void {
     invalidated.set(true);
   }
@@ -504,6 +548,7 @@ export function attachLoader<
   const target = entity as EntitySignal<E, K> &
     EntityLoaderSurface<P> & { __tags?: Set<string> | null };
   target.load = load;
+  target.loadOrThrow = loadOrThrow;
   target.refresh = refresh;
   target.invalidate = invalidate;
   Object.defineProperty(target, 'loading', {
@@ -537,8 +582,7 @@ interface TaggedCollection {
 
 function isTaggedCollection(value: unknown): value is TaggedCollection {
   return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
+    isTraversableNode(value) &&
     (value as Record<symbol, unknown>)[ENTITY_LOADER_SIGNAL] === true
   );
 }
@@ -564,8 +608,7 @@ export function invalidateTag(
   const visited = new WeakSet<object>();
 
   const walk = (node: unknown): void => {
-    if (node == null) return;
-    if (typeof node !== 'object' && typeof node !== 'function') return;
+    if (!isTraversableNode(node)) return;
     if (visited.has(node as object)) return;
     visited.add(node as object);
 

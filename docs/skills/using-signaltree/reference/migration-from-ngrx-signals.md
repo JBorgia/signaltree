@@ -452,10 +452,10 @@ export function createBaseState() {
 
 // derived/tier-entity-resolution.derived.ts — current entity is *derived*
 import { computed } from '@angular/core';
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
-export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+export const entityResolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
   driver: {
     current: computed(() => {
       const id = $.selected.driverId(); // <-- root selection
@@ -480,7 +480,7 @@ This unlocks `upsertOne`, `removeOne`, `byId`, `setAll` for the entity collectio
 - **If the app has a typed error model** (existing class/interface/discriminated union): the domain slice has **two siblings** — `xLoad: status<string>()` for the state machine _and_ `xError: Nullable<AppError>` for the typed payload (so consumers don't lose typed error info to the `string`-only payload of `status<T>().setError(msg)`). Ops set both: `$.x.xLoad.setError(String(err)); $.x.xError.set(toAppError(err));`. `status<AppError>()` is **not** a substitute — its API is state-machine, not error-storage.
 - **If the app has no typed error model**: `xLoad: status<string>()` alone is correct. Do **not** invent an error type just to satisfy the pattern — the cost (new type, mapping function, every `Ops` learns to use it) outweighs the benefit until the app actually needs structured errors.
 
-### 2. Materialize derivations inside the tree with `externalDerived` + `.derived()`
+### 2. Materialize derivations inside the tree with `derivedFrom` + `.derived()`
 
 **Applies when:** the legacy app has ≥ 1 `withComputed` derivation that is read from ≥ 2 consumers. Skip when every derivation is consumer-local (one component reads it once) — a component-level `computed()` is correct in that case.
 
