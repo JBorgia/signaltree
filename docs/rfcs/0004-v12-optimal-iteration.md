@@ -623,3 +623,14 @@ release ("Override §5 and publish now", asked and answered): all other
 ratchet steps (adversarial reviews at design and implementation time,
 negative-tested gates, M3 acceptance at 80%) were completed; the cooling
 window alone was waived by owner decision.
+
+### Post-release external audit intake (2026-07-23, v11.6.0)
+
+Independent post-publish audit confirmed the major fixes; new items:
+FIXED same-day — CHANGELOG "(unreleased)" label, llms version-table rows,
+README effects() row lacking deprecation marker, persisted-scope GC guidance
+(persistence-guide). QUEUED for the release pipeline — tarball-consumer
+install/import test as a pre-publish gate, and an RC-phase option in
+release.sh. Re-affirmed as recorded decisions (not reopened): async
+single-authority, entityMap unified shape (RFC 0005), single-scope cache
+(RFC 0003 §5).

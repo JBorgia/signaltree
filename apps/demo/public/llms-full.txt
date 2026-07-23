@@ -64,7 +64,7 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `entityMap` gains cache-aware (single-scope) loading (`load`) + `invalidateTag()` | 11.2.0 (shipped as a separate `entityCollection` marker) |
 | `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
 | `markerSignalForm()` / `signalFormBridge()` — Angular Signal Forms bridge (`@signaltree/ng-forms/signals`, Angular 22+) | 11.5.0 (both are **deprecated aliases** of `signalForm()` as of 11.6.0 — emit `signalForm`) |
-| `signalForm()` — one name for the Signal Forms bridge (marker overload + schema overload), with `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` validator tagging; `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views | 11.6.0 (unreleased) |
+| `signalForm()` — one name for the Signal Forms bridge (marker overload + schema overload), with `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` validator tagging; `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views | 11.6.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.

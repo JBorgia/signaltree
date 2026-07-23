@@ -123,3 +123,14 @@ const tree = signalTree({
 
 Persistence here is best-effort by design: a storage failure never breaks the
 load path.
+
+## Persisted-scope cleanup (high-cardinality scopes)
+
+Scoped `entityMap({ load, persist })` writes one storage entry per scope
+(`key::<stableStringify(params)>`) and never garbage-collects old scopes —
+an app cycling through thousands of tenant/customer/search scopes will
+accumulate entries. Until a built-in GC policy ships (tracked alongside the
+RFC 0003 §5 multi-scope LRU deferral), applications should periodically
+clear stale entries themselves (e.g. enumerate adapter keys by the `key::`
+prefix and delete those not touched recently, or version the `persist.key`
+prefix and drop old versions on startup).

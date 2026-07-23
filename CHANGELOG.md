@@ -1,6 +1,6 @@
-## 11.6.0 (unreleased)
+## 11.6.0 (2026-07-23)
 
-> The first release to pass the full RFC 0004 §5 ratchet: every change below
+> Published 2026-07-23 (owner-recorded §5 cooling override). The first release to pass the full gate pipeline: every change below
 > went design-review → implement → adversarial review → fix before landing,
 > and the release was measured by the M3 fresh-agent acceptance test
 > (80% strict first-attempt success against the llms docs, up from ~0%
