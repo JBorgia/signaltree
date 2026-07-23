@@ -1,3 +1,5 @@
+import { isTraversableNode } from '@signaltree/core';
+
 import type { Registry } from './state';
 import { removeBoundPath, removePendingPath } from './state';
 import { readTreeAtPath } from './matcher';
@@ -54,8 +56,7 @@ function pathExists(treeRoot: unknown, path: string): boolean {
     // Structural-only check: the parent must be an object/function with `seg`
     // as an own enumerable property. We do NOT call signals here — a signal
     // holding null/undefined would otherwise falsely indicate "key removed."
-    if (cur === null || cur === undefined) return false;
-    if (typeof cur !== 'object' && typeof cur !== 'function') return false;
+    if (!isTraversableNode(cur)) return false;
     if (!(seg in (cur as Record<string, unknown>))) return false;
     cur = (cur as Record<string, unknown>)[seg];
   }

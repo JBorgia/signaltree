@@ -1,8 +1,8 @@
 # Cookbook: `entityMap({ load })` + HTTP caching + push invalidation
 
-`entityMap`'s cache-aware loading (v11.2+, [RFC 0002](../rfcs/0002-entity-collection.md);
+`entityMap`'s single-scope freshness-managed loading (v11.2+, [RFC 0002](../rfcs/0002-entity-collection.md);
 scoped form and the `entityCollection`→`entityMap` fold in v11.4+, [RFC 0003](../rfcs/0003-keyed-entity-collection.md))
-is the cache-aware collection loader: passing `load` in `entityMap(config)` adds load status +
+is the single-scope freshness-managed collection loader: passing `load` in `entityMap(config)` adds load status +
 a freshness guard + single-flight dedup + tag invalidation + optional offline-first persistence
 to the same marker — no second marker to import. This cookbook wires it end-to-end with the two
 things it deliberately does **not** own — HTTP-level caching (ETag / conditional GET) and
@@ -169,6 +169,6 @@ multi-scope LRU (instant back-toggle between recently seen scopes) is explicitly
 ## Anti-patterns
 
 - **Don't** stack TanStack Query / a second document cache alongside `entityMap` — you'd get the
-  triple-cache duplication `entityMap`'s cache-aware loading exists to remove.
+  triple-cache duplication `entityMap`'s freshness-managed loading exists to remove.
 - **Don't** put conditional-GET logic in the loader (see §2).
 - **Don't** hand-flip `status()` from your SSE handler — that's what `invalidateTag` replaces.

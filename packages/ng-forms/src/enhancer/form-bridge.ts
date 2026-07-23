@@ -8,7 +8,7 @@ import {
     ValidationErrors,
     ValidatorFn,
 } from '@angular/forms';
-import { FORM_MARKER, FormSignal, isFormMarker, ISignalTree } from '@signaltree/core';
+import { FORM_MARKER, FormSignal, isFormMarker, ISignalTree, isTraversableNode } from '@signaltree/core';
 
 // =============================================================================
 // TYPES
@@ -105,12 +105,11 @@ function findFormSignals(
   // FormSignal is a callable function with $, valid, dirty, submitting, validate, etc.
   // Note: FormSignal is typeof 'function' because it's a callable signal
   const hasForm =
-    (typeof node === 'function' || typeof node === 'object') &&
-    node !== null &&
-    '$' in node &&
-    'valid' in node &&
-    'dirty' in node &&
-    'validate' in node;
+    isTraversableNode(node) &&
+    '$' in (node as Record<string, unknown>) &&
+    'valid' in (node as Record<string, unknown>) &&
+    'dirty' in (node as Record<string, unknown>) &&
+    'validate' in (node as Record<string, unknown>);
 
   if (
     hasForm &&
@@ -124,7 +123,7 @@ function findFormSignals(
   }
 
   // Check if it's a callable (signal) with nested properties
-  if (typeof node === 'function' || typeof node === 'object') {
+  if (isTraversableNode(node)) {
     const entries = Object.entries(node as Record<string, unknown>);
     for (const [key, value] of entries) {
       // Skip internal properties

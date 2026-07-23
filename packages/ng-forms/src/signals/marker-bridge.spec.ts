@@ -58,10 +58,10 @@ describe('markerSignalForm', () => {
   it('runs marker validators as Signal Forms validators', () => {
     const { fieldTree } = create();
 
-    // Empty required fields → invalid with signalTree-kind errors
+    // Empty required fields → invalid, tagged with the validator's own kind
     expect(fieldTree.name().valid()).toBe(false);
     const errors = fieldTree.name().errors();
-    expect(errors.some((e) => e.kind === 'signalTree')).toBe(true);
+    expect(errors.some((e) => e.kind === 'required')).toBe(true);
     expect(errors[0].message).toBe('Name required');
 
     // Email format rule
@@ -74,6 +74,69 @@ describe('markerSignalForm', () => {
     fieldTree.email().value.set('alice@acme.test');
     expect(fieldTree.name().valid()).toBe(true);
     expect(fieldTree.email().valid()).toBe(true);
+  });
+
+  describe('validator identity (kind)', () => {
+    it('tags a built-in validator error with its validatorKind, not a generic kind', () => {
+      const { fieldTree } = create();
+
+      fieldTree.email().value.set('mail.com');
+      const errors = fieldTree.email().errors();
+
+      // validators.email() → kind 'email', not the old generic 'signalTree'
+      expect(errors[0].kind).toBe('email');
+      expect(errors[0].message).toBe('Invalid email');
+    });
+
+    it('falls back to the generic "signalTree" kind for a custom/anonymous validator', () => {
+      interface Coupon extends Record<string, unknown> {
+        code: string;
+      }
+      const tree = signalTree({
+        checkout: form<Coupon>({
+          initial: { code: '' },
+          validators: {
+            // Plain closure — no validatorKind of its own.
+            code: (value: unknown) =>
+              value === 'EXPIRED' ? 'Coupon expired' : null,
+          },
+        }),
+      });
+      const fieldTree = markerSignalForm(tree.$.checkout, {
+        injector: TestBed.inject(Injector),
+      });
+
+      fieldTree.code().value.set('EXPIRED');
+      const errors = fieldTree.code().errors();
+
+      expect(errors[0].kind).toBe('signalTree');
+      expect(errors[0].message).toBe('Coupon expired');
+    });
+
+    it('falls back to the generic kind for a validators.when()-wrapped validator', () => {
+      interface ShipForm extends Record<string, unknown> {
+        shipToOther: boolean;
+        otherAddress: string;
+      }
+      const tree = signalTree({
+        ship: form<ShipForm>({
+          initial: { shipToOther: true, otherAddress: '' },
+          validators: {
+            otherAddress: validators.when<ShipForm>(
+              (f) => f.shipToOther,
+              validators.required('Address required')
+            ),
+          },
+        }),
+      });
+      const fieldTree = markerSignalForm(tree.$.ship, {
+        injector: TestBed.inject(Injector),
+      });
+
+      const errors = fieldTree.otherAddress().errors();
+      expect(errors[0].kind).toBe('signalTree');
+      expect(errors[0].message).toBe('Address required');
+    });
   });
 
   it('keeps the marker errors()/valid() live for FieldTree-side writes', async () => {

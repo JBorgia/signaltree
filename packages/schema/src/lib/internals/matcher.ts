@@ -1,4 +1,5 @@
 import { isSignal } from '@angular/core';
+import { isTraversableNode } from '@signaltree/core';
 
 import type { SchemaEntry, PatternSegment, Registry } from './state';
 import { WILDCARD, addBoundPath } from './state';
@@ -202,7 +203,7 @@ export function snapshotTreeNode(node: unknown): unknown {
     try { return (node as () => unknown)(); } catch { return undefined; }
   }
 
-  if (typeof node !== 'object' && typeof node !== 'function') return node;
+  if (!isTraversableNode(node)) return node;
   // Built-ins are leaves — return as-is.
   if (Array.isArray(node) || node instanceof Date || node instanceof Map || node instanceof Set) {
     return node;
@@ -241,8 +242,7 @@ export function readTreeAtPath(
   const segs = path.split('.');
   let cur: unknown = treeRoot;
   for (const seg of segs) {
-    if (cur === null || cur === undefined) return undefined;
-    if (typeof cur !== 'object' && typeof cur !== 'function') return undefined;
+    if (!isTraversableNode(cur)) return undefined;
     cur = (cur as Record<string, unknown>)[seg];
   }
   return snapshotTreeNode(cur);

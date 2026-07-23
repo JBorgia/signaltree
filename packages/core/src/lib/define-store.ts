@@ -1,5 +1,8 @@
 import { DestroyRef, inject, Injectable, type Type } from '@angular/core';
 
+import type { SignalTreeBuilder } from './internals/builder-types';
+import type { ReadonlyStore } from './types';
+
 /**
  * Config for {@link defineStore}.
  */
@@ -10,6 +13,20 @@ export interface DefineStoreConfig {
    * provide it locally via a component/route `providers` array.
    */
   providedIn?: 'root' | 'platform' | null;
+  /**
+   * `'readonly'` narrows the injected type to {@link ReadonlyStore} — read-only
+   * `$` reads plus lifecycle (`destroy()`/`destroyed`), with no reachable write
+   * call signature. This is a **type-only** narrowing: `inject(MyStore)`
+   * resolves to the exact same tree object either way, so this does not
+   * protect against a deliberate `as any` bypass — it protects against the
+   * common case an AI agent or developer reaches for a `.set()`/mutator that
+   * simply isn't offered on the injected type. Marker mutator methods
+   * (`upsertOne`, `setLoading`, …) are NOT stripped — see {@link ReadonlyStore}
+   * for why. Use this for components that should only read the store,
+   * pairing it with a separate `@Injectable` Ops service for writes (see
+   * "Production architecture" in the root README).
+   */
+  expose?: 'readonly';
 }
 
 /**
@@ -46,7 +63,38 @@ export interface DefineStoreConfig {
  *   inc() { this.store.$.count.update((n) => n + 1); }
  * }
  * ```
+ *
+ * @example Read-only injection
+ * ```ts
+ * export const CounterStore = defineStore(
+ *   () => signalTree({ count: 0 }),
+ *   { expose: 'readonly' }
+ * );
+ *
+ * @Component({ providers: [CounterStore] })
+ * export class Display {
+ *   readonly store = inject(CounterStore);
+ *   read() { return this.store.$.count(); } // ✅ read-only
+ *   // this.store.$.count.set(1);           // ❌ type error — not on ReadonlyStore
+ * }
+ * ```
  */
+// Overload order matters, mirroring entityMap's config-driven overload
+// precedent (entity-map.ts): the readonly-specific overload is declared
+// first so `{ expose: 'readonly' }` resolves to it. Constrained on
+// `SignalTreeBuilder<T, any>` (not `SignalTree<T>`/`ISignalTree<T>`) because
+// that's what `signalTree(...)` actually returns — verified via a type-test
+// harness (define-store.typing.spec.ts) that initially constrained on
+// `SignalTree<T>` and silently fell through to the untransformed generic
+// overload below for every real call site.
+export function defineStore<T>(
+  factory: () => SignalTreeBuilder<T, any>,
+  config: DefineStoreConfig & { expose: 'readonly' }
+): Type<ReadonlyStore<T>>;
+export function defineStore<R>(
+  factory: () => R,
+  config?: DefineStoreConfig
+): Type<R>;
 export function defineStore<R>(
   factory: () => R,
   config: DefineStoreConfig = {}

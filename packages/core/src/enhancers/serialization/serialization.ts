@@ -1,5 +1,6 @@
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
+import { isTraversableNode } from '../../lib/utils';
 import { ISignalTree } from '../../lib/types';
 import type { EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
@@ -568,10 +569,7 @@ export function serialization(
           for (const part of path.split('.')) {
             if (!part) continue;
             const next = node[part];
-            if (
-              !next ||
-              (typeof next !== 'object' && typeof next !== 'function')
-            ) {
+            if (!isTraversableNode(next)) {
               node = undefined;
               break;
             }
@@ -795,8 +793,7 @@ export function serialization(
             typeof (v as { set?: unknown }).set === 'function');
 
         const walkAlias = (obj: unknown, path = '') => {
-          if (!obj || (typeof obj !== 'object' && typeof obj !== 'function'))
-            return;
+          if (!isTraversableNode(obj)) return;
           const ref = obj as object;
           if (visited.has(ref)) return;
           visited.add(ref);

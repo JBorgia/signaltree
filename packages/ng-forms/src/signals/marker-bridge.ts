@@ -28,10 +28,10 @@ import {
 import type { FormSignal } from '@signaltree/core';
 
 /** Marker-side validator shape (see `Validator` in @signaltree/core). */
-type MarkerValidator = (
+type MarkerValidator = ((
   value: unknown,
   formValues?: Record<string, unknown>
-) => string | null;
+) => string | null) & { validatorKind?: string };
 
 interface FormMarkerInternals<T extends Record<string, unknown>> {
   __model?: WritableSignal<T>;
@@ -57,12 +57,22 @@ export interface MarkerSignalFormOptions {
  * - The FieldTree's model IS the marker's values signal — edits through
  *   either API are immediately visible to the other.
  * - The marker's sync validators run as Signal Forms validators; errors
- *   appear on field state as `{ kind: 'signalTree', message }`.
+ *   appear on field state as `{ kind, message }`. `kind` is the validator's
+ *   `validatorKind` when it has one (all built-in `validators.*` — except
+ *   `when`, which wraps an arbitrary inner validator and has no identity of
+ *   its own — set this: `'required'`, `'email'`, `'minLength'`, …); custom
+ *   validators without a `validatorKind` fall back to the generic
+ *   `'signalTree'`.
  * - The marker's `errors()`/`valid()` signals are computed over the shared
  *   model, so FieldTree-side writes are reflected immediately.
- * - Async marker validators are NOT auto-installed; run them via the
- *   marker's `validate()`/`submit()`, or register Signal Forms
- *   `validateAsync`/`validateHttp` rules yourself.
+ * - **Async validators are NOT unified between the two systems.** The
+ *   marker's own `asyncValidators`/`validateField()`/`validateAll()`/
+ *   `submit()` path and the FieldTree's native Signal Forms `validateAsync`/
+ *   `validateHttp` are two independent systems that this bridge does not
+ *   connect — pick ONE as the authority for a given bridged form. Using both
+ *   on the same field can leave `tree.$...field.valid()` and
+ *   `fieldTree.field().valid()` disagreeing during an async validation
+ *   window, since each only reflects its own validator set.
  *
  * @example
  * ```ts
@@ -130,7 +140,9 @@ export function markerSignalForm<T extends Record<string, unknown>>(
           const formValues = model() as Record<string, unknown>;
           for (const validator of list) {
             const message = validator(ctx.value(), formValues);
-            if (message) return { kind: 'signalTree', message };
+            if (message) {
+              return { kind: validator.validatorKind ?? 'signalTree', message };
+            }
           }
           return undefined;
         });

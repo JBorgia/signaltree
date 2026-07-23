@@ -43,6 +43,8 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 
 For anything beyond a prototype, wrap the tree in a service and expose **`$` reads + Ops methods**: keep `computed()` / `.derived()` for reads and `@Injectable` Ops services for writes and async. This keeps agent-generated code architecturally sound, not just API-correct. See [Recommended Architecture](docs/architecture/signaltree-architecture-guide.md#recommended-architecture-tldr).
 
+For components that should only ever read the store, `defineStore(factory, { expose: 'readonly' })` narrows the injected type to a read-only surface (`$` reads plus `destroy()`/`destroyed`) — no `.set()`/`.update()`/branch-write call signature reachable on the injected type. This is a compile-time narrowing, not a runtime proxy — pair it with a separate Ops service for the write path.
+
 ## When to Use SignalTree
 
 **Good fit:**
@@ -101,7 +103,7 @@ In templates, `store.$.user.name()` works exactly like any other signal.
 npm install @signaltree/core
 ```
 
-Requires Angular 17+ (signals support).
+Requires Angular 20, 21, or 22 (see `peerDependencies` in [`packages/core/package.json`](packages/core/package.json)).
 
 ## Entity Collections
 
@@ -151,10 +153,10 @@ const store = signalTree({
 store.$.loadingState.setLoading();
 store.$.users.setAll(data); // entities written directly — loadingState is a sibling
 store.$.loadingState.setLoaded();
-store.$.loadingState.loading(); // Signal<boolean> (v10.3 canonical; .isLoading() still works as a deprecated alias)
+store.$.loadingState.loading(); // Signal<boolean> (the `is`-prefix aliases — .isLoading() etc. — were removed in v11.0.0)
 ```
 
-`entityCollection<E, K>(config)` (v11.2) is a cache-aware, self-loading `entityMap` — it composes the full `entityMap` surface with a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
+Passing `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`) to `entityMap()` turns the collection into a single-scope freshness-managed, self-loading one — a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence, all on the same marker. It retains only the current scope — switching scope A → B → A refetches A rather than serving from a multi-key cache. There is no separate `entityCollection` marker — the short-lived v11.2/11.3 marker of that name was folded into `entityMap` in v11.4.0. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
 
 ## Composition model
 
@@ -162,7 +164,7 @@ A SignalTree store is composed from four distinct, type-safe mechanisms — each
 
 | Concern            | Mechanism                                                                                                            | Example                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`, `entityCollection`)     | `signalTree({ users: entityMap<User>() })`               |
+| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`)     | `signalTree({ users: entityMap<User>() })`               |
 | **Derived state**  | `.derived()` / `derivedFrom()` — computed signals deep-merged at any path                                            | `.derived($ => ({ activeCount: computed(...) }))`        |
 | **Capabilities**   | `.with()` enhancers — opt-in, tree-shakeable, and reusable (author your own custom enhancers)                        | `.with(batching()).with(devTools())`                     |
 | **Actions**        | a plain `@Injectable` Ops service that writes to tree paths — reads (`tree.$`) stay decoupled from writes            | `ops.users.select(id)`                                   |
@@ -263,7 +265,7 @@ The value-level `createEditSession(initial)` primitive (single-arg, no tree bind
 
 ## Async (`asyncSource` / `asyncQuery` markers)
 
-Async state usually belongs **at the tree path it describes** — use `asyncSource` for load-and-expose and `asyncQuery` for input-driven debounced queries. Reach for a plain Observable method on an Ops class only when the orchestration spans multiple paths or stages that no single marker can express (see the migration section). Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`, `entityCollection`):
+Async state usually belongs **at the tree path it describes** — use `asyncSource` for load-and-expose and `asyncQuery` for input-driven debounced queries. Reach for a plain Observable method on an Ops class only when the orchestration spans multiple paths or stages that no single marker can express (see the migration section). Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`):
 
 ```typescript
 import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';

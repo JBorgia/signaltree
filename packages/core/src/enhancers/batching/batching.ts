@@ -1,4 +1,5 @@
 import { copyTreeProperties } from '../utils/copy-tree-properties';
+import { isTraversableNode } from '../../lib/utils';
 
 import type {
   ISignalTree,
@@ -147,7 +148,7 @@ export function batching(
       // NodeAccessors and leaf signals are CALLABLE (typeof 'function');
       // rejecting functions here would skip every accessor in the tree and
       // leave batch()/coalesce() silently inert.
-      if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+      if (!isTraversableNode(node)) {
         return;
       }
 
@@ -213,10 +214,7 @@ export function batching(
       for (const key of Object.keys(node)) {
         if (key.startsWith('_') || key === 'set' || key === 'update') continue;
         const child = node[key];
-        if (
-          child &&
-          (typeof child === 'object' || typeof child === 'function')
-        ) {
+        if (isTraversableNode(child)) {
           wrapSignalSetters(child, path ? `${path}.${key}` : key);
         }
       }

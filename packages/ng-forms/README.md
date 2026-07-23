@@ -372,14 +372,19 @@ class ProfileComponent {
   });
 
   // FieldTree shares the marker's values signal; marker sync validators run as
-  // Signal Forms validators (errors carry `kind: 'signalTree'`).
+  // Signal Forms validators (errors carry `kind: 'required'`/`'email'`/… for
+  // built-in validators, or `kind: 'signalTree'` for untagged custom ones).
   profile = markerSignalForm(this.tree.$.profile, { injector: this.injector });
 }
 ```
 
-Async marker validators aren't auto-installed—keep running them via the marker's
-`validate()`/`submit()`, or add Signal Forms `validateAsync` rules yourself. Requires
-Angular 22+.
+**Async validation is not unified between the two systems.** The marker's own
+async path (`asyncValidators`/`validateField()`/`validateAll()`/`submit()`) and
+the FieldTree's native Signal Forms `validateAsync`/`validateHttp` are
+independent — this bridge does not connect them. Pick one as the authority for
+a given bridged form; using both on the same field can leave the marker's
+`valid()` and the FieldTree's `valid()` disagreeing during an async validation
+window. Requires Angular 22+.
 
 ### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
 

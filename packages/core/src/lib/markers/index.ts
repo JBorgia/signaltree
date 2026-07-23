@@ -90,7 +90,7 @@ export {
   type AsyncQueryFn,
 } from './async-query';
 
-// Cache-aware loading for entityMap (RFC 0002/0003) — the loader surface that
+// Single-scope freshness-managed loading for entityMap (RFC 0002/0003) — the loader surface that
 // `entityMap({ load, … })` attaches. `entityMap` itself is exported from ./types.
 export {
   invalidateTag,

@@ -21,7 +21,7 @@ import {
   validateStandardSchema,
   type FieldTree,
 } from '@angular/forms/signals';
-import { toWritableSignal } from '@signaltree/core';
+import { isTraversableNode, toWritableSignal } from '@signaltree/core';
 import type { SchemaMethods } from '@signaltree/schema';
 
 /**
@@ -74,8 +74,7 @@ export function applySignalTreeSchemas(
     const segments = subPath.split('.');
     let cursor: unknown = fieldRoot;
     for (const seg of segments) {
-      if (cursor === null || cursor === undefined) break;
-      if (typeof cursor !== 'object' && typeof cursor !== 'function') break;
+      if (!isTraversableNode(cursor)) break;
       cursor = (cursor as Record<string, unknown>)[seg];
     }
 

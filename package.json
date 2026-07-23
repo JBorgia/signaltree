@@ -97,6 +97,7 @@
     "validate:doc-snippets": "node scripts/validate-doc-snippets.js",
     "validate:size-claims": "node scripts/verify-size-claims.js",
     "validate:types": "bash scripts/verify-no-broken-dts.sh",
+    "validate:walkers": "bash scripts/verify-no-adhoc-walkers.sh",
     "validate:budget": "node scripts/v9-budget-checks.js",
     "validate:tree-shaking": "node scripts/verify-tree-shaking.js",
     "validate:all": "npm run validate",

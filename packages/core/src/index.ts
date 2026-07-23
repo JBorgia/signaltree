@@ -39,6 +39,9 @@ export type {
   CallableWritableSignal,
   AccessibleNode,
   NodeAccessor,
+  ReadonlyNodeAccessor,
+  ReadonlyTreeNode,
+  ReadonlyStore,
   Primitive,
   NotFn,
 
@@ -187,8 +190,8 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
-// Cache-aware loading for entityMap (RFC 0002/0003). `entityMap({ load, … })`
-// turns a plain collection into a self-loading, cache-aware one; `invalidateTag`
+// Single-scope freshness-managed loading for entityMap (RFC 0002/0003). `entityMap({ load, … })`
+// turns a plain collection into a self-loading, freshness-managed one; `invalidateTag`
 // is the push-invalidation seam. `entityMap` is exported above (from ./lib/types).
 export {
   invalidateTag,
@@ -225,6 +228,7 @@ export {
   // Signal utilities - Signal-specific helpers
   isNodeAccessor,
   isAnySignal,
+  isTraversableNode,
   toWritableSignal,
 
   // Helper functions - Path parsing and composition

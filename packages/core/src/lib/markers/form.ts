@@ -47,11 +47,18 @@ export const FORM_MARKER = Symbol('FORM_MARKER');
  *
  * Receives the current form values as an optional second argument so
  * cross-field validators (e.g. `validators.when`) can inspect sibling fields.
+ *
+ * The optional `validatorKind` property is a semantic identifier ('required',
+ * 'email', …) that bridges — like `markerSignalForm()` — can use as the
+ * Signal Forms error `kind` instead of a generic bridge-source literal. Every
+ * built-in `validators.*` factory (other than `when`, which has no identity
+ * of its own) tags its returned closure with this; custom validators may set
+ * it too, or leave it unset to fall back to the bridge's generic kind.
  */
-export type Validator<T> = (
+export type Validator<T> = ((
   value: T,
   formValues?: Record<string, unknown>
-) => string | null;
+) => string | null) & { validatorKind?: string };
 
 /**
  * Async validator function
@@ -814,51 +821,85 @@ function defaultEquality(a: unknown, b: unknown): boolean {
 // VALIDATORS (Common validators)
 // =============================================================================
 
+/** Tags a validator closure with its semantic kind (see {@link Validator}). */
+function withKind<T>(validator: Validator<T>, kind: string): Validator<T> {
+  validator.validatorKind = kind;
+  return validator;
+}
+
 export const validators = {
-  required:
-    (message = 'This field is required') =>
-    (value: unknown) =>
-      value === null || value === undefined || value === '' ? message : null,
+  required: (message = 'This field is required') =>
+    withKind(
+      (value: unknown) =>
+        value === null || value === undefined || value === '' ? message : null,
+      'required'
+    ),
 
-  minLength: (min: number, message?: string) => (value: unknown) =>
-    typeof value === 'string' && value.length < min
-      ? message ?? `Must be at least ${min} characters`
-      : null,
+  minLength: (min: number, message?: string) =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'string' && value.length < min
+          ? message ?? `Must be at least ${min} characters`
+          : null,
+      'minLength'
+    ),
 
-  maxLength: (max: number, message?: string) => (value: unknown) =>
-    typeof value === 'string' && value.length > max
-      ? message ?? `Must be at most ${max} characters`
-      : null,
+  maxLength: (max: number, message?: string) =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'string' && value.length > max
+          ? message ?? `Must be at most ${max} characters`
+          : null,
+      'maxLength'
+    ),
 
-  min: (min: number, message?: string) => (value: unknown) =>
-    typeof value === 'number' && value < min
-      ? message ?? `Must be at least ${min}`
-      : null,
+  min: (min: number, message?: string) =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'number' && value < min
+          ? message ?? `Must be at least ${min}`
+          : null,
+      'min'
+    ),
 
-  max: (max: number, message?: string) => (value: unknown) =>
-    typeof value === 'number' && value > max
-      ? message ?? `Must be at most ${max}`
-      : null,
+  max: (max: number, message?: string) =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'number' && value > max
+          ? message ?? `Must be at most ${max}`
+          : null,
+      'max'
+    ),
 
-  email:
-    (message = 'Invalid email address') =>
-    (value: unknown) =>
-      typeof value === 'string' &&
-      value !== '' &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        ? message
-        : null,
+  email: (message = 'Invalid email address') =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'string' &&
+        value !== '' &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+          ? message
+          : null,
+      'email'
+    ),
 
-  pattern:
-    (regex: RegExp, message = 'Invalid format') =>
-    (value: unknown) =>
-      typeof value === 'string' && value !== '' && !regex.test(value)
-        ? message
-        : null,
+  pattern: (regex: RegExp, message = 'Invalid format') =>
+    withKind(
+      (value: unknown) =>
+        typeof value === 'string' && value !== '' && !regex.test(value)
+          ? message
+          : null,
+      'pattern'
+    ),
 
   /**
    * Conditional validator - only validates when condition is met.
    * Note: Requires form context to be passed during validation.
+   *
+   * Unlike the other `validators.*` factories, this one does NOT tag its
+   * returned closure with a `validatorKind` — it delegates to an arbitrary
+   * inner `validator`, so "when" itself isn't the meaningful identity (the
+   * wrapped validator's `validatorKind`, if any, is not currently forwarded).
+   * Bridges fall back to their generic kind for `when`-wrapped validators.
    */
   when:
     <T>(condition: (form: T) => boolean, validator: Validator<unknown>) =>

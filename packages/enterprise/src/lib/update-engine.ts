@@ -1,4 +1,5 @@
 import { isSignal } from '@angular/core';
+import { isTraversableNode } from '@signaltree/core';
 
 import { ChangeType, DiffEngine } from './diff-engine';
 import { PathIndex } from './path-index';
@@ -358,10 +359,7 @@ export class OptimizedUpdateEngine {
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
         current = current[key] as Record<string, unknown>;
-        if (
-          !current ||
-          (typeof current !== 'object' && typeof current !== 'function')
-        ) {
+        if (!isTraversableNode(current)) {
           return false;
         }
       }
@@ -374,7 +372,7 @@ export class OptimizedUpdateEngine {
       // fires. A BRANCH accessor (callable NodeAccessor, not a signal) must
       // never be replaced by plain assignment (that destroys the accessor
       // tree); recurse the object patch into its per-key leaves instead.
-      if (target && (typeof target === 'function' || typeof target === 'object')) {
+      if (isTraversableNode(target)) {
         if (isSignal(target)) {
           const leaf = target as unknown as WritableSignal<unknown>;
           if (this.isEqual(leaf(), patch.value)) {

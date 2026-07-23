@@ -14,7 +14,7 @@ export { isEntityMapMarker };
  * Self-registering marker for entity collections. If you never use `entityMap()`,
  * this code is tree-shaken from your bundle. Passing a `load` (plus optional
  * `staleTime`/`equal`/`swr`/`tags`/`persist`) turns the collection into a
- * cache-aware, self-loading one; the loader machinery lives in `./entity-loader`
+ * single-scope freshness-managed, self-loading one; the loader machinery lives in `./entity-loader`
  * and is only pulled in when `load` is used.
  */
 
@@ -101,7 +101,7 @@ export interface EntityMapBuilder<
 }
 
 /**
- * Builder for a cache-aware (loading) entityMap — produced when `load` is
+ * Builder for a single-scope freshness-managed (loading) entityMap — produced when `load` is
  * configured. Its materialized signal carries the loader surface.
  */
 export interface LoadingEntityMapBuilder<
@@ -157,11 +157,12 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  * If you never use `entityMap()`, the processor is tree-shaken out.
  *
  * Passing a `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`/
- * `clearOnParamsChange`) makes the collection **cache-aware** — it loads itself,
- * exposes `.load()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
+ * `clearOnParamsChange`) makes the collection **single-scope freshness-managed** — it loads itself,
+ * exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
  * .lastLoadedAt()/.params()`, guards refetches by `staleTime`, coalesces
  * concurrent loads, and (with a loader that declares a param) is scoped per
- * `params`. Without `load` it's a plain normalized client collection.
+ * `params` (one scope retained at a time — not a multi-key cache). Without
+ * `load` it's a plain normalized client collection.
  *
  * @example Plain (client-side)
  * ```typescript
@@ -169,7 +170,7 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  * tree.$.users.addOne({ id: 1, name: 'Alice' });
  * ```
  *
- * @example Cache-aware (self-loading)
+ * @example Single-scope freshness-managed (self-loading)
  * ```typescript
  * const tree = signalTree({
  *   plants: entityMap<Plant, string>({
@@ -238,7 +239,7 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           }
         }
 
-        // Cache-aware loading (only when `load` is configured)
+        // Single-scope freshness-managed loading (only when `load` is configured)
         if (typeof cfg.load === 'function') {
           attachLoader(
             entitySignal as EntitySignal<

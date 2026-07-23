@@ -58,6 +58,23 @@ export function isAnySignal(value: unknown): boolean {
 }
 
 /**
+ * Checks if a value is a non-null object or function — the permissive
+ * "can this have own enumerable children worth recursing into" test that
+ * every hand-written tree walker in this codebase needs. Node accessors and
+ * leaf signals are callable (`typeof === 'function'`); plain nested state
+ * literals are plain objects (`typeof === 'object'`) — a walker that only
+ * accepts one of the two silently skips half the tree.
+ *
+ * This is intentionally broader than {@link isNodeAccessor} or
+ * {@link isAnySignal}, which check for a *specific* shape. Use this as the
+ * "should I keep walking?" guard before those narrower checks decide what
+ * to do with the value.
+ */
+export function isTraversableNode(value: unknown): boolean {
+  return value != null && (typeof value === 'object' || typeof value === 'function');
+}
+
+/**
  * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
  * compatible with Angular's Signal Forms connect() API and other APIs that expect WritableSignal.
  *

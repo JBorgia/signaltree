@@ -28,7 +28,7 @@ import {
     ValidationErrors,
     ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
+import { isTraversableNode, signalTree } from '@signaltree/core';
 import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
 import { firstValueFrom, isObservable, Observable, Subscription } from 'rxjs';
 
@@ -677,10 +677,7 @@ function getSignalAtPath<T>(
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (
-      !current ||
-      (typeof current !== 'object' && typeof current !== 'function')
-    ) {
+    if (!isTraversableNode(current)) {
       return null;
     }
 
@@ -818,7 +815,7 @@ function connectControlAndSignal(
     }
   }
 
-  // Fallback: Manual bidirectional bridge for pre-20.3 Angular (no connect() API)
+  // Fallback: Manual bidirectional bridge for Angular 20.0-20.2 (no connect() API yet)
   // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
   // markerSignalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
 
@@ -826,7 +823,8 @@ function connectControlAndSignal(
   if (isDevEnvironment() && !hasShownLegacyWarning) {
     hasShownLegacyWarning = true;
     console.warn(
-      '[@signaltree/ng-forms] Legacy Angular 17-19 support is deprecated and will be removed in v6.0. ' +
+      '[@signaltree/ng-forms] FormControl.connect() was not found — falling back to the ' +
+        'manual bridge, which is deprecated and will be removed in v6.0. ' +
         'Please upgrade to Angular 20.3+ to use native Signal Forms. ' +
         'See MIGRATION.md for the upgrade path.'
     );
@@ -1012,7 +1010,7 @@ function connectFormArrayAndSignal(
 
 /**
  * Syncs a FormArray structure with a signal array value.
- * Used by the manual bridge fallback for Angular 17-19.
+ * Used by the manual bridge fallback on Angular 20.0-20.2 (pre-`connect()`).
  *
  * @deprecated Legacy path now that Angular 22 ships stable Signal Forms — manual
  * bridge support will be dropped in favor of `markerSignalForm()` from

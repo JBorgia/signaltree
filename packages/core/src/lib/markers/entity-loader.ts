@@ -8,13 +8,14 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
+import { isTraversableNode } from '../utils';
 import type { EntitySignal } from '../types';
 
 /**
- * Cache-aware loading for `entityMap`.
+ * Single-scope freshness-managed loading for `entityMap`.
  *
  * `entityMap({ load, staleTime, … })` turns a plain normalized collection into a
- * self-loading, cache-aware one: a loader, load status, a per-scope freshness
+ * self-loading, single-scope freshness-managed one: a loader, load status, a per-scope freshness
  * guard, single-flight dedup, tag-based invalidation, and optional offline-first
  * persistence — all attached to the same `EntitySignal` surface. This module holds
  * the loader machinery so a plain `entityMap()` (no `load`) never pulls it in
@@ -72,7 +73,7 @@ export type EntityPersist =
     };
 
 /**
- * Cache-aware loading options for {@link entityMap}. Presence of `load` turns a
+ * Single-scope freshness-managed loading options for {@link entityMap}. Presence of `load` turns a
  * plain collection into a loading one.
  */
 export interface EntityLoadOptions<E, P = void> {
@@ -121,6 +122,14 @@ export interface EntityLoadOptions<E, P = void> {
 export interface EntityLoaderSurface<P = void> {
   /** Guarded load: no-op if fresh OR the same scope is already in flight. */
   load(params: P): Promise<void>;
+  /**
+   * Same as `load()`, but rejects with the loader's error instead of only
+   * surfacing it through `.error()`. `load()` always resolves — even on
+   * failure — so template/signal consumers never see an unhandled rejection;
+   * `loadOrThrow()` is for imperative call sites that want conventional
+   * `await`/`try-catch` orchestration instead.
+   */
+  loadOrThrow(params: P): Promise<void>;
   /** Force a reload, ignoring `staleTime`/scope-match. Omit `params` to re-run the last scope. */
   refresh(params?: P): Promise<void>;
   /** Mark the current scope stale. Does not fetch — the next `load()` does. */
@@ -202,7 +211,7 @@ function nowMs(): number {
 // =============================================================================
 
 /**
- * Attach the cache-aware loader surface (see {@link EntityLoaderSurface}) onto an
+ * Attach the single-scope freshness-managed loader surface (see {@link EntityLoaderSurface}) onto an
  * existing {@link EntitySignal}. Called by `entityMap`'s materializer when `load`
  * is configured.
  *
@@ -467,6 +476,12 @@ export function attachLoader<
     return beginLoad(resolved);
   }
 
+  async function loadOrThrow(params: P): Promise<void> {
+    await load(params);
+    const err = errorSignal();
+    if (err != null) throw err;
+  }
+
   function invalidate(): void {
     invalidated.set(true);
   }
@@ -504,6 +519,7 @@ export function attachLoader<
   const target = entity as EntitySignal<E, K> &
     EntityLoaderSurface<P> & { __tags?: Set<string> | null };
   target.load = load;
+  target.loadOrThrow = loadOrThrow;
   target.refresh = refresh;
   target.invalidate = invalidate;
   Object.defineProperty(target, 'loading', {
@@ -537,8 +553,7 @@ interface TaggedCollection {
 
 function isTaggedCollection(value: unknown): value is TaggedCollection {
   return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
+    isTraversableNode(value) &&
     (value as Record<symbol, unknown>)[ENTITY_LOADER_SIGNAL] === true
   );
 }
@@ -564,8 +579,7 @@ export function invalidateTag(
   const visited = new WeakSet<object>();
 
   const walk = (node: unknown): void => {
-    if (node == null) return;
-    if (typeof node !== 'object' && typeof node !== 'function') return;
+    if (!isTraversableNode(node)) return;
     if (visited.has(node as object)) return;
     visited.add(node as object);
 

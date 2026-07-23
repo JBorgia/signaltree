@@ -71,7 +71,7 @@ describe('plain entityMap (no load) has no loader surface', () => {
   });
 });
 
-describe('entityMap({ load }) — global cache-aware', () => {
+describe('entityMap({ load }) — global single-scope freshness-managed', () => {
   it('auto-load is deferred off the render pass (NG0600-safe), then populates', async () => {
     let calls = 0;
     const tree = signalTree({
@@ -146,6 +146,54 @@ describe('entityMap({ load }) — global cache-aware', () => {
     await tree.$.plants.load();
     expect(tree.$.plants.error()).toBeInstanceOf(Error);
     expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  describe('loadOrThrow()', () => {
+    it('resolves normally on success, same as load()', async () => {
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => Promise.resolve([P1]),
+          selectId,
+          lazy: true,
+        }),
+      });
+      await expect(tree.$.plants.loadOrThrow()).resolves.toBeUndefined();
+      expect(tree.$.plants.all()).toEqual([P1]);
+      expect(tree.$.plants.error()).toBeNull();
+    });
+
+    it('rejects with the loader error instead of only setting .error()', async () => {
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => Promise.reject(new Error('boom')),
+          selectId,
+          lazy: true,
+        }),
+      });
+      await expect(tree.$.plants.loadOrThrow()).rejects.toThrow('boom');
+      expect(tree.$.plants.error()).toBeInstanceOf(Error);
+      expect(tree.$.plants.loaded()).toBe(false);
+    });
+
+    it('does not throw a stale error on a guarded no-op call once fresh', async () => {
+      let calls = 0;
+      const tree = signalTree({
+        plants: entityMap<Plant, string>({
+          load: () => {
+            calls++;
+            return Promise.resolve([P1]);
+          },
+          selectId,
+          staleTime: '1h',
+          lazy: true,
+        }),
+      });
+      await tree.$.plants.loadOrThrow();
+      expect(calls).toBe(1);
+      // Second call is a guarded no-op (still fresh) — must not throw.
+      await expect(tree.$.plants.loadOrThrow()).resolves.toBeUndefined();
+      expect(calls).toBe(1);
+    });
   });
 
   describe('staleTime', () => {
@@ -259,6 +307,32 @@ describe('invalidateTag()', () => {
     await tree.$.orders.load();
     expect(plantCalls).toBe(2);
     expect(orderCalls).toBe(1);
+  });
+
+  it('walks into nested branches to find tagged collections (regression: invalidateTag used to gate on typeof === object, silently skipping NodeAccessor branches)', async () => {
+    let plantCalls = 0;
+    const tree = signalTree({
+      catalog: {
+        nursery: {
+          plants: entityMap<Plant, string>({
+            load: () => {
+              plantCalls++;
+              return of([P1]);
+            },
+            selectId,
+            staleTime: '1h',
+            tags: ['plants'],
+          }),
+        },
+      },
+    });
+    tree.$.catalog.nursery.plants.all();
+    await Promise.resolve();
+    expect(plantCalls).toBe(1);
+
+    expect(invalidateTag(tree, 'plants')).toBe(1);
+    await tree.$.catalog.nursery.plants.load();
+    expect(plantCalls).toBe(2);
   });
 
   it('returns 0 for an unknown tag', () => {

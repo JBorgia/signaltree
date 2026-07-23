@@ -259,6 +259,18 @@ else
     exit 1
 fi
 
+# 9c. Verify No Hand-Rolled Tree-Walker Guards
+print_step "Checking for duplicated callable-node walker guards"
+if bash scripts/verify-no-adhoc-walkers.sh 2>&1 | tee /tmp/verify-walkers.log; then
+    print_success "No hand-rolled traversable-node guards found"
+else
+    print_error "Found a hand-rolled 'object or function' guard outside utils.ts"
+    cat /tmp/verify-walkers.log
+    print_info "Use isTraversableNode() from packages/core/src/lib/utils.ts instead"
+    print_info "— this is the exact bug class behind the v11.4/11.5 batching()/updateOptimized() regressions"
+    exit 1
+fi
+
 # 10. Bundle Size Analysis (Warning Only)
 print_header "10. Bundle Size Analysis"
 print_step "Analyzing bundle sizes"
