@@ -218,7 +218,8 @@ export function markerSignalForm<T extends Record<string, unknown>>(
         'validateAsync/validateHttp. Using both on one field can leave ' +
         "the marker's valid() and the FieldTree's valid() disagreeing " +
         'during an async validation window. See "Async validation is not ' +
-        'unified" in the @signaltree/ng-forms README.'
+        'unified between the two systems." in the @signaltree/ng-forms ' +
+        'README.'
     );
   }
 

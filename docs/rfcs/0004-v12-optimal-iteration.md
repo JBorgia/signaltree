@@ -506,3 +506,7 @@ Deferred, tracked: a destroy-path test for the entity loader (the
 order — but the destroy path has zero coverage in either direction); the
 review also confirmed a pre-existing latent: a caller-held `load()` promise
 never resolves after destroy. Both belong to the step-3 loader work.
+
+Step-3 review note: `when()`-wrapped built-ins now bridge their real kind
+(`'required'` etc.) instead of `'signalTree'` in DEFAULT mode — sanctioned
+by §4 step 3; needs an explicit 11.6.0 changelog line at release.

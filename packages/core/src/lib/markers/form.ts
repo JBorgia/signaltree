@@ -842,6 +842,11 @@ function defaultEquality(a: unknown, b: unknown): boolean {
  * Bridges (e.g. ng-forms' `markerSignalForm`) surface the kind as the Signal
  * Forms error `kind` instead of the generic `'signalTree'` fallback.
  *
+ * Note: `withKind` carries only the kind, NOT `validatorParams` — re-tagging
+ * a built-in (e.g. `withKind(validators.min(5), 'custom')`) loses branded
+ * emission under `nativeErrors` and falls back to plain `{kind, message}`;
+ * `validators.when()` forwards both.
+ *
  * @example
  * ```typescript
  * const noProfanity = withKind(

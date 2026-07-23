@@ -622,6 +622,41 @@ describe('loader teardown (materializing injector destroyed)', () => {
     expect(tree.$.plants.all()).toEqual([]);
     expect(tree.$.plants.loaded()).toBe(false);
   });
+
+  it('drops rows resolved after destroy (Promise loader) — settle guard', async () => {
+    // Promises cannot be unsubscribed, so this pins the `destroyed` guard in
+    // settleSuccess — the only line standing between a late resolution and a
+    // post-destroy write.
+    const d = deferred<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => d.promise,
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    // Materialize the loading entityMap (and start the load) INSIDE the
+    // child injection context so the loader binds its DestroyRef to `env`.
+    runInInjectionContext(env, () => {
+      void tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+
+    env.destroy();
+
+    // Resolve AFTER destroy: rows must not be applied.
+    d.resolve([P1, P2]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
 });
 
 describe('entityMap loading — typing (compile-time)', () => {

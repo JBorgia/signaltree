@@ -328,4 +328,6 @@ without invoking it. Settle callbacks are guarded, so no incorrect writes
 occur; the cost is a hung `await`. Fix candidate (resolve-on-destroy) is
 deliberately NOT bundled into step 3 — it changes observable promise
 semantics and should ride with its own test + changelog note in the 11.6.0
-loader pass.
+loader pass. Same latent family: post-destroy `loading()` also sticks `true`
+forever (`onDestroy` never resets `loadingSignal`); rides with the same
+11.6.0 loader-pass fix.
