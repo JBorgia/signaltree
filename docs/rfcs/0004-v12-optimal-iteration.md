@@ -550,3 +550,14 @@ rows dropped derived state merged into marker nodes (fix + typing-spec case
 in the M3 follow-up pass). Over-teaching check: zero claims failed
 verification. Ranked fixes applied in the follow-up commit; M3 re-run
 recommended after (target: 5/5 on this task set).
+
+### M3 run 2 (2026-07-23, post-fix, HEAD 1571588b): **80% strict first-attempt**
+
+4 PASS + 1 PARTIAL (up from 60%). Both run-1 misses converted with zero
+fixes — the taught facts did the work (the asReadonly section +
+ReadonlyExtras library fix for T4; the type-vs-interface gotcha for T3).
+One honest regression located a further library type gap:
+`SignalTreeBuilder` omitted `registerCleanup`/`destroyed`, which exist at
+runtime and which the docs correctly teach — fixed same-day in
+builder-types.ts (also retires the step-2 review's "destroyed typed on
+faith" NIT). Every other taught claim held under strict verification.
