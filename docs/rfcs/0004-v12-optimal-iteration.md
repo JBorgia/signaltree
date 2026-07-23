@@ -561,3 +561,45 @@ One honest regression located a further library type gap:
 runtime and which the docs correctly teach — fixed same-day in
 builder-types.ts (also retires the step-2 review's "destroyed typed on
 faith" NIT). Every other taught claim held under strict verification.
+
+## 8. Placement audit (2026-07-23, post-plan) — next-cycle queue
+
+Full mechanism-placement audit (core vs marker vs enhancer vs injected
+feature vs subpath vs package) found the taxonomy consistently applied;
+everything not listed below is explicitly RIGHT where it is (incl. all six
+exported markers, the five core enhancers, security/lazy as injected
+features, edit-session//storage as subpaths, and every package boundary).
+`linked()` vs `derived()` reviewed separately: stays split, mirroring
+Angular's own computed/linkedSignal vocabulary (consolidation = config flag
+changing return type — the F2 cliff pattern).
+
+Queued for the cycle after 11.6.0 (deliberately NOT added to the frozen
+release):
+1. **Delete `externalDerived` from the barrel** — deprecated alias whose
+   JSDoc promised removal in v8, still public at 11.x.
+2. **`@signaltree/core/authoring` subpath** for the ~15 enhancer-author
+   plumbing exports (withWriteContext, getPathNotifier, ENHANCER_META,
+   registerMarkerProcessor, the three zero-consumer create*Signal
+   factories, optionally the *_READERS consts). Two internal import sites
+   (schema, guardrails); deprecated root re-exports one minor. Payoff: a
+   barrel teachable end-to-end (M3 guessability).
+3. **`effects()` — finish or deprecate.** The one core enhancer not earning
+   its keep, with a REAL BUG found: calls angularEffect() with no injector
+   handling → NG0203 outside injection contexts (the archived v6 version
+   had the option); monkey-patches destroy instead of registerCleanup; no
+   tree-shake gate entry; absent from llms.txt while README steers to
+   native effect(). Either fix all four or deprecate with guidance updates
+   (dev-proxy.ts advertises it).
+4. **Guardrails "dead by default" root cause**: the package's conditional
+   exports map the `"default"` condition to noop.js — bundlers setting
+   neither development nor production get the noop even in dev. The
+   site-audit finding was real and this is why. Needs its own fix + test.
+5. **Persistence decision-table doc**: four surfaces (stored(), 
+   persistence(), /storage adapters, entityMap persist) with no routing
+   guidance — a doc, not a relocation.
+6. Housekeeping: delete the enhancers/entities/ tombstone (throws
+   "removed in v7"); split serialization.ts so /storage doesn't enter via
+   the 1335-line enhancer module; one-line scope disclaimer on
+   @signaltree/events (6.2k LOC, zero core imports — standalone product
+   under the scope, agents will assume tree integration that doesn't
+   exist).
