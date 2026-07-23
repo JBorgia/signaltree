@@ -1,4 +1,10 @@
-import { of } from 'rxjs';
+import {
+  createEnvironmentInjector,
+  EnvironmentInjector,
+  runInInjectionContext,
+} from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { of, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { signalTree } from '../signal-tree';
@@ -577,6 +583,44 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
     expect(store.get(`cust::${stableStringify({ region: 'west' })}`)).toBe(
       JSON.stringify(EAST)
     );
+  });
+});
+
+describe('loader teardown (materializing injector destroyed)', () => {
+  // Pins the RFC 0005 §6 claim that removing the `takeUntilDestroyed` pipe
+  // lost nothing: the loader's `DestroyRef.onDestroy` hook unsubscribes the
+  // in-flight Observable, and settle callbacks guard `destroyed`.
+  it('drops rows emitted after destroy — no write, no throw', () => {
+    const subject = new Subject<Plant[]>();
+    const env = createEnvironmentInjector(
+      [],
+      TestBed.inject(EnvironmentInjector)
+    );
+
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: () => subject.asObservable(),
+        selectId,
+        lazy: true,
+      }),
+    });
+
+    // Materialize the loading entityMap (and start the load) INSIDE the
+    // child injection context so the loader binds its DestroyRef to `env`.
+    runInInjectionContext(env, () => {
+      void tree.$.plants.load();
+    });
+    expect(tree.$.plants.loading()).toBe(true);
+    expect(subject.observed).toBe(true);
+
+    env.destroy();
+
+    // Destroy unsubscribed the in-flight source…
+    expect(subject.observed).toBe(false);
+    // …so a late emission neither applies rows nor throws.
+    expect(() => subject.next([P1, P2])).not.toThrow();
+    expect(tree.$.plants.all()).toEqual([]);
+    expect(tree.$.plants.loaded()).toBe(false);
   });
 });
 

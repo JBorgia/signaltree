@@ -1,6 +1,12 @@
 import { ApplicationRef, Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { form as ngForm } from '@angular/forms/signals';
+import {
+  form as ngForm,
+  MinValidationError,
+  NgValidationError,
+  PatternValidationError,
+  RequiredValidationError,
+} from '@angular/forms/signals';
 import { form, signalTree, validators } from '@signaltree/core';
 
 import { markerSignalForm } from './marker-bridge';
@@ -113,7 +119,7 @@ describe('markerSignalForm', () => {
       expect(errors[0].message).toBe('Coupon expired');
     });
 
-    it('falls back to the generic kind for a validators.when()-wrapped validator', () => {
+    it('forwards the inner validator kind through validators.when()', () => {
       interface ShipForm extends Record<string, unknown> {
         shipToOther: boolean;
         otherAddress: string;
@@ -133,9 +139,140 @@ describe('markerSignalForm', () => {
         injector: TestBed.inject(Injector),
       });
 
+      // when() has no identity of its own — the wrapped validator's kind
+      // ('required') is forwarded instead of the generic fallback.
       const errors = fieldTree.otherAddress().errors();
-      expect(errors[0].kind).toBe('signalTree');
+      expect(errors[0].kind).toBe('required');
       expect(errors[0].message).toBe('Address required');
+    });
+  });
+
+  describe('nativeErrors: true (branded Angular errors)', () => {
+    interface Signup extends Record<string, unknown> {
+      username: string;
+      age: number;
+      slug: string;
+    }
+    const SLUG = /^[a-z-]+$/;
+
+    function createSignup(nativeErrors: boolean) {
+      const tree = signalTree({
+        signup: form<Signup>({
+          initial: { username: 'ok', age: 30, slug: 'fine' },
+          validators: {
+            username: validators.required('Name required'),
+            age: validators.min(18, 'Too young'),
+            slug: validators.pattern(SLUG, 'Lowercase only'),
+          },
+        }),
+      });
+      return markerSignalForm(tree.$.signup, {
+        injector: TestBed.inject(Injector),
+        ...(nativeErrors ? { nativeErrors } : {}),
+      });
+    }
+
+    it('emits Angular branded errors with typed constraint values', () => {
+      const fieldTree = createSignup(true);
+
+      fieldTree.age().value.set(12);
+      const [ageError] = fieldTree.age().errors();
+      expect(ageError instanceof NgValidationError).toBe(true);
+      expect(ageError).toBeInstanceOf(MinValidationError);
+      expect((ageError as MinValidationError).min).toBe(18);
+      expect(ageError.kind).toBe('min');
+      expect(ageError.message).toBe('Too young');
+
+      fieldTree.username().value.set('');
+      const [nameError] = fieldTree.username().errors();
+      expect(nameError).toBeInstanceOf(RequiredValidationError);
+      expect(nameError.message).toBe('Name required');
+
+      fieldTree.slug().value.set('NOPE');
+      const [slugError] = fieldTree.slug().errors();
+      expect(slugError).toBeInstanceOf(PatternValidationError);
+      expect((slugError as PatternValidationError).pattern).toBe(SLUG);
+    });
+
+    it('keeps { kind, message } for custom/untagged validators even with nativeErrors', () => {
+      interface Coupon extends Record<string, unknown> {
+        code: string;
+      }
+      const tree = signalTree({
+        checkout: form<Coupon>({
+          initial: { code: 'EXPIRED' },
+          validators: {
+            code: (value: unknown) =>
+              value === 'EXPIRED' ? 'Coupon expired' : null,
+          },
+        }),
+      });
+      const fieldTree = markerSignalForm(tree.$.checkout, {
+        injector: TestBed.inject(Injector),
+        nativeErrors: true,
+      });
+
+      const [error] = fieldTree.code().errors();
+      expect(error.kind).toBe('signalTree');
+      expect(error.message).toBe('Coupon expired');
+      expect(error instanceof NgValidationError).toBe(false);
+    });
+
+    it('default mode is unchanged: plain objects, not branded instances', () => {
+      const fieldTree = createSignup(false);
+
+      fieldTree.age().value.set(12);
+      const [ageError] = fieldTree.age().errors();
+      expect(ageError.kind).toBe('min');
+      expect(ageError.message).toBe('Too young');
+      expect(ageError instanceof NgValidationError).toBe(false);
+    });
+  });
+
+  describe('async-authority dev warning', () => {
+    it('never warns for a marker without asyncValidators', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+        /* silence */
+      });
+      try {
+        create();
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('warns once (and only once) when the bridged marker has asyncValidators', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+        /* silence */
+      });
+      try {
+        const makeTree = () =>
+          signalTree({
+            profile: form<Profile>({
+              initial: { name: '', email: '' },
+              validators: { name: validators.required('Name required') },
+              asyncValidators: {
+                email: async () => null,
+              },
+            }),
+          });
+
+        markerSignalForm(makeTree().$.profile, {
+          injector: TestBed.inject(Injector),
+        });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0][0]).toMatch(/pick one authority/i);
+        expect(warn.mock.calls[0][0]).toMatch(/validateAsync/);
+
+        // Second bridge with async validators: one-time warning, no repeat
+        markerSignalForm(makeTree().$.profile, {
+          injector: TestBed.inject(Injector),
+        });
+        expect(warn).toHaveBeenCalledTimes(1);
+      } finally {
+        warn.mockRestore();
+      }
     });
   });
 

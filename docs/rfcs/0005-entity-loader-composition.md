@@ -316,3 +316,16 @@ ceremony with zero bytes returned until an unscheduled major.
   forbidden-identifier assertions for the loader become **budget assertions**
   (the loader is expected in entityMap bundles under shape A); the
   ng-forms legacy-bridge and stale-claim items are unaffected.
+
+### §6 addendum (2026-07-23, step-3 execution)
+
+The RFC 0004 §4 step-3 work added the deferred destroy-path test (loader
+subscription torn down via `destroyRef.onDestroy`; late Observable emissions
+neither throw nor write). While writing it, the previously-suspected latent
+was **confirmed**: an in-flight `load()` promise held by a caller never
+resolves after injector destroy — `onDestroy` clears `inFlightResolve`
+without invoking it. Settle callbacks are guarded, so no incorrect writes
+occur; the cost is a hung `await`. Fix candidate (resolve-on-destroy) is
+deliberately NOT bundled into step 3 — it changes observable promise
+semantics and should ride with its own test + changelog note in the 11.6.0
+loader pass.

@@ -184,6 +184,7 @@ export {
   isFormMarker,
   createFormSignal,
   validators,
+  withKind,
   FORM_MARKER,
   type FormMarker,
   type FormSignal,

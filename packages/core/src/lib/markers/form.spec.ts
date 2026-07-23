@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { signalTree } from '../signal-tree';
-import { createFormSignal, form, FORM_MARKER, isFormMarker, validators } from './form';
+import { createFormSignal, form, FORM_MARKER, isFormMarker, validators, withKind } from './form';
 
 // Mock localStorage for testing
 function createMockStorage(): Storage {
@@ -746,6 +746,73 @@ describe('validators', () => {
       expect(
         validate('123 Main St', { hasAddress: true, address: '123 Main St' })
       ).toBeNull();
+    });
+  });
+
+  describe('validator identity (validatorKind / validatorParams)', () => {
+    it('built-in factories tag kind, and constraint factories tag params', () => {
+      expect(validators.required().validatorKind).toBe('required');
+      expect(validators.email().validatorKind).toBe('email');
+
+      const min = validators.min(18);
+      expect(min.validatorKind).toBe('min');
+      expect(min.validatorParams).toEqual({ min: 18 });
+
+      const max = validators.max(99);
+      expect(max.validatorKind).toBe('max');
+      expect(max.validatorParams).toEqual({ max: 99 });
+
+      const minLength = validators.minLength(3);
+      expect(minLength.validatorKind).toBe('minLength');
+      expect(minLength.validatorParams).toEqual({ minLength: 3 });
+
+      const maxLength = validators.maxLength(10);
+      expect(maxLength.validatorKind).toBe('maxLength');
+      expect(maxLength.validatorParams).toEqual({ maxLength: 10 });
+
+      const regex = /^\d+$/;
+      const pattern = validators.pattern(regex);
+      expect(pattern.validatorKind).toBe('pattern');
+      expect(pattern.validatorParams).toEqual({ pattern: regex });
+    });
+
+    it('when() forwards the inner validator kind and params', () => {
+      const wrapped = validators.when<{ on: boolean }>(
+        (f) => f.on,
+        validators.minLength(5)
+      );
+      expect(wrapped.validatorKind).toBe('minLength');
+      expect(wrapped.validatorParams).toEqual({ minLength: 5 });
+    });
+
+    it('when() over an untagged custom validator stays untagged', () => {
+      const wrapped = validators.when<{ on: boolean }>(
+        (f) => f.on,
+        (value: unknown) => (value === 'bad' ? 'Nope' : null)
+      );
+      expect(wrapped.validatorKind).toBeUndefined();
+      expect(wrapped.validatorParams).toBeUndefined();
+    });
+
+    it('withKind() wraps — it never mutates the passed closure', () => {
+      const shared = (value: unknown) =>
+        value === 'bad' ? 'Nope' : null;
+
+      const tagged = withKind(shared, 'custom');
+
+      expect(tagged).not.toBe(shared);
+      expect(tagged.validatorKind).toBe('custom');
+      expect(
+        (shared as { validatorKind?: string }).validatorKind
+      ).toBeUndefined();
+
+      // Delegation is intact (including the formValues pass-through)
+      expect(tagged('bad')).toBe('Nope');
+      expect(tagged('ok')).toBeNull();
+      const spy = vi.fn().mockReturnValue(null);
+      const taggedSpy = withKind(spy, 'k');
+      taggedSpy('v', { sibling: 1 });
+      expect(spy).toHaveBeenCalledWith('v', { sibling: 1 });
     });
   });
 
