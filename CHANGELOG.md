@@ -71,8 +71,10 @@
   local rollup plugin papered over it by fabricating `dist/index.js` from a
   hardcoded export list, so every published version shipped a stale stub
   (and would have silently resurrected removed APIs forever). Input keys
-  are now unique, the fabrication plugin is deleted, and the built barrel
-  is the real module (`tools/verify-built-barrels.mjs` guards it).
+  are now unique (root-fixed in the shared rollup config for all three
+  affected packages), the fabrication plugins are deleted — ng-forms'
+  published barrel had been missing `ngFormValidators` while its own d.ts
+  declared it — and CI runs the barrel gate.
 
 - **`@signaltree/enterprise`: built-in leaf replacement was silently
   inert** — DiffEngine recursed into `Date`/`Map`/`Set` leaves as empty
