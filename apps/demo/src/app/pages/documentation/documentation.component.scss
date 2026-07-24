@@ -275,7 +275,7 @@
       background-color: transparent;
       border: none;
       padding: 0;
-      color: #24292e;
+      color: var(--text-primary);
       font-size: 0.9rem;
       line-height: 1.65;
       font-weight: normal;
@@ -289,7 +289,7 @@
 
   // Syntax highlighting styles (GitHub theme)
   .hljs {
-    color: #24292e;
+    color: var(--text-primary);
     background: transparent;
   }
 
