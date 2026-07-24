@@ -259,6 +259,32 @@ else
     exit 1
 fi
 
+# 9d. Tarball-Consumer Gate (BLOCKING)
+# Packs every publishable package and asserts the SHIPPED tarball actually
+# contains every file its `exports` map references (the guardrails@10.6
+# barrel-bug class), then `npm install`s the @signaltree/core tarball into a
+# throwaway consumer and resolves every subpath — proving a real external
+# install accepts the published exports (incl. the v12 /authoring move). The
+# last release-process gap the audit flagged (RFC 0004). Must run BEFORE the
+# bundle-size steps below, which consume/remove dist/. Added 2026-07-24.
+print_header "9d. Tarball-Consumer Gate"
+print_step "Self-testing the tarball gate (negative test)"
+if node tools/verify-tarball-consumer.mjs --self-test 2>&1 | tee /tmp/tarball-selftest.log; then
+    print_success "Tarball gate self-test passed (gate can fail)"
+else
+    print_error "Tarball gate self-test FAILED — the gate is inert, refusing to continue"
+    cat /tmp/tarball-selftest.log
+    exit 1
+fi
+print_step "Packing + resolving every published package as a real consumer"
+if node tools/verify-tarball-consumer.mjs 2>&1 | tee /tmp/tarball-consumer.log; then
+    print_success "Published tarballs install + resolve"
+else
+    print_error "A published tarball would be broken for external consumers"
+    cat /tmp/tarball-consumer.log
+    exit 1
+fi
+
 # 9c. (removed) The hand-rolled-walker-guard grep script was deleted: a
 # pipefail/exit-status bug made it structurally unable to flag violations
 # (verified 2026-07-23 — it greenlit four live ones). Its job moved to an
