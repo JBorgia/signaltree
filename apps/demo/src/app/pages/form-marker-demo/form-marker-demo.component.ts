@@ -1,10 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  OnDestroy,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
+  type AuditEntry,
+  createAuditTracker,
   form,
   FormSignal,
   history,
+  type ISignalTree,
   signalTree,
   validators,
 } from '@signaltree/core';
@@ -46,6 +55,13 @@ interface ListingWizard {
   shippingOptions: string[];
 }
 
+interface AuditProfile {
+  [key: string]: unknown;
+  name: string;
+  email: string;
+  bio: string;
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -64,10 +80,10 @@ interface ListingWizard {
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './form-marker-demo.component.scss',
 })
-export class FormMarkerDemoComponent {
+export class FormMarkerDemoComponent implements OnDestroy {
   // Demo selection
   activeDemo = signal<
-    'basic' | 'wizard' | 'persistence' | 'history' | 'angular-bridge'
+    'basic' | 'wizard' | 'persistence' | 'history' | 'angular-bridge' | 'audit'
   >('basic');
 
   // =============================================================================
@@ -369,6 +385,85 @@ export class FormMarkerDemoComponent {
   }
 
   // =============================================================================
+  // DEMO 5: Audit Tracker — createAuditTracker (@signaltree/core)
+  // =============================================================================
+
+  auditStore = signalTree<AuditProfile>({
+    name: '',
+    email: '',
+    bio: '',
+  });
+
+  /** Raw log `createAuditTracker` pushes into (plain array, not a signal). */
+  private readonly auditLogRaw: AuditEntry<AuditProfile>[] = [];
+  /** Signal copy synced on an interval so the template re-renders live. */
+  readonly auditEntries = signal<AuditEntry<AuditProfile>[]>([]);
+
+  private stopAuditTracker?: () => void;
+  private auditSyncHandle?: ReturnType<typeof setInterval>;
+  readonly auditTrackingActive = signal(false);
+
+  constructor() {
+    this.startAuditTracking();
+  }
+
+  startAuditTracking(): void {
+    if (this.stopAuditTracker) return;
+
+    // core signalTree has no `subscribe`, so createAuditTracker falls back
+    // to ~100ms polling internally. We sync our own display signal on a
+    // short interval so the live log below reflects that polling.
+    this.stopAuditTracker = createAuditTracker(
+      this.auditStore as unknown as ISignalTree<AuditProfile>,
+      this.auditLogRaw,
+      {
+        includePreviousValues: true,
+        getMetadata: () => ({
+          source: 'form-marker-demo',
+          description: 'profile edit',
+        }),
+        maxEntries: 25,
+      }
+    );
+    this.auditSyncHandle = setInterval(() => {
+      this.auditEntries.set([...this.auditLogRaw]);
+    }, 150);
+    this.auditTrackingActive.set(true);
+  }
+
+  stopAuditTracking(): void {
+    this.stopAuditTracker?.();
+    this.stopAuditTracker = undefined;
+    if (this.auditSyncHandle) {
+      clearInterval(this.auditSyncHandle);
+      this.auditSyncHandle = undefined;
+    }
+    this.auditTrackingActive.set(false);
+  }
+
+  randomizeAuditProfile(): void {
+    const names = ['Ada Lovelace', 'Grace Hopper', 'Katherine Johnson'];
+    const roles = ['engineer', 'admin', 'viewer'];
+    const name = names[Math.floor(Math.random() * names.length)];
+    this.auditStore.$.name.set(name);
+    this.auditStore.$.email.set(
+      `${name.split(' ')[0].toLowerCase()}@example.com`
+    );
+    this.auditStore.$.bio.set(
+      `Role: ${roles[Math.floor(Math.random() * roles.length)]}`
+    );
+  }
+
+  clearAuditLog(): void {
+    this.auditLogRaw.length = 0;
+    this.auditEntries.set([]);
+  }
+
+  ngOnDestroy(): void {
+    this.stopAuditTracking();
+  }
+
+  // =============================================================================
   // CODE EXAMPLES
   // =============================================================================
 
@@ -521,6 +616,35 @@ feedbackFormGroup.patchValue({ title: 'Another' }); // Updates signals
 const titleControl = tree.getAngularForm('feedback')?.formControl('title');
 titleControl?.markAsTouched();`;
 
+  auditCode = `// Audit tracker — tree-shakeable, moved to @signaltree/core in v13
+// (@signaltree/ng-forms/audit is a deprecated re-export)
+import { signalTree, createAuditTracker, type AuditEntry } from '@signaltree/core';
+
+interface Profile { name: string; email: string; bio: string }
+
+const tree = signalTree<Profile>({ name: '', email: '', bio: '' });
+const auditLog: AuditEntry<Profile>[] = [];
+
+// Pushes an AuditEntry into auditLog on every state change. Uses
+// tree.subscribe() when available; core signalTree has none, so it falls
+// back to ~100ms polling — zero setup either way.
+const stopTracking = createAuditTracker(tree, auditLog, {
+  includePreviousValues: true,      // capture the "before" values too
+  getMetadata: () => ({ source: 'profile-editor' }),
+  maxEntries: 25,                   // bound the log (0 = unlimited)
+  // filter: (changes) => 'email' in changes, // only audit specific fields
+});
+
+tree.$.name.set('Ada Lovelace');
+// auditLog[0] === {
+//   timestamp: 1737...,
+//   changes: { name: 'Ada Lovelace' },
+//   previousValues: { name: '' },
+//   metadata: { source: 'profile-editor' },
+// }
+
+stopTracking(); // unsubscribe / stop polling`;
+
   // Source strings wrapped for the shared tabbed code viewer
   basicFormFiles: CodeFile[] = [
     { label: 'basic-form.ts', language: 'typescript', source: this.basicFormCode },
@@ -544,5 +668,8 @@ titleControl?.markAsTouched();`;
       language: 'typescript',
       source: this.formBridgeCode,
     },
+  ];
+  auditFiles: CodeFile[] = [
+    { label: 'audit.ts', language: 'typescript', source: this.auditCode },
   ];
 }

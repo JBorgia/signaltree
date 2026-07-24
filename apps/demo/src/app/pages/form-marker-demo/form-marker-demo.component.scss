@@ -633,3 +633,31 @@
     }
   }
 }
+
+// Audit log (live-rendered AuditEntry list)
+.log-container {
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  border: 1px solid var(--border-color, var(--color-neutral-200));
+  border-radius: 8px;
+  background: var(--bg-card, var(--color-white));
+}
+
+.log-entry {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color, var(--color-neutral-200));
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-primary, var(--color-neutral-900));
+  word-break: break-word;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.muted {
+    color: var(--text-secondary, var(--color-neutral-500));
+    font-family: inherit;
+  }
+}

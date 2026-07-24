@@ -45,6 +45,13 @@
     >
       🔗 Angular Bridge
     </button>
+    <button
+      class="btn-tab"
+      [class.active]="activeDemo() === 'audit'"
+      (click)="activeDemo.set('audit')"
+    >
+      🧾 Audit
+    </button>
   </nav>
 
   <!-- DEMO 1: Basic Validation -->
@@ -773,6 +780,127 @@
       <div class="code-panel">
         <h3>Code</h3>
         <st-code-tabs [files]="formBridgeFiles" />
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 5: Audit Tracker -->
+  @if (activeDemo() === 'audit') {
+  <section class="demo-section">
+    <h2>Audit Tracker — <code>createAuditTracker()</code></h2>
+    <p class="info-text">
+      ℹ️ <code>createAuditTracker(tree, auditLog, config)</code> pushes an
+      <code>AuditEntry</code> into <code>auditLog</code> on every state
+      change. It's tree-shakeable and lives in <code>&#64;signaltree/core</code>
+      (moved from <code>&#64;signaltree/ng-forms/audit</code>, which is now a
+      deprecated re-export). Core signalTree has no <code>subscribe()</code>,
+      so this falls back to ~100ms polling — edit the fields below and watch
+      the log fill in.
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-form">
+          <div class="form-field">
+            <label for="audit-name">Name</label>
+            <input
+              id="audit-name"
+              type="text"
+              [ngModel]="auditStore.$.name()"
+              (ngModelChange)="auditStore.$.name.set($event)"
+              name="audit-name"
+              placeholder="Your name"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="audit-email">Email</label>
+            <input
+              id="audit-email"
+              type="email"
+              [ngModel]="auditStore.$.email()"
+              (ngModelChange)="auditStore.$.email.set($event)"
+              name="audit-email"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="audit-bio">Bio</label>
+            <textarea
+              id="audit-bio"
+              [ngModel]="auditStore.$.bio()"
+              (ngModelChange)="auditStore.$.bio.set($event)"
+              name="audit-bio"
+              rows="3"
+              placeholder="Short bio..."
+            ></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="randomizeAuditProfile()"
+            >
+              🎲 Randomize
+            </button>
+            @if (auditTrackingActive()) {
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="stopAuditTracking()"
+            >
+              ⏸️ Stop Tracking
+            </button>
+            } @else {
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="startAuditTracking()"
+            >
+              ▶️ Start Tracking
+            </button>
+            }
+            <button type="button" class="btn-danger" (click)="clearAuditLog()">
+              🗑️ Clear Log
+            </button>
+          </div>
+        </div>
+
+        <div class="state-panel">
+          <h3>Audit Log ({{ auditEntries().length }})</h3>
+          <dl>
+            <dt>Tracking:</dt>
+            <dd
+              [class.success]="auditTrackingActive()"
+              [class.error]="!auditTrackingActive()"
+            >
+              {{ auditTrackingActive() ? 'active (polling)' : 'stopped' }}
+            </dd>
+          </dl>
+          <div class="log-container">
+            @for (entry of auditEntries().slice().reverse(); track $index) {
+            <div class="log-entry">
+              <strong>{{ entry.timestamp | date : 'HH:mm:ss.SSS' }}</strong>
+              — changes: {{ entry.changes | json }}
+              @if (entry.previousValues) {
+              <br />previous: {{ entry.previousValues | json }}
+              }
+            </div>
+            } @empty {
+            <div class="log-entry muted">
+              No changes tracked yet — edit a field above.
+            </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <st-code-tabs [files]="auditFiles" />
       </div>
     </div>
   </section>

@@ -1,6 +1,7 @@
 
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { entityMap, signalTree } from '@signaltree/core';
 import {
     BaseEvent,
     classifyError,
@@ -16,6 +17,12 @@ import {
     validateEvent,
     z,
 } from '@signaltree/events';
+import {
+  applyOptimisticEntityChange,
+  entityEventHandler,
+  type EntityEventMapping,
+  type EntityOptimisticPatch,
+} from '@signaltree/events/angular';
 import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent } from '@signaltree/events/testing';
 
 import {
@@ -58,6 +65,44 @@ type UserRegistered = z.infer<typeof UserRegisteredSchema>;
 
 // Union of all demo events
 type DemoEvent = TradeProposalCreated | TradeAccepted | UserRegistered;
+
+// =============================================================================
+// ENTITY BRIDGE DEMO TYPES (events -> entityMap)
+// =============================================================================
+
+interface Order extends Record<string, unknown> {
+  id: string;
+  customer: string;
+  total: number;
+  status: 'pending' | 'shipped' | 'cancelled';
+}
+
+interface OrderEventData {
+  order?: Order;
+  id?: string;
+  changes?: Partial<Order>;
+}
+
+type OrderEventType = 'OrderCreated' | 'OrderUpdated' | 'OrderCancelled';
+type OrderEvent = BaseEvent<OrderEventType, OrderEventData>;
+
+function makeOrderEvent(type: OrderEventType, data: OrderEventData): OrderEvent {
+  return {
+    id: generateEventId(),
+    type,
+    version: { major: 1, minor: 0 },
+    timestamp: new Date().toISOString(),
+    correlationId: crypto.randomUUID(),
+    actor: { id: 'order-service', type: 'system' },
+    metadata: { source: 'events-demo', environment: 'development' },
+    data,
+  };
+}
+
+const INITIAL_ORDERS: Order[] = [
+  { id: 'ORD-001', customer: 'Ada Lovelace', total: 129.99, status: 'pending' },
+  { id: 'ORD-002', customer: 'Grace Hopper', total: 54.5, status: 'pending' },
+];
 
 // =============================================================================
 // COMPONENT
@@ -131,8 +176,150 @@ export class EventsDemoComponent {
 
   // Active tab
   readonly activeTab = signal<
-    'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency' | 'reactions'
+    | 'factory'
+    | 'validation'
+    | 'eventbus'
+    | 'errors'
+    | 'idempotency'
+    | 'entities'
+    | 'reactions'
   >('factory');
+
+  // =============================================================================
+  // ENTITY BRIDGE DEMO — entityEventHandler / applyOptimisticEntityChange
+  // =============================================================================
+
+  readonly entityDemoTree = signalTree({
+    orders: entityMap<Order, string>(),
+  });
+
+  private readonly orderEventMapping: EntityEventMapping<
+    Order,
+    string,
+    OrderEvent
+  > = {
+    match: (e) =>
+      e.type === 'OrderCreated'
+        ? 'upsert'
+        : e.type === 'OrderUpdated'
+        ? 'update'
+        : e.type === 'OrderCancelled'
+        ? 'remove'
+        : null,
+    upsert: (e) => (e.type === 'OrderCreated' ? e.data.order : undefined),
+    update: (e) =>
+      e.type === 'OrderUpdated' && e.data.id && e.data.changes
+        ? { id: e.data.id, changes: e.data.changes }
+        : undefined,
+    remove: (e) => (e.type === 'OrderCancelled' ? e.data.id : undefined),
+  };
+
+  // The coalescing flush: one call handles a whole batch of events, mapping
+  // them onto entityMap's batch ops (upsertMany/updateMany/removeMany) so the
+  // batch produces ONE notification per op type instead of one per event.
+  private readonly flushOrderEvents = entityEventHandler<Order, string, OrderEvent>(
+    this.entityDemoTree.$.orders,
+    this.orderEventMapping
+  );
+
+  readonly orderEventLog = signal<string[]>([]);
+
+  readonly optimisticPatch = signal<EntityOptimisticPatch<Order> | null>(null);
+  readonly optimisticStatus = signal<'idle' | 'pending' | 'confirmed' | 'rolled-back'>(
+    'idle'
+  );
+
+  private logOrderEvent(message: string): void {
+    this.orderEventLog.update((log) => [...log, message]);
+  }
+
+  seedOrders(): void {
+    this.entityDemoTree.$.orders.setAll(INITIAL_ORDERS);
+    this.orderEventLog.set([]);
+    this.optimisticPatch.set(null);
+    this.optimisticStatus.set('idle');
+    this.logOrderEvent(`Seeded ${INITIAL_ORDERS.length} orders.`);
+  }
+
+  dispatchOrderBatch(): void {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const events: OrderEvent[] = [
+      makeOrderEvent('OrderCreated', {
+        order: {
+          id: `ORD-NEW-${suffix}-1`,
+          customer: 'New Customer A',
+          total: 42.0,
+          status: 'pending',
+        },
+      }),
+      makeOrderEvent('OrderCreated', {
+        order: {
+          id: `ORD-NEW-${suffix}-2`,
+          customer: 'New Customer B',
+          total: 87.5,
+          status: 'pending',
+        },
+      }),
+      makeOrderEvent('OrderCreated', {
+        order: {
+          id: `ORD-NEW-${suffix}-3`,
+          customer: 'New Customer C',
+          total: 15.25,
+          status: 'pending',
+        },
+      }),
+      makeOrderEvent('OrderUpdated', {
+        id: 'ORD-001',
+        changes: { status: 'shipped' },
+      }),
+      makeOrderEvent('OrderCancelled', { id: 'ORD-002' }),
+    ];
+
+    // A single call to the flush function applies the ENTIRE batch — 3
+    // upserts + 1 update + 1 remove — as one coalesced upsertMany/updateMany/
+    // removeMany pass, instead of 5 individual entityMap notifications.
+    this.flushOrderEvents(events);
+
+    this.logOrderEvent(
+      `Dispatched batch of ${events.length} mixed events (3 creates, 1 update, 1 cancel) ` +
+        `→ entityEventHandler coalesced them into one upsertMany + one updateMany + one ` +
+        `removeMany call.`
+    );
+  }
+
+  applyOptimisticShipment(): void {
+    const patch = applyOptimisticEntityChange(
+      this.entityDemoTree.$.orders,
+      'ORD-001',
+      { status: 'shipped' }
+    );
+    this.optimisticPatch.set(patch);
+    this.optimisticStatus.set('pending');
+    this.logOrderEvent(
+      `Optimistically applied ORD-001 → status: 'shipped' (was: '${
+        patch.previousData?.status ?? 'n/a'
+      }'). Awaiting server confirmation…`
+    );
+  }
+
+  confirmOptimisticShipment(): void {
+    this.optimisticStatus.set('confirmed');
+    this.optimisticPatch.set(null);
+    this.logOrderEvent('Server confirmed the update — optimistic change kept.');
+  }
+
+  rollbackOptimisticShipment(): void {
+    this.optimisticPatch()?.rollback();
+    this.optimisticStatus.set('rolled-back');
+    this.logOrderEvent(
+      'Server rejected the update — rolled back to the previous snapshot automatically.'
+    );
+    this.optimisticPatch.set(null);
+  }
+
+  clearOrderEventLog(): void {
+    this.orderEventLog.set([]);
+  }
 
   // Computed - priority info display
   readonly priorityInfo = computed(() => {
@@ -251,7 +438,57 @@ expect(eventBus.getPublishedEvents()).toHaveLength(1);`,
     },
   ];
 
+  readonly entityBridgeCode: CodeFile[] = [
+    {
+      label: 'entity-bridge.ts',
+      language: 'typescript',
+      source: `import { entityMap, signalTree } from '@signaltree/core';
+import { entityEventHandler, batchedHandler } from '@signaltree/events/angular';
+
+const tree = signalTree({ orders: entityMap<Order, string>() });
+
+// Map events to entityMap batch ops. A batch of N events becomes ONE
+// upsertMany/updateMany/removeMany call per op type, not N notifications.
+const flush = entityEventHandler(tree.$.orders, {
+  match: (e) =>
+    e.type === 'OrderCreated' ? 'upsert' :
+    e.type === 'OrderUpdated' ? 'update' :
+    e.type === 'OrderCancelled' ? 'remove' : null,
+  upsert: (e) => e.type === 'OrderCreated' ? e.data.order : undefined,
+  update: (e) => e.type === 'OrderUpdated'
+    ? { id: e.data.id, changes: e.data.changes } : undefined,
+  remove: (e) => e.type === 'OrderCancelled' ? e.data.id : undefined,
+});
+
+// Drive it directly from an already-batched source...
+flush(eventsReceivedThisTick);
+
+// ...or turn a live event stream into periodic, coalesced flushes:
+const onOrderEvent = batchedHandler(flush, 50, 200);
+websocketService.on('order-event', onOrderEvent);`,
+    },
+    {
+      label: 'optimistic-entity.ts',
+      language: 'typescript',
+      source: `import { applyOptimisticEntityChange } from '@signaltree/events/angular';
+
+// Snapshots the current entity and applies the change, so you get a
+// ready-made rollback closure without hand-writing one.
+const { data, previousData, rollback } = applyOptimisticEntityChange(
+  tree.$.orders,
+  orderId,
+  { status: 'shipped' }
+);
+
+// On server confirmation: just drop the reference, the write already stuck.
+// On server rejection / timeout: restore the previous snapshot in one call.
+rollback();`,
+    },
+  ];
+
   constructor() {
+    this.seedOrders();
+
     // Set up MockEventBus subscriptions
     this.mockEventBus.subscribe('TradeProposalCreated', (event: BaseEvent) => {
       this.logSubscriber(
@@ -279,7 +516,14 @@ expect(eventBus.getPublishedEvents()).toHaveLength(1);`,
   // =============================================================================
 
   setActiveTab(
-    tab: 'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency' | 'reactions'
+    tab:
+      | 'factory'
+      | 'validation'
+      | 'eventbus'
+      | 'errors'
+      | 'idempotency'
+      | 'entities'
+      | 'reactions'
   ) {
     this.activeTab.set(tab);
   }

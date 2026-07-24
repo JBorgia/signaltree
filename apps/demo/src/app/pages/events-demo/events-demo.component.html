@@ -45,6 +45,13 @@
     </button>
     <button
       class="btn-tab"
+      [class.active]="activeTab() === 'entities'"
+      (click)="setActiveTab('entities')"
+    >
+      Entity Bridge
+    </button>
+    <button
+      class="btn-tab"
       [class.active]="activeTab() === 'reactions'"
       (click)="setActiveTab('reactions')"
     >
@@ -398,6 +405,103 @@
           }
         </div>
       </div>
+    </div>
+  </div>
+  }
+
+  <!-- Entity Bridge Tab -->
+  @if (activeTab() === 'entities') {
+  <div class="demo-section">
+    <h2>Events ↔ entityMap Bridge</h2>
+    <p class="section-description">
+      <code>entityEventHandler</code> maps a <strong>batch</strong> of events
+      onto <code>@signaltree/core</code>'s entityMap batch ops
+      (<code>upsertMany</code>/<code>updateMany</code>/<code>removeMany</code>)
+      so the whole batch produces one coalesced write per op type — instead of
+      one notification and one O(size) Map clone per event. Pair it with
+      <code>batchedHandler</code> to turn a live event stream into periodic,
+      coalesced flushes.
+    </p>
+
+    <div class="demo-controls">
+      <button class="btn primary" (click)="dispatchOrderBatch()">
+        Dispatch Batch (3 creates + 1 update + 1 cancel)
+      </button>
+      <button class="btn secondary" (click)="seedOrders()">
+        Reset Seed Data
+      </button>
+      <button class="btn ghost" (click)="clearOrderEventLog()">
+        Clear Log
+      </button>
+    </div>
+
+    <div class="two-column">
+      <div class="demo-output">
+        <h3>Event Log</h3>
+        <div class="log-container">
+          @for (entry of orderEventLog(); track $index) {
+          <div class="log-entry">{{ entry }}</div>
+          } @empty {
+          <div class="log-entry muted">No events dispatched yet</div>
+          }
+        </div>
+      </div>
+
+      <div class="demo-output">
+        <h3>
+          Orders Collection ({{ entityDemoTree.$.orders.count() }})
+        </h3>
+        <st-state-inspector [value]="entityDemoTree.$.orders.all()" />
+      </div>
+    </div>
+
+    <div class="demo-section" style="margin-top:1.5rem">
+      <h3>Optimistic Updates — <code>applyOptimisticEntityChange</code></h3>
+      <p class="section-description">
+        Snapshots the current entity and returns
+        <code>{{ '{ previousData, data, rollback }' }}</code> for optimistic
+        UI — no hand-written rollback closure needed.
+      </p>
+
+      <div class="demo-controls">
+        <button
+          class="btn primary"
+          [disabled]="optimisticStatus() === 'pending'"
+          (click)="applyOptimisticShipment()"
+        >
+          Apply Optimistic Update (ORD-001 → shipped)
+        </button>
+        <button
+          class="btn secondary"
+          [disabled]="optimisticStatus() !== 'pending'"
+          (click)="confirmOptimisticShipment()"
+        >
+          Confirm (server accepted)
+        </button>
+        <button
+          class="btn secondary"
+          [disabled]="optimisticStatus() !== 'pending'"
+          (click)="rollbackOptimisticShipment()"
+        >
+          Rollback (server rejected)
+        </button>
+      </div>
+
+      <p class="section-description">
+        Status:
+        <span
+          class="priority-badge"
+          [class.critical]="optimisticStatus() === 'rolled-back'"
+          [class.high]="optimisticStatus() === 'pending'"
+          [class.low]="optimisticStatus() === 'confirmed'"
+          >{{ optimisticStatus() }}</span
+        >
+      </p>
+    </div>
+
+    <div class="example" style="margin-top:1.5rem">
+      <h3>Code</h3>
+      <st-code-tabs [files]="entityBridgeCode" />
     </div>
   </div>
   }
