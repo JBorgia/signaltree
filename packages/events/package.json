@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/events",
-  "version": "12.0.0",
+  "version": "12.1.0",
   "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
   "license": "BUSL-1.1",
   "type": "module",
