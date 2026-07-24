@@ -119,21 +119,51 @@ print_header "1. Checking Working Directory"
 # release-state gate validates exactly what ships). At that point the tree is
 # intentionally dirty with the release-managed files, uncommitted, because
 # release.sh's file-backup rollback owns reverting them. Tolerate ONLY those
-# expected paths; any OTHER dirty path still blocks. Standalone runs
-# (RELEASE_IN_PROGRESS unset) keep the strict clean-tree requirement.
+# expected paths; any OTHER dirty path still blocks. Standalone runs keep the
+# strict clean-tree requirement.
+#
+# PROVENANCE GUARD (audit NIT): RELEASE_IN_PROGRESS alone is honor-based — a
+# stray `export RELEASE_IN_PROGRESS=1` left in a dev shell would silently relax
+# this gate on a manual `npm run validate`. So the exception ALSO requires a
+# per-run nonce that only a genuine release provides: release.sh writes a random
+# token to $RELEASE_TOKEN_FILE (inside its .release_backup dir, which it owns +
+# cleans up) and exports the SAME value as RELEASE_IN_PROGRESS_TOKEN. The
+# exception applies only when the env token is non-empty AND byte-identical to
+# the on-disk token. A dev shell can fake the env var but not the matching
+# secret file a live release wrote, so a stray var can no longer loosen the gate.
+RELEASE_TOKEN_FILE=".release_backup/.release-token"
+release_provenance_ok() {
+    [ "${RELEASE_IN_PROGRESS:-0}" = "1" ] || return 1
+    [ -n "${RELEASE_IN_PROGRESS_TOKEN:-}" ] || return 1
+    [ -f "$RELEASE_TOKEN_FILE" ] || return 1
+    [ "$(cat "$RELEASE_TOKEN_FILE" 2>/dev/null)" = "$RELEASE_IN_PROGRESS_TOKEN" ] || return 1
+    return 0
+}
+
+# Release-managed manifests, EXACTLY the packages scripts/release.sh publishes
+# (its PACKAGES array). Deliberately excludes the private `packages/shared`
+# (bundled into core, never published) and any other package.json — the old
+# `packages/[^/]+/package.json` wildcard tolerated dirt in non-released manifests.
+RELEASE_MANAGED_ALLOWLIST='^(package\.json|CHANGELOG\.md|packages/(core|events|ng-forms|realtime|callable-syntax|enterprise|guardrails|schema)/package\.json|apps/demo/src/app/(version|library-versions)\.ts)$'
+
 if [ -z "$(git status --porcelain)" ]; then
     print_success "Working directory is clean"
-elif [ "${RELEASE_IN_PROGRESS:-0}" = "1" ]; then
+elif release_provenance_ok; then
     UNEXPECTED_DIRTY=$(git status --porcelain | sed 's/^...//' | grep -vE \
-        '^(package\.json|CHANGELOG\.md|packages/[^/]+/package\.json|apps/demo/src/app/(version|library-versions)\.ts)$' \
+        "$RELEASE_MANAGED_ALLOWLIST" \
         || true)
     if [ -n "$UNEXPECTED_DIRTY" ]; then
         print_error "Working directory has unexpected uncommitted changes (beyond the release bump):"
         echo "$UNEXPECTED_DIRTY"
         exit 1
     fi
-    print_success "Working tree clean except expected release-managed files (RELEASE_IN_PROGRESS=1)"
+    print_success "Working tree clean except expected release-managed files (verified release run)"
 else
+    if [ "${RELEASE_IN_PROGRESS:-0}" = "1" ]; then
+        print_error "RELEASE_IN_PROGRESS=1 but no matching release provenance token found."
+        print_error "This clean-tree exception is valid ONLY when invoked by scripts/release.sh."
+        print_error "Refusing to relax the gate for a possibly-stray env var — treating the tree as dirty."
+    fi
     print_error "Working directory has uncommitted changes"
     git status --short
     exit 1
@@ -245,14 +275,16 @@ else
     exit 1
 fi
 
-# 7a. Skill Code-Block Lint
-# Type-checks every fenced ts/typescript/tsx block in docs/skills/ against
-# the real built @signaltree/* d.ts files. Must run after the build step
-# (needs dist/packages/*). Between lint (step 4) and the build above makes
-# no sense because dist isn't present yet; we run it as soon as the build
-# completes so any skill API drift fails fast before release assets ship.
-print_header "7a. Skill Code-Block Lint"
-print_step "Type-checking SKILL.md / reference/*.md code blocks"
+# 7a. Skill + Guide Code-Block Lint
+# Type-checks every fenced ts/typescript/tsx block in docs/skills/ AND the gated
+# authoring guides (docs/guides/custom-markers-enhancers.md — its NG0600 /
+# factory-validation / walkable / asReadonly landmine examples) against the real
+# built @signaltree/* d.ts files. Must run after the build step (needs
+# dist/packages/*). Between lint (step 4) and the build above makes no sense
+# because dist isn't present yet; we run it as soon as the build completes so any
+# skill/guide API drift fails fast before release assets ship.
+print_header "7a. Skill + Guide Code-Block Lint"
+print_step "Type-checking SKILL.md / reference/*.md + authoring-guide code blocks"
 if node scripts/lint-skills.mjs 2>&1 | tee /tmp/lint-skills.log; then
     print_success "Skill code blocks all type-check"
 else

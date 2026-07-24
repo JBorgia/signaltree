@@ -720,3 +720,14 @@ callable-node traversal contract (the v11.4/11.5 inert-walker class), (4)
 `asReadonly` doesn't strip a custom marker's mutators (honest limitation),
 (5) `[ST####]` codes + plain-noun naming + conformance-fixture testing. Add
 an "Authoring markers: the five landmines" section drawn from RFC 0004/0005.
+
+### M3 run 3 (2026-07-24, post-12.1.0): 100%
+
+Re-run against the current docs to measure acceptance of the 12.1.0 surface
+(the gap where M3 hadn't been measured on idle/settled/maxScopes/nativeErrors).
+**5/5 PASS, zero fixes** (up from 80%): each new symbol was discovered and used
+correctly from the llms docs alone, including reaching for `idle()` and
+avoiding the `notLoaded()` after-error footgun without prompting. No
+over-claims. One discoverability gap found + fixed: `maxScopes` was only in
+`llms-full.txt`, invisible to a short-manifest (`llms.txt`) retrieval — added
+a clause to the llms.txt scoped-persist sentence.

@@ -23,6 +23,8 @@ SignalTree is designed for extensibility. You can create your own **markers** (s
 **Markers** are placeholder objects in your initial state definition that get **materialized** into specialized signal types during tree finalization.
 
 ```typescript
+import { signalTree, entityMap, status, stored } from '@signaltree/core';
+
 // Marker in state definition (placeholder)
 const tree = signalTree({
   users: entityMap<User>(), // EntityMapMarker → EntitySignal
@@ -134,7 +136,7 @@ export function isSelectionMarker(v: unknown): v is SelectionMarker<unknown> {
 
 // Usage - no manual registration needed!
 const tree = signalTree({
-  tasks: [...],
+  tasks: [] as { id: number; done: boolean }[],
   selectedIds: selection<number>(),  // ← Self-registers & materializes
 });
 
@@ -169,7 +171,7 @@ const tree = signalTree({
 
 **For custom markers, `registerMarkerProcessor()` MUST be called BEFORE `signalTree()`:**
 
-```typescript
+```typescript skip
 // ✅ CORRECT - Register custom marker first
 registerMarkerProcessor(isMyMarker, createMySignal);
 const tree = signalTree({ field: myMarker() }); // Works!
@@ -183,7 +185,7 @@ registerMarkerProcessor(isMyMarker, createMySignal); // Never processes
 
 For optimal tree-shaking, implement self-registration in your marker factory:
 
-```typescript
+```typescript skip
 // my-marker.ts
 import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
@@ -457,7 +459,7 @@ export interface MyMarker<T> {
 
 #### 2. Create the marker factory function
 
-```typescript
+```typescript skip
 export function myMarker<T>(config: T): MyMarker<T> {
   return {
     [MY_MARKER]: true,
@@ -468,7 +470,7 @@ export function myMarker<T>(config: T): MyMarker<T> {
 
 #### 3. Create the type guard
 
-```typescript
+```typescript skip
 export function isMyMarker(value: unknown): value is MyMarker<unknown> {
   return Boolean(value && typeof value === 'object' && MY_MARKER in value && (value as Record<symbol, unknown>)[MY_MARKER] === true);
 }
@@ -513,7 +515,7 @@ export function createMySignal<T>(marker: MyMarker<T>): MySignal<T> {
 
 > ⚠️ **Registration must happen BEFORE any `signalTree()` call that uses this marker!**
 
-```typescript
+```typescript skip
 import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 // Call once at app startup (e.g., in main.ts BEFORE bootstrapApplication)
@@ -526,7 +528,7 @@ registerMarkerProcessor(isMyMarker, (marker) => createMySignal(marker));
 - An `APP_INITIALIZER` provider
 - Top of a barrel file that's imported at app startup
 
-```typescript
+```typescript skip
 // main.ts example
 import './markers/register-all-markers'; // ← Registers all custom markers
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -690,7 +692,7 @@ export function devTools(config: DevToolsConfig = {}): <T>(tree: ISignalTree<T>)
 
 When you use the wrong pattern, TypeScript will complain when chaining `.with()`:
 
-```typescript
+```typescript skip
 // With WRONG pattern - TypeScript error!
 const tree = signalTree({ count: 0 }).with(batching()).with(myBrokenEnhancer()); // ❌ Error: types are incompatible
 
@@ -759,8 +761,8 @@ tree.clearLogs();
 
 For enhancers that need dependency ordering, use `createEnhancer()`:
 
-```typescript
-import { createEnhancer } from '@signaltree/core/enhancers';
+```typescript skip
+import { createEnhancer } from '@signaltree/core/authoring';
 
 export const withAudit = /*@__PURE__*/ createEnhancer(
   {
@@ -787,7 +789,7 @@ export const withAudit = /*@__PURE__*/ createEnhancer(
 
 For enhancers that intercept tree calls (like devTools or batching):
 
-```typescript
+```typescript skip
 import { copyTreeProperties } from '@signaltree/core/enhancers/utils/copy-tree-properties';
 
 export function withTiming<T>() {
@@ -829,6 +831,15 @@ export function withTiming<T>() {
 Markers and enhancers work independently but compose well:
 
 ```typescript
+import {
+  signalTree,
+  entityMap,
+  status,
+  stored,
+  devTools,
+  batching,
+} from '@signaltree/core';
+
 const tree = signalTree({
   // Markers in state
   users: entityMap<User>(),

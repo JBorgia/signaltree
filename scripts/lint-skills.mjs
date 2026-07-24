@@ -2,8 +2,10 @@
 /**
  * lint-skills.mjs
  *
- * Type-checks every fenced TypeScript code block in docs/skills/**\/*.md against
- * the real built @signaltree/* d.ts files. Catches:
+ * Type-checks every fenced TypeScript code block in docs/skills/**\/*.md — plus
+ * the gated agent-facing authoring guides in GUIDE_FILES (currently
+ * docs/guides/custom-markers-enhancers.md) — against the real built
+ * @signaltree/* d.ts files. Catches:
  *   - syntax / type errors
  *   - references to symbols not exported from the real public barrels
  *   - missing imports for symbols used
@@ -45,6 +47,17 @@ import ts from 'typescript';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
 const SKILLS_ROOT = path.join(REPO_ROOT, 'docs', 'skills');
+// Agent-facing authoring guides are gated too — their code examples rot just
+// like SKILL.md examples do. `docs/guides/*.md` are linted with the same real
+// @signaltree/* d.ts program as the skills, but with SECTION-SCOPED
+// concatenation (see collectGuideBlocks): a guide's step-by-step fences build
+// one running example across sibling fences (`MyMarker` defined in step 1,
+// referenced in step 2), so isolated-per-fence compilation would spuriously
+// fail. Skills stay one-module-per-fence (their examples are self-contained).
+const GUIDES_ROOT = path.join(REPO_ROOT, 'docs', 'guides');
+// Guide markdown files gated alongside the skills (repo-relative). Add more as
+// their code examples are brought up to a lintable state.
+const GUIDE_FILES = ['docs/guides/custom-markers-enhancers.md'];
 const DIST_ROOT = path.join(REPO_ROOT, 'dist', 'packages');
 
 // Map of @signaltree/* import specifier → absolute d.ts path in dist.
@@ -372,7 +385,16 @@ function assembleSnippet(block, blockId, stubNames = []) {
     ? stubNames
         .map(
           (n) =>
-            `type ${n} = any;\n` +
+            // Generic-tolerant type alias so cross-fence references in type
+            // position — `MyMarker<T>`, `MySignal<T>`, `ISignalTree<T>`,
+            // `BatchingMethods<T>` — resolve to `any` instead of tripping
+            // TS2315 "Type 'X' is not generic". The value stub keeps a generic
+            // CALL signature so `entityMap<User>()` etc. still type-check. These
+            // stubs only ever apply to names TS reports as "Cannot find name"
+            // (undefined-in-snippet pedagogical placeholders); imported real
+            // symbols resolve to their d.ts and are never stubbed, so this does
+            // not hide genuine API-shape errors.
+            `type ${n}<A = any, B = any, C = any> = any;\n` +
             `declare const ${n}: { <T = any, U = any, V = any>(...args: any[]): any; [k: string]: any };`
         )
         .join('\n') + '\n'
@@ -502,7 +524,10 @@ function buildLineMap(block, syntheticText) {
  * Main lint routine.
  */
 async function main() {
-  logInfo(`Linting skills under ${path.relative(REPO_ROOT, SKILLS_ROOT)}`);
+  logInfo(
+    `Linting skills under ${path.relative(REPO_ROOT, SKILLS_ROOT)}` +
+      (GUIDE_FILES.length ? ` + guides: ${GUIDE_FILES.join(', ')}` : '')
+  );
   assertDistExists();
   const { paths, missing } = resolveTsPaths();
   if (missing.length > 0) {
@@ -525,6 +550,20 @@ async function main() {
       .replace(/\r/g, '\n');
     const blocks = extractBlocks(text, mdPath);
     allBlocks.push(...blocks);
+  }
+  // Agent-facing authoring guides. Same real-d.ts program as the skills.
+  // Currently the marker/enhancer authoring guide (its NG0600 / factory-
+  // validation / walkable / asReadonly "landmine" examples are the highest-
+  // value fences to keep from rotting). Other docs/guides/*.md (migration
+  // guides, etc.) intentionally show removed/old-major APIs and are a separate,
+  // larger gating effort — not linted here.
+  for (const rel of GUIDE_FILES) {
+    const mdPath = path.join(REPO_ROOT, rel);
+    if (!existsSync(mdPath)) continue;
+    const text = readFileSync(mdPath, 'utf8')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+    allBlocks.push(...extractBlocks(text, mdPath));
   }
 
   const linted = allBlocks.filter((b) => !b.skip);
@@ -627,6 +666,16 @@ declare const vi: { fn: (impl?: any) => any; mock: (mod: string, factory?: any) 
     'export const myMarker: any = () => ({});\n' +
       'export const MY_MARKER: any = Symbol("MY_MARKER");\n' +
       'export const myProcessor: any = () => undefined;\n',
+    'utf8'
+  );
+  // `./validated-marker` is the pedagogical module authored in the guide's
+  // "Complete Example: validated() Marker" fence; the "Type-Safe State
+  // Interface" fence imports its types. Provide `any` generic aliases so that
+  // fence type-checks without inlining the whole marker again.
+  writeFileSync(
+    path.join(tempRoot, 'validated-marker.ts'),
+    'export type ValidatedMarker<T = unknown> = any;\n' +
+      'export type ValidatedSignal<T = unknown> = any;\n',
     'utf8'
   );
   writeFileSync(

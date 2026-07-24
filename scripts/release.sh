@@ -189,6 +189,18 @@ print_step "Creating version backup for rollback capability..."
 rm -rf "$BACKUP_DIR"
 mkdir -p "$BACKUP_DIR"
 
+# Provenance token for pre-publish-validation.sh's clean-tree exception.
+# The validator relaxes its strict clean-tree gate (to tolerate the release
+# bump's expected dirty files) ONLY when the RELEASE_IN_PROGRESS_TOKEN it
+# receives matches this per-run secret written into the release-owned backup
+# dir. A stray `export RELEASE_IN_PROGRESS=1` in a dev shell has no matching
+# token file, so it can no longer loosen the gate on a manual `npm run validate`.
+# The token lives inside $BACKUP_DIR, so it is removed by the same rollback /
+# success cleanup that clears the backup dir.
+RELEASE_IN_PROGRESS_TOKEN="$(openssl rand -hex 16 2>/dev/null || echo "${RANDOM}${RANDOM}${RANDOM}$(date +%s)")"
+printf '%s' "$RELEASE_IN_PROGRESS_TOKEN" > "$BACKUP_DIR/.release-token"
+export RELEASE_IN_PROGRESS_TOKEN
+
 # Backup workspace manifest, changelog, and generated demo version files as-is.
 # CHANGELOG.md is in the set because the finalize step (below) rewrites its top
 # heading after the bump; a post-bump validation failure must revert it too.
@@ -372,7 +384,7 @@ fi
 # skill code-block lint) still runs and still blocks the release.
 print_step "Running comprehensive pre-publish validation (post-bump, validates what ships)..."
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
-    if RELEASE_IN_PROGRESS=1 bash scripts/pre-publish-validation.sh; then
+    if RELEASE_IN_PROGRESS=1 RELEASE_IN_PROGRESS_TOKEN="$RELEASE_IN_PROGRESS_TOKEN" bash scripts/pre-publish-validation.sh; then
         print_success "Pre-publish validation passed"
     else
         print_error "Pre-publish validation failed!"
@@ -383,7 +395,7 @@ if [ "$SKIP_TESTS" != "skip-tests" ]; then
 else
     print_warning "skip-tests: running FAST validation (unit tests, coverage, benchmarks skipped)"
     print_warning "ALL correctness gates still run and still block the release"
-    if RELEASE_IN_PROGRESS=1 FAST_VALIDATE=1 bash scripts/pre-publish-validation.sh; then
+    if RELEASE_IN_PROGRESS=1 RELEASE_IN_PROGRESS_TOKEN="$RELEASE_IN_PROGRESS_TOKEN" FAST_VALIDATE=1 bash scripts/pre-publish-validation.sh; then
         print_success "Fast pre-publish validation passed (slow steps skipped, all gates enforced)"
     else
         print_error "Pre-publish validation failed!"
