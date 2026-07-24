@@ -2,6 +2,42 @@
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
+## 13.0.0
+
+> RFC 0007's packaging principle applied: two capabilities that never
+> depended on `@angular/forms` move from `@signaltree/ng-forms` to
+> `@signaltree/core`, plus a new signal-native undo/redo feature for `form()`
+> and an events↔`entityMap` bridge. Full detail and before/after examples:
+> [`docs/guides/migration-v12-v13.md`](migration-v12-v13.md).
+
+**Breaking (one import-path move):**
+
+- `createAuditTracker`/`createAuditCallback` + `AuditEntry`/`AuditMetadata`/
+  `AuditTrackerConfig` moved from `@signaltree/ng-forms` to
+  `@signaltree/core`. Old path (`@signaltree/ng-forms/audit`) still works,
+  `@deprecated`.
+
+**New (additive):**
+
+- `history()` (`@signaltree/core`) — signal-native undo/redo for `form()`
+  markers: `form({ history: history({ capacity, exclude }) })`. Drives a
+  bound `signalForm()` field tree from the same engine; a raw object on
+  `history` throws `[ST2006]`.
+- `entityEventHandler(entities, mapping)` / `applyOptimisticEntityChange(entities, id, change)`
+  (`@signaltree/events/angular`) — map an event batch onto `entityMap`'s
+  batch ops, and derive an optimistic-update `rollback` closure automatically.
+
+**Deprecated, not removed:**
+
+- `withFormHistory` (`@signaltree/ng-forms`) — use `history()` on the `form()`
+  marker instead; retained for `createFormTree` users.
+- `createWizardForm` (`@signaltree/ng-forms`) — use the `form()` marker's
+  built-in `wizard` config instead (`signalForm()`-compatible); retained for
+  `createFormTree` users.
+
+All packages bumped to **13.0.0** (`@signaltree/shared` was at 9.2.2, now
+aligned).
+
 ## 11.0.0
 
 > **Two breaking changes, both mechanical and both opt-in surfaces.** The v11 theme: SignalTree's optional/heavy subsystems — security validation and lazy/memory — are now explicitly opt-in so they tree-shake out of bundles that don't use them. The bare-tree floor drops ~29% (7.5KB → 5.3KB gzip). If you pass neither `security` nor `lazy` to `signalTree(...)` and don't ship `devTools()` to production, **nothing changes for you** — upgrade and move on.
@@ -505,67 +541,34 @@ If you encounter issues during migration:
 > [`@signaltree/ng-forms` package README](../../packages/ng-forms/README.md) as
 > authoritative, not this section.
 
-### Overview
+### ng-forms: classic Reactive Forms bridge
 
-The `@signaltree/ng-forms` package includes a **manual bidirectional bridge** for Angular 17-19 compatibility. This bridge will be **removed in v6.0** when Angular 21 is released.
+There is no Angular `connect()` API — it has never existed in any Angular
+version. The actual sync mechanism between `createFormTree` and Angular's
+classic `FormGroup` is `createFormTree`'s own **manual bidirectional bridge**:
+an effect that pushes tree signal writes into the `FormGroup`, and a
+`valueChanges` subscription that pushes form edits back into the tree's
+signals. That bridge is the real and only sync path — not a fallback for a
+missing native API — and it works unchanged on Angular 20, 21, and 22.
 
-**Timeline:**
+`createFormTree` itself is **deprecated**: it targets classic Reactive Forms.
+The supported paths going forward are:
 
-- **v5.x** (Current): Legacy bridge functional, deprecation warning in dev mode
-- **v6.0** (Planned): Legacy bridge removed, Angular 20.3+ required
+- **`form()` marker + `signalForm()`** — the signal-native path, built on
+  Angular's real `@angular/forms/signals` primitives (`SignalFormControl`,
+  Angular 21.2+). Prefer this for new code.
+- **`formBridge()`** — if you need interop with an existing classic
+  `FormGroup`.
 
-### Who is Affected?
-
-If you're using `@signaltree/ng-forms` with **Angular 17, 18, or 19**, you'll see this console warning in development:
-
-```
-[@signaltree/ng-forms] Legacy Angular 17-19 support is deprecated and will be removed in v6.0.
-Please upgrade to Angular 20.3+ to use native Signal Forms. See MIGRATION.md for the upgrade path.
-```
-
-### Migration Path
-
-**Option 1: Upgrade to Angular 20.3+ (Recommended)**
-
-Angular 20.3+ includes native Signal Forms with the `connect()` API. `@signaltree/ng-forms` will automatically use this API when available.
-
-```bash
-# Upgrade Angular
-ng update @angular/core @angular/cli --next
-
-# Verify version (should be 20.3+)
-ng version
-```
-
-No code changes required - `@signaltree/ng-forms` will detect and use the native API.
-
-**Option 2: Stay on Angular 17-19 (Temporary)**
-
-If you cannot upgrade immediately:
-
-1. The legacy bridge will continue working in v5.x
-2. You can suppress the warning by acknowledging the deprecation
-3. Plan to upgrade before v6.0 release
-
-**Suppressing the Warning** (not recommended):
-
-```typescript
-// Only if you understand the deprecation and have a migration plan
-if (globalThis && typeof globalThis === 'object') {
-  (globalThis as any).__signaltreeNgFormsLegacyAck = true;
-}
-```
-
-### What Changes in v6.0?
-
-- **Minimum Angular version**: 20.3+
-- **Removed**: Manual bidirectional bridge code
-- **Required**: Native Angular Signal Forms (`FormControl.connect()`)
-- **Benefit**: Smaller bundle size, better performance, native Angular integration
+`createFormTree` keeps working as-is on Angular 20/21/22; there is no
+announced removal, just a preference for the signal-native path above.
 
 ### Testing the Upgrade
 
-After upgrading to Angular 20.3+:
+The manual bridge works the same across Angular 20, 21, and 22 — no upgrade
+is required for it to keep functioning. If you're moving to the signal-native
+path, migrate call sites from `createFormTree` to `form()` + `signalForm()`
+and verify:
 
 1. Verify no deprecation warnings in console
 2. Test form bindings work correctly

@@ -1603,6 +1603,43 @@ await wizard.goTo('pricing'); // Jump to step by name
 wizard.reset(); // Go back to first step
 ```
 
+#### Undo/redo history — `history()` (v13+)
+
+Signal-native undo/redo for a `form()` marker. Import `history` alongside
+`form`/`signalTree` and attach it via the `history` config key — a raw config
+object there throws `[ST2006]`, it must be `history()`'s output:
+
+```typescript
+import { signalTree, form, history, validators } from '@signaltree/core';
+
+const tree = signalTree({
+  profile: form<{ name: string; password: string }>({
+    initial: { name: '', password: '' },
+    history: history({ capacity: 20, exclude: ['password'] }),
+  }),
+});
+
+tree.$.profile.patch({ name: 'Ada' });
+tree.$.profile.history?.undo();          // name reverts
+tree.$.profile.history?.redo();
+tree.$.profile.history?.canUndo();       // Signal<boolean>
+tree.$.profile.history?.canRedo();       // Signal<boolean>
+tree.$.profile.history?.history();       // Signal<{ past: T[]; present: T; future: T[] }>
+tree.$.profile.history?.clearHistory();
+```
+
+`FormHistoryOptions`: `{ capacity?: number = 10; exclude?: (keyof T)[] }`.
+`exclude` is a security feature, not just a filter — excluded fields never
+enter the snapshot buffer, so an edit that only touches an excluded field
+records nothing, and undo can never resurrect an old value for that field
+(it keeps whatever the field currently holds). History attaches to the same
+values signal `signalForm()` uses as its Signal Forms `FieldTree` model, so
+undo/redo drive **both** the marker's `set`/`patch`/`reset` API and a bound
+field tree — including edits made *through* the field tree (which write the
+model signal directly, bypassing the marker's mutators). Tree-shakeable: a
+bundle that never imports `history()` doesn't pay for the snapshot/undo
+engine — only `form()`'s type-only reference to `HistoryFeature` remains.
+
 #### Form Persistence
 
 ```typescript
@@ -1659,6 +1696,40 @@ async function handleSubmit() {
   });
 }
 ```
+
+### 13) Audit tracking — `createAuditTracker()` / `createAuditCallback()` (v13+)
+
+Framework-agnostic change-logging for any `ISignalTree` — tree-shakeable
+(only bundled if imported). Moved here from `@signaltree/ng-forms` in v13
+(RFC 0007): it never depended on `@angular/forms`, only on
+`@signaltree/shared`'s `getChanges` and the core tree type, so it's a
+within-tree mechanic, not a forms concern. The old
+`@signaltree/ng-forms/audit` path still re-exports it as a `@deprecated`
+back-compat shim — import from `@signaltree/core` in new code.
+
+```typescript
+import { signalTree, createAuditTracker, AuditEntry } from '@signaltree/core';
+
+const tree = signalTree({ name: '', email: '' });
+const auditLog: AuditEntry<{ name: string; email: string }>[] = [];
+
+const stopTracking = createAuditTracker(tree, auditLog, {
+  getMetadata: () => ({ userId: currentUser.id, source: 'form-editor' }),
+  includePreviousValues: true,
+  maxEntries: 500, // 0 (default) = unlimited
+});
+
+tree.$.name.set('John');
+// auditLog now has one AuditEntry: { timestamp, changes: { name: 'John' }, previousValues, metadata }
+
+stopTracking(); // unsubscribe
+```
+
+Uses `tree.subscribe()` for zero-polling reactive tracking in Angular
+contexts (falls back to a 100ms poll outside one). `createAuditCallback()` is
+the lower-level primitive — a `(previousState, currentState) => void`
+callback shaped for `tree.subscribe()` directly, for callers who want more
+control than `createAuditTracker`'s managed subscription.
 
 ## Error handling examples
 
@@ -2654,29 +2725,30 @@ npm install @signaltree/ng-forms
 - 🎯 Type-safe form controls
 - 🔄 Automatic sync between form state and tree state
 - 📊 Form status tracking (valid, pristine, touched, etc.)
-- ⚡ Native Signal Forms support (Angular 20.3+) via `connect()`
-- 🔧 A manual bidirectional bridge as a fallback on Angular 20.0–20.2, where `FormControl.connect()` isn't available yet (deprecated, will be removed once the package's minimum supported Angular ships `connect()`)
+- ⚡ Signal-native forms via `signalForm()` (Angular Signal Forms `FieldTree`)
+- 🔧 Classic `FormGroup` interop via `createFormTree` / `formBridge()`
 
-**Signal Forms (Angular 20.3+ recommended)**
+**Signal-native forms (recommended)**
 
-Use Angular's Signal Forms `connect()` API directly with SignalTree:
+Use the `form()` marker with `signalForm()` for an Angular Signal Forms
+`FieldTree` backed by tree state (Angular 22+):
 
 ```ts
-import { toWritableSignal } from '@signaltree/core';
+import { signalTree, form } from '@signaltree/core';
+import { signalForm } from '@signaltree/ng-forms/signals';
 
 const tree = signalTree({
-  user: { name: '', email: '' },
+  profile: form({ initial: { name: '', email: '' } }),
 });
 
-// Leaves are WritableSignal<T>
-nameControl.connect(tree.$.user.name);
-
-// Convert a slice to a WritableSignal<T>
-const userSignal = toWritableSignal(tree.$.user);
-userGroupControl.connect(userSignal);
+// FieldTree whose model IS the marker's values signal — one source of truth.
+readonly profile = signalForm(this.tree.$.profile);
 ```
 
-The `@signaltree/ng-forms` package requires Angular 20, 21, or 22 and prefers `connect()` (available from Angular 20.3+ Signal Forms) whenever `FormControl` exposes it. On Angular 20.0–20.2, where `connect()` doesn't exist yet, it falls back to a manual bidirectional bridge.
+> Note: Angular has **no** `FormControl.connect(signal)` API. For classic
+> Reactive Forms interop backed by tree state, use `createFormTree` or the
+> `formBridge()` enhancer (both build a real `FormGroup`); `@signaltree/ng-forms`
+> supports Angular 20, 21, and 22.
 
 **Quick Example:**
 

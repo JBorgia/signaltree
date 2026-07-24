@@ -1,6 +1,6 @@
 ---
 name: signaltree-ng-forms
-description: Guides AI agents integrating Angular reactive forms with SignalTree via @signaltree/ng-forms. Covers FormGroup ↔ signal bidirectional sync, validators, conditional fields, persistence, undo/redo, and multi-step wizards. Triggers on @signaltree/ng-forms, Angular reactive forms, FormGroup, createFormTree, form() marker, formBridge, signal forms, FormControl, FormArray, form validators, wizard forms.
+description: Guides AI agents integrating Angular reactive forms with SignalTree via @signaltree/ng-forms. Covers FormGroup ↔ signal bidirectional sync, validators, conditional fields, persistence, undo/redo, and multi-step wizards. Triggers on @signaltree/ng-forms, Angular reactive forms, FormGroup, createFormTree, form() marker, formBridge, signal forms, FormControl, FormArray, form validators, wizard forms, withFormHistory, createWizardForm, form history, undo redo forms.
 ---
 
 # Using @signaltree/ng-forms
@@ -111,7 +111,30 @@ const tree = signalTree({
 
 See `WizardConfig` and `FormWizard` in `@signaltree/core` for full shape.
 
-Pattern D — undo/redo:
+Pattern D — undo/redo, via core `history()` (v13+; recommended, works with both `form()` alone and a bound `signalForm()`):
+
+```ts
+import { signalTree, form, history } from '@signaltree/core';
+
+interface ContactForm extends Record<string, unknown> { name: string; email: string; ssn: string }
+
+const tree = signalTree({
+  contact: form<ContactForm>({
+    initial: { name: '', email: '', ssn: '' },
+    history: history({ capacity: 20, exclude: ['ssn'] }), // exclude = never snapshotted
+  }),
+});
+
+tree.$.contact.patch({ name: 'Ada' });
+tree.$.contact.history?.undo();
+tree.$.contact.history?.redo();
+tree.$.contact.history?.canUndo(); // Signal<boolean>
+tree.$.contact.history?.history(); // Signal<{ past: T[]; present: T; future: T[] }>
+```
+
+A raw object on `history` (not `history()`'s output) throws `[ST2006]` at the `form()` call. If a `signalForm()` binds this same marker, undo/redo also move the bound `FieldTree`, and edits made through the `FieldTree` are captured too — one engine, no sync loop.
+
+Legacy Pattern D — `withFormHistory` on `createFormTree` (`@deprecated` since v13; retained for `createFormTree`/`FormGroup` users, cannot attach to a `signalForm()` `FieldTree`):
 
 ```ts
 import { createFormTree } from '@signaltree/ng-forms';

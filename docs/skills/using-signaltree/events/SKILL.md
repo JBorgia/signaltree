@@ -1,6 +1,6 @@
 ---
 name: signaltree-events
-description: Guides AI agents using @signaltree/events for Zod-validated event schemas, event registries, factories, idempotency, retry classification, and framework subpath integrations (NestJS EventBusModule, Angular WebSocket bridge, testing utilities). Triggers on @signaltree/events, createEventSchema, validateEvent, EventRegistry, EventBusModule, BaseSubscriber, NestJS event bus, Zod schema, idempotency store, retryable error, event factory, CQRS events.
+description: Guides AI agents using @signaltree/events for Zod-validated event schemas, event registries, factories, idempotency, retry classification, and framework subpath integrations (NestJS EventBusModule, Angular WebSocket bridge, entityMap batch-op bridge, optimistic updates, testing utilities). Triggers on @signaltree/events, createEventSchema, validateEvent, EventRegistry, EventBusModule, BaseSubscriber, NestJS event bus, Zod schema, idempotency store, retryable error, event factory, CQRS events, entityEventHandler, OptimisticUpdateManager, applyOptimisticEntityChange, optimistic update rollback.
 ---
 
 # Using @signaltree/events
@@ -99,6 +99,51 @@ Subscribers extend `BaseSubscriber<T>` with `config: SubscriberConfig` (`name`, 
 
 Use `forRootAsync` when Redis config requires async loading.
 
+Angular `entityMap` bridge (`/angular` subpath, v13+) — for apps holding entities in a `@signaltree/core` `entityMap`, don't hand-write a per-event `upsertOne`/`updateOne`/`removeOne` loop over an event batch; `entityEventHandler` maps the batch onto `entityMap`'s own batch ops (one `upsertMany`/`updateMany`/`removeMany` call, not one per event):
+
+```ts
+import { entityEventHandler } from '@signaltree/events/angular';
+// entities: a @signaltree/core entityMap accessor, e.g. store.$.trades.entities
+
+const flush = entityEventHandler(entities, {
+  match: (e) =>
+    e.type === 'TradeCreated' ? 'upsert' :
+    e.type === 'TradeStatusChanged' ? 'update' :
+    e.type === 'TradeCancelled' ? 'remove' : null,
+  upsert: (e) => (e.type === 'TradeCreated' ? e.data.trade : undefined),
+  update: (e) => (e.type === 'TradeStatusChanged' ? { id: e.data.tradeId, changes: { status: e.data.status } } : undefined),
+  remove: (e) => (e.type === 'TradeCancelled' ? e.data.tradeId : undefined),
+});
+
+flush(eventsReceivedThisTick); // call with a buffered batch (your own timer/size trigger)
+```
+
+Coalescing within one batch: same-id `upsert`/`update` touches fold in arrival order (later fields win); removal always wins over any upsert/update to the same id in the same batch; structurally-identical `update` deltas collapse into one `updateMany` call; stale `remove`s (id no longer present) are silently dropped, not thrown. `mapping.match` is optional — if omitted, the op is inferred by trying `upsert`, then `update`, then `remove` extractors in order.
+
+Optimistic updates (`/angular` subpath) — `OptimisticUpdateManager` tracks pending optimistic writes with automatic timeout-rollback; `applyOptimisticEntityChange(entities, id, change)` (v13+) derives the manager-ready `rollback` closure automatically from the entityMap's CURRENT entry instead of a hand-written closure per call site:
+
+```ts
+import { OptimisticUpdateManager, applyOptimisticEntityChange } from '@signaltree/events/angular';
+
+const manager = new OptimisticUpdateManager();
+const { data, previousData, rollback } = applyOptimisticEntityChange(entities, tradeId, { status: 'accepted' });
+
+manager.apply({
+  id: crypto.randomUUID(),
+  correlationId,
+  type: 'UpdateTradeStatus',
+  data,
+  previousData: previousData ?? data,
+  timeoutMs: 5000,
+  rollback, // restores previousData via upsertOne, or removeOne if this was a fresh create
+});
+
+manager.confirm(correlationId);              // server accepted
+manager.rollback(correlationId, new Error()); // server rejected / explicit rollback
+```
+
+`OptimisticUpdateManager` is O(n) for a burst of N pending updates (mutates an internal `Map` in place + a version-counter signal, not a clone per op).
+
 Testing (`/testing` subpath):
 
 ```ts
@@ -123,5 +168,6 @@ Gotchas:
 - `createEventSchema` accepts a shape map (field map); `createEventSchemaFromZod` accepts a pre-built ZodObject — both normalize equivalently.
 - `InMemoryIdempotencyStore` is process-local; swap to Redis-backed store for multi-instance.
 - Angular peer range for this package is `^18` (not `^20`); note when consuming in older Angular apps alongside other SignalTree packages.
+- Pair `entityEventHandler` with `batchedHandler(flush, flushIntervalMs, maxBatchSize)` (both from `@signaltree/events/angular`) to coalesce a live stream: `const onEvent = batchedHandler(entityEventHandler(entities, mapping), 50, 200)`. Or buffer yourself and call `flush(batch)` directly.
 
 Related: `using-signaltree` (root), `spec-auditing`, `compression`

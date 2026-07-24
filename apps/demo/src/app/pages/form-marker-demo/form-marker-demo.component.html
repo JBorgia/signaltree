@@ -33,6 +33,13 @@
     </button>
     <button
       class="btn-tab"
+      [class.active]="activeDemo() === 'history'"
+      (click)="activeDemo.set('history')"
+    >
+      ⏪ Undo/Redo
+    </button>
+    <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'angular-bridge'"
       (click)="activeDemo.set('angular-bridge')"
     >
@@ -520,6 +527,108 @@
       <div class="code-panel">
         <h3>Code</h3>
         <st-code-tabs [files]="persistenceFiles" />
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 3.5: Undo/Redo History -->
+  @if (activeDemo() === 'history') {
+  <section class="demo-section">
+    <h2>Undo/Redo History</h2>
+    <p class="info-text">
+      ℹ️ Attach <code>history()</code> to a <code>form()</code> marker to get
+      signal-native undo/redo. Every <code>set()</code>/<code>patch()</code>
+      call records a snapshot; <code>canUndo</code>/<code>canRedo</code> are
+      signals you can bind straight to button <code>[disabled]</code>.
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-form">
+          <div class="form-field">
+            <label for="history-name">Name</label>
+            <input
+              id="history-name"
+              type="text"
+              [ngModel]="historyForm.$.name()"
+              (ngModelChange)="historyForm.$.name.set($event)"
+              name="history-name"
+              placeholder="Your name"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="history-email">Email</label>
+            <input
+              id="history-email"
+              type="email"
+              [ngModel]="historyForm.$.email()"
+              (ngModelChange)="historyForm.$.email.set($event)"
+              name="history-email"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn-primary"
+              [disabled]="!historyForm.history!.canUndo()"
+              (click)="historyForm.history!.undo()"
+            >
+              ⏪ Undo
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              [disabled]="!historyForm.history!.canRedo()"
+              (click)="historyForm.history!.redo()"
+            >
+              ⏩ Redo
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="historyForm.history!.clearHistory()"
+            >
+              🧹 Clear History
+            </button>
+          </div>
+        </div>
+
+        <div class="state-panel">
+          <h3>History State</h3>
+          <dl>
+            <dt>Can Undo:</dt>
+            <dd
+              [class.success]="historyForm.history!.canUndo()"
+              [class.error]="!historyForm.history!.canUndo()"
+            >
+              {{ historyForm.history!.canUndo() }}
+            </dd>
+            <dt>Can Redo:</dt>
+            <dd
+              [class.success]="historyForm.history!.canRedo()"
+              [class.error]="!historyForm.history!.canRedo()"
+            >
+              {{ historyForm.history!.canRedo() }}
+            </dd>
+            <dt>Past entries:</dt>
+            <dd>{{ historyForm.history!.history().past.length }}</dd>
+            <dt>Future entries:</dt>
+            <dd>{{ historyForm.history!.history().future.length }}</dd>
+            <dt>Current Values:</dt>
+            <dd>
+              <st-state-inspector [value]="historyForm()" />
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <st-code-tabs [files]="historyFiles" />
       </div>
     </div>
   </section>

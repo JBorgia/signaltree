@@ -314,6 +314,12 @@ no URL/deep-link breakage.
   `docs/skills/using-signaltree/reference/install.md` still says "Angular 20
   or 21" on branch 12 — a file whose own header claims it is "derived from
   peerDependencies."
+  > **Correction (2026-07-24):** the "20.3 `connect()` boundary" above isn't
+  > an unverified claim — it's false. Angular has never shipped a
+  > `FormControl`/`FormArray` `connect()` API, on 20.3 or any other version.
+  > The real signal↔reactive primitive is `SignalFormControl`
+  > (`@angular/forms/signals`, Angular 21.2+), constructor-based. Left as
+  > originally written above for history.
 - **Gate-rot is proven in-repo, twice**: `validate:doc-snippets` has validated
   nothing for three months (zero `// @check` adoption); `validate:size-claims`
   has been an orphan npm script for eight. Gates survive here only as blocking

@@ -1,6 +1,10 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+// Type-only: keeps the history engine (snapshot buffer, undo/redo) out of every
+// bundle that doesn't call `history()`. The branded feature's closure is the
+// sole runtime reference to it — the `security()`/`loader()` precedent.
+import type { FormHistoryApi, HistoryFeature } from '../types';
 
 /**
  * Form Marker - Tree-integrated forms with validation, wizard, and persistence
@@ -122,6 +126,13 @@ export interface FormConfig<T extends Record<string, unknown>> {
   wizard?: WizardConfig;
   /** Custom equality check for dirty detection */
   equalityFn?: (a: unknown, b: unknown) => boolean;
+  /**
+   * Undo/redo history, built by the `history()` helper:
+   * `form({ history: history({ capacity, exclude }) })`. Attaches to the
+   * marker's values signal, so undo/redo also drive a bound `signalForm()`
+   * field tree. Tree-shaken out when `history()` is never imported.
+   */
+  history?: HistoryFeature<T>;
 }
 
 /**
@@ -248,6 +259,13 @@ export interface FormSignal<T extends Record<string, unknown>> {
   // Wizard (only present if wizard config provided)
   wizard?: FormWizard;
 
+  /**
+   * Undo/redo controls (only present when `history()` is configured). Because
+   * history rides on the marker's values signal, these also move a bound
+   * `signalForm()` field tree.
+   */
+  history?: FormHistoryApi<T>;
+
   // Persistence
   /** Force save to storage */
   persistNow(): void;
@@ -291,6 +309,23 @@ let formRegistered = false;
 export function form<T extends Record<string, unknown>>(
   config: FormConfig<T>
 ): FormMarker<T> {
+  // Fail closed HERE, at the factory call site — not in the marker processor.
+  // The materializer wraps create() in a try/catch that swallows throws
+  // (RFC 0005 §7), so a processor-level guard would silently no-op instead of
+  // failing loud. A raw object on `history` that isn't `history()` output must
+  // be caught synchronously when the user writes the form.
+  if (
+    config.history !== undefined &&
+    (config.history === null ||
+      (config.history as HistoryFeature<T>).__signalTreeFormHistory !== true)
+  ) {
+    throw new Error(
+      '[ST2006] form({ history }) requires the history() helper: ' +
+        "import { history } from '@signaltree/core' and pass " +
+        'history({ capacity, exclude }). A raw config object is not accepted.'
+    );
+  }
+
   // Self-register on first use (tree-shakeable)
   if (!formRegistered) {
     formRegistered = true;
@@ -367,6 +402,17 @@ export function createFormSignal<T extends Record<string, unknown>>(
   const valuesSignal: WritableSignal<T> = signal(
     readFromStorage() ?? { ...initial }
   );
+
+  // Undo/redo binding — assigned near the end once the value funnel exists.
+  // `recordHistory` is a hoisted declaration so the field accessors and
+  // mutators (defined above/below) can call it before the binding is set;
+  // it is only ever invoked at runtime, after attachment.
+  let historyBinding:
+    | ReturnType<HistoryFeature<T>['attach']>
+    | undefined;
+  function recordHistory(): void {
+    historyBinding?.record();
+  }
 
   /** Per-field touched state */
   const touchedSignal: WritableSignal<Record<keyof T, boolean>> = signal(
@@ -502,10 +548,12 @@ export function createFormSignal<T extends Record<string, unknown>>(
     accessor.set = (v: V) => {
       setValue(v);
       schedulePersist();
+      recordHistory();
     };
     accessor.update = (fn: (c: V) => V) => {
       setValue(fn(getValue()));
       schedulePersist();
+      recordHistory();
     };
     return accessor;
   }
@@ -700,11 +748,13 @@ export function createFormSignal<T extends Record<string, unknown>>(
   formSignalFn.set = (values: Partial<T>): void => {
     valuesSignal.update((curr) => ({ ...curr, ...values }));
     schedulePersist();
+    recordHistory();
   };
 
   formSignalFn.patch = (values: Partial<T>): void => {
     valuesSignal.update((curr) => ({ ...curr, ...values }));
     schedulePersist();
+    recordHistory();
   };
 
   formSignalFn.reset = (): void => {
@@ -718,6 +768,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
     asyncErrorsSignal.set({});
     wizard?.reset();
     schedulePersist();
+    recordHistory();
   };
 
   formSignalFn.clear = (): void => {
@@ -747,6 +798,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
     );
     asyncErrorsSignal.set({});
     schedulePersist();
+    recordHistory();
   };
 
   // Validation signals
@@ -810,6 +862,34 @@ export function createFormSignal<T extends Record<string, unknown>>(
       persistStorage.removeItem(config.persist);
     }
   };
+
+  // Undo/redo history (injected feature — tree-shaken unless `history()` is
+  // imported). The brand is validated at the form() factory (fail-closed);
+  // here we only attach when present, since the processor swallows throws.
+  if (
+    config.history !== undefined &&
+    (config.history as HistoryFeature<T>).__signalTreeFormHistory === true
+  ) {
+    historyBinding = config.history.attach({
+      read: () => valuesSignal(),
+      write: (next) => {
+        valuesSignal.update((curr) => ({ ...curr, ...next }));
+        schedulePersist();
+      },
+    });
+    formSignalFn.history = historyBinding.api;
+
+    // @internal — lets the ng-forms Signal Forms bridge capture edits made
+    // THROUGH the bound FieldTree (which writes the model signal directly,
+    // bypassing the marker's set/patch mutators). signalForm() runs an effect
+    // that calls this on model changes; overlaps with the mutator-hook
+    // recording are deduped by the engine's snapshot-equality guard. Kept
+    // injector-free here — the Angular effect lives in ng-forms.
+    Object.defineProperty(formSignalFn, '__recordHistory', {
+      value: historyBinding.record,
+      enumerable: false,
+    });
+  }
 
   return formSignalFn;
 }

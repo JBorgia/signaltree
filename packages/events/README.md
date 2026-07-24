@@ -2,7 +2,7 @@
 
 Event-driven architecture infrastructure for SignalTree applications. Provides a complete event bus system with validation, subscribers, error classification, and real-time sync.
 
-> **Scope:** `@signaltree/events` is a standalone full-stack event bus — it does NOT integrate with the signal tree (no tree methods, enhancers, or markers; you wire the bus and your trees together in application code).
+> **Scope:** `@signaltree/events` is primarily a standalone full-stack event bus — no tree methods, enhancers, or markers; you wire the bus and your trees together in application code. The one exception (v13+) is the Angular `entityEventHandler`/`applyOptimisticEntityChange` bridge below, which maps event batches onto `@signaltree/core`'s `entityMap` batch ops — everything else in this package has no dependency on `@signaltree/core`.
 
 ## Installation
 
@@ -209,6 +209,87 @@ try {
 }
 ```
 
+`applyOptimisticEntityChange` (v13+) derives that `rollback` closure for you
+when the optimistic change targets a single entity in a `@signaltree/core`
+`entityMap` collection, instead of hand-writing it every call site:
+
+```typescript
+import { OptimisticUpdateManager, applyOptimisticEntityChange } from '@signaltree/events/angular';
+
+const manager = new OptimisticUpdateManager();
+
+const { data, previousData, rollback } = applyOptimisticEntityChange(
+  store.$.trades.entities,
+  tradeId,
+  { status: 'accepted' }
+);
+
+manager.apply({
+  id: crypto.randomUUID(),
+  correlationId,
+  type: 'UpdateTradeStatus',
+  data,
+  previousData: previousData ?? data,
+  timeoutMs: 5000,
+  rollback, // <- derived from the collection's current entry, no hand-written closure
+});
+```
+
+`rollback` restores `previousData` via `upsertOne`, or — if the entity didn't
+exist before this change (a fresh optimistic create) — removes it via
+`removeOne` instead of resurrecting a partial record. `OptimisticUpdateManager`
+is otherwise unchanged in behavior; internally (v13) it mutates a private
+`Map` in place instead of cloning it on every apply/confirm/rollback, so a
+burst of N pending updates is O(n) instead of O(n²).
+
+### Entity Events — event batch → `entityMap` batch ops bridge (v13+)
+
+If your entity collections live in a `@signaltree/core` `entityMap`,
+`entityEventHandler` maps a *batch* of domain events onto `entityMap`'s own
+batch mutation ops (`upsertMany`/`updateMany`/`removeMany`) instead of a
+per-event `upsertOne`/`updateOne`/`removeOne` loop — one signal notification
+per op instead of one per event:
+
+```typescript
+import { entityEventHandler } from '@signaltree/events/angular';
+
+const flush = entityEventHandler(store.$.trades.entities, {
+  match: (e) =>
+    e.type === 'TradeCreated' ? 'upsert' :
+    e.type === 'TradeStatusChanged' ? 'update' :
+    e.type === 'TradeCancelled' ? 'remove' : null,
+  upsert: (e) => (e.type === 'TradeCreated' ? e.data.trade : undefined),
+  update: (e) =>
+    e.type === 'TradeStatusChanged'
+      ? { id: e.data.tradeId, changes: { status: e.data.status } }
+      : undefined,
+  remove: (e) => (e.type === 'TradeCancelled' ? e.data.tradeId : undefined),
+});
+
+// Drive it from an already-batched source (e.g. a buffered WebSocket queue,
+// or your own setInterval/RxJS bufferTime):
+flush(eventsReceivedThisTick);
+```
+
+Pair it with `batchedHandler(flush, flushIntervalMs, maxBatchSize)` to buffer a
+live stream (for N ms or M events) and call `flush` once per window:
+
+```ts
+import { entityEventHandler, batchedHandler } from '@signaltree/events/angular';
+
+const flush = entityEventHandler(store.$.trades.entities, mapping);
+const onTradeEvent = batchedHandler(flush, 50, 200); // ≤50ms or 200 events
+websocketService.on('trade-event', onTradeEvent);
+```
+
+`mapping` is `{ match?, upsert?, update?, remove?, selectId? }` — `match`
+decides which op an event maps to (or it's inferred by extractor precedence
+if omitted). Coalescing rules within one batch: same-id `upsert`/`update`
+touches fold in arrival order (later fields win); if an id is both
+touched and removed in the same batch, removal always wins; `update` deltas
+sharing the same structural shape collapse into one `updateMany` call;
+stale `remove`s (id no longer present) are silently dropped.
+
 ## Testing Utilities
 
 ### MockEventBus
@@ -355,7 +436,8 @@ const isValid = registry.validate(event);
 ### Angular Exports (`@signaltree/events/angular`)
 
 - **Services**: `WebSocketService`
-- **Utilities**: `OptimisticUpdateManager`, `createEventHandler`
+- **Utilities**: `OptimisticUpdateManager`, `applyOptimisticEntityChange` (v13+), `createEventHandler`, `createTypedHandler`
+- **entityMap bridge (v13+)**: `entityEventHandler`
 
 ### Testing Exports (`@signaltree/events/testing`)
 

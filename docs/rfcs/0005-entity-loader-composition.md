@@ -208,14 +208,20 @@ instead of imports.
    so the fix requires a module split before an injected shape
    (`asyncValidators: asyncRules(...)`) is even measurable. Smaller prize
    (form totals 2.6 KB gzip); candidate, not commitment.
-3. **ng-forms legacy manual bridge** (the deprecated Angular 20.0–20.2
-   fallback): 5 legacy-bridge identifiers present in a bundle importing only
-   `createFormTree` — Angular 22 consumers ship dead fallback code selected
-   by runtime feature-detection of `connect()`. Different fix shape (subpath
-   or accelerated removal of a deprecated path), same root cause: code-path
+3. **ng-forms manual bridge**: 5 bridge identifiers present in a bundle
+   importing only `createFormTree` — Angular 22 consumers ship the bridge
+   code unconditionally. Different fix shape (subpath or accelerated
+   deprecation of `createFormTree` itself), same root cause: code-path
    gating instead of import gating. **Bonus stale claim found:** the
-   fallback's dev warning says it "will be removed in v6.0" — v6.0 shipped
+   bridge's dev warning says it "will be removed in v6.0" — v6.0 shipped
    in 2025; the message names a past version.
+   > **Correction (2026-07-24):** the framing above as a "deprecated Angular
+   > 20.0–20.2 fallback…selected by runtime feature-detection of `connect()`"
+   > is wrong. Angular has never had a `connect()` API on `FormControl`/
+   > `FormArray`, so any such feature-detection always resolves false — the
+   > manual bridge is not a fallback for a missing native API, it is the
+   > sole sync path, unconditionally, on Angular 20/21/22 alike. The "will be
+   > removed in v6.0" stale-claim finding stands as originally written.
 4. **Broken documented import (live doc bug, agent-facing):**
    `llms-full.txt:232` and `docs/guides/entity-collection-cookbook.md:115`
    teach `import { …, createIndexedDBAdapter } from '@signaltree/core'` —

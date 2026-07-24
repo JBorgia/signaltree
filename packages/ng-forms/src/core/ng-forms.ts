@@ -66,9 +66,6 @@ function isDevEnvironment(): boolean {
   return true; // Default to dev mode if uncertain
 }
 
-// Track if we've already shown the deprecation warning (show once per session)
-let hasShownLegacyWarning = false;
-
 /**
  * @fileoverview Angular Forms Integration for SignalTree
  *
@@ -199,8 +196,12 @@ let hasShownCreateFormTreeDeprecation = false;
 /**
  * Creates a form tree with Angular FormGroup integration.
  *
- * @deprecated Use `signalTree({ myForm: form({...}) }).with(formBridge())` instead.
- * The new pattern provides better tree-shaking, composability, and separation of concerns.
+ * @deprecated Legacy classic-Reactive-Forms bridge. Prefer the signal-native
+ * path: the `form()` marker with `signalForm()` (Angular Signal Forms
+ * `FieldTree`) from `@signaltree/ng-forms/signals`. If you specifically need a
+ * classic `FormGroup`, use the `form()` marker with the `formBridge()`
+ * enhancer. Both give better tree-shaking, composability, and separation of
+ * concerns, and neither carries the hand-rolled sync this classic tree does.
  *
  * Migration example:
  * ```typescript
@@ -778,12 +779,19 @@ function createAbstractControl(
 }
 
 /**
- * Connects a FormControl to a WritableSignal with bidirectional sync.
- * Prefers Angular 20+ Signal Forms connect() API when available.
+ * Bidirectionally syncs a classic `FormControl` with a SignalTree
+ * `WritableSignal` via a hand-rolled bridge.
  *
- * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
- * now that Angular 22 ships stable Signal Forms. Prefer `signalForm()`
- * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
+ * There is no Angular API to attach an existing `FormControl` to an external
+ * signal — the signal-native path is a *separate*, constructor-based primitive
+ * (`SignalFormControl` in `@angular/forms/signals`, surfaced by SignalTree as
+ * `signalForm()`), which owns its own value signal rather than adopting one.
+ * So this manual `valueChanges`↔`set` bridge is the real and only sync path
+ * for `createFormTree`, on every supported Angular version.
+ *
+ * @deprecated `createFormTree` (classic Reactive Forms) is legacy — prefer the
+ * signal-native `form()` marker + `signalForm()` from
+ * `@signaltree/ng-forms/signals`.
  */
 function connectControlAndSignal(
   control: FormControl,
@@ -791,45 +799,6 @@ function connectControlAndSignal(
   cleanupCallbacks: Array<() => void>,
   fieldConfig?: FieldConfig
 ): void {
-  // Try Angular 20+ Signal Forms connect() API first
-  const maybeConnect = (
-    control as unknown as {
-      connect?: (sig: WritableSignal<unknown>) => unknown;
-    }
-  ).connect;
-
-  if (typeof maybeConnect === 'function') {
-    try {
-      const res = maybeConnect.call(control, valueSignal);
-      if (
-        res &&
-        typeof (res as { unsubscribe?: () => void }).unsubscribe === 'function'
-      ) {
-        cleanupCallbacks.push(() =>
-          (res as { unsubscribe: () => void }).unsubscribe()
-        );
-      }
-      return; // Connected via native API
-    } catch {
-      // Fall through to manual bridge
-    }
-  }
-
-  // Fallback: Manual bidirectional bridge for Angular 20.0-20.2 (no connect() API yet)
-  // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
-  // signalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
-
-  // Emit deprecation warning in dev mode (once per session)
-  if (isDevEnvironment() && !hasShownLegacyWarning) {
-    hasShownLegacyWarning = true;
-    console.warn(
-      '[@signaltree/ng-forms] FormControl.connect() was not found — falling back to the ' +
-        'manual bridge, which is deprecated and will be removed in the next major release. ' +
-        'Please upgrade to Angular 20.3+ to use native Signal Forms. ' +
-        'See MIGRATION.md for the upgrade path.'
-    );
-  }
-
   let updatingFromControl = false;
   let updatingFromSignal = false;
   let versionCounter = 0;
@@ -908,12 +877,15 @@ function connectControlAndSignal(
 }
 
 /**
- * Connects a FormArray to an EnhancedArraySignal with bidirectional sync.
- * Prefers Angular 20+ Signal Forms connect() API when available.
+ * Bidirectionally syncs a classic `FormArray` with an `EnhancedArraySignal`
+ * via a hand-rolled bridge (structural add/remove + recursive re-wiring).
  *
- * @deprecated Manual bridge support (fallback for pre-20.3 Angular) is legacy
- * now that Angular 22 ships stable Signal Forms. Prefer `signalForm()`
- * from `@signaltree/ng-forms/signals` for native FieldTree-based forms.
+ * As with {@link connectControlAndSignal}, Angular exposes no way to attach an
+ * existing `FormArray` to an external signal; this manual bridge is the real
+ * and only sync path. The signal-native alternative is `signalForm()`.
+ *
+ * @deprecated `createFormTree` (classic Reactive Forms) is legacy — prefer the
+ * signal-native `form()` marker + `signalForm()`.
  */
 function connectFormArrayAndSignal(
   formArray: FormArray,
@@ -924,36 +896,6 @@ function connectFormArrayAndSignal(
   cleanupCallbacks: Array<() => void>,
   connectControlRecursive: (control: AbstractControl, path: string) => void
 ): void {
-  // Try Angular 20+ Signal Forms connect() API first
-  const maybeConnect = (
-    formArray as unknown as {
-      connect?: (sig: WritableSignal<unknown[]>) => unknown;
-    }
-  ).connect;
-
-  if (typeof maybeConnect === 'function') {
-    try {
-      const res = maybeConnect.call(
-        formArray,
-        arraySignal as unknown as WritableSignal<unknown[]>
-      );
-      if (
-        res &&
-        typeof (res as { unsubscribe?: () => void }).unsubscribe === 'function'
-      ) {
-        cleanupCallbacks.push(() =>
-          (res as { unsubscribe: () => void }).unsubscribe()
-        );
-      }
-      return; // Connected via native API
-    } catch {
-      // Fall through to manual bridge
-    }
-  }
-
-  // Fallback: Manual bidirectional bridge for pre-20.3 Angular (no connect() API)
-  // @deprecated Legacy path now that Angular 22 ships stable Signal Forms; prefer
-  // signalForm() from @signaltree/ng-forms/signals for FieldTree-based forms.
   let updatingFromControl = false;
   let updatingFromSignal = false;
 
@@ -1010,11 +952,11 @@ function connectFormArrayAndSignal(
 
 /**
  * Syncs a FormArray structure with a signal array value.
- * Used by the manual bridge fallback on Angular 20.0-20.2 (pre-`connect()`).
+ * Part of the classic-`FormGroup` manual bridge (the real sync path — see
+ * {@link connectControlAndSignal}).
  *
- * @deprecated Legacy path now that Angular 22 ships stable Signal Forms — manual
- * bridge support will be dropped in favor of `signalForm()` from
- * `@signaltree/ng-forms/signals`.
+ * @deprecated Belongs to the legacy `createFormTree` classic-forms bridge —
+ * prefer the signal-native `form()` marker + `signalForm()`.
  */
 function syncFormArrayFromValue(
   formArray: FormArray,

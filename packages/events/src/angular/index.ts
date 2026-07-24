@@ -14,9 +14,25 @@ export type {
 } from './websocket.service';
 
 // Optimistic Updates
-export { OptimisticUpdateManager } from './optimistic-updates';
-export type { OptimisticUpdate, UpdateResult } from './optimistic-updates';
+export {
+  OptimisticUpdateManager,
+  applyOptimisticEntityChange,
+} from './optimistic-updates';
+export type {
+  OptimisticUpdate,
+  UpdateResult,
+  EntitySnapshotAccessor,
+  EntityOptimisticPatch,
+} from './optimistic-updates';
 
 // Event Handlers
-export { createEventHandler, createTypedHandler } from './handlers';
+export {
+  createEventHandler,
+  createTypedHandler,
+  batchedHandler,
+} from './handlers';
 export type { EventHandler, TypedEventHandler } from './handlers';
+
+// Entity Events (entityMap batch-op bridge)
+export { entityEventHandler } from './entity-events';
+export type { EntityEventOp, EntityEventMapping } from './entity-events';

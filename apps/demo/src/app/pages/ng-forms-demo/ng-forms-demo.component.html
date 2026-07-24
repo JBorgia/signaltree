@@ -471,17 +471,35 @@
           <h3>🧙 Need Multi-Step Forms?</h3>
           <p>
             This demo shows a single-page form. For wizard flows (onboarding,
-            checkout), use <code>createWizardForm()</code>:
+            checkout), use the <code>form()</code> marker's built-in
+            <code>wizard</code> config — see the
+            <a routerLink="/form-marker">Form Marker demo</a>'s Wizard tab
+            for a full interactive example.
+            <code>createWizardForm()</code> from
+            <code>&#64;signaltree/ng-forms</code> is deprecated.
           </p>
-          <pre><code>const wizard = createWizardForm([
-            {{ '{' }} fields: ['profile.name', 'profile.email'] {{ '}' }},
-            {{ '{' }} fields: ['company.name', 'company.size'] {{ '}' }},
-            {{ '{' }} fields: ['preferences.*'] {{ '}' }}
-            ], initialValues);
+          <pre><code>const tree = signalTree({{ '{' }}
+            myForm: form({{ '{' }}
+              initial: initialValues,
+              wizard: {{ '{' }}
+                steps: ['profile', 'company', 'preferences'],
+                stepFields: {{ '{' }}
+                  profile: ['profile.name', 'profile.email'],
+                  company: ['company.name', 'company.size'],
+                  preferences: ['preferences.*'],
+                {{ '}' }},
+                stepConfig: {{ '{' }}
+                  company: {{ '{' }} canSkip: true {{ '}' }},
+                {{ '}' }},
+              {{ '}' }},
+            {{ '}' }}),
+          {{ '}' }});
 
-            wizard.nextStep();  // Auto-shows next fields
-            wizard.previousStep();
-          wizard.currentStep(); // Signal</code></pre>
+          await tree.$.myForm.wizard!.next();  // validates step, then advances
+          tree.$.myForm.wizard!.prev();
+          tree.$.myForm.wizard!.goTo('preferences');
+          tree.$.myForm.wizard!.canNext();     // Signal&lt;boolean&gt;
+          tree.$.myForm.wizard!.currentStep(); // Signal&lt;number&gt;</code></pre>
           <p class="hint">
             Angular 22 has no wizard support. You'd build step management
             manually.

@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/events",
-  "version": "12.1.0",
+  "version": "13.0.0",
   "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
   "license": "BUSL-1.1",
   "type": "module",
@@ -50,7 +50,8 @@
     "rxjs": "^7.0.0",
     "@nestjs/common": "^10.0.0 || ^11.0.0",
     "bullmq": "^5.0.0",
-    "reflect-metadata": "^0.1.13 || ^0.2.0"
+    "reflect-metadata": "^0.1.13 || ^0.2.0",
+    "@signaltree/core": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@nestjs/common": {

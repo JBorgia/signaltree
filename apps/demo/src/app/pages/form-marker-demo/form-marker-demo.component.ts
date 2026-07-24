@@ -1,7 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { form, FormSignal, signalTree, validators } from '@signaltree/core';
+import {
+  form,
+  FormSignal,
+  history,
+  signalTree,
+  validators,
+} from '@signaltree/core';
 import { formBridge } from '@signaltree/ng-forms';
 
 import {
@@ -20,6 +26,12 @@ interface ContactForm {
   email: string;
   phone: string;
   message: string;
+}
+
+interface ProfileDraft {
+  [key: string]: unknown;
+  name: string;
+  email: string;
 }
 
 interface ListingWizard {
@@ -54,9 +66,9 @@ interface ListingWizard {
 })
 export class FormMarkerDemoComponent {
   // Demo selection
-  activeDemo = signal<'basic' | 'wizard' | 'persistence' | 'angular-bridge'>(
-    'basic'
-  );
+  activeDemo = signal<
+    'basic' | 'wizard' | 'persistence' | 'history' | 'angular-bridge'
+  >('basic');
 
   // =============================================================================
   // DEMO 1: Basic Form with Validation
@@ -264,6 +276,21 @@ export class FormMarkerDemoComponent {
   }
 
   // =============================================================================
+  // DEMO 3.5: Undo/Redo History
+  // =============================================================================
+
+  historyStore = signalTree({
+    profile: form<ProfileDraft>({
+      initial: { name: '', email: '' },
+      history: history({ capacity: 20 }),
+    }),
+  });
+
+  get historyForm() {
+    return this.historyStore.$.profile as unknown as FormSignal<ProfileDraft>;
+  }
+
+  // =============================================================================
   // DEMO 4: Angular FormGroup Bridge
   // =============================================================================
 
@@ -431,6 +458,30 @@ tree.$.draft.persistNow();    // Force immediate save
 tree.$.draft.reload();        // Reload from storage
 tree.$.draft.clearStorage();  // Remove from storage`;
 
+  historyCode = `// Undo/redo history for a form() marker
+import { signalTree, form, history } from '@signaltree/core';
+
+const tree = signalTree({
+  profile: form({
+    initial: { name: '', email: '' },
+    history: history({ capacity: 20 }), // optional: exclude: ['ssn']
+  }),
+});
+
+// Every patch()/set()/$.field.set() call records a snapshot
+tree.$.profile.$.name.set('Ada');
+tree.$.profile.$.email.set('ada@example.com');
+
+// Undo/redo drive the marker's values signal directly
+tree.$.profile.history?.undo();          // reverts email, then name
+tree.$.profile.history?.redo();
+tree.$.profile.history?.clearHistory();  // drop past/future, keep present
+
+// Signals for wiring up UI
+tree.$.profile.history?.canUndo();       // Signal<boolean>
+tree.$.profile.history?.canRedo();       // Signal<boolean>
+tree.$.profile.history?.history();       // Signal<{ past, present, future }>`;
+
   formBridgeCode = `// Angular FormGroup Bridge
 // Use form() marker with formBridge() enhancer to get
 // Angular-compatible FormGroup instances
@@ -483,6 +534,9 @@ titleControl?.markAsTouched();`;
       language: 'typescript',
       source: this.persistenceCode,
     },
+  ];
+  historyFiles: CodeFile[] = [
+    { label: 'history.ts', language: 'typescript', source: this.historyCode },
   ];
   formBridgeFiles: CodeFile[] = [
     {

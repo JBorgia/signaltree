@@ -186,6 +186,28 @@ export {
   type AsyncValidator,
 } from './lib/markers/form';
 
+// `history()` — signal-native undo/redo for form() markers, and the
+// tree-shakeable way to add it: importing `form` WITHOUT `history` keeps the
+// snapshot/undo engine out of the bundle (security()/loader() precedent, RFC 0006).
+// Attaches to the marker's values signal, so it also drives a bound signalForm().
+export { history } from './lib/form-history/form-history';
+export type {
+  HistoryFeature,
+  FormHistoryApi,
+  FormHistoryOptions,
+  FormHistorySnapshot,
+} from './lib/types';
+
+// Audit tracker — framework-agnostic tree change logging (moved from
+// @signaltree/ng-forms in v13, RFC 0006). Tree-shakeable: unused → not bundled.
+export {
+  createAuditTracker,
+  createAuditCallback,
+  type AuditEntry,
+  type AuditMetadata,
+  type AuditTrackerConfig,
+} from './lib/audit/audit';
+
 // Async-source marker (v9.5) - load-and-expose async primitive
 // createAsyncSourceSignal moved to '@signaltree/core/authoring' in 11.6.0
 // (authoring-only factory, zero application consumers).

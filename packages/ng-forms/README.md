@@ -11,17 +11,22 @@ SignalTree provides a layered forms architecture:
 ```
 @signaltree/core                    @signaltree/ng-forms
 ┌─────────────────────────┐         ┌─────────────────────────┐
-│ form() marker           │         │ formBridge()      │
+│ form() marker           │         │ formBridge()            │
 │ ─────────────────────── │   ───►  │ enhancer that:          │
 │ • Signal-based fields   │         │ • Creates FormGroup     │
 │ • Sync/async validators │         │ • Bidirectional sync    │
 │ • Persistence           │         │ • Conditional fields    │
 │ • Wizard navigation     │         │ • Angular validators    │
-│ • dirty/valid/submitting│         │                         │
-└─────────────────────────┘         │ withFormHistory()       │
-     Works standalone!              │ • Undo/redo             │
-                                    └─────────────────────────┘
+│ • dirty/valid/submitting│         └─────────────────────────┘
+│ • history() undo/redo   │
+│   (v13+, on the marker) │
+└─────────────────────────┘
+     Works standalone!
 ```
+
+(`withFormHistory()` in `@signaltree/ng-forms` still exists but is
+`@deprecated` since v13 — scoped to the legacy `createFormTree()`/`FormGroup`
+substrate. See "Form history snapshots" below.)
 
 **Key insight**: `form()` is self-sufficient. `formBridge()` adds Angular-specific capabilities.
 
@@ -139,20 +144,27 @@ const formGroup = tree.getAngularForm('profile')?.formGroup;
 
 **Use when**: Need `[formGroup]` directives, Angular validators, conditional field disabling
 
-### form() + formBridge() + withFormHistory()
+### form() + history() — undo/redo (v13+; supersedes `withFormHistory`)
 
 ```typescript
-const tree = signalTree({
-  editor: form({ initial: { content: '' } }),
-})
-  .with(formBridge())
-  .with(withFormHistory({ capacity: 50 }));
+import { signalTree, form, history } from '@signaltree/core';
 
-tree.undo();
-tree.redo();
+const tree = signalTree({
+  editor: form<{ content: string }>({
+    initial: { content: '' },
+    history: history({ capacity: 50 }),
+  }),
+});
+
+tree.$.editor.history?.undo();
+tree.$.editor.history?.redo();
+tree.$.editor.history?.canUndo(); // Signal<boolean>
 ```
 
-**Use when**: Complex editors, need undo/redo
+**Use when**: Complex editors, need undo/redo. This is a `@signaltree/core`
+feature — `formBridge()`/ng-forms are not required — and it also drives a
+bound `signalForm()` Signal Forms field tree, which the legacy
+`withFormHistory()` (below) structurally cannot do.
 
 ## Installation
 
@@ -291,7 +303,7 @@ form.form.controls.user.controls.name.value;  // string
 - **Conditional fields**: Enable/disable controls based on dynamic predicates
 - **Persistence**: Keep form state in `localStorage`, IndexedDB, or custom storage with debounced writes
 - **Validation batching**: Aggregate touched/errors updates to avoid jitter in large forms
-- **Wizard & history helpers**: Higher-level APIs for multi-step flows and undo/redo stacks
+- **Legacy wizard & history helpers** (`createWizardForm`, `withFormHistory`, both `@deprecated` since v13): multi-step flows and undo/redo stacks for `createFormTree()`. For new code, prefer the `form()` marker's built-in `wizard` config and `@signaltree/core`'s `history()` — both `signalForm()`-compatible.
 - **Signal ↔ Observable bridge**: Convert signals to RxJS streams for interoperability
 - **Template-driven adapter**: `SignalValueDirective` bridges standalone signals with `ngModel`
 
@@ -418,15 +430,20 @@ const userForm = signalForm<{ name: string; email: string }>(tree, 'user', tree.
 Both call shapes of `signalForm()` are exported from `@signaltree/ng-forms/signals`
 and require Angular 22+.
 
-### Connecting to Reactive Forms
+### Bridging classic Reactive Forms
 
-```ts
-import { toWritableSignal } from '@signaltree/core';
+Angular has **no** `FormControl.connect(signal)` API — signal↔reactive interop
+is a separate, constructor-based primitive (`SignalFormControl`, Angular 21.2+).
+SignalTree gives you two supported paths instead:
 
-// Convert ng-forms signals to work with Angular's .connect()
-const nameSignal = toWritableSignal(formTree.$.user.name);
-reactiveControl.connect(nameSignal);
-```
+- **Classic `FormGroup`** backed by tree state — use `createFormTree` (or the
+  `formBridge()` enhancer on a `form()` marker). These build a real `FormGroup`
+  and keep it in sync with the tree.
+- **Angular Signal Forms `FieldTree`** — use `signalForm()` (the signal-native
+  path; Angular 22+).
+
+Reach for the second unless you must interoperate with existing classic
+Reactive Forms code.
 
 ## Form tree configuration
 
@@ -463,6 +480,39 @@ const checkout = createFormTree(initialState, {
 
 ## Wizard flows
 
+`createWizardForm` (below) is `@deprecated` since v13 — it's built on
+`createFormTree` (`FormGroup`) and has no `signalForm()` bridge. **Prefer the
+`form()` marker's built-in `wizard` config** (`@signaltree/core`), which is
+`signalForm()`-compatible:
+
+```typescript
+import { signalTree, form } from '@signaltree/core';
+
+interface SignupForm extends Record<string, unknown> {
+  email: string; password: string; firstName: string; lastName: string;
+}
+
+const tree = signalTree({
+  signup: form<SignupForm>({
+    initial: { email: '', password: '', firstName: '', lastName: '' },
+    wizard: {
+      steps: ['credentials', 'profile'],
+      stepFields: { credentials: ['email', 'password'], profile: ['firstName', 'lastName'] },
+      // Or per-step stepConfig: { credentials: { validate, canSkip } } for
+      // custom step validation/skip logic beyond field presence.
+    },
+  }),
+});
+
+await tree.$.signup.wizard!.next();  // validates the current step first
+tree.$.signup.wizard!.prev();
+await tree.$.signup.wizard!.goTo('profile');
+tree.$.signup.wizard!.currentStep(); // Signal<number>
+```
+
+The legacy `createFormTree`-based wizard (retained for existing
+`createFormTree` users, not removed):
+
 ```typescript
 import { createWizardForm, FormStep } from '@signaltree/ng-forms';
 
@@ -498,6 +548,11 @@ Wizard forms reuse the same `form` instance and `FormTree` helpers, adding `curr
 
 ## Form history snapshots
 
+`withFormHistory` (below) is `@deprecated` since v13 — scoped to the legacy
+`createFormTree` (`FormGroup`) substrate; it cannot attach to a `signalForm()`
+field tree. **Prefer `history()` from `@signaltree/core`** on the `form()`
+marker instead — see "form() + history()" above.
+
 ```typescript
 import { withFormHistory } from '@signaltree/ng-forms';
 
@@ -510,7 +565,7 @@ form.history(); // signal with { past, present, future }
 form.clearHistory();
 ```
 
-History tracking works at the FormGroup level so it plays nicely with external updates and preserved snapshots.
+History tracking works at the FormGroup level so it plays nicely with external updates and preserved snapshots. Retained for `createFormTree` users; will be removed with the legacy `FormGroup` bridge.
 
 ## Helpers and utilities
 
@@ -538,7 +593,7 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 | Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard)   |
 | Multi-step onboarding (5+ steps)           | ✅ **ng-forms** (wizard API)             |
 | Form with auto-save drafts                 | ✅ **ng-forms** (built-in persistence)   |
-| Complex editor with undo/redo              | ✅ **ng-forms** (history tracking)       |
+| Complex editor with undo/redo              | ✅ **core `history()`** on the `form()` marker (v13+; ng-forms `withFormHistory` is deprecated) |
 | Migrating from reactive forms              | ✅ **ng-forms** (FormGroup bridge)       |
 | Dynamic form with conditional fields       | ✅ **ng-forms** (conditionals config)    |
 | Form synced with global app state          | ✅ **ng-forms** (SignalTree integration) |

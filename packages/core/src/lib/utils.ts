@@ -107,7 +107,10 @@ export function isTraversableNode(value: unknown): value is object {
 
 /**
  * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
- * compatible with Angular's Signal Forms connect() API and other APIs that expect WritableSignal.
+ * for use with any API that expects a `WritableSignal` — e.g. as an Angular
+ * Signal Forms model, or the value fed to `SignalFormControl`. (Note: Angular
+ * has no `FormControl.connect(signal)` API — see `signalForm()` for the
+ * signal-native forms bridge.)
  *
  * Creates a two-way binding between the NodeAccessor and a WritableSignal:
  * - Reads all leaf values from the NodeAccessor and exposes them as a signal
@@ -129,12 +132,11 @@ export function isTraversableNode(value: unknown): value is object {
  *   user: { name: '', email: '' }
  * });
  *
- * // Convert slice to WritableSignal for Angular Signal Forms
+ * // Convert a slice to a WritableSignal (e.g. a Signal Forms model)
  * const userSignal = toWritableSignal(tree.$.user);
- * formControl.connect(userSignal); // ✅ Works with connect()
  *
  * // Leaves are already WritableSignal - no conversion needed
- * nameControl.connect(tree.$.user.name); // ✅ Already a WritableSignal
+ * const nameSignal = tree.$.user.name; // ✅ Already a WritableSignal
  * ```
  */
 export function toWritableSignal<T>(

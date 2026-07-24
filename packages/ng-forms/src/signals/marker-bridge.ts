@@ -16,6 +16,7 @@
  */
 
 import {
+  effect,
   inject,
   Injector,
   runInInjectionContext,
@@ -69,6 +70,13 @@ interface FormMarkerInternals<T extends Record<string, unknown>> {
     validators?: Partial<Record<string, MarkerValidator | MarkerValidator[]>>;
     asyncValidators?: Partial<Record<string, unknown>>;
   };
+  /**
+   * Present only when the marker was built with `history()`. Records a
+   * snapshot of the current values into the undo stack. We call it from an
+   * effect so edits made THROUGH the bound FieldTree (which writes the model
+   * signal directly, bypassing the marker's set/patch) are captured too.
+   */
+  __recordHistory?: () => void;
 }
 
 /** Options for the marker form of {@link signalForm}. */
@@ -264,5 +272,23 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
 
   // No sync-back needed: the marker's errors()/valid() are computed over the
   // same model signal, so FieldTree-side edits are reflected immediately.
+
+  // Undo/redo capture for FieldTree-origin edits. The marker's own
+  // set/patch/reset already record into the history stack, but Angular Signal
+  // Forms writes the model signal directly (bypassing those). This effect
+  // observes the shared model and records on every change; snapshots that
+  // duplicate the current present are deduped by the engine, so it composes
+  // with the marker-side recording and with undo/redo (which set `present`
+  // before restoring) without double-entries or feedback loops.
+  if (internals.__recordHistory) {
+    const record = internals.__recordHistory;
+    runInInjectionContext(injector, () => {
+      effect(() => {
+        model(); // track every model change, whatever the write source
+        record();
+      });
+    });
+  }
+
   return fieldTree;
 }

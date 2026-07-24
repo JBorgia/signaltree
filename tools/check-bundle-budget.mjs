@@ -56,6 +56,22 @@ const TARGETS = {
       globalThis.__sink = t.$.users.all();
     `,
   },
+  'signaltree-form': {
+    // v13 (RFC 0007): the form() marker WITHOUT history(). The history engine
+    // (snapshot buffer + undo/redo) is an injected feature carried only by the
+    // history() helper's closure, so a plain form() tree-shakes it out —
+    // measured 7.46KB gzip. A regression toward 8.2KB means a static reference
+    // to the history engine leaked onto the plain form() path. The
+    // forbidden-identifier assertion in scripts/verify-tree-shaking.js is the
+    // companion structural check.
+    budgetKB: 7.8,
+    code: `
+      import { signalTree, form } from ${JSON.stringify(CORE)};
+      const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });
+      t.$.p.patch({ name: 'a' });
+      globalThis.__sink = t.$.p();
+    `,
+  },
 };
 
 const EXTERNAL = ['@angular/*', 'rxjs', 'rxjs/*', 'tslib'];

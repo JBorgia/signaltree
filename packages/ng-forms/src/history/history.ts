@@ -20,8 +20,19 @@ export interface FormHistory<T> {
 }
 
 /**
- * Enhances a FormTree with undo/redo capabilities.
- * Provides form-specific history management with capacity limits and change tracking.
+ * Enhances a legacy `createFormTree` (Angular `FormGroup`) with undo/redo.
+ * Provides form-specific history management with capacity limits and change
+ * tracking, driven by the `FormGroup`'s `valueChanges` stream.
+ *
+ * @deprecated Since v13. This works only on the legacy `createFormTree`
+ * (`FormGroup`) substrate. For the `form()` marker — including anything bound
+ * with `signalForm()` — use the signal-native `history()` feature from
+ * `@signaltree/core` instead: `form({ history: history({ capacity, exclude }) })`.
+ * It attaches to the marker's values signal, so undo/redo drive BOTH the marker
+ * API and a bound Angular Signal Forms `FieldTree` from one engine, adds a
+ * security `exclude` for sensitive fields, and uses no RxJS. This legacy helper
+ * is retained for `createFormTree` users and will be removed when the legacy
+ * `FormGroup` bridge is (see RFC 0007).
  *
  * @param formTree - The form tree to enhance
  * @param options - Configuration options

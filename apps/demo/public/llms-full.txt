@@ -46,7 +46,7 @@ Requires Angular 20, 21, or 22 (see `peerDependencies` in `@signaltree/core`'s `
 
 ### Version → API availability
 
-All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). Check `node_modules/@signaltree/core/package.json` for the exact installed patch. If you are pinned to an older version, the features below do NOT exist yet — do not emit them:
+All `@signaltree/*` packages — including `@signaltree/shared` (internal-only, never imported directly; was at 9.2.x, aligned to the rest of the workspace as of 13.0.0) — publish in lockstep, currently on the **13.x** line. Check `node_modules/@signaltree/core/package.json` for the exact installed patch. If you are pinned to an older version, the features below do NOT exist yet — do not emit them:
 
 | Feature | Available from |
 |---|---|
@@ -65,6 +65,11 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`) + NG0600-safe deferred auto-load; `entityCollection` folded in | 11.4.0 (superseded the 11.3.0 `key`/`currentKey` shape, corrected same-day; the separate `entityCollection` marker was removed — its capability is now `entityMap({ load })`) |
 | `markerSignalForm()` / `signalFormBridge()` — Angular Signal Forms bridge (`@signaltree/ng-forms/signals`, Angular 22+) | 11.5.0 (both are **deprecated aliases** of `signalForm()` as of 11.6.0 — emit `signalForm`) |
 | `signalForm()` — one name for the Signal Forms bridge (marker overload + schema overload), with `nativeErrors` option (branded Angular Signal Forms errors); `withKind()` validator tagging; `entityMap` loader gains `loadOrThrow()`; `asReadonly()`/`ReadonlyStore` readonly views | 11.6.0 |
+| `entityMap({ load: fn })` raw-function form **removed** — wrap with `loader()` from `@signaltree/core` (**breaking**) | 12.0.0 |
+| `history()` — signal-native undo/redo for `form()` markers (`form({ history: history({ capacity, exclude }) })`); drives a bound `signalForm()` field tree from the same engine | 13.0.0 |
+| `createAuditTracker`/`createAuditCallback` + `AuditEntry`/`AuditMetadata`/`AuditTrackerConfig` types moved from `@signaltree/ng-forms` to `@signaltree/core` (**breaking** — canonical import path changed; old path still works, `@deprecated`) | 13.0.0 |
+| `entityEventHandler()` / `applyOptimisticEntityChange()` (`@signaltree/events/angular`) — batch events onto `entityMap` batch ops / derive optimistic-update rollback | 13.0.0 |
+| `withFormHistory` / `createWizardForm` (`@signaltree/ng-forms`) — **deprecated**, not removed; use core `history()` / the `form()` marker's `wizard` config instead | 13.0.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -445,6 +450,63 @@ await f.submit(async (values) => api.save(values)); // sets submitting, validate
 // Persistence (when persist key configured): f.persistNow() / f.reload() / f.clearStorage()
 ```
 
+### `history()` — undo/redo for `form()` markers (v13+, `@signaltree/core`)
+
+Signal-native undo/redo, attached via the `history` config key on `form()`:
+
+```typescript
+import { signalTree, form, history } from '@signaltree/core';
+
+const tree = signalTree({
+  profile: form<{ name: string; password: string }>({
+    initial: { name: '', password: '' },
+    history: history({ capacity: 20, exclude: ['password'] }),
+  }),
+});
+
+tree.$.profile.patch({ name: 'Ada' });
+tree.$.profile.history?.undo();      // name reverts; password untouched
+tree.$.profile.history?.redo();
+tree.$.profile.history?.canUndo();   // Signal<boolean>
+tree.$.profile.history?.canRedo();   // Signal<boolean>
+tree.$.profile.history?.history();   // Signal<{ past: T[]; present: T; future: T[] }>
+tree.$.profile.history?.clearHistory();
+```
+
+`FormHistoryOptions<T>`: `{ capacity?: number = 10; exclude?: (keyof T)[] }`.
+The materialized `history?` field on the `FormSignal` (`FormHistoryApi<T>`)
+only exists when `history()` was passed — it's `undefined` otherwise, hence
+the `?.` calls above.
+
+- **`exclude` is a security control, not just a filter.** Snapshots are
+  projected through `deepClone` + a per-excluded-key `delete` before
+  comparison or storage — an edit that touches ONLY an excluded field records
+  nothing, and an undo restores the projected snapshot merged over the live
+  values, so an excluded field keeps whatever it currently holds. A stripped
+  secret (e.g. `password`) can never be resurrected by undo.
+- **Drives a bound `signalForm()` field tree from the SAME engine.**
+  `history()` attaches to the form marker's values signal — the identical
+  signal `signalForm()` uses as its Angular Signal Forms `FieldTree` model
+  (`__model`). Undo/redo therefore move both the marker's own
+  `set`/`patch`/`reset`/`clear` API AND the bound `FieldTree` in one step. It
+  also captures edits made *through* the `FieldTree` (which writes the model
+  signal directly, bypassing the marker's mutators) via an `effect` the
+  ng-forms bridge runs over the shared model — overlap with mutator-side
+  recording is deduped by the engine's snapshot-equality guard, so there are
+  no double-entries or undo/redo feedback loops.
+- **Fails closed, not silently inert.** `form({ history: <raw object> })` —
+  anything that isn't `history()`'s branded return value — throws `[ST2006]`
+  synchronously at the `form()` call site.
+- **Tree-shakeable.** `form()` imports only the `HistoryFeature`/`FormHistoryApi`
+  *types* from the history module; the snapshot/undo engine's runtime code
+  (the closure `history()` returns) is the sole reference to it, so a bundle
+  that never calls `history()` doesn't pay for it — same injected-feature
+  shape as `security()`/`loader()`.
+- **Superseded, not replaced:** `withFormHistory` from `@signaltree/ng-forms`
+  is `@deprecated` since v13 (still functional, scoped to the legacy
+  `createFormTree`/`FormGroup` substrate, which structurally cannot attach to
+  a Signal Forms `FieldTree`).
+
 ### Angular Signal Forms bridge — `signalForm()` (`@signaltree/ng-forms/signals`, Angular 22+)
 
 **This is the Signal Forms story** (v11.6+; on 11.5.x the same capability shipped under the now-deprecated names `markerSignalForm`/`signalFormBridge`). `signalForm()` is one name with two overloads, one per validation source:
@@ -510,6 +572,43 @@ const userForm = signalForm<User>(tree, 'user', tree.$.user);
 ### Custom markers via `registerMarkerProcessor(spec)`
 
 You can register a custom marker processor. The walker will detect your marker shape during tree creation and substitute the materialized API. See `packages/core/src/lib/internals/materialize-markers.ts` for the registration shape.
+
+### Audit tracking — `createAuditTracker()` / `createAuditCallback()` (v13+, `@signaltree/core`)
+
+Framework-agnostic change logging for any `ISignalTree` — tree-shakeable
+(only bundled if imported):
+
+```typescript
+import { signalTree, createAuditTracker, AuditEntry } from '@signaltree/core';
+
+const tree = signalTree({ name: '', email: '' });
+const auditLog: AuditEntry<{ name: string; email: string }>[] = [];
+
+const stopTracking = createAuditTracker(tree, auditLog, {
+  getMetadata: () => ({ userId: currentUser.id, source: 'form-editor' }),
+  includePreviousValues: true, // adds AuditEntry.previousValues
+  filter: (changes) => 'name' in changes, // only audit `name` changes
+  maxEntries: 500, // 0 (default) = unlimited
+});
+
+tree.$.name.set('John');
+// auditLog: [{ timestamp, changes: { name: 'John' }, previousValues, metadata }]
+
+stopTracking(); // unsubscribe
+```
+
+Uses `tree.subscribe()` for zero-polling reactive tracking when available
+(falls back to a 100ms poll outside Angular contexts). `createAuditCallback(auditLog, getMetadata?)`
+is the lower-level primitive — a `(previousState, currentState) => void`
+callback shaped to pass directly to `tree.subscribe()`, for callers who want
+their own subscription lifecycle instead of `createAuditTracker`'s managed
+one.
+
+**Moved from `@signaltree/ng-forms` in v13** (RFC 0007): it never depended on
+`@angular/forms`, only on `@signaltree/shared`'s `getChanges` and the core
+tree type, so it's a within-tree mechanic, not a forms concern. The old
+`@signaltree/ng-forms/audit` import path still re-exports it, `@deprecated`
+— import from `@signaltree/core` in new code.
 
 ---
 
@@ -830,7 +929,7 @@ session.pullFromSource();
 | `@signaltree/callable-syntax` | Build-time `(value)` → `.set(value)` transform | Vite/Webpack plugin |
 | `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup`, with Standard Schema validation | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
 | `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
-| `@signaltree/events` | Standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — does NOT integrate with the signal tree | `createEventSchema()`, `EventBusModule` |
+| `@signaltree/events` | Primarily a standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — the bus itself does NOT integrate with the signal tree. Exception (v13+): `@signaltree/events/angular`'s `entityEventHandler`/`applyOptimisticEntityChange` bridge event batches onto `@signaltree/core`'s `entityMap` batch ops | `createEventSchema()`, `EventBusModule`, `entityEventHandler()` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
 | `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
 | `@signaltree/enterprise` | Diff-based `updateOptimized()` for very large trees | `optimized()` enhancer |

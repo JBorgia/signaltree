@@ -1,3 +1,87 @@
+## 13.0.0 (2026-07-24)
+
+> RFC 0007's packaging principle — *independent dependency/runtime → its own
+> package; a within-tree mechanic (needs only `@signaltree/core` +
+> `@signaltree/shared`) → core* — applied to two capabilities that were filed
+> under the wrong tree, plus a new signal-native undo/redo feature for
+> `form()` and an events↔`entityMap` bridge. Breaking because the
+> core↔ng-forms moves change canonical import paths.
+
+### Added
+
+- **`history()` (`@signaltree/core`) — signal-native undo/redo for `form()`
+  markers.** `form({ history: history({ capacity?: 10, exclude?: (keyof T)[] }) })`.
+  Materializes as `tree.$.myForm.history?` → `{ undo(), redo(), clearHistory(),
+  canUndo: Signal<boolean>, canRedo: Signal<boolean>, history: Signal<{ past,
+  present, future }> }`. Attaches to the marker's values signal — the same
+  signal `signalForm()` uses as its Angular Signal Forms `FieldTree` model —
+  so undo/redo drive BOTH the marker API and any bound Signal Forms field
+  tree from one engine, including edits made *through* the field tree.
+  `exclude` is a security feature: excluded fields never enter the snapshot
+  buffer and keep their live value across an undo (a stripped secret can
+  never be resurrected). A raw object passed as `history` (instead of
+  `history()`'s output) throws `[ST2006]` at the `form()` call site
+  (fail-closed, not a silent no-op). Injected-feature shape identical to
+  `security()`/`loader()` — tree-shakeable: a bundle that never imports
+  `history()` doesn't pay for the snapshot/undo engine (measured Δ ≈ 0.69KB
+  gzip for `form()` + `history()` vs `form()` alone).
+- **`entityEventHandler(entities, mapping)` (`@signaltree/events/angular`)** —
+  maps a *batch* of domain events onto `entityMap`'s batch mutation ops
+  (`upsertMany`/`updateMany`/`removeMany`), collapsing what used to be one
+  signal notification + one O(size) Map clone per event into a handful of
+  calls per batch. `mapping = { match?, upsert?, update?, remove?, selectId? }`.
+  Compose with `batchedHandler` to turn a live event stream into periodic
+  coalesced flushes. Coalescing rules (same-id touches fold in arrival order,
+  removal wins over upsert/update to the same id in the same batch,
+  structurally-identical `update` deltas collapse into one `updateMany` call)
+  are documented on the export.
+- **`applyOptimisticEntityChange(entities, id, change)` (`@signaltree/events/angular`)**
+  — applies an optimistic change to one entity in an `entityMap` collection
+  and derives the `rollback` closure automatically from the collection's
+  current entry (restore the prior entity, or remove it if the change was a
+  fresh optimistic create). Drops straight into
+  `OptimisticUpdateManager.apply()`'s `rollback` field — existing hand-written
+  closures keep working unchanged.
+
+### Changed
+
+- **`createAuditTracker`/`createAuditCallback` (+ `AuditEntry`/`AuditMetadata`/
+  `AuditTrackerConfig` types) moved from `@signaltree/ng-forms` to
+  `@signaltree/core`.** They never depended on `@angular/forms` — only on
+  `@signaltree/shared`'s `getChanges` and the core tree type — so they're a
+  within-tree mechanic per RFC 0007, not a forms concern. Import from
+  `@signaltree/core`. The old `@signaltree/ng-forms/audit` path still
+  re-exports them as a `@deprecated` back-compat shim.
+- **`OptimisticUpdateManager` (`@signaltree/events/angular`) is now O(n)**
+  instead of O(n²) for a burst of N pending updates — it mutates a private
+  `Map` in place and bumps a `signal<number>` version counter instead of
+  cloning the whole pending-updates `Map` on every apply/confirm/rollback.
+  Public API unchanged.
+
+### Deprecated
+
+- **`withFormHistory` (`@signaltree/ng-forms`)** — scoped to the legacy
+  `createFormTree` (`FormGroup`) substrate; structurally cannot attach to a
+  `signalForm()` `FieldTree`. Use `form({ history: history({ capacity,
+  exclude }) })` from `@signaltree/core` instead. Retained (not removed) for
+  `createFormTree` users; will be removed with the legacy `FormGroup` bridge.
+- **`createWizardForm` (`@signaltree/ng-forms`)** — built on `createFormTree`,
+  with no `signalForm()` bridge. Use the `form()` marker's built-in `wizard`
+  config (`{ steps, stepConfig: { name: { validate, canSkip } }, stepFields }`,
+  navigate via `tree.$.myForm.wizard!.next()`/`.prev()`/`.goTo()`), which is
+  `signalForm()`-compatible.
+
+### Docs
+
+- New RFC: [`docs/rfcs/0007-packaging-principle-and-ng-forms-reslice.md`](docs/rfcs/0007-packaging-principle-and-ng-forms-reslice.md)
+  — the governing packaging principle (independent dependency/runtime → own
+  package; within-tree mechanic → core) and the measured classification that
+  drove the `history`/`audit` moves.
+- New guide: [`docs/guides/migration-v12-v13.md`](docs/guides/migration-v12-v13.md).
+
+All packages bumped to **13.0.0** (`@signaltree/shared` was at 9.2.2; now
+aligned with the rest of the workspace).
+
 ## 12.1.0 (2026-07-24)
 
 ### Added

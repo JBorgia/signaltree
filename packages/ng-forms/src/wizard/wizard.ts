@@ -21,8 +21,17 @@ export interface FormStep<T extends Record<string, unknown>> {
 }
 
 /**
- * Creates a wizard form with multi-step navigation.
- * Manages step visibility, navigation, and per-step validation.
+ * Creates a wizard form with multi-step navigation on the legacy
+ * `createFormTree` (`FormGroup`) substrate.
+ *
+ * @deprecated Since v13. Use the `form()` marker's built-in `wizard` config
+ * instead — it is feature-equivalent (per-step `validate` and `canSkip` via
+ * `WizardStepConfig`) and, because it rides on the marker, is
+ * `signalForm()`-compatible: navigate with `tree.$.myForm.wizard!.next()` /
+ * `.prev()` / `.goTo()` while a bound Angular Signal Forms `FieldTree` shows
+ * the same values. This legacy helper only drives a `createFormTree` and will
+ * be removed with the legacy `FormGroup` bridge (RFC 0007). Migration:
+ * `form({ initial, wizard: { steps: [...], stepConfig: { step1: { validate, canSkip } }, stepFields: {...} } })`.
  *
  * @param steps - Array of form steps defining fields and validation
  * @param initialValues - Initial form values

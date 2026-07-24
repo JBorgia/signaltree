@@ -476,6 +476,68 @@ export interface LoaderFeature<E, P = void> {
   readonly __params?: P;
 }
 
+/** Options for the {@link HistoryFeature} produced by `history()`. */
+export interface FormHistoryOptions<T> {
+  /** Maximum number of past entries retained (default: 10). */
+  capacity?: number;
+  /**
+   * Fields that are NEVER written to the history buffer (e.g. `password`,
+   * `ssn`). Excluded fields keep their live value across undo/redo — they are
+   * never cloned into the snapshot stack, so secrets do not linger in memory
+   * or leak through devtools/serialization. This is the security escape hatch
+   * that the legacy `withFormHistory` lacked.
+   */
+  exclude?: (keyof T)[];
+}
+
+/** Immutable undo/redo state exposed by {@link FormHistoryApi.history}. */
+export interface FormHistorySnapshot<T> {
+  past: T[];
+  present: T;
+  future: T[];
+}
+
+/**
+ * Undo/redo surface attached to a `form()` marker when `history()` is
+ * configured. Because history rides on the marker's values signal — the same
+ * signal `signalForm()` uses as its `FieldTree` model — undo/redo drive BOTH
+ * the marker API and any bound Angular Signal Forms field from one engine.
+ */
+export interface FormHistoryApi<T> {
+  /** Revert to the previous recorded state (no-op if none). */
+  undo(): void;
+  /** Re-apply the next state after an undo (no-op if none). */
+  redo(): void;
+  /** Drop past/future, keeping the current values as the only present. */
+  clearHistory(): void;
+  canUndo: Signal<boolean>;
+  canRedo: Signal<boolean>;
+  history: Signal<FormHistorySnapshot<T>>;
+}
+
+/**
+ * Branded form-history feature produced by the `history()` helper and passed
+ * as the `history` option of a `form()` marker: `form({ history: history() })`.
+ *
+ * Exact `security()`/`loader()` precedent: the helper closure is the *only*
+ * reference to the history engine (snapshot buffer, deep-clone, undo/redo), so
+ * importing `form` without `history` tree-shakes the engine out of the bundle.
+ * A raw (non-branded) value on `history` fails closed at the `form()` call site.
+ */
+export interface HistoryFeature<T extends Record<string, unknown>> {
+  readonly __signalTreeFormHistory: true;
+  /**
+   * @internal Bind the engine to a form marker's value funnel. `read` returns
+   * the live values; `write` applies a restored snapshot through the form
+   * (merged, so excluded fields survive). Returns the public api plus a
+   * `record()` hook the marker calls after each mutation.
+   */
+  attach(ctx: { read: () => T; write: (next: Partial<T>) => void }): {
+    api: FormHistoryApi<T>;
+    record: () => void;
+  };
+}
+
 // ============================================
 // FEATURE TYPES
 // ============================================
