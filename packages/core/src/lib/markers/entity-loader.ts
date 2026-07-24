@@ -357,6 +357,17 @@ export function attachLoader<
     const p = persist;
     if (!p || !scoped || p.maxScopes === undefined) return;
     const max = p.maxScopes;
+    // Runtime safety net (prod builds strip the dev-throw in loader()): an
+    // invalid maxScopes must NOT run GC — a value < 1 would evict every scope
+    // on each write-through and silently wipe the persisted cache. Treat any
+    // non-positive-integer as "no GC" (identical to leaving maxScopes unset),
+    // the safe default. The loader() factory still throws on it in dev.
+    // Runtime safety net (prod builds strip the dev-throw in loader()): an
+    // invalid maxScopes must NOT run GC — a value < 1 would evict every scope
+    // on each write-through and silently wipe the persisted cache. Treat any
+    // non-positive-integer as "no GC" (identical to leaving maxScopes unset),
+    // the safe default. The loader() factory still throws on it in dev.
+    if (!Number.isInteger(max) || max < 1) return;
     const indexKey = `${p.key}::__scopes`;
     try {
       void Promise.resolve(p.adapter.getItem(indexKey))

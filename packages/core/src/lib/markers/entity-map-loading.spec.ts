@@ -690,6 +690,30 @@ describe('persist.maxScopes — persisted-scope GC (scoped collections)', () => 
     expect(() => gcTree(adapter, 2.5)).toThrow(/maxScopes/);
   });
 
+  it('runtime safety net: an invalid maxScopes in a PROD build runs NO GC (never evicts)', async () => {
+    // Prod builds strip the dev-throw above (ngDevMode false). The runtime
+    // guard in touchScopeIndex must then treat maxScopes < 1 as "no GC" so a
+    // bad value can't silently wipe the persisted cache on every write.
+    const prev = (globalThis as { ngDevMode?: unknown }).ngDevMode;
+    (globalThis as { ngDevMode?: unknown }).ngDevMode = false;
+    try {
+      const { store, adapter } = inspectableAdapter();
+      const tree = gcTree(adapter, 0); // no dev-throw now
+      for (const region of ['r1', 'r2', 'r3']) {
+        await tree.$.customers.load({ region });
+        await flush();
+      }
+      // No eviction: all three scope entries retained, and no index written
+      // (touchScopeIndex bailed before touching the adapter).
+      expect(store.has(scopeKey('r1'))).toBe(true);
+      expect(store.has(scopeKey('r2'))).toBe(true);
+      expect(store.has(scopeKey('r3'))).toBe(true);
+      expect(store.has(INDEX_KEY)).toBe(false);
+    } finally {
+      (globalThis as { ngDevMode?: unknown }).ngDevMode = prev;
+    }
+  });
+
   it('global (parameterless) collections ignore maxScopes — single entry, no index', async () => {
     const { store, adapter } = inspectableAdapter();
     const tree = signalTree({
