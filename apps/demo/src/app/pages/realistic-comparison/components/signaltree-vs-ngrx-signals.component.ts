@@ -157,7 +157,7 @@ interface DeepNestedState {
             <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
               <li><strong>READ</strong> — derived state via Angular <code>computed()</code>; no separate memoization layer needed</li>
               <li><strong>WRITE</strong> — Ops services: direct mutation + async only</li>
-              <li><strong>REACT</strong> — <code>tree.effect()</code> via <code>.with(effects())</code>: state changes are events</li>
+              <li><strong>REACT</strong> — native Angular <code>effect(() =&gt; tree.$.path())</code>: reads drive reactions</li>
               <li>One tree, all domains — no per-feature store files</li>
               <li>Change detection batched via <code>batching()</code> enhancer</li>
             </ul>

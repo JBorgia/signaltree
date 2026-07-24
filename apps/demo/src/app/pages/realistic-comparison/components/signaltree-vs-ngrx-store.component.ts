@@ -150,7 +150,7 @@ interface BenchmarkResult {
             <ul>
               <li><strong>READ</strong> — all computed via <code>.derived()</code> on the tree</li>
               <li><strong>WRITE</strong> — Ops services: mutations + async only</li>
-              <li><strong>REACT</strong> — <code>tree.effect()</code> via <code>.with(effects())</code>: state changes are events</li>
+              <li><strong>REACT</strong> — native Angular <code>effect(() =&gt; tree.$.path())</code>: reads drive reactions</li>
               <li>Granular reactivity per path</li>
               <li>Change detection batched via <code>batching()</code></li>
               <li>Derived state via Angular <code>computed()</code> directly</li>
