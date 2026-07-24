@@ -88,6 +88,30 @@ export type EntityPersist =
        * scope. Default: `false` (write-through cache only).
        */
       hydrateThenRevalidate?: boolean;
+      /**
+       * Storage garbage collection for **scoped** collections (a loader that
+       * declares a params argument). Each scope persists under its own storage
+       * key (`key::<stableStringify(params)>`), so high-cardinality scopes —
+       * tenants, customers, searches — accumulate entries forever by default.
+       *
+       * When set, the loader maintains a touch-ordered index of persisted
+       * scope keys under `` `${key}::__scopes` `` (JSON array, most-recent
+       * last). Every successful write-through moves the current scope to the
+       * index tail; once the index exceeds `maxScopes`, the oldest scopes are
+       * dropped from the index and their storage entries removed via
+       * `adapter.removeItem`. Same best-effort posture as write-through
+       * itself: adapter failures never break the load path, and a pruned
+       * scope simply misses hydration and loads fresh on its next visit.
+       *
+       * Unset (default) = no GC, exactly the previous behavior — the
+       * application owns cleanup (see `docs/guides/persistence-guide.md`,
+       * "Persisted-scope cleanup"). Ignored on global (parameterless)
+       * collections, which persist a single entry under `key`.
+       *
+       * This is storage GC only — in-memory multi-scope LRU *caching* remains
+       * deferred (RFC 0003 §5); the in-memory cache is still single-scope.
+       */
+      maxScopes?: number;
     };
 
 /**
@@ -321,6 +345,58 @@ export function attachLoader<
     return scoped ? `${base}::${stableStringify(params)}` : base;
   };
 
+  /**
+   * Persisted-scope GC (see {@link EntityPersist.maxScopes}). Upserts the
+   * scope's storage key at the MRU tail of the `${key}::__scopes` index and
+   * evicts (index slot + `removeItem`) the oldest entries beyond `maxScopes`.
+   * Fire-and-forget with the same best-effort posture as `writeThrough`: any
+   * adapter failure — sync throw or rejected promise — is swallowed and never
+   * breaks (or delays) the load path.
+   */
+  function touchScopeIndex(storageKey: string): void {
+    const p = persist;
+    if (!p || !scoped || p.maxScopes === undefined) return;
+    const max = p.maxScopes;
+    const indexKey = `${p.key}::__scopes`;
+    try {
+      void Promise.resolve(p.adapter.getItem(indexKey))
+        .then((raw) => {
+          let index: string[] = [];
+          if (raw != null) {
+            try {
+              const parsed = JSON.parse(raw) as unknown;
+              if (Array.isArray(parsed)) {
+                index = parsed.filter((k): k is string => typeof k === 'string');
+              }
+            } catch {
+              // Corrupt index: rebuild from scratch (entries orphaned by the
+              // corruption are unreachable to GC but harmless — app-level
+              // cleanup by `key::` prefix still applies).
+            }
+          }
+          const at = index.indexOf(storageKey);
+          if (at !== -1) index.splice(at, 1);
+          index.push(storageKey);
+          while (index.length > max) {
+            const evicted = index.shift() as string;
+            try {
+              void Promise.resolve(p.adapter.removeItem(evicted)).catch(
+                () => undefined
+              );
+            } catch {
+              // Best-effort eviction; the index slot is dropped regardless.
+            }
+          }
+          return Promise.resolve(
+            p.adapter.setItem(indexKey, JSON.stringify(index))
+          );
+        })
+        .catch(() => undefined);
+    } catch {
+      // Persistence is best-effort; never let a storage failure break loads.
+    }
+  }
+
   function isStale(params: P): boolean {
     if (lastLoadedAtSignal() === null) return true;
     if (invalidated()) return true;
@@ -331,14 +407,13 @@ export function attachLoader<
 
   function writeThrough(params: P): void {
     if (!persist) return;
+    const storageKey = scopeStorageKey(params);
     try {
-      void persist.adapter.setItem(
-        scopeStorageKey(params),
-        JSON.stringify(entity.all())
-      );
+      void persist.adapter.setItem(storageKey, JSON.stringify(entity.all()));
     } catch {
       // Persistence is best-effort; never let a storage failure break loads.
     }
+    touchScopeIndex(storageKey);
   }
 
   function seedFromSnapshot(raw: string | null): void {

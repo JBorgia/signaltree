@@ -128,11 +128,35 @@ load path.
 
 ## Persisted-scope cleanup (high-cardinality scopes)
 
-A scoped `entityMap` with `loader({ persist })` writes one storage entry per scope
-(`key::<stableStringify(params)>`) and never garbage-collects old scopes —
-an app cycling through thousands of tenant/customer/search scopes will
-accumulate entries. Until a built-in GC policy ships (tracked alongside the
-RFC 0003 §5 multi-scope LRU deferral), applications should periodically
-clear stale entries themselves (e.g. enumerate adapter keys by the `key::`
-prefix and delete those not touched recently, or version the `persist.key`
-prefix and drop old versions on startup).
+A scoped `entityMap` with `loader({ persist })` writes one storage entry per
+scope (`key::<stableStringify(params)>`). Left alone, an app cycling through
+thousands of tenant/customer/search scopes accumulates entries forever. Set
+`persist.maxScopes` to cap them:
+
+```typescript
+load: loader(({ tenantId }) => api.customers(tenantId), {
+  persist: {
+    adapter: createIndexedDBAdapter(),
+    key: 'customers',
+    hydrateThenRevalidate: true,
+    maxScopes: 20, // keep the 20 most-recently written scopes
+  },
+}),
+```
+
+The loader maintains a touch-ordered index of persisted scope keys under
+`key::__scopes` (a JSON array, most-recent last). Every successful
+write-through moves the current scope to the tail; once the index exceeds
+`maxScopes`, the oldest scopes' storage entries are removed. Like write-through
+itself this is best-effort — an adapter failure never breaks (or delays) the
+load path — and it is **storage GC only**: a pruned scope simply misses
+hydration and loads fresh on its next visit. The in-memory cache is unaffected
+and still single-scope; a multi-scope in-memory LRU remains explicitly
+deferred (RFC 0003 §5).
+
+**When you need a custom policy** (time-based expiry, per-user quotas, keys
+shared across trees), leave `maxScopes` unset — the `key::__scopes` index is
+then never written, and nothing is ever removed. Manage cleanup yourself:
+enumerate adapter keys by the `key::` prefix and delete entries not touched
+recently, or version the `persist.key` prefix and drop old versions on
+startup.

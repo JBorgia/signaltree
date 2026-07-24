@@ -560,6 +560,155 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
   });
 });
 
+describe('persist.maxScopes — persisted-scope GC (scoped collections)', () => {
+  const INDEX_KEY = 'cust::__scopes';
+  const scopeKey = (region: string) =>
+    `cust::${stableStringify({ region })}`;
+
+  function inspectableAdapter() {
+    const store = new Map<string, string>();
+    const adapter: EntityStorageAdapter = {
+      getItem: (k) => store.get(k) ?? null,
+      setItem: (k, v) => {
+        store.set(k, v);
+      },
+      removeItem: (k) => {
+        store.delete(k);
+      },
+    };
+    return { store, adapter };
+  }
+
+  function gcTree(adapter: EntityStorageAdapter, maxScopes?: number) {
+    return signalTree({
+      customers: entityMap<Cust, string, Scope>({
+        load: loader((_s) => of(WEST), {
+          persist: { adapter, key: 'cust', maxScopes },
+        }),
+        selectId: custId,
+      }),
+    });
+  }
+
+  // The index maintenance is fire-and-forget (adapter ops may be async), so
+  // settle its microtask chain after each load before inspecting the store.
+  async function flush(): Promise<void> {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  }
+
+  it('cycling through maxScopes+2 scopes keeps exactly maxScopes entries + the index; oldest evicted', async () => {
+    const { store, adapter } = inspectableAdapter();
+    const tree = gcTree(adapter, 2);
+    for (const region of ['r1', 'r2', 'r3', 'r4']) {
+      await tree.$.customers.load({ region });
+      await flush();
+    }
+    expect(store.has(scopeKey('r1'))).toBe(false); // evicted
+    expect(store.has(scopeKey('r2'))).toBe(false); // evicted
+    expect(store.get(scopeKey('r3'))).toBe(JSON.stringify(WEST));
+    expect(store.get(scopeKey('r4'))).toBe(JSON.stringify(WEST));
+    expect(store.get(INDEX_KEY)).toBe(
+      JSON.stringify([scopeKey('r3'), scopeKey('r4')])
+    );
+    expect(store.size).toBe(3); // maxScopes entries + the index itself
+  });
+
+  it('re-touching an old scope moves it to MRU — not evicted next', async () => {
+    const { store, adapter } = inspectableAdapter();
+    const tree = gcTree(adapter, 2);
+    await tree.$.customers.load({ region: 'r1' });
+    await flush();
+    await tree.$.customers.load({ region: 'r2' });
+    await flush();
+    // Re-touch r1 (scope change → refetch → write-through → index upsert).
+    await tree.$.customers.load({ region: 'r1' });
+    await flush();
+    expect(store.get(INDEX_KEY)).toBe(
+      JSON.stringify([scopeKey('r2'), scopeKey('r1')])
+    );
+    // r3 must now evict r2 (LRU), not the re-touched r1.
+    await tree.$.customers.load({ region: 'r3' });
+    await flush();
+    expect(store.has(scopeKey('r2'))).toBe(false);
+    expect(store.has(scopeKey('r1'))).toBe(true);
+    expect(store.get(INDEX_KEY)).toBe(
+      JSON.stringify([scopeKey('r1'), scopeKey('r3')])
+    );
+  });
+
+  it('unset maxScopes: never writes the index key, never removes (current behavior)', async () => {
+    const { store, adapter } = inspectableAdapter();
+    const removeSpy = vi.spyOn(adapter, 'removeItem');
+    const tree = gcTree(adapter, undefined);
+    for (const region of ['r1', 'r2', 'r3', 'r4']) {
+      await tree.$.customers.load({ region });
+      await flush();
+    }
+    expect(store.has(INDEX_KEY)).toBe(false);
+    expect(removeSpy).not.toHaveBeenCalled();
+    expect(store.size).toBe(4); // all scope entries kept
+  });
+
+  it('eviction removeItem failures are best-effort — the load still resolves', async () => {
+    const { store, adapter } = inspectableAdapter();
+    adapter.removeItem = () => Promise.reject(new Error('quota'));
+    const tree = gcTree(adapter, 1);
+    await tree.$.customers.load({ region: 'r1' });
+    await flush();
+    // r2 triggers an eviction whose removeItem rejects — must not surface.
+    await expect(
+      tree.$.customers.load({ region: 'r2' })
+    ).resolves.toBeUndefined();
+    await flush();
+    expect(tree.$.customers.all()).toEqual(WEST);
+    expect(tree.$.customers.error()).toBeNull();
+    // Index still pruned (slot dropped) even though the entry lingers.
+    expect(store.get(INDEX_KEY)).toBe(JSON.stringify([scopeKey('r2')]));
+  });
+
+  it('synchronously-throwing removeItem is equally best-effort', async () => {
+    const { store, adapter } = inspectableAdapter();
+    adapter.removeItem = () => {
+      throw new Error('nope');
+    };
+    const tree = gcTree(adapter, 1);
+    await tree.$.customers.load({ region: 'r1' });
+    await flush();
+    await expect(
+      tree.$.customers.load({ region: 'r2' })
+    ).resolves.toBeUndefined();
+    await flush();
+    expect(store.get(INDEX_KEY)).toBe(JSON.stringify([scopeKey('r2')]));
+  });
+
+  it('fails closed at the loader() call site on a non-positive-integer maxScopes (dev)', () => {
+    // Validated in the loader() factory, NOT at attach time: the marker
+    // materializer swallows processor throws, so an attach-time throw
+    // would not actually fail closed (same reasoning as [ST2004]).
+    const { adapter } = inspectableAdapter();
+    expect(() => gcTree(adapter, 0)).toThrow(/maxScopes/);
+    expect(() => gcTree(adapter, 2.5)).toThrow(/maxScopes/);
+  });
+
+  it('global (parameterless) collections ignore maxScopes — single entry, no index', async () => {
+    const { store, adapter } = inspectableAdapter();
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1]), {
+          lazy: true,
+          persist: { adapter, key: 'plants', maxScopes: 2 },
+        }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    await flush();
+    expect(store.get('plants')).toBe(JSON.stringify([P1]));
+    expect(store.has('plants::__scopes')).toBe(false);
+    expect(store.size).toBe(1);
+  });
+});
+
 describe('loader teardown (materializing injector destroyed)', () => {
   // Pins the RFC 0005 §6 claim that removing the `takeUntilDestroyed` pipe
   // lost nothing: the loader's `DestroyRef.onDestroy` hook unsubscribes the
