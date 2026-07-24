@@ -118,6 +118,17 @@ function createSelection<T>(): SelectionSignal<T> {
 // =============================================================================
 // Register marker processors to embed custom signals directly in SignalTree.
 // ⚠️ CRITICAL: Register BEFORE any signalTree() call that uses these markers!
+//
+// Authoring landmines these materializers deliberately respect (see
+// docs/guides/custom-markers-enhancers.md → "Authoring Markers: The Five
+// Landmines"):
+//   • NG0600 — createCounter/createSelection seed signals via their INITIAL
+//     value; they never .set() synchronously at materialize time. Markers
+//     finalize lazily (often during a template read), so a synchronous write
+//     would throw NG0600 mid-render.
+//   • Validate in the FACTORY — materializeMarkers() wraps create() in a
+//     try/catch that swallows throws, so any config validation belongs in the
+//     marker factory (counter()/selection()), not the materializer.
 
 // --- Counter Marker ---
 const COUNTER_MARKER = Symbol('COUNTER_MARKER');

@@ -401,8 +401,19 @@
         <h4>Markers</h4>
         <ul>
           <li>Use <code>Symbol()</code> for unique identification</li>
-          <li>Keep materializers pure - no side effects</li>
-          <li>Register processors once at app startup</li>
+          <li>
+            Keep materializers pure — never <code>.set()</code> a signal
+            synchronously (NG0600); seed via the initial value and defer loads
+            to <code>queueMicrotask</code>
+          </li>
+          <li>
+            Validate config in the <strong>factory</strong>, not the
+            materializer (materializer throws are swallowed)
+          </li>
+          <li>
+            Self-register in the factory, or register once
+            <strong>before any <code>signalTree()</code></strong> call
+          </li>
           <li>Provide <code>reset()</code> for easy state clearing</li>
           <li>Use computed signals for derived state</li>
         </ul>

@@ -8,6 +8,7 @@ SignalTree is designed for extensibility. You can create your own **markers** (s
 - [Two Patterns for Custom Signals](#two-patterns-for-custom-signals)
 - [Built-in Markers](#built-in-markers)
 - [Built-in Enhancers](#built-in-enhancers)
+- [Authoring Markers: The Five Landmines](#authoring-markers-the-five-landmines)
 - [Creating Custom Markers](#creating-custom-markers)
 - [Creating Custom Enhancers](#creating-custom-enhancers)
 - [Advanced Patterns](#advanced-patterns)
@@ -30,7 +31,7 @@ const tree = signalTree({
 });
 
 // After finalization, you get rich APIs:
-tree.$.users.set({ id: 1, name: 'Alice' });
+tree.$.users.addOne({ id: 1, name: 'Alice' });
 tree.$.loadingStatus.setLoading();
 tree.$.theme.set('dark'); // Auto-saves to localStorage
 ```
@@ -40,16 +41,21 @@ tree.$.theme.set('dark'); // Auto-saves to localStorage
 **Enhancers** are functions that augment your tree with additional methods, signals, or behavior. They're applied via `.with()`:
 
 ```typescript
+import { effect } from '@angular/core';
+
 const tree = signalTree({ count: 0 })
   .with(devTools({ treeName: 'MyApp' }))
-  .with(batching())
-  .with(effects());
+  .with(batching());
 
-// Now tree has devtools, batching, and effects capabilities
+// Now the tree has devtools + batching capabilities
 tree.batch(() => {
   /* batched updates */
 });
-tree.effect((state) => console.log(state));
+
+// Reactivity uses Angular's native effect(). A SignalTree is made of ordinary
+// signals, so there is no effects() enhancer — it was removed in v12 (use
+// effect(() => tree.$.path()) for correct injection-context handling).
+effect(() => console.log(tree.$.count()));
 ```
 
 ---
@@ -233,10 +239,10 @@ const tree = signalTree({
 });
 
 // Materialized API:
-tree.$.users.set({ id: 1, name: 'Alice' });
+tree.$.users.addOne({ id: 1, name: 'Alice' });
 tree.$.users.byId(1)?.name(); // 'Alice'
 tree.$.users.all(); // [{ id: 1, name: 'Alice' }]
-tree.$.users.delete(1);
+tree.$.users.removeOne(1);
 ```
 
 ### status()
@@ -250,7 +256,7 @@ const tree = signalTree({
 
 // Materialized API:
 tree.$.fetchStatus.setLoading();
-tree.$.fetchStatus.isLoading(); // true
+tree.$.fetchStatus.loading(); // true
 tree.$.fetchStatus.setLoaded();
 tree.$.fetchStatus.setError(new Error('Failed'));
 tree.$.fetchStatus.error(); // Error object
@@ -281,15 +287,159 @@ tree.$.theme.reload(); // Re-reads from localStorage
 | ----------------- | -------------------------- | ----------------------------------------------- |
 | `devTools()`      | Redux DevTools integration | `connectDevTools()`, `disconnectDevTools()`     |
 | `batching()`      | Batch CD notifications     | `batch()`, `coalesce()`, `flushNotifications()` |
-| `effects()`       | Reactive effects           | `effect()`, `subscribe()`                       |
 | `serialization()` | JSON export/import         | `toJSON()`, `fromJSON()`                        |
 | `timeTravel()`    | Undo/redo history          | `undo()`, `redo()`, `history`                   |
+
+> **No `effects()` enhancer.** It was removed in v12. A SignalTree is made of ordinary Angular signals, so use the native `effect(() => tree.$.path())` — it handles the injection context correctly and avoids the NG0203 footgun. There is no `tree.effect()` / `tree.subscribe()`.
+
+---
+
+## Authoring Markers: The Five Landmines
+
+Before you write a marker, read these. Every one of them is a real bug that bit a **built-in** marker — the mechanism is forgiving right up until it isn't, and the failures are the invisible kind (green in build/typecheck, green in specs that never render, wrong in production). Each landmine below is stated as: the trap, why it bites, the correct pattern, and a short example.
+
+### 1. Never write a signal synchronously in your materializer (NG0600)
+
+**The trap.** Your materializer calls `someSignal.set(...)` (or auto-loads, or seeds from storage) while building the materialized shape.
+
+**Why it bites.** SignalTree finalizes markers **lazily, on first `tree.$` access** — which is frequently a template read *during Angular's render pass*. A signal write there throws `NG0600: Writing to signals is not allowed while Angular renders`, and every binding after the throw stays blank. This is not hypothetical: `form({ persist })` hydrated a saved draft with a synchronous `valuesSignal.set()` in the factory — invisible to every fresh-browser test (empty storage skipped the write), but a returning user's form threw on first render (CHANGELOG 11.5.0). The non-lazy `entityMap` loader and `asyncSource` auto-load had the same class of bug and now defer to a microtask (CHANGELOG 11.4.0). See `packages/core/src/lib/markers/form.ts:350-369` (hydrate via the signal's *initial value*, a pure read) and `packages/core/src/lib/markers/entity-loader.ts:597-624` (`queueMicrotask(kickoff)`).
+
+**The correct pattern.** Seed via the signal's **initial value** (a pure read), keep derived state in `computed()`, and defer any load/seed/auto-start to `queueMicrotask`.
+
+```ts wrong
+import { signal } from '@angular/core';
+
+// ❌ Throws NG0600 when the first read happens inside a template.
+function createRangeSignal(marker: { defaultValue: number }) {
+  const value = signal(0);
+  value.set(marker.defaultValue); // synchronous write at materialize time
+  return Object.assign(() => value(), { value });
+}
+```
+
+```typescript
+import { signal, computed } from '@angular/core';
+
+// ✅ Seed from the initial value; keep derived state computed; defer any load.
+function createRangeSignal(marker: { defaultValue: number }) {
+  const value = signal(marker.defaultValue); // initial value — no write
+  const doubled = computed(() => value() * 2); // derived — not written
+  queueMicrotask(() => value.set(marker.defaultValue)); // deferred, if you must
+  return Object.assign(() => value(), { value, doubled });
+}
+```
+
+### 2. Validate in the FACTORY, not the materializer
+
+**The trap.** You throw from your materializer to reject bad configuration ("loud failure").
+
+**Why it bites.** `materializeMarkers()` wraps `processor.create()` in a `try/catch` that **swallows the throw** — dev logs a `console.error`, production silently degrades (the marker placeholder is simply left un-materialized) — see `packages/core/src/lib/internals/materialize-markers.ts:247-267`. So a "must fail loudly" validation becomes a fail-*open* no-op. The built-ins learned this: `entityMap({ load })` validates that `load` is a `loader()` feature synchronously **in the factory** with a coded `[ST2004]` throw (`packages/core/src/lib/markers/entity-map.ts:231-246`), and `loader()` validates `persist.maxScopes` **in the factory** (`packages/core/src/lib/markers/loader.ts:74-89`) — both with an explicit comment that a materializer-level throw "would not actually fail closed" (RFC 0005 §6/§7).
+
+**The correct pattern.** Do config validation in the **factory function**, which runs at `signalTree({ ... })` definition time and cannot be swallowed. Give the error a stable code (see landmine 5).
+
+```ts wrong
+// ❌ Swallowed by materializeMarkers()'s try/catch — fails OPEN in prod.
+function createRangeSignal(marker: { min: number; max: number }) {
+  if (marker.min > marker.max) throw new Error('bad range');
+  // ...
+}
+```
+
+```typescript
+const RANGE_MARKER = Symbol('RANGE_MARKER');
+
+// ✅ Validate in the factory — runs at signalTree() definition, cannot be swallowed.
+export function range(min: number, max: number) {
+  if (min > max) {
+    throw new Error(`[ST9001] range(): min (${min}) must be <= max (${max}).`);
+  }
+  return { [RANGE_MARKER]: true, min, max };
+}
+```
+
+### 3. Materialize into a walkable shape (the callable-node contract)
+
+**The trap.** You materialize into a bespoke callable (a function you hang methods on), or you nest accessors in a shape the framework doesn't recognize.
+
+**Why it bites.** Every tree walker — batching's setter interception, `serialization()`, `invalidateTag()`, the enterprise diff/patch engine, and `materializeMarkers()` itself — decides "should I keep walking?" with `isTraversableNode` (object **or** function) and then classifies with `isNodeAccessor` / `isSignal` (`packages/core/src/lib/utils.ts:71-106`). NodeAccessors and leaf signals are `typeof 'function'` **carrying a brand** (Angular's `SIGNAL`, or `Symbol.for('SignalTree:NodeAccessor')`). `materializeMarkers()` explicitly bails on any unbranded function: `if (typeof node === 'function' && !isAccessor) return;` (`materialize-markers.ts:227-228`). An unbranded bespoke callable is therefore **invisible** to the walkers — this is the exact root cause behind the v11.4/11.5 inert-batching and inert-enterprise regressions, where walkers were only ever tested on flat plain-object fixtures (RFC 0004 §3 V-P1).
+
+**The correct pattern.** Materialize into a **plain object** of signals, or a proper NodeAccessor/signal. Don't invent an unbranded callable.
+
+```ts wrong
+// ❌ Unbranded callable — walkers skip it and everything hanging off it.
+function createRangeSignal(marker: { min: number }) {
+  const fn = () => marker.min;
+  (fn as unknown as { setToMax: () => void }).setToMax = () => undefined;
+  return fn; // batching/serialization/enterprise cannot see .setToMax or nested state
+}
+```
+
+```typescript
+import { signal } from '@angular/core';
+
+// ✅ Plain object of signals — traversable by every walker.
+function createRangeSignal(marker: { min: number; max: number }) {
+  const value = signal(marker.min);
+  return { value, setToMax: () => value.set(marker.max) };
+}
+```
+
+### 4. `asReadonly()` does NOT strip a custom marker's mutators
+
+**The trap.** You rely on `asReadonly(tree)` (or `defineStore(..., { expose: 'readonly' })`) to hide your custom marker's `.set()` / mutators from readers.
+
+**Why it bites.** Readonly is **type-only** — `asReadonly()` returns the *exact same runtime object*, retyped (`packages/core/src/lib/readonly.ts:19-39, 414-422`). The per-marker readonly views (`ReadonlyEntitySignal`, `ReadonlyFormSignal`, `ReadonlyStatusSignal`, …) are **hand-listed reader allowlists for BUILT-IN markers only**. The dispatch (`ReadonlyViewOf`, `readonly.ts:318-349`) matches only the built-in marker types; a custom marker matches no row and falls through the generic object/accessor branch — it gets no curated reader view, and at runtime its mutators are still on the same object and still reachable. The module itself documents that "a future marker without a row here degrades silently" (RFC 0004 §3 V-P2).
+
+**The correct pattern.** Don't depend on `asReadonly()` for custom-marker write protection. Expose reads through a **separate reader object**, or split the write path into an `@Injectable` Ops service — the reader+Ops pattern the readonly module docs recommend.
+
+```ts wrong
+import { asReadonly } from '@signaltree/core';
+
+// ❌ Type-only, and only demotes BUILT-IN markers. Custom mutators survive.
+declare const tree: { $: { myRange: { setToMax(): void } } };
+const reader = asReadonly(tree);
+reader.$.myRange.setToMax(); // still callable at runtime — NOT write-protected
+```
+
+```typescript
+import { signal, type Signal } from '@angular/core';
+
+// ✅ Hand readers a view that only exposes reads; keep writes on a separate surface.
+function createRangeSignal(marker: { min: number; max: number }) {
+  const value = signal(marker.min);
+  const read: { value: Signal<number> } = { value: value.asReadonly() };
+  const ops = { setToMax: () => value.set(marker.max) }; // inject via an Ops service
+  return { read, ops };
+}
+```
+
+### 5. Code errors `[ST####]`, name the marker a plain noun, and conformance-test it
+
+**The trap.** Ad-hoc warning text, a verb-y name (`createSelectionMarker`, `makeSelection`, `markSelection`), and shipping without a deep-tree test.
+
+**Why it bites.** Core codes every dev warning/error with a stable `[ST####]` tag (`packages/core/src/lib/constants.ts:33-66`, `SIGNAL_TREE_MESSAGES`) so messages are greppable and stable across releases. Built-in markers are **plain nouns** — `entityMap`, `status`, `stored`, `form`, `loader` — because that is what an AI coding agent guesses; a verb name is a guessability tax (the same reasoning drove the `form().data()` alias in `form.ts:189-197`). And a marker never tested on a **deep callable-branch tree** can be silently inert — precisely the v11.4/11.5 failure mode.
+
+**The correct pattern.** Tag dev warnings/errors with a stable `[ST####]` (pick your own app range — the `ST1xxx`/`ST2xxx` codes are core's), name your marker a plain noun, and add a walker-conformance test modeled on `packages/core/src/lib/walker-conformance.spec.ts` (a deliberately hostile tree with markers nested five branches deep next to `Date`/`Map` leaves).
+
+```typescript
+const RANGE_MARKER = Symbol('RANGE_MARKER');
+
+// ✅ Plain-noun name (`range`, not `createRangeMarker`), coded error, testable.
+export function range(min: number, max: number) {
+  if (min > max) throw new Error(`[ST9001] range(): min must be <= max.`);
+  return { [RANGE_MARKER]: true, min, max };
+}
+// Test it inside a deep callable-branch tree — see
+// packages/core/src/lib/walker-conformance.spec.ts for the fixture template.
+```
 
 ---
 
 ## Creating Custom Markers
 
 > **Important:** If you just need a rich signal for component-local state, consider the simpler [Standalone Signal Factories](#pattern-1-standalone-signal-factories-recommended-for-most-cases) pattern. Use markers when you need the signal to live inside SignalTree state.
+>
+> **Read [Authoring Markers: The Five Landmines](#authoring-markers-the-five-landmines) first** — the step-by-step below teaches the mechanism; the landmines are what keep your marker from being silently broken.
 
 ### Step-by-Step Guide
 
@@ -744,12 +894,16 @@ export function createStoredSignal<T>(marker: StoredMarker<T>): StoredSignal<T> 
 
 - [ ] Use `Symbol()` for unique marker identification
 - [ ] Keep type guards simple and fast (no deep inspection)
-- [ ] Register processors once at app startup
-- [ ] Handle errors gracefully in materializers
+- [ ] **Prefer self-registration inside the factory** (lazy + tree-shakeable). If you register imperatively instead, do it once **before any `signalTree()` call** — registering after a tree is built is a no-op for that tree (dev warns). See [Registration Timing](#registration-timing--self-registration-v701)
+- [ ] **Validate config in the FACTORY, not the materializer** — `processor.create()` throws are swallowed (dev `console.error`, silent in prod), so a materializer throw fails *open* ([landmine 2](#2-validate-in-the-factory-not-the-materializer))
+- [ ] **Never write a signal synchronously in your materializer** (NG0600) — seed via the initial value, keep derived state `computed()`, defer loads/auto-start to `queueMicrotask` ([landmine 1](#1-never-write-a-signal-synchronously-in-your-materializer-ng0600))
+- [ ] **Materialize into a plain object or a proper NodeAccessor** so tree walkers can traverse it — an unbranded bespoke callable is invisible ([landmine 3](#3-materialize-into-a-walkable-shape-the-callable-node-contract))
+- [ ] **Don't rely on `asReadonly()` to hide custom-marker mutators** — expose reads through a separate reader object / Ops service ([landmine 4](#4-asreadonly-does-not-strip-a-custom-markers-mutators))
 - [ ] Provide `reset()` methods for restoring defaults
 - [ ] Consider SSR - avoid browser APIs at module import time
-- [ ] Add dev-mode warnings for configuration errors
-- [ ] Write unit tests for materialization and edge cases
+- [ ] Add dev-mode warnings/errors with a stable `[ST####]` code ([landmine 5](#5-code-errors-st-name-the-marker-a-plain-noun-and-conformance-test-it))
+- [ ] Name the marker a **plain noun** (`range`, not `createRangeMarker`) for agent-guessability
+- [ ] Write a **walker-conformance test** (deep callable-branch tree) plus materialization unit tests
 
 ### Enhancers
 
@@ -780,16 +934,20 @@ For complete examples, see:
 
   - `packages/core/src/lib/markers/status.ts`
   - `packages/core/src/lib/markers/stored.ts`
-  - `packages/core/src/lib/types.ts` (`entityMap()`)
+  - `packages/core/src/lib/markers/entity-map.ts` (`entityMap()` — and its `[ST2004]` factory-validation precedent)
+  - `packages/core/src/lib/markers/form.ts` (NG0600-safe hydration via initial value)
+  - `packages/core/src/lib/markers/loader.ts` (factory-validated `persist.maxScopes` guard)
 
 - **Enhancers:**
 
   - `packages/core/src/enhancers/devtools/devtools.ts`
   - `packages/core/src/enhancers/batching/batching.ts`
-  - `packages/core/src/enhancers/effects/effects.ts`
+  - _(There is no `effects()` enhancer — it was removed in v12; use Angular's native `effect()`.)_
 
 - **Marker Processing:**
-  - `packages/core/src/lib/internals/materialize-markers.ts`
+  - `packages/core/src/lib/internals/materialize-markers.ts` (the swallowing `try/catch`)
+  - `packages/core/src/lib/readonly.ts` (per-marker readonly views — built-ins only)
+  - `packages/core/src/lib/walker-conformance.spec.ts` (the deep-tree conformance fixture)
 
 ---
 
