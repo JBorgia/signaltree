@@ -1,3 +1,49 @@
+## Unreleased
+
+### Added
+
+- **`persist.maxScopes` — persisted-scope garbage collection** for scoped
+  cache-aware collections (`entityMap({ load: loader(fn, { persist }) })`).
+  Each scope persists under its own storage key
+  (`key::<stableStringify(params)>`), so high-cardinality scopes (tenants,
+  customers, searches) previously accumulated entries forever — the
+  feature-level gap flagged by two external audits. With `maxScopes` set, the
+  loader keeps a touch-ordered index under `key::__scopes` and, on each
+  successful write-through, evicts the least-recently written scope entries
+  beyond the cap (best-effort, like write-through itself — adapter failures
+  never break the load path; a pruned scope just misses hydration and loads
+  fresh). Unset = previous behavior (no GC; the app owns cleanup — see the
+  persistence guide's "Persisted-scope cleanup"). Storage GC only: the
+  in-memory cache stays single-scope; multi-scope LRU caching remains
+  deferred (RFC 0003 §5). A non-positive-integer `maxScopes` fails closed at
+  the `loader()` call site (dev).
+
+## Unreleased (12.0.1)
+
+### Release engineering
+
+Release-pipeline hardening — closes the bypass routes two external audits
+confirmed (RFC 0004, v12 audit intake):
+
+- `release.sh skip-tests` no longer bypasses validation: it sets
+  `FAST_VALIDATE=1`, which skips only the slow steps (unit tests, coverage,
+  benchmarks) with a loud banner; every correctness gate (builds, barrel +
+  export parity, tarball-consumer, taught-symbols, version-claims,
+  guardrails-exports, size, release-state) still runs and still blocks.
+- `npm run publish:all` now runs the full `npm run validate` suite before
+  publishing (was the lighter `prepublish`).
+- The guardrails conditional-exports gate now also runs in
+  `pre-publish-validation.sh` (was CI-only).
+- `release.yml` verifies the exact tagged commit (full gate set incl. the
+  tarball-consumer and changelog gates) before creating a GitHub release.
+- New `publish.yml` + `scripts/ci-publish.sh`: the sanctioned publish path is
+  now CI — reruns the full gate set against the tag, then publishes all
+  packages with `NPM_TOKEN` and provenance. `release.sh` remains for
+  emergencies. See `docs/guides/releasing.md`.
+- New demo route-smoke job in `validate.yml`: Playwright visits 8 key demo
+  routes against a static production build and fails on any console error or
+  missing h1/main (`npm run smoke:routes` locally).
+
 ## 12.0.0 (2026-07-23)
 
 > **Correction (2026-07-24, post-release):** 11.6.0 announced the

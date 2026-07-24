@@ -2,6 +2,12 @@
 
 # SignalTree Pre-Publish Validation Script
 # Comprehensive validation before publishing to npm
+#
+# FAST_VALIDATE=1 skips ONLY the slow steps (unit tests, coverage,
+# performance benchmarks). ALL correctness gates still run: builds,
+# barrel + export parity, tarball-consumer, taught-symbols, version-claims,
+# size gates, release-state, changelog-adjacent gates. This is the ONLY
+# sanctioned "fast" path (RFC 0004 §5: skip paths removed or loudly logged).
 
 set -euo pipefail
 
@@ -35,12 +41,15 @@ print_success() {
 
 print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
-    ((VALIDATION_WARNINGS++))
+    # NOT ((VAR++)): under `set -e` a post-increment from 0 returns status 1
+    # and silently kills the script (bit us 2026-07-24 — the first
+    # statement-level warning aborted validation with a green-looking log).
+    VALIDATION_WARNINGS=$((VALIDATION_WARNINGS + 1))
 }
 
 print_error() {
     echo -e "${RED}❌ $1${NC}"
-    ((VALIDATION_ERRORS++))
+    VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
 }
 
 print_info() {
@@ -72,7 +81,36 @@ run_check() {
 # Change to workspace root
 cd "$(dirname "$0")/.."
 
+# FAST_VALIDATE mode: skip slow steps only, keep every correctness gate.
+FAST_VALIDATE="${FAST_VALIDATE:-0}"
+FAST_SKIPPED=(
+    "Section 5:  Unit Tests (pnpm run test:all)"
+    "Section 6:  Test Coverage (scripts/test-coverage.sh)"
+    "Section 12: Performance Benchmarks (scripts/perf-suite.js)"
+)
+
+print_fast_banner() {
+    echo -e "${YELLOW}"
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║  ⚠️  FAST_VALIDATE=1 — SLOW STEPS SKIPPED                            ║"
+    echo "╠════════════════════════════════════════════════════════════════════╣"
+    for item in "${FAST_SKIPPED[@]}"; do
+        printf '║  SKIPPED → %-56s ║\n' "$item"
+    done
+    echo "╠════════════════════════════════════════════════════════════════════╣"
+    echo "║  ALL correctness gates STILL RUN: builds, barrel + export parity,   ║"
+    echo "║  tarball-consumer, taught-symbols, version-claims, size claims,     ║"
+    echo "║  release-state, guardrails exports, bundle budget, sanity checks.   ║"
+    echo "║  CI must run the FULL suite before anything is published.           ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
 print_header "SignalTree Pre-Publish Validation"
+
+if [ "$FAST_VALIDATE" = "1" ]; then
+    print_fast_banner
+fi
 
 # 1. Clean Working Directory
 print_header "1. Checking Working Directory"
@@ -127,36 +165,44 @@ fi
 
 # 5. Unit Tests
 print_header "5. Unit Tests"
-print_step "Running all unit tests"
-if pnpm run test:all 2>&1 | tee /tmp/tests.log; then
-    print_success "All tests passed"
+if [ "$FAST_VALIDATE" = "1" ]; then
+    print_warning "FAST_VALIDATE=1 — SKIPPING unit tests (slow step; correctness gates below still run)"
 else
-    print_error "Tests failed"
-    cat /tmp/tests.log
-    exit 1
+    print_step "Running all unit tests"
+    if pnpm run test:all 2>&1 | tee /tmp/tests.log; then
+        print_success "All tests passed"
+    else
+        print_error "Tests failed"
+        cat /tmp/tests.log
+        exit 1
+    fi
 fi
 
 # 6. Test Coverage
 print_header "6. Test Coverage"
-print_step "Generating test coverage reports"
-if bash scripts/test-coverage.sh 2>&1 | tee /tmp/coverage.log; then
-    print_success "Test coverage generated"
-
-    # Check coverage thresholds
-    if [ -f "coverage/coverage-summary.json" ]; then
-        print_info "Coverage summary:"
-        node -e "
-            const fs = require('fs');
-            const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
-            const total = summary.total;
-            console.log('  Statements: ' + total.statements.pct + '%');
-            console.log('  Branches:   ' + total.branches.pct + '%');
-            console.log('  Functions:  ' + total.functions.pct + '%');
-            console.log('  Lines:      ' + total.lines.pct + '%');
-        "
-    fi
+if [ "$FAST_VALIDATE" = "1" ]; then
+    print_warning "FAST_VALIDATE=1 — SKIPPING test coverage (slow step; correctness gates below still run)"
 else
-    print_warning "Test coverage generation failed"
+    print_step "Generating test coverage reports"
+    if bash scripts/test-coverage.sh 2>&1 | tee /tmp/coverage.log; then
+        print_success "Test coverage generated"
+
+        # Check coverage thresholds
+        if [ -f "coverage/coverage-summary.json" ]; then
+            print_info "Coverage summary:"
+            node -e "
+                const fs = require('fs');
+                const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+                const total = summary.total;
+                console.log('  Statements: ' + total.statements.pct + '%');
+                console.log('  Branches:   ' + total.branches.pct + '%');
+                console.log('  Functions:  ' + total.functions.pct + '%');
+                console.log('  Lines:      ' + total.lines.pct + '%');
+            "
+        fi
+    else
+        print_warning "Test coverage generation failed"
+    fi
 fi
 
 # 7. Build All Packages
@@ -259,6 +305,19 @@ else
     exit 1
 fi
 
+# 9c. Guardrails Conditional-Exports Gate (BLOCKING)
+# Asserts @signaltree/guardrails' exports map resolves the default condition
+# to the real build (not the no-op stub). Previously only ran in CI
+# (validate.yml); wired here 2026-07-24 so no publish path can dodge it.
+print_step "Verifying guardrails conditional exports (default → real build)"
+if node scripts/verify-guardrails-default-condition.mjs 2>&1 | tee /tmp/verify-guardrails-exports.log; then
+    print_success "Guardrails conditional exports verified"
+else
+    print_error "Guardrails conditional exports broken — default condition would resolve to the wrong build"
+    cat /tmp/verify-guardrails-exports.log
+    exit 1
+fi
+
 # 9d. Tarball-Consumer Gate (BLOCKING)
 # Packs every publishable package and asserts the SHIPPED tarball actually
 # contains every file its `exports` map references (the guardrails@10.6
@@ -336,8 +395,12 @@ fi
 
 # 12. Performance Benchmarks (Warning Only)
 print_header "12. Performance Benchmarks"
-print_step "Running performance benchmarks (warning only)"
-if [ -f "scripts/perf-suite.js" ]; then
+if [ "$FAST_VALIDATE" = "1" ]; then
+    print_warning "FAST_VALIDATE=1 — SKIPPING performance benchmarks (slow step; correctness gates still run)"
+elif [ ! -f "scripts/perf-suite.js" ]; then
+    print_warning "Performance suite not found (skipping)"
+else
+    print_step "Running performance benchmarks (warning only)"
     print_info "Running benchmarks (this may take a few minutes)..."
     # Use gtimeout on macOS, timeout on Linux
     if command -v gtimeout > /dev/null; then
@@ -359,8 +422,6 @@ if [ -f "scripts/perf-suite.js" ]; then
     else
         print_warning "Performance benchmarks failed or timed out (non-blocking)"
     fi
-else
-    print_warning "Performance suite not found (skipping)"
 fi
 
 # 13. Documentation Validation
@@ -489,6 +550,10 @@ DURATION=$((END_TIME - START_TIME))
 print_info "Total validation time: ${DURATION}s"
 print_info "Errors: $VALIDATION_ERRORS"
 print_info "Warnings: $VALIDATION_WARNINGS"
+
+if [ "$FAST_VALIDATE" = "1" ]; then
+    print_fast_banner
+fi
 
 if [ $VALIDATION_ERRORS -gt 0 ]; then
     echo ""

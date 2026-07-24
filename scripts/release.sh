@@ -91,7 +91,13 @@ fi
 
 if [[ ! "$RELEASE_TYPE" =~ ^(major|minor|patch)$ ]]; then
     print_error "Invalid release type. Use: major, minor, or patch"
-    echo "Usage: $0 [major|minor|patch] [skip-tests]"
+    echo "Usage: $0 [major|minor|patch] [skip-tests] [--yes] [--keep-version]"
+    echo ""
+    echo "  skip-tests  Skips ONLY the slow steps (unit tests, coverage, benchmarks)."
+    echo "              ALL correctness gates still run: builds, barrel + export"
+    echo "              parity, tarball-consumer, taught-symbols, version-claims,"
+    echo "              guardrails-exports, size gates, changelog gate."
+    echo "              There is no flag that skips the correctness gates."
     exit 1
 fi
 
@@ -110,7 +116,14 @@ on_interrupt() {
 
 trap on_interrupt INT TERM
 
-# Step 0: Run comprehensive pre-publish validation
+# Step 0: Run comprehensive pre-publish validation.
+# skip-tests does NOT bypass validation (RFC 0004 §5: skip paths removed or
+# loudly logged; v12 audit intake, 2026-07-24). It sets FAST_VALIDATE=1, which
+# skips ONLY the slow steps (unit tests, coverage, benchmarks) inside
+# scripts/pre-publish-validation.sh — every correctness gate (builds, barrel +
+# export parity, tarball-consumer, taught-symbols, version-claims,
+# guardrails-exports, size gates, release-state, skill code-block lint) still
+# runs and still blocks the release.
 print_step "Running comprehensive pre-publish validation..."
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     if bash scripts/pre-publish-validation.sh; then
@@ -121,17 +134,13 @@ if [ "$SKIP_TESTS" != "skip-tests" ]; then
         exit 1
     fi
 else
-    print_warning "Skipping pre-publish validation (tests disabled)"
-    # Even when tests are skipped, enforce the skill code-block lint so a
-    # release never ships with docs/skills examples that don't compile
-    # against the real @signaltree/* d.ts files. Requires `dist/packages/*`
-    # to exist — run `npm run build:all` before `./scripts/release.sh ... skip-tests`.
-    print_step "Running skill code-block lint (gating even when tests are skipped)"
-    if node scripts/lint-skills.mjs; then
-        print_success "Skill code-block lint passed"
+    print_warning "skip-tests: running FAST validation (unit tests, coverage, benchmarks skipped)"
+    print_warning "ALL correctness gates still run and still block the release"
+    if FAST_VALIDATE=1 bash scripts/pre-publish-validation.sh; then
+        print_success "Fast pre-publish validation passed (slow steps skipped, all gates enforced)"
     else
-        print_error "Skill code-block lint failed!"
-        print_error "Run \`npm run build:all && npm run lint:skills\` locally to iterate"
+        print_error "Pre-publish validation failed!"
+        print_error "skip-tests only skips slow steps — a failed correctness gate always blocks"
         exit 1
     fi
 fi

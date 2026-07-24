@@ -1,0 +1,159 @@
+name: Publish to npm (CI)
+
+# The SANCTIONED publish path (v12 audit intake, 2026-07-24).
+# =============================================================
+# Publishes every @signaltree/* package from the EXACT tagged commit, but
+# only after the `verify` job reruns the full gate set on that commit —
+# the protected-check architecture: no human laptop state, no gate bypass.
+#
+# Owner setup (one-time):
+#   1. Create a GRANULAR npm automation token scoped to the @signaltree
+#      packages (npmjs.com → Access Tokens → Generate New Token → Granular,
+#      "Read and write" on the 8 packages, no 2FA prompt on automation).
+#   2. Add it as the `NPM_TOKEN` repository secret
+#      (GitHub → Settings → Secrets and variables → Actions).
+#   3. Protect tags: Settings → Rules → Rulesets → new tag ruleset matching
+#      `v*` restricting who can create tags; and require the "Verify tagged
+#      commit (full gate set)" check on main via branch protection so no
+#      unverified commit can be tagged for release.
+#
+# Usage: Actions → "Publish to npm (CI)" → Run workflow → enter the version
+# tag (e.g. v12.0.1). The `release: published` trigger also fires for a
+# release published manually in the GitHub UI — but NOT for releases created
+# by release.yml (GITHUB_TOKEN events never trigger other workflows), so the
+# normal flow is: push signed tag → release.yml verifies + creates the
+# release → dispatch this workflow with the tag.
+#
+# scripts/release.sh remains available for emergency local publishes, but CI
+# publish is the sanctioned path. See docs/guides/releasing.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Version tag to publish (for example v12.0.1)'
+        required: true
+        type: string
+  release:
+    types: [published]
+
+jobs:
+  verify:
+    name: Verify tagged commit (full gate set)
+    runs-on: ubuntu-latest
+    if: github.repository == 'JBorgia/signaltree'
+    outputs:
+      tag_name: ${{ steps.release_tag.outputs.tag_name }}
+    steps:
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          TAG_NAME="${{ github.event.inputs.release_tag }}"
+          if [[ -z "$TAG_NAME" ]]; then
+            TAG_NAME="${{ github.event.release.tag_name }}"
+          fi
+
+          if [[ "$TAG_NAME" != v* ]]; then
+            echo "Expected a version tag like v12.0.1, got: ${TAG_NAME}"
+            exit 1
+          fi
+
+          echo "Publishing from tag ${TAG_NAME}"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release_tag.outputs.tag_name }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_NAME="${{ steps.release_tag.outputs.tag_name }}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "v$PKG_VERSION" != "$TAG_NAME" ]; then
+            echo "Tag $TAG_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Lint
+        run: pnpm run lint:all
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test:all
+
+      - name: Build
+        run: pnpm run build:all
+
+      - name: Verify built barrels resolve (all 8 packages)
+        run: node tools/verify-built-barrels.mjs
+
+      - name: Verify guardrails conditional exports (default → real build)
+        run: node scripts/verify-guardrails-default-condition.mjs
+
+      - name: Verify taught symbols
+        run: node scripts/verify-taught-symbols.js
+
+      - name: Verify version claims
+        run: node scripts/verify-version-claims.js
+
+      - name: Tarball-consumer gate (self-test, then gate)
+        run: |
+          node tools/verify-tarball-consumer.mjs --self-test
+          node tools/verify-tarball-consumer.mjs
+
+      - name: Verify CHANGELOG has an entry for this version
+        run: |
+          TAG_NAME="${{ steps.release_tag.outputs.tag_name }}"
+          VERSION="${TAG_NAME#v}"
+          bash scripts/verify-changelog-entry.sh --self-test
+          bash scripts/verify-changelog-entry.sh "$VERSION"
+
+  publish:
+    name: Publish all packages
+    needs: verify
+    runs-on: ubuntu-latest
+    if: github.repository == 'JBorgia/signaltree'
+    permissions:
+      contents: read
+      id-token: write # npm --provenance
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag_name }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build all packages (production) + ship skills
+        run: pnpm run build:production
+
+      - name: Publish to npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bash scripts/ci-publish.sh

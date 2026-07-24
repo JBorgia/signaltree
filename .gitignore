@@ -95,3 +95,5 @@ tmp/
 .nx/polygraph
 .nx/self-healing
 .nx/migrate-runs
+# Playwright route-smoke artifacts (scripts/playwright/route-smoke.config.ts)
+test-results/

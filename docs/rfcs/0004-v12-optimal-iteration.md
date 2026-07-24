@@ -647,3 +647,18 @@ release.yml reruns no gates — the strongest fix is publish-from-CI gated on
 a protected check of the exact tagged commit. Re-affirmed deferrals:
 multi-scope LRU + persisted-scope GC (RFC 0003 §5; GC guidance shipped in
 the persistence guide, built-in policy rides with LRU).
+
+**EXECUTED 2026-07-24 (release-pipeline hardening):** all three queued
+items closed. (1) `skip-tests` now sets `FAST_VALIDATE=1` — only unit
+tests/coverage/benchmarks are skipped, loudly bannered; every correctness
+gate still runs and blocks (§5: skip paths removed or loudly logged).
+(2) `publish:all` routes through the full `npm run validate` suite.
+(3) release.yml verifies the exact tagged commit (full gate set incl.
+tarball-consumer + changelog gates) before creating a release, and the new
+publish.yml + `scripts/ci-publish.sh` implement the protected-check
+architecture: CI reruns the gates against the tag and publishes with
+`NPM_TOKEN` + provenance — the sanctioned path; `release.sh` is
+emergency-only (docs/guides/releasing.md). Bonus hardening: the
+guardrails-exports gate joined pre-publish-validation.sh (was CI-only), and
+validate.yml gained a Playwright route-smoke job over 8 key demo routes
+(no console errors, visible h1/main — the 404-deep-link/site-audit class).

@@ -53,3 +53,31 @@ jobs:
 
       - name: Verify version claims
         run: node scripts/verify-version-claims.js
+
+  demo-route-smoke:
+    name: Demo route smoke (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build demo (production)
+        run: pnpm exec nx build demo --configuration=production
+
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Route smoke (8 key routes, no console errors, visible h1/main)
+        run: pnpm run smoke:routes

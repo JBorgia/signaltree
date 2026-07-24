@@ -1,5 +1,12 @@
 name: GitHub Release
 
+# A tag push no longer blindly creates a release (v12 audit intake,
+# 2026-07-24): the `verify` job checks out the EXACT tagged commit and reruns
+# the full gate set — lint, typecheck, tests, builds, built-barrel resolution,
+# taught-symbols, version-claims, the tarball-consumer gate, and the
+# CHANGELOG-entry gate for the tag's version. Release creation depends on all
+# of it passing.
+
 on:
   push:
     tags:
@@ -12,17 +19,12 @@ on:
         type: string
 
 jobs:
-  release:
+  verify:
+    name: Verify tagged commit (full gate set)
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+    outputs:
+      tag_name: ${{ steps.release_tag.outputs.tag_name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Resolve release tag
         id: release_tag
         run: |
@@ -36,13 +38,79 @@ jobs:
             exit 1
           fi
 
-          echo "Creating GitHub release for ${TAG_NAME}"
+          echo "Verifying tagged commit for ${TAG_NAME}"
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release_tag.outputs.tag_name }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Lint
+        run: pnpm run lint:all
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test:all
+
+      - name: Build
+        run: pnpm run build:all
+
+      - name: Verify built barrels resolve (all 8 packages)
+        run: node tools/verify-built-barrels.mjs
+
+      - name: Verify guardrails conditional exports (default → real build)
+        run: node scripts/verify-guardrails-default-condition.mjs
+
+      - name: Verify taught symbols
+        run: node scripts/verify-taught-symbols.js
+
+      - name: Verify version claims
+        run: node scripts/verify-version-claims.js
+
+      - name: Tarball-consumer gate (self-test, then gate)
+        run: |
+          node tools/verify-tarball-consumer.mjs --self-test
+          node tools/verify-tarball-consumer.mjs
+
+      - name: Verify CHANGELOG has an entry for this version
+        run: |
+          TAG_NAME="${{ steps.release_tag.outputs.tag_name }}"
+          VERSION="${TAG_NAME#v}"
+          bash scripts/verify-changelog-entry.sh --self-test
+          bash scripts/verify-changelog-entry.sh "$VERSION"
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.verify.outputs.tag_name }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          tag_name: ${{ steps.release_tag.outputs.tag_name }}
+          tag_name: ${{ needs.verify.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
