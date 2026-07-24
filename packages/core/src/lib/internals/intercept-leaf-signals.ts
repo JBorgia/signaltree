@@ -1,6 +1,7 @@
 import type { UpdateMetadata } from '../types';
-import { isTraversableNode } from '../utils';
 import { getActiveWriteContext } from '../write-context';
+
+import { visitTree } from './visit-tree';
 
 /**
  * Recursively walk a NodeAccessor tree and wrap every plain writable leaf
@@ -41,90 +42,76 @@ export function interceptLeafSignals(
   options: { maxDepth?: number } = {}
 ): () => void {
   const restorers: Array<() => void> = [];
-  const seen = new WeakSet<object>();
   const maxDepth = options.maxDepth ?? 32;
 
-  const walk = (node: unknown, pathPrefix: string, depth: number): void => {
-    if (depth > maxDepth) return;
-    if (!isTraversableNode(node)) return;
-    if (seen.has(node)) return;
-    seen.add(node);
-
-    let keys: string[];
-    try {
-      keys = Object.keys(node);
-    } catch {
-      return;
-    }
-
-    for (const key of keys) {
-      let child: unknown;
-      try {
-        child = (node as Record<string, unknown>)[key];
-      } catch {
-        continue;
-      }
-      if (!isTraversableNode(child)) continue;
-
-      const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-
-      const isWritableSignal =
-        typeof child === 'function' &&
-        'set' in child &&
-        'update' in child &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typeof (child as any).set === 'function' &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typeof (child as any).update === 'function';
-
-      const isEntityCollection =
-        isWritableSignal && ('add' in child || 'remove' in child);
-
-      if (isWritableSignal && !isEntityCollection) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const original = child as any;
-        const originalSet = original.set.bind(original);
-        const originalUpdate = original.update.bind(original);
-
-        restorers.push(() => {
-          original.set = originalSet;
-          original.update = originalUpdate;
-        });
-
-        original.set = (value: unknown) => {
-          const prev = original();
-          originalSet(value);
-          const next = original();
-          if (next !== prev) onWrite(childPath, next, prev, getActiveWriteContext());
-        };
-
-        original.update = (updater: (v: unknown) => unknown) => {
-          const prev = original();
-          originalUpdate(updater);
-          const next = original();
-          if (next !== prev) onWrite(childPath, next, prev, getActiveWriteContext());
-        };
-        continue;
-      }
-
-      // Recurse into NodeAccessors / nested plain objects. Skip built-ins
-      // and arrays — they're stored as single signals, not nested trees.
-      if (typeof child === 'function' && !isWritableSignal) {
-        walk(child, childPath, depth + 1);
-      } else if (
-        typeof child === 'object' &&
-        !Array.isArray(child) &&
-        !(child instanceof Date) &&
-        !(child instanceof Map) &&
-        !(child instanceof Set)
-      ) {
-        walk(child, childPath, depth + 1);
-      }
-    }
-  };
-
+  // Traversal is the shared `visitTree` skeleton; this visitor supplies only
+  // the leaf action (wrap `.set`/`.update` to observe writes) and the recurse
+  // decision. Behavior preserved vs the former hand-rolled walk: wrap plain
+  // writable leaves only, skip entity collections (they notify themselves),
+  // don't descend into built-ins/arrays, and never wrap the root node itself.
   try {
-    walk(root, '', 0);
+    visitTree(
+      root,
+      (node, path) => {
+        // The root is always a branch here (tree.$); never treat it as a leaf.
+        if (path === '') return true;
+
+        const isWritableSignal =
+          typeof node === 'function' &&
+          'set' in node &&
+          'update' in node &&
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          typeof (node as any).set === 'function' &&
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          typeof (node as any).update === 'function';
+
+        if (isWritableSignal) {
+          const isEntityCollection = 'add' in node || 'remove' in node;
+          if (isEntityCollection) return false; // collection notifies itself
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const original = node as any;
+          const originalSet = original.set.bind(original);
+          const originalUpdate = original.update.bind(original);
+
+          restorers.push(() => {
+            original.set = originalSet;
+            original.update = originalUpdate;
+          });
+
+          original.set = (value: unknown) => {
+            const prev = original();
+            originalSet(value);
+            const next = original();
+            if (next !== prev)
+              onWrite(path, next, prev, getActiveWriteContext());
+          };
+
+          original.update = (updater: (v: unknown) => unknown) => {
+            const prev = original();
+            originalUpdate(updater);
+            const next = original();
+            if (next !== prev)
+              onWrite(path, next, prev, getActiveWriteContext());
+          };
+          return false; // leaf — don't recurse into it
+        }
+
+        // Built-ins/arrays are stored as single signals, not nested trees.
+        if (
+          typeof node === 'object' &&
+          (Array.isArray(node) ||
+            node instanceof Date ||
+            node instanceof Map ||
+            node instanceof Set)
+        ) {
+          return false;
+        }
+
+        return true; // branch accessor / plain nested object — recurse
+      },
+      { maxDepth }
+    );
   } catch {
     // Ignore traversal errors; partial interception is still useful.
   }

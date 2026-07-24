@@ -1,5 +1,5 @@
 import { copyTreeProperties } from '../utils/copy-tree-properties';
-import { isTraversableNode } from '../../lib/utils';
+import { visitTree } from '../../lib/internals/visit-tree';
 
 import type {
   ISignalTree,
@@ -143,84 +143,70 @@ export function batching(
     /**
      * Recursively wrap signal setters to schedule notifications.
      * Signal values still update immediately (synchronous).
+     *
+     * Traversal is the shared `visitTree` skeleton; this visitor supplies only
+     * the leaf action (wrap `.set`/`.update` for batch/coalesce scheduling) and
+     * always recurses. `skipKey` reproduces the former hand-rolled key filter:
+     * skipping `set`/`update`/`_`-prefixed keys keeps `visitTree` from *reading*
+     * `.update` on an entityMap proxy, which would trip the proxy's get-trap and
+     * fire a spurious `[ST2002]` warning. The `.set` read and the `'update' in
+     * node` has-trap guard below match the previous behavior exactly.
      */
-    const wrapSignalSetters = (node: any, path = ''): void => {
-      // NodeAccessors and leaf signals are CALLABLE (typeof 'function');
-      // rejecting functions here would skip every accessor in the tree and
-      // leave batch()/coalesce() silently inert.
-      // The `as unknown` cast intentionally defeats the type guard's
-      // narrowing: `node` must stay `any` for the setter wrapping below —
-      // the guard is a runtime gate here, not a type refinement.
-      if (!isTraversableNode(node as unknown)) {
-        return;
-      }
+    const wrapSignalSetters = (rootNode: any): void => {
+      visitTree(
+        rootNode,
+        (node: any, path) => {
+          // If this node has a set method, wrap it.
+          if (typeof node.set === 'function' && !node.__batchingWrapped) {
+            const originalSet = node.set.bind(node);
 
-      // If this node has a set method, wrap it
-      if (typeof node.set === 'function' && !node.__batchingWrapped) {
-        const originalSet = node.set.bind(node);
+            node.set = (value: any) => {
+              if (inCoalesce) {
+                coalescedUpdates.set(path, () => originalSet(value));
+              } else {
+                originalSet(value); // synchronous
+              }
+              if (!inBatch) {
+                scheduleNotification();
+              }
+            };
 
-        node.set = (value: any) => {
-          if (inCoalesce) {
-            // Coalesce mode: store update, execute later
-            coalescedUpdates.set(path, () => originalSet(value));
-          } else {
-            // Normal mode: execute immediately (synchronous!)
-            originalSet(value);
+            node.__batchingWrapped = true;
           }
 
-          // Schedule CD notification (doesn't affect value timing)
-          if (!inBatch) {
-            scheduleNotification();
-          }
-        };
+          // `'update' in node` FIRST: a bare `node.update` read on an entityMap
+          // proxy hits its get-trap and fires a spurious [ST2002] warning; the
+          // `in` check goes through the has-trap (no warning).
+          if (
+            'update' in node &&
+            typeof node.update === 'function' &&
+            !node.__batchingUpdateWrapped
+          ) {
+            const originalUpdate = node.update.bind(node);
 
-        // Mark as wrapped to prevent double-wrapping
-        node.__batchingWrapped = true;
-      }
+            node.update = (updater: any) => {
+              if (inCoalesce) {
+                coalescedUpdates.set(`${path}:update:${Date.now()}`, () =>
+                  originalUpdate(updater)
+                );
+              } else {
+                originalUpdate(updater);
+              }
+              if (!inBatch) {
+                scheduleNotification();
+              }
+            };
 
-      // If this node has an update method, wrap it.
-      // Guard with `'update' in node` FIRST: a bare `node.update` read on an
-      // entityMap proxy hits its get-trap and fires a spurious [ST2002]
-      // "did you mean updateOne/updateMany?" warning. The `in` check goes
-      // through the proxy's has-trap (no warning) and short-circuits the read.
-      if (
-        'update' in node &&
-        typeof node.update === 'function' &&
-        !node.__batchingUpdateWrapped
-      ) {
-        const originalUpdate = node.update.bind(node);
-
-        node.update = (updater: any) => {
-          if (inCoalesce) {
-            // Coalesce mode: store update, execute later
-            // Note: for update(), we can't easily dedupe, so we just queue
-            coalescedUpdates.set(`${path}:update:${Date.now()}`, () =>
-              originalUpdate(updater)
-            );
-          } else {
-            // Normal mode: execute immediately (synchronous!)
-            originalUpdate(updater);
+            node.__batchingUpdateWrapped = true;
           }
 
-          if (!inBatch) {
-            scheduleNotification();
-          }
-        };
-
-        node.__batchingUpdateWrapped = true;
-      }
-
-      // Recurse into child nodes. NodeAccessors (and leaf signals) are
-      // CALLABLE — typeof 'function' — so the walk must descend into
-      // functions too, not just plain objects; otherwise no leaf setter is
-      // ever wrapped and batch()/coalesce() silently do nothing.
-      for (const key of Object.keys(node)) {
-        if (key.startsWith('_') || key === 'set' || key === 'update') continue;
-        const child = node[key];
-        if (isTraversableNode(child)) {
-          wrapSignalSetters(child, path ? `${path}.${key}` : key);
+          return true; // always recurse (a wrapped node still has children)
+        },
+        {
+          skipKey: (key) =>
+            key.startsWith('_') || key === 'set' || key === 'update',
         }
-      }
+      );
     };
 
     // Wrap the tree's $ proxy
@@ -422,42 +408,7 @@ export function batchingWithConfig(
   return batching(config);
 }
 
-/** @deprecated Use tree.flushNotifications() instead */
-export function flushBatchedUpdates(): void {
-  if (typeof ngDevMode === 'undefined' || ngDevMode) {
-    console.warn(
-      '[SignalTree] flushBatchedUpdates() is deprecated. Use tree.flushNotifications() instead.'
-    );
-  }
-}
-
-/** @deprecated Use tree.hasPendingNotifications() instead */
-export function hasPendingUpdates(): boolean {
-  if (typeof ngDevMode === 'undefined' || ngDevMode) {
-    console.warn(
-      '[SignalTree] hasPendingUpdates() is deprecated. Use tree.hasPendingNotifications() instead.'
-    );
-  }
-  return false;
-}
-
-/** @deprecated No longer needed - signal reads are always synchronous */
-export function getBatchQueueSize(): number {
-  if (typeof ngDevMode === 'undefined' || ngDevMode) {
-    console.warn(
-      '[SignalTree] getBatchQueueSize() is deprecated. Signal writes are now synchronous.'
-    );
-  }
-  return 0;
-}
-
-/**
- * @deprecated Use `batching()` as the primary enhancer. This legacy
- * `withBatching` alias will be removed in a future major release.
- */
-export const withBatching = Object.assign(
-  (config: BatchingConfig = {}) => batching(config),
-  {
-    highPerformance: highPerformanceBatching,
-  }
-);
+// v12: removed the deprecated legacy batching surface — `flushBatchedUpdates()`
+// (use `tree.flushNotifications()`), `hasPendingUpdates()` (use
+// `tree.hasPendingNotifications()`), `getBatchQueueSize()` (obsolete — signal
+// writes are synchronous), and the `withBatching` alias (use `batching()`).

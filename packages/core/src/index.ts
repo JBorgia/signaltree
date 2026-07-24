@@ -106,37 +106,9 @@ export type {
   UpdateMetadata,
 } from './lib/types';
 
-/**
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export type { EnhancerMeta } from './lib/types';
-
-// ============================================
-// WRITE CONTEXT (enhancer plumbing, ambient channel for UpdateMetadata)
-// ============================================
-// Synchronous ambient channel for tagging writes with UpdateMetadata.
-// Used by enhancers (guardrails, validation, time-travel/devtools replay) to
-// observe and react to write intent without changing Angular's WritableSignal API.
-/**
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { withWriteContext, getActiveWriteContext } from './lib/write-context';
-
-// ============================================
-// LEAF SIGNAL INTERCEPTION (enhancer plumbing)
-// ============================================
-// Used by enhancers that need to observe every leaf write (devtools,
-// time-travel, validation). Application code should not use this directly.
-/**
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { interceptLeafSignals } from './lib/internals/intercept-leaf-signals';
+// Enhancer-author plumbing (EnhancerMeta, withWriteContext,
+// getActiveWriteContext, interceptLeafSignals) was removed from the root barrel
+// in v12 — import it from '@signaltree/core/authoring'.
 
 // Entity helpers (runtime)
 export { entityMap } from './lib/types';
@@ -251,6 +223,11 @@ export {
   type EntityPersist,
   type EntityStorageAdapter,
 } from './lib/markers/entity-loader';
+// `loader()` — the tree-shakeable way to make an entityMap cache-aware (RFC 0005 §6).
+// Importing `entityMap` WITHOUT `loader` shakes the loader machinery out; the
+// branded `LoaderFeature` it returns is the only static reference to `attachLoader`.
+export { loader, type LoaderOptions } from './lib/markers/loader';
+export type { LoaderFeature } from './lib/types';
 export type {
   LoadingEntityMapMarker,
   LoadingEntitySignal,
@@ -263,13 +240,8 @@ export type {
 // `asyncSource`) is deferred. The implementation + tests live in
 // ./lib/markers/async-stream.ts; re-export here to promote it when warranted.
 
-// Marker processing (v7) - extensibility
-/**
- * @deprecated Use '@signaltree/core/authoring' — marker-author plumbing moved
- * off the root barrel in 11.6.0. This root re-export will be removed in the
- * next major.
- */
-export { registerMarkerProcessor } from './lib/internals/materialize-markers';
+// Marker processing (v7): `registerMarkerProcessor` was removed from the root
+// barrel in v12 — import it from '@signaltree/core/authoring'.
 
 // ============================================
 // UTILITY EXPORTS
@@ -291,12 +263,8 @@ export {
   isBuiltInObject,
 } from './lib/utils';
 
-/**
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { composeEnhancers } from './lib/utils';
+// `composeEnhancers`, `getPathNotifier` — removed from the root barrel in v12;
+// import from '@signaltree/core/authoring'.
 
 // ============================================
 // EDIT SESSION (subpath: @signaltree/core/edit-session)
@@ -304,14 +272,6 @@ export { composeEnhancers } from './lib/utils';
 
 // Moved to '@signaltree/core/edit-session' in v9.
 // Import from there to reduce main bundle size.
-
-// PathNotifier exports - For internal use by enhancers (e.g., guardrails)
-/**
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { getPathNotifier } from './lib/path-notifier';
 
 // ============================================
 // SECURITY (subpath: @signaltree/core/security)
@@ -326,23 +286,9 @@ export { getPathNotifier } from './lib/path-notifier';
 // ENHANCER EXPORTS
 // ============================================
 
-/**
- * Enhancer creation and composition utilities
- * @see {@link createEnhancer} for creating enhancers with metadata
- * @see {@link resolveEnhancerOrder} for dependency resolution
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
-
-/**
- * Enhancer metadata symbol for third-party compatibility
- * @deprecated Use '@signaltree/core/authoring' — enhancer-author plumbing
- * moved off the root barrel in 11.6.0. This root re-export will be removed in
- * the next major.
- */
-export { ENHANCER_META } from './lib/types';
+// `createEnhancer`, `resolveEnhancerOrder`, `ENHANCER_META` — enhancer-author
+// plumbing removed from the root barrel in v12; import from
+// '@signaltree/core/authoring'.
 
 // ============================================
 // INDIVIDUAL ENHANCER EXPORTS
@@ -360,16 +306,9 @@ export { batching } from './enhancers/batching/batching';
 
 export type { BatchingConfig, BatchingMethods } from './lib/types';
 
-/**
- * Effects enhancer for reactive side effects and subscriptions
- * @deprecated Use Angular's native `effect()` instead — a SignalTree is made
- * of ordinary Angular signals, so `effect(() => tree.$.path())` gives the
- * same reactivity with proper injection-context handling. Removal planned for
- * the next major release. Known limitation: `tree.effect()`/`tree.subscribe()`
- * throw NG0203 outside injection contexts.
- */
-export { effects } from './enhancers/effects/effects';
-export type { EffectsConfig } from './enhancers/effects/effects';
+// The `effects()` enhancer was removed in v12 — a SignalTree is made of
+// ordinary Angular signals, so use native `effect(() => tree.$.path())`
+// (proper injection-context handling; no NG0203 footgun).
 
 /**
  * Time travel enhancer for debugging and undo/redo functionality
@@ -421,7 +360,6 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/consta
  *
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications
- * - `effects(config?)` - DEPRECATED: use Angular's native `effect()` instead
  * - `timeTravel(config?)` - Undo/redo
  * - `devTools(config?)` - Redux DevTools integration
  * - `serialization(config?)` - State serialization

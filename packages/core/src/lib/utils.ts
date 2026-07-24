@@ -29,6 +29,31 @@ export function isEntityMapMarker(value: unknown): boolean {
 }
 
 /**
+ * Check if a value is a branded loader feature produced by `loader()`.
+ *
+ * Kept here (a shake-safe, dependency-free property check) rather than in
+ * `./markers/loader` on purpose: `entity-map.ts` calls this guard on every
+ * materialized collection, so if the guard lived alongside `loader()` it would
+ * statically pull the loader module — and its `attachLoader` import — into
+ * every `entityMap()` consumer, defeating the whole tree-shake boundary. Mirror
+ * of {@link isEntityMapMarker}.
+ */
+export function isLoaderFeature(
+  value: unknown
+): value is { __signalTreeLoader: true; attach(entity: unknown): void } {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as { __signalTreeLoader?: unknown }).__signalTreeLoader === true &&
+      // Also require a callable `attach` — the guard's return type promises it,
+      // and the factory relies on this to fail closed: a hand-forged brand
+      // without `attach` must be rejected at the call site ([ST2004]), not slip
+      // through and TypeError inside the marker processor's swallowed try/catch.
+      typeof (value as { attach?: unknown }).attach === 'function'
+  );
+}
+
+/**
  * Generic memory manager interface for lazy signal trees
  */
 export interface MemoryManager {

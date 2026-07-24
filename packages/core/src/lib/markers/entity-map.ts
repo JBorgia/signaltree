@@ -2,8 +2,7 @@ import { computed, Signal } from '@angular/core';
 
 import { createEntitySignal } from '../entity-signal';
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
-import { isEntityMapMarker } from '../utils';
-import { attachLoader, type EntityLoadOptions } from './entity-loader';
+import { isEntityMapMarker, isLoaderFeature } from '../utils';
 
 // Re-export isEntityMapMarker for convenience
 export { isEntityMapMarker };
@@ -12,20 +11,25 @@ export { isEntityMapMarker };
  * EntityMap Marker Factory
  *
  * Self-registering marker for entity collections. If you never use `entityMap()`,
- * this code is tree-shaken from your bundle. Passing a `load` (plus optional
- * `staleTime`/`equal`/`swr`/`tags`/`persist`) turns the collection into a
- * cache-aware (single-scope), self-loading one; the loader machinery lives in `./entity-loader`
- * — a separate module for code organization, NOT a tree-shake boundary: it is
- * statically imported here, so it ships with `entityMap` whether or not `load`
- * is configured (~1.5 KB min+gzip of removable machinery; measured 2026-07-23,
- * RFC 0005 §6 — the injected-helper split that would reclaim it is archived as
- * the fallback design pending new evidence).
+ * this code is tree-shaken from your bundle. Passing a `load` turns the
+ * collection into a cache-aware (single-scope), self-loading one; the loader
+ * machinery lives in `./entity-loader`.
+ *
+ * Tree-shake boundary (RFC 0005 §6): the loader machinery is reached ONLY
+ * through the `loader()` helper (`./loader`) — `entityMap({ load: loader(fn,
+ * opts) })`. This file does NOT import `attachLoader`; the `loader()` feature
+ * carries the only reference to it, so a plain `entityMap()` (or one whose
+ * `load` is never a loader feature) tree-shakes the loader/cache/SWR/persist
+ * code out entirely. A raw function passed to `load` fails closed ([ST2004]) —
+ * it cannot silently no-op. (v12 removed the deprecated raw `load: fn` path;
+ * this is the reclaim RFC 0005 was staged to earn.)
  */
 
 import type {
   EntityConfig,
   EntityMapMarker,
   EntitySignal,
+  LoaderFeature,
   LoadingEntityMapMarker,
 } from '../types';
 
@@ -141,8 +145,12 @@ type InternalMarker = EntityMapMarker<
   Record<string, unknown>,
   string | number
 > & {
-  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number> &
-    Partial<EntityLoadOptions<Record<string, unknown>, unknown>>;
+  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number> & {
+    // `load` is a `loader()` feature (v12). Typed `unknown` here — the
+    // processor guards with `isLoaderFeature` and fails closed on anything
+    // else (e.g. a JS/`any` caller passing a raw function).
+    load?: unknown;
+  };
   __computedSlices?: EntityMapComputedSlices<Record<string, unknown>>;
 };
 
@@ -160,13 +168,15 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  * Automatically registers its processor on first use — no manual registration.
  * If you never use `entityMap()`, the processor is tree-shaken out.
  *
- * Passing a `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`/
- * `clearOnParamsChange`) makes the collection **cache-aware** — it loads itself,
- * exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
- * .lastLoadedAt()/.params()`, guards refetches by `staleTime`, coalesces
- * concurrent loads, and (with a loader that declares a param) is scoped per
- * `params` (one scope retained at a time — not a multi-key cache). Without
- * `load` it's a plain normalized client collection.
+ * Passing a `load` — as a `loader()` feature (preferred) or a raw function
+ * (deprecated, [ST2004]) — makes the collection **cache-aware**: it loads
+ * itself, exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.loading()/
+ * .loaded()/.error()/.lastLoadedAt()/.params()`, guards refetches by
+ * `staleTime`, coalesces concurrent loads, and (with a loader that declares a
+ * param) is scoped per `params` (one scope retained at a time — not a multi-key
+ * cache). Wrapping with `loader()` keeps the loader machinery tree-shakeable —
+ * a plain `entityMap()` never pays for it. Without `load` it's a plain
+ * normalized client collection.
  *
  * @example Plain (client-side)
  * ```typescript
@@ -176,12 +186,12 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  *
  * @example Cache-aware (self-loading)
  * ```typescript
+ * import { signalTree, entityMap, loader } from '@signaltree/core';
+ *
  * const tree = signalTree({
  *   plants: entityMap<Plant, string>({
- *     load: () => plantApi.list$(),
  *     selectId: (p) => p.url,
- *     staleTime: '30m',
- *     tags: ['plants'],
+ *     load: loader(() => plantApi.list$(), { staleTime: '30m', tags: ['plants'] }),
  *   }),
  * });
  * await tree.$.plants.load();   // guarded — no-op while fresh / in-flight
@@ -191,18 +201,18 @@ type DefaultKey<E> = E extends { id: infer I extends string | number }
  * ```typescript
  * const tree = signalTree({
  *   customers: entityMap<Customer, string, { regionUrl: string }>({
- *     load: ({ regionUrl }) => api.getCustomers$(regionUrl),
  *     selectId: (c) => c.externalId,
- *     staleTime: '30m',
+ *     load: loader(({ regionUrl }) => api.getCustomers$(regionUrl), { staleTime: '30m' }),
  *   }),
  * });
  * await tree.$.customers.load({ regionUrl });  // per-scope freshness
  * ```
  *
- * @see RFC 0002, RFC 0003
+ * @see RFC 0002, RFC 0003, RFC 0005
  */
 // Overload order matters: the LOADING overload is declared first so a config
-// carrying `load` resolves to it; the PLAIN overload is declared LAST so that
+// carrying `load: loader(...)` resolves to a loading builder (recovering `P`
+// from the feature); the PLAIN overload is declared LAST so that
 // `ReturnType<typeof entityMap<E, K>>` (a common user idiom, and what the demos
 // use) resolves to the plain builder rather than the loading one.
 export function entityMap<
@@ -210,14 +220,31 @@ export function entityMap<
   K extends string | number = DefaultKey<E>,
   P = void
 >(
-  config: EntityConfig<E, K> & EntityLoadOptions<E, P>
+  config: EntityConfig<E, K> & { load: LoaderFeature<E, P> }
 ): LoadingEntityMapBuilder<E, K, P, Record<string, never>>;
 export function entityMap<E, K extends string | number = DefaultKey<E>>(
   config?: EntityConfig<E, K>
 ): EntityMapBuilder<E, K, Record<string, never>>;
 export function entityMap<E, K extends string | number = DefaultKey<E>>(
-  config?: EntityConfig<E, K> & Partial<EntityLoadOptions<E, unknown>>
+  config?: EntityConfig<E, K> & { load?: LoaderFeature<E, unknown> }
 ): EntityMapBuilder<E, K, Record<string, never>> {
+  // Fail closed at the call site (v12): `load` must be a `loader()` feature.
+  // Checked HERE, synchronously, rather than in the marker processor —
+  // `materializeMarkers()` wraps `processor.create()` in a try/catch that
+  // swallows throws (dev console.error, silent in prod), so a processor-level
+  // throw would not actually fail closed. Throwing in the factory surfaces the
+  // error where the user wrote `entityMap({ load: fn })`, and cannot be
+  // swallowed. Raw `load: fn` was removed in v12 (RFC 0005 §6). [ST2004]
+  const rawLoad = (config as { load?: unknown } | undefined)?.load;
+  if (rawLoad != null && !isLoaderFeature(rawLoad)) {
+    throw new Error(
+      `SignalTree: entityMap({ load }) requires the loader() helper — ` +
+        `entityMap({ load: loader(fn, { staleTime, swr, tags }) }). The raw ` +
+        `"load: fn" form was removed in v12 so the loader machinery ` +
+        `tree-shakes out of plain collections. [ST2004]`
+    );
+  }
+
   // Self-register on first use (tree-shakeable)
   if (!entityMapRegistered) {
     entityMapRegistered = true;
@@ -243,14 +270,19 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           }
         }
 
-        // Cache-aware loading (only when `load` is configured)
-        if (typeof cfg.load === 'function') {
-          attachLoader(
+        // Cache-aware loading — reached ONLY through a `loader()` feature, the
+        // sole holder of the `attachLoader` reference. This file does not
+        // import `attachLoader`, so a plain `entityMap()` tree-shakes the
+        // loader machinery out (RFC 0005 §6). A non-feature `load` is rejected
+        // at the `entityMap()` call site (fail-closed [ST2004]), so by the time
+        // the processor runs `load` is either absent or a loader feature.
+        const load = cfg.load;
+        if (isLoaderFeature(load)) {
+          load.attach(
             entitySignal as EntitySignal<
               Record<string, unknown>,
               string | number
-            >,
-            cfg as EntityLoadOptions<Record<string, unknown>, unknown>
+            >
           );
         }
 

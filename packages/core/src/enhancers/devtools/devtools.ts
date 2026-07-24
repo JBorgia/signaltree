@@ -124,12 +124,4 @@ export function productionDevTools(): <T>(
   });
 }
 
-/**
- * @deprecated Use `devTools()` as the primary enhancer. This legacy
- * `withDevTools` factory will be removed in a future major release.
- */
-export const withDevTools = Object.assign(devTools, {
-  production: productionDevTools,
-  full: fullDevTools,
-  enable: enableDevTools,
-});
+// v12: removed the deprecated `withDevTools` alias — use `devTools()`.

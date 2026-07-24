@@ -1,11 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-import {
-  batching,
-  flushBatchedUpdates,
-  getBatchQueueSize,
-  hasPendingUpdates,
-} from './batching';
+import { batching } from './batching';
 import { signalTree } from '../../lib/signal-tree';
 
 function createFakeTree(initial: any) {
@@ -38,29 +33,20 @@ describe('batching behavior', () => {
    * In v6.1.0+, signal writes are SYNCHRONOUS:
    * - Values update immediately when .set() is called
    * - Only CD notifications are batched
-   * - The deprecated getBatchQueueSize() always returns 0
    *
-   * The old test expected getBatchQueueSize() >= 1 after an update,
-   * but now updates are applied immediately.
+   * (v12 removed the legacy global getBatchQueueSize/hasPendingUpdates/
+   * flushBatchedUpdates helpers — pending state is observed via the tree's
+   * hasPendingNotifications()/flushNotifications() methods.)
    */
   it('applies updates synchronously (v6.1.0+ behavior)', () => {
     const tree = createFakeTree({ count: 0 });
     const enhanced = batching()(tree as any) as any;
-
-    // Deprecated function warns and returns false
-    expect(hasPendingUpdates()).toBe(false);
 
     // Update is applied immediately (synchronous!)
     enhanced({ count: 1 });
 
     // Value is already updated - no queue
     expect(enhanced().count).toBe(1);
-
-    // Deprecated function warns and returns 0
-    expect(getBatchQueueSize()).toBe(0);
-
-    // flushBatchedUpdates is deprecated but should not throw
-    expect(() => flushBatchedUpdates()).not.toThrow();
   });
 
   it('tracks pending CD notifications via tree methods', () => {

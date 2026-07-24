@@ -188,12 +188,16 @@ Modern bundlers (Vite, esbuild, Rollup, webpack 5+) **automatically tree-shake b
 import { signalTree, batching } from '@signaltree/core';
 ```
 
-Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`, `./storage`. Enhancers are NOT a published subpath — they live in the main barrel and are tree-shaken from there.
+Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`, `./storage`, `./lazy`, `./authoring`. Enhancers are NOT a published subpath — they live in the main barrel and are tree-shaken from there.
 
-**Measured impact** (with modern bundlers):
+- `@signaltree/core/lazy` — the `lazy()` helper for deferring marker/enhancer materialization.
+- `@signaltree/core/authoring` — enhancer- and marker-author plumbing (`getPathNotifier`, `registerMarkerProcessor`, `withWriteContext`, `createEnhancer`, …). This is also the migration target for the deprecated root-barrel re-exports of `getPathNotifier` and `registerMarkerProcessor` (see below).
 
-- Core only: ~8.5 KB gzipped
-- Core + batching: ~9.3 KB gzipped (barrel vs subpath: identical)
+**Measured impact** (with modern bundlers, per `tools/check-bundle-budget.mjs`):
+
+- Bare `signalTree` (no markers/enhancers): ~5.5 KB gzipped
+- A tree using a plain `entityMap()`: ~8.4 KB gzipped
+- Core + `batching()`: bare `signalTree` plus `batching()`'s own delta (see per-enhancer deltas under "Available extension packages")
 - Unused enhancers: **automatically excluded** by tree-shaking
 
 ### Marker Tree-Shaking (Self-Registering)
@@ -347,8 +351,10 @@ tree.$.form.submitted.set(true);
 
 When tests need synchronous notification delivery, use `flushSync()`:
 
+> **Deprecated root-barrel re-export:** `getPathNotifier` from `@signaltree/core` is deprecated (11.6.0) — it moved to `@signaltree/core/authoring` as part of enhancer-author plumbing. The root re-export will be removed in the next major; import it from `@signaltree/core/authoring` instead.
+
 ```typescript
-import { getPathNotifier } from '@signaltree/core';
+import { getPathNotifier } from '@signaltree/core/authoring';
 
 it('updates state', () => {
   tree.$.count.set(5);
@@ -818,11 +824,12 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Reactive Side Effects:**
 
-- `effects()` - Angular `effect()`-based subscriptions on tree state with cleanup
+- `effects()` - **Deprecated (11.6.0)** — Angular `effect()`-based subscriptions on tree state with cleanup. Use native Angular `effect(() => tree.$.path())` instead: `tree.effect()`/`tree.subscribe()` call Angular's `effect()` without any injector handling, so calling them outside an injection context throws `NG0203` (native `effect()` lets you pass `{ injector }` explicitly to avoid this). Removal is planned for a future major release, not v12.
 
 ```typescript
 import { signalTree, effects } from '@signaltree/core';
 
+// Deprecated — prefer native effect(() => tree.$.count()) (see "Reactive effects" below)
 const tree = signalTree({ count: 0, user: { name: 'Alice' } }).with(effects());
 
 // Subscribe with automatic cleanup on destroy
@@ -993,9 +1000,12 @@ SignalTree is designed for extensibility. Create your own **markers** (state pla
 
 #### Custom Marker Example
 
+> **Deprecated root-barrel re-export:** `registerMarkerProcessor` from `@signaltree/core` is deprecated (11.6.0) — marker-author plumbing moved to `@signaltree/core/authoring`. The root re-export will be removed in the next major; import it from `@signaltree/core/authoring` instead.
+
 ```typescript
 import { signal, Signal } from '@angular/core';
-import { registerMarkerProcessor, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 // 1. Define marker symbol and interface
 const VALIDATED_MARKER = Symbol('VALIDATED_MARKER');
@@ -1112,7 +1122,7 @@ SignalTree provides two utilities for external derived functions:
 
 ```typescript
 // app-tree.ts
-import { signalTree, entityMap, WithDerived } from '@signaltree/core';
+import { signalTree, entityMap, type WithDerived } from '@signaltree/core';
 import { entityResolutionDerived } from './derived/tier-entity-resolution';
 import { complexLogicDerived } from './derived/tier-complex-logic';
 
@@ -1271,18 +1281,22 @@ tree.$.users.upsertOne(user, { selectId: (u) => u.odataId });
 
 #### Cache-aware / self-loading `entityMap` (v11.4+)
 
-Pass `load` in `entityMap`'s config and it gains a self-loading, cache-aware surface — reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection. Full `entityMap` surface **plus** a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. It retains only the current scope (switching scope A → B → A refetches A, not a multi-key cache). There is no separate `entityCollection` marker (it was folded into `entityMap` in v11.4.0 — a plain `entityMap<E, K>()` with no `load` is unaffected). See [RFC 0002](../../docs/rfcs/0002-entity-collection.md), [RFC 0003](../../docs/rfcs/0003-keyed-entity-collection.md), and the [cookbook](../../docs/guides/entity-collection-cookbook.md).
+Wrap the fetch function in the `loader()` helper and pass it as `entityMap`'s `load` and it gains a self-loading, cache-aware surface — reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection. Full `entityMap` surface **plus** a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. It retains only the current scope (switching scope A → B → A refetches A, not a multi-key cache). There is no separate `entityCollection` marker (it was folded into `entityMap` in v11.4.0 — a plain `entityMap<E, K>()` with no `load` is unaffected). `loader()` is what keeps this machinery tree-shakeable — a plain `entityMap()` doesn't pay for it; a raw function passed directly as `load` was removed in v12 (RFC 0005 §6/§7) and now fails closed with a coded `[ST2004]` error. See [RFC 0002](../../docs/rfcs/0002-entity-collection.md), [RFC 0003](../../docs/rfcs/0003-keyed-entity-collection.md), and the [cookbook](../../docs/guides/entity-collection-cookbook.md).
 
 ```typescript
-import { signalTree, entityMap, invalidateTag } from '@signaltree/core';
+import { signalTree, entityMap, loader, invalidateTag } from '@signaltree/core';
 
 const tree = signalTree({
   plants: entityMap<Plant, string>({
-    load: () => plantApi.list$(region), // () => Observable<E[]> | Promise<E[]>
     selectId: (p) => p.url,
-    staleTime: '30m', // skip refetch while fresh; ms or '30m'. default 0 = always stale
-    swr: true, // serve last value while revalidating
-    tags: ['plants'], // for invalidateTag(tree, 'plants')
+    load: loader(
+      () => plantApi.list$(region), // () => Observable<E[]> | Promise<E[]>
+      {
+        staleTime: '30m', // skip refetch while fresh; ms or '30m'. default 0 = always stale
+        swr: true, // serve last value while revalidating
+        tags: ['plants'], // for invalidateTag(tree, 'plants')
+      }
+    ),
   }),
 });
 
@@ -1304,11 +1318,14 @@ Auto-loads on first `tree.$` access unless `lazy: true`. Keep HTTP-level caching
 Add a third type param `P` and give `load` a parameter to parameterize the collection by scope (region, customer, tenant, …) — see [RFC 0003](../../docs/rfcs/0003-keyed-entity-collection.md):
 
 ```typescript
+import { entityMap, loader } from '@signaltree/core';
+
 customers: entityMap<Customer, string, { regionUrl: string }>({
-  load: ({ regionUrl }) => api.getCustomers$(regionUrl),
   selectId: (c) => c.externalId,
-  staleTime: '30m',
-  // freshness compared per scope with `equal` (default: structural value comparison)
+  load: loader(({ regionUrl }) => api.getCustomers$(regionUrl), {
+    staleTime: '30m',
+    // freshness compared per scope with `equal` (default: structural value comparison)
+  }),
 });
 
 tree.$.customers.load({ regionUrl }); // same scope+fresh => no-op; scope changed => refetch + entities replaced
@@ -2062,6 +2079,62 @@ class AppStateService {
 }
 ```
 
+### `defineStore()` — idiomatic DI, without the boilerplate
+
+`defineStore()` wraps a `signalTree(...)` factory in an injectable Angular service class, so you get the pattern above (a tree behind DI, with lifecycle tied to the injector) without hand-writing the wrapper class:
+
+```typescript
+import { signalTree, defineStore } from '@signaltree/core';
+
+export const CounterStore = defineStore(() => signalTree({ count: 0 }));
+
+// App-wide singleton — comparable to @Injectable({ providedIn: 'root' })
+export const SettingsStore = defineStore(() => signalTree({ theme: 'light' }), { providedIn: 'root' });
+
+@Component({ providers: [CounterStore] })
+class Counter {
+  readonly store = inject(CounterStore);
+  inc() {
+    this.store.$.count.update((n) => n + 1);
+  }
+}
+```
+
+`inject(CounterStore)` resolves to the **real tree** — callable, with `$`, `.with(...)`, `.derived(...)`, and any enhancer-added methods — not a wrapper instance. The tree's `destroy()` is tied to the host injector's `DestroyRef`, so a component-provided store tears down with the component and a root store with the app. The factory runs inside Angular's injection context, so it may call `inject()` itself.
+
+### `asReadonly()` and `ReadonlyStore` — read-only views
+
+For components that should only ever read a tree, `asReadonly(tree)` narrows it to a `ReadonlyStore` — read-only `$` over the tree's full accumulated type (leaf `Signal` reads, `.derived()` computeds preserved, `linked()` narrowed to `Signal`) plus `destroy()`/`destroyed`. Marker surfaces are genuinely narrowed to per-marker reader allowlists: entity mutators (`upsertOne`, `removeWhere`, …), loader triggers (`load`/`refresh`/`invalidate`), `status` setters, and `form` writes are not offered on the readonly type, and `byId()` is re-signed to a read-only entity node (deep `Signal` leaves, no `.set`).
+
+```typescript
+import { signalTree, asReadonly } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const tree = signalTree({ count: 0 }).derived(($) => ({ doubled: computed(() => $.count() * 2) }));
+
+const reader = asReadonly(tree);
+reader.$.count(); // ✅ read
+reader.$.doubled(); // ✅ derived computeds survive
+// reader.$.count.set(1) // ❌ compile error — not offered on ReadonlyStore
+```
+
+**This is a compile-time narrowing only** — `asReadonly()` returns the exact same runtime object, with no runtime guard. It stops the type system from *offering* a write; it does not stop a deliberate `as any` bypass. Pair it with a separate `@Injectable` Ops service for the write path (writes go through the Ops service; components inject the readonly view).
+
+`defineStore(factory, { expose: 'readonly' })` is sugar over the same `ReadonlyStore` view for injected stores:
+
+```typescript
+export const CounterStore = defineStore(() => signalTree({ count: 0 }), { expose: 'readonly' });
+
+@Component({ providers: [CounterStore] })
+class Display {
+  readonly store = inject(CounterStore);
+  read() {
+    return this.store.$.count();
+  } // ✅ read-only
+  // this.store.$.count.set(1);           // ❌ type error — not on ReadonlyStore
+}
+```
+
 ## Measuring performance
 
 For fair, reproducible measurements that reflect your app and hardware, use the **Benchmark Orchestrator** in the demo. It calibrates runs per scenario and library, applies **real-world frequency weighting** based on research analysis, reports robust statistics, and supports CSV/JSON export. Avoid copying fixed numbers from docs; results vary.
@@ -2082,7 +2155,7 @@ For fair, reproducible measurements that reflect your app and hardware, use the 
           {{ userTree.$.error() }}
           <button (click)="loadUsers()">Retry</button>
         </div>
-        } @else { @for (user of users.all(); track user.id) {
+        } @else { @for (user of userTree.$.users(); track user.id) {
         <div class="user-card">
           <h3>{{ user.name }}</h3>
           <p>{{ user.email }}</p>
@@ -2093,9 +2166,11 @@ For fair, reproducible measurements that reflect your app and hardware, use the 
       </div>
 
       <!-- User Form -->
+      <!-- Branch accessors aren't writable via [(ngModel)] (it can't bind to a function
+           call); read the leaf with [ngModel] and write the leaf with (ngModelChange). -->
       <form (ngSubmit)="saveUser()" #form="ngForm">
-        <input [(ngModel)]="userTree.$.form.name()" name="name" placeholder="Name" required />
-        <input [(ngModel)]="userTree.$.form.email()" name="email" type="email" placeholder="Email" required />
+        <input [ngModel]="userTree.$.form.name()" (ngModelChange)="userTree.$.form.name.set($event)" name="name" placeholder="Name" required />
+        <input [ngModel]="userTree.$.form.email()" (ngModelChange)="userTree.$.form.email.set($event)" name="email" type="email" placeholder="Email" required />
         <button type="submit" [disabled]="form.invalid">{{ userTree.$.form.id() ? 'Update' : 'Create' }} User</button>
         <button type="button" (click)="clearForm()">Clear</button>
       </form>
@@ -2131,7 +2206,9 @@ class UserManagerComponent implements OnInit {
   }
 
   editUser(user: User) {
-    this.userTree.$.form.set(user);
+    // `form` is a plain nested object, not a leaf — it has no `.set()`. Calling
+    // the branch accessor deep-merges the partial update at runtime.
+    this.userTree.$.form(user);
   }
 
   async saveUser() {
@@ -2173,7 +2250,7 @@ class UserManagerComponent implements OnInit {
   }
 
   clearForm() {
-    this.userTree.$.form.set({ id: '', name: '', email: '' });
+    this.userTree.$.form({ id: '', name: '', email: '' });
   }
 }
 ```
@@ -2246,7 +2323,7 @@ async function handleLoadUsers() {
 
 ### Reactive effects
 
-Use Angular's built-in `effect()` to react to signal changes, or the `effects()` enhancer for tree-level subscriptions with managed cleanup:
+Use Angular's built-in `effect()` to react to signal changes — this is the canonical approach, not the deprecated `effects()` enhancer below:
 
 ```typescript
 import { effect } from '@angular/core';
@@ -2257,7 +2334,7 @@ effect(() => {
 });
 ```
 
-Or use the `effects()` enhancer for whole-tree subscriptions:
+**`effects()` enhancer — deprecated (11.6.0).** `tree.effect()`/`tree.subscribe()` call Angular's `effect()` without any injector handling, so calling them outside an injection context throws `NG0203` — a known limitation that will not be fixed. Prefer native `effect(() => tree.$.path())` (or pass `{ injector }` explicitly when calling outside an injection context). Removal is planned for a future major release, not v12:
 
 ```typescript
 import { signalTree, effects } from '@signaltree/core';
@@ -2369,7 +2446,7 @@ Consider separate packages when you need:
 
 ### Case Study
 
-Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTree migration. Original migration measured ~11,700 → ~2,800 lines of state code (~76%) and ~50KB → ~27KB gzipped state bundle (~46%). Both codebases have continued to evolve; re-measuring today the same scope yields a 60–70% reduction depending on definition (apps-only vs apps+libs, narrow vs broad import filter). The directional finding is reproducible — the exact percentages are not. **YMMV** — your migration's reduction depends on app complexity, prior architecture, and how heavily the original code leaned on custom `withX` helpers. The single biggest driver of the savings is cross-cutting concerns (devtools, error banners, telemetry, refresh handling) moving from per-store composition to tree-level enhancers.
+Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTree migration. Original migration measured ~11,700 → ~2,800 lines of state code (~76%) and ~50KB → ~27KB gzipped state bundle (~46%). Both codebases have continued to evolve; re-measuring today the same scope yields a 60–70% reduction depending on definition (apps-only vs apps+libs, narrow vs broad import filter). The directional finding is reproducible — the exact percentages are not. **YMMV** — your migration's reduction depends on app complexity, prior architecture, and how heavily the original code leaned on custom `withX` helpers. The most concretely-attributable single reduction was `entityMap()` replacing a 222-line `withEntityCrud` wrapper. The remaining bulk of the savings appears to come from cross-cutting concerns (devtools, error banners, telemetry, refresh handling) consolidating into tree-level enhancers, though we have not separately measured each category.
 
 | Metric | NgRx | SignalTree | Change |
 | --- | --- | --- | --- |
@@ -2531,6 +2608,11 @@ All enhancers are now consolidated in the core package. The following features a
 ### Integration & Convenience
 
 - **serialization()** (+0.84KB gzipped) - State persistence & SSR support
+- **persistence()** - Auto-save/load to localStorage, IndexedDB, or custom adapters
+
+### Reactive Side Effects
+
+- **effects()** - **Deprecated (11.6.0)** — use native Angular `effect(() => tree.$.path())`; removal planned for a future major, not v12
 
 ### Quick Start with Extensions
 

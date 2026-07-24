@@ -28,14 +28,18 @@ import type { EntitySignal } from '../types';
 /**
  * Cache-aware (single-scope) loading for `entityMap`.
  *
- * `entityMap({ load, staleTime, … })` turns a plain normalized collection into a
- * self-loading, cache-aware one: a loader, load status, a per-scope freshness
- * guard, single-flight dedup, tag-based invalidation, and optional offline-first
- * persistence — all attached to the same `EntitySignal` surface. This module holds
- * the loader machinery so a plain `entityMap()` (no `load`) never pulls it in
- * unless the app also uses a loading collection somewhere.
+ * `entityMap({ load: loader(fn, { staleTime, … }) })` turns a plain normalized
+ * collection into a self-loading, cache-aware one: a loader, load status, a
+ * per-scope freshness guard, single-flight dedup, tag-based invalidation, and
+ * optional offline-first persistence — all attached to the same `EntitySignal`
+ * surface. This module holds the loader machinery; `attachLoader` is reachable
+ * ONLY through the `loader()` helper (`./loader`), so a plain `entityMap()`
+ * never pulls it in unless the app also uses a loading collection (v12,
+ * RFC 0005 §6). The loader-family options (`staleTime`/`swr`/`tags`/`persist`/
+ * `equal`/`lazy`/`clearOnParamsChange`) are passed to `loader()`, not to
+ * `entityMap` directly.
  *
- * @see RFC 0002, RFC 0003
+ * @see RFC 0002, RFC 0003, RFC 0005
  */
 
 // =============================================================================

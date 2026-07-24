@@ -15,6 +15,7 @@ import {
   parseDuration,
   stableStringify,
 } from './entity-loader';
+import { loader } from './loader';
 
 interface Plant {
   url: string;
@@ -82,10 +83,10 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
     let calls = 0;
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           calls++;
           return of([P1, P2]);
-        },
+        }),
         selectId,
       }),
     });
@@ -103,12 +104,11 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
     let calls = 0;
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           calls++;
           return of([P1]);
-        },
+        }, { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
     tree.$.plants.all();
@@ -124,12 +124,11 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
     const d = deferred<Plant[]>();
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           calls++;
           return d.promise;
-        },
+        }, { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
     const p1 = tree.$.plants.load();
@@ -144,9 +143,8 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
   it('surfaces loader errors; load() still resolves', async () => {
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => Promise.reject(new Error('boom')),
+        load: loader(() => Promise.reject(new Error('boom')), { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
     await tree.$.plants.load();
@@ -158,9 +156,8 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
     it('resolves normally on success, same as load()', async () => {
       const tree = signalTree({
         plants: entityMap<Plant, string>({
-          load: () => Promise.resolve([P1]),
+          load: loader(() => Promise.resolve([P1]), { lazy: true }),
           selectId,
-          lazy: true,
         }),
       });
       await expect(tree.$.plants.loadOrThrow()).resolves.toBeUndefined();
@@ -171,9 +168,8 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
     it('rejects with the loader error instead of only setting .error()', async () => {
       const tree = signalTree({
         plants: entityMap<Plant, string>({
-          load: () => Promise.reject(new Error('boom')),
+          load: loader(() => Promise.reject(new Error('boom')), { lazy: true }),
           selectId,
-          lazy: true,
         }),
       });
       await expect(tree.$.plants.loadOrThrow()).rejects.toThrow('boom');
@@ -185,13 +181,11 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
       let calls = 0;
       const tree = signalTree({
         plants: entityMap<Plant, string>({
-          load: () => {
+          load: loader(() => {
             calls++;
             return Promise.resolve([P1]);
-          },
+          }, { staleTime: '1h', lazy: true }),
           selectId,
-          staleTime: '1h',
-          lazy: true,
         }),
       });
       await tree.$.plants.loadOrThrow();
@@ -213,13 +207,11 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
       let calls = 0;
       const tree = signalTree({
         plants: entityMap<Plant, string>({
-          load: () => {
+          load: loader(() => {
             calls++;
             return of([P1]);
-          },
+          }, { staleTime: '1h', lazy: true }),
           selectId,
-          staleTime: '1h',
-          lazy: true,
         }),
       });
       await tree.$.plants.load();
@@ -238,13 +230,11 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
       let calls = 0;
       const tree = signalTree({
         plants: entityMap<Plant, string>({
-          load: () => {
+          load: loader(() => {
             calls++;
             return of([P1]);
-          },
+          }, { staleTime: '1h', lazy: true }),
           selectId,
-          staleTime: '1h',
-          lazy: true,
         }),
       });
       await tree.$.plants.load();
@@ -256,7 +246,7 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
 
   it('swr:false flips loaded false on invalidate; swr:true keeps it true', async () => {
     const nonSwr = signalTree({
-      plants: entityMap<Plant, string>({ load: () => of([P1]), selectId }),
+      plants: entityMap<Plant, string>({ load: loader(() => of([P1])), selectId }),
     });
     nonSwr.$.plants.all();
     await Promise.resolve();
@@ -266,9 +256,8 @@ describe('entityMap({ load }) — global cache-aware (single-scope)', () => {
 
     const swr = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => of([P1]),
+        load: loader(() => of([P1]), { swr: true }),
         selectId,
-        swr: true,
       }),
     });
     swr.$.plants.all();
@@ -284,22 +273,18 @@ describe('invalidateTag()', () => {
     let orderCalls = 0;
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           plantCalls++;
           return of([P1]);
-        },
+        }, { staleTime: '1h', tags: ['plants', 'catalog'] }),
         selectId,
-        staleTime: '1h',
-        tags: ['plants', 'catalog'],
       }),
       orders: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           orderCalls++;
           return of([P2]);
-        },
+        }, { staleTime: '1h', tags: ['orders'] }),
         selectId,
-        staleTime: '1h',
-        tags: ['orders'],
       }),
     });
     tree.$.plants.all();
@@ -321,13 +306,11 @@ describe('invalidateTag()', () => {
       catalog: {
         nursery: {
           plants: entityMap<Plant, string>({
-            load: () => {
+            load: loader(() => {
               plantCalls++;
               return of([P1]);
-            },
+            }, { staleTime: '1h', tags: ['plants'] }),
             selectId,
-            staleTime: '1h',
-            tags: ['plants'],
           }),
         },
       },
@@ -344,9 +327,8 @@ describe('invalidateTag()', () => {
   it('returns 0 for an unknown tag', () => {
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => of([P1]),
+        load: loader(() => of([P1]), { tags: ['plants'] }),
         selectId,
-        tags: ['plants'],
       }),
     });
     expect(invalidateTag(tree, 'nope')).toBe(0);
@@ -375,12 +357,11 @@ describe('persist (offline-first)', () => {
     let calls = 0;
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => {
+        load: loader(() => {
           calls++;
           return d.promise;
-        },
+        }, { persist: { adapter, key: 'plants', hydrateThenRevalidate: true } }),
         selectId,
-        persist: { adapter, key: 'plants', hydrateThenRevalidate: true },
       }),
     });
     expect(tree.$.plants.all()).toEqual([]); // deferred
@@ -407,12 +388,11 @@ describe('entityMap({ load }) — scoped (per-params freshness)', () => {
   function scopedTree(c: { n: number }) {
     return signalTree({
       customers: entityMap<Cust, string, Scope>({
-        load: ({ region }) => {
+        load: loader(({ region }) => {
           c.n++;
           return of(ROWS[region]);
-        },
+        }, { staleTime: '1h' }),
         selectId: custId,
-        staleTime: '1h',
       }),
     });
   }
@@ -445,12 +425,11 @@ describe('entityMap({ load }) — scoped (per-params freshness)', () => {
     const c = { n: 0 };
     const tree = signalTree({
       items: entityMap<Cust, string, { a: number; b: number }>({
-        load: (_s) => {
+        load: loader((_s) => {
           c.n++;
           return of(WEST);
-        },
+        }, { staleTime: '1h' }),
         selectId: custId,
-        staleTime: '1h',
       }),
     });
     await tree.$.items.load({ a: 1, b: 2 });
@@ -462,13 +441,11 @@ describe('entityMap({ load }) — scoped (per-params freshness)', () => {
     const c = { n: 0 };
     const tree = signalTree({
       customers: entityMap<Cust, string, { region: string; ts: number }>({
-        load: ({ region }) => {
+        load: loader(({ region }) => {
           c.n++;
           return of(ROWS[region]);
-        },
-        equal: (a, b) => a.region === b.region,
+        }, { equal: (a, b) => a.region === b.region, staleTime: '1h' }),
         selectId: custId,
-        staleTime: '1h',
       }),
     });
     await tree.$.customers.load({ region: 'west', ts: 1 });
@@ -483,7 +460,7 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
     const dE = deferred<Cust[]>();
     const tree = signalTree({
       customers: entityMap<Cust, string, Scope>({
-        load: ({ region }) => (region === 'west' ? dW.promise : dE.promise),
+        load: loader(({ region }) => (region === 'west' ? dW.promise : dE.promise)),
         selectId: custId,
       }),
     });
@@ -502,9 +479,8 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
       const dE = deferred<Cust[]>();
       const tree = signalTree({
         customers: entityMap<Cust, string, Scope>({
-          load: ({ region }) => (region === 'west' ? dW.promise : dE.promise),
+          load: loader(({ region }) => (region === 'west' ? dW.promise : dE.promise), { clearOnParamsChange: clear }),
           selectId: custId,
-          clearOnParamsChange: clear,
         }),
       });
       return { tree, dW, dE };
@@ -534,12 +510,11 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
     const c = { n: 0 };
     const tree = signalTree({
       customers: entityMap<Cust, string, Scope>({
-        load: ({ region }) => {
+        load: loader(({ region }) => {
           c.n++;
           return of(ROWS[region]);
-        },
+        }, { staleTime: '1h' }),
         selectId: custId,
-        staleTime: '1h',
       }),
     });
     await tree.$.customers.refresh(); // no scope yet → no-op
@@ -566,9 +541,8 @@ describe('entityMap({ load }) — scoped supersede / clear / refresh', () => {
     const d = deferred<Cust[]>();
     const tree = signalTree({
       customers: entityMap<Cust, string, Scope>({
-        load: (_s) => d.promise,
+        load: loader((_s) => d.promise, { persist: { adapter, key: 'cust', hydrateThenRevalidate: true } }),
         selectId: custId,
-        persist: { adapter, key: 'cust', hydrateThenRevalidate: true },
       }),
     });
     const p = tree.$.customers.load({ region: 'west' });
@@ -599,9 +573,8 @@ describe('loader teardown (materializing injector destroyed)', () => {
 
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => subject.asObservable(),
+        load: loader(() => subject.asObservable(), { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
 
@@ -635,9 +608,8 @@ describe('loader teardown (materializing injector destroyed)', () => {
 
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => d.promise,
+        load: loader(() => d.promise, { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
 
@@ -671,9 +643,8 @@ describe('loader teardown (materializing injector destroyed)', () => {
 
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => subject.asObservable(),
+        load: loader(() => subject.asObservable(), { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
 
@@ -699,9 +670,8 @@ describe('loader teardown (materializing injector destroyed)', () => {
 
     const tree = signalTree({
       plants: entityMap<Plant, string>({
-        load: () => d.promise,
+        load: loader(() => d.promise, { lazy: true }),
         selectId,
-        lazy: true,
       }),
     });
 
@@ -735,12 +705,12 @@ describe('entityMap loading — typing (compile-time)', () => {
   it('enforces load() vs load(params) and gates the loader surface on `load`', () => {
     const scoped = signalTree({
       c: entityMap<Cust, string, Scope>({
-        load: ({ region }) => of(ROWS[region]),
+        load: loader(({ region }) => of(ROWS[region])),
         selectId: custId,
       }),
     });
     const global = signalTree({
-      c: entityMap<Plant, string>({ load: () => of([P1]), selectId }),
+      c: entityMap<Plant, string>({ load: loader(() => of([P1])), selectId }),
     });
     const plain = signalTree({ c: entityMap<Plant, string>({ selectId }) });
 

@@ -3,7 +3,6 @@ import { ENHANCER_META } from '../lib/types';
 import { batching } from './batching/batching';
 import { timeTravel } from './time-travel/time-travel';
 import { devTools } from './devtools/devtools';
-import { effects } from './effects/effects';
 import { serialization } from './serialization/serialization';
 
 /**
@@ -93,7 +92,6 @@ describe('enhancer metadata', () => {
     ['batching', batching],
     ['timeTravel', timeTravel],
     ['devTools', devTools],
-    ['effects', effects],
     ['serialization', serialization],
   ])('%s attaches metadata with name', (expectedName, factory) => {
     const enhancerFn = (factory as any)();
@@ -132,7 +130,7 @@ describe('duplicate enhancer detection', () => {
     const tree = createMockTree();
     expect(() => {
       tree.with(batching());
-      tree.with(effects());
+      tree.with(serialization());
     }).not.toThrow();
   });
 });

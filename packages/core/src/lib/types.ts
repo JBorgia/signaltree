@@ -452,6 +452,30 @@ export interface SecurityFeature {
   validate(state: unknown): void;
 }
 
+/**
+ * Branded loading feature produced by the `loader()` helper and passed as the
+ * `load` option of {@link EntityMapMarker}'s config:
+ * `entityMap({ load: loader(fn, opts) })`.
+ *
+ * Exact `security()` precedent: the helper closure is the *only* reference to
+ * the loader machinery (`attachLoader`), so importing `entityMap` without
+ * `loader` tree-shakes the loader/cache/SWR code out. The phantom `__entity`/
+ * `__params` members carry `E`/`P` so the loading overload can recover the
+ * entity and scope-param types for inference; they never exist at runtime.
+ *
+ * @typeParam E - entity row type
+ * @typeParam P - scope-param type (`void` for a global collection)
+ */
+export interface LoaderFeature<E, P = void> {
+  readonly __signalTreeLoader: true;
+  /** @internal Attaches loader machinery to a materialized entity signal. */
+  attach(entity: unknown): void;
+  /** @internal Type-level only — carries `E` for inference. */
+  readonly __entity?: E;
+  /** @internal Type-level only — carries the scope-param type `P`. */
+  readonly __params?: P;
+}
+
 // ============================================
 // FEATURE TYPES
 // ============================================

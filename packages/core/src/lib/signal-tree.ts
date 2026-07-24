@@ -695,12 +695,8 @@ function create<T extends object>(
  * // Minimal tree
  * const tree = signalTree({ count: 0 });
  *
- * // With effects
- * const tree = signalTree({ count: 0 }).with(effects());
- *
  * // With multiple enhancers
  * const tree = signalTree({ count: 0 })
- *   .with(effects())
  *   .with(timeTravel())
  *   .with(batching());
  *

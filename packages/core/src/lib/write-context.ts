@@ -13,7 +13,7 @@ import type { UpdateMetadata } from './types';
  * Tag a batch of writes with intent:
  *
  * ```ts
- * import { withWriteContext } from '@signaltree/core';
+ * import { withWriteContext } from '@signaltree/core/authoring';
  *
  * withWriteContext({ intent: 'hydrate', source: 'serialization' }, () => {
  *   tree.$.user.set(serverPayload.user);
@@ -25,7 +25,7 @@ import type { UpdateMetadata } from './types';
  * callback or guardrails-style payload handler):
  *
  * ```ts
- * import { getActiveWriteContext } from '@signaltree/core';
+ * import { getActiveWriteContext } from '@signaltree/core/authoring';
  *
  * const meta = getActiveWriteContext();
  * if (meta?.intent === 'hydrate') {

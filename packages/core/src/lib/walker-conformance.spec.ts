@@ -23,12 +23,14 @@ import { of } from 'rxjs';
 import {
   batching,
   entityMap,
-  interceptLeafSignals,
   invalidateTag,
   serialization,
   signalTree,
   status,
 } from '../index';
+// interceptLeafSignals moved off the root barrel to /authoring in v12.
+import { interceptLeafSignals } from './internals/intercept-leaf-signals';
+import { loader } from './markers/loader';
 
 interface Member extends Record<string, unknown> {
   id: number;
@@ -143,12 +145,10 @@ describe('walker conformance — core subsystems on a deep callable-branch tree'
         stamp: new Date('2021-01-01T00:00:00Z'), // sibling the walk must step over, not choke on
         nursery: {
           plants: entityMap<Member, number>({
-            load: () => {
+            load: loader(() => {
               calls++;
               return of([{ id: 1, name: 'Fern' }]);
-            },
-            staleTime: '1h',
-            tags: ['plants'],
+            }, { staleTime: '1h', tags: ['plants'] }),
           }),
         },
       },

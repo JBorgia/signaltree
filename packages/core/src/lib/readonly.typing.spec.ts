@@ -37,6 +37,7 @@ import {
   stored,
   type LoadingState,
 } from '../index';
+import { loader } from './markers/loader';
 // asyncStream is EXPERIMENTAL and not barrel-exported (RFC 0001 §5); import it
 // relatively so the parity fixture still gates its readonly dispatch row.
 import { asyncStream } from './markers/async-stream';
@@ -75,9 +76,9 @@ const tree = signalTree({
   selectedId: null as number | null,
   branch: { leaf: 'x', deep: { n: 1 } },
   users: entityMap<User, number>(),
-  cached: entityMap<User, number>({ load: () => Promise.resolve([] as User[]) }),
+  cached: entityMap<User, number>({ load: loader(() => Promise.resolve([] as User[])) }),
   // M3 fixture shape: loading entityMap that a later .derived() merges INTO.
-  plants: entityMap<User, number>({ load: () => Promise.resolve([] as User[]) }),
+  plants: entityMap<User, number>({ load: loader(() => Promise.resolve([] as User[])) }),
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
   profile: form<Profile>({ initial: { name: '', email: '' } }),

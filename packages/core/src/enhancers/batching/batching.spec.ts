@@ -3,9 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     batching,
     batchingWithConfig,
-    flushBatchedUpdates,
-    getBatchQueueSize,
-    hasPendingUpdates,
     highPerformanceBatching,
 } from './batching';
 
@@ -67,11 +64,6 @@ describe('batching enhancer', () => {
       expect(typeof batchingWithConfig).toBe('function');
       expect(typeof highPerformanceBatching).toBe('function');
       expect(typeof batching()).toBe('function');
-
-      // helpers callable (deprecated but still exported)
-      expect(typeof flushBatchedUpdates).toBe('function');
-      expect(typeof hasPendingUpdates).toBe('function');
-      expect(typeof getBatchQueueSize).toBe('function');
     });
   });
 
@@ -375,12 +367,9 @@ describe('batching enhancer', () => {
       expect(tree().count).toBe(5);
     });
 
-    it('deprecated global functions should not throw', () => {
-      // These are deprecated but should not throw
-      expect(() => flushBatchedUpdates()).not.toThrow();
-      expect(() => hasPendingUpdates()).not.toThrow();
-      expect(() => getBatchQueueSize()).not.toThrow();
-    });
+    // (v12 removed the deprecated global functions flushBatchedUpdates /
+    // hasPendingUpdates / getBatchQueueSize — use the tree's
+    // flushNotifications() / hasPendingNotifications() instead.)
 
     it('highPerformanceBatching should return a batching enhancer', () => {
       const tree = createMockTree();

@@ -932,15 +932,7 @@ export function serialization(
   return enhancerFn;
 }
 
-/**
- * @deprecated Use `serialization()` as the primary enhancer. This alias
- * remains for backwards compatibility and will be removed in a future major
- * release.
- */
-export const withSerialization = Object.assign(
-  (defaultConfig: SerializationConfig = {}) => serialization(defaultConfig),
-  {}
-);
+// v12: removed the deprecated `withSerialization` alias — use `serialization()`.
 
 /**
  * Convenience function to enable serialization with defaults
@@ -1220,15 +1212,7 @@ export function persistence(
   return persistenceFn;
 }
 
-/**
- * @deprecated Use `persistence()` as the primary enhancer. This alias
- * remains for backwards compatibility and will be removed in a future major
- * release.
- */
-export const withPersistence = Object.assign(
-  (cfg: PersistenceConfig) => persistence(cfg),
-  {}
-);
+// v12: removed the deprecated `withPersistence` alias — use `persistence()`.
 
 // createStorageAdapter / createIndexedDBAdapter moved to ./storage-adapters
 // (re-exported near the StorageAdapter type above — public surface unchanged).
