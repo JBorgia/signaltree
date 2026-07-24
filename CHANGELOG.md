@@ -1,4 +1,4 @@
-## 12.0.0 (unreleased)
+## 12.0.0 (2026-07-23)
 
 > The first "earned major" under RFC 0004 §3 V-MAJOR: a major exists to carry
 > accumulated deliberate breakage with a concrete user-visible payload. This
