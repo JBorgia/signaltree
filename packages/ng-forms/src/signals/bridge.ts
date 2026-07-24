@@ -24,8 +24,6 @@ import {
 import { isTraversableNode, toWritableSignal } from '@signaltree/core';
 import type { SchemaMethods } from '@signaltree/schema';
 
-declare const ngDevMode: boolean | undefined;
-
 /**
  * Walk `tree.schemas.boundPaths()` under the given root and bind each
  * registered schema into the Signal Forms field tree.
@@ -115,38 +113,4 @@ export function signalFormBridgeImpl<TModel>(
     // The schema callback's parameter is typed by Angular as
     // SchemaPathTree<TModel>; the cast above keeps the dynamic walk honest.
   }) as FieldTree<TModel>;
-}
-
-/** One-time guard for the signalFormBridge deprecation warning. */
-let warnedBridgeAliasDeprecated = false;
-
-/**
- * Build a Signal Forms `FieldTree` bound to a SignalTree subtree with all
- * registered schemas auto-applied.
- *
- * @deprecated Renamed to `signalForm()` in 11.6.0 — same signature, same
- * behavior: `signalForm<TModel>(tree, rootPath, subtree)`. This alias will
- * be removed in the next major. Import `signalForm` from
- * `@signaltree/ng-forms/signals`.
- *
- * @public
- */
-export function signalFormBridge<TModel>(
-  tree: SchemaMethods,
-  rootPath: string,
-  subtree: unknown
-): FieldTree<TModel> {
-  if (
-    (typeof ngDevMode === 'undefined' || ngDevMode) &&
-    !warnedBridgeAliasDeprecated
-  ) {
-    warnedBridgeAliasDeprecated = true;
-    console.warn(
-      '[SignalTree] signalFormBridge() is deprecated — renamed to ' +
-        'signalForm() in 11.6.0 (same signature, same behavior). Import ' +
-        "signalForm from '@signaltree/ng-forms/signals'. This alias will " +
-        'be removed in the next major.'
-    );
-  }
-  return signalFormBridgeImpl<TModel>(tree, rootPath, subtree);
 }

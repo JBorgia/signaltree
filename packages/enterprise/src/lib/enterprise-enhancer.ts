@@ -266,9 +266,3 @@ export interface EnterpriseEnhancedTree<T> {
    */
   getPathIndex(): PathIndex<Signal<unknown>> | null;
 }
-
-/**
- * @deprecated Use `enterprise()` instead. This legacy `withEnterprise`
- * alias will be removed in a future major release.
- */
-export const withEnterprise = Object.assign(enterprise, {});

@@ -1,4 +1,5 @@
-import { getPathNotifier, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { getPathNotifier } from '@signaltree/core/authoring';
 import { describe, expect, it, vi } from 'vitest';
 
 import { guardrails } from '../guardrails';

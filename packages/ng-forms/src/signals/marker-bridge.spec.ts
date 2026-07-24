@@ -11,8 +11,6 @@ import { form, signalTree, validators } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
-import { signalFormBridge } from './bridge';
-import { markerSignalForm } from './marker-bridge';
 import { signalForm } from './signal-form';
 
 interface Profile extends Record<string, unknown> {
@@ -233,50 +231,35 @@ describe('signalForm (marker form)', () => {
     });
   });
 
-  describe('async-authority dev warning', () => {
-    it('never warns for a marker without asyncValidators', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-        /* silence */
-      });
-      try {
-        create();
-        expect(warn).not.toHaveBeenCalled();
-      } finally {
-        warn.mockRestore();
-      }
+  describe('single async authority (v12): fail closed', () => {
+    it('does not throw for a marker without asyncValidators', () => {
+      expect(() => create()).not.toThrow();
     });
 
-    it('warns once (and only once) when the bridged marker has asyncValidators', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-        /* silence */
-      });
-      try {
-        const makeTree = () =>
-          signalTree({
-            profile: form<Profile>({
-              initial: { name: '', email: '' },
-              validators: { name: validators.required('Name required') },
-              asyncValidators: {
-                email: async () => null,
-              },
-            }),
-          });
+    it('throws [ST2005] when the bridged marker has asyncValidators', () => {
+      const makeTree = () =>
+        signalTree({
+          profile: form<Profile>({
+            initial: { name: '', email: '' },
+            validators: { name: validators.required('Name required') },
+            asyncValidators: {
+              email: async () => null,
+            },
+          }),
+        });
 
+      expect(() =>
         signalForm(makeTree().$.profile, {
           injector: TestBed.inject(Injector),
-        });
-        expect(warn).toHaveBeenCalledTimes(1);
-        expect(warn.mock.calls[0][0]).toMatch(/pick one authority/i);
-        expect(warn.mock.calls[0][0]).toMatch(/validateAsync/);
+        })
+      ).toThrow(/\[ST2005\]/);
 
-        // Second bridge with async validators: one-time warning, no repeat
+      // And it names how to resolve (pick one authority).
+      expect(() =>
         signalForm(makeTree().$.profile, {
           injector: TestBed.inject(Injector),
-        });
-        expect(warn).toHaveBeenCalledTimes(1);
-      } finally {
-        warn.mockRestore();
-      }
+        })
+      ).toThrow(/validateAsync/);
     });
   });
 
@@ -393,87 +376,6 @@ describe('signalForm (marker form)', () => {
       tree.$.account.username.set('grace');
       await stable();
       expect(fieldTree.username().value()).toBe('grace');
-    });
-  });
-
-  describe('deprecated aliases (removal in the next major)', () => {
-    it('markerSignalForm still works and fires its deprecation warning exactly once', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-        /* silence */
-      });
-      try {
-        const tree = buildTree();
-        const fieldTree = markerSignalForm(tree.$.onboarding.profile, {
-          injector: TestBed.inject(Injector),
-        });
-
-        // Alias delegates to the same implementation
-        tree.$.onboarding.profile.patch({ name: 'Alias' });
-        expect(fieldTree.name().value()).toBe('Alias');
-
-        const deprecations = warn.mock.calls.filter(([msg]) =>
-          /markerSignalForm\(\) is deprecated/.test(String(msg))
-        );
-        expect(deprecations).toHaveLength(1);
-        expect(deprecations[0][0]).toMatch(/signalForm/);
-
-        // Second use: no repeat warning (module-level one-time flag)
-        markerSignalForm(buildTree().$.onboarding.profile, {
-          injector: TestBed.inject(Injector),
-        });
-        expect(
-          warn.mock.calls.filter(([msg]) =>
-            /markerSignalForm\(\) is deprecated/.test(String(msg))
-          )
-        ).toHaveLength(1);
-      } finally {
-        warn.mockRestore();
-      }
-    });
-
-    it('signalFormBridge still works and fires its deprecation warning exactly once', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-        /* silence */
-      });
-      try {
-        interface Account {
-          username: string;
-        }
-        const makeTree = () =>
-          signalTree({ account: { username: '' } as Account }).with(
-            schemas({
-              schemas: { 'account.username': z.string().min(3) },
-            })
-          );
-
-        const tree = makeTree();
-        const fieldTree = TestBed.runInInjectionContext(() =>
-          signalFormBridge<Account>(tree, 'account', tree.$.account)
-        );
-
-        // Alias delegates to the same implementation
-        fieldTree.username().value.set('ada');
-        expect(tree.$.account.username()).toBe('ada');
-
-        const deprecations = warn.mock.calls.filter(([msg]) =>
-          /signalFormBridge\(\) is deprecated/.test(String(msg))
-        );
-        expect(deprecations).toHaveLength(1);
-        expect(deprecations[0][0]).toMatch(/signalForm/);
-
-        // Second use: no repeat warning (module-level one-time flag)
-        const tree2 = makeTree();
-        TestBed.runInInjectionContext(() =>
-          signalFormBridge<Account>(tree2, 'account', tree2.$.account)
-        );
-        expect(
-          warn.mock.calls.filter(([msg]) =>
-            /signalFormBridge\(\) is deprecated/.test(String(msg))
-          )
-        ).toHaveLength(1);
-      } finally {
-        warn.mockRestore();
-      }
     });
   });
 });

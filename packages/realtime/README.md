@@ -229,8 +229,8 @@ const tree = signalTree({ ... })
 ```
 
 > **Renamed:** `createRealtimeEnhancer` is now `realtime()` — noun-form, like
-> every other SignalTree enhancer. The old name remains as a deprecated alias
-> until the next major.
+> every other SignalTree enhancer. The deprecated `createRealtimeEnhancer`
+> alias was removed in v12.
 
 ## TypeScript
 

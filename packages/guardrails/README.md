@@ -53,8 +53,8 @@ Available factories: `createFeatureTree`, `createAngularFeatureTree`,
 `createCacheTree`, `createTestTree`.
 
 > **Renamed:** `createFormTree` is now `createGuardedFormTree` — the old name
-> collided with `createFormTree` from `@signaltree/ng-forms`. The old export
-> remains as a deprecated alias until the next major.
+> collided with `createFormTree` from `@signaltree/ng-forms`. The deprecated
+> `createFormTree` alias was removed in v12.
 
 ## How the dev/prod builds are selected (conditional exports)
 

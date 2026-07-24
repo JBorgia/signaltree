@@ -2,9 +2,7 @@
  * `signalForm()` — the single entry point for producing an Angular Signal
  * Forms `FieldTree` from SignalTree state.
  *
- * One name, two sources (11.6.0 naming unification — previously
- * `markerSignalForm` and `signalFormBridge`, both kept as deprecated
- * aliases for one minor):
+ * One name, two sources:
  *
  * - **`form()` marker** — `signalForm(tree.$.path.to.marker, options?)`
  * - **schema registry** — `signalForm<TModel>(tree, rootPath, subtree)`
@@ -37,11 +35,13 @@ import { markerSignalFormImpl, type SignalFormOptions } from './marker-bridge';
  * (validators declared on the marker, `patch`/`reset`/`submit` through the
  * marker API).
  *
- * **Async validators are NOT unified between the two systems** — the
- * marker's `asyncValidators`/`validateField()`/`submit()` path and Signal
- * Forms' `validateAsync`/`validateHttp` are independent; pick ONE as the
- * authority for a given bridged form (a one-time dev warning fires when a
- * bridged marker has `asyncValidators` configured).
+ * **Single async authority, enforced (v12)** — the marker's
+ * `asyncValidators`/`validateField()`/`submit()` path and Signal Forms'
+ * `validateAsync`/`validateHttp` are independent and cannot both drive one
+ * bridged form. Bridging a marker that has `asyncValidators` configured
+ * **throws** ([ST2005]); pick ONE authority — Signal Forms' `validateAsync`
+ * on the returned FieldTree, or the marker's own path (unbridged). Sync
+ * validators are fully unified.
  *
  * @example
  * ```ts

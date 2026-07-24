@@ -37,8 +37,6 @@ import {
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
 
-declare const ngDevMode: boolean | undefined;
-
 /** Marker-side validator shape (see `Validator` in @signaltree/core). */
 type MarkerValidator = ((
   value: unknown,
@@ -79,13 +77,6 @@ export interface SignalFormOptions {
    */
   nativeErrors?: boolean;
 }
-
-/**
- * @deprecated Renamed to {@link SignalFormOptions} in 11.6.0 (the
- * `signalForm()` naming unification). This alias will be removed in the next
- * major.
- */
-export type MarkerSignalFormOptions = SignalFormOptions;
 
 /**
  * Map a built-in validator failure to Angular's branded error factory.
@@ -129,9 +120,6 @@ function brandedError(
   }
 }
 
-/** One-time guard for the async-authority dev warning. */
-let warnedAsyncAuthority = false;
-
 /**
  * Implementation of the marker form of `signalForm()` (see
  * `./signal-form.ts` for the public entry and full JSDoc).
@@ -149,14 +137,16 @@ let warnedAsyncAuthority = false;
  *   {@link SignalFormOptions.nativeErrors}).
  * - The marker's `errors()`/`valid()` signals are computed over the shared
  *   model, so FieldTree-side writes are reflected immediately.
- * - **Async validators are NOT unified between the two systems.** The
- *   marker's own `asyncValidators`/`validateField()`/`validateAll()`/
- *   `submit()` path and the FieldTree's native Signal Forms `validateAsync`/
- *   `validateHttp` are two independent systems that this bridge does not
- *   connect — pick ONE as the authority for a given bridged form. Using both
- *   on the same field can leave `tree.$...field.valid()` and
- *   `fieldTree.field().valid()` disagreeing during an async validation
- *   window, since each only reflects its own validator set.
+ * - **Single async authority, enforced structurally (v12).** The marker's own
+ *   `asyncValidators`/`validateField()`/`validateAll()`/`submit()` path and the
+ *   FieldTree's native Signal Forms `validateAsync`/`validateHttp` are two
+ *   independent systems that this bridge does not connect — running both would
+ *   leave `tree.$...field.valid()` and `fieldTree.field().valid()` disagreeing
+ *   during any async validation window. So bridging a marker that carries
+ *   `asyncValidators` **throws** ([ST2005]): pick ONE authority — declare async
+ *   validation on the returned FieldTree via Signal Forms, or keep the marker's
+ *   async path and don't bridge. (Sync validators are unified; only async is
+ *   irreconcilable, because Signal Forms owns the field's `pending` state.)
  *
  * @internal
  */
@@ -177,25 +167,27 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
   const validatorConfig = internals.__config?.validators ?? {};
   const nativeErrors = options.nativeErrors ?? false;
 
-  // Async validation is deliberately NOT unified (see the JSDoc above) —
-  // warn once in dev when a bridged marker also has asyncValidators, since
-  // that setup invites the two-authorities disagreement window.
-  if (
-    (typeof ngDevMode === 'undefined' || ngDevMode) &&
-    !warnedAsyncAuthority &&
-    Object.keys(internals.__config?.asyncValidators ?? {}).length > 0
-  ) {
-    warnedAsyncAuthority = true;
-    console.warn(
-      '[SignalTree] signalForm(): this form() marker has ' +
-        'asyncValidators configured. Async validation is not unified ' +
-        'between the marker and Signal Forms — pick one authority: the ' +
-        "marker's validateField()/submit() path OR Signal Forms " +
-        'validateAsync/validateHttp. Using both on one field can leave ' +
-        "the marker's valid() and the FieldTree's valid() disagreeing " +
-        'during an async validation window. See "Async validation is not ' +
-        'unified between the two systems." in the @signaltree/ng-forms ' +
-        'README.'
+  // Single async authority, enforced structurally (v12). Async validation is
+  // NOT unified between the marker and Signal Forms, and there is no way to run
+  // both without a two-authorities disagreement window (`marker.valid()` vs
+  // `fieldTree.field().valid()` diverging while one system's async validator is
+  // pending). Rather than warn and let the ambiguous setup exist — or silently
+  // disable the marker's async validators and drop validation the caller
+  // configured — bridging a marker that carries asyncValidators fails closed:
+  // the caller must pick ONE authority. Not dev-gated (a genuine
+  // misconfiguration, not a footgun hint) and not swallowed (signalForm runs in
+  // injection context, not the marker materializer). [ST2005]
+  if (Object.keys(internals.__config?.asyncValidators ?? {}).length > 0) {
+    throw new Error(
+      '[SignalTree] signalForm(): this form() marker has asyncValidators ' +
+        'configured, which cannot coexist with the Signal Forms bridge — the ' +
+        "marker's async path and Signal Forms' validateAsync/validateHttp are " +
+        'two independent authorities and would disagree during any async ' +
+        'validation window. Pick ONE: (a) remove the async validators from the ' +
+        'form() marker and declare them on the returned FieldTree via Signal ' +
+        "Forms' validateAsync/validateHttp, or (b) keep the marker's async " +
+        'path and do NOT bridge (drive the form through the marker\'s own ' +
+        'validateField()/submit()). [ST2005]'
     );
   }
 
@@ -233,37 +225,4 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
   // No sync-back needed: the marker's errors()/valid() are computed over the
   // same model signal, so FieldTree-side edits are reflected immediately.
   return fieldTree;
-}
-
-/** One-time guard for the markerSignalForm deprecation warning. */
-let warnedMarkerAliasDeprecated = false;
-
-/**
- * Create an Angular Signal Forms `FieldTree` from a SignalTree `form()`
- * marker.
- *
- * @deprecated Renamed to `signalForm()` in 11.6.0 — same signature, same
- * behavior: `signalForm(tree.$.path.to.marker, options?)`. This alias will
- * be removed in the next major. Import `signalForm` from
- * `@signaltree/ng-forms/signals`.
- *
- * @public
- */
-export function markerSignalForm<T extends Record<string, unknown>>(
-  formSignal: FormSignal<T>,
-  options: SignalFormOptions = {}
-): FieldTree<T> {
-  if (
-    (typeof ngDevMode === 'undefined' || ngDevMode) &&
-    !warnedMarkerAliasDeprecated
-  ) {
-    warnedMarkerAliasDeprecated = true;
-    console.warn(
-      '[SignalTree] markerSignalForm() is deprecated — renamed to ' +
-        'signalForm() in 11.6.0 (same signature, same behavior). Import ' +
-        "signalForm from '@signaltree/ng-forms/signals'. This alias will " +
-        'be removed in the next major.'
-    );
-  }
-  return markerSignalFormImpl(formSignal, options);
 }

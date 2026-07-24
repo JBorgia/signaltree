@@ -2,9 +2,6 @@ import { entityMap, signalTree } from '@signaltree/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { realtime, RealtimeAdapter } from './create-realtime-enhancer';
-// The deprecated alias lives in the barrel (rollup shook it out of the impl
-// module when it lived there — see index.ts).
-import { createRealtimeEnhancer } from './index';
 import { CleanupFn, ConnectionStatus, RealtimeEvent, RealtimeSubscription } from './types';
 
 interface TestEntity {
@@ -134,7 +131,7 @@ function createMockAdapter(
   return adapter;
 }
 
-describe('createRealtimeEnhancer()', () => {
+describe('realtime()', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -146,13 +143,6 @@ describe('createRealtimeEnhancer()', () => {
   describe('enhancer creation', () => {
     it('should create an enhancer function', () => {
       const adapter = createMockAdapter();
-      const enhancer = createRealtimeEnhancer(adapter, {});
-
-      expect(typeof enhancer).toBe('function');
-    });
-
-    it('exports the canonical noun-form `realtime()` (createRealtimeEnhancer is a deprecated alias)', () => {
-      const adapter = createMockAdapter();
       const enhancer = realtime(adapter, {});
 
       expect(typeof enhancer).toBe('function');
@@ -163,7 +153,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       expect(tree.realtime).toBeDefined();
@@ -179,7 +169,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       expect(tree.realtime.connection.status()).toBe(
@@ -195,7 +185,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       // Initial state
@@ -217,7 +207,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       expect(tree.realtime.connection.lastConnectedAt()).toBe(null);
@@ -234,7 +224,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { items: { table: 'test_items', event: '*' } },
           { debug: false }
@@ -264,7 +254,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { items: { table: 'test_items', event: '*' } },
           { debug: false }
@@ -302,7 +292,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { items: { table: 'test_items', event: '*' } },
           { debug: false }
@@ -345,7 +335,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         custom: entityMap<CustomEntity, string>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {
             custom: {
@@ -391,7 +381,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<AppEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {
             items: {
@@ -435,7 +425,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       await vi.runAllTimersAsync();
@@ -453,7 +443,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       await vi.runAllTimersAsync();
@@ -475,7 +465,7 @@ describe('createRealtimeEnhancer()', () => {
         items: entityMap<TestEntity, number>(),
         other: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { items: { table: 'items', event: '*' } },
           { debug: false }
@@ -507,7 +497,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { items: { table: 'items', event: '*' } },
           { debug: false }
@@ -551,7 +541,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {},
           {
@@ -583,7 +573,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {},
           {
@@ -615,7 +605,7 @@ describe('createRealtimeEnhancer()', () => {
         users: entityMap<{ id: number; name: string }, number>(),
         products: entityMap<{ id: number; title: string }, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {
             users: { table: 'users', event: '*' },
@@ -658,7 +648,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {},
           { autoReconnect: false, debug: false }
@@ -676,7 +666,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {},
           {
@@ -716,7 +706,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           {},
           { autoReconnect: true, reconnectDelay: 10, debug: false }
@@ -742,7 +732,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           // 'nonexistent' isn't a real path on the tree
           { nonexistent: { table: 'whatever', event: '*' } } as never,
@@ -769,7 +759,7 @@ describe('createRealtimeEnhancer()', () => {
         plain: { value: 0 }, // a plain nested object, not an entityMap
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(
+        realtime(
           adapter,
           { plain: { table: 'whatever', event: '*' } } as never,
           { debug: true }
@@ -791,7 +781,7 @@ describe('createRealtimeEnhancer()', () => {
       const tree = createTreeWithMaterializedMarkers({
         items: entityMap<TestEntity, number>(),
       }).with(
-        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+        realtime(adapter, {}, { debug: false }) as AnyEnhancer
       );
 
       await vi.runAllTimersAsync();

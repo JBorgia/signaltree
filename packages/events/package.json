@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/events",
-  "version": "11.6.0",
+  "version": "12.0.0",
   "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
   "license": "BUSL-1.1",
   "type": "module",
@@ -46,7 +46,7 @@
   },
   "peerDependencies": {
     "zod": "^3.0.0 || ^4.0.0",
-    "@angular/core": "^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0 || ^22.0.0",
     "rxjs": "^7.0.0",
     "@nestjs/common": "^10.0.0 || ^11.0.0",
     "bullmq": "^5.0.0",

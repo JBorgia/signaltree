@@ -31,12 +31,12 @@ SignalTree provides a layered forms architecture:
 
 ```typescript
 import { signalTree, form } from '@signaltree/core';
-import { email } from '@signaltree/ng-forms';
+import { ngFormValidators } from '@signaltree/ng-forms';
 
 const tree = signalTree({
   login: form({
     initial: { email: '', password: '' },
-    validators: { email: email() },
+    validators: { email: ngFormValidators.email() },
   }),
 });
 
@@ -104,13 +104,13 @@ adds Angular `FormGroup` interop via `formBridge()`.
 
 ```typescript
 import { signalTree, form } from '@signaltree/core';
-import { email } from '@signaltree/ng-forms';
+import { ngFormValidators } from '@signaltree/ng-forms';
 
 // Pure signal forms - works without Angular forms module
 const tree = signalTree({
   login: form({
     initial: { email: '', password: '' },
-    validators: { email: email() },
+    validators: { email: ngFormValidators.email() },
   }),
 });
 
@@ -166,7 +166,7 @@ pnpm add @signaltree/core @signaltree/ng-forms
 
 ```typescript
 import { Component } from '@angular/core';
-import { createFormTree, required, email } from '@signaltree/ng-forms';
+import { createFormTree, ngFormValidators } from '@signaltree/ng-forms';
 
 @Component({
   selector: 'app-profile-form',
@@ -206,9 +206,9 @@ export class ProfileFormComponent {
       persistKey: 'profile-form',
       storage: this.storage,
       fieldConfigs: {
-        name: { validators: [required('Name is required')] },
+        name: { validators: [ngFormValidators.required('Name is required')] },
         email: {
-          validators: [required(), email()],
+          validators: [ngFormValidators.required(), ngFormValidators.email()],
           debounceMs: 150,
         },
       },
@@ -378,13 +378,17 @@ class ProfileComponent {
 }
 ```
 
-**Async validation is not unified between the two systems.** The marker's own
-async path (`asyncValidators`/`validateField()`/`validateAll()`/`submit()`) and
-the FieldTree's native Signal Forms `validateAsync`/`validateHttp` are
-independent — this bridge does not connect them. Pick one as the authority for
-a given bridged form; using both on the same field can leave the marker's
-`valid()` and the FieldTree's `valid()` disagreeing during an async validation
-window. Requires Angular 22+.
+**Single async authority — enforced (v12).** The marker's own async path
+(`asyncValidators`/`validateField()`/`validateAll()`/`submit()`) and the
+FieldTree's native Signal Forms `validateAsync`/`validateHttp` are independent
+and cannot both drive one bridged form (they would disagree during any async
+validation window, since Signal Forms owns the field's `pending` state).
+Bridging a `form()` marker that has `asyncValidators` configured therefore
+**throws** (`[ST2005]`). Pick one authority: either declare async validation on
+the returned FieldTree via Signal Forms' `validateAsync`/`validateHttp`, or keep
+the marker's async path and don't bridge (drive the form through the marker's
+own `validateField()`/`submit()`). Sync validators are fully unified. Requires
+Angular 22+.
 
 ### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
 
@@ -412,8 +416,7 @@ const userForm = signalForm<{ name: string; email: string }>(tree, 'user', tree.
 ```
 
 Both call shapes of `signalForm()` are exported from `@signaltree/ng-forms/signals`
-and require Angular 22+. (The pre-11.6 names `markerSignalForm()` and
-`signalFormBridge()` remain as deprecated aliases until the next major.)
+and require Angular 22+.
 
 ### Connecting to Reactive Forms
 
@@ -437,7 +440,7 @@ const checkout = createFormTree(initialState, {
   },
   fieldConfigs: {
     'payment.card.number': { debounceMs: 200 },
-    'preferences.*': { validators: [required()] },
+    'preferences.*': { validators: [ngFormValidators.required()] },
   },
   conditionals: [
     {
@@ -549,7 +552,7 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 ### Before (deprecated)
 
 ```typescript
-import { createFormTree, email } from '@signaltree/ng-forms';
+import { createFormTree, ngFormValidators } from '@signaltree/ng-forms';
 
 const form = createFormTree(
   {
@@ -557,7 +560,7 @@ const form = createFormTree(
     email: '',
   },
   {
-    validators: { email: email() },
+    validators: { email: ngFormValidators.email() },
     persistKey: 'profile-form',
   }
 );
@@ -571,12 +574,12 @@ form.form; // FormGroup
 
 ```typescript
 import { signalTree, form } from '@signaltree/core';
-import { formBridge, email } from '@signaltree/ng-forms';
+import { formBridge, ngFormValidators } from '@signaltree/ng-forms';
 
 const tree = signalTree({
   profile: form({
     initial: { name: '', email: '' },
-    validators: { email: email() },
+    validators: { email: ngFormValidators.email() },
     persist: 'profile-form',
   }),
 }).with(formBridge());

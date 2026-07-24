@@ -2,11 +2,7 @@ import { signalTree } from '@signaltree/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { rules } from '../lib/rules';
-import {
-  createFeatureTree,
-  createFormTree,
-  createGuardedFormTree,
-} from './index';
+import { createFeatureTree, createGuardedFormTree } from './index';
 
 import type { GuardrailsAPI, GuardrailsReport } from '../lib/types';
 import type { ISignalTree } from '@signaltree/core';
@@ -102,24 +98,5 @@ describe('guardrails factories — dev gate is functional (not the noop)', () =>
     expect(typeof treeApi.getReport).toBe('function');
     expect(treeApi.getReport().stats).toBeDefined();
     tree.destroy?.();
-  });
-
-  it('deprecated createFormTree alias warns once and delegates to createGuardedFormTree', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    const t1 = createFormTree(signalTree, { name: '' }, 'p1');
-    const t2 = createFormTree(signalTree, { name: '' }, 'p2');
-
-    const deprecationWarns = warn.mock.calls.filter((c) =>
-      String(c[0]).includes('createFormTree is deprecated')
-    );
-    expect(deprecationWarns.length).toBe(1); // once per process, not per call
-
-    // Delegation produces the same guarded tree shape as the new name.
-    expect(api(t1)).toBeDefined();
-    expect(api(t2)).toBeDefined();
-
-    t1.destroy?.();
-    t2.destroy?.();
   });
 });

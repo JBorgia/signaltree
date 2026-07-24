@@ -235,12 +235,6 @@ export function guardrails(
   };
 }
 
-/**
- * @deprecated Use `guardrails()` instead. This legacy `withGuardrails`
- * alias will be removed in a future major release.
- */
-export const withGuardrails = Object.assign(guardrails, {});
-
 /** Once-per-process flag for the plain-object change-blindness warning. */
 let warnedChangeBlindPlainTrees = false;
 

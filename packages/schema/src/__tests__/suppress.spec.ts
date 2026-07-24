@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { signalTree, withWriteContext } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { withWriteContext } from '@signaltree/core/authoring';
 
 import { schemas } from '../lib/schema';
 import { syncSchema } from './test-helpers';

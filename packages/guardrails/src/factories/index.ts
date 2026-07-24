@@ -189,34 +189,6 @@ export function createGuardedFormTree<T extends Record<string, unknown>>(
   });
 }
 
-let warnedCreateFormTree = false;
-
-/**
- * @deprecated Renamed to {@link createGuardedFormTree} — this name collides
- * with `createFormTree` from `@signaltree/ng-forms` (the established
- * form-tree factory), so importing both packages forced call-site aliasing.
- * The behavior is identical; only the name changed (matching the sibling
- * `create*Tree` factories here). Removal in the next major.
- */
-export function createFormTree<T extends Record<string, unknown>>(
-  signalTree: SignalTreeFactory<T>,
-  initial: T,
-  formName: string
-): ISignalTree<T> {
-  if (
-    (typeof ngDevMode === 'undefined' || ngDevMode) &&
-    !warnedCreateFormTree
-  ) {
-    warnedCreateFormTree = true;
-    console.warn(
-      '[SignalTree] guardrails: createFormTree is deprecated — use ' +
-        'createGuardedFormTree. (Renamed to avoid colliding with ' +
-        "@signaltree/ng-forms' createFormTree.)"
-    );
-  }
-  return createGuardedFormTree(signalTree, initial, formName);
-}
-
 /**
  * Cache tree with relaxed rules
  */

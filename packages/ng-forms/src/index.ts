@@ -15,12 +15,12 @@ import {
 } from './core/validators';
 
 /**
- * Namespaced form validators — the recommended import surface.
+ * Namespaced form validators — the only import surface.
  *
- * The bare per-function exports below are deprecated: generic names like
- * `required`, `min`, `pattern` collide with app-local symbols and with
- * `@signaltree/core`'s `validators.*` vocabulary. Import the namespace
- * instead:
+ * Generic names like `required`, `min`, `pattern` would collide with
+ * app-local symbols and with `@signaltree/core`'s `validators.*`
+ * vocabulary, so there are no bare per-function exports — import the
+ * namespace:
  *
  * ```typescript
  * import { ngFormValidators as v } from '@signaltree/ng-forms';
@@ -45,24 +45,3 @@ export const ngFormValidators = {
   unique,
   debounce,
 } as const;
-
-/** @deprecated Use `ngFormValidators.required` — bare export removed next major. */
-export { required } from './core/validators';
-/** @deprecated Use `ngFormValidators.email` — bare export removed next major. */
-export { email } from './core/validators';
-/** @deprecated Use `ngFormValidators.minLength` — bare export removed next major. */
-export { minLength } from './core/validators';
-/** @deprecated Use `ngFormValidators.maxLength` — bare export removed next major. */
-export { maxLength } from './core/validators';
-/** @deprecated Use `ngFormValidators.pattern` — bare export removed next major. */
-export { pattern } from './core/validators';
-/** @deprecated Use `ngFormValidators.min` — bare export removed next major. */
-export { min } from './core/validators';
-/** @deprecated Use `ngFormValidators.max` — bare export removed next major. */
-export { max } from './core/validators';
-/** @deprecated Use `ngFormValidators.compose` — bare export removed next major. */
-export { compose } from './core/validators';
-/** @deprecated Use `ngFormValidators.unique` — bare export removed next major. */
-export { unique } from './core/async-validators';
-/** @deprecated Use `ngFormValidators.debounce` — bare export removed next major. */
-export { debounce } from './core/async-validators';
