@@ -63,6 +63,53 @@
         <st-code-tabs [files]="markerCode" />
       </article>
 
+      <!-- Path 1b: nativeErrors: true — branded Angular validation errors -->
+      <article class="card">
+        <h2>
+          <code>signalForm(marker, &#123; nativeErrors: true &#125;)</code> —
+          branded validation errors
+        </h2>
+        <p class="hint">
+          Same bridge, one option flipped. Built-in validator failures now arrive as
+          Angular's <strong>branded</strong> error classes instead of plain
+          <code>&#123; kind, message &#125;</code> objects.
+        </p>
+
+        <div class="field">
+          <label for="sf-native-age">Age (min 18)</label>
+          <input id="sf-native-age" type="number" [formField]="nativeAccount.age" />
+          @if (nativeAccount.age().touched() && !nativeAccount.age().valid()) {
+            <p class="error">
+              kind: <code>{{ nativeAgeError()?.kind }}</code> ·
+              instanceof <code>MinValidationError</code>:
+              <strong>{{ isNativeMinError() }}</strong>
+              @if (isNativeMinError()) {
+                · <code>.min</code>: <strong>{{ nativeMinValue() }}</strong>
+              }
+            </p>
+          }
+        </div>
+
+        <div class="row badges">
+          <span
+            class="badge"
+            [class.ok]="nativeAccount().valid()"
+            [class.bad]="!nativeAccount().valid()"
+          >
+            FieldTree: {{ nativeAccount().valid() ? '✓ valid' : '✗ invalid' }}
+          </span>
+        </div>
+
+        <st-code-tabs [files]="nativeErrorsCode" />
+
+        <p class="note">
+          <code>nativeErrors: true</code> → Angular branded validation errors
+          (<code>instanceof</code> the native error type, e.g. the
+          <code>NgValidationError</code> family); default is <code>false</code> in
+          12.x — flips to <code>true</code> in v13.
+        </p>
+      </article>
+
       <!-- Path 2: schema registrations ↔ FieldTree -->
       <article class="card">
         <h2><code>signalForm(tree, rootPath, subtree)</code> — schemas auto-applied</h2>

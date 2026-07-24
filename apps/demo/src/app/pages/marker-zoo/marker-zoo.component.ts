@@ -135,9 +135,27 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
     },
   ];
 
+  readonly idleSettledCode: CodeFile[] = [
+    {
+      label: 'idle-settled.ts',
+      language: 'typescript',
+      source: `// idle(): "should I (re)fetch?" — true for BOTH NotLoaded and Error
+// settled(): "operation is done, stop the spinner" — true for Loaded and Error
+store.$.demoStatus.setError(new Error('demo failure'));
+store.$.demoStatus.notLoaded(); // false — WRONG retry guard, never retries after an error
+store.$.demoStatus.idle();      // true  — RIGHT retry guard, covers NotLoaded + Error
+store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it ended`,
+    },
+  ];
+
   readonly store = signalTree({
     // depth 1 — status marker for org-wide sync
     orgStatus: status(),
+
+    // Standalone status() node for the idle()/settled() interactive panel
+    // below. Deliberately separate from orgStatus so poking its state with
+    // buttons never disturbs the depth/composition story above.
+    demoStatus: status<Error>(),
 
     // depth 2 — asyncSource for an org-wide user directory
     directory: {
@@ -224,6 +242,22 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
     this.store.$.settings.theme.update((t) => (t === 'light' ? 'dark' : 'light'));
   }
 
+  setDemoNotLoaded(): void {
+    this.store.$.demoStatus.setNotLoaded();
+  }
+
+  setDemoLoading(): void {
+    this.store.$.demoStatus.setLoading();
+  }
+
+  setDemoLoaded(): void {
+    this.store.$.demoStatus.setLoaded();
+  }
+
+  setDemoError(): void {
+    this.store.$.demoStatus.setError(new Error('demo failure'));
+  }
+
   resetAll(): void {
     this.store.$.directory.users.reset();
     this.store.$.organization.teams.list.clear();
@@ -232,5 +266,6 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
     this.store.$.organization.teams.catalog.plants.invalidate();
     this.store.$.onboarding.profile.reset();
     this.store.$.orgStatus.reset();
+    this.store.$.demoStatus.reset();
   }
 }

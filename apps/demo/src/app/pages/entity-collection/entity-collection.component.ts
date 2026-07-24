@@ -341,6 +341,105 @@ plants: entityMap<Plant, string>({
 // then swap to fresh data when the network responds — no blank screen.`,
     },
   ];
+
+  // =========================================================================
+  // PANEL 6 — persist.maxScopes: bounded storage for scoped (per-tenant) loaders
+  // =========================================================================
+  readonly TENANT_IDS = ['tenant-a', 'tenant-b', 'tenant-c', 'tenant-d', 'tenant-e'];
+  readonly P6_MAX_SCOPES = 3;
+  private readonly P6_KEY = 'demo-scoped-tenants';
+
+  // Small in-memory storage adapter (same shape as `offlineAdapter` above) —
+  // reusing that pattern rather than inventing a new one. The extra bit here:
+  // it re-publishes its key set to a signal on every write/remove, so the
+  // template can show — live — exactly which scopes are still persisted.
+  private readonly scopedBackingStore = new Map<string, string>();
+  readonly scopedStorageKeys = signal<string[]>([]);
+  private readonly scopedAdapter: EntityStorageAdapter = {
+    getItem: (k) => this.scopedBackingStore.get(k) ?? null,
+    setItem: (k, v) => {
+      this.scopedBackingStore.set(k, v);
+      this.syncScopedStorageKeys();
+    },
+    removeItem: (k) => {
+      this.scopedBackingStore.delete(k);
+      this.syncScopedStorageKeys();
+    },
+  };
+
+  private syncScopedStorageKeys(): void {
+    const prefix = `${this.P6_KEY}::`;
+    const scopesIndexKey = `${this.P6_KEY}::__scopes`;
+    this.scopedStorageKeys.set(
+      [...this.scopedBackingStore.keys()].filter(
+        (k) => k.startsWith(prefix) && k !== scopesIndexKey
+      )
+    );
+  }
+
+  // Retained scopes rendered as their tenant id (unwraps the
+  // `${key}::${stableStringify(params)}` storage key back to `tenantId`).
+  readonly retainedTenantIds = computed(() =>
+    this.scopedStorageKeys()
+      .map((k) => {
+        try {
+          return (JSON.parse(k.slice(this.P6_KEY.length + 2)) as { tenantId: string })
+            .tenantId;
+        } catch {
+          return k;
+        }
+      })
+      .sort()
+  );
+
+  readonly p6 = signalTree({
+    tenants: entityMap<Item, string, { tenantId: string }>({
+      selectId: (i) => i.id,
+      load: loader(
+        ({ tenantId }) =>
+          of(
+            CATALOG.slice(0, 2 + (this.TENANT_IDS.indexOf(tenantId) % 3))
+          ).pipe(delay(300)),
+        {
+          persist: {
+            adapter: this.scopedAdapter,
+            key: this.P6_KEY,
+            maxScopes: this.P6_MAX_SCOPES,
+          },
+        }
+      ),
+    }),
+  });
+
+  loadTenant(tenantId: string): void {
+    this.p6.$.tenants.load({ tenantId });
+  }
+
+  readonly p6Code: CodeFile[] = [
+    {
+      label: 'scoped-max-scopes.ts',
+      language: 'typescript',
+      source: `tenants: entityMap<Item, string, { tenantId: string }>({
+  selectId: (i) => i.id,
+  load: loader(
+    ({ tenantId }) => tenantApi.list$(tenantId),   // scoped: load() takes a param
+    {
+      persist: {
+        adapter,
+        key: 'demo-scoped-tenants',
+        maxScopes: 3,   // touch-ordered LRU — caps persisted scopes
+      },
+    }
+  ),
+})
+
+tree.$.tenants.load({ tenantId: 'tenant-a' });
+tree.$.tenants.load({ tenantId: 'tenant-b' });
+tree.$.tenants.load({ tenantId: 'tenant-c' });
+tree.$.tenants.load({ tenantId: 'tenant-d' });
+// → tenant-a's persisted entry is evicted; only b, c, d remain in storage.`,
+    },
+  ];
 }
 
 function nowMs(): number {

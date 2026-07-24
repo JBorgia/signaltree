@@ -6,6 +6,11 @@ module.exports = {
   testPathIgnorePatterns: ['demo-e2e'],
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
+    // Flat-file subpaths (no index.ts inside a same-named directory) — must be
+    // matched before the generic `/$1/index.ts` fallback below, which only
+    // resolves subpaths that ARE directories (e.g. `enhancers`).
+    '^@signaltree/core/(authoring|security|lazy|edit-session|storage)$':
+      '<rootDir>/../../packages/core/src/$1.ts',
     '^@signaltree/core/(.*)$': '<rootDir>/../../packages/core/src/$1/index.ts',
     '^@signaltree/ng-forms/signals$':
       '<rootDir>/../../packages/ng-forms/src/signals/index.ts',

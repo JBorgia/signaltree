@@ -201,6 +201,16 @@
 }
 .offline-state { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.4rem; color: #6b7280; }
 
+/* ---------- panel 6: scoped persist.maxScopes ---------- */
+.scoped { display: grid; gap: 1rem; }
+.scope-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 2rem; align-items: center; }
+.scope-chip {
+  font-family: 'SF Mono', Menlo, monospace; font-size: 0.8rem; font-weight: 700;
+  padding: 0.3rem 0.75rem; border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.25);
+}
+.dark .scope-chip { background: rgba(96, 165, 250, 0.15); color: #93c5fd; border-color: rgba(96, 165, 250, 0.3); }
+
 /* ---------- footer ---------- */
 .foot { text-align: center; margin-top: 2rem; font-size: 0.85rem; color: #9ca3af; }
 

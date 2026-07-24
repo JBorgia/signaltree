@@ -1,5 +1,6 @@
 import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { MinValidationError } from '@angular/forms/signals';
 
 import { SignalFormsDemoComponent } from './signal-forms-demo.component';
 
@@ -29,5 +30,25 @@ describe('SignalFormsDemoComponent', () => {
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain(
       'Signal Forms'
     );
+  });
+
+  it('nativeErrors: true bridge emits branded Angular validation errors', () => {
+    const fixture = TestBed.createComponent(SignalFormsDemoComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    // initial: age 10 < min 18 → invalid, and the error is the BRANDED class,
+    // not a plain { kind, message } object.
+    expect(component.nativeAccount().valid()).toBe(false);
+    const err = component.nativeAgeError();
+    expect(err).toBeInstanceOf(MinValidationError);
+    expect(component.isNativeMinError()).toBe(true);
+    expect(component.nativeMinValue()).toBe(18);
+    expect(err?.kind).toBe('min');
+
+    // Fix the value → valid, no error.
+    component.nativeTree.$.account.patch({ age: 21 });
+    expect(component.nativeAccount().valid()).toBe(true);
+    expect(component.nativeAgeError()).toBeUndefined();
   });
 });

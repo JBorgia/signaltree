@@ -2,11 +2,12 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   Injector,
 } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { FormField } from '@angular/forms/signals';
+import { FormField, MinValidationError } from '@angular/forms/signals';
 import { form, signalTree, validators } from '@signaltree/core';
 import { signalForm } from '@signaltree/ng-forms/signals';
 import { schemas } from '@signaltree/schema';
@@ -25,6 +26,10 @@ interface Profile extends Record<string, unknown> {
 
 interface Account {
   username: string;
+  age: number;
+}
+
+interface AgeCheck extends Record<string, unknown> {
   age: number;
 }
 
@@ -68,6 +73,36 @@ export class SignalFormsDemoComponent {
 
   readonly profile = signalForm(this.tree.$.onboarding.profile, {
     injector: this.injector,
+    // Explicit (not left to default) so the one-time nativeErrors advisory
+    // stays quiet — this page deliberately shows both shapes side by side.
+    nativeErrors: false,
+  });
+
+  // ── 1b. nativeErrors: true — branded Angular validation errors ───────────
+  readonly nativeTree = signalTree({
+    account: form<AgeCheck>({
+      initial: { age: 10 },
+      validators: {
+        age: validators.min(18, 'Must be at least 18'),
+      },
+    }),
+  });
+
+  readonly nativeAccount = signalForm(this.nativeTree.$.account, {
+    injector: this.injector,
+    nativeErrors: true,
+  });
+
+  // The branded error IS a real class instance — `instanceof` genuinely
+  // holds, and `.min` is a typed property (not parsed out of a message
+  // string).
+  readonly nativeAgeError = computed(() => this.nativeAccount.age().errors()[0]);
+  readonly isNativeMinError = computed(
+    () => this.nativeAgeError() instanceof MinValidationError
+  );
+  readonly nativeMinValue = computed(() => {
+    const err = this.nativeAgeError();
+    return err instanceof MinValidationError ? err.min : null;
   });
 
   // ── 2. schema registrations ↔ FieldTree ──────────────────────────────────
@@ -133,6 +168,32 @@ readonly profile = signalForm(tree.$.onboarding.profile);
 // Both APIs stay live:
 //   profile.email().errors()                    // Signal Forms side
 //   tree.$.onboarding.profile.valid()           // marker side`,
+    },
+  ];
+
+  readonly nativeErrorsCode: CodeFile[] = [
+    {
+      label: 'native-errors.ts',
+      language: 'typescript',
+      source: `import { MinValidationError } from '@angular/forms/signals';
+import { form, signalTree, validators } from '@signaltree/core';
+import { signalForm } from '@signaltree/ng-forms/signals';
+
+const tree = signalTree({
+  account: form<{ age: number }>({
+    initial: { age: 10 },
+    validators: { age: validators.min(18, 'Must be at least 18') },
+  }),
+});
+
+// nativeErrors: true → built-in validator failures are Angular's BRANDED
+// error classes, not plain { kind, message } objects.
+const account = signalForm(tree.$.account, { nativeErrors: true });
+
+const err = account.age().errors()[0];
+err.kind;                          // 'min'
+err instanceof MinValidationError; // true — a real branded class instance
+err.min;                           // 18 — typed constraint, not string-parsed`,
     },
   ];
 

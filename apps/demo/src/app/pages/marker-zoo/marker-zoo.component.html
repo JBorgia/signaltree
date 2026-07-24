@@ -191,6 +191,54 @@
     </article>
   </section>
 
+  <section class="card idle-settled-panel">
+    <h2>
+      <code>status()</code> — <code>idle()</code> vs <code>settled()</code> (interactive)
+    </h2>
+    <p>
+      A standalone <code>status()</code> node (not part of the depth map above) so you
+      can freely drive it through every state and watch the composite predicates flip.
+    </p>
+    <div class="row">
+      <button (click)="setDemoNotLoaded()">setNotLoaded()</button>
+      <button (click)="setDemoLoading()">setLoading()</button>
+      <button (click)="setDemoLoaded()">setLoaded()</button>
+      <button (click)="setDemoError()">setError()</button>
+    </div>
+    <div class="row">
+      <span class="state">state: {{ store.$.demoStatus.state() }}</span>
+    </div>
+    <div class="chip-grid">
+      <span class="chip" [class.on]="store.$.demoStatus.loading()">
+        loading() {{ store.$.demoStatus.loading() }}
+      </span>
+      <span class="chip" [class.on]="store.$.demoStatus.loaded()">
+        loaded() {{ store.$.demoStatus.loaded() }}
+      </span>
+      <span class="chip" [class.on]="store.$.demoStatus.notLoaded()">
+        notLoaded() {{ store.$.demoStatus.notLoaded() }}
+      </span>
+      <span class="chip" [class.on]="store.$.demoStatus.hasError()">
+        hasError() {{ store.$.demoStatus.hasError() }}
+      </span>
+      <span class="chip highlight" [class.on]="store.$.demoStatus.idle()">
+        idle() {{ store.$.demoStatus.idle() }}
+      </span>
+      <span class="chip highlight" [class.on]="store.$.demoStatus.settled()">
+        settled() {{ store.$.demoStatus.settled() }}
+      </span>
+    </div>
+    <p class="note">
+      Use <code>idle()</code> in a guard/resolver, not <code>notLoaded()</code> —
+      <code>notLoaded()</code> is false after an error, so a
+      <code>notLoaded()</code>-gated fetch never retries. <code>idle()</code> covers
+      both <code>NotLoaded</code> and <code>Error</code>. Click
+      <strong>setError()</strong> above and watch <code>notLoaded()</code> go false
+      while <code>idle()</code> AND <code>settled()</code> both stay/go true.
+    </p>
+    <st-code-tabs [files]="idleSettledCode" />
+  </section>
+
   <div class="footer-actions">
     <button class="reset" (click)="resetAll()">Reset everything</button>
     <a class="see-more" routerLink="/async">→ See the dedicated /async demo</a>

@@ -1,6 +1,86 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>🎯 v12.1.0 — <code>idle()</code>/<code>settled()</code> status predicates + <code>persist.maxScopes</code> (July 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Two gaps closed from external audits: a <code>status()</code> guard predicate that
+      actually covers the <code>Error</code> state, and storage garbage collection for
+      high-cardinality scoped loaders.
+    </p>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>status().idle()</code> / <code>status().settled()</code></strong> —
+        the standard composite predicates. <code>idle()</code> is
+        <code>!loading() &amp;&amp; !loaded()</code>, true for <strong>both</strong>
+        <code>NotLoaded</code> and <code>Error</code> — guards/resolvers should use
+        <code>idle()</code>, not <code>notLoaded()</code>: a <code>notLoaded()</code>-gated
+        fetch silently never retries after an error, because the collection has moved to
+        the distinct <code>Error</code> state. <code>settled()</code> is
+        <code>loaded() || hasError()</code> ("done, stop the spinner"); <code>idle()</code>
+        and <code>settled()</code> deliberately overlap while errored.
+      </li>
+      <li>
+        <strong><code>persist.maxScopes</code></strong> — persisted-scope garbage
+        collection for scoped cache-aware collections
+        (<code>entityMap(&#123; load: loader(fn, &#123; persist &#125;) &#125;)</code>).
+        Each scope persists under its own storage key, so high-cardinality scopes
+        (tenants, customers, searches) previously accumulated entries forever. With
+        <code>maxScopes</code> set, the loader keeps a touch-ordered index and evicts
+        the least-recently-written scopes beyond the cap on every write-through. Unset
+        = previous behavior (no GC).
+      </li>
+    </ul>
+    <pre><code>// idle() vs notLoaded() after an error
+store.$.orgStatus.setError(err);
+store.$.orgStatus.notLoaded();  // false — WRONG guard, never retries
+store.$.orgStatus.idle();       // true  — RIGHT guard, covers NotLoaded + Error
+
+// persist.maxScopes: bounded storage for scoped loaders
+customers: entityMap&lt;Customer, string, &#123; tenantId: string &#125;&gt;(&#123;
+  selectId: (c) =&gt; c.id,
+  load: loader((&#123; tenantId &#125;) =&gt; api.getCustomers$(tenantId), &#123;
+    persist: &#123; adapter, key: 'customers', maxScopes: 3 &#125;,
+  &#125;),
+&#125;),</code></pre>
+    <p>
+      Try both live: the <a routerLink="/marker-zoo">marker zoo</a>'s
+      <code>idle()</code>/<code>settled()</code> panel, and the
+      <a routerLink="/entity-collection">entityMap showcase</a>'s scoped
+      <code>maxScopes</code> eviction panel.
+    </p>
+  </div>
+
+  <h3>🔐 v12.0.0 — <code>signalForm()</code> unification + <code>nativeErrors</code> branded errors (July 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      <code>signalForm()</code> becomes the one name for the Signal Forms bridge, plus a
+      branded-error opt-in for the marker-form shape.
+    </p>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>nativeErrors</code></strong> option on
+        <code>signalForm(marker, options)</code> — built-in validator failures
+        (<code>required</code>, <code>email</code>, <code>min</code>, <code>max</code>,
+        <code>minLength</code>, <code>maxLength</code>, <code>pattern</code>) emit
+        Angular's branded error classes (<code>requiredError()</code>,
+        <code>minError()</code>, …) instead of a plain
+        <code>&#123; kind, message &#125;</code> object, so
+        <code>error instanceof MinValidationError</code> genuinely holds and typed
+        constraints (<code>.min</code>, <code>.maxLength</code>, …) are readable
+        directly — no message-string parsing. Default <code>false</code> in 12.x; the
+        flip to <code>true</code> is postponed to v13.
+      </li>
+    </ul>
+    <p>
+      See the second, <code>nativeErrors: true</code> bridged form on the
+      <a routerLink="/signal-forms">Signal Forms demo</a> for the branded-error shape
+      side by side with the default.
+    </p>
+  </div>
+
   <h3>📡 v11.2.0 — <code>entityMap()</code> cache-aware loading + <code>invalidateTag()</code> (July 2026)</h3>
   <div class="release-highlights">
     <p>

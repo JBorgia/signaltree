@@ -303,6 +303,67 @@
     <st-code-tabs [files]="p5Code" />
   </section>
 
+  <!-- ================= PANEL 6 — persist.maxScopes ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">06</span>
+      <div>
+        <h2>persist.maxScopes: bounded storage for scoped loaders</h2>
+        <p>
+          A <strong>scoped</strong> loader — <code>load(params)</code> takes a
+          <code>tenantId</code> — persists each scope under its own storage key. Load more
+          tenants than <code>maxScopes</code> (3) and watch the oldest persisted scope's
+          chip disappear: it's evicted from storage, not just uncached.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz scoped">
+      <div class="actions">
+        @for (t of TENANT_IDS; track t) {
+          <button
+            class="btn primary"
+            (click)="loadTenant(t)"
+            [disabled]="p6.$.tenants.loading()"
+          >
+            Load {{ t }}
+          </button>
+        }
+      </div>
+
+      <div class="counters">
+        <div class="counter">
+          <span class="big">{{ p6.$.tenants.params()?.tenantId ?? '—' }}</span>
+          <span class="cap">active scope (params())</span>
+        </div>
+        <div class="counter">
+          <span class="big">{{ p6.$.tenants.count() }}</span>
+          <span class="cap">rows loaded</span>
+        </div>
+        <div class="counter accent">
+          <span class="big">{{ retainedTenantIds().length }} / {{ P6_MAX_SCOPES }}</span>
+          <span class="cap">scopes retained in storage</span>
+        </div>
+      </div>
+
+      <div class="scope-chips">
+        @if (retainedTenantIds().length === 0) {
+          <p class="hint">Load a tenant scope to seed persisted storage.</p>
+        }
+        @for (tid of retainedTenantIds(); track tid) {
+          <span class="scope-chip">{{ tid }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="callout center">
+      <code>maxScopes</code> caps persisted scopes for high-cardinality tenants
+      (touch-ordered LRU eviction); unset = no GC — entries accumulate forever.
+    </div>
+
+    <st-code-tabs [files]="p6Code" />
+  </section>
+
   <footer class="foot">
     <p>
       Full recipe (HTTP-cache / ETag interplay + SSE/SignalR wiring):
