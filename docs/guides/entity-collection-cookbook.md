@@ -1,10 +1,12 @@
-# Cookbook: `entityMap({ load })` + HTTP caching + push invalidation
+# Cookbook: `entityMap({ load: loader(fn) })` + HTTP caching + push invalidation
 
 `entityMap`'s cache-aware (single-scope) loading (v11.2+, [RFC 0002](../rfcs/0002-entity-collection.md);
 scoped form and the `entityCollection`→`entityMap` fold in v11.4+, [RFC 0003](../rfcs/0003-keyed-entity-collection.md))
-is the cache-aware collection loader: passing `load` in `entityMap(config)` adds load status +
-a freshness guard + single-flight dedup + tag invalidation + optional offline-first persistence
-to the same marker — no second marker to import. This cookbook wires it end-to-end with the two
+is the cache-aware collection loader: wrapping a load function with the `loader()` helper and passing
+it as `load` in `entityMap(config)` adds load status + a freshness guard + single-flight dedup + tag
+invalidation + optional offline-first persistence to the same marker — no second marker to import.
+`loader()` is what keeps this machinery tree-shakeable; a plain `entityMap()` (no `load`) doesn't pay
+for it. This cookbook wires it end-to-end with the two
 things it deliberately does **not** own — HTTP-level caching (ETag / conditional GET) and
 real-time push — so you don't reinvent the interplay.
 
@@ -23,7 +25,7 @@ costs bytes.** They stack — a re-fetch that the browser satisfies with a `304`
 ## 1. Baseline: a self-loading collection
 
 ```typescript
-import { signalTree, entityMap } from '@signaltree/core';
+import { signalTree, entityMap, loader } from '@signaltree/core';
 
 @Injectable({ providedIn: 'root' })
 export class PlantStore {
@@ -31,10 +33,11 @@ export class PlantStore {
 
   tree = signalTree({
     plants: entityMap<PlantDto, string>({
-      load: () => this.http.get<PlantDto[]>('/api/plants'),
       selectId: (p) => p.url,
-      staleTime: '30m',      // skip refetch while fresh
-      tags: ['plants'],      // for invalidateTag()
+      load: loader(() => this.http.get<PlantDto[]>('/api/plants'), {
+        staleTime: '30m',      // skip refetch while fresh
+        tags: ['plants'],      // for invalidateTag()
+      }),
     }),
   });
 }
@@ -112,18 +115,19 @@ collections that share a tag (e.g. `tags: ['catalog']` on both `plants` and `see
 Seed instantly from IndexedDB on startup, then revalidate in the background:
 
 ```typescript
-import { entityMap } from '@signaltree/core';
+import { entityMap, loader } from '@signaltree/core';
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 plants: entityMap<PlantDto, string>({
-  load: () => this.http.get<PlantDto[]>('/api/plants'),
   selectId: (p) => p.url,
-  swr: true,
-  persist: {
-    adapter: createIndexedDBAdapter(),
-    key: 'plants',
-    hydrateThenRevalidate: true,   // show cached rows immediately, refetch in background
-  },
+  load: loader(() => this.http.get<PlantDto[]>('/api/plants'), {
+    swr: true,
+    persist: {
+      adapter: createIndexedDBAdapter(),
+      key: 'plants',
+      hydrateThenRevalidate: true,   // show cached rows immediately, refetch in background
+    },
+  }),
 }),
 ```
 
@@ -136,15 +140,16 @@ On first access the collection paints the persisted snapshot (marked stale, so `
 Reach for the scoped form (v11.4+, [RFC 0003](../rfcs/0003-keyed-entity-collection.md)) when a
 collection is scoped to something that changes at runtime — a region, a customer, a tenant — and
 you'd otherwise hand-roll a "current scope" ref plus manual clear/refetch on change around a plain
-`entityMap`. Add a third type param `P` and give `load` a parameter; everything else (`entityMap`
-surface, single-flight, `tags`, `persist`, `swr`) is unchanged.
+`entityMap`. Add a third type param `P` and give the wrapped loader function a parameter; everything
+else (`entityMap` surface, single-flight, `tags`, `persist`, `swr`) is unchanged.
 
 ```typescript
 customers: entityMap<Customer, string, { regionUrl: string }>({
-  load: ({ regionUrl }) => api.getCustomers$(regionUrl),
   selectId: (c) => c.externalId,
-  staleTime: '30m',
-  // freshness compared per scope with `equal` (default: structural value comparison)
+  load: loader(({ regionUrl }) => api.getCustomers$(regionUrl), {
+    staleTime: '30m',
+    // freshness compared per scope with `equal` (default: structural value comparison)
+  }),
 });
 ```
 

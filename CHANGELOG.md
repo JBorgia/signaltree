@@ -1,3 +1,96 @@
+## 12.0.0 (unreleased)
+
+> The first "earned major" under RFC 0004 §3 V-MAJOR: a major exists to carry
+> accumulated deliberate breakage with a concrete user-visible payload. This
+> one's payload is the entityMap loader tree-shake reclaim (RFC 0005 §6).
+
+### Breaking
+
+- **`entityMap({ load })` now requires the `loader()` helper.** The raw
+  `entityMap({ load: () => api.list$(), staleTime, swr, tags, … })` form is
+  removed. Wrap the fetch and move the loader-family options into `loader()`:
+
+  ```ts
+  // before (11.x)
+  entityMap<Plant, string>({ selectId, load: () => api.list$(), staleTime: '30m', tags: ['plants'] })
+  // after (12.0)
+  import { entityMap, loader } from '@signaltree/core';
+  entityMap<Plant, string>({ selectId, load: loader(() => api.list$(), { staleTime: '30m', tags: ['plants'] }) })
+  ```
+
+  `selectId`/`sortComparer` stay on the `entityMap` config; `staleTime`/`swr`/
+  `tags`/`persist`/`equal`/`lazy`/`clearOnParamsChange` move into `loader()`'s
+  second argument. A raw function on `load` now **fails closed** at
+  construction with a coded error ([ST2004]) — it can never silently no-op.
+
+- **`signalForm()` fails closed on a marker with `asyncValidators`
+  (`@signaltree/ng-forms`).** Bridging a `form()` marker that carries
+  `asyncValidators` into Signal Forms now **throws** (`[ST2005]`) instead of
+  emitting a one-time dev warning. The marker's async path and Signal Forms'
+  `validateAsync`/`validateHttp` are two independent authorities that would
+  disagree during any async window; the caller must pick one (Signal Forms on
+  the returned FieldTree, or the marker's own unbridged `validateField()`/
+  `submit()`). Sync validators remain fully unified.
+
+### Added
+
+- **`loader(fn, options?)` (`@signaltree/core`)** — the tree-shakeable way to
+  make an `entityMap` cache-aware. Exact `security()` precedent: the returned
+  branded `LoaderFeature` is the *only* module-level reference to the loader
+  machinery (`attachLoader`), so importing `entityMap` without `loader` shakes
+  the loader/cache/SWR/persist code out entirely. `LoaderFeature`/`LoaderOptions`
+  are the public types.
+
+### Removed (deprecation backlog cleared — "earned major")
+
+All public APIs previously marked `@deprecated … removed next major` are gone.
+Migration guide: [`docs/guides/migration-v11-v12.md`](docs/guides/migration-v11-v12.md).
+
+- **`effects()` enhancer** (`@signaltree/core`) — use Angular's native
+  `effect(() => tree.$.path())`. The legacy global batching helpers
+  `flushBatchedUpdates()` / `hasPendingUpdates()` / `getBatchQueueSize()` are
+  also gone (use the tree's `flushNotifications()` / `hasPendingNotifications()`).
+- **Legacy `with*` enhancer aliases** — `withBatching`, `withDevTools`,
+  `withSerialization`, `withPersistence` (core), `withEnterprise`,
+  `withGuardrails` (packages), and `createRealtimeEnhancer` (realtime). Use the
+  canonical `batching()` / `devTools()` / `serialization()` / `persistence()` /
+  `enterprise()` / `guardrails()` / `realtime()`.
+- **Enhancer/marker-author plumbing removed from the `@signaltree/core` root
+  barrel** — `withWriteContext`, `getActiveWriteContext`, `interceptLeafSignals`,
+  `getPathNotifier`, `registerMarkerProcessor`, `composeEnhancers`,
+  `createEnhancer`, `resolveEnhancerOrder`, `ENHANCER_META`, `EnhancerMeta`.
+  All still available from **`@signaltree/core/authoring`**.
+- **`@signaltree/ng-forms`** — `markerSignalForm` / `signalFormBridge` aliases
+  (use `signalForm()`), the bare `required`/`email`/`min`/… validator exports
+  (use `ngFormValidators.*`), and the guardrails `createFormTree` alias (use
+  `createGuardedFormTree`).
+
+### Internal
+
+- **Canonical `visitTree` traversal skeleton.** The two walkers that wrap leaf
+  `.set`/`.update` — `interceptLeafSignals` (devtools/time-travel/schema) and
+  batching's `wrapSignalSetters` — now share one `visitTree(root, visitor,
+  { maxDepth, skipKey })` helper instead of each re-implementing the
+  `isTraversableNode` guard + `Object.keys` + cycle-guard + depth-cap + recurse
+  boilerplate. No behavior change (walker-conformance suite + the
+  `[ST2002]`-asserting entity-method-guard spec both green; `skipKey` preserves
+  the entityMap-proxy get-trap avoidance). The remaining walkers were left as-is
+  on purpose: the live-`$`-tree ones (`invalidateTag`, serialization's
+  `walkAlias`) each carry bespoke proxy-safe access, and the dual-structure
+  "zip" walkers (`recursiveUpdate`, `updateSignals`, `mergeDerivedState`) plus
+  the path-cursors are genuinely distinct algorithm families — forcing them
+  through one skeleton would distort load-bearing (and hot-path) code for a
+  maintainability-only gain.
+
+### Changed
+
+- **Plain `entityMap()` is ~1.5 KB gzip smaller.** `entity-map.ts` no longer
+  statically imports `attachLoader`; a collection that never uses `loader()`
+  no longer pays for the loader machinery. Measured: the `entityMap`-using
+  bundle dropped **9.89 KB → 8.36 KB** gzip (own-code, `@angular`/`rxjs`/`tslib`
+  external). The bundle-budget gate's `signaltree-entities` target was lowered
+  9.9 → 8.6 KB to lock the reclaim in.
+
 ## 11.6.0 (2026-07-23)
 
 > Published 2026-07-23 (owner-recorded §5 cooling override). The first release to pass the full gate pipeline: every change below

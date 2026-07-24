@@ -51,7 +51,7 @@ pnpm nx build demo --configuration=production
 | `guardrails`      | 12 KB    | 4 KB        |
 | `schema`          | 16 KB    | 6 KB        |
 
-The authoritative gzip gate is [`tools/check-bundle-budget.mjs`](tools/check-bundle-budget.mjs): bare `core` **5.8 KB**, a tree that uses `entityMap` **8.6 KB** (own-code only; `@angular`/`rxjs`/`tslib` external). Check with `npm run analyze:bundle`.
+The authoritative gzip gate is [`tools/check-bundle-budget.mjs`](tools/check-bundle-budget.mjs) — the single source of truth for library size claims; every other doc's numbers must trace back to it. Current measured (own-code only; `@angular`/`rxjs`/`tslib` external): bare `signalTree` **5.46 KB** (budget 5.8), a tree using a plain `entityMap()` **8.39 KB** (budget 8.6). A cache-aware `entityMap({ load: loader(...) })` pulls the loader machinery on top; a plain `entityMap()` tree-shakes it out entirely (v12, RFC 0005 §6). Check with `node tools/check-bundle-budget.mjs`.
 
 ### Validation pipeline
 

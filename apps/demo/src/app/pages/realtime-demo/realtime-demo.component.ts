@@ -401,14 +401,14 @@ export class RealtimeDemoComponent implements OnDestroy {
     {
       label: 'Realtime Enhancer',
       language: 'typescript',
-      source: `import { createRealtimeEnhancer } from '@signaltree/realtime';
+      source: `import { realtime } from '@signaltree/realtime';
 import { createSupabaseAdapter } from '@signaltree/realtime/supabase';
 
 // Create adapter for your backend
 const adapter = createSupabaseAdapter(supabaseClient);
 
 // Create the enhancer
-const realtime = createRealtimeEnhancer(adapter, {
+const realtimeEnhancer = realtime(adapter, {
   autoConnect: true,
   autoReconnect: true,
   reconnectDelay: 1000,
@@ -419,8 +419,8 @@ const store = signalTree({
   messages: entityMap<Message, string>({ selectId: m => m.id }),
   users: entityMap<User, string>({ selectId: u => u.id }),
 })
-.with(realtime)
-.with(realtime.sync({
+.with(realtimeEnhancer)
+.with(realtimeEnhancer.sync({
   // Sync messages table to messages entityMap
   path: ['messages'],
   config: {
@@ -429,7 +429,7 @@ const store = signalTree({
     selectId: (m: Message) => m.id,
   }
 }))
-.with(realtime.sync({
+.with(realtimeEnhancer.sync({
   path: ['users'],
   config: {
     table: 'users',

@@ -1,5 +1,4 @@
 import { AsyncDemoComponent } from '../../features/fundamentals/examples/async/async-demo.component';
-import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
 import {
     CallableSyntaxDemoComponent,
@@ -240,23 +239,8 @@ export const timeTravelExampleMeta: ExampleMeta = {
   ],
 };
 
-/**
- * Effects Examples
- */
-export const effectsExampleMeta: ExampleMeta = {
-  id: 'effects-side-effects',
-  title: 'Effects & Side Effects',
-  description:
-    'Handle side effects with auto-save, notifications, and localStorage sync.',
-  category: 'Signals',
-  focusAreas: ['effects', 'side-effects', 'reactivity'],
-  functionalUse: ['auto-save', 'notifications', 'sync'],
-  enhancers: [],
-  route: FUNDAMENTALS_ROUTE,
-  component: EffectsDemoComponent,
-  difficulty: 'intermediate',
-  tags: ['effects', 'auto-save', 'localStorage', 'notifications'],
-};
+// The Effects example was removed in v12 with the effects() enhancer — use
+// Angular's native effect() (see the "Reactive effects" note in the docs).
 
 /**
  * Forms Examples
@@ -374,7 +358,6 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   persistenceExampleMeta,
   serializationExampleMeta,
   timeTravelExampleMeta,
-  effectsExampleMeta,
   formsExampleMeta,
   signalFormsExampleMeta,
   asyncExampleMeta,

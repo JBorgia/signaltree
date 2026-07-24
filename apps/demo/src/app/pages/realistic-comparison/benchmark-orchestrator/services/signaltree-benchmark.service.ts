@@ -1,12 +1,11 @@
 import { computed, Injectable } from '@angular/core';
 import {
   batching,
-  ENHANCER_META,
-  resolveEnhancerOrder,
   serialization,
   signalTree,
   timeTravel,
 } from '@signaltree/core';
+import { ENHANCER_META, resolveEnhancerOrder } from '@signaltree/core/authoring';
 
 const highPerformanceBatching = () =>
   batching({ enabled: true, notificationDelayMs: 0 });

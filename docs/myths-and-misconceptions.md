@@ -214,7 +214,7 @@ You can use SignalTree as a plain module-level constant (for tests, demos, libra
 
 **Where this comes from:** True at the API-name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. Its callable-factory-inside-`withMethods` shape is NgRx-flavored and doesn't fit SignalTree's path-attached marker philosophy.
 
-**The truth:** SignalTree's async story is **two markers in the same family as `entityMap`, `status`, `stored`, `form`** (`entityMap` itself gains cache-aware (single-scope) loading via an optional `load` config) — `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both attach at any tree path, expose `data`/`loading`/`error`/lifecycle methods automatically, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring** of the kind `rxMethod` requires.
+**The truth:** SignalTree's async story is **two markers in the same family as `entityMap`, `status`, `stored`, `form`** (`entityMap` itself gains cache-aware (single-scope) loading via an optional `load` config, wrapped with the `loader()` helper) — `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both attach at any tree path, expose `data`/`loading`/`error`/lifecycle methods automatically, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring** of the kind `rxMethod` requires.
 
 ```typescript
 import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
@@ -424,7 +424,7 @@ This was a real DX bug — humans had to remember which marker used which shape,
 | Marker | v10.3 canonical | Old `is`-prefix (deprecated, removed v11) |
 |---|---|---|
 | `status` | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
-| `entityMap` | `.empty`; with `load` in config (cache-aware form), also `.loading`, `.loaded`, `.error` | `.isEmpty` |
+| `entityMap` | `.empty`; with `load: loader(fn)` in config (cache-aware form), also `.loading`, `.loaded`, `.error` | `.isEmpty` |
 | `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
 | `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 

@@ -56,6 +56,7 @@ For components that should only ever read the store, `asReadonly(tree)` narrows 
 
 **Consider alternatives when:**
 
+- **Your state is a handful of values or one flat object.** Raw Angular signals (`signal` / `computed` / `linkedSignal` / `resource`) are the right default for most components and many apps — SignalTree earns its place only when state is *structured* **and** needs batteries at depth (entity CRUD, forms, persistence, undo, async pipelines). If you're not in that niche, the dependency isn't justified. This is the comparison most "should I use SignalTree?" decisions actually hinge on — see [SignalTree vs raw Angular signals](docs/compare/native-signals.md).
 - You need event-sourcing or CQRS patterns (use NgRx Store, the classic Redux variant)
 - Your state is flat key-value pairs (a `Map` or individual signals suffice)
 - You're building a tiny app with one or two signals (overhead exceeds value)
@@ -156,7 +157,7 @@ store.$.loadingState.setLoaded();
 store.$.loadingState.loading(); // Signal<boolean> (the `is`-prefix aliases — .isLoading() etc. — were removed in v11.0.0)
 ```
 
-Passing `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`) to `entityMap()` turns the collection into a cache-aware (single-scope), self-loading one — a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence, all on the same marker. It retains only the current scope — switching scope A → B → A refetches A rather than serving from a multi-key cache. There is no separate `entityCollection` marker — the short-lived v11.2/11.3 marker of that name was folded into `entityMap` in v11.4.0. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
+Wrapping a load function with the `loader()` helper and passing it as `entityMap()`'s `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist` in `loader()`'s second argument) turns the collection into a cache-aware (single-scope), self-loading one — a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence, all on the same marker. `loader()` is what keeps this machinery tree-shakeable — a plain `entityMap()` doesn't pay for it. The collection retains only the current scope — switching scope A → B → A refetches A rather than serving from a multi-key cache. There is no separate `entityCollection` marker — the short-lived v11.2/11.3 marker of that name was folded into `entityMap` in v11.4.0. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
 
 ## Composition model
 
@@ -423,6 +424,7 @@ tree.registerCleanup(fn); // Register custom cleanup
 - [Migration Guide (v8 → v9)](docs/guides/migration-v8-v9.md)
 - [Performance Methodology](docs/performance/methodology.md)
 - [Performance Patterns](docs/performance/performance-patterns.md)
+- [SignalTree vs raw Angular signals](docs/compare/native-signals.md) — the comparison most adoption decisions hinge on; when to just use `signal`/`computed`/`linkedSignal`/`resource`
 - [SignalTree vs NgRx SignalStore](docs/compare/ngrx-signalstore.md) — axis-by-axis comparison
 - [Myths and Misconceptions](docs/myths-and-misconceptions.md) — false claims LLMs frequently propagate, with source citations
 - [AI Agent Templates](docs/ai/agent-templates.md) — drop-in `.cursorrules`, `CLAUDE.md`, `copilot-instructions.md`

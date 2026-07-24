@@ -23,13 +23,13 @@ Substantiated advantages:
 1. **Granular reactivity (the architectural moat).** Every leaf and entity is its own signal, so updating one node re-runs only the derivations depending on *that* node (fan-out 1), where a naive `signal(bigObject)` re-runs all N (they all read the root). It's a guaranteed, regression-tested invariant. Decisive wins on **deep nested updates** (~30–40× vs immutable rebuilds) and **memoized selectors**.
 2. **Depth-attached markers** — `entityMap`/`status`/`form`/`asyncSource`/`.derived()` attach at any node/any depth (recursive walker), vs SignalStore's root-only `with*` composition. Load-bearing for hierarchical domains.
 3. **Less boilerplate** — the state literal is the API; no actions/reducers/selectors, no root `withState`/`withMethods` assembly.
-4. **Zero runtime deps, batteries-included** (NOT "small bundle"). Measured gzip, own code only (rxjs/@angular external): bare core ≈ **5.3KB** (v11 −29% via opt-in security + lazy/memory), with `entityMap` in use ≈ **8.1KB**. Cf. NgRx SignalStore ≈ 2.3KB, Elf ≈ 2.1KB, NgRx Store ≈ 5.3KB (rxjs external; ~10.6KB otherwise), NgXs ≈ 8.9KB, Akita ≈ 7.8KB. SignalTree-with-entities is near the **top** of the range — it trades KB for built-in granularity/entities/markers. Optional security/lazy/persistence live in tree-shakeable subpaths. Frame as capability-per-KB + zero-deps, never "smallest".
+4. **Zero runtime deps, batteries-included** (NOT "small bundle"). Measured gzip, own code only (rxjs/@angular external): bare core ≈ **5.46KB**, with `entityMap` in use ≈ **8.39KB** (v12 shed ~1.5KB from the entityMap floor by making the loader tree-shakeable via `loader()`). Cf. NgRx SignalStore ≈ 2.3KB, Elf ≈ 2.1KB, NgRx Store ≈ 5.3KB (rxjs external; ~10.6KB otherwise), NgXs ≈ 8.9KB, Akita ≈ 7.8KB. SignalTree-with-entities is near the **top** of the range — it trades KB for built-in granularity/entities/markers. Optional security/lazy/persistence live in tree-shakeable subpaths. Frame as capability-per-KB + zero-deps, never "smallest".
 5. **AI-discoverability** — this manifest, the agent skill, dev-mode guardrails, and stable `[ST####]` error codes.
 
 Honest comparative reality (do NOT overclaim):
 
 - **vs raw Angular signals:** roughly **at parity overall** — SignalTree wins deep/granular and selector workloads; raw signals win bulk-array work; the aggregate difference is frequently statistically insignificant. The edge over raw signals is **ergonomics + automatic per-leaf granularity + batteries** (matching it by hand means one signal per field), not raw speed.
-- **vs NgRx:** SignalTree wins boilerplate and granular-update performance. On **bundle it does not win** — SignalStore (~2.3KB) and NgRx Store own code (~5.3KB) are smaller than SignalTree-with-entities (~8.1KB); the KB buy built-in entities/markers/granularity. NgRx wins **ecosystem maturity, training-data familiarity, team depth**. Event-sourcing/CQRS/heavy time-travel → classic NgRx Store.
+- **vs NgRx:** SignalTree wins boilerplate and granular-update performance. On **bundle it does not win** — SignalStore (~2.3KB) and NgRx Store own code (~5.3KB) are smaller than SignalTree-with-entities (~8.4KB); the KB buy built-in entities/markers/granularity. NgRx wins **ecosystem maturity, training-data familiarity, team depth**. Event-sourcing/CQRS/heavy time-travel → classic NgRx Store.
 - **Known trade-off:** serialization is slower (signals must be unwrapped); mitigate with caching/debounced persistence.
 
 Decision boundary: structured/hierarchical state + frequent targeted updates + low-boilerplate priorities → SignalTree. Simple/flat state → raw signals. Maximum ecosystem gravity or event-sourcing → NgRx.
@@ -169,8 +169,10 @@ reader();                          // ✅ zero-arg snapshot read
 **DI sugar:** `defineStore(factory, { expose: 'readonly' })` — `inject(MyStore)` then resolves to the `ReadonlyStore` view (same tree object at runtime). Only accepted when the factory returns a real `signalTree(...)`; a plain-object factory with `expose: 'readonly'` is a compile error, not a silent no-op.
 
 ```typescript
+import { defineStore, signalTree, entityMap, loader } from '@signaltree/core';
+
 export const CatalogStore = defineStore(
-  () => signalTree({ plants: entityMap<Plant, string>({ load: () => api.list$() }) }),
+  () => signalTree({ plants: entityMap<Plant, string>({ load: loader(() => api.list$()) }) }),
   { expose: 'readonly', providedIn: 'root' }
 );
 // inject(CatalogStore).$.plants.all()      ✅ read
@@ -265,24 +267,28 @@ store.$.users.byId(id)?.name(); // Signal-backed field read
 
 ### `entityMap<Entity, Key>(config)` — cache-aware self-loading (v11.2+)
 
-Pass `load` in `entityMap`'s config and it becomes a **cache-aware collection that loads itself.** Reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection — the composition the v3 audit found every consumer re-implementing (and forgetting the freshness guard, causing redundant fetches). Full `entityMap` surface PLUS a loader, load status, a freshness guard, single-flight dedup, tag invalidation, and optional offline-first persistence. (There is no separate `entityCollection` marker — it shipped that way in 11.2.0 and was folded into `entityMap` in 11.4.0; a plain `entityMap<E, K>()` with no `load` is unaffected.)
+Wrap a load function with the `loader()` helper and pass it as `load` in `entityMap`'s config and it becomes a **cache-aware collection that loads itself.** Reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection — the composition the v3 audit found every consumer re-implementing (and forgetting the freshness guard, causing redundant fetches). Full `entityMap` surface PLUS a loader, load status, a freshness guard, single-flight dedup, tag invalidation, and optional offline-first persistence. `loader()` is a standalone export from `@signaltree/core` — it's what keeps this machinery tree-shakeable; a plain `entityMap()` (no `load`) never pays for it. (There is no separate `entityCollection` marker — it shipped that way in 11.2.0 and was folded into `entityMap` in 11.4.0; a plain `entityMap<E, K>()` with no `load` is unaffected.)
 
 ```typescript
-import { signalTree, entityMap, invalidateTag } from '@signaltree/core';
+import { signalTree, entityMap, loader, invalidateTag } from '@signaltree/core';
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 const store = signalTree({
   plants: entityMap<Plant, string>({
-    load: () => plantApi.list$(region),   // () => Observable<E[]> | Promise<E[]>
     selectId: (p) => p.url,
-    staleTime: '30m',                       // skip refetch while fresh; ms or '30m'/'90s'/'2h'. default 0 = always stale
-    swr: true,                              // serve last value while revalidating
-    tags: ['plants'],                       // for invalidateTag(tree, 'plants')
-    persist: {                              // optional offline-first (reuses the existing StorageAdapter)
-      adapter: createIndexedDBAdapter(),
-      key: 'plants',
-      hydrateThenRevalidate: true,          // paint cached rows instantly, revalidate in background
-    },
+    load: loader(
+      () => plantApi.list$(region),        // () => Observable<E[]> | Promise<E[]>
+      {
+        staleTime: '30m',                       // skip refetch while fresh; ms or '30m'/'90s'/'2h'. default 0 = always stale
+        swr: true,                              // serve last value while revalidating
+        tags: ['plants'],                       // for invalidateTag(tree, 'plants')
+        persist: {                              // optional offline-first (reuses the existing StorageAdapter)
+          adapter: createIndexedDBAdapter(),
+          key: 'plants',
+          hydrateThenRevalidate: true,          // paint cached rows instantly, revalidate in background
+        },
+      }
+    ),
   }),
 });
 
@@ -304,18 +310,22 @@ store.$.plants.lastLoadedAt();   // Signal<number | null>
 invalidateTag(store, 'plants');  // marks every collection carrying the tag stale; returns the count
 ```
 
-Auto-loads on first `tree.$` access (like other markers) unless `lazy: true`. Keep HTTP-level caching (ETag / conditional GET) in the browser + `HttpClient` — `staleTime` decides whether to *ask*, the ETag decides whether the answer costs bytes. Full recipe (HTTP-cache interplay + SSE/SignalR): `docs/guides/entity-collection-cookbook.md`.
+Auto-loads on first `tree.$` access (like other markers) unless `loader()`'s `lazy: true`. Keep HTTP-level caching (ETag / conditional GET) in the browser + `HttpClient` — `staleTime` decides whether to *ask*, the ETag decides whether the answer costs bytes. Full recipe (HTTP-cache interplay + SSE/SignalR): `docs/guides/entity-collection-cookbook.md`.
 
 ### entityMap — scoped cache-aware form (v11.4+)
 
-Add a third type param `P` and give `load` a parameter to parameterize the collection by scope (region, customer, tenant, …) — see [RFC 0003](../rfcs/0003-keyed-entity-collection.md). `load` now takes the scope params; a loader that **declares a parameter** makes the collection **SCOPED**.
+Add a third type param `P` and give the wrapped loader function a parameter to parameterize the collection by scope (region, customer, tenant, …) — see [RFC 0003](../rfcs/0003-keyed-entity-collection.md). The loader function now takes the scope params; a loader that **declares a parameter** makes the collection **SCOPED**.
 
 ```typescript
 customers: entityMap<Customer, string, { regionUrl: string }>({
-  load: ({ regionUrl }) => api.getCustomers$(regionUrl),
   selectId: (c) => c.externalId,
-  staleTime: '30m',
-  // equal?: (a, b) => boolean — scope comparator; default is structural value comparison
+  load: loader(
+    ({ regionUrl }) => api.getCustomers$(regionUrl),
+    {
+      staleTime: '30m',
+      // equal?: (a, b) => boolean — scope comparator; default is structural value comparison
+    }
+  ),
 });
 
 tree.$.customers.load({ regionUrl });   // same scope+fresh => no-op; scope changed => refetch + entities replaced
@@ -329,7 +339,7 @@ Freshness (`staleTime`) is evaluated **per-scope**, not globally — switching s
 
 **NG0600 fix (v11.4).** A non-lazy, cache-aware `entityMap`'s initial auto-load — and any offline-first `persist` seed — used to run synchronously during marker materialization, which is frequently a template read *during* Angular's render pass; that could throw `NG0600: Writing to signals is not allowed while Angular renders`. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection read first inside a template is render-safe. Observable consequence: auto-load is now asynchronous — data arrives on the next microtask rather than synchronously at construction. The same fix (and the same observable timing change) was applied to `asyncSource`.
 
-> **Revision note:** this section describes the **11.4.0** shape. The original 11.3.0 release shipped this as a separate `entityCollection` marker with a `key: (params) => unknown[]` config function, a `currentKey: Signal<string | null>` accessor, and `clearOnKeyChange` — both the marker boundary and that config shape were corrected same-day (see RFC 0003 §0): `key`/`currentKey`/`clearOnKeyChange` became `equal`/`params`/`clearOnParamsChange` (it duplicated a serialized-key source of truth, collided with `persist.key`, and was inconsistent with the `equal`-comparator convention `asyncQuery` already uses), and the `entityCollection` marker itself was removed and folded into `entityMap({ load })` (a separate marker wasn't earning its keep once `entityMap`'s config could carry the loader options).
+> **Revision note:** this section describes the **11.4.0** shape. The original 11.3.0 release shipped this as a separate `entityCollection` marker with a `key: (params) => unknown[]` config function, a `currentKey: Signal<string | null>` accessor, and `clearOnKeyChange` — both the marker boundary and that config shape were corrected same-day (see RFC 0003 §0): `key`/`currentKey`/`clearOnKeyChange` became `equal`/`params`/`clearOnParamsChange` (it duplicated a serialized-key source of truth, collided with `persist.key`, and was inconsistent with the `equal`-comparator convention `asyncQuery` already uses), and the `entityCollection` marker itself was removed and folded into `entityMap({ load })` (a separate marker wasn't earning its keep once `entityMap`'s config could carry the loader options). **v12 note:** the raw `entityMap({ load: fn })` form was removed — `load` must now be wrapped with the `loader()` helper (`entityMap({ load: loader(fn, { ... }) })`); see the section above for the current shape.
 
 ### `status<ErrorType>()`
 
@@ -390,7 +400,7 @@ store.$.settings.theme.reload();  // re-read from localStorage
 
 Supports versioning and migration functions via the third argument. Use for individual per-leaf persistence; use the `persistence()` enhancer for tree-wide persistence with storage adapters.
 
-**Persistence routing (four surfaces, not competing options):** one field surviving refresh → `stored(key, default)`; whole tree snapshot/autosave → `persistence({ key })` enhancer; server-backed collection with warm-start cache + revalidation → `entityMap({ load, persist })` (never `persistence()` — the loader stays the source of truth); a non-localStorage backend (IndexedDB, custom) → `@signaltree/core/storage` adapters, which are the backend layer both `persistence()` and `entityMap({ persist })` accept, not a fifth strategy. Human-readable version with examples: docs/guides/persistence-guide.md.
+**Persistence routing (four surfaces, not competing options):** one field surviving refresh → `stored(key, default)`; whole tree snapshot/autosave → `persistence({ key })` enhancer; server-backed collection with warm-start cache + revalidation → `entityMap({ load: loader(fn, { persist }) })` (never `persistence()` — the loader stays the source of truth); a non-localStorage backend (IndexedDB, custom) → `@signaltree/core/storage` adapters, which are the backend layer both `persistence()` and `entityMap`'s `loader({ persist })` accept, not a fifth strategy. Human-readable version with examples: docs/guides/persistence-guide.md.
 
 ### `form<T>(config: FormConfig<T>)`
 

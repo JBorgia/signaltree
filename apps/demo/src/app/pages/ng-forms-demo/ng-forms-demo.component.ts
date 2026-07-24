@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
-import { createFormTree, email, FormValidationError, minLength, pattern, required } from '@signaltree/ng-forms';
+import { createFormTree, FormValidationError, ngFormValidators } from '@signaltree/ng-forms';
 
 import { ExampleComponent } from '../../examples/shared/components/example-shell';
 import type { CodeFile } from '../../examples/shared/components/example-shell';
@@ -104,36 +104,36 @@ export class NgFormsDemoComponent {
       fieldConfigs: {
         name: {
           validators: [
-            required('Name is required'),
-            minLength(3, 'Name must be at least 3 characters'),
+            ngFormValidators.required('Name is required'),
+            ngFormValidators.minLength(3, 'Name must be at least 3 characters'),
           ],
         },
         email: {
-          validators: [required(), email()],
+          validators: [ngFormValidators.required(), ngFormValidators.email()],
           asyncValidators: [this.emailAvailabilityValidator],
           debounceMs: 180,
         },
         role: {
-          validators: [required()],
+          validators: [ngFormValidators.required()],
         },
         'company.name': {
           validators: [
-            required('Company name is required when managing a team'),
-            minLength(2),
+            ngFormValidators.required('Company name is required when managing a team'),
+            ngFormValidators.minLength(2),
           ],
         },
         'company.size': {
-          validators: [required('Select an approximate company size')],
+          validators: [ngFormValidators.required('Select an approximate company size')],
         },
         'phoneNumbers.*.value': {
           validators: [
-            required('Phone number is required'),
-            pattern(/^[+\d ()-]{6,}$/),
+            ngFormValidators.required('Phone number is required'),
+            ngFormValidators.pattern(/^[+\d ()-]{6,}$/),
           ],
         },
         notes: {
           validators: [
-            minLength(10, 'Share at least 10 characters about your goals'),
+            ngFormValidators.minLength(10, 'Share at least 10 characters about your goals'),
           ],
         },
       },
@@ -205,10 +205,7 @@ export class NgFormsDemoComponent {
       language: 'typescript',
       source: `import {
   createFormTree,
-  required,
-  email,
-  minLength,
-  pattern,
+  ngFormValidators,
 } from '@signaltree/ng-forms';
 
 const profile = createFormTree({
@@ -219,9 +216,9 @@ const profile = createFormTree({
 }, {
   persistKey: 'team-onboarding',
   fieldConfigs: {
-    name: [required(), minLength(3)],
+    name: [ngFormValidators.required(), ngFormValidators.minLength(3)],
     email: {
-      validators: [required(), email()],
+      validators: [ngFormValidators.required(), ngFormValidators.email()],
       asyncValidators: async (value) => {
         await new Promise((r) => setTimeout(r, 200));
         return String(value).endsWith('@example.dev')
@@ -229,7 +226,7 @@ const profile = createFormTree({
           : null;
       },
     },
-    'phoneNumbers.*.value': [required(), pattern(/^[+0-9 ()-]{6,}$/u)],
+    'phoneNumbers.*.value': [ngFormValidators.required(), ngFormValidators.pattern(/^[+0-9 ()-]{6,}$/u)],
   },
   conditionals: [
     {

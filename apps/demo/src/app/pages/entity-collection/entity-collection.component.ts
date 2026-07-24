@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import {
   entityMap,
   invalidateTag,
+  loader,
   signalTree,
   type EntityStorageAdapter,
 } from '@signaltree/core';
@@ -62,12 +63,11 @@ export class EntityCollectionShowcaseComponent implements OnDestroy {
 
   readonly p1 = signalTree({
     items: entityMap<Item, string>({
-      load: () => {
+      load: loader(() => {
         this.p1Fetches.update((n) => n + 1);
         return of(CATALOG).pipe(delay(900));
-      },
+      }, { lazy: true }),
       selectId: (i) => i.id,
-      lazy: true,
     }),
   });
 
@@ -98,8 +98,8 @@ export class EntityCollectionShowcaseComponent implements OnDestroy {
       label: 'single-flight.ts',
       language: 'typescript',
       source: `plants: entityMap<Plant, string>({
-  load: () => plantApi.list$(),   // ONE network call per fetch
   selectId: (p) => p.id,
+  load: loader(() => plantApi.list$()),   // ONE network call per fetch
 })
 
 // Five subsystems each ask to load — in the same tick:
@@ -121,13 +121,11 @@ tree.$.plants.load();
 
   readonly p2 = signalTree({
     items: entityMap<Item, string>({
-      load: () => {
+      load: loader(() => {
         this.p2Fetches.update((n) => n + 1);
         return of(CATALOG).pipe(delay(500));
-      },
+      }, { staleTime: this.P2_STALE_MS, lazy: true }),
       selectId: (i) => i.id,
-      staleTime: this.P2_STALE_MS,
-      lazy: true,
     }),
   });
 
@@ -172,9 +170,10 @@ tree.$.plants.load();
       label: 'stale-time.ts',
       language: 'typescript',
       source: `plants: entityMap<Plant, string>({
-  load: () => plantApi.list$(),
   selectId: (p) => p.id,
-  staleTime: '8s',   // ms or '30m' / '2h'. default 0 = always stale
+  load: loader(() => plantApi.list$(), {
+    staleTime: '8s',   // ms or '30m' / '2h'. default 0 = always stale
+  }),
 })
 
 tree.$.plants.load();   // fetches
@@ -193,24 +192,18 @@ tree.$.plants.load();   // stale again → refetches`,
 
   readonly p3 = signalTree({
     plants: entityMap<Item, string>({
-      load: () => {
+      load: loader(() => {
         this.p3PlantFetches.update((n) => n + 1);
         return of(CATALOG).pipe(delay(500));
-      },
+      }, { staleTime: 600_000, tags: ['catalog'], lazy: true }),
       selectId: (i) => i.id,
-      staleTime: 600_000,
-      tags: ['catalog'],
-      lazy: true,
     }),
     seeds: entityMap<Item, string>({
-      load: () => {
+      load: loader(() => {
         this.p3SeedFetches.update((n) => n + 1);
         return of(SEEDS).pipe(delay(500));
-      },
+      }, { staleTime: 600_000, tags: ['catalog'], lazy: true }),
       selectId: (i) => i.id,
-      staleTime: 600_000,
-      tags: ['catalog'],
-      lazy: true,
     }),
   });
 
@@ -232,8 +225,8 @@ tree.$.plants.load();   // stale again → refetches`,
       label: 'invalidate-tag.ts',
       language: 'typescript',
       source: `const tree = signalTree({
-  plants: entityMap({ load: …, tags: ['catalog'] }),
-  seeds:  entityMap({ load: …, tags: ['catalog'] }),
+  plants: entityMap({ load: loader(…, { tags: ['catalog'] }) }),
+  seeds:  entityMap({ load: loader(…, { tags: ['catalog'] }) }),
 });
 
 // An SSE / SignalR event says "the catalog changed":
@@ -249,16 +242,12 @@ source.addEventListener('catalog.changed', () => {
   // =========================================================================
   readonly p4 = signalTree({
     withSwr: entityMap<Item, string>({
-      load: () => of(CATALOG.slice(0, 4)).pipe(delay(1400)),
+      load: loader(() => of(CATALOG.slice(0, 4)).pipe(delay(1400)), { swr: true, lazy: true }),
       selectId: (i) => i.id,
-      swr: true,
-      lazy: true,
     }),
     noSwr: entityMap<Item, string>({
-      load: () => of(CATALOG.slice(0, 4)).pipe(delay(1400)),
+      load: loader(() => of(CATALOG.slice(0, 4)).pipe(delay(1400)), { swr: false, lazy: true }),
       selectId: (i) => i.id,
-      swr: false,
-      lazy: true,
     }),
   });
 
@@ -278,8 +267,9 @@ source.addEventListener('catalog.changed', () => {
       label: 'swr.ts',
       language: 'typescript',
       source: `entityMap({
-  load: () => api.list$(),
-  swr: true,    // keep serving the last value while revalidating
+  load: loader(() => api.list$(), {
+    swr: true,    // keep serving the last value while revalidating
+  }),
 })
 // swr:true  → rows stay on screen, subtle "revalidating…" shimmer
 // swr:false → loaded() flips false → show a loading skeleton`,
@@ -310,13 +300,14 @@ source.addEventListener('catalog.changed', () => {
   private makeOfflineTree() {
     return signalTree({
       items: entityMap<Item, string>({
-        load: () => of(CATALOG).pipe(delay(1100)),
+        load: loader(() => of(CATALOG).pipe(delay(1100)), {
+          persist: {
+            adapter: this.offlineAdapter,
+            key: 'offline-items',
+            hydrateThenRevalidate: true,
+          },
+        }),
         selectId: (i) => i.id,
-        persist: {
-          adapter: this.offlineAdapter,
-          key: 'offline-items',
-          hydrateThenRevalidate: true,
-        },
       }),
     });
   }
@@ -337,13 +328,14 @@ source.addEventListener('catalog.changed', () => {
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 plants: entityMap<Plant, string>({
-  load: () => plantApi.list$(),
   selectId: (p) => p.id,
-  persist: {
-    adapter: createIndexedDBAdapter(),
-    key: 'plants',
-    hydrateThenRevalidate: true,  // paint cached rows at t=0, revalidate in bg
-  },
+  load: loader(() => plantApi.list$(), {
+    persist: {
+      adapter: createIndexedDBAdapter(),
+      key: 'plants',
+      hydrateThenRevalidate: true,  // paint cached rows at t=0, revalidate in bg
+    },
+  }),
 })
 // On reload: rows appear INSTANTLY from IndexedDB (marked stale),
 // then swap to fresh data when the network responds — no blank screen.`,

@@ -331,3 +331,38 @@ semantics and should ride with its own test + changelog note in the 11.6.0
 loader pass. Same latent family: post-destroy `loading()` also sticks `true`
 forever (`onDestroy` never resets `loadingSignal`); rides with the same
 11.6.0 loader-pass fix.
+
+## 7. Owner override — Option B shipped in v12 (2026-07-23)
+
+The §6 decision ("Shape A stays; Option B archived as the fallback, revisit
+only on new evidence such as a multi-scope-LRU weight increase") is **overridden
+by owner direction**: v12.0.0 ships **Option B** as the sole loading path. This
+is recorded as a deliberate override — the §6 analysis is NOT rewritten — in the
+same spirit as the RFC 0004 §5 cooling-period override recorded for 11.6.0. The
+documented revisit trigger (multi-scope LRU) had not fired; the owner elected to
+take the reclaim now and spend the guessability/churn cost as the v12 "earned
+major" payload (RFC 0004 §3 V-MAJOR).
+
+**What shipped (breaking):**
+- `loader(fn, opts)` is the required way to make an `entityMap` cache-aware:
+  `entityMap({ load: loader(fn, { staleTime, swr, tags, persist, equal, lazy,
+  clearOnParamsChange }) })`. It returns a branded `LoaderFeature<E, P>` whose
+  closure is the sole reference to `attachLoader` (exact `security()` precedent).
+- The raw `load: fn` form is **removed**. `entity-map.ts` no longer imports
+  `attachLoader`. A raw function on `load` **fails closed** at the `entityMap()`
+  call site with `[ST2004]` — checked in the factory, not the marker processor
+  (the processor's `create()` is wrapped in a `try/catch` that swallows throws,
+  so a processor-level guard would not actually fail closed).
+
+**Measured result (the reclaim §6 said was ~1.5 KB "in principle"):** the
+`signaltree-entities` budget bundle dropped **9.89 KB → 8.36 KB gzip**
+(own-code; `@angular`/`rxjs`/`tslib` external). Verified structurally: a plain
+`entityMap()` bundle contains none of `attachLoader`/`parseDuration`/
+`stableStringify`/`invalidateTag`/`DURATION_UNITS`. Budget gate lowered
+9.9 → 8.6 to lock it in.
+
+**Cost accepted (per §6's own analysis):** a fourth capability shape and a
+first-attempt agent-guessability regression on the flagship loader — mitigated
+only by docs/llms teaching `loader()` as the one true form and the fail-closed
+`[ST2004]` error naming the fix. The §6 counter-arguments were not refuted;
+they were outweighed by owner priority on the size reclaim.

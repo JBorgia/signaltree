@@ -7,6 +7,7 @@ import {
   asyncSource,
   entityMap,
   form,
+  loader,
   signalTree,
   status,
   stored,
@@ -120,10 +121,11 @@ store.$.orgStatus.fail(err);      // === setError`,
       label: 'plants.ts',
       language: 'typescript',
       source: `plants: entityMap<Plant, string>({
-  load: () => of(ALL_PLANTS).pipe(delay(400)),
   selectId: (p) => p.id,
-  staleTime: '30s',  // load() is a no-op while fresh
-  tags: ['plants'],  // invalidateTag(tree, 'plants')
+  load: loader(() => of(ALL_PLANTS).pipe(delay(400)), {
+    staleTime: '30s',  // load() is a no-op while fresh
+    tags: ['plants'],  // invalidateTag(tree, 'plants')
+  }),
 })
 
 store.$.organization.teams.catalog.plants.all();      // full entityMap surface
@@ -167,14 +169,15 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
         catalog: {
           // depth 4 — entityMap in its cache-aware, self-loading form
           plants: entityMap<Plant, string>({
-            load: () => of(ALL_PLANTS).pipe(delay(400)),
-            selectId: (p) => p.id,
-            staleTime: '30s',
-            tags: ['plants'],
             // Non-lazy: auto-loads on materialize. Safe during template-triggered
             // materialization because the auto-load is deferred off the render
             // pass (no signal writes mid-render). The "Load plants" button below
             // acts as a manual refresh.
+            load: loader(() => of(ALL_PLANTS).pipe(delay(400)), {
+              staleTime: '30s',
+              tags: ['plants'],
+            }),
+            selectId: (p) => p.id,
           }),
         },
       },

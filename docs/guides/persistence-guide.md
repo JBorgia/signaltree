@@ -13,7 +13,7 @@ For the threat model and what should never go in browser storage, see
 | One field to survive refresh (theme, locale, dismissed-banner flag)                 | `stored(key, default)` marker             | `@signaltree/core`                   |
 | The whole tree (or a whole feature tree) snapshotted + autosaved                    | `persistence({ key, … })` enhancer        | `@signaltree/core`                   |
 | A storage backend other than localStorage (IndexedDB, custom/remote)               | `/storage` adapters, plugged into either  | `@signaltree/core/storage`           |
-| A server-backed collection that shows cached rows instantly, then revalidates      | `entityMap({ load, persist })`            | `@signaltree/core`                   |
+| A server-backed collection that shows cached rows instantly, then revalidates      | `entityMap({ load: loader(fn, { persist }) })` | `@signaltree/core`               |
 
 Rules of thumb:
 
@@ -22,10 +22,10 @@ Rules of thumb:
   Don't wrap a whole tree in `stored()` fields just to persist it — and don't
   reach for `persistence()` when only `theme` needs to survive.
 - **`/storage` is not a fourth strategy** — it's the adapter layer. Both
-  `persistence()` and `entityMap({ persist })` accept its `StorageAdapter`
-  (`getItem`/`setItem`/`removeItem`, sync or Promise-returning).
-- **Server data belongs to `entityMap({ persist })`**, not `persistence()`:
-  the loader stays the source of truth; storage is only a warm-start cache
+  `persistence()` and `entityMap`'s `loader({ persist })` option accept its
+  `StorageAdapter` (`getItem`/`setItem`/`removeItem`, sync or Promise-returning).
+- **Server data belongs to `entityMap`'s `loader({ persist })`**, not
+  `persistence()`: the loader stays the source of truth; storage is only a warm-start cache
   (hydrate, mark stale, revalidate). Snapshotting server rows with
   `persistence()` gives you stale data with no revalidation story.
 
@@ -89,10 +89,11 @@ const tree = signalTree({ document: { blocks: [] as Block[] } }).with(
 );
 ```
 
-The same adapters plug into `entityMap({ persist })` below. (`stored()` takes
-a DOM `Storage` backend instead — it is deliberately localStorage-shaped.)
+The same adapters plug into `entityMap`'s `loader({ persist })` option below.
+(`stored()` takes a DOM `Storage` backend instead — it is deliberately
+localStorage-shaped.)
 
-## 4. `entityMap({ persist })` — per-collection offline-first
+## 4. `entityMap({ load: loader(fn, { persist }) })` — per-collection offline-first
 
 For collections with a loader. On every successful `load()`, rows are written
 through to the adapter under `key` (scoped collections get one entry per
@@ -101,19 +102,20 @@ rows are shown immediately, marked stale, and the loader refetches in the
 background — offline-first warm starts.
 
 ```typescript
-import { signalTree, entityMap } from '@signaltree/core';
+import { signalTree, entityMap, loader } from '@signaltree/core';
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 const tree = signalTree({
   plants: entityMap<Plant, string>({
-    load: () => api.getPlants(),
     selectId: (p) => p.id,
-    staleTime: '30m',
-    persist: {
-      adapter: createIndexedDBAdapter(),
-      key: 'plants',
-      hydrateThenRevalidate: true, // cached rows now, fresh rows soon
-    },
+    load: loader(() => api.getPlants(), {
+      staleTime: '30m',
+      persist: {
+        adapter: createIndexedDBAdapter(),
+        key: 'plants',
+        hydrateThenRevalidate: true, // cached rows now, fresh rows soon
+      },
+    }),
   }),
 });
 
@@ -126,7 +128,7 @@ load path.
 
 ## Persisted-scope cleanup (high-cardinality scopes)
 
-Scoped `entityMap({ load, persist })` writes one storage entry per scope
+A scoped `entityMap` with `loader({ persist })` writes one storage entry per scope
 (`key::<stableStringify(params)>`) and never garbage-collects old scopes —
 an app cycling through thousands of tenant/customer/search scopes will
 accumulate entries. Until a built-in GC policy ships (tracked alongside the

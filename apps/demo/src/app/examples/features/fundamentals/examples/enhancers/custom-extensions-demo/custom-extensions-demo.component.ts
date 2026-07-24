@@ -1,7 +1,8 @@
 
 import { Component, computed, Signal, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ISignalTree, registerMarkerProcessor, signalTree } from '@signaltree/core';
+import { ISignalTree, signalTree } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 import {
   type CodeFile,

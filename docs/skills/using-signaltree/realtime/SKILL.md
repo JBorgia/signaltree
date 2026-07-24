@@ -1,6 +1,6 @@
 ---
 name: signaltree-realtime
-description: Guides AI agents wiring @signaltree/realtime so DB change events (INSERT/UPDATE/DELETE) automatically sync into SignalTree entityMap slices, via Supabase, custom WebSocket adapters, or any RealtimeAdapter. Covers connection state signals, reconnect logic, and entity transforms. Triggers on @signaltree/realtime, supabaseRealtime, createRealtimeEnhancer, RealtimeAdapter, entityMap sync, connection state, Supabase realtime, Firebase realtime, WebSocket adapter, INSERT UPDATE DELETE sync.
+description: Guides AI agents wiring @signaltree/realtime so DB change events (INSERT/UPDATE/DELETE) automatically sync into SignalTree entityMap slices, via Supabase, custom WebSocket adapters, or any RealtimeAdapter. Covers connection state signals, reconnect logic, and entity transforms. Triggers on @signaltree/realtime, supabaseRealtime, realtime, RealtimeAdapter, entityMap sync, connection state, Supabase realtime, Firebase realtime, WebSocket adapter, INSERT UPDATE DELETE sync.
 ---
 
 # Using @signaltree/realtime
@@ -76,10 +76,10 @@ Custom adapter (non-Supabase):
 
 ```ts
 import { signalTree, entityMap } from '@signaltree/core';
-import { createRealtimeEnhancer } from '@signaltree/realtime';
+import { realtime } from '@signaltree/realtime';
 
 interface Todo { id: string; title: string }
-type RealtimeAdapter = Parameters<typeof createRealtimeEnhancer>[0];
+type RealtimeAdapter = Parameters<typeof realtime>[0];
 
 const myAdapter: RealtimeAdapter = {
   async connect() { /* open socket */ },
@@ -90,7 +90,7 @@ const myAdapter: RealtimeAdapter = {
 };
 
 const tree = signalTree({ todos: entityMap<Todo, string>() }).with(
-  createRealtimeEnhancer(myAdapter, { todos: { table: 'todos', event: '*' } })
+  realtime(myAdapter, { todos: { table: 'todos', event: '*' } })
 );
 ```
 
@@ -104,7 +104,7 @@ cleanup(); // or via returned CleanupFn
 
 `tree.realtime.reconnect()` — force disconnect → fresh connect, resets `reconnectAttempts` to 0. Use after long background wake-up.
 
-Reconnect options (on `createRealtimeEnhancer`): `autoReconnect` (default `true`), `reconnectDelay` (default 1000ms, exponential backoff), `maxReconnectAttempts` (default 10).
+Reconnect options (on `realtime`): `autoReconnect` (default `true`), `reconnectDelay` (default 1000ms, exponential backoff), `maxReconnectAttempts` (default 10).
 
 Gotchas:
 - Only `entityMap` slices auto-sync. Plain signals or object paths log a dev warning and are ignored.
