@@ -2,6 +2,19 @@
 
 ### Fixed
 
+- **`form()` marker: nested-object deep field accessors** (`form.$.a.b`) read and
+  wrote the ROOT path instead of the nested path — `form.$.profile.address.city()`
+  returned `undefined` and `.set()` wrote a stray root key, corrupting shape.
+  Accessors are now path-aware. (Flat forms were unaffected; regression-guarded
+  by a new shape suite.)
+- **`form()` marker: a nested field named `name` or `length`** crashed marker
+  materialization (`Object.assign` onto the function-typed accessor hit a
+  function's non-writable `name`/`length`). Now uses `Object.defineProperty`, so
+  nested fields may be called `name`, `length`, etc.
+- Added comprehensive control-SHAPE test coverage — primitives, nested objects,
+  arrays, array-of-objects, and record/map fields — across the `form()` marker,
+  `history()`, `signalForm()`, and `createFormTree` (the classic FormArray/nested
+  paths were previously untested; confirmed correct).
 - `createAuditTracker` (moved to `@signaltree/core` in 13.0.0) typed its `tree`
   parameter as `ISignalTree<T>`, but `signalTree()` returns a
   `SignalTreeBuilder<T>` that isn't structurally assignable to it — so callers

@@ -558,27 +558,77 @@ export function createFormSignal<T extends Record<string, unknown>>(
     return accessor;
   }
 
-  function createFieldsProxy(values: T): FormFields<T> {
+  /** Read the value at a dotted key path from the root values signal. */
+  function readAtPath(path: string[]): unknown {
+    let cur: unknown = valuesSignal();
+    for (const p of path) {
+      if (cur == null) return undefined;
+      cur = (cur as Record<string, unknown>)[p];
+    }
+    return cur;
+  }
+
+  /** Immutably write `value` at a key path, cloning each level on the way. */
+  function writeAtPath(path: string[], value: unknown): void {
+    valuesSignal.update((root) => {
+      const clone: Record<string, unknown> = { ...(root as object) };
+      let cur = clone;
+      for (let i = 0; i < path.length - 1; i++) {
+        const seg = path[i];
+        const child = cur[seg];
+        cur[seg] =
+          child !== null && typeof child === 'object' && !Array.isArray(child)
+            ? { ...(child as object) }
+            : {};
+        cur = cur[seg] as Record<string, unknown>;
+      }
+      cur[path[path.length - 1]] = value;
+      return clone as unknown as T;
+    });
+  }
+
+  // Deep field accessors are PATH-AWARE: a nested child (e.g.
+  // `form.$.address.city`) reads/writes `values.address.city`, not a stray
+  // root-level `city`. `basePath` accumulates as the proxy recurses.
+  function createFieldsProxy(
+    values: Record<string, unknown>,
+    basePath: string[] = []
+  ): FormFields<T> {
     const proxy = {} as FormFields<T>;
 
     for (const key of Object.keys(values)) {
-      const k = key as keyof T;
+      const path = [...basePath, key];
       const fieldAccessor = createFieldAccessor(
-        key,
-        () => valuesSignal()[k],
-        (v) => valuesSignal.update((curr) => ({ ...curr, [k]: v }))
+        path.join('.'),
+        () => readAtPath(path),
+        (v) => writeAtPath(path, v)
       );
 
-      // If value is nested object, recursively create accessors
-      const value = values[k];
+      // If value is a nested object (not an array), recurse so deep children
+      // get their own path-aware accessors.
+      const value = values[key];
       if (
         value !== null &&
         typeof value === 'object' &&
         !Array.isArray(value)
       ) {
-        // Nested - add child accessors
-        const nested = createFieldsProxy(value as unknown as T);
-        Object.assign(fieldAccessor, nested);
+        const nested = createFieldsProxy(
+          value as Record<string, unknown>,
+          path
+        );
+        // defineProperty, NOT Object.assign: the accessor is a function, and a
+        // child field named `name` or `length` would collide with a function's
+        // non-writable own properties (Object.assign throws). Those props are
+        // configurable, so defineProperty redefines them cleanly — letting
+        // forms have nested fields called `name`, `length`, etc.
+        for (const childKey of Object.keys(nested)) {
+          Object.defineProperty(fieldAccessor, childKey, {
+            value: (nested as Record<string, unknown>)[childKey],
+            writable: true,
+            enumerable: true,
+            configurable: true,
+          });
+        }
       }
 
       (proxy as Record<string, unknown>)[key] = fieldAccessor;
