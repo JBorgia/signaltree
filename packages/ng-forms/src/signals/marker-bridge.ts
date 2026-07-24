@@ -23,6 +23,7 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import {
+  apply,
   emailError,
   form,
   maxError,
@@ -34,7 +35,8 @@ import {
   validate,
   type FieldContext,
   type FieldTree,
-  type SchemaFn,
+  type FormOptions,
+  type SchemaOrSchemaFn,
   type ValidationError,
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
@@ -81,7 +83,12 @@ interface FormMarkerInternals<T extends Record<string, unknown>> {
 }
 
 /** Options for the marker form of {@link signalForm}. */
-export interface SignalFormOptions<T extends Record<string, unknown> = Record<string, unknown>> {
+export interface SignalFormOptions<
+  T extends Record<string, unknown> = Record<string, unknown>
+> extends Pick<
+    FormOptions<T>,
+    'name' | 'submission' | 'experimentalWebMcpTool'
+  > {
   /**
    * Injector to create the form and the marker-sync effect in. Optional when
    * called from an injection context (component field initializers,
@@ -89,17 +96,25 @@ export interface SignalFormOptions<T extends Record<string, unknown> = Record<st
    */
   injector?: Injector;
   /**
-   * An Angular Signal Forms schema (`SchemaFn`) applied to the returned
+   * An Angular Signal Forms schema — either a `SchemaFn` (`(path) => {…}`) or a
+   * cached `Schema` object from `schema()` — applied to the returned
    * `FieldTree` on top of any per-field validators the `form()` marker
    * carries. Reach for this when your form's rules — `disabled`/`hidden`/
-   * `metadata`/`applyEach`/cross-field `validate` — live in a Signal Forms
-   * schema rather than on the marker: the marker stays the single source of
-   * truth for the MODEL (and drives `history()` undo/redo), while the schema
-   * owns the field RULES. The two compose in one `form()` call, so there is no
-   * second model or sync loop. Marker validators (if any) run first, then this
-   * schema — keep validation in exactly one place to avoid duplicate errors.
+   * `metadata`/`applyEach`/cross-field `validate`/`validateAsync` — live in a
+   * Signal Forms schema rather than on the marker: the marker stays the single
+   * source of truth for the MODEL (and drives `history()` undo/redo), while the
+   * schema owns the field RULES. The two compose in one `form()` call (via
+   * `apply()`), so there is no second model or sync loop. Marker validators (if
+   * any) run first, then this schema — keep validation in exactly one place to
+   * avoid duplicate errors.
    */
-  schema?: SchemaFn<T>;
+  schema?: SchemaOrSchemaFn<T>;
+  /**
+   * `name`, `submission`, and `experimentalWebMcpTool` are forwarded verbatim
+   * to Angular's `form(model, schema, options)` (inherited above) — including
+   * WebMCP, which exposes the form as a tool to AI agents
+   * (`provideExperimentalWebMcpForms` + `experimentalWebMcpTool`).
+   */
   /**
    * When `true`, failures from built-in marker validators (`required`,
    * `email`, `min`, `max`, `minLength`, `maxLength`, `pattern`) are emitted
@@ -253,39 +268,57 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
   }
 
   const fieldTree = runInInjectionContext(injector, () =>
-    form<T>(model, (root) => {
-      for (const [field, fieldValidators] of Object.entries(validatorConfig)) {
-        if (!fieldValidators) continue;
-        const list = Array.isArray(fieldValidators)
-          ? fieldValidators
-          : [fieldValidators];
-        const path = (root as Record<string, unknown>)[field];
-        if (!path) continue;
+    form<T>(
+      model,
+      (root) => {
+        for (const [field, fieldValidators] of Object.entries(validatorConfig)) {
+          if (!fieldValidators) continue;
+          const list = Array.isArray(fieldValidators)
+            ? fieldValidators
+            : [fieldValidators];
+          const path = (root as Record<string, unknown>)[field];
+          if (!path) continue;
 
-        validate(path as never, (ctx: FieldContext<unknown>) => {
-          // Reading model() (not just ctx.value()) makes this reactive to
-          // the whole form, so cross-field rules (validators.when) re-run
-          // when sibling fields change.
-          const formValues = model() as Record<string, unknown>;
-          for (const validator of list) {
-            const message = validator(ctx.value(), formValues);
-            if (message) {
-              if (nativeErrors) {
-                const branded = brandedError(validator, message);
-                if (branded) return branded;
+          validate(path as never, (ctx: FieldContext<unknown>) => {
+            // Reading model() (not just ctx.value()) makes this reactive to
+            // the whole form, so cross-field rules (validators.when) re-run
+            // when sibling fields change.
+            const formValues = model() as Record<string, unknown>;
+            for (const validator of list) {
+              const message = validator(ctx.value(), formValues);
+              if (message) {
+                if (nativeErrors) {
+                  const branded = brandedError(validator, message);
+                  if (branded) return branded;
+                }
+                return {
+                  kind: validator.validatorKind ?? 'signalTree',
+                  message,
+                };
               }
-              return { kind: validator.validatorKind ?? 'signalTree', message };
             }
-          }
-          return undefined;
-        });
-      }
+            return undefined;
+          });
+        }
 
-      // Caller-supplied Angular Signal Forms schema (disabled/hidden/metadata/
-      // applyEach/validate) — composes into the same form() call as the marker
-      // validators above, over the marker's shared model.
-      options.schema?.(root);
-    })
+        // Caller-supplied Angular Signal Forms schema — a SchemaFn OR a cached
+        // Schema object. apply() accepts both and composes it into the same
+        // form() call as the marker validators above, over the shared model.
+        if (options.schema) {
+          // Casts bypass apply()'s SchemaPath<TValue> inference (root is the
+          // genuine root path, options.schema the genuine schema for T); types
+          // are erased at runtime.
+          apply(root as never, options.schema as never);
+        }
+      },
+      // Forward Angular FormOptions verbatim (name/submission/WebMCP).
+      {
+        injector,
+        name: options.name,
+        submission: options.submission,
+        experimentalWebMcpTool: options.experimentalWebMcpTool,
+      }
+    )
   );
 
   // No sync-back needed: the marker's errors()/valid() are computed over the

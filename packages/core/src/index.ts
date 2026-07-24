@@ -190,7 +190,7 @@ export {
 // tree-shakeable way to add it: importing `form` WITHOUT `history` keeps the
 // snapshot/undo engine out of the bundle (security()/loader() precedent, RFC 0006).
 // Attaches to the marker's values signal, so it also drives a bound signalForm().
-export { history } from './lib/form-history/form-history';
+export { history, trackHistory } from './lib/form-history/form-history';
 export type {
   HistoryFeature,
   FormHistoryApi,

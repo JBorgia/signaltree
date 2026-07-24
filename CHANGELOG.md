@@ -1,3 +1,31 @@
+## 13.1.0 (2026-07-24)
+
+### Added
+
+- **`trackHistory(model, options?)` (`@signaltree/core`)** — the marker-free
+  counterpart to `history()`: attaches the same signal-native undo/redo
+  engine to ANY `WritableSignal`, not just a `form()` marker's values signal.
+  Point it at the model behind a plain Angular Signal Forms `form(model,
+  schema)` (or any writable signal) and get `undo()`/`redo()`/
+  `clearHistory()`/`canUndo: Signal<boolean>`/`canRedo: Signal<boolean>`/
+  `history: Signal<{ past, present, future }>` — the identical
+  `FormHistoryApi<T>`/`FormHistoryOptions<T>` shapes `history()` uses. Runs
+  an internal `effect()` that records every model change, whatever the write
+  source (`model.set`/`.update()`, or a Signal Forms field edit through a
+  bound `FieldTree`, which writes the model directly); requires an injection
+  context or an explicit `injector` option.
+- **`signalForm()` marker overload — `SignalFormOptions.schema` widened to
+  `SchemaOrSchemaFn<T>`** (`@signaltree/ng-forms/signals`) — now accepts a
+  cached `Schema` object from Angular's `schema()`, not just a `SchemaFn`.
+  Lets a schema built once be reused across multiple bridged forms; composes
+  with marker validators exactly as before (`apply()`, on the shared model).
+- **`signalForm()` marker overload forwards `name`, `submission`, and
+  `experimentalWebMcpTool`** to Angular's `form(model, schema, options)` —
+  including WebMCP AI-agent tool registration (pair with Angular's
+  `provideExperimentalWebMcpForms()`). A schema-level `validateAsync` is
+  unaffected by the marker's `[ST2005]` single-async-authority guard, which
+  only fires when the MARKER ITSELF carries `asyncValidators`.
+
 ## 13.0.1 (2026-07-24)
 
 ### Fixed

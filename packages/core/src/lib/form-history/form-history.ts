@@ -14,7 +14,14 @@
  * @packageDocumentation
  */
 
-import { computed, signal } from '@angular/core';
+import {
+  computed,
+  effect,
+  inject,
+  Injector,
+  signal,
+  type WritableSignal,
+} from '@angular/core';
 import { deepClone, snapshotsEqual } from '@signaltree/shared';
 
 import type {
@@ -123,4 +130,47 @@ export function history<T extends Record<string, unknown>>(
       return { api, record };
     },
   };
+}
+
+/**
+ * Attach undo/redo history to ANY `WritableSignal` model — no `form()` marker
+ * required. This is the marker-free counterpart to `history()`: point it at the
+ * model signal an Angular Signal Forms `form(model, schema)` was built over (or
+ * any writable signal) and get `undo()`/`redo()`/`canUndo`/`canRedo`/`history`.
+ *
+ * It runs the same engine as `history()`, plus an `effect()` that observes the
+ * model and records every change — from any source (Signal Forms `FieldTree`
+ * edits, `model.set(...)`, etc.). Undo/redo write the model back; the engine's
+ * snapshot-equality guard dedupes so those writes don't create phantom entries.
+ *
+ * Requires an injection context (for the `effect`) or an explicit `injector`.
+ *
+ * @example
+ * ```ts
+ * // Angular Signal Forms, no SignalTree marker:
+ * const model = signal({ name: '', email: '' });
+ * const f = form(model, mySchema);
+ * const hist = trackHistory(model, { capacity: 50, exclude: ['password'] });
+ * hist.undo();  // reverts the last edit; the FieldTree reflects it
+ * ```
+ *
+ * @public
+ */
+export function trackHistory<T extends Record<string, unknown>>(
+  model: WritableSignal<T>,
+  options: FormHistoryOptions<T> & { injector?: Injector } = {}
+): FormHistoryApi<T> {
+  const injector = options.injector ?? inject(Injector);
+  const binding = history<T>(options).attach({
+    read: () => model(),
+    write: (next) => model.update((m) => ({ ...m, ...next })),
+  });
+  effect(
+    () => {
+      model();
+      binding.record();
+    },
+    { injector }
+  );
+  return binding.api;
 }

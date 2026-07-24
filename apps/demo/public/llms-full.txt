@@ -70,6 +70,7 @@ All `@signaltree/*` packages — including `@signaltree/shared` (internal-only, 
 | `createAuditTracker`/`createAuditCallback` + `AuditEntry`/`AuditMetadata`/`AuditTrackerConfig` types moved from `@signaltree/ng-forms` to `@signaltree/core` (**breaking** — canonical import path changed; old path still works, `@deprecated`) | 13.0.0 |
 | `entityEventHandler()` / `applyOptimisticEntityChange()` (`@signaltree/events/angular`) — batch events onto `entityMap` batch ops / derive optimistic-update rollback | 13.0.0 |
 | `withFormHistory` / `createWizardForm` (`@signaltree/ng-forms`) — **deprecated**, not removed; use core `history()` / the `form()` marker's `wizard` config instead | 13.0.0 |
+| `trackHistory(model, options?)` (`@signaltree/core`) — marker-free undo/redo over any `WritableSignal`; `signalForm()`'s marker overload accepts a cached `schema()` object (`SchemaOrSchemaFn<T>`) and forwards `name`/`submission`/`experimentalWebMcpTool` to Angular's `form()` | 13.1.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -507,6 +508,45 @@ the `?.` calls above.
   `createFormTree`/`FormGroup` substrate, which structurally cannot attach to
   a Signal Forms `FieldTree`).
 
+### `trackHistory()` — marker-free undo/redo over any `WritableSignal` (v13.1+, `@signaltree/core`)
+
+Same undo/redo engine as `history()`, but with no `form()` marker required —
+point it at the model signal behind a plain Angular Signal Forms
+`form(model, schema)` (or literally any `WritableSignal`):
+
+```typescript
+import { signal } from '@angular/core';
+import { form } from '@angular/forms/signals';
+import { trackHistory } from '@signaltree/core';
+
+const model = signal({ name: '', email: '' });
+const nameForm = form(model, (p) => {
+  /* validators, disabled, etc. */
+});
+
+// Needs an injection context (internal effect()), or pass `injector` explicitly.
+const hist = trackHistory(model, { capacity: 20, exclude: ['password'] });
+
+nameForm.name().value.set('Ada');
+hist.undo();        // model reverts; nameForm.name().value() === ''
+hist.canUndo();      // Signal<boolean>
+hist.canRedo();      // Signal<boolean>
+hist.history();      // Signal<{ past: T[]; present: T; future: T[] }>
+hist.redo();
+hist.clearHistory();
+```
+
+`FormHistoryApi<T>`/`FormHistoryOptions<T>` — the identical shapes `history()`
+uses. The difference is entirely in how it attaches: `trackHistory` runs its
+own internal `effect()` that reads the model and records on every change,
+whatever the write source (`model.set`/`.update()`, or a Signal Forms field
+edit through a bound `FieldTree`, which writes the model directly). Undo/redo
+write the model back through the same restore path as `history()`; the
+snapshot-equality dedupe prevents those writes from creating phantom entries.
+Reach for `trackHistory()` when your form is built directly on Angular Signal
+Forms with no SignalTree `form()` marker in the picture; reach for `history()`
+when it is (it composes with `signalForm()`'s bridge for free — see above).
+
 ### Angular Signal Forms bridge — `signalForm()` (`@signaltree/ng-forms/signals`, Angular 22+)
 
 **This is the Signal Forms story** (v11.6+; on 11.5.x the same capability shipped under the now-deprecated names `markerSignalForm`/`signalFormBridge`). `signalForm()` is one name with two overloads, one per validation source:
@@ -543,9 +583,36 @@ class ProfileComponent {
 }
 ```
 
-Options (`SignalFormOptions`): `injector` (required only outside an injection context) and `nativeErrors`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects). The 11.6.0 announcement that the default would flip in v12 was NOT kept — the flip is explicitly postponed to v13; set `nativeErrors` explicitly if you depend on either shape.
+Options (`SignalFormOptions`): `injector` (required only outside an injection context), `nativeErrors`, `schema`, and (v13.1+) `name`/`submission`/`experimentalWebMcpTool`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects). The 11.6.0 announcement that the default would flip in v12 was NOT kept — the flip is explicitly postponed to v13; set `nativeErrors` explicitly if you depend on either shape.
 
 **Single-authority async rule:** async validation is **NOT unified** between the two systems. The marker's `asyncValidators`/`validateField()`/`submit()` path and Signal Forms' `validateAsync`/`validateHttp` are independent — pick ONE as the authority for a given bridged form (using both on one field can leave the marker's `valid()` and the FieldTree's `valid()` disagreeing during an async validation window). A one-time dev warning fires when a bridged marker has `asyncValidators` configured.
+
+**`options.schema` — compose a Signal Forms schema on top of marker validators (v13.1+).** `schema` accepts `SchemaOrSchemaFn<T>` — either a plain `SchemaFn` (`(path) => {…}`) OR a cached `Schema` object built once via Angular's `schema()` and reused across forms. It's applied with `apply()` on top of any marker validators, over the SAME shared model — for rules a marker's `validators` config can't express: `disabled`, `hidden`, `metadata`, `applyEach`, cross-field `validate`, and schema-level `validateAsync`.
+
+```typescript
+import { disabled, schema, validate } from '@angular/forms/signals';
+
+const profileSchema = schema<Profile>((p) => {
+  disabled(p.email, () => true);
+  validate(p.name, (ctx) => (ctx.value() ? undefined : { kind: 'required', message: 'Required' }));
+});
+
+const fieldTree = signalForm(tree.$.profile, { injector, schema: profileSchema });
+```
+
+Important: the `[ST2005]` single-authority guard above is about the MARKER'S OWN `asyncValidators` specifically. A marker with NO async config, paired with a schema that declares `validateAsync`, is the supported "pick one authority" shape — the schema is the only async authority in play, so there is no disagreement window to guard against; that combination does not throw.
+
+**FormOptions passthrough (v13.1+).** `name`, `submission`, and `experimentalWebMcpTool` are forwarded verbatim to Angular's `form(model, schema, options)` — including registering the form as a WebMCP AI-agent tool:
+
+```typescript
+const fieldTree = signalForm(tree.$.profile, {
+  injector,
+  name: 'profileForm',
+  experimentalWebMcpTool: { name: 'profileTool', description: 'Edit the user profile' },
+});
+```
+
+`experimentalWebMcpTool` requires Angular's `provideExperimentalWebMcpForms()` to be configured in the app (or the injector under test) — Angular's own `form()` throws in dev mode if the tool option is set without it; SignalTree doesn't add or relax that requirement, it just forwards the option.
 
 **2. Schema-registry overload — `signalForm<TModel>(tree, rootPath, subtree)`.** For trees whose validation lives in StandardSchema schemas (Zod/Valibot/ArkType) registered via `@signaltree/schema`'s `schemas()` enhancer, rather than in a `form()` marker: returns a `FieldTree<TModel>` bound to the subtree with every registered schema under `rootPath` auto-applied per leaf path (`validateStandardSchema`) — no schema arguments needed; `schemas()` must be applied before `signalForm()`.
 

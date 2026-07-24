@@ -402,6 +402,43 @@ the marker's async path and don't bridge (drive the form through the marker's
 own `validateField()`/`submit()`). Sync validators are fully unified. Requires
 Angular 22+.
 
+**A caller-supplied Signal Forms `schema` composes with marker validators
+(v13.1+).** The marker's `options.schema` accepts a `SchemaOrSchemaFn<T>` —
+either a `SchemaFn` (`(path) => {…}`) OR a cached `Schema` object from
+Angular's `schema()` — for rules a marker's `validators` config can't
+express (`disabled`, `hidden`, `metadata`, `applyEach`, cross-field
+`validate`/`validateAsync`). It's applied via `apply()` on top of any marker
+validators, over the same shared model — no second model, no sync loop:
+
+```typescript
+import { disabled, schema, validate } from '@angular/forms/signals';
+
+const profileSchema = schema<Profile>((p) => {
+  disabled(p.email, () => true);
+  validate(p.name, (ctx) => (ctx.value() ? undefined : { kind: 'required', message: 'Required' }));
+});
+
+const fieldTree = signalForm(tree.$.profile, { injector, schema: profileSchema });
+```
+
+The `[ST2005]` guard above is about the MARKER'S OWN `asyncValidators`
+specifically — a marker with no async config, paired with a schema that
+declares `validateAsync`, is the supported shape: the schema is the only
+async authority, so there's no disagreement to guard against.
+
+`signalForm`'s options also forward `name`, `submission`, and
+`experimentalWebMcpTool` verbatim to Angular's `form(model, schema, options)`
+(v13.1+) — including exposing the form as a WebMCP AI-agent tool (pair with
+Angular's `provideExperimentalWebMcpForms()`):
+
+```typescript
+const fieldTree = signalForm(tree.$.profile, {
+  injector,
+  name: 'profileForm',
+  experimentalWebMcpTool: { name: 'profileTool', description: 'Edit the user profile' },
+});
+```
+
 ### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
 
 If you register Zod/Valibot/ArkType schemas via `@signaltree/schema`, the

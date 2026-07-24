@@ -1640,6 +1640,42 @@ model signal directly, bypassing the marker's mutators). Tree-shakeable: a
 bundle that never imports `history()` doesn't pay for the snapshot/undo
 engine — only `form()`'s type-only reference to `HistoryFeature` remains.
 
+#### Marker-free undo/redo — `trackHistory()` (v13.1+)
+
+`history()` needs a `form()` marker; `trackHistory()` is the same undo/redo
+engine attached to **any** `WritableSignal` — including the model signal
+behind a plain Angular Signal Forms `form(model, schema)`, with no
+SignalTree marker involved at all:
+
+```typescript
+import { signal } from '@angular/core';
+import { form } from '@angular/forms/signals';
+import { trackHistory } from '@signaltree/core';
+
+const model = signal({ name: '', email: '' });
+const nameForm = form(model, (p) => {
+  /* validators, etc. */
+});
+
+// Requires an injection context (for the internal effect()) or pass `injector`.
+const hist = trackHistory(model, { capacity: 20, exclude: ['password'] });
+
+nameForm.name().value.set('Ada');
+hist.undo(); // reverts the model; nameForm.name().value() is back to ''
+hist.canUndo(); // Signal<boolean>
+hist.canRedo(); // Signal<boolean>
+hist.history(); // Signal<{ past: T[]; present: T; future: T[] }>
+hist.redo();
+hist.clearHistory();
+```
+
+An internal `effect()` observes the model and records every change,
+whatever the write source — `model.set`/`.update()`, or a Signal Forms field
+edit through the bound `FieldTree` (which writes the model directly).
+Undo/redo write the model back; the same snapshot-equality dedupe as
+`history()` keeps those writes from creating phantom entries. Same
+`FormHistoryOptions` shape (`capacity`, `exclude`) as `history()`.
+
 #### Form Persistence
 
 ```typescript
