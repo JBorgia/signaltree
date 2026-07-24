@@ -61,6 +61,49 @@ describe('status() marker', () => {
     });
   });
 
+  describe('idle() — the "should I (re)fetch?" predicate', () => {
+    const sig = () =>
+      createStatusSignal({
+        [STATUS_MARKER]: true,
+        initialState: LoadingState.NotLoaded,
+      });
+
+    it('is true initially (NotLoaded)', () => {
+      expect(sig().idle()).toBe(true);
+    });
+
+    it('is false while loading', () => {
+      const s = sig();
+      s.setLoading();
+      expect(s.idle()).toBe(false);
+    });
+
+    it('is false once loaded', () => {
+      const s = sig();
+      s.setLoaded();
+      expect(s.idle()).toBe(false);
+    });
+
+    it('stays TRUE after setError — the footgun notLoaded() misses (retry-never)', () => {
+      const s = sig();
+      s.setError(new Error('boom'));
+      // notLoaded() is false in the Error state — a notLoaded()-gated guard
+      // would never retry. idle() is the correct guard predicate.
+      expect(s.notLoaded()).toBe(false);
+      expect(s.idle()).toBe(true);
+    });
+
+    it('is true again after reset / setNotLoaded', () => {
+      const s = sig();
+      s.setLoaded();
+      s.reset();
+      expect(s.idle()).toBe(true);
+      s.setLoaded();
+      s.setNotLoaded();
+      expect(s.idle()).toBe(true);
+    });
+  });
+
   describe('helper methods', () => {
     it('should transition through loading states', () => {
       const sig = createStatusSignal({

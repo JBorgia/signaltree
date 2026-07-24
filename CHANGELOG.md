@@ -1,6 +1,15 @@
-## Unreleased
+## Unreleased (12.0.1)
 
 ### Added
+
+- **`status().idle()` — the canonical "should I (re)fetch?" predicate.**
+  `idle` is `!loading() && !loaded()`, so it is true for **both** `NotLoaded`
+  and `Error`. Guards/resolvers should use `idle()`, not `notLoaded()`:
+  `notLoaded()` is strictly `state === NotLoaded`, so a `notLoaded()`-gated
+  fetch **silently never retries after an error** (the collection is in the
+  distinct `Error` state). Also steers off `state() === LoadingState.X`
+  enum comparisons (a codegen hallucination magnet). Added to the readonly
+  view's `STATUS_READERS`.
 
 - **`persist.maxScopes` — persisted-scope garbage collection** for scoped
   cache-aware collections (`entityMap({ load: loader(fn, { persist }) })`).
@@ -18,7 +27,13 @@
   deferred (RFC 0003 §5). A non-positive-integer `maxScopes` fails closed at
   the `loader()` call site (dev).
 
-## Unreleased (12.0.1)
+### Changed
+
+- **`signalForm()` emits a one-time dev-mode advisory when `nativeErrors` is
+  left unset**, noting the default is `false` in 12.x and flips to `true` in
+  v13 — set it explicitly to pin either error shape now. Explicitly setting
+  either value silences it. Advisory only (`console.info`); no behavior
+  change. The v13 default flip is documented at every promise site.
 
 ### Release engineering
 

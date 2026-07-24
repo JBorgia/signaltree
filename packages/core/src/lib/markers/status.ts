@@ -62,6 +62,22 @@ export interface StatusSignal<E = Error> {
   loaded: Signal<boolean>;
   /** True when state is Error (i.e. error !== null) */
   hasError: Signal<boolean>;
+  /**
+   * True when the collection is neither loading nor loaded — i.e. it should
+   * be (re)fetched. Covers **both** `NotLoaded` AND `Error`, which is the
+   * whole point: this is THE guard/resolver predicate for "should I fetch?".
+   *
+   * Reach for `idle()`, not `notLoaded()`, in a guard/resolver:
+   * `notLoaded()` is strictly `state === NotLoaded`, so it is **false** once
+   * `setError()` has moved the collection to the distinct `Error` state — a
+   * `notLoaded()`-gated fetch therefore **silently never retries after an
+   * error**. `idle()` is exactly `!loading() && !loaded()`, so it stays true
+   * in the error state and the fetch retries.
+   *
+   * Prefer this predicate over `state() === LoadingState.X` comparisons —
+   * enum-equality reads are a codegen hallucination magnet (see README).
+   */
+  idle: Signal<boolean>;
 
   // Canonical helper methods
   /** Set state to NotLoaded and clear error */
@@ -190,6 +206,7 @@ export function createStatusSignal<E = Error>(
   let _loading: Signal<boolean> | null = null;
   let _loaded: Signal<boolean> | null = null;
   let _hasError: Signal<boolean> | null = null;
+  let _idle: Signal<boolean> | null = null;
 
   const getNotLoaded = () =>
     (_notLoaded ??= computed(() => stateSignal() === LoadingState.NotLoaded));
@@ -199,6 +216,16 @@ export function createStatusSignal<E = Error>(
     (_loaded ??= computed(() => stateSignal() === LoadingState.Loaded));
   const getHasError = () =>
     (_hasError ??= computed(() => stateSignal() === LoadingState.Error));
+  // "should I (re)fetch?" — true unless actively loading or already loaded, so
+  // it stays true in the Error state (unlike notLoaded). NOT derived from
+  // notLoaded/hasError: expressed directly as !loading && !loaded so a future
+  // added state can't silently make it wrong.
+  const getIdle = () =>
+    (_idle ??= computed(
+      () =>
+        stateSignal() !== LoadingState.Loading &&
+        stateSignal() !== LoadingState.Loaded
+    ));
 
   return {
     // Source signals
@@ -217,6 +244,9 @@ export function createStatusSignal<E = Error>(
     },
     get hasError() {
       return getHasError();
+    },
+    get idle() {
+      return getIdle();
     },
 
     // Helper methods

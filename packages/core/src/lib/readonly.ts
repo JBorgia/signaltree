@@ -89,6 +89,7 @@ export const STATUS_READERS = [
   'loading',
   'loaded',
   'hasError',
+  'idle',
 ] as const;
 
 /**

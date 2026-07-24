@@ -37,6 +37,23 @@ import {
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
 
+declare const ngDevMode: boolean | undefined;
+
+// One-time (per module load) advisory when `nativeErrors` is left unset —
+// warns the default flips in v13 so callers can pin the shape they want now.
+let warnedNativeErrorsDefault = false;
+
+/**
+ * Test-only: reset the one-time `nativeErrors` advisory flag. Exported from
+ * the module (NOT the package barrel) so specs can exercise the first-call
+ * behavior deterministically; the module-level flag is otherwise consumed by
+ * whichever test runs first. Do not use in application code.
+ * @internal
+ */
+export function __resetNativeErrorsAdvisoryForTests(): void {
+  warnedNativeErrorsDefault = false;
+}
+
 /** Marker-side validator shape (see `Validator` in @signaltree/core). */
 type MarkerValidator = ((
   value: unknown,
@@ -77,7 +94,8 @@ export interface SignalFormOptions {
    * still `false` — the flip is now EXPLICITLY POSTPONED to v13 (an external
    * post-release audit caught the promise miss, 2026-07-24). If your code
    * depends on either error shape, set the option explicitly rather than
-   * relying on the default.
+   * relying on the default — leaving it unset emits a one-time dev-mode
+   * `console.info` advisory about the upcoming v13 flip.
    */
   nativeErrors?: boolean;
 }
@@ -170,6 +188,24 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
   const injector = options.injector ?? inject(Injector);
   const validatorConfig = internals.__config?.validators ?? {};
   const nativeErrors = options.nativeErrors ?? false;
+
+  // Advisory (not a warning — the default is safe): nativeErrors is false in
+  // 12.x and flips to true in v13. If the caller hasn't chosen, tell them once
+  // so they can pin the shape now rather than be surprised by the v13 flip.
+  // Explicitly setting either value silences it.
+  if (
+    options.nativeErrors === undefined &&
+    !warnedNativeErrorsDefault &&
+    (typeof ngDevMode === 'undefined' || ngDevMode)
+  ) {
+    warnedNativeErrorsDefault = true;
+    console.info(
+      '[SignalTree] signalForm(): `nativeErrors` defaults to false in 12.x ' +
+        'and flips to true in v13. Set it explicitly to opt into branded ' +
+        'Angular validation errors now, or pin the plain { kind, message } ' +
+        'shape — either choice silences this notice.'
+    );
+  }
 
   // Single async authority, enforced structurally (v12). Async validation is
   // NOT unified between the marker and Signal Forms, and there is no way to run
