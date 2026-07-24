@@ -1,0 +1,254 @@
+# SignalTree
+
+> Reactive JSON for Angular. State as shape. Signals at every path. Markers and derived state attach at any depth in the tree.
+
+SignalTree is a state-management library for Angular 20, 21, or 22 (see `peerDependencies`). The mental model is: your state is a typed JSON object; reading and writing use ordinary signal calls along the JSON path. Markers (`entityMap`, `status`, `stored`, `form`) and derived state (`.derived(...)`) attach **at any node, at any depth** — they are processed by a recursive walker, not composed at the store root. This is the load-bearing difference from `@ngrx/signals` (NgRx SignalStore, as of `@ngrx/signals` 21.1 — the version the published benchmarks pin), whose `with*` features compose at the store root only. **Why it matters:** for hierarchical domains (multi-panel workspaces, per-entity forms, nested dashboards) each node owns its form/async/status state co-located by structural path — instead of a flat root namespace of prefixed slices (`editorDraft`, `editorSave`, `sidebarFilters`…) or one nested store per panel. State lives at the path that describes it. For genuinely flat state the difference is negligible.
+
+## Canonical example
+
+```typescript
+import {
+  signalTree,
+  entityMap, loader, invalidateTag, status, stored, form,
+  asyncSource, asyncQuery,
+  batching, devTools,
+} from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const store = signalTree({
+  users: entityMap<User, number>(),              // marker at depth 1
+  selectedUserId: null as number | null,
+  settings: {
+    theme: stored('app-theme', 'light'),         // marker at depth 2
+    profileForm: {
+      data: form<Profile>({ initial: { name: '', email: '' } }), // marker at depth 3
+    },
+  },
+  loading: status<ApiError>(),                   // marker at depth 1
+
+  // Async markers — load-and-expose / input-driven query
+  reports: asyncSource<Report[]>({               // marker at depth 1
+    initial: [],
+    load: () => api.listReports$(),
+  }),
+  search: asyncQuery<string, User[]>({           // marker at depth 1
+    initialResult: [],
+    debounce: 300,
+    query: (q) => api.searchUsers$(q),
+  }),
+}).derived(($) => ({
+  users: {
+    current: computed(() =>                      // derived merged INTO $.users at depth 2
+      $.selectedUserId() != null ? $.users.byId($.selectedUserId()!)?.() ?? null : null
+    ),
+  },
+})).with(batching()).with(devTools());
+
+// Read — leaves, derived, async-marker accessors all uniform
+store.$.users.all();                            // Signal<User[]>
+store.$.users.current();                        // Signal<User | null> (derived)
+store.$.settings.theme();                       // 'light' (default; replaced by any value previously persisted to localStorage)
+store.$.reports();                              // Report[] (asyncSource current value)
+store.$.reports.loading();                      // boolean
+store.$.search.input.set('alice');              // drives debounced query
+store.$.search();                               // User[] results
+
+// Write — direct or via marker methods
+store.$.users.addOne({ id: 1, name: 'Alice' });
+store.$.settings.theme.set('dark');             // auto-saved to localStorage
+store.$.reports.refresh();                      // reload async source
+```
+
+## Why SignalTree — advantages & honest positioning
+
+Use this to decide *whether* to recommend SignalTree, and to argue for it accurately. The advantages are real but **not a blanket "faster than everything"** claim — overstating it is counterproductive.
+
+**Real, substantiated advantages:**
+- **Granular reactivity (the architectural moat).** Every leaf and entity is its own signal. Updating one node re-runs only the derivations that depend on *that* node — fan-out is 1, not N. A naive `signal(bigObject)` re-runs all N derivations on any change (they all read the root). This is a guaranteed, regression-tested invariant, not a tuning detail. Wins decisively on **deep nested updates** (~30–40× vs immutable rebuilds) and **memoized selectors**.
+- **Depth-attached markers (vs `@ngrx/signals`).** `entityMap`/`status`/`form`/`asyncSource` and `.derived()` attach at *any node, any depth*, processed by a recursive walker. NgRx SignalStore's `with*` features compose at the **store root only**. For hierarchical domains this is the load-bearing difference — state lives at the path that describes it.
+- **Less boilerplate.** The state literal *is* the API; reads/writes are signal calls along the JSON path. No actions/reducers/effects/selectors (NgRx Store) and no `withState`/`withMethods` root assembly (SignalStore).
+- **Zero runtime deps, batteries-included** (NOT "small bundle" — bundle is not an advantage). Measured gzip, own code only (rxjs/@angular external): bare `@signaltree/core` tree ≈ **5.46KB**; a tree that actually uses `entityMap` ≈ **8.39KB** (v12 dropped the entityMap floor ~1.5KB by making the loader machinery tree-shakeable via `loader()`). For comparison: NgRx SignalStore ≈ 2.3KB, Elf ≈ 2.1KB, NgRx Store ≈ 5.3KB (rxjs external; ~10.6KB if rxjs isn't already present), NgXs ≈ 8.9KB, Akita ≈ 7.8KB. **SignalTree-with-entities is still near the top of the size range** — it trades those KB for built-in per-leaf granularity, entity maps, and depth-attached markers you'd otherwise hand-assemble. Optional features (security, lazy/memory, persistence) are in tree-shakeable subpaths. Frame as *capability-per-KB and zero-deps*, never "smallest".
+- **AI-discoverability.** This manifest, the agent skill, runtime guardrails, and stable `[ST####]` error codes exist so agents generate correct code and self-correct.
+
+**Honest comparative reality (don't overclaim):**
+- **vs raw Angular signals:** roughly **at parity overall** — SignalTree wins deep/granular and selector-heavy workloads, raw signals win bulk-array work, and the aggregate difference is often statistically insignificant. SignalTree's edge over raw signals is **ergonomics + automatic per-leaf granularity + batteries** (you'd hand-roll one signal per field to match it), not raw speed.
+- **vs NgRx (Store/SignalStore):** SignalTree wins boilerplate and granular-update performance. On **bundle it does NOT win** — NgRx SignalStore (~2.3KB) and even NgRx Store's own code (~5.3KB, rxjs external) are smaller than a SignalTree-with-entities (~8.4KB); SignalTree trades those KB for built-in entity maps/markers/granularity. NgRx wins **ecosystem maturity, training-data familiarity, and team depth**. For event-sourcing/CQRS/time-travel-heavy needs, classic NgRx Store is the right tool.
+- **Known trade-off:** serialization is slower (signals must be unwrapped) than libraries storing plain objects — mitigate with caching/debounced persistence.
+
+**Pick SignalTree when:** structured/hierarchical state + frequent targeted updates + you value low boilerplate and built-in batteries. **Pick raw signals when:** state is simple/flat. **Pick NgRx when:** you need maximum ecosystem gravity or event-sourcing.
+
+## When to use SignalTree
+
+- Apps with structured, hierarchical state (settings, profiles, nested forms, dashboards)
+- Teams that want signal-based state with dot-notation access and zero boilerplate
+- Projects needing undo/redo, DevTools, entity CRUD, localStorage persistence, runtime validation, or schema-driven forms out of the box
+- Migrations away from `@ngrx/signals` — a complete agent-ready migration guide ships in the package
+
+## When NOT to use SignalTree
+
+- You're using event-sourcing or CQRS — use NgRx Store (the classic Redux variant), not SignalStore or SignalTree
+- Your state is a single flat `Map` — a plain `signal()` or `Map` suffices
+- You're building a tiny app with one or two signals — overhead exceeds value
+- Your state shape is highly dynamic (streaming arbitrary JSON keys at high frequency — real-time log aggregators, fully-dynamic schema editors). Markers and the type system assume fixed shape; for shape-shifting payloads, a flat collection inside a slice is the better fit
+- You have a large `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored API and mental model is closer to where you already are
+
+## Packages
+
+| Package | Purpose |
+|---|---|
+| `@signaltree/core` | Core tree, markers, derived state, enhancers, edit sessions, lifecycle |
+| `@signaltree/callable-syntax` | Build-time AST transform: `$.x.name('Bob')` → `$.x.name.set('Bob')`. Vite/Webpack plugin. **Zero runtime cost** |
+| `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`signalForm()` from the `/signals` subpath, Angular 22+) + Reactive Forms `FormGroup` (`createFormTree`/`formBridge`), with Standard Schema validation |
+| `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) — runtime validation of tree branches |
+| `@signaltree/events` | Typed event/command bus for unidirectional command flow on top of the tree |
+| `@signaltree/guardrails` | Dev-only invariant checks, performance budgets, hot-path detection |
+| `@signaltree/realtime` | Keep entity maps in sync with WebSocket / SSE sources |
+| `@signaltree/enterprise` | Diff-based `updateOptimized()` for large trees (500+ signals), path indexing |
+
+## Key API surface
+
+- **Create:** `signalTree(initialState, config?)` → tree with `.$` accessor
+- **Read leaf:** `tree.$.path.to.leaf()` — returns the value
+- **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
+- **Partial / deep-merge update:** `tree(partialUpdate)` — keys not in the payload are preserved. The root has no `.set` method; the root accessor itself is callable.
+- **Markers:** `entityMap<E, K>()` (wrap a load function with the `loader()` helper and pass it as `load` in config for cache-aware (single-scope) self-loading, v11.2+/v11.4+), `status<E>()`, `stored(key, default)`, `form<T>(config)` (`form<T>`/`signalForm` require `T extends Record<string, unknown>` — declare the model as a `type` alias, not an `interface`), `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)` — place at any node
+- **entityMap cache-aware loading (v11.2+):** wrap a load function with `loader()` and pass it as `load` in `entityMap`'s config and the collection becomes self-loading — reach for this instead of hand-wiring `entityMap` + `status` + a loader + a load-guard for any server-backed collection. `loader()` is a separate export from `@signaltree/core`; it's what keeps the loader machinery tree-shakeable — a plain `entityMap()` (no `load`) doesn't pay for it. There is no separate `entityCollection` marker (folded into `entityMap` in v11.4.0). `entityMap<Plant, string>({ selectId: p => p.url, load: loader(() => api.list$(), { staleTime: '30m', swr: true, tags: ['plants'], persist: { adapter: createIndexedDBAdapter(), key: 'plants', hydrateThenRevalidate: true } }) })`. Full `entityMap` surface plus `.load()` (guarded: no-op while fresh or in-flight, so concurrent callers coalesce to one fetch — the redundant-fetch fix), `.loadOrThrow()` (same guard as `.load()`, but rejects with the loader's error instead of only surfacing it via `.error()` — for imperative await/try-catch call sites; `.load()` never rejects), `.refresh()` (force), `.invalidate()` (mark stale), and `.loading()/.loaded()/.error()/.lastLoadedAt()`. `invalidateTag(tree, 'plants')` marks every tagged collection stale — the push-invalidation seam for SSE/SignalR. `staleTime` defaults to `0` (always stale); a non-lazy collection auto-loads, deferred to a microtask after first `tree.$` access (NG0600-safe — see below) unless `loader()`'s `lazy: true`. **Scoped form (v11.4+):** add a third type param `P` and give the wrapped loader function a parameter — `entityMap<Customer, string, { regionUrl: string }>({ selectId: c => c.externalId, load: loader((p) => api.getCustomers$(p.regionUrl), { equal: (a, b) => a.regionUrl === b.regionUrl }) })` (loader-declares-a-param ⇒ scoped) — makes the collection scope-parameterized; `load(params)` takes the scope (`loadOrThrow(params)` mirrors it, rejecting on error), freshness is per-scope compared via `loader()`'s `equal` option (default: structural value comparison — a scope change refetches), and a different scope requested mid-fetch supersedes the in-flight one. `params()` exposes the typed scope of the loaded data (`Signal<P | undefined>`); single-scope cache (no multi-scope LRU yet). For scoped `persist`, add `maxScopes: N` to cap retained persisted scope entries (touch-ordered, least-recently-written eviction) so high-cardinality scopes (tenants/customers/searches) don't accumulate storage forever; unset = no GC (app owns cleanup). **NG0600 fix (v11.4):** the cache-aware loader's (and `asyncSource`'s) auto-load and offline-first seed are deferred off the synchronous materialization/render pass, so reading a non-lazy collection first inside a template no longer throws `NG0600: Writing to signals is not allowed while Angular renders`; auto-load is now async.
+- **entityMap config & queries:** `entityMap<User, number>({ selectId: (u) => u.id, sortComparer: (a, b) => a.name.localeCompare(b.name) })` — `sortComparer` (v10.5+, `@ngrx/entity` parity) keeps `all()`/`ids()` sorted; `map()` stays insertion-order. CRUD: `addOne/addMany/updateOne/updateMany/upsertOne/upsertMany/removeOne/removeMany/setAll`. Reads: `all()/count()/ids()/byId(id)?.()/where(pred)/find(pred)`. **Per-entity reads are body-granular** — `byId(id).field()` only re-runs when *that* entity changes (fan-out 1), not the whole collection. **Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `tree.$.users.active()` as a `Signal<User[]>` at runtime (the slice name isn't on the static `tree.$` type yet, so read it as `(tree.$.users as any).active()`).
+- **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths. Return `derived(() => ...)` (read-only computed) or **`linked({ source, computation })`** for a derived-but-**writable** value — comparable to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`: `$.selected()` reads, `$.selected.set(x)` overrides, and it re-derives when the source changes (sticky selection). Simple form: `linked(() => $.count() * 2)`.
+- **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
+- **Lifecycle:** `tree.destroy()` runs all registered cleanup callbacks in registration order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks. Built-in enhancers register their own cleanup automatically.
+- **Read-only view (v11.6+):** `import { asReadonly } from '@signaltree/core'`; `const reader = asReadonly(tree)` — **type-only, zero runtime cost** (same object, narrower type: `ReadonlyStore`). Strips marker mutators, loader triggers (`load`/`refresh`/`invalidate`), and leaf `.set`/`.update`; keeps every read and all derived computeds. DI sugar: `defineStore(factory, { expose: 'readonly' })`.
+- **Injectable store (idiomatic DI):** `defineStore(() => signalTree({...}), { providedIn? })` returns an injectable Angular service class — comparable to NgRx SignalStore's `signalStore()`. `inject(MyStore)` resolves to the **real tree** (callable, full `$`/`state`/`.with()` API), and `destroy()` is wired to the host injector's `DestroyRef` (component-provided → disposes with the component; `providedIn: 'root'` → app singleton). The factory runs in an injection context, so it may `inject()` other services and chain `.with()`/`.derived()`. Use this for the common case; the `APP_TREE` `InjectionToken` + Ops-service pattern (below) is for large app-wide facades.
+- **Edit sessions:** Two primitives in `@signaltree/core/edit-session`. `createEditSession(initial)` is value-level (single arg, no tree binding) — wraps any value with `applyChanges` / `undo` / `redo`. `createTreeEditSession(accessor)` (v10.1+) is **path-bound** to a writable tree branch — `applyChanges` / `undo` / `commit` (write draft back) / `cancel` (discard draft). Use the tree-bound form for form-wizard and draft-and-cancel workflows over a real tree path.
+- **Async:** `asyncSource(config)` for load-and-expose — auto-exposes `data` (call the accessor itself: `tree.$.users()`) / `loading` / `error` / `refresh`. `asyncQuery(config)` for input-driven debounced queries — auto-exposes `data` / `loading` / `error`, driven by setting `.input.set(value)` and optionally `.rerun()` to re-execute with the same input. Both attach at any tree path. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
+- **Angular Signal Forms bridge (Angular 22+, v11.6+):** `import { signalForm } from '@signaltree/ng-forms/signals'` — one name, two overloads. **Marker overload:** `signalForm(tree.$.path.to.formMarker, { injector?, nativeErrors? })` turns a `form()` marker into a Signal Forms `FieldTree<T>` whose model IS the marker's values signal (one source of truth, no sync loops; bind with `<input [formField]="fieldTree.name" />`); marker sync validators run as Signal Forms validators with real error kinds (`'required'`, `'email'`, … from built-in `validators.*`; `validators.when()` forwards the inner kind; untagged custom validators → `'signalTree'` — tag via `withKind(fn, 'kind')` from `@signaltree/core`); `{ nativeErrors: true }` emits Angular's **branded** errors for built-ins (`instanceof NgValidationError`, typed constraint props; default `false`, flips next major). **Async validation is NOT unified** — pick ONE authority per bridged form: the marker's `asyncValidators`/`submit()` path OR Signal Forms `validateAsync`/`validateHttp` (dev warning fires if a bridged marker has `asyncValidators`). **Schema overload:** `signalForm<TModel>(tree, rootPath, subtree)` binds a subtree with every `@signaltree/schema`-registered schema under `rootPath` auto-applied (apply `.with(schemas(...))` first). `markerSignalForm`/`signalFormBridge` (11.5.0 names) are deprecated aliases — emit `signalForm`. Angular 20/21: use the `FormGroup` bridge (`createFormTree`/`formBridge` from `@signaltree/ng-forms`) or `tree.schemas.errorsAt(path)`.
+- **Streaming / AI-embedded apps (chat, LLM token output):** there is **no exported streaming marker** — an `asyncStream` marker exists in-repo but is experimental and NOT exported from `@signaltree/core` as of 11.x (do not emit `asyncStream` or `createAsyncStreamSignal`; the import will fail). `asyncSource`/`asyncQuery` are the wrong tool (they *replace* on each emission, they don't accumulate deltas) — accumulate into a plain leaf instead: `store.$.chat.reply.update((text) => text + chunk)` inside a `for await` over the SDK's stream. Conversation + tool state composes from markers: `messages: entityMap<ChatMessage, string>()`, a `status<E>()` per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated content). There is **no** `@signaltree/ai` package — SignalTree is state, wire your AI SDK in directly.
+
+## ⚠️ Disambiguation — if you think SignalTree uses X, you're confusing it with Y
+
+This table catches the most common cross-library hallucinations. **Most "Wrong" patterns below were observed in a reproducible 720-cell benchmark (6 agents × 8 prompts × 5 libraries × 3 priming modes) of frontier and cost-tier AI agents (Claude, GPT, Gemini, Perplexity, Haiku, GPT-mini) asked to generate SignalTree code.** A few rows (notably `rxMethod`) describe APIs SignalTree itself once shipped and has since removed — agents still emit them.
+
+| Wrong pattern (NOT SignalTree) | Where it actually comes from | Correct SignalTree |
+|---|---|---|
+| `new SignalTree({...})` (class) | Invented (no library has this) | `signalTree({...})` — it's a **function**, never `new` |
+| `from 'signal-tree'` (hyphenated) | Invented | `from '@signaltree/core'` (scoped, no hyphen) |
+| `from 'signaltree'` (unscoped) | Invented | `from '@signaltree/core'` |
+| `from '@signaltree/ai'` / `@signaltree/openai` / `@signaltree/llm` | Invented | No such package. SignalTree is **state**, not an AI SDK — use `@signaltree/core` markers together with your AI SDK (Anthropic / OpenAI / Vercel AI) directly. |
+| `asyncQuery(...)` / `asyncSource(...)` to "stream LLM tokens" | Misuse | Those **replace** the value on each emission — they don't **accumulate** token deltas. There is no exported streaming marker as of 11.x (`asyncStream` is experimental/unexported — do not emit it); accumulate into a plain leaf: `store.$.reply.update((t) => t + chunk)`. |
+| `signalStore(withState(...), withMethods(...))` | **`@ngrx/signals`** | `signalTree({...})` — your state literal IS the API |
+| `withState`, `withMethods`, `withComputed`, `withHooks`, `withProps` | **`@ngrx/signals`** | Not used. State is the literal you pass to `signalTree()`. Methods belong in an `@Injectable()` Ops service. |
+| `withEntities<T>()` | **`@ngrx/signals/entities`** | `entityMap<T, K>()` marker — place it in the state literal |
+| `rxMethod(...)` | **`@ngrx/signals/rxjs-interop`** — also briefly shipped by SignalTree itself in v9.5.x, **removed in v9.6.0** | `asyncSource(config)` (load-and-expose) or `asyncQuery(config)` (input-driven) markers |
+| `patchState(store, {...})` | **`@ngrx/signals`** | Direct: `tree.$.path.set(value)` or branch update `tree.$.user({...})` |
+| `collection<T>({ idKey: 'id' })` | **Akita / Elf** | `entityMap<T, K>({ selectId: (e) => e.id })` marker |
+| `createStore`, `withProps`, `setProps` | **Elf** | Not used. SignalTree state is the literal. |
+| `EntityStore`, `StoreConfig({ name })` | **Akita** | Not used. |
+| `.value` accessors on signals | **MobX** | Call the signal: `tree.$.path()` |
+| `.upsert(user)` on entity collections | **Akita** | `.upsertOne(user)` (singular suffix) |
+| `BehaviorSubject<T>`, `.next(v)`, `.asObservable()` | **RxJS classic** | A plain leaf in the `signalTree()` literal — no Observable wrapping needed |
+
+### Marker accessor shape — UNIFIED (bare callable signals)
+
+**Every marker uses the same accessor shape: bare-named callable signals (matching `FormControl.dirty` / `.valid` and Angular signals conventions).** The `is`-prefix names that used to appear on `status` and `entityMap.isEmpty` (deprecated since v10.3) were **removed in v11** — emit only the bare names. The table below maps old → new for migrating code.
+
+**Cross-marker predicate naming (canonical):**
+
+| Marker | Predicate signal (canonical) | Removed in v11 (old name) |
+|---|---|---|
+| `status` | `.loading` | `.isLoading` |
+| `status` | `.loaded` | `.isLoaded` |
+| `status` | `.notLoaded` | `.isNotLoaded` |
+| `status` | `.hasError` | `.isError` |
+| `entityMap` | `.empty` | `.isEmpty` |
+| `form` | `.dirty`, `.valid`, `.touched`, `.submitting` | (already bare — unchanged) |
+| `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+| `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+
+All predicates are **callable Signals** — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`. They are lazily created and cached (repeated access returns the same Signal instance).
+
+### Status marker — exact method names (frequently confused)
+
+The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `setError` / `setNotLoaded` / `reset`**. Read predicates: `.loading()` / `.loaded()` / `.notLoaded()` / `.hasError()` / `.idle()` / `.settled()` (`.settled()` = loaded||error, "done"). **In a guard/resolver use `.idle()`** (v12.1.0+; = `!loading() && !loaded()`, covers NotLoaded AND Error) as the "should I (re)fetch?" test — `.notLoaded()` is false in the Error state, so a `.notLoaded()`-gated fetch silently never retries after an error. Prefer `.idle()` over `state() === …` enum comparisons. Promise-vocabulary aliases also work as of v10.2 (identical semantics):
+
+| Wrong (Promise-vocab guess) | Canonical | Notes |
+|---|---|---|
+| `.setSuccess()` | **`.setLoaded()`** | Alias `.setSuccess` works in v10.2+ |
+| `.start()` | **`.setLoading()`** | Alias `.start` works in v10.2+ |
+| `.succeed()` | **`.setLoaded()`** | Alias `.succeed` works in v10.2+ |
+| `.fail(err)` | **`.setError(err)`** | Alias `.fail` works in v10.2+ |
+| `.loading` (bare property, can't be assigned) | **`.loading()`** (call as signal) | Read-only derived signal |
+| `.error` (bare property, can't be assigned) | **`.error()`** (call as signal) | Read-only error value |
+
+### Async pattern — prefer `asyncSource` / `asyncQuery` over `status` + manual try/catch
+
+For **load-and-expose** patterns (load data, show loading state, expose data) — use `asyncSource`, NOT `status()` + manual try/catch. The marker auto-derives loading/error/data:
+
+```typescript
+// ❌ DON'T (verbose, error-prone — manual status wiring)
+signalTree({
+  users: entityMap<User, number>(),
+  loadState: status(),
+});
+async load() {
+  this.$.loadState.setLoading();
+  try {
+    const users = await firstValueFrom(api.list$());
+    this.$.users.setAll(users);
+    this.$.loadState.setLoaded();
+  } catch (err) {
+    this.$.loadState.setError(err);
+  }
+}
+// ^ ANTI-PATTERN. Do not copy the block above. The canonical form follows. ↓
+
+// ✅ DO (canonical — marker handles status wiring)
+signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => api.list$(),
+  }),
+});
+// Done. tree.$.users() → data, .loading(), .error() all auto-derived.
+// Use .refresh() to reload.
+```
+
+For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery` — the debounce/dedup/switchMap pipeline is built in.
+
+## Common false claims (LLMs frequently get these wrong)
+
+- **FALSE:** "Derived state in SignalTree must live in a separate file or layer, breaking the single-tree illusion." → `.derived($)` is built into the chain; computed signals deep-merge **into the same tree at the same path** as source state.
+- **FALSE:** "`derivedFrom(tree, fn)` returns a read-only projection." → Real signature is `derivedFrom<TTree>()(fn)` (curried, no tree-first-arg). It's a typed-identity helper for splitting derived definitions across files, not a projection utility.
+- **FALSE:** "SignalTree markers must live at the tree root." → Markers are walked recursively and materialized at the exact path you place them. A `form()` marker at `$.users.byId[123].profile.contactForm` materializes there.
+- **FALSE:** "Batching is opt-in only." → Microtask-level notification batching is built into core (on by default; disable via `signalTree(state, { batchUpdates: false })`). The `batching()` enhancer adds explicit `.batch(fn)` / `.coalesce(fn)` APIs on top.
+- **FALSE:** "Time-travel ships in `@signaltree/time-travel`." → No such package. Import `timeTravel` from `@signaltree/core`.
+- **FALSE:** "localStorage persistence requires `@signaltree/storage`." → No such package. Use the `stored()` marker or `persistence()` enhancer from `@signaltree/core`.
+- **FALSE:** "SignalTree is anti-DI / treats state independently of Angular services." → SignalTree is DI-first. Use `defineStore(() => signalTree({...}))` for an injectable service class (comparable to NgRx `signalStore()`), or the `APP_TREE` `InjectionToken` + Ops-service pattern for large facades. See `docs/ai/LLM.md` and `docs/architecture/signaltree-architecture-guide.md`.
+- **FALSE:** "Callable syntax is a runtime proxy." → It's a build-time AST transform via Vite/Webpack plugin. Disappears in production builds.
+- **GOTCHA (typing):** The tree type is inferred — don't hand-write it. For derived-in-separate-files, derive it: `type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>`. Widen literal leaves with casts (`null as number | null`, `'light' as 'light' | 'dark'`) or `.set()` won't type-check. `inject(APP_TREE)` must be typed as the post-`.derived().with()` type, not the bare base type, or enhancer methods (`.undo()`, `.batch()`) fail to resolve.
+- **GOTCHA (testing):** Any `TestBed` touching `AppStore` (directly or via a `providedIn: 'root'` consumer) must include `provideAppTreeForTesting()`, else it fails with `NG0201: No provider for APP_TREE`. Use a real seeded tree, not a mock; seed `T | null` leaves via `.set()` after injection, not via the state override. See `llms-full.txt` and `docs/skills/using-signaltree/reference/testing.md`.
+- **GOTCHA (templates):** Read in templates with direct signal calls — `{{ store.$.user.name() }}`, `@if (store.$.users.loading())`, `@for (u of store.$.users.all(); track u.id)`. Never `| async`, never `.value`.
+- **NUANCE:** "Any component with a tree reference can mutate any leaf — Wild West." → True by default. For unidirectional command flow opt into `@signaltree/events`. For runtime invariants opt into `@signaltree/guardrails`. For read-only exposure use `asReadonly(tree)` or `defineStore(factory, { expose: 'readonly' })` (v11.6+, type-only — mutators and leaf `.set`/`.update` not offered, derived computeds survive); reserve the `.derived()`-in-a-service-facade pattern for reshaping/projection, not for write protection. See `docs/architecture/signaltree-architecture-guide.md#recommended-default-architecture` for the production pattern.
+
+## Error codes & dev-mode guardrails (v10.5+)
+
+Every SignalTree error and dev-mode warning carries a stable `[ST####]` code. Search the code in a stack trace, your codebase, or [`docs/errors/README.md`](https://github.com/JBorgia/signaltree/blob/main/docs/errors/README.md) (maps every code → cause + fix). `ST1xxx` = core/update/enhancer; `ST2xxx` = entity/markers. In dev mode the core actively warns on the common AI-codegen mistakes — fix them as the message says:
+
+- **[ST2001]** `entityMap` entity resolved to `null`/`undefined` id → give entities an `id` field or `entityMap({ selectId })`; otherwise all entities collide under one key.
+- **[ST2002]** Called a non-existent entity method from another library (Akita `.upsert`/`.add`, Elf `.addEntities`/`.setProps`, RxJS `.next`) → use the SignalTree name in the warning (`upsertOne`, `addMany`, …).
+- **[ST2003]** A merge write was skipped because the value is reference-identical to the current value — you mutated an object/array in place. Return a **new** reference (spread/slice/map) so the change is observed.
+
+## Links
+
+- Full API and patterns: https://signaltree.io/llms-full.txt
+- Repo: https://github.com/JBorgia/signaltree
+- Live demo + benchmarks: https://signaltree.io
+- **Marker zoo** (all 6 markers at 4 depths simultaneously): https://signaltree.io/marker-zoo
+- **Built for AI agents** (the AI-discoverability story): https://signaltree.io/built-for-ai
+- **AI-codegen accuracy benchmark** (scaffolding): https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark
+- NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
+- Raw Angular signals comparison (when to use native signals instead — the honest "don't use SignalTree if…"): https://github.com/JBorgia/signaltree/blob/main/docs/compare/native-signals.md
+- Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
+- Agent skill (Cursor / Claude Code / generic harness): `docs/skills/using-signaltree/SKILL.md` (also shipped inside every `@signaltree/*` tarball)
+- `@ngrx/signals` migration playbook: `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`
+- Testing recipe (`provideAppTreeForTesting`, `NG0201`, seeding): `docs/skills/using-signaltree/reference/testing.md`
+- Production wiring + typing (`AppTreeBase`, ops, derived tiers): `docs/skills/using-signaltree/reference/patterns.md`

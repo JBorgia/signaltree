@@ -1,0 +1,1 @@
+import {c as F}from'./main-6HSO2YK4.js';function e(n){let r={},i=window;return i.__LIBRARY_VERSIONS__?(n.forEach(o=>{r[o]=i.__LIBRARY_VERSIONS__?.[o]||"unknown";}),r):(n.forEach(o=>{r[o]="unknown";}),r)}function t(n){return F(this,null,function*(){return e(n)})}export{t as getLibraryVersions,e as getLibraryVersionsSync};
