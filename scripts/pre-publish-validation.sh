@@ -114,8 +114,25 @@ fi
 
 # 1. Clean Working Directory
 print_header "1. Checking Working Directory"
+# RELEASE_IN_PROGRESS=1 is set by scripts/release.sh, which now bumps the
+# version AND finalizes the changelog BEFORE calling this validation (so the
+# release-state gate validates exactly what ships). At that point the tree is
+# intentionally dirty with the release-managed files, uncommitted, because
+# release.sh's file-backup rollback owns reverting them. Tolerate ONLY those
+# expected paths; any OTHER dirty path still blocks. Standalone runs
+# (RELEASE_IN_PROGRESS unset) keep the strict clean-tree requirement.
 if [ -z "$(git status --porcelain)" ]; then
     print_success "Working directory is clean"
+elif [ "${RELEASE_IN_PROGRESS:-0}" = "1" ]; then
+    UNEXPECTED_DIRTY=$(git status --porcelain | sed 's/^...//' | grep -vE \
+        '^(package\.json|CHANGELOG\.md|packages/[^/]+/package\.json|apps/demo/src/app/(version|library-versions)\.ts)$' \
+        || true)
+    if [ -n "$UNEXPECTED_DIRTY" ]; then
+        print_error "Working directory has unexpected uncommitted changes (beyond the release bump):"
+        echo "$UNEXPECTED_DIRTY"
+        exit 1
+    fi
+    print_success "Working tree clean except expected release-managed files (RELEASE_IN_PROGRESS=1)"
 else
     print_error "Working directory has uncommitted changes"
     git status --short

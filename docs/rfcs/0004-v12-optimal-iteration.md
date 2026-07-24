@@ -662,3 +662,35 @@ emergency-only (docs/guides/releasing.md). Bonus hardening: the
 guardrails-exports gate joined pre-publish-validation.sh (was CI-only), and
 validate.yml gained a Playwright route-smoke job over 8 key demo routes
 (no console errors, visible h1/main — the 404-deep-link/site-audit class).
+
+**Release-state ordering defect + fix (found during the 12.0.1 cut,
+2026-07-24).** `release.sh` ran `pre-publish-validation.sh` (which owns the
+release-state gate) BEFORE bumping the version. For a real bump (12.0.0 →
+12.0.1) the gate therefore ran with `package.json` still at 12.0.0 while the
+changelog top was `## Unreleased (12.0.1)`; release-state skips the
+Unreleased line and matched the 12.0.0 body, so it PASSED — then the bump
+happened and the release shipped, but nothing ever rewrote `## Unreleased
+(12.0.1)` into a dated heading. Result: 12.0.1 ships with an
+"Unreleased"-labeled changelog and main goes red on the next validate — the
+exact class the release-state gate exists to catch, slipping through purely
+because validation ran pre-bump. This is the same failure shape as the
+11.6.0 stale-"(unreleased)" finding (audit item H), one layer up in the
+pipeline. Fix: reorder `release.sh` to **bump → finalize → validate**. After
+the version bump and demo-constant regen, a new idempotent
+`scripts/finalize-changelog.mjs` stamps the top `## Unreleased (NEW_VERSION)`
+/ bare `## Unreleased` heading into `## NEW_VERSION (YYYY-MM-DD)` (fails loud
+if the top heading documents no release for NEW_VERSION; skipped under
+`--keep-version`). Only then does `pre-publish-validation.sh` run — now
+validating exactly what ships (`package.json == CHANGELOG == NEW_VERSION`,
+release-state green against the shipped version). Rollback was extended to
+cover the new post-bump surface: `CHANGELOG.md` joined the backup + restore
+sets, and the post-bump `exit 1` paths (finalize failure, validation
+failure) now call `rollback_versions` explicitly — an explicit `exit` does
+not fire the `ERR` trap, so a bare `exit 1` after the bump would otherwise
+leave the tree bumped. Companion change (necessary, flagged): because
+validation now runs on the intentionally-dirty pre-commit tree,
+`pre-publish-validation.sh`'s clean-working-tree gate tolerates ONLY the
+release-managed paths when `RELEASE_IN_PROGRESS=1` (set by `release.sh`); any
+other dirty path still blocks, and standalone runs keep the strict
+clean-tree requirement. The double build (validation builds, then release.sh
+rebuilds) is retained — correctness over speed.

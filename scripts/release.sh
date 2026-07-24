@@ -116,34 +116,13 @@ on_interrupt() {
 
 trap on_interrupt INT TERM
 
-# Step 0: Run comprehensive pre-publish validation.
-# skip-tests does NOT bypass validation (RFC 0004 §5: skip paths removed or
-# loudly logged; v12 audit intake, 2026-07-24). It sets FAST_VALIDATE=1, which
-# skips ONLY the slow steps (unit tests, coverage, benchmarks) inside
-# scripts/pre-publish-validation.sh — every correctness gate (builds, barrel +
-# export parity, tarball-consumer, taught-symbols, version-claims,
-# guardrails-exports, size gates, release-state, skill code-block lint) still
-# runs and still blocks the release.
-print_step "Running comprehensive pre-publish validation..."
-if [ "$SKIP_TESTS" != "skip-tests" ]; then
-    if bash scripts/pre-publish-validation.sh; then
-        print_success "Pre-publish validation passed"
-    else
-        print_error "Pre-publish validation failed!"
-        print_error "Please fix the errors above before proceeding with the release"
-        exit 1
-    fi
-else
-    print_warning "skip-tests: running FAST validation (unit tests, coverage, benchmarks skipped)"
-    print_warning "ALL correctness gates still run and still block the release"
-    if FAST_VALIDATE=1 bash scripts/pre-publish-validation.sh; then
-        print_success "Fast pre-publish validation passed (slow steps skipped, all gates enforced)"
-    else
-        print_error "Pre-publish validation failed!"
-        print_error "skip-tests only skips slow steps — a failed correctness gate always blocks"
-        exit 1
-    fi
-fi
+# ORDERING NOTE (RFC 0004 v12-audit intake, 2026-07-24):
+# This script BUMPS the version and FINALIZES the changelog BEFORE running the
+# comprehensive pre-publish validation (moved down, just above the build step).
+# Validation must see exactly what ships — package.json == CHANGELOG ==
+# NEW_VERSION — so the release-state gate validates the shipped version instead
+# of the pre-bump one. See the big comment block above the validation call
+# below for the full rationale.
 
 # Get current workspace version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -210,8 +189,11 @@ print_step "Creating version backup for rollback capability..."
 rm -rf "$BACKUP_DIR"
 mkdir -p "$BACKUP_DIR"
 
-# Backup workspace manifest and generated demo version files exactly as-is
+# Backup workspace manifest, changelog, and generated demo version files as-is.
+# CHANGELOG.md is in the set because the finalize step (below) rewrites its top
+# heading after the bump; a post-bump validation failure must revert it too.
 backup_file "package.json"
+backup_file "CHANGELOG.md"
 backup_file "apps/demo/src/app/version.ts"
 backup_file "apps/demo/src/app/library-versions.ts"
 
@@ -231,6 +213,9 @@ rollback_versions() {
 
     if [ -d "$BACKUP_DIR" ]; then
         restore_file "package.json"
+
+        # Revert the changelog finalization (dated heading → back to Unreleased)
+        restore_file "CHANGELOG.md"
 
         # Restore each package manifest exactly, including original dependency ranges
         for package in "${PACKAGES[@]}"; do
@@ -342,6 +327,72 @@ if [ -f "tools/generate-version-env.cjs" ]; then
     node tools/generate-version-env.cjs
 fi
 
+# Step 2.5: Finalize the CHANGELOG for the version being shipped.
+# Rewrites the top "## Unreleased ($NEW_VERSION)" / bare "## Unreleased" heading
+# into a dated "## $NEW_VERSION (YYYY-MM-DD)" heading. Idempotent (a heading
+# already dated for this version is left as-is) and fails loudly if the top
+# heading documents no release for $NEW_VERSION — we must never publish an
+# undocumented version. Skipped for --keep-version (republish of an
+# already-dated version). This runs BEFORE validation so the release-state gate
+# (in pre-publish-validation.sh) sees package.json == CHANGELOG == $NEW_VERSION
+# — the whole point of the bump-then-finalize-then-validate ordering.
+if [ "$KEEP_VERSION" = true ]; then
+    print_step "Skipping changelog finalize (--keep-version): heading already dated"
+else
+    print_step "Finalizing CHANGELOG heading for $NEW_VERSION..."
+    if node scripts/finalize-changelog.mjs "$NEW_VERSION" --date "$(date +%Y-%m-%d)"; then
+        print_success "CHANGELOG finalized for $NEW_VERSION"
+    else
+        print_error "Failed to finalize CHANGELOG for $NEW_VERSION"
+        print_error "The top CHANGELOG heading must document $NEW_VERSION before release"
+        rollback_versions
+        exit 1
+    fi
+fi
+
+# Step 2.6: Run comprehensive pre-publish validation — AFTER the bump + finalize
+# so it validates exactly what ships (package.json == CHANGELOG == NEW_VERSION).
+# This used to run FIRST, before the bump; that let the release-state gate pass
+# against the OLD version while the changelog still said "Unreleased
+# (NEW_VERSION)", and nothing ever dated the heading — so the shipped version
+# went out labeled "Unreleased" and main went red on the next validate (the
+# exact class the release-state gate exists to catch). Reordered 2026-07-24.
+#
+# RELEASE_IN_PROGRESS=1 tells pre-publish-validation.sh's clean-working-tree
+# check that the bump + finalize edits (package.json, packages/*/package.json,
+# CHANGELOG.md, demo version constants) are EXPECTED and uncommitted at this
+# point — the file-backup rollback above owns reverting them. Any OTHER dirty
+# path still blocks. If validation fails here, the ERR trap runs
+# rollback_versions, which restores every bumped manifest AND the changelog.
+#
+# skip-tests does NOT bypass validation (RFC 0004 §5). It sets FAST_VALIDATE=1,
+# which skips ONLY the slow steps (unit tests, coverage, benchmarks); every
+# correctness gate (builds, barrel + export parity, tarball-consumer,
+# taught-symbols, version-claims, guardrails-exports, size gates, release-state,
+# skill code-block lint) still runs and still blocks the release.
+print_step "Running comprehensive pre-publish validation (post-bump, validates what ships)..."
+if [ "$SKIP_TESTS" != "skip-tests" ]; then
+    if RELEASE_IN_PROGRESS=1 bash scripts/pre-publish-validation.sh; then
+        print_success "Pre-publish validation passed"
+    else
+        print_error "Pre-publish validation failed!"
+        print_error "Please fix the errors above before proceeding with the release"
+        rollback_versions
+        exit 1
+    fi
+else
+    print_warning "skip-tests: running FAST validation (unit tests, coverage, benchmarks skipped)"
+    print_warning "ALL correctness gates still run and still block the release"
+    if RELEASE_IN_PROGRESS=1 FAST_VALIDATE=1 bash scripts/pre-publish-validation.sh; then
+        print_success "Fast pre-publish validation passed (slow steps skipped, all gates enforced)"
+    else
+        print_error "Pre-publish validation failed!"
+        print_error "skip-tests only skips slow steps — a failed correctness gate always blocks"
+        rollback_versions
+        exit 1
+    fi
+fi
+
 # Step 3: Build all packages
 print_step "Building all packages..."
 
@@ -390,11 +441,16 @@ for package in "${PACKAGES[@]}"; do
     if [ ! -d "$DIST_PATH" ]; then
         print_error "Dist folder not found for $package at $DIST_PATH"
         print_error "Aborting before publish to avoid partial releases"
+        # Explicit exit doesn't fire the ERR trap; roll back the bump +
+        # finalized changelog so a dist-preflight bail never leaves the tree
+        # bumped (the reorder now also dirties CHANGELOG.md by this point).
+        rollback_versions
         exit 1
     fi
     if [ ! -f "$DIST_PATH/package.json" ]; then
         print_error "package.json not found in $DIST_PATH"
         print_error "Aborting before publish to avoid partial releases"
+        rollback_versions
         exit 1
     fi
 done
@@ -439,6 +495,8 @@ print_success "Workspace specs resolved in dist manifests"
 # Step 4: Commit changes
 print_step "Committing version changes (if any)..."
 git add package.json packages/*/package.json
+# Include the finalized changelog (top heading dated by the finalize step).
+git add CHANGELOG.md
 if [ -f "apps/demo/src/app/version.ts" ]; then
     git add apps/demo/src/app/version.ts
 fi
