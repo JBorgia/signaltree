@@ -82,7 +82,7 @@ import { markerSignalFormImpl, type SignalFormOptions } from './marker-bridge';
  */
 export function signalForm<T extends Record<string, unknown>>(
   marker: FormSignal<T>,
-  options?: SignalFormOptions
+  options?: SignalFormOptions<T>
 ): FieldTree<T>;
 /**
  * Create an Angular Signal Forms `FieldTree` bound to a SignalTree subtree
@@ -131,7 +131,7 @@ export function signalForm<TModel>(
 ): FieldTree<TModel>;
 export function signalForm<T extends Record<string, unknown>, TModel>(
   source: FormSignal<T> | SchemaMethods,
-  optionsOrRootPath?: SignalFormOptions | string,
+  optionsOrRootPath?: SignalFormOptions<T> | string,
   subtree?: unknown
 ): FieldTree<T> | FieldTree<TModel> {
   // Overload discrimination: the schema form is the only one whose second

@@ -34,6 +34,7 @@ import {
   validate,
   type FieldContext,
   type FieldTree,
+  type SchemaFn,
   type ValidationError,
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
@@ -80,13 +81,25 @@ interface FormMarkerInternals<T extends Record<string, unknown>> {
 }
 
 /** Options for the marker form of {@link signalForm}. */
-export interface SignalFormOptions {
+export interface SignalFormOptions<T extends Record<string, unknown> = Record<string, unknown>> {
   /**
    * Injector to create the form and the marker-sync effect in. Optional when
    * called from an injection context (component field initializers,
    * constructors).
    */
   injector?: Injector;
+  /**
+   * An Angular Signal Forms schema (`SchemaFn`) applied to the returned
+   * `FieldTree` on top of any per-field validators the `form()` marker
+   * carries. Reach for this when your form's rules — `disabled`/`hidden`/
+   * `metadata`/`applyEach`/cross-field `validate` — live in a Signal Forms
+   * schema rather than on the marker: the marker stays the single source of
+   * truth for the MODEL (and drives `history()` undo/redo), while the schema
+   * owns the field RULES. The two compose in one `form()` call, so there is no
+   * second model or sync loop. Marker validators (if any) run first, then this
+   * schema — keep validation in exactly one place to avoid duplicate errors.
+   */
+  schema?: SchemaFn<T>;
   /**
    * When `true`, failures from built-in marker validators (`required`,
    * `email`, `min`, `max`, `minLength`, `maxLength`, `pattern`) are emitted
@@ -182,7 +195,7 @@ function brandedError(
  */
 export function markerSignalFormImpl<T extends Record<string, unknown>>(
   formSignal: FormSignal<T>,
-  options: SignalFormOptions = {}
+  options: SignalFormOptions<T> = {}
 ): FieldTree<T> {
   const internals = formSignal as unknown as FormMarkerInternals<T>;
   const model = internals.__model;
@@ -267,6 +280,11 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
           return undefined;
         });
       }
+
+      // Caller-supplied Angular Signal Forms schema (disabled/hidden/metadata/
+      // applyEach/validate) — composes into the same form() call as the marker
+      // validators above, over the marker's shared model.
+      options.schema?.(root);
     })
   );
 
