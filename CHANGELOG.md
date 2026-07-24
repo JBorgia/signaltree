@@ -1,3 +1,15 @@
+## 13.0.1 (2026-07-24)
+
+### Fixed
+
+- `createAuditTracker` (moved to `@signaltree/core` in 13.0.0) typed its `tree`
+  parameter as `ISignalTree<T>`, but `signalTree()` returns a
+  `SignalTreeBuilder<T>` that isn't structurally assignable to it — so callers
+  had to write `createAuditTracker(tree as unknown as ISignalTree<T>, log)`.
+  The parameter is now typed `NodeAccessor<T>` (what the tracker actually needs
+  — it only reads the tree via `tree()`), so `signalTree()` output is accepted
+  directly with no cast. Behavior unchanged.
+
 ## 13.0.0 (2026-07-24)
 
 > RFC 0007's packaging principle — *independent dependency/runtime → its own

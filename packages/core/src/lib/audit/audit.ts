@@ -12,7 +12,7 @@ import { getChanges } from '@signaltree/shared';
  * @packageDocumentation
  */
 
-import type { ISignalTree } from '../types';
+import type { NodeAccessor } from '../types';
 
 /**
  * Audit log entry recording state changes.
@@ -64,7 +64,8 @@ export interface AuditTrackerConfig<T> {
  * This function is tree-shakeable - if not imported, it won't be included in
  * your bundle.
  *
- * @param tree - The ISignalTree to track
+ * @param tree - The tree (or slice accessor) to track. Accepts the value
+ *   returned by `signalTree()` directly — no cast needed.
  * @param auditLog - Array to collect audit entries
  * @param config - Optional configuration
  * @returns Unsubscribe function to stop tracking
@@ -86,7 +87,7 @@ export interface AuditTrackerConfig<T> {
  * ```
  */
 export function createAuditTracker<T extends Record<string, unknown>>(
-  tree: ISignalTree<T>,
+  tree: NodeAccessor<T>,
   auditLog: AuditEntry<T>[],
   config: AuditTrackerConfig<T> = {}
 ): () => void {
