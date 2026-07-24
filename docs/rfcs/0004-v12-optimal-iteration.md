@@ -663,14 +663,14 @@ guardrails-exports gate joined pre-publish-validation.sh (was CI-only), and
 validate.yml gained a Playwright route-smoke job over 8 key demo routes
 (no console errors, visible h1/main — the 404-deep-link/site-audit class).
 
-**Release-state ordering defect + fix (found during the 12.0.1 cut,
+**Release-state ordering defect + fix (found during the 12.1.0 cut,
 2026-07-24).** `release.sh` ran `pre-publish-validation.sh` (which owns the
 release-state gate) BEFORE bumping the version. For a real bump (12.0.0 →
-12.0.1) the gate therefore ran with `package.json` still at 12.0.0 while the
-changelog top was `## Unreleased (12.0.1)`; release-state skips the
+12.1.0) the gate therefore ran with `package.json` still at 12.0.0 while the
+changelog top was `## Unreleased (12.1.0)`; release-state skips the
 Unreleased line and matched the 12.0.0 body, so it PASSED — then the bump
 happened and the release shipped, but nothing ever rewrote `## Unreleased
-(12.0.1)` into a dated heading. Result: 12.0.1 ships with an
+(12.1.0)` into a dated heading. Result: 12.1.0 ships with an
 "Unreleased"-labeled changelog and main goes red on the next validate — the
 exact class the release-state gate exists to catch, slipping through purely
 because validation ran pre-bump. This is the same failure shape as the

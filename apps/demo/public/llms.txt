@@ -168,7 +168,7 @@ All predicates are **callable Signals** — invoke them: `tree.$.load.loading()`
 
 ### Status marker — exact method names (frequently confused)
 
-The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `setError` / `setNotLoaded` / `reset`**. Read predicates: `.loading()` / `.loaded()` / `.notLoaded()` / `.hasError()` / `.idle()` / `.settled()` (`.settled()` = loaded||error, "done"). **In a guard/resolver use `.idle()`** (v12.0.1+; = `!loading() && !loaded()`, covers NotLoaded AND Error) as the "should I (re)fetch?" test — `.notLoaded()` is false in the Error state, so a `.notLoaded()`-gated fetch silently never retries after an error. Prefer `.idle()` over `state() === …` enum comparisons. Promise-vocabulary aliases also work as of v10.2 (identical semantics):
+The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `setError` / `setNotLoaded` / `reset`**. Read predicates: `.loading()` / `.loaded()` / `.notLoaded()` / `.hasError()` / `.idle()` / `.settled()` (`.settled()` = loaded||error, "done"). **In a guard/resolver use `.idle()`** (v12.1.0+; = `!loading() && !loaded()`, covers NotLoaded AND Error) as the "should I (re)fetch?" test — `.notLoaded()` is false in the Error state, so a `.notLoaded()`-gated fetch silently never retries after an error. Prefer `.idle()` over `state() === …` enum comparisons. Promise-vocabulary aliases also work as of v10.2 (identical semantics):
 
 | Wrong (Promise-vocab guess) | Canonical | Notes |
 |---|---|---|

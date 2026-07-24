@@ -362,8 +362,8 @@ store.$.users.loading.loading();    // boolean
 store.$.users.loading.loaded();     // boolean
 store.$.users.loading.hasError();   // boolean
 store.$.users.loading.notLoaded();  // boolean
-store.$.users.loading.idle();       // boolean — "should I (re)fetch?" (v12.0.1+)
-store.$.users.loading.settled();    // boolean — "is it done?" (loaded || error) (v12.0.1+)
+store.$.users.loading.idle();       // boolean — "should I (re)fetch?" (v12.1.0+)
+store.$.users.loading.settled();    // boolean — "is it done?" (loaded || error) (v12.1.0+)
 // (The `is`-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
 // idle() = should-fetch (!loading && !loaded); settled() = done (loaded || error).
 // Note Error is BOTH idle AND settled (errored = done + retryable) — by design.

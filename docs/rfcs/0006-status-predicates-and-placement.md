@@ -2,7 +2,7 @@
 
 **Status:** Spike / decision-pending
 **Date:** 2026-07-24
-**Prompted by:** the `status().idle()` addition (a0faff76) — before shipping it in 12.0.1, decide whether composite predicates belong in core at all, whether they bloat, and whether the custom-marker extension path is where any of this should live instead.
+**Prompted by:** the `status().idle()` addition (a0faff76) — before shipping it in 12.1.0, decide whether composite predicates belong in core at all, whether they bloat, and whether the custom-marker extension path is where any of this should live instead.
 
 ## 0. The questions
 
@@ -64,7 +64,7 @@ Two honest positions:
 ## 5. Decision (2026-07-24)
 
 Owner chose the **closed set: `idle` + `settled`** (decide the universal
-composites as a set, not drip-fed one footgun at a time). Shipped in 12.0.1:
+composites as a set, not drip-fed one footgun at a time). Shipped in 12.1.0:
 both as fixed derived predicates, added to `STATUS_READERS` + the readonly
 typing fixture, spec'd (incl. the deliberate `idle`∩`settled` overlap in the
 Error state — an errored request is both *done* and *retryable*). NO
