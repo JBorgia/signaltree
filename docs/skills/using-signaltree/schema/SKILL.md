@@ -133,7 +133,7 @@ A write to `user.age` runs the ancestor schema (no more-specific match).
 ## Suppress validation for replays — time-travel, hydration
 
 ```ts
-import { withWriteContext } from '@signaltree/core';
+import { withWriteContext } from '@signaltree/core/authoring';
 
 const tree = signalTree(initialState).with(
   schemas({

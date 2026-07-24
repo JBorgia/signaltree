@@ -22,7 +22,10 @@ Two patterns — choose one:
 Pattern A — `createFormTree` (full example with validators, async validation, conditionals, persistence):
 
 ```ts
-import { createFormTree, email, minLength, pattern, required } from '@signaltree/ng-forms';
+import { createFormTree, ngFormValidators } from '@signaltree/ng-forms';
+
+// v12: the bare validator exports were removed — use the ngFormValidators object.
+const { required, email, minLength, pattern } = ngFormValidators;
 
 interface ProfileForm extends Record<string, unknown> {
   name: string; email: string; role: string; company: { name: string; size: string }

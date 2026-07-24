@@ -109,7 +109,8 @@ These are **private, bundled packages** consumed internally by the public `@sign
 ```ts wrong
 // ✗ Wrong — registration happens too late.
 // Intentional anti-pattern; skipped by the skill lint.
-import { signalTree, registerMarkerProcessor } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 import { myMarker, MY_MARKER, myProcessor } from './my-marker';
 
 const tree = signalTree({ slot: myMarker() }); // ← processor not registered yet
@@ -118,7 +119,8 @@ registerMarkerProcessor(MY_MARKER, myProcessor);
 
 ```ts
 // ✓ Right — register first, then create trees
-import { signalTree, registerMarkerProcessor } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 import { myMarker, MY_MARKER, myProcessor } from './my-marker';
 
 registerMarkerProcessor(MY_MARKER, myProcessor);

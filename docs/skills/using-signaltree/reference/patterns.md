@@ -875,7 +875,8 @@ base class. `createEnhancer` attaches metadata (for dependency ordering and
 DevTools) and types the surface the enhancer adds to the tree.
 
 ```ts
-import { createEnhancer, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { createEnhancer } from '@signaltree/core/authoring';
 
 // The extra surface this enhancer adds to the tree.
 interface BannerApi {
@@ -1013,7 +1014,7 @@ reactive methods to any node it is applied to, exactly like `status()` or
 
 ```ts skip
 // saving-state.marker.ts
-import { registerMarkerProcessor } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 import { signal, computed } from '@angular/core';
 
 export const savingState = () => Symbol('savingState');
