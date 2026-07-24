@@ -90,6 +90,7 @@ export const STATUS_READERS = [
   'loaded',
   'hasError',
   'idle',
+  'settled',
 ] as const;
 
 /**

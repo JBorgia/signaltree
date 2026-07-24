@@ -104,6 +104,46 @@ describe('status() marker', () => {
     });
   });
 
+  describe('settled() — the "is it done?" predicate (loaded || error)', () => {
+    const sig = () =>
+      createStatusSignal({
+        [STATUS_MARKER]: true,
+        initialState: LoadingState.NotLoaded,
+      });
+
+    it('is false initially (NotLoaded) and while loading', () => {
+      const s = sig();
+      expect(s.settled()).toBe(false);
+      s.setLoading();
+      expect(s.settled()).toBe(false);
+    });
+
+    it('is true when loaded', () => {
+      const s = sig();
+      s.setLoaded();
+      expect(s.settled()).toBe(true);
+    });
+
+    it('is true on error (the counterpart idle also covers)', () => {
+      const s = sig();
+      s.setError(new Error('boom'));
+      expect(s.settled()).toBe(true);
+    });
+
+    it('truth table: idle/loading/settled across all four states (Error overlaps idle+settled by design)', () => {
+      const s = sig();
+      const row = () => [s.idle(), s.loading(), s.settled()];
+      expect(row()).toEqual([true, false, false]); // NotLoaded
+      s.setLoading();
+      expect(row()).toEqual([false, true, false]); // Loading
+      s.setLoaded();
+      expect(row()).toEqual([false, false, true]); // Loaded
+      s.setError(new Error('x'));
+      // Error is BOTH idle (retry) AND settled (done) — the deliberate overlap.
+      expect(row()).toEqual([true, false, true]);
+    });
+  });
+
   describe('helper methods', () => {
     it('should transition through loading states', () => {
       const sig = createStatusSignal({

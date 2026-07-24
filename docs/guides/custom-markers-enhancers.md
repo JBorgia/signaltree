@@ -106,7 +106,7 @@ Register marker processors to embed custom signals directly in SignalTree state.
 ```typescript
 // selection-marker.ts
 import { signal, computed } from '@angular/core';
-import { registerMarkerProcessor } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 const SELECTION_MARKER = Symbol('SELECTION_MARKER');
 let selectionRegistered = false;  // ← Track registration
@@ -179,7 +179,7 @@ For optimal tree-shaking, implement self-registration in your marker factory:
 
 ```typescript
 // my-marker.ts
-import { registerMarkerProcessor } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 const MY_MARKER = Symbol('MY_MARKER');
 let registered = false;
@@ -364,7 +364,7 @@ export function createMySignal<T>(marker: MyMarker<T>): MySignal<T> {
 > ⚠️ **Registration must happen BEFORE any `signalTree()` call that uses this marker!**
 
 ```typescript
-import { registerMarkerProcessor } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 // Call once at app startup (e.g., in main.ts BEFORE bootstrapApplication)
 registerMarkerProcessor(isMyMarker, (marker) => createMySignal(marker));
@@ -402,7 +402,7 @@ tree.$.myField.reset(); // Back to 'hello'
 ```typescript
 // validated-marker.ts
 import { signal, Signal, WritableSignal } from '@angular/core';
-import { registerMarkerProcessor } from '@signaltree/core';
+import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 // Symbol
 const VALIDATED_MARKER = Symbol('VALIDATED_MARKER');

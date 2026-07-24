@@ -2,14 +2,18 @@
 
 ### Added
 
-- **`status().idle()` — the canonical "should I (re)fetch?" predicate.**
+- **`status().idle()` + `status().settled()` — the standard composite predicates.**
   `idle` is `!loading() && !loaded()`, so it is true for **both** `NotLoaded`
   and `Error`. Guards/resolvers should use `idle()`, not `notLoaded()`:
   `notLoaded()` is strictly `state === NotLoaded`, so a `notLoaded()`-gated
   fetch **silently never retries after an error** (the collection is in the
   distinct `Error` state). Also steers off `state() === LoadingState.X`
-  enum comparisons (a codegen hallucination magnet). Added to the readonly
-  view's `STATUS_READERS`.
+  enum comparisons (a codegen hallucination magnet). `settled()` is
+  `loaded() || hasError()` ("done, stop the spinner"); note `idle` and
+  `settled` deliberately overlap in the Error state (errored = done AND
+  retryable). This is the closed standard set — bespoke composites use
+  `.derived()`, different state machines use a custom marker (RFC 0006).
+  Both added to the readonly view's `STATUS_READERS`.
 
 - **`persist.maxScopes` — persisted-scope garbage collection** for scoped
   cache-aware collections (`entityMap({ load: loader(fn, { persist }) })`).

@@ -363,8 +363,11 @@ store.$.users.loading.loaded();     // boolean
 store.$.users.loading.hasError();   // boolean
 store.$.users.loading.notLoaded();  // boolean
 store.$.users.loading.idle();       // boolean — "should I (re)fetch?" (v12.0.1+)
+store.$.users.loading.settled();    // boolean — "is it done?" (loaded || error) (v12.0.1+)
 // (The `is`-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
-// GUARD/RESOLVER predicate: use idle() (= !loading && !loaded), NOT notLoaded().
+// idle() = should-fetch (!loading && !loaded); settled() = done (loaded || error).
+// Note Error is BOTH idle AND settled (errored = done + retryable) — by design.
+// GUARD/RESOLVER predicate: use idle(), NOT notLoaded().
 // notLoaded() is false in the Error state, so a notLoaded()-gated fetch silently
 // never retries after an error; idle() stays true and retries. Prefer idle() over
 // state() === '...' comparisons (enum-equality reads are a hallucination magnet).

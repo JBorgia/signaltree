@@ -78,6 +78,19 @@ export interface StatusSignal<E = Error> {
    * enum-equality reads are a codegen hallucination magnet (see README).
    */
   idle: Signal<boolean>;
+  /**
+   * True once the operation has finished — **either** `Loaded` OR `Error`
+   * (i.e. `loaded() || hasError()`). The "stop the spinner / the request is
+   * done" predicate, the settled counterpart to {@link idle}.
+   *
+   * Note `idle` and `settled` deliberately **overlap** in the `Error` state:
+   * an errored request is both *done* (`settled`) and *should be retried*
+   * (`idle`). Truth table — `idle` / `loading` / `settled`:
+   * NotLoaded = T/F/F · Loading = F/T/F · Loaded = F/F/T · Error = T/F/T.
+   * This is the closed set of standard composite predicates; anything more
+   * app-specific composes over these via `.derived()`.
+   */
+  settled: Signal<boolean>;
 
   // Canonical helper methods
   /** Set state to NotLoaded and clear error */
@@ -207,6 +220,7 @@ export function createStatusSignal<E = Error>(
   let _loaded: Signal<boolean> | null = null;
   let _hasError: Signal<boolean> | null = null;
   let _idle: Signal<boolean> | null = null;
+  let _settled: Signal<boolean> | null = null;
 
   const getNotLoaded = () =>
     (_notLoaded ??= computed(() => stateSignal() === LoadingState.NotLoaded));
@@ -225,6 +239,14 @@ export function createStatusSignal<E = Error>(
       () =>
         stateSignal() !== LoadingState.Loading &&
         stateSignal() !== LoadingState.Loaded
+    ));
+  // "is it done?" — Loaded OR Error. The settled counterpart to idle;
+  // expressed directly so it can't drift if a state is ever added.
+  const getSettled = () =>
+    (_settled ??= computed(
+      () =>
+        stateSignal() === LoadingState.Loaded ||
+        stateSignal() === LoadingState.Error
     ));
 
   return {
@@ -247,6 +269,9 @@ export function createStatusSignal<E = Error>(
     },
     get idle() {
       return getIdle();
+    },
+    get settled() {
+      return getSettled();
     },
 
     // Helper methods

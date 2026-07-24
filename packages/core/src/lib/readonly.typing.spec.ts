@@ -192,6 +192,7 @@ export type _ReadonlyViewChecks = [
   Expect<Equal<ROStatus['loading'], Signal<boolean>>>,
   Expect<Equal<ROStatus['hasError'], Signal<boolean>>>,
   Expect<Equal<ROStatus['idle'], Signal<boolean>>>,
+  Expect<Equal<ROStatus['settled'], Signal<boolean>>>,
   // Source WritableSignals demoted to plain Signal reads.
   Expect<Equal<ROStatus['state'], Signal<LoadingState>>>,
   Expect<Equal<ROStatus['error'], Signal<Error | null>>>,
