@@ -37,12 +37,18 @@ const TARGETS = {
     // (load/staleTime/persist/tags, RFC 0003) raised the measured floor to
     // 9.67KB and shipped that way — the gate was not updated with the
     // feature. Measured breakdown (11.5.0): entity-loader.js is ~3.5KB
-    // minified (~1.1KB gzip) of that. RFC 0003 deliberately traded this
-    // floor for the one-marker DX; statically tree-shaking a config-driven
-    // branch is impossible, and a sync-stub + dynamic-import split of the
-    // loader is the only way to win it back — worth its own RFC if the
-    // floor ever matters more than the DX. Accepted for now.
-    budgetKB: 9.9,
+    // minified (~1.1KB gzip) of that.
+    //
+    // Lowered 9.9 → 8.6 for 12.0.0 (RFC 0005 §6): the reclaim landed. v12
+    // removed the raw `load: fn` path and entity-map.ts's static `attachLoader`
+    // import, so the loader/cache/SWR/persist machinery is reached ONLY through
+    // the `loader()` helper. A plain `entityMap()` (measured here) now
+    // tree-shakes it out entirely — measured 8.36KB gzip, down from 9.89KB in
+    // the 11.6 dual-path interim (~1.53KB reclaimed). Cache-aware collections
+    // pay for the machinery via `loader()`; plain collections do not. This
+    // budget locks the win in — a regression back toward 9.9 means something
+    // re-introduced a static reference to the loader machinery on the plain path.
+    budgetKB: 8.6,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });

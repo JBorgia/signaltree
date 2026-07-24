@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "11.6.0",
+  "version": "12.0.0",
   "packageManager": "pnpm@10.17.0",
   "license": "BUSL-1.1",
   "funding": {
@@ -98,6 +98,7 @@
     "validate:size-claims": "node scripts/verify-size-claims.js",
     "validate:taught-symbols": "node scripts/verify-taught-symbols.js",
     "validate:version-claims": "node scripts/verify-version-claims.js",
+    "validate:release-state": "node scripts/verify-release-state.js",
     "validate:changelog-entry": "bash scripts/verify-changelog-entry.sh",
     "validate:types": "bash scripts/verify-no-broken-dts.sh",
     "validate:budget": "node scripts/v9-budget-checks.js",

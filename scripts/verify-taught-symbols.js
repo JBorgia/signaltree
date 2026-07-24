@@ -206,7 +206,8 @@ const GOLDEN_API = [
   { name: 'validators', entry: '' },
   { name: 'withKind', entry: '' },
   { name: 'batching', entry: '' },
-  { name: 'effects', entry: '' },
+  // `effects` removed in v12 — use Angular's native `effect()`.
+  { name: 'loader', entry: '' },
   { name: 'devTools', entry: '' },
   { name: 'timeTravel', entry: '' },
   { name: 'persistence', entry: '' },

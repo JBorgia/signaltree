@@ -431,6 +431,29 @@ else
     exit 1
 fi
 
+# 13d. Release-State Verification (BLOCKING)
+# Catches the class the other gates missed: a CHANGELOG top heading still
+# labeled "(unreleased)" for a version whose git tag already exists (the 11.6.0
+# post-release finding), and CHANGELOG/package.json version drift. Added
+# 2026-07-23 (audit item H). Self-test proves the gate can fail.
+print_header "13d. Release-State Verification"
+print_step "Self-testing the release-state gate (negative test)"
+if node scripts/verify-release-state.js --self-test 2>&1 | tee /tmp/release-state-selftest.log; then
+    print_success "Release-state gate self-test passed (gate can fail)"
+else
+    print_error "Release-state gate self-test FAILED — the gate is inert, refusing to continue"
+    cat /tmp/release-state-selftest.log
+    exit 1
+fi
+print_step "Checking CHANGELOG heading vs package.json version and tag state"
+if node scripts/verify-release-state.js 2>&1 | tee /tmp/release-state.log; then
+    print_success "Release-state consistent"
+else
+    print_error "Release-state drift — a shipped version still says (unreleased), or CHANGELOG/package.json versions disagree"
+    cat /tmp/release-state.log
+    exit 1
+fi
+
 # Final Summary
 print_header "Validation Summary"
 
