@@ -694,3 +694,29 @@ release-managed paths when `RELEASE_IN_PROGRESS=1` (set by `release.sh`); any
 other dirty path still blocks, and standalone runs keep the strict
 clean-tree requirement. The double build (validation builds, then release.sh
 rebuilds) is retained — correctness over speed.
+
+### 12.1.0 cut (2026-07-24)
+
+- **§5 cooling period bypassed — owner-authorized**, business reason: v3
+  TruckTrax needs the 12.1.0 changes. All other ratchet gates held: each
+  workstream adversarially reviewed in isolation, then a cumulative
+  `v12.0.0..HEAD` pre-publish review returned SHIP (8-package test:all green,
+  real minor-bump dry-run verified, version coherence + idle/settled
+  truth-table + cross-cutting all clean; two non-blocking NITs noted:
+  route-smoke can't detect a renamed route via the `**` redirect, and the
+  `maxScopes` invalid-value guard is dev-only).
+- **Semver correction:** cut is **12.1.0 (minor)**, not 12.0.1 — everything
+  since 12.0.0 is additive public API (idle/settled/maxScopes/nativeErrors
+  advisory) with zero breaking changes.
+
+### Queued follow-up (post-12.1.0): marker-authoring best-practices
+
+`docs/guides/custom-markers-enhancers.md` covers the mechanism well but omits
+the five marker-authoring landmines this effort surfaced — each of which
+caused a real shipped bug in a *built-in* marker: (1) NG0600 (defer
+auto-start/seed to a microtask), (2) the materializer swallows `create()`
+throws so validation must live in the *factory* (bit `maxScopes`), (3) the
+callable-node traversal contract (the v11.4/11.5 inert-walker class), (4)
+`asReadonly` doesn't strip a custom marker's mutators (honest limitation),
+(5) `[ST####]` codes + plain-noun naming + conformance-fixture testing. Add
+an "Authoring markers: the five landmines" section drawn from RFC 0004/0005.
