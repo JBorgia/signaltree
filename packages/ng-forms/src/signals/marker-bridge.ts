@@ -73,7 +73,11 @@ export interface SignalFormOptions {
    * `{ kind: validatorKind ?? 'signalTree', message }` in both modes.
    *
    * Default `false` (plain objects — the pre-11.6 behavior). The default
-   * flips in the next major.
+   * was announced (11.6.0) to flip in the next major, but v12 shipped with it
+   * still `false` — the flip is now EXPLICITLY POSTPONED to v13 (an external
+   * post-release audit caught the promise miss, 2026-07-24). If your code
+   * depends on either error shape, set the option explicitly rather than
+   * relying on the default.
    */
   nativeErrors?: boolean;
 }

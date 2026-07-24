@@ -1,5 +1,11 @@
 ## 12.0.0 (2026-07-23)
 
+> **Correction (2026-07-24, post-release):** 11.6.0 announced the
+> `nativeErrors` default would flip to `true` in this major; v12 shipped with
+> it still `false`. The flip is explicitly postponed to **v13** — set the
+> option explicitly if you depend on either error shape. (Caught by an
+> external post-release audit.)
+
 > The first "earned major" under RFC 0004 §3 V-MAJOR: a major exists to carry
 > accumulated deliberate breakage with a concrete user-visible payload. This
 > one's payload is the entityMap loader tree-shake reclaim (RFC 0005 §6).

@@ -634,3 +634,16 @@ install/import test as a pre-publish gate, and an RC-phase option in
 release.sh. Re-affirmed as recorded decisions (not reopened): async
 single-authority, entityMap unified shape (RFC 0005), single-scope cache
 (RFC 0003 §5).
+
+### v12.0.0 external-audit intake (2026-07-24)
+
+Verified against the repo — auditor accurate on all checkable claims.
+FIXED same-day: the `nativeErrors` default-flip promise miss (11.6.0 said
+"flips next major"; v12 kept `false`) — now explicitly postponed to v13 at
+every promise site (JSDoc, llms-full, changelog correction note).
+CONFIRMED-OPEN, queued (release-pipeline hardening): `skip-tests` bypasses
+the full suite; `publish:all` runs the lighter `prepublish`; the tag-push
+release.yml reruns no gates — the strongest fix is publish-from-CI gated on
+a protected check of the exact tagged commit. Re-affirmed deferrals:
+multi-scope LRU + persisted-scope GC (RFC 0003 §5; GC guidance shipped in
+the persistence guide, built-in policy rides with LRU).
