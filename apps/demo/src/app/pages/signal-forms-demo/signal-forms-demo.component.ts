@@ -5,10 +5,20 @@ import {
   computed,
   inject,
   Injector,
+  signal,
 } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { FormField, MinValidationError } from '@angular/forms/signals';
-import { form, signalTree, validators } from '@signaltree/core';
+import {
+  disabled,
+  form as ngForm,
+  FormField,
+  hidden,
+  MinValidationError,
+  required,
+  schema,
+  validate,
+} from '@angular/forms/signals';
+import { form, signalTree, trackHistory, validators } from '@signaltree/core';
 import { signalForm } from '@signaltree/ng-forms/signals';
 import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
@@ -33,6 +43,17 @@ interface AgeCheck extends Record<string, unknown> {
   age: number;
 }
 
+interface TaskDraft extends Record<string, unknown> {
+  title: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface TeamPlan extends Record<string, unknown> {
+  plan: 'free' | 'pro';
+  seats: number;
+  promoCode: string;
+}
+
 /**
  * Angular 22 Signal Forms × SignalTree.
  *
@@ -54,6 +75,21 @@ interface AgeCheck extends Record<string, unknown> {
 })
 export class SignalFormsDemoComponent {
   private readonly injector = inject(Injector);
+
+  // ── 0. trackHistory() — marker-FREE undo/redo over a raw Signal Forms
+  //      model (13.1.0). No form() marker anywhere below: `taskModel` is a
+  //      plain WritableSignal, `taskFieldTree` is Angular's own `form()`.
+  //      trackHistory() attaches undo/redo directly to the model signal. ──
+  readonly taskModel = signal<TaskDraft>({ title: '', priority: 'low' });
+
+  readonly taskFieldTree = ngForm(this.taskModel, (p) => {
+    required(p.title, { message: 'Title is required' });
+  });
+
+  readonly taskHistory = trackHistory(this.taskModel, {
+    capacity: 25,
+    injector: this.injector,
+  });
 
   // ── 1. form() marker ↔ FieldTree ─────────────────────────────────────────
   readonly tree = signalTree({
@@ -103,6 +139,30 @@ export class SignalFormsDemoComponent {
   readonly nativeMinValue = computed(() => {
     const err = this.nativeAgeError();
     return err instanceof MinValidationError ? err.min : null;
+  });
+
+  // ── 1c. signalForm(marker, { schema }) — a cached Angular schema() adds
+  //       disabled/hidden/cross-field validate rules a marker's `validators`
+  //       config can't express, composed on top of the marker-backed
+  //       FieldTree (13.1.0). The marker stays the model/history authority;
+  //       the schema owns the field RULES. ──────────────────────────────────
+  readonly planTree = signalTree({
+    team: form<TeamPlan>({
+      initial: { plan: 'free', seats: 1, promoCode: '' },
+    }),
+  });
+
+  private readonly planSchema = schema<TeamPlan>((p) => {
+    disabled(p.seats, (ctx) => ctx.valueOf(p.plan) === 'free');
+    hidden(p.promoCode, (ctx) => ctx.valueOf(p.plan) !== 'pro');
+    validate(p.seats, (ctx) =>
+      ctx.value() >= 1 ? undefined : { kind: 'min', message: 'At least 1 seat' }
+    );
+  });
+
+  readonly planForm = signalForm(this.planTree.$.team, {
+    injector: this.injector,
+    schema: this.planSchema,
   });
 
   // ── 2. schema registrations ↔ FieldTree ──────────────────────────────────
@@ -221,6 +281,104 @@ const tree = signalTree({
 readonly account = signalForm<Account>(
   tree, 'account', tree.$.account
 );`,
+    },
+  ];
+
+  readonly trackHistoryCode: CodeFile[] = [
+    {
+      label: 'track-history.ts',
+      language: 'typescript',
+      source: `import { signal, inject, Injector } from '@angular/core';
+import { form, required } from '@angular/forms/signals';
+import { trackHistory } from '@signaltree/core';
+
+// Plain Signal Forms — no SignalTree form() marker anywhere.
+const taskModel = signal({ title: '', priority: 'low' as const });
+const taskForm = form(taskModel, (p) => {
+  required(p.title, { message: 'Title is required' });
+});
+
+// Undo/redo attaches directly to the model signal. No marker required —
+// replaces hand-rolled @ngrx-style change trackers with one call.
+const history = trackHistory(taskModel, {
+  capacity: 25,
+  injector: inject(Injector), // or call trackHistory() in injection context
+});
+
+// Template: <input [formField]="taskForm.title" />
+history.undo();          // reverts the last edit; the FieldTree reflects it
+history.redo();
+history.clearHistory();
+history.canUndo();       // Signal<boolean>
+history.canRedo();       // Signal<boolean>
+history.history();       // Signal<{ past, present, future }>`,
+    },
+  ];
+
+  readonly schemaOptionCode: CodeFile[] = [
+    {
+      label: 'schema-option.ts',
+      language: 'typescript',
+      source: `import { disabled, hidden, schema, validate } from '@angular/forms/signals';
+import { form, signalTree } from '@signaltree/core';
+import { signalForm } from '@signaltree/ng-forms/signals';
+
+// The marker carries ONLY the model (and, optionally, history()) —
+// no validators config. A rich Angular schema supplies the field RULES.
+const tree = signalTree({
+  team: form<TeamPlan>({
+    initial: { plan: 'free', seats: 1, promoCode: '' },
+  }),
+});
+
+const planSchema = schema<TeamPlan>((p) => {
+  disabled(p.seats, (ctx) => ctx.valueOf(p.plan) === 'free');
+  hidden(p.promoCode, (ctx) => ctx.valueOf(p.plan) !== 'pro');
+  validate(p.seats, (ctx) =>
+    ctx.value() >= 1 ? undefined : { kind: 'min', message: 'At least 1 seat' }
+  );
+});
+
+// Marker validators (if any) run first, then this schema — applied via
+// apply() on top of the marker-backed FieldTree, over the SAME shared model.
+const planForm = signalForm(tree.$.team, { schema: planSchema });
+
+planForm.seats().disabled();   // true while plan === 'free'
+planForm.promoCode().hidden(); // true while plan !== 'pro'`,
+    },
+  ];
+
+  readonly webMcpCode: CodeFile[] = [
+    {
+      label: 'webmcp.ts',
+      language: 'typescript',
+      source: `// app.config.ts — register the experimental WebMCP forms provider
+import { provideExperimentalWebMcpForms } from '@angular/forms/signals';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideExperimentalWebMcpForms(), /* ... */],
+};
+
+// component.ts — signalForm() forwards experimentalWebMcpTool verbatim to
+// Angular's form(model, schema, options), same as name/submission.
+import { form, signalTree } from '@signaltree/core';
+import { signalForm } from '@signaltree/ng-forms/signals';
+
+const tree = signalTree({
+  profile: form<Profile>({ initial: { name: '', email: '' } }),
+});
+
+const profileForm = signalForm(tree.$.profile, {
+  name: 'profileForm',
+  experimentalWebMcpTool: {
+    name: 'profileTool',
+    description: 'Edit the user profile',
+  },
+});
+
+// An MCP-connected AI agent can now discover and drive this form — read its
+// fields, set values, and submit — without app-specific glue.
+// Experimental; requires Angular 22+.`,
     },
   ];
 }

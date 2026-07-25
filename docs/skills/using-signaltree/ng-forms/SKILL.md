@@ -134,6 +134,39 @@ tree.$.contact.history?.history(); // Signal<{ past: T[]; present: T; future: T[
 
 A raw object on `history` (not `history()`'s output) throws `[ST2006]` at the `form()` call. If a `signalForm()` binds this same marker, undo/redo also move the bound `FieldTree`, and edits made through the `FieldTree` are captured too — one engine, no sync loop.
 
+Pattern D2 — undo/redo WITHOUT a marker, via core `trackHistory()` (v13.1+). For a plain Angular Signal Forms model signal (no SignalTree `form()` marker), point `trackHistory` at the model to get the same undo/redo engine — replaces `@ngrx`-style change trackers. Needs an injection context (or pass `injector`):
+
+```ts
+import { signal, inject, Injector } from '@angular/core';
+import { form, required } from '@angular/forms/signals';
+import { trackHistory } from '@signaltree/core';
+
+const model = signal({ title: '', priority: 'low' });
+const f = form(model, (p) => { required(p.title); });
+const hist = trackHistory(model, { capacity: 25, exclude: ['secret'], injector: inject(Injector) });
+
+hist.undo(); hist.redo(); hist.canUndo(); // FieldTree reflects undo/redo
+```
+
+Pattern E — pass an Angular Signal Forms schema + FormOptions to a marker-bridged form (v13.1+). `signalForm(marker, options)` takes `schema` as a `SchemaOrSchemaFn<T>` (inline `SchemaFn` OR a cached `schema()` object) for rules a marker's `validators` can't hold (`disabled`/`hidden`/`applyEach`/cross-field `validate`/`validateAsync`), and forwards `name`/`submission`/`experimentalWebMcpTool` verbatim to Angular's `form(model, schema, options)`:
+
+```ts
+import { disabled, schema, validate } from '@angular/forms/signals';
+import { signalForm } from '@signaltree/ng-forms/signals';
+
+const s = schema<Profile>((p) => { disabled(p.email, { when: (c) => !c.valueOf(p.optIn) }); });
+
+// WebMCP: expose the form as a tool to AI agents (Angular 22+; add
+// provideExperimentalWebMcpForms() to providers).
+const fieldTree = signalForm(tree.$.profile, {
+  injector,
+  schema: s,
+  experimentalWebMcpTool: { name: 'update_profile', description: 'Fill/submit the profile form' },
+});
+```
+
+Schema-level `validateAsync` is the supported async shape (a marker with its own `asyncValidators` still throws `[ST2005]`; put async in the passed schema instead).
+
 Legacy Pattern D — `withFormHistory` on `createFormTree` (`@deprecated` since v13; retained for `createFormTree`/`FormGroup` users, cannot attach to a `signalForm()` `FieldTree`):
 
 ```ts

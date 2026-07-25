@@ -327,7 +327,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Signal Forms',
       description:
-        "Angular 22 Signal Forms interop via signalForm(): a form() marker as a FieldTree, and @signaltree/schema registrations auto-applied to a FieldTree.",
+        'Angular 22 Signal Forms interop via signalForm(): a form() marker as a FieldTree, @signaltree/schema registrations auto-applied to a FieldTree, plus 13.1.0: trackHistory() marker-free undo/redo, schema-driven disabled/hidden rules, and WebMCP passthrough.',
     },
   },
   {
