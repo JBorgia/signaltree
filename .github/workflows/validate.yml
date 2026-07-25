@@ -54,6 +54,9 @@ jobs:
       - name: Verify version claims
         run: node scripts/verify-version-claims.js
 
+      - name: Verify package hygiene (no junk / entries present in tarballs)
+        run: node scripts/verify-package-hygiene.js
+
   demo-route-smoke:
     name: Demo route smoke (Playwright)
     runs-on: ubuntu-latest

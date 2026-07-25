@@ -18,6 +18,8 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
+    "!src/**/__tests__/**",
+    "!src/**/*.spec.d.ts",
     "README.md",
     "CHANGELOG.md"
   ],

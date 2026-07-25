@@ -84,6 +84,11 @@ for package in "${PACKAGES[@]}"; do
 done
 print_success "All dist outputs present at version $VERSION"
 
+# Preflight 1b: package hygiene — never publish a tarball that ships test
+# specs, source maps, raw .ts, or is missing a declared entry.
+print_step "Verifying package hygiene (no junk in tarballs)..."
+node scripts/verify-package-hygiene.js || exit 1
+
 # Preflight 2: resolve pnpm `workspace:` protocol / bare `*` specs in the
 # published dist manifests (npm publish does NOT rewrite them; shipping a
 # literal `workspace:*` breaks installs). Same rewrite as scripts/release.sh.
