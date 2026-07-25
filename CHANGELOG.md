@@ -1,3 +1,20 @@
+## 13.1.1 (2026-07-25)
+
+### Fixed
+
+- **Packaging**: `@signaltree/schema` no longer ships `src/__tests__/test-helpers.d.ts`
+  in its published tarball (a non-`.spec` test helper its `files` glob swept up).
+  Excluded `__tests__`/`*.spec.d.ts` from the package `files`.
+
+### Internal
+
+- Replaced the unused `verify-size-claims.js` byte-count rubber-stamp with
+  `verify-package-hygiene.js`, which inspects the real packed tarball
+  (`npm pack --dry-run`) and fails if a package ships test specs / source maps /
+  raw `.ts` / `tsconfig` / `__tests__` / fixtures, or is missing a declared entry
+  (`main`, `exports` subpaths, `.d.ts`). Wired into `validate.yml` and the
+  `ci-publish.sh` pre-publish preflight.
+
 ## 13.1.0 (2026-07-24)
 
 ### Added
