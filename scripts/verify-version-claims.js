@@ -110,8 +110,12 @@ function checkSite(text, site, majors) {
     // 2. Stale prose enumerations: "Angular 20 or 21", "Angular 20 and 21",
     //    "Angular 19, 20, or 21"... Dotted versions ("Angular 20.3+") and
     //    "+"-suffixed claims are structurally excluded.
+    // Trailing guard excludes dotted versions ("20.3") and "+"/extra-digit
+    // suffixes, but NOT a sentence-ending period: `(?!\.\d)` only rejects a dot
+    // FOLLOWED BY A DIGIT, so "Angular 20, 21, or 22." no longer backtracks to
+    // a spurious "20, 21" match (the sentence-final-enumeration false positive).
     for (const m of line.matchAll(
-      /\bAngular\s+(\d{1,2}(?:(?:,\s*(?:or\s+|and\s+)?|\s+or\s+|\s+and\s+)\d{1,2})+)(?![.\d+])/g
+      /\bAngular\s+(\d{1,2}(?:(?:,\s*(?:or\s+|and\s+)?|\s+or\s+|\s+and\s+)\d{1,2})+)(?!\d)(?!\+)(?!\.\d)/g
     )) {
       const claimed = [...m[1].matchAll(/\d{1,2}/g)]
         .map((n) => Number(n[0]))
@@ -181,13 +185,21 @@ function selfTest(majors) {
   // Excluded semantics must NOT be flagged.
   const excluded = [
     `${humanPhrase(majors)} — canonical claim present.`,
+    // Regression: a canonical enumeration ENDING A SENTENCE (trailing period)
+    // must not backtrack to a spurious shorter match. Was a false positive
+    // before the `(?!\\.\\d)` trailing-guard fix.
+    `${humanPhrase(majors)}.`,
+    `The package supports ${humanPhrase(majors)}. See peerDependencies.`,
     'Native Signal Forms support (Angular 20.3+) via `connect()`.',
     'Fallback on Angular 20.0–20.2 where `connect()` is unavailable.',
     "The `/signals` subpath requires `@angular/core ^22.0.0 || ^23.0.0`.",
     '@signaltree/events peers: `@angular/core ^18.0.0 || ^19.0.0 || ^20.0.0`.',
   ].join('\n');
   const v2 = checkSite(excluded, 'fixture-exclusions.md', majors);
-  expect('does not flag excluded semantics (connect()/20.3, /signals, events)', v2.length === 0);
+  expect(
+    'does not flag excluded semantics (connect()/20.3, /signals, events, sentence-final enumeration)',
+    v2.length === 0
+  );
 
   // Control: a clean site passes.
   const clean = `Requires ${humanPhrase(majors)} (\`@angular/core ${semverPhrase(majors)}\`).`;

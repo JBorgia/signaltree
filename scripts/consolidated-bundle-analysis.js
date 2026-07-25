@@ -30,7 +30,9 @@ const packages = [
       'dist/packages/core/fesm2022/signaltree-core.mjs',
     ],
     maxSize: 30000,
-    claimed: 42261,
+    // v13.1.0: core grew ~2.36KB (history()/audit/trackHistory; audit moved in
+    // from ng-forms). Honest claim = measured packed size.
+    claimed: 44677,
   },
   {
     name: 'enterprise',

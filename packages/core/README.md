@@ -2784,7 +2784,7 @@ readonly profile = signalForm(this.tree.$.profile);
 > Note: Angular has **no** `FormControl.connect(signal)` API. For classic
 > Reactive Forms interop backed by tree state, use `createFormTree` or the
 > `formBridge()` enhancer (both build a real `FormGroup`); `@signaltree/ng-forms`
-> supports Angular 20, 21, and 22.
+> supports Angular 20, 21, or 22 — see `peerDependencies`.
 
 **Quick Example:**
 
