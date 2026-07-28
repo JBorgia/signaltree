@@ -132,9 +132,11 @@ SignalTree treats application state as **reactive JSON** — a typed, dot-notati
 
 You don't model state as actions, reducers, selectors, or classes — you model it as **data**.
 
-### When SignalTree earns its place (and when it doesn't)
+### Where SignalTree fits
 
-SignalTree is **not** the right tool for every app — and saying so is part of the pitch. Its defensible niche is **deeply structured state that needs batteries** (entity CRUD, async status, forms, persistence, undo) **attached at any node, at any depth**:
+SignalTree is built for **structured state that wants batteries** (entity CRUD, async status, forms,
+persistence, undo) **attached at any node, at any depth** — which describes most Angular apps past
+the prototype stage:
 
 ```typescript
 import { signalTree, asyncSource, form, status } from '@signaltree/core';
@@ -155,7 +157,7 @@ store.$.workspace.editor.draft.dirty(); // each panel owns its state, addressed 
 
 Every behavior lives at the path it describes — not flattened to a store root, not hand-wired field by field. That **structural locality**, plus recursive typing and partial deep-merge writes, is the boilerplate SignalTree removes. It's the load-bearing difference from NgRx SignalStore (whose `with*` features compose at the store root only).
 
-**If your state is a handful of values or one flat object, use raw Angular signals** (`signal` / `computed` / `linkedSignal` / `resource`) — they're zero-dependency and SignalTree would just be overhead. The honest decision boundary:
+**For a couple of values inside one component, use raw Angular signals** (`signal` / `computed` / `linkedSignal` / `resource`) — they're zero-dependency and complete for that. The honest decision boundary:
 
 - **Raw signals** → simple/flat/component-local state, one async fetch. ([when native signals are enough](https://github.com/JBorgia/signaltree/blob/main/docs/compare/native-signals.md))
 - **SignalTree** → structured/nested state needing batteries at depth, fully typed.

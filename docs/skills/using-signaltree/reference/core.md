@@ -129,7 +129,7 @@ Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey`
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
 **Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (the `.isEmpty` alias was removed in v11).
 **Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when *that* entity changes (fan-out 1), not on every collection mutation.
-**Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `store.$.users.active()` as a `Signal<User[]>` — **fully typed on `tree.$` since v14** (no cast; chain `.computed()` more than once and every name is typed independently). The `compute` fn receives only that collection's `E[]`, so a projection that needs other state (another collection, an external id signal) stays a normal `computed`/`.derived()`.
+**Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `store.$.users.active()` as a `Signal<User[]>` — **fully typed on `tree.$` since v13.2** (no cast; chain `.computed()` more than once and every name is typed independently). The `compute` fn receives only that collection's `E[]`, so a projection that needs other state (another collection, an external id signal) stays a normal `computed`/`.derived()`.
 
 ### `status()`
 

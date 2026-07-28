@@ -47,21 +47,50 @@ For components that should only ever read the store, `asReadonly(tree)` narrows 
 
 ## When to Use SignalTree
 
-**Good fit:**
+Most Angular apps that have outgrown "a few signals in a component" are a good fit. If you're
+writing an app with real domain state — not a demo — you're likely in scope.
 
-- Apps with structured, hierarchical state (settings, user profiles, nested forms, dashboards)
-- Teams that want signal-based state with dot-notation access and zero boilerplate
-- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`asyncSource` / `asyncQuery` markers), or persistence out of the box
-- Migrations away from `@ngrx/signals` — the agent-ready migration playbook ships in `@signaltree/core/skills/`
+**Reach for SignalTree when you have:**
 
-**Consider alternatives when:**
+- **Structured or nested state** — settings, user profiles, workspaces, dashboards, multi-step
+  wizards, anything with domains inside domains. `tree.$.workspace.editor.draft.dirty()` reads and
+  writes at any depth, with full recursive typing.
+- **Server-backed collections** — `entityMap({ load: loader(fn) })` gives you normalized O(1) CRUD
+  plus caching, `staleTime` freshness, single-flight dedup, tag invalidation, and optional
+  offline-first persistence from one config key.
+- **Forms** — the `form()` marker covers field/dirty/valid/touched/submit and wizards, and bridges
+  to Angular Signal Forms via `signalForm()`.
+- **Optimistic UI** — `updateAndReport()` returns a changed-paths report, so rollback is mechanical
+  rather than hand-tracked.
+- **Async data** — `asyncSource()` / `asyncQuery()` for load-and-expose and debounced
+  input-driven queries, with `status()` predicates for the lifecycle.
+- **Undo/redo, persistence, DevTools** — `timeTravel()`, `stored()` with migrations, `history()` /
+  `trackHistory()`, Redux DevTools integration. All included, none hand-wired.
+- **State that will grow.** Starting simple is fine — the shape *is* the API, so adding a domain or
+  attaching a marker at a new node doesn't restructure anything you already wrote. You don't need to
+  predict your final shape to start.
+- **Multiple stores / feature domains** — one tree per feature with an Ops service in front is the
+  recommended architecture, and it scales to many.
+- **AI-assisted development** — measured 49% → 91% codegen accuracy with `llms.txt` in context (see
+  below), plus a vendor-neutral agent skill.
+- **Migrating off `@ngrx/signals`** — the agent-ready migration playbook ships in
+  `@signaltree/core/skills/`.
 
-- **Your state is a handful of values or one flat object.** Raw Angular signals (`signal` / `computed` / `linkedSignal` / `resource`) are the right default for most components and many apps — SignalTree earns its place only when state is *structured* **and** needs batteries at depth (entity CRUD, forms, persistence, undo, async pipelines). If you're not in that niche, the dependency isn't justified. This is the comparison most "should I use SignalTree?" decisions actually hinge on — see [SignalTree vs raw Angular signals](docs/compare/native-signals.md).
-- You need event-sourcing or CQRS patterns (use NgRx Store, the classic Redux variant)
-- Your state is flat key-value pairs (a `Map` or individual signals suffice)
-- You're building a tiny app with one or two signals (overhead exceeds value)
-- Your state shape is highly dynamic — streaming arbitrary JSON with unknown keys at high frequency (real-time log aggregators, fully-dynamic schema editors). SignalTree's markers and type system assume a fixed shape; for genuinely shape-shifting payloads, a flat collection inside a single store slice is a better fit.
-- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored mental model is closer to where you already are. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
+**Where something else may fit better:**
+
+- **A couple of values in one component.** Raw Angular signals (`signal` / `computed` /
+  `linkedSignal` / `resource`) are complete for that, and reaching for any store would be
+  ceremony. The interesting question isn't "is my app big enough" — it's whether you want the
+  batteries above hand-assembled or provided. See
+  [SignalTree vs raw Angular signals](docs/compare/native-signals.md).
+- **Event-sourcing or CQRS** — use NgRx Store (the classic Redux variant); replaying an event log is
+  a different architecture, not a feature gap.
+- **Genuinely shape-shifting state** — streaming arbitrary JSON with unknown keys at high frequency
+  (log aggregators, fully-dynamic schema editors). Markers and the type system assume a known shape;
+  put dynamic payloads in a collection inside a slice instead.
+- **A large existing `@ngrx/store` (classic) + heavy RxJS codebase** — the lowest-cognitive-cost
+  migration target is `@ngrx/signals`, whose RxJS-flavored model is closer to where you already are.
+  See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the decision tree.
 
 ## 🤖 Built for the AI-assisted era
 

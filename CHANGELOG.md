@@ -1,4 +1,4 @@
-## Unreleased (next major — v14)
+## Unreleased — 13.2.0 (minor)
 
 ### Fixed
 
@@ -24,6 +24,16 @@
   emptiness test matches it — so the implementation filters the index signature
   out (`LiteralKeys`) before mapping. Getting this wrong silently grafts an
   index signature onto every plain collection.
+
+  Shipped as a **minor**, not held for v14: it adds no runtime surface and makes
+  an already-shipped primitive usable, so there's no reason for consumers to
+  wait on a breaking release for it. Strictly, resolved types gain an
+  intersection member — assignments to `EntitySignal<E, K>` still work (an
+  intersection is assignable to its member), but an exact-type assertion in
+  consumer code (`Equal<$['users'], EntitySignal<User, number>>`) would now see
+  the slice-bearing type on a collection that has slices.
+
+## Unreleased (next major — v14)
 
 ### Changed (BREAKING)
 

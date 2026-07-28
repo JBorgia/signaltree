@@ -216,7 +216,7 @@ store.$.workspace.sidebar.results();
 
 Because `with*` features in `@ngrx/signals` (as of `@ngrx/signals` 21.1 — the version the published SignalTree benchmarks pin) compose **at the store root**, the equivalent there is either (a) one flat root namespace with prefixed keys — `editorDraft`, `editorSave`, `sidebarFilters`, `sidebarResults` — losing the structural grouping, or (b) a separate nested `signalStore` per panel that you wire together manually. SignalTree expresses it as **plain object nesting**, and the form/status/async APIs materialize exactly where you placed them. The win is *structural locality*: state lives at the path that describes it, so the tree shape mirrors the UI/domain shape instead of a flat slice registry.
 
-This is not "NgRx can't do it" — it can, via nested stores or flat slices. It's that SignalTree makes nesting the *default, zero-ceremony* expression, which is why an agent generating state for a hierarchical domain produces less code and fewer naming decisions. For genuinely flat state (one or two slices) the difference is negligible — see "When NOT to use SignalTree."
+This is not "NgRx can't do it" — it can, via nested stores or flat slices. It's that SignalTree makes nesting the *default, zero-ceremony* expression, which is why an agent generating state for a hierarchical domain produces less code and fewer naming decisions. For genuinely flat state (one or two slices) the difference is negligible — see "Where something else may fit better" in `llms.txt`.
 
 ### `entityMap<Entity, Key>(config?)`
 
@@ -262,7 +262,7 @@ store.$.users.find((u) => u.role === 'admin'); // Signal<User | undefined>
 store.$.users.byId(id)?.name(); // Signal-backed field read
 
 // Computed slices: attach a derived projection to the collection AT DECLARATION.
-// Typed on tree.$ since v14 — no cast. Chainable; each name typed independently.
+// Typed on tree.$ since v13.2 — no cast. Chainable; each name typed independently.
 // entityMap<User>()
 //   .computed('active', (all) => all.filter((u) => u.active))
 //   .computed('total', (all) => all.length)
@@ -588,7 +588,7 @@ class ProfileComponent {
 }
 ```
 
-Options (`SignalFormOptions`): `injector` (required only outside an injection context), `nativeErrors`, `schema`, and (v13.1+) `name`/`submission`/`experimentalWebMcpTool`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. **Default is `true` since v14** (branded errors — the Angular-native shape; announced in 11.6.0, deferred through 12.x/13.x, flipped in v14). Pass `nativeErrors: false` for the pre-v14 plain `{ kind, message }` objects.
+Options (`SignalFormOptions`): `injector` (required only outside an injection context), `nativeErrors`, `schema`, and (v13.1+) `name`/`submission`/`experimentalWebMcpTool`. **`nativeErrors` defaults to `true` since v14** (announced in 11.6.0, deferred through 12.x/13.x): failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Pass **`{ nativeErrors: false }`** for the pre-v14 plain `{ kind, message }` objects. `kind` and `message` are present in BOTH shapes, so code reading only those two is unaffected by the flip; narrowing on the plain object shape, serializing errors, or deep-equalling them in tests is what needs updating. Custom/untagged validators emit plain `{ kind: 'signalTree', message }` in both modes.
 
 **Single-authority async rule:** async validation is **NOT unified** between the two systems. The marker's `asyncValidators`/`validateField()`/`submit()` path and Signal Forms' `validateAsync`/`validateHttp` are independent — pick ONE as the authority for a given bridged form (using both on one field can leave the marker's `valid()` and the FieldTree's `valid()` disagreeing during an async validation window). A one-time dev warning fires when a bridged marker has `asyncValidators` configured.
 

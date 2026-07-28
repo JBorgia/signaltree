@@ -71,7 +71,7 @@ plants: entityMap<PlantDto, string>({
   .computed('activeCount', (all) => all.filter((p) => p.active).length),
 ```
 
-Read them straight off the tree — **fully typed since v14, no cast**:
+Read them straight off the tree — **fully typed since v13.2, no cast**:
 
 ```typescript
 this.store.tree.$.plants.byUrl();       // Signal<Record<string, PlantDto>>
@@ -82,7 +82,7 @@ this.store.tree.$.plants.activeCount(); // Signal<number>
 loader-backed collections — the loader surface (`load()`, `loading()`, …) stays available alongside
 them.
 
-> Before v14 slice names weren't on the static `tree.$` type and the docs told you to read them via
+> Before v13.2 slice names weren't on the static `tree.$` type and the docs told you to read them via
 > `(tree.$.plants as any).byUrl()`. That cast is gone; if you see it in older code, delete it.
 
 ### `find` / `where` — reactive lookups without a wrapper

@@ -1,8 +1,8 @@
 # SignalTree vs raw Angular signals
 
-> Honest, axis-by-axis comparison written for both humans and AI coding agents. Raw Angular signals are the **framework itself** — zero dependency, zero learning tax, guaranteed future-proof. SignalTree must *earn* its dependency against that bar. This page says plainly where it does and where it doesn't.
+> Honest, axis-by-axis comparison written for both humans and AI coding agents. Raw Angular signals are the **framework itself** — zero dependency, zero learning tax, guaranteed future-proof. SignalTree measures itself against that bar rather than against a straw man. This page says plainly where each one fits.
 
-This is the comparison most "should I use SignalTree?" decisions actually hinge on — more than the NgRx one. If you only have a couple of values, **stop here and use raw signals.**
+This is the comparison most "should I use SignalTree?" decisions actually hinge on — more than the NgRx one. The short version: **raw signals are primitives; SignalTree is a state library built on them.** If you have a couple of values in a component, the primitives are the answer. Once you're hand-writing the things in the "what native signals don't provide" list below — normalized collections, per-field form state, persistence, undo, deep reactive nesting — you're building a state library by hand, and that's the point at which using one is the simpler choice.
 
 ---
 
@@ -10,11 +10,13 @@ This is the comparison most "should I use SignalTree?" decisions actually hinge 
 
 | Use... | When... |
 |---|---|
-| **Raw Angular signals** (`signal` / `computed` / `linkedSignal` / `effect` / `resource`) | Your state is a handful of values or one flat object; you don't need entity CRUD, forms, persistence, or undo; you want zero dependencies and zero abstraction risk. **This is the right default for most components and many apps.** |
-| **SignalTree** | Your state is **deeply structured** (nested domains, dashboards, multi-step forms), AND you want batteries — entity CRUD, async status, localStorage, forms, validation — attached **at specific nodes at any depth**, with full recursive typing and far less hand-wiring than assembling the above from primitives. |
-| **Either** | Medium apps with some structure but modest battery needs — taste and team familiarity decide. |
+| **Raw Angular signals** (`signal` / `computed` / `linkedSignal` / `effect` / `resource`) | Your state is a handful of values or one flat object; you don't need entity CRUD, forms, persistence, or undo; you want zero dependencies. **The right default for component-local state.** |
+| **SignalTree** | Your state has **structure** (nested domains, dashboards, multi-step forms, feature stores) and you want batteries — entity CRUD, async status, localStorage, forms, validation, undo — attached **at specific nodes at any depth**, with full recursive typing instead of hand-wiring. |
+| **Either** | Some structure, modest battery needs — taste and team familiarity decide. Worth noting SignalTree stays comfortable here: the shape is the API, so it doesn't impose ceremony while your state is still small. |
 
-The honest one-liner: **raw signals win for simple/flat state; SignalTree earns its place only when state is structured *and* needs batteries at depth.** If you're not in that niche, the dependency isn't justified — and that's fine.
+The honest one-liner: **raw signals win for simple, component-local state; SignalTree wins once state is structured or wants batteries.** The dividing line isn't app size — it's whether you'd otherwise be writing the normalized-map, form-state, and persistence plumbing yourself.
+
+One practical note in SignalTree's favour for growth: because state is modeled as its shape, "start with raw signals and migrate later" is a real refactor (every consumer's read/write path changes), whereas starting with a tree and adding domains or markers as you go is additive. If you already expect structure, starting there costs you little.
 
 ---
 
@@ -28,7 +30,7 @@ As of Angular 20 the native primitives cover a lot:
 - `linkedSignal<T>()` — a *writable* computed that resets when its source changes (stable since v19).
 - `resource()` / `rxResource()` — async data loading with `value`/`status`/`error`/`reload` (developer-preview / stabilizing through the 19–20 line; check your version).
 
-For one value, a derived view, or a single async fetch, these are complete, zero-dependency, and will never be deprecated out from under you. **SignalTree adds nothing here — it would be pure overhead.**
+For one value, a derived view, or a single async fetch, these are complete, zero-dependency, and will never be deprecated out from under you. **Use them directly for that** — SignalTree isn't trying to wrap a single `signal()`.
 
 What native signals do **not** provide (and won't — they're primitives, not a state library):
 

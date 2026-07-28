@@ -221,8 +221,10 @@ const tree = signalTree({
   },
 });
 
-// FieldTree whose model IS the marker's values signal
-readonly profile = signalForm(tree.$.onboarding.profile);
+// FieldTree whose model IS the marker's values signal.
+// nativeErrors: false pins the plain { kind, message } error shape — since v14
+// the default is branded Angular errors (see the next section).
+readonly profile = signalForm(tree.$.onboarding.profile, { nativeErrors: false });
 
 // Template: <input [formField]="profile.name" />
 // Both APIs stay live:
