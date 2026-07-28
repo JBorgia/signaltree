@@ -96,6 +96,17 @@ export type {
   TimeTravelEntry,
   TimeTravelMethods,
 
+  // Enhancer-added method types. Exported so a DOWNSTREAM LIBRARY can name the
+  // return type of its own `.with(...)` chain in its emitted .d.ts. `.with()`
+  // returns `this & TAdded`, so a helper like
+  // `withStandardEnhancers(tree) { return tree.with(batching()).with(devTools(...)) }`
+  // infers a type referencing these interfaces; if they aren't on the barrel the
+  // consumer's declaration emit can't name them and the helper has to erase its
+  // own return type (losing `.batch()`/`.undo()`/… for its callers). Found via a
+  // real consumer doing exactly that — see docs/audits/2026-07/.
+  DevToolsMethods,
+  OptimizedUpdateMethods,
+
   // Lifecycle
   EnhancerCleanup,
 

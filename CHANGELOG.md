@@ -36,6 +36,31 @@
 
 ### Fixed
 
+- **`DevToolsMethods` and `OptimizedUpdateMethods` are now exported from
+  `@signaltree/core`** — they existed as `export interface` in `lib/types.ts` but
+  were never re-exported from the barrel, while their siblings
+  `BatchingMethods`/`TimeTravelMethods`/`EffectsMethods` were. That inconsistency
+  broke a real consumer pattern: `.with()` returns `this & TAdded`, so a
+  **library** that wraps an enhancer chain —
+
+  ```ts
+  export function withStandardEnhancers<T extends object>(tree, opts) {
+    const enhanced = tree.with(batching()).with(devTools({ treeName }));
+    return opts.isProduction ? enhanced : enhanced.with(timeTravel());
+  }
+  ```
+
+  — infers a return type referencing those interfaces. With them off the barrel,
+  the consumer's own declaration emit cannot name them, so the helper is forced to
+  annotate a narrower return type and **erase the enhancer methods for all its
+  callers** (`.batch()`, `.undo()`, … become unreachable). Found in a downstream
+  library that had done exactly that, with a comment explaining why.
+
+  Verified by compiling a simulated consumer library against the built package:
+  its emitted `.d.ts` now names the types through `import("@signaltree/core")`
+  rather than failing. Purely additive — two type exports, no runtime change.
+
+
 - **`entityMap().computed()` slice names are now typed on `tree.$`**
   (`@signaltree/core`). Reading a slice used to require throwing away type
   safety — `(tree.$.users as any).active()` — which the docs taught as the
