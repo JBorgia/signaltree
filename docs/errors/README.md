@@ -59,3 +59,13 @@ reused.
 | ST2004 | entityMap raw `load` function | (v12.0.0+) `entityMap({ load: fn, staleTime, swr, tags, … })` with a raw function on `load` is rejected — wrap it with `loader()` from `@signaltree/core` and move the loader-family options (`staleTime`/`swr`/`tags`/`persist`/`equal`/`lazy`) into its second argument: `entityMap({ load: loader(fn, { staleTime, tags }) })`. |
 | ST2005 | signalForm + marker asyncValidators | Bridging a `form()` marker that has `asyncValidators` configured into `signalForm()` throws — the marker's async path and Signal Forms' `validateAsync`/`validateHttp` can't both drive one form. Pick one authority: remove `asyncValidators` from the marker and use Signal Forms' `validateAsync`/`validateHttp`, or don't bridge and drive the form through the marker's own `validateField()`/`submit()`. |
 | ST2006 | form() history not from history() | (v13.0.0+) `form({ history: <value> })` was given something other than `history()`'s return value. Import `history` from `@signaltree/core` and pass `history({ capacity, exclude })` — a raw config object on `history` is not accepted. |
+
+## Compile-time symptoms (not `ST` codes)
+
+Some mistakes surface as a **TypeScript error at author time**, so they never get an `ST` code — but
+this page is where people search, so they're routed here. (The `ST` tables above stay append-only;
+this section is deliberately separate from that numbering.)
+
+| Symptom | Cause → fix |
+|---------|-------------|
+| `TS2339: Property 'set' does not exist on type 'NodeAccessor<…>'` | You initialized an object state key as a plain object (`{}` / `{} as Dto`), which makes it a **nested node** (fields become individual leaves), then tried to `.set()` it as a single value. To store an object as one settable leaf, initialize it `null` with the object type: `firmware: null as FirmwareDto \| null` — then `.set(dto)` / `()` work, and consumers default with `?? {}`. Full discussion: [Myth 19](../myths-and-misconceptions.md#myth-19-any-object-i-put-in-the-initial-state-becomes-one-settable-value) · [typing patterns](../guides/typing-patterns.md#object-leaves-vs-nested-nodes-when-set-doesnt-exist) |

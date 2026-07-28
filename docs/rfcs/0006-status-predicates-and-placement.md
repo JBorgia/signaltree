@@ -1,6 +1,9 @@
 # RFC 0006 — Spike: `status()` composite predicates, tree-shaking, and the core-vs-userland line
 
-**Status:** Spike / decision-pending
+**Status:** **Accepted** — decided 2026-07-24 (§5), shipped in 12.1.0. Closed predicate set:
+`notLoaded` / `loading` / `loaded` / `hasError` / `idle` / `settled`.
+_(Header corrected 2026-07-28: it still read "Spike / decision-pending" long after §5 recorded the
+decision and the code shipped it — the analysis below was never actually pending.)_
 **Date:** 2026-07-24
 **Prompted by:** the `status().idle()` addition (a0faff76) — before shipping it in 12.1.0, decide whether composite predicates belong in core at all, whether they bloat, and whether the custom-marker extension path is where any of this should live instead.
 
@@ -73,3 +76,12 @@ composites compose via `.derived()`, different state shapes via a custom
 marker (`registerMarkerProcessor`, `@signaltree/core/authoring`). Placement
 confirmed correct; no core→userland relocation warranted. Stale
 `registerMarkerProcessor` import in the custom-markers guide fixed.
+
+**Consumer evidence (2026-07-28).** The v3 consumer audit
+([`docs/audits/2026-07/v3-consumer-reuse-audit.md`](../audits/2026-07/v3-consumer-reuse-audit.md),
+finding E) found a large real consumer had independently hand-built this exact predicate set
+(`isLoading`/`isLoaded`/`isNotLoaded` helpers over a `LoadingState` enum) — the demand signal §3
+wanted, arriving after the fact. The consumer-facing teaching material this implies now lives in
+[`docs/guides/status-predicates.md`](../guides/status-predicates.md): the predicate table, the
+enum→`status()` migration, the `idle()`-in-guards footgun, and the scope boundary
+(collection / per-entity / service) that determines when `status()` is the wrong tool.

@@ -58,3 +58,46 @@ const store = signalTree({
 
     (Place these examples in code samples and `QUICK_REFERENCE.md` to teach contributors the pattern.)
 ````
+
+### Object leaves vs nested nodes (when `.set()` doesn't exist)
+
+The leaf-vs-node decision comes from the initial **value**, not from the annotation. A plain object
+initializer becomes a **nested node** — its fields are individually reactive leaves — so there is no
+`.set()` on the object itself:
+
+````typescript
+const tree = signalTree({
+  firmware: {} as FirmwareDto,     // → NodeAccessor<FirmwareDto>, no .set()
+});
+
+tree.$.firmware.set(dto);
+// ✗ TS2339: Property 'set' does not exist on type 'NodeAccessor<FirmwareDto>'
+````
+
+When the object is something you swap **wholesale** (a DTO off the wire, a snapshot) rather than edit
+field-by-field, initialize it `null` with the object type so it materializes as a single settable
+leaf:
+
+````typescript
+const tree = signalTree({
+  firmware: null as FirmwareDto | null,   // → CallableWritableSignal<FirmwareDto | null>
+});
+
+tree.$.firmware.set(dto);                 // ✓
+const fw = tree.$.firmware() ?? ({} as FirmwareDto);   // default at the read site
+````
+
+This follows the same principle as the rest of this page — **annotate at the leaf and let inference
+do the rest** — with the addition that the *initial value* also chooses the leaf/node shape. Pick
+deliberately:
+
+| Intent | Initialize as | Result |
+|---|---|---|
+| Per-field reactivity (`tree.$.settings.theme()`) | `{ theme: 'dark', … }` | Nested node |
+| Replace the whole object atomically | `null as Dto \| null` | Settable leaf |
+
+There is no `leaf()`/value marker for this — the `null`-init idiom is the canonical answer. See
+[Myth 19](../myths-and-misconceptions.md#myth-19-any-object-i-put-in-the-initial-state-becomes-one-settable-value)
+for the longer discussion and
+[`docs/errors/README.md`](../errors/README.md#compile-time-symptoms-not-st-codes) for the error-message
+route in.

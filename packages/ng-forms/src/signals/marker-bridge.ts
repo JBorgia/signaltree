@@ -4,11 +4,12 @@
  * Turns a SignalTree `form()` marker into an Angular 22 Signal Forms
  * `FieldTree` that shares the marker's values signal as its model — one
  * source of truth, no copying, no sync loops. The marker's sync validators
- * are installed as Signal Forms validators (errors carry the validator's
- * semantic `kind` — `'required'`, `'email'`, … — or `'signalTree'` for
- * untagged custom validators; with `nativeErrors: true` built-ins emit
- * Angular's branded error classes), and the marker's own `errors()`/`valid()`
- * stay live when edits arrive through the FieldTree.
+ * are installed as Signal Forms validators (built-in validator failures emit
+ * Angular's branded error classes by default since v14; `nativeErrors: false`
+ * restores the plain `{ kind, message }` shape, where `kind` is the validator's
+ * semantic kind — `'required'`, `'email'`, … — or `'signalTree'` for untagged
+ * custom validators), and the marker's own `errors()`/`valid()` stay live when
+ * edits arrive through the FieldTree.
  *
  * **Requires Angular 22+** (`@angular/forms/signals`).
  *
@@ -40,23 +41,6 @@ import {
   type ValidationError,
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
-
-declare const ngDevMode: boolean | undefined;
-
-// One-time (per module load) advisory when `nativeErrors` is left unset —
-// warns the default flips in v13 so callers can pin the shape they want now.
-let warnedNativeErrorsDefault = false;
-
-/**
- * Test-only: reset the one-time `nativeErrors` advisory flag. Exported from
- * the module (NOT the package barrel) so specs can exercise the first-call
- * behavior deterministically; the module-level flag is otherwise consumed by
- * whichever test runs first. Do not use in application code.
- * @internal
- */
-export function __resetNativeErrorsAdvisoryForTests(): void {
-  warnedNativeErrorsDefault = false;
-}
 
 /** Marker-side validator shape (see `Validator` in @signaltree/core). */
 type MarkerValidator = ((
@@ -125,13 +109,15 @@ export interface SignalFormOptions<
    * Custom/untagged validators still emit
    * `{ kind: validatorKind ?? 'signalTree', message }` in both modes.
    *
-   * Default `false` (plain objects — the pre-11.6 behavior). The default
-   * was announced (11.6.0) to flip in the next major, but v12 shipped with it
-   * still `false` — the flip is now EXPLICITLY POSTPONED to v13 (an external
-   * post-release audit caught the promise miss, 2026-07-24). If your code
-   * depends on either error shape, set the option explicitly rather than
-   * relying on the default — leaving it unset emits a one-time dev-mode
-   * `console.info` advisory about the upcoming v13 flip.
+   * **Default `true` since v14** — the flip announced in 11.6.0 and deferred
+   * through 12.x and 13.x. Branded errors are the Angular-native shape, so
+   * they are the default a fresh caller (human or agent) should get.
+   *
+   * Set `nativeErrors: false` to keep the pre-v14 plain `{ kind, message }`
+   * objects. `kind` and `message` are present in BOTH shapes, so code reading
+   * only those two keeps working; narrowing on the plain object shape,
+   * serializing errors, or deep-equalling them in tests is what needs updating
+   * (see `docs/guides/migration-v13-v14.md`).
    */
   nativeErrors?: boolean;
 }
@@ -184,14 +170,15 @@ function brandedError(
  *
  * - The FieldTree's model IS the marker's values signal — edits through
  *   either API are immediately visible to the other.
- * - The marker's sync validators run as Signal Forms validators; errors
- *   appear on field state as `{ kind, message }`. `kind` is the validator's
- *   `validatorKind` when it has one (all built-in `validators.*` set this:
- *   `'required'`, `'email'`, `'minLength'`, …; `validators.when` forwards
- *   the wrapped validator's kind); custom validators without a
- *   `validatorKind` fall back to the generic `'signalTree'`. With
- *   `{ nativeErrors: true }`, built-in validator failures are emitted as
- *   Angular's branded error classes instead (see
+ * - The marker's sync validators run as Signal Forms validators. Since v14,
+ *   built-in validator failures are emitted as Angular's branded error classes
+ *   (`requiredError()`, `minError()`, …) by default. With
+ *   `{ nativeErrors: false }` they appear as plain `{ kind, message }` instead,
+ *   where `kind` is the validator's `validatorKind` when it has one (all
+ *   built-in `validators.*` set this: `'required'`, `'email'`, `'minLength'`, …;
+ *   `validators.when` forwards the wrapped validator's kind). Custom validators
+ *   without a `validatorKind` always emit
+ *   `{ kind: 'signalTree', message }` — both modes (see
  *   {@link SignalFormOptions.nativeErrors}).
  * - The marker's `errors()`/`valid()` signals are computed over the shared
  *   model, so FieldTree-side writes are reflected immediately.
@@ -223,25 +210,9 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
 
   const injector = options.injector ?? inject(Injector);
   const validatorConfig = internals.__config?.validators ?? {};
-  const nativeErrors = options.nativeErrors ?? false;
-
-  // Advisory (not a warning — the default is safe): nativeErrors is false in
-  // 12.x and flips to true in v13. If the caller hasn't chosen, tell them once
-  // so they can pin the shape now rather than be surprised by the v13 flip.
-  // Explicitly setting either value silences it.
-  if (
-    options.nativeErrors === undefined &&
-    !warnedNativeErrorsDefault &&
-    (typeof ngDevMode === 'undefined' || ngDevMode)
-  ) {
-    warnedNativeErrorsDefault = true;
-    console.info(
-      '[SignalTree] signalForm(): `nativeErrors` defaults to false in 12.x ' +
-        'and flips to true in v13. Set it explicitly to opt into branded ' +
-        'Angular validation errors now, or pin the plain { kind, message } ' +
-        'shape — either choice silences this notice.'
-    );
-  }
+  // v14: branded Angular errors are the default. Pass `nativeErrors: false`
+  // for the pre-v14 plain `{ kind, message }` shape.
+  const nativeErrors = options.nativeErrors ?? true;
 
   // Single async authority, enforced structurally (v12). Async validation is
   // NOT unified between the marker and Signal Forms, and there is no way to run

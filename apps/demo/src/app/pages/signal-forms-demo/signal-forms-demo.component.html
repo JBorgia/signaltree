@@ -167,8 +167,9 @@
         <p class="note">
           <code>nativeErrors: true</code> → Angular branded validation errors
           (<code>instanceof</code> the native error type, e.g. the
-          <code>NgValidationError</code> family); default is <code>false</code> in
-          12.x — flips to <code>true</code> in v13.
+          <code>NgValidationError</code> family). This is the <strong>default
+          since v14</strong>; pass <code>nativeErrors: false</code> for the
+          pre-v14 plain <code>&#123; kind, message &#125;</code> shape.
         </p>
       </article>
 

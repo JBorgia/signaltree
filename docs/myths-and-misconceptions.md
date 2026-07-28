@@ -436,6 +436,62 @@ The deprecated `is`-prefix accessors return the **same Signal instance** as the 
 
 ---
 
+## Myth 19: "Any object I put in the initial state becomes one settable value."
+
+**Source of confusion:** "State as shape" is read as "whatever I write, I get back with `.set()` on
+it." For a plain object initializer, that isn't what happens — and the failure is a compile error
+with a confusing message rather than anything at runtime.
+
+**The truth:** SignalTree decides leaf-vs-node from the initial **value**. A plain object becomes a
+**nested node** whose fields are individually reactive leaves; it is *not* a single settable value:
+
+```typescript
+const tree = signalTree({
+  firmware: {} as FirmwareDto,   // ← becomes a NODE, not a leaf
+});
+
+tree.$.firmware.set(dto);
+// ✗ TS2339: Property 'set' does not exist on type 'NodeAccessor<FirmwareDto>'
+```
+
+That's correct behavior — node-ness is what gives you `tree.$.firmware.version()` granularity — but
+it's the wrong shape when the object is a DTO you replace **wholesale** (a payload off the wire, a
+device descriptor, a snapshot) and never edit field-by-field.
+
+**To keep an object as one settable leaf, initialize it `null` with the object type:**
+
+```typescript
+const tree = signalTree({
+  firmware: null as FirmwareDto | null,   // ← a LEAF holding an object
+});
+
+tree.$.firmware.set(dto);        // ✓ works — replaces the whole value
+tree.$.firmware();               // FirmwareDto | null
+// consumers default at the read site:
+const fw = tree.$.firmware() ?? ({} as FirmwareDto);
+```
+
+Why this works: the leaf/node decision is a runtime `value && typeof value === 'object'` test, and
+`null` isn't an object — so the key materializes as a writable signal whose type is the annotation
+you gave it.
+
+**There is no `leaf()` / value marker** to declare "treat this object as one value" — the `null`-init
+idiom is the canonical answer, deliberately, rather than adding API surface for it.
+
+**Which one do you want?**
+
+| You want | Initialize as | You get |
+|---|---|---|
+| Per-field reactivity (`tree.$.settings.theme()`) | `{ theme: 'dark', … }` | Nested node, fields are leaves |
+| Replace the whole object atomically | `null as Dto \| null` | One settable leaf |
+
+**Where this bites hardest:** AI-generated code. `{} as SomeDto` is a natural thing for an agent to
+emit for "an object I'll fill in later," and nothing in the type it sees warns that `.set()` won't
+be there. If you hit `TS2339 … NodeAccessor`, this is why — see
+[`docs/errors/README.md`](errors/README.md#compile-time-symptoms-not-st-codes).
+
+---
+
 ## Why this page exists
 
 Every error catalogued above is one that **AI coding agents will continue to make** until our docs surface area gives them a higher-quality alternative to retrieve. The cycle:

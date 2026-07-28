@@ -1,3 +1,57 @@
+## Unreleased (next major — v14)
+
+### Fixed
+
+- **`entityMap().computed()` slice names are now typed on `tree.$`**
+  (`@signaltree/core`). Reading a slice used to require throwing away type
+  safety — `(tree.$.users as any).active()` — which the docs taught as the
+  official access pattern. `TreeNode<T>` now threads the builder's accumulated
+  slice record through materialization, so `tree.$.users.active()` is
+  `Signal<User[]>` with no cast, `.computed()` chains type each name
+  independently, and loader-backed collections keep their loader surface
+  alongside the slices.
+
+  Type-only — the runtime already attached slices to the entity signal; nothing
+  about the emitted JS changes. A slice-free `entityMap()` still resolves to
+  exactly `EntitySignal<E, K>` (asserted as a regression row in
+  `marker-resolution.typing.spec.ts`, alongside rows for chained slices and the
+  loading variant).
+
+  The subtlety worth recording: `.computed()` accumulates slices by
+  intersection over a `Record<string, never>` seed, so a collection with two
+  slices types as `Record<string, never> & Record<'a', A> & Record<'b', B>`.
+  A bare `keyof` on that is `string`, and an `extends Record<string, never>`
+  emptiness test matches it — so the implementation filters the index signature
+  out (`LiteralKeys`) before mapping. Getting this wrong silently grafts an
+  index signature onto every plain collection.
+
+### Changed (BREAKING)
+
+- **`signalForm()`: `nativeErrors` now defaults to `true`** (`@signaltree/ng-forms`).
+  Built-in marker validator failures (`required`, `email`, `min`, `max`,
+  `minLength`, `maxLength`, `pattern`) bridged into Angular Signal Forms are
+  emitted as Angular's **branded** validation errors (`requiredError()`,
+  `minError(min)`, …) — so `error instanceof NgValidationError` holds and
+  constraint values are typed properties — instead of plain `{ kind, message }`
+  objects. This is the flip announced in 11.6.0 and deferred through 12.x and
+  13.x; branded errors are the Angular-native shape, so they are what a fresh
+  caller should get by default.
+
+  **Migration:** code that reads `error.kind` / `error.message` off *built-in*
+  validator failures, or narrows on the plain object shape, either passes
+  `nativeErrors: false` to keep the pre-v14 behavior, or migrates to the branded
+  classes (`error.kind` still works on branded errors; `instanceof` checks and
+  typed constraint props like `.min` / `.pattern` become available).
+  Custom/untagged validators are **unaffected** — they emit
+  `{ kind: 'signalTree', message }` in both modes, as before.
+
+### Removed
+
+- The one-time dev-mode `console.info` advisory about the upcoming `nativeErrors`
+  flip, and its test-only `__resetNativeErrorsAdvisoryForTests` export
+  (module-internal, never on the package barrel). The flip has happened; the
+  notice has no remaining purpose.
+
 ## 13.1.1 (2026-07-25)
 
 ### Fixed

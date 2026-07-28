@@ -2,6 +2,27 @@
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
+## 14.0.0 (unreleased)
+
+> One breaking change: `signalForm()`'s `nativeErrors` option now defaults to
+> `true`, so built-in validator failures bridged into Angular Signal Forms are
+> Angular's branded error classes rather than plain `{ kind, message }` objects.
+> Full detail and before/after:
+> [`docs/guides/migration-v13-v14.md`](migration-v13-v14.md).
+
+**Breaking (one option default):**
+
+- `signalForm(marker, { nativeErrors })` defaults to `true` (was `false`) — the
+  flip announced in 11.6.0 and deferred through 12.x/13.x. `kind` and `message`
+  are present in both shapes, so code reading only those keeps working. Pass
+  `nativeErrors: false` to keep the pre-v14 plain objects. Custom/untagged
+  validators are unaffected (`{ kind: 'signalTree', message }` in both modes).
+
+**Removed:**
+
+- The one-time dev-mode `console.info` advisory about the upcoming flip, and its
+  test-only `__resetNativeErrorsAdvisoryForTests` companion.
+
 ## 13.0.0
 
 > RFC 0007's packaging principle applied: two capabilities that never

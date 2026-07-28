@@ -109,8 +109,8 @@ export class SignalFormsDemoComponent {
 
   readonly profile = signalForm(this.tree.$.onboarding.profile, {
     injector: this.injector,
-    // Explicit (not left to default) so the one-time nativeErrors advisory
-    // stays quiet — this page deliberately shows both shapes side by side.
+    // Explicit opt-OUT: the default is branded since v14, and this page
+    // deliberately shows both shapes side by side (see nativeAccount below).
     nativeErrors: false,
   });
 
@@ -246,8 +246,9 @@ const tree = signalTree({
   }),
 });
 
-// nativeErrors: true → built-in validator failures are Angular's BRANDED
-// error classes, not plain { kind, message } objects.
+// Since v14 this is the DEFAULT: built-in validator failures are Angular's
+// BRANDED error classes, not plain { kind, message } objects. (Passed
+// explicitly here for clarity; { nativeErrors: false } opts back out.)
 const account = signalForm(tree.$.account, { nativeErrors: true });
 
 const err = account.age().errors()[0];

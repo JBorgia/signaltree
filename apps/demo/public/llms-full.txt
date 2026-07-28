@@ -261,10 +261,15 @@ store.$.users.find((u) => u.role === 'admin'); // Signal<User | undefined>
 // entity changes (fan-out 1), not on every collection mutation.
 store.$.users.byId(id)?.name(); // Signal-backed field read
 
-// Computed slices: materialized at runtime; slice names aren't on the static
-// tree.$ type yet, so read via a cast.
-// entityMap<User>().computed('active', (all) => all.filter((u) => u.active))
-(store.$.users as any).active(); // Signal<User[]>
+// Computed slices: attach a derived projection to the collection AT DECLARATION.
+// Typed on tree.$ since v14 — no cast. Chainable; each name typed independently.
+// entityMap<User>()
+//   .computed('active', (all) => all.filter((u) => u.active))
+//   .computed('total', (all) => all.length)
+store.$.users.active(); // Signal<User[]>
+store.$.users.total(); // Signal<number>
+// `compute` sees only this collection's E[] — a projection that needs other
+// state (another collection, an external id signal) stays a normal computed().
 ```
 
 `entityMap` can be placed at any depth: `$.tickets.entities`, `$.users.byOrg[orgId].members`, etc.
@@ -583,7 +588,7 @@ class ProfileComponent {
 }
 ```
 
-Options (`SignalFormOptions`): `injector` (required only outside an injection context), `nativeErrors`, `schema`, and (v13.1+) `name`/`submission`/`experimentalWebMcpTool`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. Default is `false` (plain `{ kind, message }` objects). The 11.6.0 announcement that the default would flip in v12 was NOT kept — the flip is explicitly postponed to v13; set `nativeErrors` explicitly if you depend on either shape.
+Options (`SignalFormOptions`): `injector` (required only outside an injection context), `nativeErrors`, `schema`, and (v13.1+) `name`/`submission`/`experimentalWebMcpTool`. With **`{ nativeErrors: true }`**, failures from built-in marker validators are emitted as **Angular's branded validation errors** (`requiredError()`, `minError(min)`, …) — `error instanceof NgValidationError` holds and constraint values are typed properties (`.min`, `.maxLength`, `.pattern`, …). `NgValidationError` itself imports from `@angular/forms/signals` (Angular's package, not `@signaltree/*`). Custom/untagged validators still emit plain `{ kind, message }` in both modes. **Default is `true` since v14** (branded errors — the Angular-native shape; announced in 11.6.0, deferred through 12.x/13.x, flipped in v14). Pass `nativeErrors: false` for the pre-v14 plain `{ kind, message }` objects.
 
 **Single-authority async rule:** async validation is **NOT unified** between the two systems. The marker's `asyncValidators`/`validateField()`/`submit()` path and Signal Forms' `validateAsync`/`validateHttp` are independent — pick ONE as the authority for a given bridged form (using both on one field can leave the marker's `valid()` and the FieldTree's `valid()` disagreeing during an async validation window). A one-time dev warning fires when a bridged marker has `asyncValidators` configured.
 
