@@ -916,7 +916,15 @@ declare const vi: { fn: (impl?: any) => any; mock: (mod: string, factory?: any) 
     const program2 = ts.createProgram(p2.files, compilerOptions, host2);
 
     for (const fname of p2.files) {
+      // `files[0]` is the ambient stub .d.ts, which has no backing block —
+      // pass 1 skips it by name and pass 2 must too. Without this, a pass-2 run
+      // where TS declines to load the ambient file falls into the `!source`
+      // branch with `block === undefined` and dies on `block.filePath`,
+      // reporting a crash instead of the real diagnostics. Pass 2 only runs when
+      // pass 1 found "Cannot find name" errors, which is why this stayed latent.
+      if (fname === ambientPath) continue;
       const block = p2.fileToBlock.get(fname);
+      if (!block) continue;
       const source = program2.getSourceFile(fname);
       if (!source) {
         totalErrors++;
