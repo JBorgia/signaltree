@@ -95,6 +95,56 @@ export interface NodeAccessor<T> {
   (updater: (current: T) => T): void;
 }
 
+/**
+ * The literal (declared) keys of `S`, discarding any `string`/`number` index
+ * signature.
+ *
+ * Needed because `entityMap()` seeds its slice record as `Record<string, never>`
+ * and `.computed()` accumulates by intersection — so two slices on one
+ * collection type as `Record<string, never> & Record<'a', A> & Record<'b', B>`.
+ * A bare `keyof` on that yields `string`, which would map to a junk index
+ * signature instead of the two real slice names, and an `extends
+ * Record<string, never>` emptiness test wrongly matches it (the intersection is
+ * still assignable to the seed). Filtering the index signature out is what
+ * makes both the emptiness check and the key mapping correct.
+ */
+type LiteralKeys<S> = keyof {
+  [K in keyof S as string extends K
+    ? never
+    : number extends K
+    ? never
+    : K]: S[K];
+};
+
+/**
+ * Materialize an `entityMap().computed()` slice record onto the collection's
+ * signal type.
+ *
+ * `entityMap()`'s builders track their slices at the type level in a phantom
+ * `__sliceTypes` property (`EntityMapBuilder`/`LoadingEntityMapBuilder` in
+ * `markers/entity-map.ts`). The runtime already attaches each slice as a
+ * `computed` on the materialized entity signal, so `tree.$.plants.byUrl()` has
+ * always WORKED — this type is what makes it *typed* rather than requiring
+ * `(tree.$.plants as any).byUrl()`.
+ *
+ * A slice-free collection has no literal slice keys and resolves to exactly
+ * `EntitySignal<E, K>`, unchanged.
+ *
+ * Declared here rather than reusing `EntitySignalWithSlices` because
+ * `markers/entity-map.ts` imports from this file — the dependency runs one way.
+ */
+type ApplyComputedSlices<TMarker, TBase> = TMarker extends {
+  __sliceTypes?: infer S;
+}
+  ? [LiteralKeys<NonNullable<S>>] extends [never]
+    ? TBase
+    : TBase & {
+        readonly [P in LiteralKeys<NonNullable<S>>]: Signal<
+          NonNullable<S>[P]
+        >;
+      }
+  : TBase;
+
 // TreeNode represents the runtime shape of the tree where properties are
 // accessed by string keys at runtime. Previously this was strictly mapped
 // to `keyof T` which caused incompatibilities across packages when an
@@ -105,9 +155,9 @@ export interface NodeAccessor<T> {
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
-    ? LoadingEntitySignal<LE, LK, LP>
+    ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
+    ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>

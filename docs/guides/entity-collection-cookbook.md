@@ -52,7 +52,73 @@ ngOnInit() { this.plants.load(); }         // no-op if fresh or already in-fligh
 
 Five subsystems calling `plants.load()` in the same tick produce **one** HTTP request.
 
-## 2. Let the browser handle ETags
+## 2. Derived slices & lookups (don't hand-roll these)
+
+A collection's read surface is bigger than `all()` / `loading()` / `error()`. Two features cover
+almost every projection people write by hand in a separate derived layer.
+
+### Computed slices — attach the projection at the declaration
+
+`.computed(name, fn)` hangs a derived signal off the collection itself, so the projection lives next
+to the data instead of in a distant `computed`:
+
+```typescript
+plants: entityMap<PlantDto, string>({
+  selectId: (p) => p.url,
+  load: loader(() => this.http.get<PlantDto[]>('/api/plants'), { staleTime: '30m' }),
+})
+  .computed('byUrl', (all) => Object.fromEntries(all.map((p) => [p.url, p])))
+  .computed('activeCount', (all) => all.filter((p) => p.active).length),
+```
+
+Read them straight off the tree — **fully typed since v14, no cast**:
+
+```typescript
+this.store.tree.$.plants.byUrl();       // Signal<Record<string, PlantDto>>
+this.store.tree.$.plants.activeCount(); // Signal<number>
+```
+
+`.computed()` chains, each name is typed independently, and slices work on **both** plain and
+loader-backed collections — the loader surface (`load()`, `loading()`, …) stays available alongside
+them.
+
+> Before v14 slice names weren't on the static `tree.$` type and the docs told you to read them via
+> `(tree.$.plants as any).byUrl()`. That cast is gone; if you see it in older code, delete it.
+
+### `find` / `where` — reactive lookups without a wrapper
+
+```typescript
+const active = store.tree.$.plants.find((p) => p.active);          // Signal<PlantDto | undefined>
+const inRegion = store.tree.$.plants.where((p) => p.regionUrl === url); // Signal<PlantDto[]>
+```
+
+Reach for these when you want a **standalone reactive** lookup. A one-shot imperative read is fine
+as-is and doesn't need a signal:
+
+```typescript
+const first = store.tree.$.plants.all().find((p) => p.active); // PlantDto | undefined — fine
+```
+
+`.all().find(...)` inside a `computed()` is also correct — the accessors just save you the wrapper.
+
+### When a slice is the wrong tool
+
+A slice's `compute` receives **only that collection's `E[]`**. Anything that reads other state — a
+second collection, an external id signal, a filter the user typed — cannot be a slice and stays a
+normal `computed()` / `.derived()`:
+
+```typescript
+// selectedPlantId lives elsewhere in the tree → NOT a slice
+readonly selectedPlant = computed(() => {
+  const id = this.store.tree.$.selectedPlantId();
+  return id ? this.store.tree.$.plants.byId(id)?.() ?? null : null;
+});
+```
+
+That boundary is the whole rule: **self-contained projection of one collection → slice; anything
+cross-cutting → derived.**
+
+## 3. Let the browser handle ETags
 
 You write no ETag code. Return `Cache-Control` + `ETag` from the server; the browser stores the
 response and replays `If-None-Match` automatically on the next `HttpClient.get` to the same URL.
@@ -72,7 +138,7 @@ transport would).
 > Do **not** try to move `If-None-Match` handling into the loader. That re-implements, worse, what
 > the platform already does — and it's explicitly out of scope for core (RFC 0002 §3).
 
-## 3. Push invalidation over SSE
+## 4. Push invalidation over SSE
 
 When the backend can tell you "plants changed", flip freshness with `invalidateTag` and let the
 next read (or an explicit `refresh()`) do the fetch.
@@ -99,7 +165,7 @@ export class PlantStore {
 events is cheap. Call `.refresh()` when you want an eager refetch; omit it to defer until the view
 next reads the collection.
 
-## 4. Push invalidation over SignalR (`@signaltree/realtime` / TruckTrax-style)
+## 5. Push invalidation over SignalR (`@signaltree/realtime` / TruckTrax-style)
 
 Same shape, different transport:
 
@@ -110,7 +176,7 @@ connection.on('PlantsChanged', () => invalidateTag(this.tree, 'plants'));
 Because `invalidateTag` walks `tree.$` for tagged collections, one event can invalidate several
 collections that share a tag (e.g. `tags: ['catalog']` on both `plants` and `seeds`).
 
-## 5. Offline-first (hydrate-then-revalidate)
+## 6. Offline-first (hydrate-then-revalidate)
 
 Seed instantly from IndexedDB on startup, then revalidate in the background:
 
@@ -135,7 +201,7 @@ On first access the collection paints the persisted snapshot (marked stale, so `
 `false` until the network confirms), fires `load()`, and swaps in fresh rows on success — while
 `swr: true` keeps serving the old rows during the revalidation instead of blanking the view.
 
-## 6. Scoped collections (parameterized by region, customer, tenant, …)
+## 7. Scoped collections (parameterized by region, customer, tenant, …)
 
 Reach for the scoped form (v11.4+, [RFC 0003](../rfcs/0003-keyed-entity-collection.md)) when a
 collection is scoped to something that changes at runtime — a region, a customer, a tenant — and
@@ -172,7 +238,7 @@ between two scopes refetches each time rather than serving a cached second scope
 multi-scope LRU (instant back-toggle between recently seen scopes) is explicitly deferred — see RFC
 0003 §5 — and layers on top of this without an API break if it ships later.
 
-## 7. Imperative error handling
+## 8. Imperative error handling
 
 Template/signal consumers want `load()`'s always-resolves guarantee (no unhandled rejection just
 from reading a collection), but a route guard, resolver, or other imperative call site usually
@@ -210,5 +276,5 @@ failure (see [RFC 0004](../rfcs/0004-v12-optimal-iteration.md) §3 V-P4).
 
 - **Don't** stack TanStack Query / a second document cache alongside `entityMap` — you'd get the
   triple-cache duplication `entityMap`'s cache-aware loading exists to remove.
-- **Don't** put conditional-GET logic in the loader (see §2).
+- **Don't** put conditional-GET logic in the loader (see §3).
 - **Don't** hand-flip `status()` from your SSE handler — that's what `invalidateTag` replaces.

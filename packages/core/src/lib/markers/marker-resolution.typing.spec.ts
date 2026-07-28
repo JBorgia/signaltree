@@ -16,6 +16,8 @@
  * unexported `TypedSignalTree`) are not consumer-reachable; their marker-
  * resolution gap is tracked as an internal-only finding, not asserted here.
  */
+import type { Signal } from '@angular/core';
+
 import type {
   AsyncQuerySignal,
   AsyncSourceSignal,
@@ -30,6 +32,7 @@ import {
   asyncSource,
   entityMap,
   form,
+  loader,
   signalTree,
   status,
   stored,
@@ -96,6 +99,51 @@ export type _MarkerResolutionChecks = [
   // plain + union leaves stay callable writable signals
   Expect<Equal<$['count'], CallableWritableSignal<number>>>,
   Expect<Equal<$['selectedId'], CallableWritableSignal<number | null>>>
+];
+
+// --- `.computed()` slice names are typed on `tree.$` (no `as any`) -----------
+// The runtime has always attached slices to the materialized entity signal;
+// these rows gate that the TYPES survive materialization. Before
+// `ApplyComputedSlices`, `$.plants.byUrl` did not exist on the static type and
+// every read needed `(tree.$.plants as any).byUrl()`.
+const sliceTree = signalTree({
+  plants: entityMap<User, number>().computed('byId2', (all) =>
+    Object.fromEntries(all.map((u) => [u.id, u]))
+  ),
+  chained: entityMap<User, number>()
+    .computed('names', (all) => all.map((u) => u.name))
+    .computed('total', (all) => all.length),
+});
+type Slice$ = typeof sliceTree.$;
+
+export type _ComputedSliceChecks = [
+  // a slice resolves to Signal<R> with R inferred from the compute fn
+  Expect<
+    Equal<Slice$['plants']['byId2'], Signal<{ [k: string]: User }>>
+  >,
+  // the base EntitySignal surface survives alongside the slice
+  Expect<Equal<Slice$['plants']['all'], Signal<User[]>>>,
+  // chained slices accumulate — both names present, independently typed
+  Expect<Equal<Slice$['chained']['names'], Signal<string[]>>>,
+  Expect<Equal<Slice$['chained']['total'], Signal<number>>>,
+  // REGRESSION: a slice-free collection stays EXACTLY EntitySignal — the
+  // `Record<string, never>` default must not graft an index signature on
+  Expect<Equal<$['users'], EntitySignal<User, number>>>
+];
+
+// Slices on a LOADER-BACKED collection resolve too (the loading branch of
+// TreeNode is a separate arm — `LoadingEntitySignal`, not `EntitySignal`).
+const loadingSliceTree = signalTree({
+  remote: entityMap<User, number>({
+    load: loader(() => Promise.resolve([] as User[])),
+  }).computed('names', (all) => all.map((u) => u.name)),
+});
+type Loading$ = typeof loadingSliceTree.$;
+
+export type _LoadingSliceChecks = [
+  Expect<Equal<Loading$['remote']['names'], Signal<string[]>>>,
+  // the loader surface survives alongside the slice
+  Expect<Equal<Loading$['remote']['loading'], Signal<boolean>>>
 ];
 
 // Internal (unexported) variants — imported relatively so they're gated too.
