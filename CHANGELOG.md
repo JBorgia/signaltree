@@ -1,4 +1,4 @@
-## Unreleased — 13.2.0
+## 13.2.0 (2026-07-28)
 
 > **Heads-up for `signalForm()` users:** this release changes the **default error
 > shape** emitted by the Angular Signal Forms bridge (`nativeErrors` now defaults
@@ -65,12 +65,16 @@
   consumer code (`Equal<$['users'], EntitySignal<User, number>>`) would now see
   the slice-bearing type on a collection that has slices.
 
-### Removed
+### Changed (dev-mode notice)
 
-- The one-time dev-mode `console.info` advisory about the upcoming `nativeErrors`
-  flip, and its test-only `__resetNativeErrorsAdvisoryForTests` export
-  (module-internal, never on the package barrel). The flip has happened; the
-  notice has no remaining purpose.
+- The one-time dev-mode `console.info` about the *upcoming* `nativeErrors` flip is
+  replaced by one about the *completed* flip: an unset caller is now told once that
+  the default is `true` and how to opt out. Kept precisely because the flip lands
+  in a **minor** — a caller who upgrades without reading this file would otherwise
+  get different objects out of `field().errors()` with no signal at all. Setting
+  the option either way silences it, and it is `ngDevMode`-gated so production
+  pays nothing. (`__resetNativeErrorsAdvisoryForTests` is renamed
+  `__resetNativeErrorsNoticeForTests`; module-internal, never on the barrel.)
 
 ## 13.1.1 (2026-07-25)
 
