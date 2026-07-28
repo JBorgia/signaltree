@@ -12,7 +12,11 @@ describe('[ST2007] derived value dropped — dev-mode guardrail', () => {
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
-      signalTree({ w: { n: 1 } }).derived(() => ({ w: { bad: foreign } })).$.w;
+      const tree = signalTree({ w: { n: 1 } }).derived(() => ({
+        w: { bad: foreign },
+      }));
+      // Touch `$` so markers materialize and the derived queue is applied.
+      expect(tree.$.w).toBeDefined();
       const msgs = warn.mock.calls.map((c) => String(c[0]));
       const hit = msgs.find((m) => m.includes('ST2007'));
       expect(hit).toBeDefined();
@@ -26,7 +30,11 @@ describe('[ST2007] derived value dropped — dev-mode guardrail', () => {
   it('warns generically for a plainly invalid derived value', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
-      signalTree({ w: { n: 1 } }).derived(() => ({ w: { bad: 42 as never } })).$.w;
+      const tree = signalTree({ w: { n: 1 } }).derived(() => ({
+        w: { bad: 42 as never },
+      }));
+      // Touch `$` so markers materialize and the derived queue is applied.
+      expect(tree.$.w).toBeDefined();
       const hit = warn.mock.calls
         .map((c) => String(c[0]))
         .find((m) => m.includes('ST2007'));
