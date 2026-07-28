@@ -1,4 +1,38 @@
-## Unreleased — 13.2.0 (minor)
+## Unreleased — 13.2.0
+
+> **Heads-up for `signalForm()` users:** this release changes the **default error
+> shape** emitted by the Angular Signal Forms bridge (`nativeErrors` now defaults
+> to `true`). That is a behavior change in a minor — see "Changed" below. Pass
+> `nativeErrors: false` to keep the previous shape. Everything else in 13.2 is
+> additive. Upgrade notes: [`docs/guides/migration-v13.2.md`](docs/guides/migration-v13.2.md).
+
+### Changed
+
+- **`signalForm()`: `nativeErrors` now defaults to `true`** (`@signaltree/ng-forms`).
+  Built-in marker validator failures (`required`, `email`, `min`, `max`,
+  `minLength`, `maxLength`, `pattern`) bridged into Angular Signal Forms are
+  emitted as Angular's **branded** validation errors (`requiredError()`,
+  `minError(min)`, …) — so `error instanceof NgValidationError` holds and
+  constraint values are typed properties — instead of plain `{ kind, message }`
+  objects. This is the flip announced in 11.6.0 and deferred through 12.x and
+  13.x; branded errors are the Angular-native shape, so they are what a fresh
+  caller should get by default.
+
+  **Why a minor, not a major:** the flip was announced two versions ago and has
+  been emitting a one-time dev-mode notice for callers who left the option unset
+  ever since, so it is not arriving unannounced. The affected surface is narrow —
+  the `signalForm()` marker overload requires Angular 22 — and opting out is a
+  one-word change. Being explicit about it here rather than hiding it in a major
+  is the trade being made.
+
+  **Migration:** `kind` and `message` are present on **both** shapes, so code
+  reading only those two is unaffected. What needs updating: narrowing on the
+  plain object shape, serializing errors (a branded error is a class instance, so
+  `JSON.stringify` output differs), and deep-equality assertions in tests
+  (`toEqual({ kind, message })` against a branded instance fails — assert on
+  properties or `toBeInstanceOf`). Or pass `nativeErrors: false` to keep the
+  pre-13.2 behavior. Custom/untagged validators are **unaffected** — they emit
+  `{ kind: 'signalTree', message }` in both modes, as before.
 
 ### Fixed
 
@@ -25,35 +59,11 @@
   out (`LiteralKeys`) before mapping. Getting this wrong silently grafts an
   index signature onto every plain collection.
 
-  Shipped as a **minor**, not held for v14: it adds no runtime surface and makes
-  an already-shipped primitive usable, so there's no reason for consumers to
-  wait on a breaking release for it. Strictly, resolved types gain an
-  intersection member — assignments to `EntitySignal<E, K>` still work (an
-  intersection is assignable to its member), but an exact-type assertion in
+  No runtime surface is added, so this needed no major. Strictly, resolved types
+  gain an intersection member — assignments to `EntitySignal<E, K>` still work
+  (an intersection is assignable to its member), but an exact-type assertion in
   consumer code (`Equal<$['users'], EntitySignal<User, number>>`) would now see
   the slice-bearing type on a collection that has slices.
-
-## Unreleased (next major — v14)
-
-### Changed (BREAKING)
-
-- **`signalForm()`: `nativeErrors` now defaults to `true`** (`@signaltree/ng-forms`).
-  Built-in marker validator failures (`required`, `email`, `min`, `max`,
-  `minLength`, `maxLength`, `pattern`) bridged into Angular Signal Forms are
-  emitted as Angular's **branded** validation errors (`requiredError()`,
-  `minError(min)`, …) — so `error instanceof NgValidationError` holds and
-  constraint values are typed properties — instead of plain `{ kind, message }`
-  objects. This is the flip announced in 11.6.0 and deferred through 12.x and
-  13.x; branded errors are the Angular-native shape, so they are what a fresh
-  caller should get by default.
-
-  **Migration:** code that reads `error.kind` / `error.message` off *built-in*
-  validator failures, or narrows on the plain object shape, either passes
-  `nativeErrors: false` to keep the pre-v14 behavior, or migrates to the branded
-  classes (`error.kind` still works on branded errors; `instanceof` checks and
-  typed constraint props like `.min` / `.pattern` become available).
-  Custom/untagged validators are **unaffected** — they emit
-  `{ kind: 'signalTree', message }` in both modes, as before.
 
 ### Removed
 

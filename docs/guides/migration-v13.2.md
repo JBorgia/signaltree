@@ -1,16 +1,21 @@
-# Migrating to SignalTree v14
+# Upgrading to SignalTree 13.2
 
-v14 carries **one breaking change**: `signalForm()`'s `nativeErrors` option now
-defaults to `true`, so built-in validator failures bridged into Angular Signal
-Forms arrive as Angular's branded error classes instead of plain
-`{ kind, message }` objects.
+13.2 carries **one behavior change** plus one type-level improvement.
 
-This is the flip announced in 11.6.0, deferred through 12.x and 13.x, and now
-made. If your app doesn't use `@signaltree/ng-forms`'s `signalForm()` bridge, or
-already passes `nativeErrors` explicitly, **v14 is a no-op for you** — jump to
-[§3](#3-nothing-else-changed).
+> **Read this if you use `signalForm()`.** `nativeErrors` now defaults to `true`,
+> so built-in validator failures bridged into Angular Signal Forms arrive as
+> Angular's branded error classes instead of plain `{ kind, message }` objects.
+> This is a **behavior change shipping in a minor** — deliberately, because the
+> flip was announced in 11.6.0, deferred through 12.x and 13.x, and has been
+> emitting a dev-mode notice the whole time. If you'd rather not take it now,
+> pass `nativeErrors: false` and nothing changes.
 
-## 1. `signalForm()`: `nativeErrors` defaults to `true` (breaking)
+If your app doesn't use `@signaltree/ng-forms`'s `signalForm()` bridge, or
+already passes `nativeErrors` explicitly, **the behavior change is a no-op for
+you** — see [§3](#3-also-in-132-computed-slice-names-are-typed) for the part
+that's pure upside.
+
+## 1. `signalForm()`: `nativeErrors` defaults to `true`
 
 ### What changed
 
@@ -20,19 +25,19 @@ branded validation errors (`requiredError()`, `minError(min)`, …):
 
 ```ts
 const account = signalForm(tree.$.account, { injector });
-//                                          ^ nativeErrors defaults to true in v14
+//                                          ^ nativeErrors defaults to true in 13.2
 
 account.age().value.set(12);
 const [err] = account.age().errors();
 
-// v14 (branded, the new default)
+// 13.2 (branded, the new default)
 err instanceof NgValidationError;   // true
 err instanceof MinValidationError;  // true
 err.min;                            // 18 — a typed constraint, not string-parsed
 err.kind;                           // 'min' — still present on branded errors
 err.message;                        // 'Too young' — still present
 
-// v13 and earlier (plain object, now behind `nativeErrors: false`)
+// 13.1 and earlier (plain object, now behind `nativeErrors: false`)
 err instanceof NgValidationError;   // false
 err.kind;                           // 'min'
 err.message;                        // 'Too young'
@@ -105,14 +110,47 @@ If you set `nativeErrors` explicitly only to silence that notice, you can now
 drop the option — but check which value you pinned first: dropping an explicit
 `false` changes behavior.
 
-## 3. Nothing else changed
+## 3. Also in 13.2: `.computed()` slice names are typed
+
+No action needed — this only removes a cast you were previously told to write.
+
+`entityMap().computed()` slices have always materialized on `tree.$` at runtime,
+but the slice names weren't on the static type, so the docs taught this:
+
+```typescript
+// before 13.2 — the documented access pattern
+(store.$.plants as any).byUrl();
+```
+
+They're now typed, and `.computed()` chains type each name independently:
+
+```typescript
+// 13.2
+store.$.plants.byUrl();       // Signal<Record<string, PlantDto>>
+store.$.plants.activeCount(); // Signal<number>
+```
+
+**Delete the `as any` casts** wherever you followed the old guidance. Loader-backed
+collections keep their loader surface alongside the slices, and a collection with
+no slices resolves to exactly `EntitySignal<E, K>` as before.
+
+The one strictly-observable type change: a slice-bearing collection's resolved
+type now includes the slice members, so an *exact*-type assertion in your own code
+(e.g. `Equal<typeof store.$.plants, EntitySignal<PlantDto, string>>`) will see the
+richer type. Ordinary assignments to `EntitySignal<E, K>` are unaffected — an
+intersection is assignable to its member.
+
+See the [entity-collection cookbook §2](entity-collection-cookbook.md) for the
+full slices / `find` / `where` surface.
+
+## 4. Nothing else changed
 
 Core state APIs (`signalTree`, `$` path access, `.set`/`.update`, `.derived()`,
 markers `entityMap`/`status`/`stored`/`form`, `defineStore`, `asReadonly`), the
 `entityMap` loader surface (`loader()`, `loadOrThrow()`, scoped loading), core
 `history()`/`trackHistory()`, the `@signaltree/events` bridges, and the
 `signalForm()` schema overload are all unchanged. Package boundaries are
-unchanged from v13. Angular support is 20 / 21 / 22.
+unchanged from 13.1. Angular support is 20 / 21 / 22.
 
 The `[ST2005]` single-async-authority rule is unchanged: bridging a `form()`
 marker that carries `asyncValidators` still throws — pick one authority.

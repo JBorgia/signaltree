@@ -149,7 +149,7 @@ describe('signalForm (marker form)', () => {
     });
   });
 
-  describe('nativeErrors (branded Angular errors — default since v14)', () => {
+  describe('nativeErrors (branded Angular errors — default since 13.2)', () => {
     interface Signup extends Record<string, unknown> {
       username: string;
       age: number;
@@ -158,7 +158,7 @@ describe('signalForm (marker form)', () => {
     const SLUG = /^[a-z-]+$/;
 
     // `undefined` leaves the option unset so the DEFAULT is exercised — which
-    // since v14 is branded. Pass an explicit boolean to pin a shape.
+    // since 13.2 is branded. Pass an explicit boolean to pin a shape.
     function createSignup(nativeErrors?: boolean) {
       const tree = signalTree({
         signup: form<Signup>({
@@ -222,7 +222,7 @@ describe('signalForm (marker form)', () => {
       expect(error instanceof NgValidationError).toBe(false);
     });
 
-    it('defaults to branded when the option is left unset (v14 flip)', () => {
+    it('defaults to branded when the option is left unset (13.2 flip)', () => {
       const fieldTree = createSignup(); // option omitted entirely
 
       fieldTree.age().value.set(12);
@@ -232,7 +232,7 @@ describe('signalForm (marker form)', () => {
       expect((ageError as MinValidationError).min).toBe(18);
     });
 
-    it('nativeErrors: false restores the pre-v14 plain { kind, message } shape', () => {
+    it('nativeErrors: false restores the pre-13.2 plain { kind, message } shape', () => {
       const fieldTree = createSignup(false);
 
       fieldTree.age().value.set(12);

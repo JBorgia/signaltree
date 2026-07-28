@@ -5,7 +5,7 @@
  * `FieldTree` that shares the marker's values signal as its model — one
  * source of truth, no copying, no sync loops. The marker's sync validators
  * are installed as Signal Forms validators (built-in validator failures emit
- * Angular's branded error classes by default since v14; `nativeErrors: false`
+ * Angular's branded error classes by default since 13.2; `nativeErrors: false`
  * restores the plain `{ kind, message }` shape, where `kind` is the validator's
  * semantic kind — `'required'`, `'email'`, … — or `'signalTree'` for untagged
  * custom validators), and the marker's own `errors()`/`valid()` stay live when
@@ -109,15 +109,15 @@ export interface SignalFormOptions<
    * Custom/untagged validators still emit
    * `{ kind: validatorKind ?? 'signalTree', message }` in both modes.
    *
-   * **Default `true` since v14** — the flip announced in 11.6.0 and deferred
+   * **Default `true` since 13.2** — the flip announced in 11.6.0 and deferred
    * through 12.x and 13.x. Branded errors are the Angular-native shape, so
    * they are the default a fresh caller (human or agent) should get.
    *
-   * Set `nativeErrors: false` to keep the pre-v14 plain `{ kind, message }`
+   * Set `nativeErrors: false` to keep the pre-13.2 plain `{ kind, message }`
    * objects. `kind` and `message` are present in BOTH shapes, so code reading
    * only those two keeps working; narrowing on the plain object shape,
    * serializing errors, or deep-equalling them in tests is what needs updating
-   * (see `docs/guides/migration-v13-v14.md`).
+   * (see `docs/guides/migration-v13.2.md`).
    */
   nativeErrors?: boolean;
 }
@@ -170,7 +170,7 @@ function brandedError(
  *
  * - The FieldTree's model IS the marker's values signal — edits through
  *   either API are immediately visible to the other.
- * - The marker's sync validators run as Signal Forms validators. Since v14,
+ * - The marker's sync validators run as Signal Forms validators. Since 13.2,
  *   built-in validator failures are emitted as Angular's branded error classes
  *   (`requiredError()`, `minError()`, …) by default. With
  *   `{ nativeErrors: false }` they appear as plain `{ kind, message }` instead,
@@ -210,8 +210,8 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
 
   const injector = options.injector ?? inject(Injector);
   const validatorConfig = internals.__config?.validators ?? {};
-  // v14: branded Angular errors are the default. Pass `nativeErrors: false`
-  // for the pre-v14 plain `{ kind, message }` shape.
+  // 13.2: branded Angular errors are the default. Pass `nativeErrors: false`
+  // for the pre-13.2 plain `{ kind, message }` shape.
   const nativeErrors = options.nativeErrors ?? true;
 
   // Single async authority, enforced structurally (v12). Async validation is

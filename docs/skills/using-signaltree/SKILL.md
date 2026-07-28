@@ -91,7 +91,7 @@ const tree = signalTree({
 const profile = signalForm(tree.$.onboarding.profile); // FieldTree<{ name: string }>
 // template: <input [formField]="profile.name" /> — marker validators run as Signal Forms
 // validators with real error kinds; built-ins emit Angular's branded errors by
-// default (v14+) — pass { nativeErrors: false } for plain { kind, message }.
+// default (13.2+) — pass { nativeErrors: false } for plain { kind, message }.
 // Async validation is NOT unified — pick ONE authority (marker submit() path OR validateAsync).
 ```
 

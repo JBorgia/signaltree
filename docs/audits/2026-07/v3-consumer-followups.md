@@ -38,7 +38,7 @@ first pass landed A/B/C wrong precisely because the rules (RFC 0001/0006/0007) w
 | The `as any` teaching | Retired at all four sites that taught it: `SKILL.md`, `reference/core.md`, `llms.txt`, `llms-full.txt`. |
 
 Also landed alongside (not from this brief): the **`nativeErrors` default flip to `true`** — see
-`CHANGELOG.md` (Unreleased/v14) and the new `docs/guides/migration-v13-v14.md`. That resolves a
+`CHANGELOG.md` (Unreleased/13.2) and the new `docs/guides/migration-v13.2.md`. That resolves a
 promise RFC 0004 §4.3 made for "the next major" and then missed across both v12 and v13.
 
 **Sequence note (historical):** G1b was correctly done first — it's the single highest-leverage item in

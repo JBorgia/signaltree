@@ -109,7 +109,7 @@ export class SignalFormsDemoComponent {
 
   readonly profile = signalForm(this.tree.$.onboarding.profile, {
     injector: this.injector,
-    // Explicit opt-OUT: the default is branded since v14, and this page
+    // Explicit opt-OUT: the default is branded since 13.2, and this page
     // deliberately shows both shapes side by side (see nativeAccount below).
     nativeErrors: false,
   });
@@ -222,7 +222,7 @@ const tree = signalTree({
 });
 
 // FieldTree whose model IS the marker's values signal.
-// nativeErrors: false pins the plain { kind, message } error shape — since v14
+// nativeErrors: false pins the plain { kind, message } error shape — since 13.2
 // the default is branded Angular errors (see the next section).
 readonly profile = signalForm(tree.$.onboarding.profile, { nativeErrors: false });
 
@@ -248,7 +248,7 @@ const tree = signalTree({
   }),
 });
 
-// Since v14 this is the DEFAULT: built-in validator failures are Angular's
+// Since 13.2 this is the DEFAULT: built-in validator failures are Angular's
 // BRANDED error classes, not plain { kind, message } objects. (Passed
 // explicitly here for clarity; { nativeErrors: false } opts back out.)
 const account = signalForm(tree.$.account, { nativeErrors: true });

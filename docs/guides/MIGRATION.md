@@ -2,25 +2,32 @@
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
-## 14.0.0 (unreleased)
+## 13.2.0 (unreleased)
 
-> One breaking change: `signalForm()`'s `nativeErrors` option now defaults to
+> One behavior change: `signalForm()`'s `nativeErrors` option now defaults to
 > `true`, so built-in validator failures bridged into Angular Signal Forms are
 > Angular's branded error classes rather than plain `{ kind, message }` objects.
-> Full detail and before/after:
-> [`docs/guides/migration-v13-v14.md`](migration-v13-v14.md).
+> Plus one pure-upside type fix (`.computed()` slice names). Full detail and
+> before/after: [`docs/guides/migration-v13.2.md`](migration-v13.2.md).
 
-**Breaking (one option default):**
+**Behavior change (one option default) — in a minor, deliberately:**
 
 - `signalForm(marker, { nativeErrors })` defaults to `true` (was `false`) — the
-  flip announced in 11.6.0 and deferred through 12.x/13.x. `kind` and `message`
-  are present in both shapes, so code reading only those keeps working. Pass
-  `nativeErrors: false` to keep the pre-v14 plain objects. Custom/untagged
+  flip announced in 11.6.0 and deferred through 12.x/13.x, with a dev-mode notice
+  running the whole time. `kind` and `message` are present in both shapes, so code
+  reading only those keeps working; narrowing on the plain shape, serializing
+  errors, or deep-equalling them in tests is what needs updating. Pass
+  `nativeErrors: false` to keep the pre-13.2 plain objects. Custom/untagged
   validators are unaffected (`{ kind: 'signalTree', message }` in both modes).
+
+**Additive:**
+
+- `entityMap().computed()` slice names are typed on `tree.$` — delete any
+  `(tree.$.x as any).sliceName()` casts the old docs told you to write.
 
 **Removed:**
 
-- The one-time dev-mode `console.info` advisory about the upcoming flip, and its
+- The one-time dev-mode `console.info` advisory about the flip, and its
   test-only `__resetNativeErrorsAdvisoryForTests` companion.
 
 ## 13.0.0
