@@ -256,3 +256,34 @@ export type _ReadonlyMinimalChecks = [
   Expect<Equal<(typeof roMinimal)['$']['n'], Signal<number>>>,
   Expect<NotOffered<(typeof roMinimal)['$']['n'], 'set'>>
 ];
+
+// --- readonly × `.computed()` slices -----------------------------------------
+// Slice names are typed on `tree.$` (13.2). Two things must BOTH hold in the
+// readonly view, and neither is implied by the writable-tree assertions in
+// marker-resolution.typing.spec.ts:
+//   1. slices survive the narrowing (they're reads — dropping them would make
+//      `asReadonly` lossy for any collection that declares one), and
+//   2. the narrowing still BLOCKS writes on a slice-bearing collection — i.e.
+//      attaching a slice must not knock the entity surface off the
+//      `ENTITY_READERS` allowlist dispatch and fall through to a permissive arm.
+const sliceTree = signalTree({
+  stock: entityMap<User, number>()
+    .computed('names', (all) => all.map((u) => u.name))
+    .computed('total', (all) => all.length),
+});
+const roSlice = asReadonly(sliceTree);
+type ROStock = (typeof roSlice)['$']['stock'];
+
+export type _ReadonlySliceChecks = [
+  // 1. slices are present and correctly typed through the readonly view
+  Expect<Equal<ROStock['names'], Signal<string[]>>>,
+  Expect<Equal<ROStock['total'], Signal<number>>>,
+  // the ordinary read surface still comes through
+  Expect<Equal<ROStock['all'], Signal<User[]>>>,
+  // 2. writes remain unreachable — the slice did not defeat the narrowing
+  Expect<NotOffered<ROStock, 'addOne'>>,
+  Expect<NotOffered<ROStock, 'upsertOne'>>,
+  Expect<NotOffered<ROStock, 'removeOne'>>,
+  Expect<NotOffered<ROStock, 'setAll'>>,
+  Expect<NotOffered<ROStock, 'clear'>>
+];
