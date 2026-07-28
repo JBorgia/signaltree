@@ -20,8 +20,8 @@ describe('[ST2007] derived value dropped — dev-mode guardrail', () => {
       const msgs = warn.mock.calls.map((c) => String(c[0]));
       const hit = msgs.find((m) => m.includes('ST2007'));
       expect(hit).toBeDefined();
-      expect(hit).toContain('DIFFERENT @angular/core');
-      expect(hit).toContain('dedupe');
+      expect(hit).toContain('different @angular/core');
+      expect(hit).toContain('Dedupe @angular/core');
     } finally {
       warn.mockRestore();
     }
@@ -39,7 +39,7 @@ describe('[ST2007] derived value dropped — dev-mode guardrail', () => {
         .map((c) => String(c[0]))
         .find((m) => m.includes('ST2007'));
       expect(hit).toBeDefined();
-      expect(hit).toContain('was ignored');
+      expect(hit).toContain('not a signal');
     } finally {
       warn.mockRestore();
     }

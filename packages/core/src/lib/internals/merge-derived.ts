@@ -234,21 +234,13 @@ export function mergeDerivedState(
 
       if (looksLikeForeignSignal) {
         console.warn(
-          `[SignalTree] [ST2007] Derived "${currentPath}" is a signal created by a ` +
-            `DIFFERENT @angular/core instance than the one @signaltree/core imports, ` +
-            `so it was dropped instead of merged (it carries Symbol(SIGNAL) but ` +
-            `isSignal() rejects it). Your app/test has two copies of @angular/core. ` +
-            `Fixes: dedupe it in your bundler (Vite: ` +
-            `resolve: { dedupe: ['@angular/core'] }; Jest: moduleNameMapper), or ` +
-            `hoist @angular/core to a single version. Nothing about your ` +
-            `.derived() code is wrong.`
+          `[SignalTree] [ST2007] Derived "${currentPath}" dropped: signal from a ` +
+            `different @angular/core instance. Dedupe @angular/core. See ST2007.`
         );
       } else {
         console.warn(
-          `[SignalTree] [ST2007] Derived "${currentPath}" was ignored: expected a ` +
-            `signal (computed/signal), a derived marker, or a plain object to merge, ` +
-            `but got ${value === null ? 'null' : typeof value}. It has NOT been ` +
-            `added to the tree.`
+          `[SignalTree] [ST2007] Derived "${currentPath}" dropped: not a signal, ` +
+            `marker, or object. See ST2007.`
         );
       }
     }
