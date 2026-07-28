@@ -551,19 +551,27 @@ else
     exit 1
 fi
 
-# 13c. Size-Claims Verification (BLOCKING)
-# Formerly an orphan npm script (8 months, never in any workflow — RFC 0004
-# §3 V-P6); wired here 2026-07-23 after refreshing the stale claims in
-# consolidated-bundle-analysis.js. Negative test: empirically proven able to
-# fail — it fired on all four packages' stale claims the day it was wired.
+# 13c. Package-Hygiene Verification (BLOCKING)
+# Was "Size-Claims Verification", calling scripts/verify-size-claims.js. That
+# script was DELETED in 13.1.1 (3a5262b2) as a byte-count rubber-stamp and
+# replaced by verify-package-hygiene.js, but this call site was never updated —
+# so `node` exited MODULE_NOT_FOUND, the else branch fired, and every release
+# blocked on a phantom "size claims drifted" error. Fixed 2026-07-28 while
+# cutting 13.2.0.
+#
+# Now runs the real gate: inspects each packed tarball (`npm pack --dry-run`) and
+# fails if a package ships specs / source maps / raw .ts / tsconfig / __tests__ /
+# fixtures, or is missing a declared entry (main, exports subpaths, .d.ts).
+# ci-publish.sh runs the same gate before publishing; running it here too means a
+# local `npm run validate` catches packaging regressions at the same point.
 # Needs the production builds from step 7.
-print_header "13c. Size-Claims Verification"
-print_step "Verifying full-package size claims (±5%)"
-if node scripts/verify-size-claims.js 2>&1 | tee /tmp/size-claims.log; then
-    print_success "Size claims verified"
+print_header "13c. Package-Hygiene Verification"
+print_step "Inspecting packed tarballs for stray files and missing entries"
+if node scripts/verify-package-hygiene.js 2>&1 | tee /tmp/package-hygiene.log; then
+    print_success "Package hygiene verified"
 else
-    print_error "Size claims drifted >5% from measured — update consolidated-bundle-analysis.js claims deliberately"
-    cat /tmp/size-claims.log
+    print_error "Package hygiene failed — a tarball ships files it shouldn't, or is missing a declared entry"
+    cat /tmp/package-hygiene.log
     exit 1
 fi
 
