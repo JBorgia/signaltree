@@ -56,6 +56,8 @@ type AnyRecord = Record<string, unknown>;
  * Checks if a value is an Angular signal.
  * Uses the official isSignal utility from @angular/core.
  */
+declare const ngDevMode: boolean | undefined;
+
 function isSignalLike(value: unknown): value is Signal<unknown> {
   return isSignal(value);
 }
@@ -211,8 +213,45 @@ export function mergeDerivedState(
       // while adding new derived signals. The key insight is that target[key]
       // still references the ORIGINAL object from the source tree.
       mergeDerivedState($, value, currentPath);
+    } else if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      // Anything else is silently dropped — historically the single most
+      // expensive failure mode in this file, because a dropped derived value
+      // looks exactly like "the feature doesn't work" with no diagnostic.
+      //
+      // The dominant real-world cause is a DUPLICATED @angular/core: if the app
+      // (or test runner) loads one copy for its own code and another for
+      // @signaltree/core, each has its own `Symbol(SIGNAL)`, so `isSignal()`
+      // here returns false for a perfectly good `computed()` created by the
+      // caller. Every derived value then falls through to this branch. Detect it
+      // precisely — a function carrying an own symbol named SIGNAL that
+      // `isSignal()` nonetheless rejects — and say so, because the generic
+      // message would send people hunting in the wrong place. [ST2007]
+      const looksLikeForeignSignal =
+        typeof value === 'function' &&
+        Object.getOwnPropertySymbols(value).some(
+          (sym) => sym.description === 'SIGNAL'
+        );
+
+      if (looksLikeForeignSignal) {
+        console.warn(
+          `[SignalTree] [ST2007] Derived "${currentPath}" is a signal created by a ` +
+            `DIFFERENT @angular/core instance than the one @signaltree/core imports, ` +
+            `so it was dropped instead of merged (it carries Symbol(SIGNAL) but ` +
+            `isSignal() rejects it). Your app/test has two copies of @angular/core. ` +
+            `Fixes: dedupe it in your bundler (Vite: ` +
+            `resolve: { dedupe: ['@angular/core'] }; Jest: moduleNameMapper), or ` +
+            `hoist @angular/core to a single version. Nothing about your ` +
+            `.derived() code is wrong.`
+        );
+      } else {
+        console.warn(
+          `[SignalTree] [ST2007] Derived "${currentPath}" was ignored: expected a ` +
+            `signal (computed/signal), a derived marker, or a plain object to merge, ` +
+            `but got ${value === null ? 'null' : typeof value}. It has NOT been ` +
+            `added to the tree.`
+        );
+      }
     }
-    // Ignore other values (shouldn't happen with valid derived definitions)
   }
 }
 

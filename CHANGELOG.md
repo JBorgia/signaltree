@@ -34,6 +34,28 @@
   pre-13.2 behavior. Custom/untagged validators are **unaffected** — they emit
   `{ kind: 'signalTree', message }` in both modes, as before.
 
+### Added
+
+- **`[ST2007]` dev-mode guardrail: `.derived()` no longer drops values silently**
+  (`@signaltree/core`). The merge walked each derived value and ignored anything
+  that wasn't a signal, a derived marker, or a plain object — with a
+  `// shouldn't happen` comment and no diagnostic. It does happen, and the usual
+  cause is brutal to find: if an app or test runner loads **two copies of
+  `@angular/core`**, each has its own `Symbol(SIGNAL)`, so `isSignal()` inside
+  `@signaltree/core` rejects a `computed()` the caller just created and **every**
+  derived value is discarded. The feature simply appears not to work.
+
+  Now warns, and distinguishes the two cases: a value carrying an own
+  `Symbol(SIGNAL)` that `isSignal()` still rejects is reported as a duplicate
+  `@angular/core` with the bundler fix (Vite `resolve.dedupe`, Jest
+  `moduleNameMapper`) and an explicit note that the caller's `.derived()` code is
+  not at fault; anything else gets the generic "expected a signal, got X".
+  Dev-mode only, so production is unaffected.
+
+  Found the hard way while reviewing a real consumer whose test suite had exactly
+  this duplication — 12 domains' worth of derived selection state was missing from
+  the tree with no warning of any kind.
+
 ### Fixed
 
 - **`DevToolsMethods` and `OptimizedUpdateMethods` are now exported from
