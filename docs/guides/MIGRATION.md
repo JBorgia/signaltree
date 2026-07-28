@@ -25,10 +25,11 @@
 - `entityMap().computed()` slice names are typed on `tree.$` — delete any
   `(tree.$.x as any).sliceName()` casts the old docs told you to write.
 
-**Removed:**
+**Dev-mode notice:**
 
-- The one-time dev-mode `console.info` advisory about the flip, and its
-  test-only `__resetNativeErrorsAdvisoryForTests` companion.
+- The one-time `console.info` about the *upcoming* flip now reports the
+  *completed* one (kept because the change lands in a minor; `ngDevMode`-gated,
+  silenced by setting the option either way).
 
 ## 13.0.0
 

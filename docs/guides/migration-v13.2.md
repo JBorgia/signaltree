@@ -98,17 +98,23 @@ or code only reads `.kind` / `.message`. You need to act only where you:
 - The marker's own `errors()` / `valid()` signals are unaffected — this option
   governs only what the bridged `FieldTree`'s field state reports.
 
-## 2. Removed: the `nativeErrors` flip advisory
+## 2. The dev-mode notice now reports the completed flip
 
-`signalForm()` used to emit a one-time dev-mode `console.info` when
-`nativeErrors` was left unset, warning that the default would flip. The flip has
-happened, so the notice is gone. Its test-only companion
-`__resetNativeErrorsAdvisoryForTests` (module-internal, never exported from the
-package barrel) is removed with it.
+`signalForm()` emitted a one-time dev-mode `console.info` when `nativeErrors` was
+left unset, warning that the default *would* flip. That notice now reports that it
+*has*:
 
-If you set `nativeErrors` explicitly only to silence that notice, you can now
-drop the option — but check which value you pinned first: dropping an explicit
-`false` changes behavior.
+> `nativeErrors` now defaults to TRUE as of 13.2 — built-in validator failures are
+> Angular branded errors … Pass `nativeErrors: false` for the previous shape.
+
+It is deliberately kept rather than deleted, because the flip ships in a **minor**:
+without it, upgrading `13.1 → 13.2` without reading this guide changes what
+`field().errors()` returns with no signal at all. Setting `nativeErrors` either way
+silences it, and it is `ngDevMode`-gated, so production bundles pay nothing.
+
+If you previously set `nativeErrors` only to silence the old notice, you can drop
+the option — but check which value you pinned first: dropping an explicit `false`
+changes behavior.
 
 ## 3. Also in 13.2: `.computed()` slice names are typed
 

@@ -42,6 +42,26 @@ import {
 } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
 
+declare const ngDevMode: boolean | undefined;
+
+// One-time (per module load) dev-mode notice when `nativeErrors` is left unset.
+// The 13.2 flip changed the DEFAULT error shape in a MINOR, so a caller who
+// upgrades without reading the changelog gets different objects out of
+// `field().errors()` with no signal. This says so once. Setting the option
+// either way silences it, and it costs nothing in production (ngDevMode).
+let warnedNativeErrorsFlip = false;
+
+/**
+ * Test-only: reset the one-time `nativeErrors` notice flag. Exported from the
+ * module (NOT the package barrel) so specs can exercise first-call behavior
+ * deterministically; the module-level flag is otherwise consumed by whichever
+ * test runs first. Do not use in application code.
+ * @internal
+ */
+export function __resetNativeErrorsNoticeForTests(): void {
+  warnedNativeErrorsFlip = false;
+}
+
 /** Marker-side validator shape (see `Validator` in @signaltree/core). */
 type MarkerValidator = ((
   value: unknown,
@@ -213,6 +233,25 @@ export function markerSignalFormImpl<T extends Record<string, unknown>>(
   // 13.2: branded Angular errors are the default. Pass `nativeErrors: false`
   // for the pre-13.2 plain `{ kind, message }` shape.
   const nativeErrors = options.nativeErrors ?? true;
+
+  // Because that default CHANGED in a minor, tell an unset caller once.
+  if (
+    options.nativeErrors === undefined &&
+    !warnedNativeErrorsFlip &&
+    (typeof ngDevMode === 'undefined' || ngDevMode)
+  ) {
+    warnedNativeErrorsFlip = true;
+    console.info(
+      '[SignalTree] signalForm(): `nativeErrors` now defaults to TRUE as of ' +
+        '13.2 — built-in validator failures are Angular branded errors ' +
+        '(instanceof NgValidationError) rather than plain { kind, message } ' +
+        'objects. `kind` and `message` are present on both shapes, so most ' +
+        'code is unaffected; narrowing on the plain shape, serializing ' +
+        'errors, or deep-equalling them in tests is what changes. Pass ' +
+        '`nativeErrors: false` for the previous shape. Setting the option ' +
+        'either way silences this notice. See docs/guides/migration-v13.2.md'
+    );
+  }
 
   // Single async authority, enforced structurally (v12). Async validation is
   // NOT unified between the marker and Signal Forms, and there is no way to run

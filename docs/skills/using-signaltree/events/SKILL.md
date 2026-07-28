@@ -102,10 +102,24 @@ Use `forRootAsync` when Redis config requires async loading.
 Angular `entityMap` bridge (`/angular` subpath, v13+) — for apps holding entities in a `@signaltree/core` `entityMap`, don't hand-write a per-event `upsertOne`/`updateOne`/`removeOne` loop over an event batch; `entityEventHandler` maps the batch onto `entityMap`'s own batch ops (one `upsertMany`/`updateMany`/`removeMany` call, not one per event):
 
 ```ts
+import type { EntitySignal } from '@signaltree/core';
+import type { BaseEvent } from '@signaltree/events';
 import { entityEventHandler } from '@signaltree/events/angular';
-// entities: a @signaltree/core entityMap accessor, e.g. store.$.trades.entities
 
-const flush = entityEventHandler(entities, {
+type Trade = { id: string; status: string; [k: string]: unknown };
+
+// A discriminated union gives the extractors typed `e.data`; with a bare
+// `BaseEvent`, `data` is `unknown` and every access needs a cast.
+type TradeEvent =
+  | BaseEvent<'TradeCreated', { trade: Trade }>
+  | BaseEvent<'TradeStatusChanged', { tradeId: string; status: string }>
+  | BaseEvent<'TradeCancelled', { tradeId: string }>;
+
+// entities: a @signaltree/core entityMap accessor, e.g. store.$.trades.entities
+declare const entities: EntitySignal<Trade, string>;
+declare const eventsReceivedThisTick: TradeEvent[];
+
+const flush = entityEventHandler<Trade, string, TradeEvent>(entities, {
   match: (e) =>
     e.type === 'TradeCreated' ? 'upsert' :
     e.type === 'TradeStatusChanged' ? 'update' :
@@ -123,7 +137,14 @@ Coalescing within one batch: same-id `upsert`/`update` touches fold in arrival o
 Optimistic updates (`/angular` subpath) — `OptimisticUpdateManager` tracks pending optimistic writes with automatic timeout-rollback; `applyOptimisticEntityChange(entities, id, change)` (v13+) derives the manager-ready `rollback` closure automatically from the entityMap's CURRENT entry instead of a hand-written closure per call site:
 
 ```ts
+import type { EntitySignal } from '@signaltree/core';
 import { OptimisticUpdateManager, applyOptimisticEntityChange } from '@signaltree/events/angular';
+
+type Trade = { id: string; status: string; [k: string]: unknown };
+
+declare const entities: EntitySignal<Trade, string>;
+declare const tradeId: string;
+declare const correlationId: string;
 
 const manager = new OptimisticUpdateManager();
 const { data, previousData, rollback } = applyOptimisticEntityChange(entities, tradeId, { status: 'accepted' });
@@ -134,6 +155,7 @@ manager.apply({
   type: 'UpdateTradeStatus',
   data,
   previousData: previousData ?? data,
+  appliedAt: new Date(),
   timeoutMs: 5000,
   rollback, // restores previousData via upsertOne, or removeOne if this was a fresh create
 });

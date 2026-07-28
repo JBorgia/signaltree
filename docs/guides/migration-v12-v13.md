@@ -135,7 +135,7 @@ const { data, previousData, rollback } = applyOptimisticEntityChange(
   tradeId,
   { status: 'accepted' }
 );
-manager.apply({ id: crypto.randomUUID(), correlationId, type: 'UpdateTradeStatus', data, previousData: previousData ?? data, timeoutMs: 5000, rollback });
+manager.apply({ id: crypto.randomUUID(), correlationId, type: 'UpdateTradeStatus', data, previousData: previousData ?? data, appliedAt: new Date(), timeoutMs: 5000, rollback });
 ```
 
 `OptimisticUpdateManager`'s public API is unchanged; it's now O(n) instead of

@@ -141,8 +141,10 @@ import { signal, inject, Injector } from '@angular/core';
 import { form, required } from '@angular/forms/signals';
 import { trackHistory } from '@signaltree/core';
 
-const model = signal({ title: '', priority: 'low' });
+const model = signal({ title: '', priority: 'low', secret: '' });
 const f = form(model, (p) => { required(p.title); });
+// `exclude` keeps a field out of the undo stack — sensitive values, or noisy
+// fields you don't want to step back through. Keys are checked against the model.
 const hist = trackHistory(model, { capacity: 25, exclude: ['secret'], injector: inject(Injector) });
 
 hist.undo(); hist.redo(); hist.canUndo(); // FieldTree reflects undo/redo
@@ -151,8 +153,15 @@ hist.undo(); hist.redo(); hist.canUndo(); // FieldTree reflects undo/redo
 Pattern E — pass an Angular Signal Forms schema + FormOptions to a marker-bridged form (v13.1+). `signalForm(marker, options)` takes `schema` as a `SchemaOrSchemaFn<T>` (inline `SchemaFn` OR a cached `schema()` object) for rules a marker's `validators` can't hold (`disabled`/`hidden`/`applyEach`/cross-field `validate`/`validateAsync`), and forwards `name`/`submission`/`experimentalWebMcpTool` verbatim to Angular's `form(model, schema, options)`:
 
 ```ts
-import { disabled, schema, validate } from '@angular/forms/signals';
+import type { Injector } from '@angular/core';
+import { disabled, schema } from '@angular/forms/signals';
+import { form, signalTree } from '@signaltree/core';
 import { signalForm } from '@signaltree/ng-forms/signals';
+
+type Profile = { email: string; optIn: boolean; [k: string]: unknown };
+
+declare const injector: Injector;
+declare const tree: ReturnType<typeof signalTree<{ profile: ReturnType<typeof form<Profile>> }>>;
 
 const s = schema<Profile>((p) => { disabled(p.email, { when: (c) => !c.valueOf(p.optIn) }); });
 

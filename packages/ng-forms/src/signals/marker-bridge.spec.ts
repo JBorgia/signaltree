@@ -12,6 +12,7 @@ import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 import { signalForm } from './signal-form';
+import { __resetNativeErrorsNoticeForTests } from './marker-bridge';
 
 interface Profile extends Record<string, unknown> {
   name: string;
@@ -240,6 +241,62 @@ describe('signalForm (marker form)', () => {
       expect(ageError.kind).toBe('min');
       expect(ageError.message).toBe('Too young');
       expect(ageError instanceof NgValidationError).toBe(false);
+    });
+  });
+
+  describe('nativeErrors 13.2-flip notice (dev-mode console.info)', () => {
+    // The default flipped in a MINOR, so an unset caller must be told once.
+    function bridge(opts: { nativeErrors?: boolean }) {
+      const tree = signalTree({
+        f: form<{ name: string }>({
+          initial: { name: '' },
+          validators: { name: validators.required('req') },
+        }),
+      });
+      return signalForm(tree.$.f, {
+        injector: TestBed.inject(Injector),
+        ...opts,
+      });
+    }
+
+    it('emits exactly one notice when nativeErrors is unset (then never again)', () => {
+      __resetNativeErrorsNoticeForTests();
+      const info = jest
+        .spyOn(console, 'info')
+        .mockImplementation(() => undefined);
+      try {
+        bridge({}); // unset — should emit
+        bridge({}); // unset again — one-time flag suppresses
+        const calls = info.mock.calls.filter((c) =>
+          String(c[0]).includes('nativeErrors')
+        );
+        expect(calls.length).toBe(1);
+        // must state the NEW default and the opt-out, not the old pre-flip text
+        expect(String(calls[0][0])).toContain('defaults to TRUE');
+        expect(String(calls[0][0])).toContain('nativeErrors: false');
+      } finally {
+        info.mockRestore();
+      }
+    });
+
+    it('never emits when nativeErrors is set explicitly (either value)', () => {
+      // Reset so the flag is fresh: if the explicit path did NOT suppress,
+      // these calls would emit. Proves suppression is the explicit set, not a
+      // spent one-time flag.
+      __resetNativeErrorsNoticeForTests();
+      const info = jest
+        .spyOn(console, 'info')
+        .mockImplementation(() => undefined);
+      try {
+        bridge({ nativeErrors: false });
+        bridge({ nativeErrors: true });
+        const calls = info.mock.calls.filter((c) =>
+          String(c[0]).includes('nativeErrors')
+        );
+        expect(calls.length).toBe(0);
+      } finally {
+        info.mockRestore();
+      }
     });
   });
 
