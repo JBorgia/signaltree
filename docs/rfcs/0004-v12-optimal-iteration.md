@@ -1,11 +1,37 @@
 # RFC 0004 — The "optimal iteration": walker hardening, honest readonly, Signal Forms parity, verified docs
 
-**Status:** **Amended after adversarial review** (2026-07-23) — §1 is the original plan, kept for the record; **§4 is the plan of record**
+**Status:** **Executed — closed 2026-07-28.** §1 is the original plan, kept for the
+record; §4 was the plan of record and has shipped across 11.6 → 13.2. See
+the Completion ledger below before reading §4 as a to-do list.
 **Date:** 2026-07-23
 **Affects:** `@signaltree/core`, `@signaltree/enterprise`, `@signaltree/schema`, `@signaltree/ng-forms`, all doc surfaces (README, llms.txt/llms-full.txt, SKILL.md, demo app), release/validation tooling
 **Supersedes:** the branch-`12` `init` commit (`54fe4626`) where they overlap
 **Versions at writing:** 11.5.3 published; target ~~12.0.0~~ **11.6.0** (see §3 verdict V-MAJOR)
 **Selection criterion (explicit):** optimal end-state for the library. Difficulty, time, and cost are excluded from the decision function by owner directive. Options are rejected only for being *worse*, never for being *harder*.
+
+
+## Completion ledger (added 2026-07-28)
+
+This RFC targeted **11.6.0**. The repo is on **13.2.0**, and §4's items have
+shipped or been superseded. Recorded here because §4 otherwise reads as live
+work: it was being treated as an open plan two majors after it landed.
+
+Verified against the tree at 13.2.0 (symbol presence checked in the barrels, not
+inferred):
+
+| §4 item | State |
+|---|---|
+| 1. Walker hardening | **Shipped.** `isTraversableNode` is a type guard (`lib/utils.ts:102`); `verify-no-adhoc-walkers.sh` is deleted as planned ("proven inert"). No `walkTree` unification, as decided. The optional `resolvePath` follow-up was never opened — still optional. |
+| 2. Readonly, truthful and minimal | **Shipped.** `asReadonly` + `ReadonlyStore` are exported and are the primary surface; per-marker reader allowlists exist (`ENTITY_READERS`/`STATUS_READERS`); no Proxy. Slice-bearing collections were confirmed in 13.2.0 to keep reads while still refusing writes. |
+| 3. Signal Forms parity | **Shipped, and its last open promise is now kept.** `withKind` is exported; single-authority async is enforced by `[ST2005]`; branded error factories ship. The "default flip in the next major" — deferred through 12.x and 13.x — **landed in 13.2.0** (`nativeErrors` now defaults to `true`). |
+| 4. Loader (`loadOrThrow` only) | **Shipped** (`markers/entity-loader.ts:179`). |
+| 5. Vocabulary pass | Believed applied; not re-verified in this pass. |
+| 6. Verified docs gates | **Shipped and then some** — taught-symbols, version-claims, release-state and package-hygiene gates all run in `pre-publish-validation.sh`. Two gate bugs found and fixed 2026-07-28 (a call site pointing at a deleted script, and a crash in `lint-skills.mjs`). The §6 addendum is resolved — see the RESOLVED note inline. |
+| 7. Naming coherence (S0) | **Shipped.** `signalForm()` is the single name; `markerSignalForm`/`signalFormBridge` are gone, not merely deprecated. |
+| 8–10. Doc surfaces, comparator stamp, fresh-agent test | Partly shipped; the classic-NgRx skill validation round remains outstanding and is tracked in the project notes, not here. |
+
+**Nothing in §4 should be started from this document.** Anything still wanted from
+items 5 and 8–10 belongs in a new RFC or the ordinary backlog.
 
 ## 0. Context
 
@@ -402,12 +428,19 @@ Target: **11.6.0**. Ordered by dependency.
    `release.sh`; all wired as blocking sections of
    `pre-publish-validation.sh`; wire-or-delete the two orphan validators.
    **Addendum (2026-07-23, measured):** the "loader machinery only pulled in
-   when `load` is used" claim is **false** — plain `entityMap()` ships the
-   full ~5.9 KB gzip loader (static `attachLoader` import). Claim correction +
-   a loader case in `verify-tree-shaking.js` land here; the structural fix
-   (injected `loader()` capability, `security()`-precedent) is
+   when `load` is used" claim was **false at the time** — plain `entityMap()`
+   shipped the full ~5.9 KB gzip loader (static `attachLoader` import). Claim
+   correction + a loader case in `verify-tree-shaking.js` land here; the
+   structural fix (injected `loader()` capability, `security()`-precedent) is
    **[RFC 0005](0005-entity-loader-composition.md)** — options analysis
    drafted, pending its own adversarial review per §5 rule 1.
+
+   > **RESOLVED (2026-07-28).** Do not read the paragraph above as a live
+   > overclaim — it is the historical record of one. RFC 0005 shipped option A:
+   > `loader()` is a separate export and the sole holder of the `attachLoader`
+   > reference, so `markers/entity-map.ts` no longer imports it statically and a
+   > plain `entityMap()` genuinely does not pay for the loader. The claim the
+   > addendum called false is now **true**, and the docs teach it that way.
 7. **Naming coherence pass (S0 — must precede S1).** Found post-review:
    `markerSignalForm` is the only `marker`-prefixed export in the codebase —
    it matches none of the established families (markers = plain nouns,

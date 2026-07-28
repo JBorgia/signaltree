@@ -36,6 +36,22 @@
 
 ### Added
 
+- **New guide: `docs/guides/composition-recipes.md`** — the resolved forms of three
+  capabilities that get requested as features and are deliberately *not* API: a
+  standard enhancer policy, a reusable entity-CRUD Ops base, and a selection
+  read-model. Each composes primitives that already ship. Includes the two traps
+  the audit surfaced: gating `timeTravel()` on a runtime boolean defeats
+  tree-shaking (it's the RFC 0005 §0 mistake — gate structurally instead), and
+  optimistic rollback must snapshot *prior values* and restore the whole of what
+  an operation touched.
+
+- **Corrected an inaccurate `updateAndReport()` claim** in the root README. It was
+  described as providing "a changed-paths report for rollback"; it returns changed
+  **paths**, not previous values, so it cannot restore state on its own. Rollback
+  is snapshot → write → restore. The paths report is for partial server-payload
+  sync, audit trails, and targeted persistence — which is what its own JSDoc says.
+
+
 - **`[ST2007]` dev-mode guardrail: `.derived()` no longer drops values silently**
   (`@signaltree/core`). The merge walked each derived value and ignored anything
   that wasn't a signal, a derived marker, or a plain object — with a

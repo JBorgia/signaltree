@@ -1,6 +1,13 @@
 # RFC 0001 — Where AI-embedded support belongs (core vs recipes vs external)
 
-**Status:** Proposed
+**Status:** **Decided (2026-06-04) and executed** — see §5 (the decision) and §6 (its
+disposition, applied). `asyncStream` is un-exported from the public barrel and parked as
+experimental; §4's "recipes before API" boundary stands as the governing rule for
+AI-embedded work.
+_(Header corrected 2026-07-28: it still read "Proposed" long after §5 recorded a dated
+decision and §6 was carried out in code — verified: `asyncStream` appears in
+`packages/core/src/index.ts` only as a comment, with the implementation retained at
+`lib/markers/async-stream.ts`.)_
 **Date:** 2026-06-04
 **Affects:** `@signaltree/core` (10.5.0 line), docs/skills, future `@signaltree/ai`
 **Versions at writing:** core 10.4.1 (published) / 10.5.0 (staged, unpublished); `@ngrx/signals` 20.1 (comparator); Angular 20.x

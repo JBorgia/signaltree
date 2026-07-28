@@ -286,7 +286,45 @@ silently dropped. Do not open an `ST` code for it.
 
 ---
 
-## Deferred — feature RFCs (audit findings A/B/C), NOT in this brief
+## RESOLVED — findings A/B/C determined 2026-07-28 (hold lifted)
+
+The hold on these was "until the v3 migration PR is reviewed." **That review is
+done** (see the review notes in the reuse audit), so the determinations are made
+rather than carried forward:
+
+| | Determination | Delivered as |
+|---|---|---|
+| **A** — enhancer preset | **Not core API.** A docs recipe. | [`docs/guides/composition-recipes.md` §1](../../guides/composition-recipes.md#1-a-standard-enhancer-policy) |
+| **B** — entity-CRUD Ops | **Not API yet.** Recipe now; RFC 0008 only if the recipe proves insufficient. | [§2](../../guides/composition-recipes.md#2-a-reusable-entity-crud-ops-base) |
+| **C** — selection read-model | **Not core API.** Userland `.derived()` recipe. | [§3](../../guides/composition-recipes.md#3-a-selection-read-model) |
+
+**What the v3 review changed.** Two things, in opposite directions:
+
+- It *weakened* A's only technical argument for core. The case had been that a
+  userland helper cannot type its own return value — v3 had annotated a narrower
+  return type with a comment explaining that the enhancer-augmented type wasn't
+  "portably nameable." That was a real bug, but in the **barrel**, not in the
+  design: `DevToolsMethods` and `OptimizedUpdateMethods` weren't exported.
+  **Fixed in 13.2.0**, so a userland helper now types correctly and A has no
+  remaining structural reason to be in core.
+- It *strengthened* B's evidence while confirming it shouldn't ship as API yet.
+  The engine is genuinely proven — twelve domains, each an ~8-line subclass — but
+  its coupling is unchanged (`backend`/`endpoint` and hardcoded REST verb/URL
+  conventions), and the reusable parts are already shipped primitives. What
+  remains is an `extend`-this base class plus one app's REST conventions.
+
+The recipe also carries two corrections the review produced that any future API
+would have to respect: rollback must **snapshot prior values** (`updateAndReport()`
+returns changed *paths*, not previous values, so it cannot restore state), and it
+must restore the **whole** of what an operation touched — a real bug had
+`delete$` restoring `[id]` instead of the user's actual prior selection, with a
+test that passed only because it selected exactly the row it deleted.
+
+If B is ever built, the constraints below still bind.
+
+---
+
+## Original analysis — feature RFCs (audit findings A/B/C)
 
 These are genuine upstream *features*, tracked in the audit; they need RFCs/implementation, not "guidance,"
 and are intentionally out of scope for this pass. **Each was re-tested per item against RFC 0001 §2/§4,

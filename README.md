@@ -24,7 +24,7 @@
 State is modeled as the shape of your data, and the capabilities you'd otherwise hand-assemble ship as composable markers and enhancers:
 
 - **`entityMap()`** → normalized collections with O(1) lookups and reactive CRUD
-- **`updateAndReport()`** → optimistic UI with a changed-paths report for rollback
+- **`updateAndReport()`** → a changed-paths report for partial server-payload sync, audit trails, and targeted persistence
 - **`form()`** (`@signaltree/ng-forms`) → tree-integrated reactive forms with validation and wizards
 - **`.derived()`** → computed state deep-merged at any path
 - **`timeTravel()`** → undo/redo with configurable history depth
@@ -32,7 +32,7 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 
 ### Use SignalTree if you need
 
-- Optimistic UI with rollback (`updateAndReport`)
+- Optimistic UI with rollback (snapshot → write → restore; see the [Ops recipe](docs/guides/composition-recipes.md#2-a-reusable-entity-crud-ops-base))
 - Undo / redo (`timeTravel` enhancer)
 - Typed normalized collections with O(1) lookups (`entityMap`)
 - Reactive forms with validation, wizards, and persistence (`form()` marker)
@@ -60,8 +60,10 @@ writing an app with real domain state — not a demo — you're likely in scope.
   offline-first persistence from one config key.
 - **Forms** — the `form()` marker covers field/dirty/valid/touched/submit and wizards, and bridges
   to Angular Signal Forms via `signalForm()`.
-- **Optimistic UI** — `updateAndReport()` returns a changed-paths report, so rollback is mechanical
-  rather than hand-tracked.
+- **Optimistic UI** — snapshot with `byId()`, write eagerly, restore on failure; `entityMap`'s
+  batch ops keep a burst to one notification. `updateAndReport()` tells you which **paths** changed
+  (for partial server-payload sync, audit trails, targeted persistence). See the
+  [Ops recipe](docs/guides/composition-recipes.md#2-a-reusable-entity-crud-ops-base).
 - **Async data** — `asyncSource()` / `asyncQuery()` for load-and-expose and debounced
   input-driven queries, with `status()` predicates for the lifecycle.
 - **Undo/redo, persistence, DevTools** — `timeTravel()`, `stored()` with migrations, `history()` /

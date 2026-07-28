@@ -1,6 +1,11 @@
 # RFC 0007 — The packaging principle, and the ng-forms re-slice it forced
 
-**Status:** Decided; implementing on `feat/v13-package-reslice`.
+**Status:** **Decided and implemented — shipped in v13.0.0** (commit `40ab3083`).
+The packaging principle in §1 is the standing rule for package boundaries.
+_(Header corrected 2026-07-28: it still pointed at the in-flight branch
+`feat/v13-package-reslice`, which merged and shipped. Verified: `history()` is in
+core, the events↔`entityMap` bridge is in `@signaltree/events/angular`, and the
+ng-forms re-slice is on `main`.)_
 **Date:** 2026-07-24
 **Builds on:** [RFC 0005](0005-entity-loader-composition.md) §1 (the injected-feature
 precedent, generalized here into a repo-wide rule), §7 (the processor-swallows-throws
