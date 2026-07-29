@@ -1,6 +1,113 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>
+    🎯 v13.2.0 — typed <code>.computed()</code> slices, branded form errors by default
+    (July 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      A shipped primitive stopped requiring a cast, a two-release-old promise got kept,
+      and a silent failure became a loud one.
+    </p>
+    <h4>✨ Fixed</h4>
+    <ul>
+      <li>
+        <strong><code>entityMap().computed()</code> slice names are typed on
+        <code>tree.$</code></strong> — reading a slice used to mean throwing away type
+        safety with <code>(tree.$.users as any).active()</code>, which the docs taught as
+        the official pattern. The runtime always worked; the types were dropped at
+        materialization. Now <code>tree.$.users.active()</code> is
+        <code>Signal&lt;User[]&gt;</code> with no cast, <code>.computed()</code> chains
+        type each name independently, and loader-backed collections keep their loader
+        surface alongside the slices. <strong>Delete those casts.</strong>
+      </li>
+      <li>
+        <strong><code>DevToolsMethods</code> / <code>OptimizedUpdateMethods</code> are
+        exported</strong> — they existed but were missing from the barrel, so a
+        <em>library</em> wrapping an enhancer chain could not name its own return type
+        and had to erase <code>.batch()</code>/<code>.undo()</code> for its callers.
+      </li>
+    </ul>
+    <h4>⚠️ Changed (behavior)</h4>
+    <ul>
+      <li>
+        <strong><code>signalForm()</code>: <code>nativeErrors</code> now defaults to
+        <code>true</code></strong> — built-in validator failures arrive as Angular's
+        branded error classes rather than plain <code>&#123; kind, message &#125;</code>
+        objects. This is the flip announced in 11.6.0 and deferred through 12.x and 13.x.
+        <code>kind</code> and <code>message</code> exist on <strong>both</strong> shapes,
+        so most code is unaffected; narrowing on the plain shape, serializing errors, or
+        deep-equalling them in tests is what changes. Pass
+        <code>&#123; nativeErrors: false &#125;</code> to keep the old shape.
+      </li>
+    </ul>
+    <h4>🛡️ New guardrail</h4>
+    <ul>
+      <li>
+        <strong><code>[ST2007]</code></strong> — <code>.derived()</code> used to drop any
+        value it didn't recognize as a signal, silently. The usual cause is brutal to
+        find: two copies of <code>&#64;angular/core</code> mean two
+        <code>Symbol(SIGNAL)</code>s, so <code>isSignal()</code> inside SignalTree rejects
+        a <code>computed()</code> you just created and <em>every</em> derived value
+        vanishes. It now says so, and names the bundler fix.
+      </li>
+    </ul>
+    <h4>📉 Bundle</h4>
+    <ul>
+      <li>
+        Dev-only guardrails don't tree-shake on their own — <code>ngDevMode</code> is a
+        runtime global, so the branch survives minification. Define it
+        (<code>"define": &#123; "ngDevMode": "false" &#125;</code>) and reclaim
+        <strong>~0.5–0.9 KB gzip</strong>. Thrown-error messages stay on purpose.
+      </li>
+    </ul>
+    <pre><code>// Typed slices — no cast since 13.2
+plants: entityMap&lt;PlantDto, string&gt;(&#123; selectId: (p) =&gt; p.url &#125;)
+  .computed('byUrl', (all) =&gt; Object.fromEntries(all.map((p) =&gt; [p.url, p])))
+  .computed('activeCount', (all) =&gt; all.filter((p) =&gt; p.active).length),
+
+store.$.plants.byUrl();       // Signal&lt;Record&lt;string, PlantDto&gt;&gt;
+store.$.plants.activeCount(); // Signal&lt;number&gt;</code></pre>
+  </div>
+
+  <h3>🎯 v13.0.0–13.1.0 — the packaging principle, <code>history()</code>, events↔entityMap (July 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      v13 wrote down the rule for what belongs in which package —
+      <em>independent dependency or runtime → its own package; a within-tree mechanic →
+      core</em> — and moved the two capabilities that were filed wrong.
+    </p>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>history()</code> (core)</strong> — signal-native undo/redo for the
+        <code>form()</code> marker: <code>form(&#123; history: history(&#123; capacity &#125;) &#125;)</code>.
+        Drives a bound <code>signalForm()</code> field tree from the same engine, which
+        the old <code>FormGroup</code>-only <code>withFormHistory</code> structurally
+        could not reach. <strong>13.1.0</strong> added
+        <code>trackHistory(model)</code> — the same engine pointed at any
+        <code>WritableSignal</code>, no marker required.
+      </li>
+      <li>
+        <strong><code>entityEventHandler</code> / <code>applyOptimisticEntityChange</code></strong>
+        (<code>&#64;signaltree/events/angular</code>) — map an event batch onto
+        <code>entityMap</code>'s batch ops instead of a per-event
+        <code>upsertOne</code> loop, and derive the optimistic-update rollback closure
+        automatically.
+      </li>
+    </ul>
+    <h4>🔀 Moved (breaking, one import path)</h4>
+    <ul>
+      <li>
+        <code>createAuditTracker</code>/<code>createAuditCallback</code> moved from
+        <code>&#64;signaltree/ng-forms</code> to <code>&#64;signaltree/core</code> —
+        they never depended on <code>&#64;angular/forms</code>. The old path still
+        re-exports them, deprecated.
+      </li>
+    </ul>
+  </div>
+
   <h3>🎯 v12.1.0 — <code>idle()</code>/<code>settled()</code> status predicates + <code>persist.maxScopes</code> (July 2026)</h3>
   <div class="release-highlights">
     <p>
