@@ -129,7 +129,8 @@
     "callable:validate": "npm run build:callable-syntax && cd dist/packages/callable-syntax && node -e \"console.log('Package structure:', require('./package.json'))\"",
     "// Maintenance": "Workspace maintenance and updates",
     "update:deps": "nx migrate latest && npm install && nx migrate --run-migrations",
-    "workspace:info": "nx report"
+    "workspace:info": "nx report",
+    "check:devmode-foldable": "node tools/check-devmode-foldable.mjs"
   },
   "private": true,
   "dependencies": {

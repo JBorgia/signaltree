@@ -427,6 +427,26 @@ else
     exit 1
 fi
 
+# 10c. Dev-Code Foldability Gate (BLOCKING)
+# The bundle budget above measures the DEFAULT build, where `ngDevMode` is an
+# unresolved global and every guardrail message ships. This gate protects the
+# consumer's escape hatch: defining `ngDevMode: false` must still fold the
+# advisory code away (~0.5-0.9KB gzip). It fails if that stops working — i.e. if
+# someone writes a dev gate the bundler cannot statically resolve (`isDev()`, a
+# helper call, anything that isn't a bare `ngDevMode` comparison), which would
+# silently charge every consumer for prose they can no longer remove.
+# Thrown-error codes (ST1xxx, ST2004-ST2006) are intentionally exempt — see
+# docs/performance/dropping-dev-code.md. Needs the core build (step 7).
+print_header "10c. Dev-Code Foldability Gate"
+print_step "Verifying advisory guardrails fold when ngDevMode is defined false"
+if node tools/check-devmode-foldable.mjs 2>&1 | tee /tmp/devmode-foldable.log; then
+    print_success "Dev-only code is foldable"
+else
+    print_error "Dev-only code no longer folds — advisory prose is stuck in production bundles"
+    cat /tmp/devmode-foldable.log
+    exit 1
+fi
+
 # 11. Sanity Checks
 print_header "11. Sanity Checks"
 print_step "Running sanity checks on build outputs"

@@ -36,6 +36,34 @@
 
 ### Added
 
+- **Documented + gated: how to drop SignalTree's dev-only code in production**
+  (`docs/performance/dropping-dev-code.md`, `tools/check-devmode-foldable.mjs`).
+
+  The dev-mode guardrails sit behind `ngDevMode`, which is a **runtime global
+  Angular assigns — not a compile-time constant a bundler substitutes in library
+  code**. So `typeof ngDevMode === 'undefined' || ngDevMode` is unresolvable at
+  build time, the branch survives minification, and the advisory message strings
+  ship to production by default. That was never written down.
+
+  One line reclaims them — Angular `"define": { "ngDevMode": "false" }` (its
+  `define` explicitly applies to libraries), or the equivalent in Vite / esbuild /
+  webpack. Measured, own code only, gzip: bare **5.55 → 5.04 KB**, with
+  `entityMap()` **8.48 → 7.61 KB**, with `form()` **7.69 → 7.00 KB**.
+
+  A new blocking gate (`10c`) keeps the escape hatch working: it builds each
+  target twice and fails if defining `ngDevMode: false` stops shrinking the
+  output, or if any advisory code survives it. That catches the regression where
+  a dev gate becomes un-foldable (`if (isDev())`, a helper call — anything that
+  isn't a bare `ngDevMode` comparison), which would silently charge every consumer
+  for prose they can no longer remove.
+
+  **Deliberately unchanged:** thrown-error messages (`ST1xxx`, plus `ST2004`–
+  `ST2006`) still ship in production. `constants.ts` keeps one table for both
+  modes with each string under ~25 chars, because an exception identified only by
+  an opaque integer is useless in a production stack trace. Advisory prose is
+  removable; error identity is not.
+
+
 - **New guide: `docs/guides/composition-recipes.md`** — the resolved forms of three
   capabilities that get requested as features and are deliberately *not* API: a
   standard enhancer policy, a reusable entity-CRUD Ops base, and a selection
