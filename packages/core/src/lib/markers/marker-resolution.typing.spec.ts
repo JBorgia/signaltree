@@ -13,8 +13,9 @@
  *
  * NOTE: only `TreeNode` is part of the public barrel. The internal
  * `EntityAwareTreeNode` / `DeepEntityAwareTreeNode` variants (used by the
- * unexported `TypedSignalTree`) are not consumer-reachable; their marker-
- * resolution gap is tracked as an internal-only finding, not asserted here.
+ * unexported `TypedSignalTree`) are not consumer-reachable, but they ARE asserted
+ * here — including `.computed()` slice resolution. Leaving them unchecked is how
+ * they drifted out of sync with `TreeNode` in the first place.
  */
 import type { Signal } from '@angular/core';
 
@@ -139,6 +140,21 @@ const loadingSliceTree = signalTree({
   }).computed('names', (all) => all.map((u) => u.name)),
 });
 type Loading$ = typeof loadingSliceTree.$;
+
+// The two INTERNAL tree-node variants resolve slices as well. Previously only
+// `TreeNode` did, so `TypedSignalTree` (which builds on these) would have silently
+// dropped slice names — the same class of gap the 13.2 fix closed for `tree.$`.
+type SliceState = {
+  stock: ReturnType<typeof entityMap<User, number>> & {
+    __sliceTypes?: { names: string[] };
+  };
+};
+export type _InternalVariantSliceChecks = [
+  Expect<Equal<EntityAwareTreeNode<SliceState>['stock']['names'], Signal<string[]>>>,
+  Expect<
+    Equal<DeepEntityAwareTreeNode<SliceState>['stock']['names'], Signal<string[]>>
+  >
+];
 
 export type _LoadingSliceChecks = [
   Expect<Equal<Loading$['remote']['names'], Signal<string[]>>>,

@@ -951,9 +951,9 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  */
 export type DeepEntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
-    ? LoadingEntitySignal<LE, LK, LP>
+    ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
+    ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
@@ -980,9 +980,9 @@ export type DeepEntityAwareTreeNode<T> = {
  */
 export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
-    ? LoadingEntitySignal<LE, LK, LP>
+    ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
+    ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
