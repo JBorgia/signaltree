@@ -105,6 +105,12 @@ jobs:
       - name: Verify guardrails conditional exports (default → real build)
         run: node scripts/verify-guardrails-default-condition.mjs
 
+      - name: Bundle-budget gate (own-code gzip floor)
+        run: node tools/check-bundle-budget.mjs
+
+      - name: Dev-code foldability gate (ngDevMode advisory code must fold)
+        run: node tools/check-devmode-foldable.mjs
+
       - name: Verify taught symbols
         run: node scripts/verify-taught-symbols.js
 
