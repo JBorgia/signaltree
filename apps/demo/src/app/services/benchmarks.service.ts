@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { batching, signalTree } from '@signaltree/core';
+import { lazy } from '@signaltree/core/lazy';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
@@ -527,7 +528,13 @@ export class BenchmarkService {
   }
 
   /**
-   * Benchmark memory efficiency with lazy loading
+   * Benchmark memory efficiency with lazy loading.
+   *
+   * The lazy branch MUST pass `lazy: lazy()`. Since v11 lazy signal creation is an
+   * injected feature, so `useLazySignals: true` alone is a silent no-op (core warns
+   * LAZY_NOT_INJECTED) — without the feature both branches build eager trees and this
+   * benchmark compares two identical configurations while reporting a lazy/eager
+   * delta.
    */
   benchmarkLazyLoading() {
     try {
@@ -567,12 +574,12 @@ export class BenchmarkService {
 
       // Lazy loading
       const lazyMemory = BenchmarkService.profileMemory(() => {
-        const tree = signalTree(largeState, { useLazySignals: true });
+        const tree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
         tree();
       });
       results.lazy.memory = lazyMemory?.delta || 0;
 
-      const lazyTree = signalTree(largeState, { useLazySignals: true });
+      const lazyTree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
       results.lazy.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties

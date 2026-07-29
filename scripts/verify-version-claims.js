@@ -49,6 +49,10 @@ const CLAIM_SITES = [
   'apps/demo/public/llms.txt',
   'apps/demo/public/llms-full.txt',
   'docs/skills/using-signaltree/reference/install.md',
+  // Added 2026-07-28: this page had drifted to "Latest release (7.6.0)" and
+  // "Angular 20.3+" while the packages shipped 13.2.0 on Angular 20/21/22.
+  // It rotted precisely because it wasn't gated.
+  'docs/overview.md',
 ];
 
 // Lines matching any of these are excluded from drift scanning (see header).

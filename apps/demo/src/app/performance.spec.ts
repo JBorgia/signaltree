@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { batching, signalTree } from '@signaltree/core';
+import { lazy } from '@signaltree/core/lazy';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
@@ -185,11 +186,11 @@ describe('SignalTree Performance Benchmarks', () => {
     });
 
     const lazyTime = measureTime(() => {
-      const tree = signalTree(largeState, { useLazySignals: true });
+      const tree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
       tree();
     });
 
-    const lazyTree = signalTree(largeState, { useLazySignals: true });
+    const lazyTree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
     const accessTime = measureTime(() => {
       // Access a deeply nested property to trigger signal creation
       const val = (lazyTree.$ as Record<string, any>)['level_5_item_0']?.[

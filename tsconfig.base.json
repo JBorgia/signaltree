@@ -22,6 +22,7 @@
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
+      "@signaltree/core/lazy": ["packages/core/src/lazy.ts"],
       "@signaltree/core/security": ["packages/core/src/security.ts"],
       "@signaltree/core/edit-session": ["packages/core/src/edit-session.ts"],
       "@signaltree/core/storage": ["packages/core/src/storage.ts"],

@@ -4,14 +4,13 @@
 
 # SignalTree Overview and Specifications
 
-This document consolidates the feature overview and technical specifications for the SignalTree ecosystem (September 2025).
+This document consolidates the feature overview and technical specifications for the SignalTree ecosystem.
 
-## Latest release (7.6.0)
+## Release notes
 
-- DevTools auto-connect, path-based actions, and time-travel dispatch support
-- `entityMap().byId()` reactivity fix when IDs are set before collections
-- Derived `.with()` chaining preserves computed identity
-- Safer DevTools serialization and filtering options
+Release notes live in [`CHANGELOG.md`](../CHANGELOG.md) — the single source of truth.
+This page previously duplicated a "Latest release" list, which then sat at 7.6.0
+while the packages shipped 13.x. Don't reintroduce it; link the changelog instead.
 
 ## Overview
 
@@ -30,20 +29,27 @@ This document consolidates the feature overview and technical specifications for
 
 ## Package ecosystem
 
-SignalTree consists of one core package with all enhancers built-in, plus three optional add-on packages:
+SignalTree is one core package with every enhancer built in, plus seven optional
+add-ons. Package boundaries follow the rule in
+[RFC 0007](rfcs/0007-packaging-principle-and-ng-forms-reslice.md): an independent
+dependency or runtime earns its own package; a within-tree mechanic lives in core.
 
-- **@signaltree/core**: Complete state management solution including all enhancers (batching, middleware, devtools, time-travel, serialization) plus built-in markers like `entityMap`, `status`, and `stored`
-- **@signaltree/ng-forms**: Angular Forms integration (separate package)
-- **@signaltree/enterprise**: Enterprise-scale optimizations for 500+ signals (separate package)
-- **@signaltree/callable-syntax**: Build-time transform for callable signal syntax (dev dependency, separate package)
+- **@signaltree/core**: the whole state layer — enhancers (batching, devtools, time-travel, serialization), markers (`entityMap`, `status`, `stored`, `form`, `asyncSource`, `asyncQuery`), plus `loader()`, `history()`, `trackHistory()`, `linked()`, `derivedFrom()`, `defineStore()`, `asReadonly()`
+- **@signaltree/ng-forms**: Angular Forms integration — `createFormTree` (FormGroup) and `signalForm()` (Angular 22 Signal Forms bridge). Separate because it depends on `@angular/forms`
+- **@signaltree/schema**: StandardSchema-compatible runtime validation registered against tree paths
+- **@signaltree/events**: domain-event bus with an `entityMap` bridge and optimistic-update manager
+- **@signaltree/realtime**: SSE/SignalR wiring onto tag-based cache invalidation
+- **@signaltree/guardrails**: opt-in runtime write auditing and intent-aware suppression
+- **@signaltree/enterprise**: enterprise-scale optimizations for 500+ signals
+- **@signaltree/callable-syntax**: build-time transform for callable signal syntax (dev dependency)
 
 **All enhancers are exported from `@signaltree/core`** — no need for separate enhancer packages.
 
 ## Technical specifications
 
-- Angular 20.3+, TypeScript 5.5+, Node 18.17+ (development)
+- Angular 20, 21, or 22 (see `peerDependencies`), TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Tree-shakeable: typical apps using `@signaltree/core` ship ~8.5KB gzipped after dead-code elimination; published package size is bounded by CI (see budget table below)
+- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external): a bare tree ~5.6KB; with `entityMap` ~8.5KB; with `form()` ~7.7KB. Enforced by `tools/check-bundle-budget.mjs`. Defining `ngDevMode: false` in a production build reclaims a further ~0.5–0.9KB — see [dropping dev code](performance/dropping-dev-code.md)
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)

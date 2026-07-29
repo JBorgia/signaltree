@@ -1121,16 +1121,22 @@ import { status } from '@signaltree/core';
 {
   plants: {
     entities: entityMap<Plant, number>(),
-    status: status()  // Auto-creates state, error, isLoading, etc.
+    status: status<ApiError>()  // Auto-creates state, error + read predicates
   },
 }
 
-// Access
+// Access — bare-name predicates (the `is`-prefixed aliases were REMOVED in v11)
 tree.$.plants.status.state()       // LoadingState enum
-tree.$.plants.status.error()       // Error | null
-tree.$.plants.status.isLoading()   // boolean
-tree.$.plants.status.isLoaded()    // boolean
-tree.$.plants.status.isError()     // boolean
+tree.$.plants.status.error()       // ApiError | null
+tree.$.plants.status.notLoaded()   // boolean — strictly state === NotLoaded
+tree.$.plants.status.loading()     // boolean
+tree.$.plants.status.loaded()      // boolean
+tree.$.plants.status.hasError()    // boolean (NOT `error()` — that's the value)
+tree.$.plants.status.idle()        // !loading() && !loaded() — covers NotLoaded AND Error
+tree.$.plants.status.settled()     // loaded() || hasError() — "stop the spinner"
+
+// In a guard/resolver use idle(), NOT notLoaded(): notLoaded() is false once a load
+// has errored, so a notLoaded()-gated fetch silently never retries.
 
 // Mutations
 tree.$.plants.status.setLoading()
@@ -1177,7 +1183,7 @@ Loading state as sibling to entity collection.
 }
 
 // Access
-tree.$.plantsStatus.isLoading()
+tree.$.plantsStatus.loading()
 ```
 
 **Pros:** Flatter structure, simpler when using `entityMap` directly.
