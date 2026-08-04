@@ -49,13 +49,26 @@ const age = tree.$.user.profile.age();      // Deep access
 tree.$.user.profile(profile => updateProfile(profile));  // native update(fn)
 tree.$.user.profile({ email: 'new@email.com' });          // native partial merge
 
-// ⚠️ CAVEAT: don't mix the two styles in a file the transform processes.
-// The transform rewrites ANY tree.$.path(args) call to .set()/.update() —
-// it can't tell a leaf from a branch. Branch NodeAccessors have NO
-// .set()/.update() method, so a branch call like the ones above would be
-// rewritten into a call to a method that doesn't exist and THROW at
-// runtime. Keep branch-call syntax out of transformed files, or stick to
-// tree.$.branch.leaf(...) leaf calls there instead.`;
+// ⚠️ KNOW THE TRANSFORM'S LIMITS. The INTENT is "make leaf signals callable
+// like branches already are". The implementation is a purely syntactic
+// rewrite with no type information, so it rewrites ANY call it sees under a
+// root identifier:
+//
+//   tree.$.user.profile({ ... })     → .profile.set({ ... })    ✗ branches
+//                                       have no .set() — throws
+//   tree.$.users.addOne({ id: 1 })   → .addOne.set({ id: 1 })   ✗ mangles
+//                                       marker methods
+//   tree.$.users.where(u => u.ok)    → .where.update(...)       ✗ even READS
+//                                       with an argument
+//
+// So in a processed file, use leaf calls ONLY — tree.$.branch.leaf(value).
+// Branch writes and marker/entityMap methods must use their explicit forms
+// there, or live in files the transform doesn't touch.
+//
+// ⚠️ ALSO: the default root identifier is just 'tree'. A component writing
+// this.tree.$.count(5) or store.$.count(5) is NOT transformed — and an
+// untransformed leaf call is a silent no-op. Configure rootIdentifiers to
+// match how your code actually names its trees.`;
 
 const CURRENT_SOURCE = `// 🔧 Current Explicit Syntax (always works, no transform needed)
 
