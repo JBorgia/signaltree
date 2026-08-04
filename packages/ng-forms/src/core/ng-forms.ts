@@ -353,13 +353,29 @@ export function createFormTree<T extends Record<string, unknown>>(
     )
   );
 
-  const fieldErrors: Record<string, Signal<string | undefined>> = {};
-  const fieldAsyncErrors: Record<string, Signal<string | undefined>> = {};
+  // Null-prototype: these are looked up by arbitrary caller-supplied field
+  // paths, and a plain `{}` would resolve 'toString'/'constructor'/'valueOf'
+  // to inherited Object.prototype members — handing back a function where a
+  // Signal is expected (rendering "[object Undefined]", or throwing inside
+  // change detection for the ones that need a receiver).
+  const fieldErrors: Record<string, Signal<string | undefined>> =
+    Object.create(null);
+  const fieldAsyncErrors: Record<string, Signal<string | undefined>> =
+    Object.create(null);
 
   fieldErrorKeys.forEach((fieldPath) => {
     fieldErrors[fieldPath] = computed(() => errors()[fieldPath]);
     fieldAsyncErrors[fieldPath] = computed(() => asyncErrors()[fieldPath]);
   });
+
+  // Shared no-error signal for paths that carry no validator. Errors only ever
+  // originate from a validator, so such a path can never have one — returning
+  // this instead of caching a per-path computed keeps the lazy cache bounded
+  // by the paths that can actually produce an error.
+  const noFieldError = computed<string | undefined>(() => undefined);
+  const hasValidatorFor = (path: string) =>
+    findValidator(syncValidators, path) !== undefined ||
+    findValidator(asyncValidators, path) !== undefined;
 
   const fieldConfigLookup = (path: string) =>
     resolveFieldConfig(fieldConfigs, path);
@@ -553,6 +569,10 @@ export function createFormTree<T extends Record<string, unknown>>(
 
   const destroy = () => {
     cleanupCallbacks.splice(0).forEach((fn) => fn());
+    // Release the lazily-cached per-path signals; they are keyed by paths this
+    // form's callers asked for and are useless once the form is gone.
+    for (const key of Object.keys(fieldErrors)) delete fieldErrors[key];
+    for (const key of Object.keys(fieldAsyncErrors)) delete fieldAsyncErrors[key];
   };
 
   const formTree = {
@@ -573,14 +593,22 @@ export function createFormTree<T extends Record<string, unknown>>(
     submit,
     validate,
     // errors()/asyncErrors() are keyed by CONCRETE traversal paths
-    // (e.g. 'phones.0.value'), while fieldErrors is pre-seeded from the
-    // validator map's literal keys (which may be globs like 'phones.*.value').
-    // Lazily create + cache a computed for any concrete path so per-index
-    // lookups work instead of falling into an always-undefined stub.
+    // (e.g. 'phones.0.value'), while the seeded entries come from the validator
+    // map's literal keys (which may be globs like 'phones.*.value'). Lazily
+    // create + cache a computed for any concrete path that a validator actually
+    // covers, so per-index lookups work instead of falling into an
+    // always-undefined stub. Uncovered paths share one constant signal rather
+    // than growing the cache — a template calling this per row of a long list
+    // must not accumulate a computed per index for fields that have no
+    // validator at all.
     getFieldError: (field: string) =>
-      (fieldErrors[field] ??= computed(() => errors()[field])),
+      hasValidatorFor(field)
+        ? (fieldErrors[field] ??= computed(() => errors()[field]))
+        : noFieldError,
     getFieldAsyncError: (field: string) =>
-      (fieldAsyncErrors[field] ??= computed(() => asyncErrors()[field])),
+      hasValidatorFor(field)
+        ? (fieldAsyncErrors[field] ??= computed(() => asyncErrors()[field]))
+        : noFieldError,
     getFieldTouched: (field: string) =>
       computed(() => formGroup.get(field)?.touched ?? false),
     isFieldValid: (field: string) =>
@@ -1047,11 +1075,15 @@ interface ControlSnapshot {
 }
 
 function collectControlSnapshot(control: AbstractControl): ControlSnapshot {
+  // Null-prototype: these maps are indexed by caller-supplied field paths, so a
+  // plain `{}` would resolve 'toString'/'constructor'/'valueOf' to inherited
+  // Object.prototype members and report a function as if it were an error
+  // message.
   const snapshot: ControlSnapshot = {
-    syncErrors: {},
-    asyncErrors: {},
-    touched: {},
-    pending: {},
+    syncErrors: Object.create(null),
+    asyncErrors: Object.create(null),
+    touched: Object.create(null),
+    pending: Object.create(null),
   };
 
   traverseControls(
@@ -1292,8 +1324,15 @@ function resolveFieldConfig(
 }
 
 function findValidator<T>(map: Record<string, T>, path: string): T | undefined {
-  if (map[path]) {
-    return map[path];
+  // hasOwnProperty, not a truthiness check: the validator map is a user-supplied
+  // object literal, so `map['toString']` would otherwise return
+  // Object.prototype.toString and be invoked as a validator.
+  const own = (key: string) =>
+    Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+
+  const direct = own(path);
+  if (direct) {
+    return direct;
   }
 
   let candidate: { key: string; value: T } | undefined;
@@ -1312,7 +1351,7 @@ function findValidator<T>(map: Record<string, T>, path: string): T | undefined {
     return candidate.value;
   }
 
-  return map['*'];
+  return own('*');
 }
 
 interface PersistController {

@@ -549,9 +549,12 @@ export class SignalTreeBenchmarkService {
 
     // Mutate a little so shape stabilizes
     for (let i = 0; i < 10; i++) {
-      // Immutable rebuild: returning the same array reference hits core's
-      // ref-equality short-circuit, so the shape stabilization this loop
-      // exists for would never actually happen.
+      // Immutable rebuild, matching what the NgRx SignalStore arm does for the
+      // same scenario. (The in-place version did stabilize shape — core's
+      // ref-equality check suppresses notification, not the mutation, and this
+      // benchmark measures snapshot + stringify, which never consults
+      // notification. The rewrite is for parity between the arms, not
+      // correctness.)
       (tree.$ as any)['users'].update((arr: any[]) => {
         const idx = i % arr.length;
         return arr.map((item: any, j: number) =>

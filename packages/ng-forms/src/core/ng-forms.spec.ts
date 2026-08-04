@@ -239,3 +239,83 @@ describe('NgForms', () => {
     });
   });
 });
+
+describe('createFormTree field-error lookup hardening', () => {
+  const inheritedNames = [
+    'toString',
+    'constructor',
+    'valueOf',
+    'hasOwnProperty',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    'toLocaleString',
+    '__proto__',
+  ];
+
+  it('never returns an Object.prototype member where a Signal is expected', () => {
+    const form = (createFormTree as any)(
+      { username: '' },
+      { validators: { username: required('Username is required') } }
+    );
+
+    for (const name of inheritedNames) {
+      const sync = form.getFieldError(name);
+      const async = form.getFieldAsyncError(name);
+      // Must be callable signals returning undefined — not inherited methods.
+      expect(typeof sync).toBe('function');
+      expect(typeof async).toBe('function');
+      expect(sync()).toBeUndefined();
+      expect(async()).toBeUndefined();
+    }
+  });
+
+  it('still resolves a field genuinely named like a prototype member', async () => {
+    const form = (createFormTree as any)(
+      { toString: '' },
+      { validators: { toString: required('toString is required') } }
+    );
+
+    form.setValue('toString', '');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(form.getFieldError('toString')()).toBe('toString is required');
+  });
+
+  it('does not grow the cache for paths no validator covers', () => {
+    const form = (createFormTree as any)(
+      { username: '' },
+      { validators: { username: required() } }
+    );
+
+    for (let i = 0; i < 500; i++) {
+      form.getFieldError(`rows.${i}.value`);
+    }
+
+    // Uncovered paths share one constant signal instead of caching per path.
+    expect(Object.keys(form.fieldErrors).length).toBeLessThan(10);
+  });
+
+  it('caches per concrete path when a glob validator covers it', () => {
+    const form = (createFormTree as any)(
+      { phones: [{ value: '' }] },
+      { validators: { 'phones.*.value': required('Phone is required') } }
+    );
+
+    const first = form.getFieldError('phones.0.value');
+    const again = form.getFieldError('phones.0.value');
+    expect(first).toBe(again); // stable identity for template bindings
+  });
+
+  it('releases cached path signals on destroy()', () => {
+    const form = (createFormTree as any)(
+      { phones: [{ value: '' }] },
+      { validators: { 'phones.*.value': required() } }
+    );
+
+    for (let i = 0; i < 50; i++) form.getFieldError(`phones.${i}.value`);
+    expect(Object.keys(form.fieldErrors).length).toBeGreaterThan(0);
+
+    form.destroy();
+    expect(Object.keys(form.fieldErrors).length).toBe(0);
+  });
+});

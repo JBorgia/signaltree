@@ -364,21 +364,31 @@ export function isStoredMarker(value: unknown): value is StoredMarker<unknown> {
 // =============================================================================
 
 /**
- * @internal - Every live stored signal with debounced writes, held WEAKLY.
+ * @internal - Commit hooks for stored signals that currently have an
+ * UNPERSISTED write. Membership tracks pending-ness, not signal lifetime:
+ * a signal joins when a debounced write is armed and leaves the moment that
+ * write commits or is cancelled.
  *
- * Registration is a side effect with page lifetime created by a tree-scoped
- * factory, so strong references would outlive the tree: trees are destroyable
- * (`signalTree().destroy()`), and per-route/per-dialog trees are routine. A
- * strong entry retains the flush closure and through it the `Storage` backend,
- * the marker's `defaultValue`, the signal's current value, and any
- * user-supplied serialize/deserialize/migrate/onError callbacks — so a
- * `stored()` holding a cached list would leak that payload for the life of the
- * page, and every drain would walk signals nobody can reach.
+ * Why not "every live stored signal": that registration is a side effect with
+ * page lifetime created by a tree-scoped factory, so it outlived its tree
+ * (`signalTree()` has `destroy()`, and per-route/per-dialog trees are
+ * routine), retaining the `Storage` backend, the marker's `defaultValue`, the
+ * signal's current value and any user callbacks — a measurable leak.
  *
- * Holding the materialized signal weakly lets the whole graph be collected
- * with its tree; dead entries are pruned on the next drain.
+ * Why not a `WeakRef` to the signal either: the drain needs `commitPending`,
+ * and `commitPending` does not reference the signal, so the signal is
+ * collectable while its write is still armed. The deref would then yield
+ * `undefined` and the value would be dropped — and GC at page-hide is exactly
+ * when a mobile WebView both collects and stops firing timers, so that is the
+ * common case, not a corner one. Weakness must not be able to outrace
+ * durability.
+ *
+ * Scoping to pending writes gives both properties with a strong ref: idle
+ * signals are not registered at all (nothing to leak), and anything with an
+ * unpersisted value is guaranteed reachable by the drain. The set is bounded
+ * by the number of keys written within one debounce window.
  */
-const activeStoredSignals = new Set<WeakRef<{ flush: () => void }>>();
+const pendingStoredWrites = new Set<() => void>();
 
 /** @internal */
 let lifecycleFlushInstalled = false;
@@ -408,11 +418,17 @@ function installLifecycleFlush(): void {
  * (e.g. Capacitor's `App.addListener('pause', ...)`).
  */
 export function flushAllStoredSignals(): void {
-  for (const ref of activeStoredSignals) {
-    const signal = ref.deref();
-    if (signal) signal.flush();
-    // Collected with its tree — prune so drains stay proportional to live state.
-    else activeStoredSignals.delete(ref);
+  // Iterate a copy: each commit removes its own entry, and a listener running
+  // during teardown must not be derailed by one bad key. Errors are already
+  // routed to onError/console inside writeNow; the guard here is for anything
+  // that escapes it (e.g. an instrumented console), which would otherwise
+  // abandon every signal after it in the drain.
+  for (const commit of [...pendingStoredWrites]) {
+    try {
+      commit();
+    } catch {
+      // Keep draining the rest.
+    }
   }
 }
 
@@ -593,12 +609,14 @@ export function createStoredSignal<T>(
     }
     hasPending = false;
     pendingValue = undefined;
+    // Nothing unpersisted left — stop holding this signal's graph alive.
+    pendingStoredWrites.delete(commitPending);
   };
 
   const commitPending = (): void => {
     if (!hasPending) return;
     const value = pendingValue as T;
-    cancelPending();
+    cancelPending(); // also deregisters
     writeNow(value);
   };
 
@@ -615,6 +633,10 @@ export function createStoredSignal<T>(
     // Debounced write - coalesce rapid updates to a single write
     pendingValue = value;
     hasPending = true;
+    // Reachable for the lifecycle drain for exactly as long as this value is
+    // unpersisted. The timer alone is not enough: on WebView suspension it
+    // never fires, which is the whole reason the drain exists.
+    pendingStoredWrites.add(commitPending);
     if (debounceTimer !== null) {
       clearTimeout(debounceTimer);
     }
@@ -674,10 +696,11 @@ export function createStoredSignal<T>(
 
   storedSignal.flush = commitPending;
 
-  // Drain pending writes when the page is hidden/unloaded so a debounced
-  // value can't be lost to a background/kill (mobile WebViews in particular).
+  // Install the page-lifecycle listeners so a debounced value can't be lost to
+  // a background/kill (mobile WebViews in particular). This signal enrols in
+  // the drain only while it actually has an unpersisted write — see
+  // `pendingStoredWrites`.
   if (storage && debounceMs > 0) {
-    activeStoredSignals.add(new WeakRef(storedSignal));
     installLifecycleFlush();
   }
 

@@ -1547,33 +1547,140 @@ describe('stored() — deferred migration re-persist vs authoritative ops', () =
   });
 });
 
-describe('stored() — lifecycle registry holds signals weakly', () => {
-  it('registers via WeakRef so a dropped tree can be collected', () => {
-    const mockStorage = createMockStorage();
-    const sig = createStoredSignal({
-      [STORED_MARKER]: true,
-      key: 'weak',
-      defaultValue: 0,
-      options: { storage: mockStorage },
-    });
+describe('stored() — lifecycle drain reaches every unpersisted write', () => {
+  let mockStorage: Storage;
 
-    // Sanity: a live signal is still drained by the global flush.
-    sig.set(7);
-    flushAllStoredSignals();
-    expect(JSON.parse(mockStorage.getItem('weak') as string).data).toBe(7);
+  beforeEach(() => {
+    mockStorage = createMockStorage();
   });
 
-  it('flushAllStoredSignals() tolerates many signals without error', () => {
-    const mockStorage = createMockStorage();
+  it('drains a pending write even when the signal itself is unreferenced', () => {
+    vi.useFakeTimers();
+
+    // Signal created and dropped inside a scope — models a per-route/per-dialog
+    // tree torn down while its debounced write is still armed. Reachability of
+    // the pending write must not depend on reachability of the signal.
+    (() => {
+      createStoredSignal<string>({
+        [STORED_MARKER]: true,
+        key: 'scoped',
+        defaultValue: 'light',
+        options: { storage: mockStorage, debounceMs: 200 },
+      }).set('dark');
+    })();
+
+    // Page hidden before the timer could fire — the timer never runs on a
+    // suspended WebView, so the drain is the only chance to persist.
+    flushAllStoredSignals();
+
+    expect(JSON.parse(mockStorage.getItem('scoped') as string).data).toBe('dark');
+
+    vi.useRealTimers();
+  });
+
+  it('does not retain signals that have nothing pending', () => {
+    vi.useFakeTimers();
+
+    const sig = createStoredSignal<number>({
+      [STORED_MARKER]: true,
+      key: 'idle',
+      defaultValue: 0,
+      options: { storage: mockStorage, debounceMs: 100 },
+    });
+
+    sig.set(1);
+    vi.advanceTimersByTime(100); // commits, and deregisters
+
+    let writes = 0;
+    const counting: Storage = {
+      ...mockStorage,
+      setItem: (k: string, v: string) => {
+        writes++;
+        mockStorage.setItem(k, v);
+      },
+    };
+    void counting;
+
+    // Nothing pending anywhere: the drain must be a no-op, not a re-write.
+    flushAllStoredSignals();
+    expect(writes).toBe(0);
+
+    vi.useRealTimers();
+  });
+
+  it('deregisters on clear() and reload() so a drain cannot resurrect', () => {
+    vi.useFakeTimers();
+
+    const sig = createStoredSignal<string>({
+      [STORED_MARKER]: true,
+      key: 'cancelled',
+      defaultValue: 'default',
+      options: { storage: mockStorage, debounceMs: 200 },
+    });
+
+    sig.set('A');
+    sig.clear();
+    flushAllStoredSignals();
+
+    expect(mockStorage.getItem('cancelled')).toBe(null);
+
+    vi.useRealTimers();
+  });
+
+  it('one failing signal does not abandon the rest of the drain', () => {
+    vi.useFakeTimers();
+
+    const exploding: Storage = {
+      ...createMockStorage(),
+      setItem: () => {
+        throw new Error('boom');
+      },
+    };
+
+    createStoredSignal<number>({
+      [STORED_MARKER]: true,
+      key: 'bad',
+      defaultValue: 0,
+      options: {
+        storage: exploding,
+        debounceMs: 200,
+        onError: () => {
+          throw new Error('handler explodes too');
+        },
+      },
+    }).set(1);
+
+    createStoredSignal<number>({
+      [STORED_MARKER]: true,
+      key: 'good',
+      defaultValue: 0,
+      options: { storage: mockStorage, debounceMs: 200 },
+    }).set(42);
+
+    expect(() => flushAllStoredSignals()).not.toThrow();
+    expect(JSON.parse(mockStorage.getItem('good') as string).data).toBe(42);
+
+    vi.useRealTimers();
+  });
+
+  it('drains many pending writes in one pass', () => {
+    vi.useFakeTimers();
+
     for (let i = 0; i < 200; i++) {
-      createStoredSignal({
+      createStoredSignal<number>({
         [STORED_MARKER]: true,
         key: `bulk-${i}`,
         defaultValue: i,
-        options: { storage: mockStorage },
+        options: { storage: mockStorage, debounceMs: 500 },
       }).set(i + 1);
     }
-    expect(() => flushAllStoredSignals()).not.toThrow();
+
+    flushAllStoredSignals();
+
     expect(JSON.parse(mockStorage.getItem('bulk-0') as string).data).toBe(1);
+    expect(JSON.parse(mockStorage.getItem('bulk-199') as string).data).toBe(200);
+
+    vi.useRealTimers();
   });
 });
+

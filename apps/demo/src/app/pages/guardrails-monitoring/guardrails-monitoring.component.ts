@@ -62,21 +62,27 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
   private readonly config: GuardrailsConfig<GuardrailsDemoState> = {
     treeId: 'demo-guardrails',
     mode: 'warn',
-    // `enabled: true` is honoured here, including in this demo's production
-    // build — so the panel below shows live guardrail output rather than a
-    // dead UI.
-    //
-    // How that squares with "zero production cost": for an app consuming
-    // @signaltree/guardrails from npm, the package's `exports` map resolves
-    // the `production` condition to `dist/noop.js` (src/noop.ts), which
-    // ignores config entirely. This demo does NOT go through that path — the
-    // package is not in node_modules, and tsconfig.base.json maps
-    // `@signaltree/guardrails` directly to `packages/guardrails/src`, which
-    // TypeScript resolves before any `exports` condition applies. Verified in
-    // the build output: dist/apps/demo/browser contains the real rule strings
-    // and none of noop.ts's. So this page is a deliberate exception, not a
-    // demonstration of what your production bundle will contain.
+    // `enabled: true` is honoured here even in this demo's production build.
+    // For an app installing @signaltree/guardrails from npm, the package's
+    // `exports` map resolves the `production` condition to dist/noop.js, which
+    // ignores config entirely — that is where "zero production cost" comes
+    // from. This demo never reaches that map: the package is not in
+    // node_modules at all, and tsconfig.base.json points
+    // `@signaltree/guardrails` at packages/guardrails/src/index.ts, so there is
+    // no package.json for the resolver to consult. Confirmed against the build
+    // output — dist/apps/demo/browser carries the real rule strings and none of
+    // noop.ts's. Treat this page as a deliberate exception, not as a picture of
+    // what your own production bundle will contain.
     enabled: true,
+    changeDetection: {
+      // REQUIRED for this page to show anything. Guardrails prefers core's
+      // path-notifier, which only emits for entityMap collections
+      // (packages/core/src/lib/entity-signal.ts is its sole caller). This
+      // demo's state is plain objects, so the notifier would never fire and
+      // every panel would read zero forever. Forcing the polling strategy is
+      // what makes the metrics real.
+      disablePathNotifier: true,
+    },
     budgets: {
       maxUpdateTime: 6,
     },
@@ -124,7 +130,9 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
   ) as unknown as GuardrailsEnabledTree<GuardrailsDemoState>;
 
   // __guardrails is a dev-only introspection property — not a public API.
-  // It is available because the guardrails() enhancer attaches it in dev mode.
+  // It is available because the guardrails() enhancer attaches it whenever the
+  // enhancer is active — see the config note above for why that includes this
+  // demo's production build.
   private readonly guardrails = this.tree.__guardrails;
 
   private readonly refreshTimerId: ReturnType<typeof setInterval> | undefined;
@@ -150,7 +158,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
       this.refreshReport();
     } else {
       this.refreshTimerId = undefined;
-      this.recordScenario('Guardrails enhancer runs only in dev builds.');
+      this.recordScenario('Guardrails enhancer is not attached on this tree.');
     }
   }
 
@@ -168,7 +176,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   runHealthyScenario(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
@@ -194,7 +202,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   triggerHotPath(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
@@ -221,7 +229,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   triggerBudgetBreach(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
@@ -255,7 +263,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   triggerRuleViolation(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
@@ -280,7 +288,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   runSuppressedScenario(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
@@ -307,7 +315,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   resetDemo(): void {
     if (!this.guardrails) {
-      this.recordScenario('Guardrails API unavailable in production builds.');
+      this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
