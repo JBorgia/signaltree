@@ -1,4 +1,4 @@
-## Unreleased (13.3.0)
+## 13.3.0 (2026-08-04)
 
 Durability release for the `stored()` marker (`@signaltree/core`), prompted by
 a field report from a Capacitor app: a value `.set()` right before the app was
