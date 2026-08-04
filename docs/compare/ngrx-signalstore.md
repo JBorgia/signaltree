@@ -203,7 +203,8 @@ For teams migrating NgRx `rxMethod` code: the SignalTree-native mapping is `asyn
 |---|---|---|
 | **localStorage** | Community plugins or hand-roll in `withHooks` | `stored('key', default)` marker per-leaf, or `.with(persistence())` enhancer for tree-wide |
 | **IndexedDB / custom adapters** | Hand-roll | `createIndexedDBAdapter()` or `createStorageAdapter()` from `@signaltree/core/storage` |
-| **Versioning + migrations** | Hand-roll | `stored(key, default, { version, migrations })` |
+| **Versioning + migrations** | Hand-roll | `stored(key, default, { version, migrate })` |
+| **Durability on background/kill** | Hand-roll | Debounced writes drain automatically on `visibilitychange`/`pagehide`; `.flush()` / `flushAllStoredSignals()` for native lifecycle hooks; `debounceMs: 0` for synchronous writes (13.3+) |
 
 ### 9. Forms
 

@@ -2,6 +2,79 @@
   <h2>🚀 What's New</h2>
 
   <h3>
+    💾 v13.3.0 — <code>stored()</code> writes are durable: <code>flush()</code>,
+    lifecycle drain, cancel-on-clear (August 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      A field report from a Capacitor app: select a value, background the app within
+      ~100&nbsp;ms, and the selection is gone — the debounced storage write never fired
+      and nothing drained it. The debounce/coalescing model was right; draining was
+      missing. This release closes the loss window automatically and fixes two real
+      bugs the investigation surfaced.
+    </p>
+    <h4>✨ Fixed</h4>
+    <ul>
+      <li>
+        <strong><code>clear()</code> and <code>reload()</code> cancel the pending
+        debounced write</strong> — previously <code>clear()</code> removed the key but
+        left the write timer armed, so the cleared value was written back
+        ~100&nbsp;ms later: resurrected in storage while the signal held the default.
+        <code>reload()</code> had the mirror hazard (a stale pending value overwriting
+        what was just read).
+      </li>
+      <li>
+        <strong><code>reload()</code> runs migrations</strong> — it used to apply
+        stored data regardless of its <code>__v</code>, so reloading a key written by
+        an older app version (say, another tab) bypassed the <code>migrate</code>
+        function initial load would have run. Reload and init now share one load path.
+      </li>
+    </ul>
+    <h4>🆕 Added</h4>
+    <ul>
+      <li>
+        <strong>Automatic lifecycle drain</strong> — every stored signal with debounced
+        writes is flushed on <code>visibilitychange</code>&nbsp;→&nbsp;hidden and
+        <code>pagehide</code> (one lazy listener pair, SSR-safe). By the time a mobile
+        WebView is suspended or a tab closes, pending values are in storage — no
+        consumer changes needed.
+      </li>
+      <li>
+        <strong><code>.flush()</code></strong> commits one signal's pending write
+        synchronously; <strong><code>flushAllStoredSignals()</code></strong> drains
+        everything — wire it to native lifecycle hooks the DOM can't see, e.g.
+        Capacitor's <code>App.addListener('pause', …)</code>.
+      </li>
+      <li>
+        <strong><code>maxWaitMs</code></strong> — plain debouncing resets the timer on
+        every update, so a key updated faster than <code>debounceMs</code> never
+        persisted until updates stopped. <code>maxWaitMs</code> bounds that staleness.
+      </li>
+      <li>
+        <strong><code>onError</code></strong> (+ <code>StoredErrorContext</code>) —
+        storage failures (quota, serialization, migration) previously only
+        <code>console.warn</code>'d in dev and were compiled out of production builds:
+        silently dropped data. Now there's a programmatic hook.
+      </li>
+    </ul>
+    <h4>⚠️ Changed (behavior)</h4>
+    <ul>
+      <li>
+        <strong><code>debounceMs: 0</code> writes synchronously in the caller's
+        stack</strong> (was deferred one microtask) — <code>set()</code> returning now
+        means the value is in storage, for keys that must never sit in a debounce
+        window.
+      </li>
+    </ul>
+    <pre><code>// Durability levers, least → most aggressive
+tree.$.truckId.flush();                  // commit this signal's pending write now
+flushAllStoredSignals();                 // drain all (e.g. Capacitor 'pause' hook)
+stored('truckId', null, &#123; debounceMs: 0 &#125;); // synchronous per-key
+
+// And the automatic one: backgrounding the app drains everything — no code.</code></pre>
+  </div>
+
+  <h3>
     🎯 v13.2.0 — typed <code>.computed()</code> slices, branded form errors by default
     (July 2026)
   </h3>

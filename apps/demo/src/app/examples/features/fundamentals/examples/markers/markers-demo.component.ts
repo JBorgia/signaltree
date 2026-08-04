@@ -169,15 +169,23 @@ const tree = signalTree({
 // Auto-loads from localStorage on init
 tree.$.theme();  // 'light' or restored value
 
-// Auto-saves on change (debounced 100ms default)
+// Auto-saves on change (debounced 100ms default). Pending writes are
+// drained automatically when the page is hidden/unloaded, so a value set
+// right before the app is backgrounded is not lost (v13.3).
 tree.$.theme.set('dark');  // Immediate signal update
 
 // Methods
-tree.$.theme.clear();   // Reset to default
-tree.$.theme.reload();  // Force reload from storage
+tree.$.theme.clear();   // Reset to default (cancels pending write)
+tree.$.theme.reload();  // Reload from storage, runs migrations (cancels pending write)
+tree.$.theme.flush();   // Commit a pending debounced write right now (v13.3)
 
-// Custom debounce
-stored('key', value, { debounceMs: 0 });  // Immediate`;
+// Durability options (v13.3)
+stored('key', value, { debounceMs: 0 });   // Synchronous write in set()'s stack
+stored('key', value, { maxWaitMs: 1000 }); // Cap write delay under rapid updates
+stored('key', value, { onError: (e, ctx) => report(e, ctx) }); // Quota/serialize failures
+
+// Drain every stored signal (e.g. Capacitor App 'pause' hook)
+flushAllStoredSignals();`;
 
   combinedExample = `// Combining markers with derived state
 const tree = signalTree({

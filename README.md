@@ -28,7 +28,7 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 - **`form()`** (`@signaltree/ng-forms`) → tree-integrated reactive forms with validation and wizards
 - **`.derived()`** → computed state deep-merged at any path
 - **`timeTravel()`** → undo/redo with configurable history depth
-- **`stored()`** → localStorage autosave with migrations
+- **`stored()`** → localStorage autosave with migrations and durable writes (auto-drained on background/unload)
 
 ### Use SignalTree if you need
 
@@ -36,7 +36,7 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 - Undo / redo (`timeTravel` enhancer)
 - Typed normalized collections with O(1) lookups (`entityMap`)
 - Reactive forms with validation, wizards, and persistence (`form()` marker)
-- localStorage autosave with migrations (`stored()` marker)
+- localStorage autosave with migrations and background/kill-safe writes (`stored()` marker)
 - State that mirrors your data shape, not Redux ceremony
 
 ### Production architecture
