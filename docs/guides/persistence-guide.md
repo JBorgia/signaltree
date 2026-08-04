@@ -48,6 +48,15 @@ tree.$.theme.set('dark'); // auto-saves to localStorage under 'app.theme'
 tree.$.theme.clear(); // remove from storage, reset to default
 ```
 
+Debounced writes are durable: pending writes are drained automatically when
+the page is hidden or unloaded, `flush()` commits one signal's pending write
+on demand, and `flushAllStoredSignals()` drains everything (wire it to native
+lifecycle hooks the DOM can't see, e.g. Capacitor's `App` `'pause'` event).
+For keys that must never be caught in a debounce window, `debounceMs: 0`
+writes synchronously in the caller's stack. `maxWaitMs` bounds how long
+continuous updates can delay a write, and `onError` surfaces storage
+failures (quota, serialization) that would otherwise only warn in dev.
+
 ## 2. `persistence({ key, … })` — whole-tree snapshot / autosave
 
 An enhancer (it composes `serialization()` internally, so the tree also gains

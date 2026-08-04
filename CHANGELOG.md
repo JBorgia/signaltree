@@ -1,3 +1,61 @@
+## Unreleased (13.3.0)
+
+Durability release for the `stored()` marker (`@signaltree/core`), prompted by
+a field report from a Capacitor app: a value `.set()` right before the app was
+backgrounded/killed could be lost, because the debounced storage write
+(default 100 ms) had not fired yet and nothing drained it on teardown. The
+debounce/coalescing model is unchanged — this release makes draining safe and
+gives durability-critical keys explicit levers.
+
+### Fixed
+
+- **`stored()`: `clear()` and `reload()` now cancel a pending debounced
+  write.** Previously `clear()` removed the key synchronously but left the
+  write timer armed, so the cleared value was written back ~100 ms later —
+  resurrecting it in storage while the signal held the default (signal/storage
+  drift). `reload()` had the same hazard: the stale pending value could
+  overwrite what was just read. Both now treat their own operation as the
+  source of truth.
+- **`stored()`: `reload()` now runs migrations.** It previously applied stored
+  data regardless of its `__v`, so reloading a key written by an older app
+  version (e.g. another tab) bypassed the `migrate` function that initial load
+  would have run. `reload()` and initial load now share one code path.
+- **`stored()`: a deferred migration re-persist can no longer clobber newer
+  data.** The microtask that re-saves migrated data now skips itself if the
+  app wrote (or has queued) a newer value since it was scheduled.
+
+### Added
+
+- **`stored()`: `flush()`** — synchronously commits a pending debounced write
+  and cancels the timer. No-op when nothing is pending.
+- **`flushAllStoredSignals()`** (exported from `@signaltree/core`) — drains
+  every live stored signal. Wire it to native lifecycle hooks the DOM can't
+  see, e.g. Capacitor's `App.addListener('pause', …)`.
+- **Automatic lifecycle drain.** Every stored signal with debounced writes is
+  drained on `visibilitychange` → `hidden` and `pagehide` (one shared listener
+  pair, installed lazily, SSR-safe). This closes the reported loss window with
+  no consumer changes: by the time a mobile WebView is suspended or a tab is
+  closed, pending values are in storage.
+- **`stored()`: `maxWaitMs` option** — bounds how long successive updates can
+  delay a write. Plain debouncing resets the timer on every update, so a key
+  updated faster than `debounceMs` never persisted until updates stopped;
+  `maxWaitMs` guarantees a write at most that long after the first unpersisted
+  update.
+- **`stored()`: `onError` option** (+ exported `StoredErrorContext` type) —
+  callback for storage failures (`read` / `write` / `migrate`). Without it,
+  failures only `console.warn` in dev mode and are compiled out of production
+  builds — quota errors silently dropped data with no programmatic signal.
+
+### Changed
+
+- **`stored()`: `debounceMs: 0` now writes synchronously in the caller's
+  stack** (previously deferred one microtask). `set()` returning now means the
+  value is in storage — equivalent durability to calling `storage.setItem`
+  yourself, for keys that must never sit in a debounce window.
+- **`stored()`: debounced writes commit directly in the timer callback**
+  (previously deferred one extra microtask inside the `setTimeout`, which
+  bought nothing and complicated cancellation).
+
 ## 13.2.0 (2026-07-28)
 
 > **Heads-up for `signalForm()` users:** this release changes the **default error

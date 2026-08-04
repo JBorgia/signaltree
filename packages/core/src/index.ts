@@ -172,9 +172,11 @@ export {
   isStoredMarker,
   createStorageKeys,
   clearStoragePrefix,
+  flushAllStoredSignals,
   type StoredMarker,
   type StoredSignal,
   type StoredOptions,
+  type StoredErrorContext,
 } from './lib/markers/stored';
 
 // Form marker (v7.2) - tree-integrated forms with validation

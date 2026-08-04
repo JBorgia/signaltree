@@ -1478,13 +1478,33 @@ clearStoragePrefix('myApp');
 stored('key', defaultValue, {
   version: 1, // Schema version
   migrate: (old, ver) => migrated, // Migration function
-  debounceMs: 100, // Write debounce (default: 100)
+  debounceMs: 100, // Write debounce (default: 100); 0 = synchronous write
+  maxWaitMs: 1000, // Optional cap on write delay under continuous updates
   storage: sessionStorage, // Custom storage backend
   serialize: (v) => JSON.stringify(v), // Custom serializer
   deserialize: (s) => JSON.parse(s), // Custom deserializer
   clearOnMigrationFailure: false, // Clear on failed migration
+  onError: (e, ctx) => report(e, ctx), // Storage failure hook (read/write/migrate)
 });
 ```
+
+#### Durability
+
+Debounced writes are drained automatically when the page is hidden or
+unloaded (`visibilitychange` → hidden, `pagehide`), so a value set right
+before the app is backgrounded or killed is not lost. Levers, from least to
+most aggressive:
+
+```typescript
+tree.$.theme.flush(); // commit this signal's pending write now
+flushAllStoredSignals(); // drain every stored signal (e.g. Capacitor 'pause' hook)
+stored('key', v, { debounceMs: 0 }); // per-key: write synchronously in set()'s stack
+```
+
+`clear()` and `reload()` cancel any pending debounced write — a cleared value
+can't be resurrected by a timer that was already armed, and `reload()` treats
+storage as the source of truth (running `migrate` if the stored version
+differs, same as initial load).
 
 ### 12) `form(config)` - Tree-Integrated Forms
 

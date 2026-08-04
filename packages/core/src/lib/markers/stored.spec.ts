@@ -5,9 +5,11 @@ import {
   clearStoragePrefix,
   createStorageKeys,
   createStoredSignal,
+  flushAllStoredSignals,
   isStoredMarker,
   stored,
   STORED_MARKER,
+  type StoredOptions,
 } from '../markers/stored';
 import { signalTree } from '../signal-tree';
 
@@ -1141,5 +1143,321 @@ describe('clearStoragePrefix()', () => {
     expect(mockStorage.getItem('app:auth:token')).toBe(null);
     expect(mockStorage.getItem('app:auth:user')).toBe(null);
     expect(mockStorage.getItem('app:settings:theme')).toBe('"dark"'); // Preserved
+  });
+});
+
+// =============================================================================
+// Durability & draining (flush, lifecycle drain, cancel-on-clear/reload,
+// maxWaitMs, onError, synchronous debounceMs: 0)
+// =============================================================================
+
+describe('stored() durability and draining', () => {
+  let mockStorage: Storage;
+
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+  });
+
+  const makeSignal = <T,>(
+    key: string,
+    defaultValue: T,
+    options: StoredOptions<T> = {}
+  ) =>
+    createStoredSignal<T>({
+      [STORED_MARKER]: true,
+      key,
+      defaultValue,
+      options: { storage: mockStorage, ...options },
+    });
+
+  describe('clear()/reload() vs pending writes', () => {
+    it('clear() cancels a pending debounced write (no resurrection)', () => {
+      vi.useFakeTimers();
+
+      const sig = makeSignal('k', 'default');
+      sig.set('A'); // debounced write of A armed
+      sig.clear(); // must cancel it, not just removeItem
+
+      vi.advanceTimersByTime(500);
+
+      expect(sig()).toBe('default');
+      expect(mockStorage.getItem('k')).toBe(null);
+
+      vi.useRealTimers();
+    });
+
+    it('reload() cancels a pending write and takes storage as truth', () => {
+      vi.useFakeTimers();
+      mockStorage.setItem('k', JSON.stringify({ __v: 1, data: 'persisted' }));
+
+      const sig = makeSignal('k', 'default');
+      sig.set('unsaved');
+      sig.reload();
+
+      expect(sig()).toBe('persisted');
+
+      vi.advanceTimersByTime(500);
+      // The stale pending write must not overwrite what reload() read
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe('persisted');
+
+      vi.useRealTimers();
+    });
+
+    it('reload() runs migrations when the stored version differs', async () => {
+      interface Settings {
+        name: string;
+        migrated: boolean;
+      }
+      const sig = makeSignal<Settings>(
+        'k',
+        { name: 'default', migrated: false },
+        {
+          version: 2,
+          migrate: (old) => ({
+            ...(old as { name: string }),
+            migrated: true,
+          }),
+        }
+      );
+
+      // Another tab/process writes v1 data
+      mockStorage.setItem(
+        'k',
+        JSON.stringify({ __v: 1, data: { name: 'external' } })
+      );
+
+      sig.reload();
+      expect(sig()).toEqual({ name: 'external', migrated: true });
+
+      // Migrated data is re-persisted with the new version
+      await new Promise((r) => queueMicrotask(r));
+      const persisted = JSON.parse(mockStorage.getItem('k')!);
+      expect(persisted.__v).toBe(2);
+      expect(persisted.data).toEqual({ name: 'external', migrated: true });
+    });
+  });
+
+  describe('flush()', () => {
+    it('commits a pending write synchronously and cancels the timer', () => {
+      vi.useFakeTimers();
+
+      let writes = 0;
+      const trackingStorage: Storage = {
+        ...mockStorage,
+        setItem: (key: string, value: string) => {
+          writes++;
+          mockStorage.setItem(key, value);
+        },
+      };
+
+      const sig = createStoredSignal({
+        [STORED_MARKER]: true,
+        key: 'k',
+        defaultValue: 'default',
+        options: { storage: trackingStorage },
+      });
+
+      sig.set('A');
+      expect(mockStorage.getItem('k')).toBe(null); // still debounced
+
+      sig.flush();
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe('A');
+
+      vi.advanceTimersByTime(500);
+      expect(writes).toBe(1); // timer was cancelled - no double write
+
+      vi.useRealTimers();
+    });
+
+    it('is a no-op when nothing is pending', () => {
+      const sig = makeSignal('k', 'default');
+      expect(() => sig.flush()).not.toThrow();
+      expect(mockStorage.getItem('k')).toBe(null);
+    });
+
+    it('flushAllStoredSignals() drains every live stored signal', () => {
+      vi.useFakeTimers();
+
+      const a = makeSignal('a', 0);
+      const b = makeSignal('b', 0);
+      a.set(1);
+      b.set(2);
+
+      flushAllStoredSignals();
+
+      expect(JSON.parse(mockStorage.getItem('a')!).data).toBe(1);
+      expect(JSON.parse(mockStorage.getItem('b')!).data).toBe(2);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('lifecycle drain', () => {
+    it('drains pending writes on pagehide', () => {
+      vi.useFakeTimers();
+
+      const sig = makeSignal('k', 'default');
+      sig.set('selected');
+      expect(mockStorage.getItem('k')).toBe(null);
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe('selected');
+      vi.useRealTimers();
+    });
+
+    it('drains pending writes when the document becomes hidden', () => {
+      vi.useFakeTimers();
+
+      const sig = makeSignal('k', 'default');
+      sig.set('selected');
+
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      try {
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(JSON.parse(mockStorage.getItem('k')!).data).toBe('selected');
+      } finally {
+        delete (document as unknown as Record<string, unknown>)[
+          'visibilityState'
+        ];
+      }
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('debounceMs: 0 (synchronous mode)', () => {
+    it('writes in the caller stack - durable the moment set() returns', () => {
+      const sig = makeSignal('k', 'a', { debounceMs: 0 });
+      sig.set('b');
+      // No awaits, no timer advance - already in storage
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe('b');
+    });
+  });
+
+  describe('maxWaitMs', () => {
+    it('bounds staleness under continuous updates', () => {
+      vi.useFakeTimers();
+
+      const sig = makeSignal('k', 0, { debounceMs: 100, maxWaitMs: 300 });
+
+      // Update every 50ms - plain debounce alone would never flush
+      let i = 0;
+      for (let t = 0; t < 300; t += 50) {
+        sig.set(++i);
+        vi.advanceTimersByTime(50);
+      }
+
+      // maxWait fired at t=300 with the latest value
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe(i);
+
+      vi.useRealTimers();
+    });
+
+    it('resets after a commit so later bursts get their own bound', () => {
+      vi.useFakeTimers();
+
+      const sig = makeSignal('k', 0, { debounceMs: 100, maxWaitMs: 300 });
+
+      sig.set(1);
+      vi.advanceTimersByTime(100); // debounce commits normally
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe(1);
+
+      sig.set(2);
+      vi.advanceTimersByTime(100);
+      expect(JSON.parse(mockStorage.getItem('k')!).data).toBe(2);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('onError', () => {
+    it('receives write failures and suppresses the console warn', () => {
+      const seen: Array<{ operation: string; key: string }> = [];
+      const failingStorage: Storage = {
+        ...mockStorage,
+        setItem: () => {
+          throw new Error('QuotaExceededError');
+        },
+      };
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* silence */
+      });
+
+      const sig = createStoredSignal({
+        [STORED_MARKER]: true,
+        key: 'k',
+        defaultValue: 'default',
+        options: {
+          storage: failingStorage,
+          debounceMs: 0,
+          onError: (error, context) =>
+            seen.push({ operation: context.operation, key: context.key }),
+        },
+      });
+
+      sig.set('x');
+
+      expect(seen).toEqual([{ operation: 'write', key: 'k' }]);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('receives read failures', () => {
+      mockStorage.setItem('k', '{not valid json');
+      const operations: string[] = [];
+
+      const sig = makeSignal('k', 'default', {
+        onError: (error, context) => operations.push(context.operation),
+      });
+
+      expect(sig()).toBe('default');
+      expect(operations).toEqual(['read']);
+    });
+
+    it('receives migration failures', () => {
+      mockStorage.setItem('k', JSON.stringify({ __v: 1, data: 'old' }));
+      const operations: string[] = [];
+
+      const sig = makeSignal('k', 'default', {
+        version: 2,
+        migrate: () => {
+          throw new Error('cannot migrate');
+        },
+        onError: (error, context) => operations.push(context.operation),
+      });
+
+      expect(sig()).toBe('default');
+      expect(operations).toEqual(['migrate']);
+    });
+
+    it('a throwing onError handler does not break persistence', () => {
+      const failingStorage: Storage = {
+        ...mockStorage,
+        setItem: () => {
+          throw new Error('write failed');
+        },
+      };
+
+      const sig = createStoredSignal({
+        [STORED_MARKER]: true,
+        key: 'k',
+        defaultValue: 'default',
+        options: {
+          storage: failingStorage,
+          debounceMs: 0,
+          onError: () => {
+            throw new Error('handler blew up');
+          },
+        },
+      });
+
+      expect(() => sig.set('x')).not.toThrow();
+      expect(sig()).toBe('x'); // signal still updated
+    });
   });
 });

@@ -184,9 +184,18 @@ store.$.settings.theme(); // 'light' or value from localStorage
 store.$.settings.theme.set('dark');
 
 // Additional methods:
-store.$.settings.theme.clear(); // Remove from localStorage, reset to default
-store.$.settings.theme.reload(); // Re-read from localStorage
+store.$.settings.theme.clear(); // Remove from localStorage, reset to default (cancels pending write)
+store.$.settings.theme.reload(); // Re-read from localStorage, runs migrations (cancels pending write)
+store.$.settings.theme.flush(); // Commit a pending debounced write synchronously
 ```
+
+Writes are debounced (default 100 ms) and drained automatically on
+`visibilitychange` → hidden / `pagehide`, so backgrounding or killing the app
+does not lose a just-set value. Options: `debounceMs` (0 = synchronous write),
+`maxWaitMs` (caps write delay under continuous updates), `onError(error, { key, operation })`
+(storage failure hook). `flushAllStoredSignals()` (exported from
+`@signaltree/core`) drains every stored signal — call it from native lifecycle
+hooks like Capacitor's `App` `'pause'` event.
 
 ---
 

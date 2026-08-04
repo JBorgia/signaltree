@@ -26,6 +26,9 @@ import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers
  * // Force reload from storage
  * tree.$.theme.reload();
  *
+ * // Force a pending debounced write to commit right now
+ * tree.$.theme.flush();
+ *
  * // With versioning and migration
  * signalTree({
  *   settings: stored('user-settings', defaultSettings, {
@@ -83,8 +86,27 @@ export interface StoredOptions<T> {
   deserialize?: (stored: string) => T;
   /** Storage backend (default: localStorage) */
   storage?: Storage | null;
-  /** Debounce delay in ms for writes (default: 100). Set to 0 for immediate writes. */
+  /**
+   * Debounce delay in ms for writes (default: 100).
+   * Set to 0 for immediate, synchronous writes in the caller's stack —
+   * equivalent durability to calling `storage.setItem` yourself.
+   */
   debounceMs?: number;
+  /**
+   * Upper bound in ms on how long successive updates may delay a pending
+   * write. Plain debouncing resets the timer on every update, so a key
+   * updated faster than `debounceMs` is never persisted until updates stop;
+   * `maxWaitMs` guarantees a write at most this long after the first
+   * unpersisted update. Ignored when `debounceMs` is 0.
+   */
+  maxWaitMs?: number;
+  /**
+   * Called when a storage operation fails (read, write, or migration).
+   * When provided it replaces the default dev-mode `console.warn` — which
+   * is compiled out of production builds, where failures would otherwise
+   * be completely silent.
+   */
+  onError?: (error: unknown, context: StoredErrorContext) => void;
   /**
    * Schema version for this stored value.
    * When version changes, the migrate function is called.
@@ -101,6 +123,16 @@ export interface StoredOptions<T> {
    * @default false
    */
   clearOnMigrationFailure?: boolean;
+}
+
+/**
+ * Context passed to a {@link StoredOptions.onError} handler.
+ */
+export interface StoredErrorContext {
+  /** The storage key the failed operation targeted. */
+  key: string;
+  /** Which storage operation failed. */
+  operation: 'read' | 'write' | 'migrate';
 }
 
 /**
@@ -245,10 +277,17 @@ export interface StoredSignal<T> {
   set(value: T): void;
   /** Update the value (auto-saves to storage) */
   update(fn: (current: T) => T): void;
-  /** Clear from storage and reset to default */
+  /** Clear from storage and reset to default (cancels any pending write) */
   clear(): void;
-  /** Force reload from storage */
+  /** Force reload from storage, running migrations if the stored version differs (cancels any pending write) */
   reload(): void;
+  /**
+   * Commit any pending debounced write to storage synchronously.
+   * No-op when nothing is pending. Called automatically for all stored
+   * signals when the page is hidden or unloaded, so debounced values are
+   * not lost when the app is backgrounded or killed.
+   */
+  flush(): void;
   /** Get the storage key */
   readonly key: string;
   /** Get the current version */
@@ -321,6 +360,49 @@ export function isStoredMarker(value: unknown): value is StoredMarker<unknown> {
 }
 
 // =============================================================================
+// LIFECYCLE DRAIN
+// =============================================================================
+
+/**
+ * @internal - Flush hooks for every live stored signal with debounced writes.
+ * Stored signals have no dispose hook (they live as long as their tree,
+ * typically the app), so entries are never removed; each holds only a small
+ * closure and flushing with nothing pending is a no-op.
+ */
+const activeStoredFlushers = new Set<() => void>();
+
+/** @internal */
+let lifecycleFlushInstalled = false;
+
+/**
+ * @internal - Installs a single pair of page-lifecycle listeners that drain
+ * all pending stored writes when the page is hidden or unloading.
+ * `visibilitychange` → hidden is the reliable signal on mobile/Capacitor
+ * (fired before the WebView is suspended); `pagehide` covers desktop
+ * navigation. SSR-safe: no-op without a DOM.
+ */
+function installLifecycleFlush(): void {
+  if (lifecycleFlushInstalled) return;
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  lifecycleFlushInstalled = true;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushAllStoredSignals();
+  });
+  window.addEventListener('pagehide', () => flushAllStoredSignals());
+}
+
+/**
+ * Synchronously commits every pending debounced write across all stored
+ * signals. Runs automatically on `visibilitychange` → hidden and `pagehide`;
+ * call it manually from native lifecycle hooks the DOM can't see
+ * (e.g. Capacitor's `App.addListener('pause', ...)`).
+ */
+export function flushAllStoredSignals(): void {
+  for (const flush of activeStoredFlushers) flush();
+}
+
+// =============================================================================
 // SIGNAL FACTORY
 // =============================================================================
 
@@ -340,9 +422,11 @@ export function createStoredSignal<T>(
       serialize = JSON.stringify,
       deserialize = JSON.parse,
       debounceMs = 100, // Default debounce to avoid hammering localStorage
+      maxWaitMs,
       version = 1,
       migrate,
       clearOnMigrationFailure = false,
+      onError,
     },
   } = marker;
 
@@ -354,150 +438,176 @@ export function createStoredSignal<T>(
       ? localStorage
       : null;
 
-  // Load and potentially migrate initial value from storage
-  let initialValue = defaultValue;
-  if (storage) {
-    try {
-      const storedRaw = storage.getItem(key);
-      if (storedRaw !== null) {
-        const parsed = deserialize(storedRaw);
-
-        // Check if data has version metadata
-        if (isVersionedData<T>(parsed)) {
-          const storedVersion = parsed.__v;
-          let data = parsed.data;
-
-          // Run migration if versions differ
-          if (storedVersion !== version && migrate) {
-            try {
-              data = migrate(data, storedVersion);
-              // Save migrated data with new version
-              queueMicrotask(() => {
-                try {
-                  const versionedData: VersionedStorageData<T> = {
-                    __v: version,
-                    data,
-                  };
-                  storage.setItem(
-                    key,
-                    serialize(versionedData as unknown as T)
-                  );
-                } catch {
-                  // Ignore save errors during migration
-                }
-              });
-            } catch (e) {
-              if (typeof ngDevMode === 'undefined' || ngDevMode) {
-                console.warn(
-                  `SignalTree: Migration failed for "${key}" from v${storedVersion} to v${version}`,
-                  e
-                );
-              }
-              if (clearOnMigrationFailure) {
-                storage.removeItem(key);
-              }
-              data = defaultValue;
-            }
-          }
-
-          initialValue = data;
-        } else {
-          // Legacy data without version - treat as v0 and migrate if needed
-          if (migrate && version > 0) {
-            try {
-              initialValue = migrate(parsed, 0);
-              // Save with version metadata
-              queueMicrotask(() => {
-                try {
-                  const versionedData: VersionedStorageData<T> = {
-                    __v: version,
-                    data: initialValue,
-                  };
-                  storage.setItem(
-                    key,
-                    serialize(versionedData as unknown as T)
-                  );
-                } catch {
-                  // Ignore save errors
-                }
-              });
-            } catch (e) {
-              if (typeof ngDevMode === 'undefined' || ngDevMode) {
-                console.warn(
-                  `SignalTree: Migration failed for "${key}" from legacy to v${version}`,
-                  e
-                );
-              }
-              if (clearOnMigrationFailure) {
-                storage.removeItem(key);
-              }
-              initialValue = defaultValue;
-            }
-          } else {
-            // No migration needed, use legacy data as-is
-            initialValue = parsed as T;
-          }
-        }
-      }
-    } catch (e) {
-      // Storage read failed, use default
-      if (typeof ngDevMode === 'undefined' || ngDevMode) {
-        console.warn(`SignalTree: Failed to read "${key}" from storage`, e);
-      }
-    }
-  }
-
-  const sig = signal<T>(initialValue);
   const currentVersion = version;
 
-  // Debounced save to storage - non-blocking via queueMicrotask
-  let pendingWrite: ReturnType<typeof setTimeout> | null = null;
+  // Monotonic count of committed writes - used to drop a deferred migration
+  // persist that would otherwise clobber data written after it was scheduled.
+  let writeGeneration = 0;
+
+  const reportError = (
+    operation: StoredErrorContext['operation'],
+    error: unknown,
+    devMessage: string
+  ): void => {
+    if (onError) {
+      try {
+        onError(error, { key, operation });
+      } catch {
+        // A failing error handler must not break persistence
+      }
+      return;
+    }
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      console.warn(devMessage, error);
+    }
+  };
+
+  // Synchronous versioned write - the single point where storage is touched
+  const writeNow = (value: T): void => {
+    if (!storage) return;
+    writeGeneration++;
+    try {
+      const versionedData: VersionedStorageData<T> = {
+        __v: currentVersion,
+        data: value,
+      };
+      storage.setItem(key, serialize(versionedData as unknown as T));
+    } catch (e) {
+      reportError(
+        'write',
+        e,
+        `SignalTree: Failed to save "${key}" to storage`
+      );
+    }
+  };
+
+  // Persist migrated data without blocking the caller (init or reload).
+  // Skipped if the app wrote (or has queued) newer data in the meantime.
+  const persistMigrated = (data: T): void => {
+    const generationAtSchedule = writeGeneration;
+    queueMicrotask(() => {
+      if (writeGeneration !== generationAtSchedule || hasPending) return;
+      writeNow(data);
+    });
+  };
+
+  // Read + migrate. Shared by init and reload() so both apply the same
+  // versioning rules.
+  const loadFromStorage = (): T => {
+    if (!storage) return defaultValue;
+    try {
+      const storedRaw = storage.getItem(key);
+      if (storedRaw === null) return defaultValue;
+      const parsed = deserialize(storedRaw);
+
+      // Check if data has version metadata
+      if (isVersionedData<T>(parsed)) {
+        const storedVersion = parsed.__v;
+        let data = parsed.data;
+
+        // Run migration if versions differ
+        if (storedVersion !== version && migrate) {
+          try {
+            data = migrate(data, storedVersion);
+            persistMigrated(data);
+          } catch (e) {
+            reportError(
+              'migrate',
+              e,
+              `SignalTree: Migration failed for "${key}" from v${storedVersion} to v${version}`
+            );
+            if (clearOnMigrationFailure) {
+              storage.removeItem(key);
+            }
+            return defaultValue;
+          }
+        }
+        return data;
+      }
+
+      // Legacy data without version - treat as v0 and migrate if needed
+      if (migrate && version > 0) {
+        try {
+          const migrated = migrate(parsed, 0);
+          persistMigrated(migrated);
+          return migrated;
+        } catch (e) {
+          reportError(
+            'migrate',
+            e,
+            `SignalTree: Migration failed for "${key}" from legacy to v${version}`
+          );
+          if (clearOnMigrationFailure) {
+            storage.removeItem(key);
+          }
+          return defaultValue;
+        }
+      }
+
+      // No migration needed, use legacy data as-is
+      return parsed as T;
+    } catch (e) {
+      reportError(
+        'read',
+        e,
+        `SignalTree: Failed to read "${key}" from storage`
+      );
+      return defaultValue;
+    }
+  };
+
+  const sig = signal<T>(loadFromStorage());
+
+  // Debounced write state. `hasPending` (not `pendingValue !== undefined`)
+  // tracks pending-ness so that `undefined` remains a legal stored value.
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingValue: T | undefined;
+  let hasPending = false;
+
+  const cancelPending = (): void => {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    if (maxWaitTimer !== null) {
+      clearTimeout(maxWaitTimer);
+      maxWaitTimer = null;
+    }
+    hasPending = false;
+    pendingValue = undefined;
+  };
+
+  const commitPending = (): void => {
+    if (!hasPending) return;
+    const value = pendingValue as T;
+    cancelPending();
+    writeNow(value);
+  };
 
   const saveToStorage = (value: T): void => {
     if (!storage) return;
 
-    // Wrap data with version metadata
-    const versionedData: VersionedStorageData<T> = {
-      __v: currentVersion,
-      data: value,
-    };
-
-    // For immediate writes (debounceMs = 0), skip debouncing
+    // Immediate mode: write synchronously in the caller's stack, so the
+    // value is durable the moment set() returns.
     if (debounceMs === 0) {
-      queueMicrotask(() => {
-        try {
-          storage.setItem(key, serialize(versionedData as unknown as T));
-        } catch (e) {
-          if (typeof ngDevMode === 'undefined' || ngDevMode) {
-            console.warn(`SignalTree: Failed to save "${key}" to storage`, e);
-          }
-        }
-      });
+      writeNow(value);
       return;
     }
 
-    // Debounced write - coalesce rapid updates
+    // Debounced write - coalesce rapid updates to a single write
     pendingValue = value;
-    if (pendingWrite !== null) {
-      clearTimeout(pendingWrite);
+    hasPending = true;
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
     }
-    pendingWrite = setTimeout(() => {
-      pendingWrite = null;
-      queueMicrotask(() => {
-        try {
-          const finalData: VersionedStorageData<T> = {
-            __v: currentVersion,
-            data: pendingValue as T,
-          };
-          storage.setItem(key, serialize(finalData as unknown as T));
-        } catch (e) {
-          if (typeof ngDevMode === 'undefined' || ngDevMode) {
-            console.warn(`SignalTree: Failed to save "${key}" to storage`, e);
-          }
-        }
-      });
-    }, debounceMs);
+    debounceTimer = setTimeout(commitPending, debounceMs);
+
+    // maxWait timer starts on the first unpersisted update and is NOT reset
+    // by later updates - bounds staleness under continuous writes.
+    if (maxWaitMs !== undefined && maxWaitTimer === null) {
+      maxWaitTimer = setTimeout(commitPending, maxWaitMs);
+    }
   };
 
   // Create the stored signal interface
@@ -515,30 +625,35 @@ export function createStoredSignal<T>(
   };
 
   storedSignal.clear = (): void => {
+    cancelPending(); // A pending write must not resurrect the cleared value
     sig.set(defaultValue);
     if (storage) {
-      storage.removeItem(key);
+      try {
+        storage.removeItem(key);
+      } catch (e) {
+        reportError(
+          'write',
+          e,
+          `SignalTree: Failed to remove "${key}" from storage`
+        );
+      }
     }
   };
 
   storedSignal.reload = (): void => {
     if (!storage) return;
-    try {
-      const storedRaw = storage.getItem(key);
-      if (storedRaw !== null) {
-        const parsed = deserialize(storedRaw);
-        if (isVersionedData<T>(parsed)) {
-          sig.set(parsed.data);
-        } else {
-          sig.set(parsed as T);
-        }
-      } else {
-        sig.set(defaultValue);
-      }
-    } catch {
-      sig.set(defaultValue);
-    }
+    cancelPending(); // Storage is the source of truth for a reload
+    sig.set(loadFromStorage());
   };
+
+  storedSignal.flush = commitPending;
+
+  // Drain pending writes when the page is hidden/unloaded so a debounced
+  // value can't be lost to a background/kill (mobile WebViews in particular).
+  if (storage && debounceMs > 0) {
+    activeStoredFlushers.add(commitPending);
+    installLifecycleFlush();
+  }
 
   // Add readonly properties
   Object.defineProperty(storedSignal, 'key', { value: key, writable: false });
