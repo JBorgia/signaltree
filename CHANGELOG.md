@@ -1,3 +1,20 @@
+## Unreleased (13.3.1)
+
+### Fixed
+
+- **`createFormTree()`: `getFieldError()` / `getFieldAsyncError()` now resolve
+  concrete array-index paths validated via glob keys** (`@signaltree/ng-forms`).
+  The per-field error map was pre-seeded only from the validator map's literal
+  keys — so a validator registered as `phones.*.value` produced errors keyed by
+  concrete paths (`phones.0.value`) that `getFieldError('phones.0.value')`
+  could never see: it fell into an always-`undefined` stub while the form-level
+  `errors()` summary showed the message, leaving the two error surfaces on one
+  form disagreeing. Both lookups now lazily create (and cache) a computed for
+  any requested concrete path, reading the same `errors()` source of truth.
+  Found via the ng-forms demo page, which exercises exactly this pattern.
+  (`createFormTree` remains deprecated in favor of `form()` + `signalForm()`;
+  the fix keeps the legacy bridge honest for existing consumers.)
+
 ## 13.3.0 (2026-08-04)
 
 Durability release for the `stored()` marker (`@signaltree/core`), prompted by
