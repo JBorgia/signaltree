@@ -73,7 +73,7 @@ writing an app with real domain state — not a demo — you're likely in scope.
   predict your final shape to start.
 - **Multiple stores / feature domains** — one tree per feature with an Ops service in front is the
   recommended architecture, and it scales to many.
-- **AI-assisted development** — measured 49% → 91% codegen accuracy with `llms.txt` in context (see
+- **AI-assisted development** — measured 49% → 98% codegen accuracy with `llms.txt` in context (see
   below), plus a vendor-neutral agent skill.
 - **Migrating off `@ngrx/signals`** — the agent-ready migration playbook ships in
   `@signaltree/core/skills/`.
@@ -98,9 +98,9 @@ writing an app with real domain state — not a demo — you're likely in scope.
 
 SignalTree is the first Angular state-management library to treat AI coding agents as a first-class consumer of its API. We ship `llms.txt`, disambiguation tables, and a vendor-neutral agent skill — and **we measure the result**.
 
-**Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 agents (4 frontier + 2 cost-tier) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
+**Measured (v10.3.3, 2026-06-01):** AI-codegen accuracy goes from **49% cold → 98% primed (+49 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 agents (4 frontier + 2 cost-tier) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. Four of the six agents reach **100/100** when primed.
 
-The priming surface ships with the npm package: `node_modules/@signaltree/core/llms.txt` is automatically available to retrieval-aware AI tools after `npm install @signaltree/core`. See [Built for AI →](https://signaltree.io/built-for-ai) and the [reproducible benchmark](scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
+The priming surface ships with the npm package: `node_modules/@signaltree/core/llms.txt` is automatically available to retrieval-aware AI tools after `npm install @signaltree/core`. See [Built for AI →](https://signaltree.io/built-for-ai) and the [reproducible benchmark](scripts/ai-codegen-benchmark/RESULTS-v10.3.3-VS-v10.2.md).
 
 **Don't take our number — re-run it.** The full harness (agents, prompts, libraries, priming modes, and scoring) lives in [`scripts/ai-codegen-benchmark/`](scripts/ai-codegen-benchmark/). Point it at your own agents and prompts and reproduce the delta yourself.
 

@@ -132,7 +132,7 @@ export interface StoredErrorContext {
   /** The storage key the failed operation targeted. */
   key: string;
   /** Which storage operation failed. */
-  operation: 'read' | 'write' | 'migrate';
+  operation: 'read' | 'write' | 'migrate' | 'remove';
 }
 
 /**
@@ -364,12 +364,21 @@ export function isStoredMarker(value: unknown): value is StoredMarker<unknown> {
 // =============================================================================
 
 /**
- * @internal - Flush hooks for every live stored signal with debounced writes.
- * Stored signals have no dispose hook (they live as long as their tree,
- * typically the app), so entries are never removed; each holds only a small
- * closure and flushing with nothing pending is a no-op.
+ * @internal - Every live stored signal with debounced writes, held WEAKLY.
+ *
+ * Registration is a side effect with page lifetime created by a tree-scoped
+ * factory, so strong references would outlive the tree: trees are destroyable
+ * (`signalTree().destroy()`), and per-route/per-dialog trees are routine. A
+ * strong entry retains the flush closure and through it the `Storage` backend,
+ * the marker's `defaultValue`, the signal's current value, and any
+ * user-supplied serialize/deserialize/migrate/onError callbacks — so a
+ * `stored()` holding a cached list would leak that payload for the life of the
+ * page, and every drain would walk signals nobody can reach.
+ *
+ * Holding the materialized signal weakly lets the whole graph be collected
+ * with its tree; dead entries are pruned on the next drain.
  */
-const activeStoredFlushers = new Set<() => void>();
+const activeStoredSignals = new Set<WeakRef<{ flush: () => void }>>();
 
 /** @internal */
 let lifecycleFlushInstalled = false;
@@ -399,7 +408,12 @@ function installLifecycleFlush(): void {
  * (e.g. Capacitor's `App.addListener('pause', ...)`).
  */
 export function flushAllStoredSignals(): void {
-  for (const flush of activeStoredFlushers) flush();
+  for (const ref of activeStoredSignals) {
+    const signal = ref.deref();
+    if (signal) signal.flush();
+    // Collected with its tree — prune so drains stay proportional to live state.
+    else activeStoredSignals.delete(ref);
+  }
 }
 
 // =============================================================================
@@ -559,7 +573,10 @@ export function createStoredSignal<T>(
   const sig = signal<T>(loadFromStorage());
 
   // Debounced write state. `hasPending` (not `pendingValue !== undefined`)
-  // tracks pending-ness so that `undefined` remains a legal stored value.
+  // tracks pending-ness, so a pending `undefined` is distinguishable from
+  // nothing pending. (That only makes the *scheduling* correct — `undefined`
+  // still does not survive a round trip through the default JSON serializer,
+  // which drops the key entirely.)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingValue: T | undefined;
@@ -625,14 +642,20 @@ export function createStoredSignal<T>(
   };
 
   storedSignal.clear = (): void => {
-    cancelPending(); // A pending write must not resurrect the cleared value
+    // Cancel BOTH deferred write paths. The debounce/maxWait timers are
+    // cancellable; the migration re-persist is a queued microtask that is not,
+    // so bumping the generation makes it a no-op when it runs. Without this a
+    // clear() in the same tick as a version migration is undone one microtask
+    // later — the key comes back and the signal disagrees with storage.
+    cancelPending();
+    writeGeneration++;
     sig.set(defaultValue);
     if (storage) {
       try {
         storage.removeItem(key);
       } catch (e) {
         reportError(
-          'write',
+          'remove',
           e,
           `SignalTree: Failed to remove "${key}" from storage`
         );
@@ -642,7 +665,10 @@ export function createStoredSignal<T>(
 
   storedSignal.reload = (): void => {
     if (!storage) return;
-    cancelPending(); // Storage is the source of truth for a reload
+    // Same reasoning as clear(): storage is authoritative for a reload, so no
+    // earlier deferred write — timer or migration microtask — may land after it.
+    cancelPending();
+    writeGeneration++;
     sig.set(loadFromStorage());
   };
 
@@ -651,7 +677,7 @@ export function createStoredSignal<T>(
   // Drain pending writes when the page is hidden/unloaded so a debounced
   // value can't be lost to a background/kill (mobile WebViews in particular).
   if (storage && debounceMs > 0) {
-    activeStoredFlushers.add(commitPending);
+    activeStoredSignals.add(new WeakRef(storedSignal));
     installLifecycleFlush();
   }
 

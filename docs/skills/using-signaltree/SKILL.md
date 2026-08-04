@@ -16,6 +16,28 @@ Mental model:
 - Enhancers: `tree.with(batching()).with(devTools())` — order-sensitive.
 - Markers: `entityMap<User>()`, `entityMap<Plant>({ load: loader(fn) })` (cache-aware (single-scope) form), `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })` — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); the `@signaltree/callable-syntax` build-time transform extends call-syntax to **leaf writes** only. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
 
+> **The one fact everything else follows from: only LEAVES are Angular signals.**
+> A branch is not a signal — it's a plain accessor function. This asymmetry is the
+> single most common thing agents get wrong about this codebase, so before changing
+> anything that touches nodes, check your reasoning against this table:
+>
+> | | leaf (`WritableSignal<T>`) | branch / node (`NodeAccessor<T>`) |
+> |---|---|---|
+> | read | `leaf()` | `node()` — unwraps the whole subtree |
+> | write a value | `leaf.set(v)` | `node({ partial })` — deep merge, absent keys preserved |
+> | write from current | `leaf.update(fn)` | `node(fn)` — fn receives the unwrapped value |
+> | has `.set` / `.update` | yes | **no — by design, and it needs none** |
+> | called with an argument, untransformed | **silent no-op** (Angular ignores extra args) | writes (this is native core behavior) |
+>
+> Consequences worth stating outright, because each has been "fixed" wrongly before:
+> **(1)** Never add `.set()`/`.update()` to a node — the call signatures already do
+> both writes, and the names would collide with state keys called `set`/`update`.
+> **(2)** Node call-syntax is core behavior, not a feature of
+> `@signaltree/callable-syntax`, and not something to warn users away from.
+> **(3)** That transform exists solely to give *leaves* the same call syntax; it is
+> build-time and zero-runtime, emitting exactly the `.set()`/`.update()` you would
+> have hand-written.
+
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
 
 **App-wide state always uses one tree.** All domains (auth, settings, tickets, feature flags, …) go into a single `signalTree()` call — never one tree per domain or one tree per service. The pattern:

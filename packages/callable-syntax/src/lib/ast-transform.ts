@@ -1,3 +1,48 @@
+/**
+ * @fileoverview Build-time callable syntax for SignalTree LEAVES.
+ *
+ * ## Why this package exists (read before changing anything here)
+ *
+ * In SignalTree, **only leaves are Angular signals.** Branch nodes are plain
+ * accessor functions and are already callable by nature — `node()` reads,
+ * `node({ partial })` deep-merges, `node(fn)` updates. Nodes have no
+ * `.set()`/`.update()` and need none.
+ *
+ * Leaves are the asymmetry: an Angular signal getter ignores extra arguments,
+ * so `tree.$.count(5)` on a leaf does *nothing at all* — silently. Writing a
+ * leaf requires `.set()`/`.update()`, which means the call syntax changes the
+ * moment you reach the bottom of the tree.
+ *
+ * This transform removes that seam. It rewrites leaf calls into the explicit
+ * method calls at build time, so one syntax reads and writes at every depth.
+ * The output is byte-identical to what you would have written by hand — no
+ * helper, no wrapper, nothing added to the bundle. `/augmentation` is types
+ * only (`export {}`); `/vite` and `/webpack` are build plugins. Hence the
+ * devDependency.
+ *
+ * ## Known correctness gap — do not paper over this in docs
+ *
+ * The rewrite is purely syntactic (Babel, no type information), so it cannot
+ * tell a leaf from anything else that is callable. Everything below is
+ * rewritten even though it was already correct, producing `.set`/`.update` on
+ * a target that has neither:
+ *
+ *   tree.$.user.profile({ ... })   → .profile.set({ ... })   // node write
+ *   tree.$.users.addOne({ id: 1 }) → .addOne.set({ id: 1 })  // marker method
+ *   tree.$.users.where(fn)         → .where.update(fn)       // a marker READ
+ *
+ * These are defects in this transform, not constraints users should route
+ * around, and not evidence that core is missing anything. Fixing them
+ * properly needs type information (a TS-checker-backed transform) so that only
+ * true `WritableSignal` leaves are rewritten. Until then the behaviour is
+ * pinned by tests in ./ast-transform.spec.ts under "documented limitations" —
+ * a fix should turn those tests into assertions of the corrected output.
+ *
+ * Also note `DEFAULT_ROOT_IDENTIFIERS` is `['tree']` and the chain walk stops
+ * at `this`, so `this.tree.$.count(5)` and `store.$.count(5)` are NOT
+ * transformed — and an untransformed leaf call is the silent no-op above.
+ * Configure `rootIdentifiers` to match how the codebase names its trees.
+ */
 import generate from '@babel/generator';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';

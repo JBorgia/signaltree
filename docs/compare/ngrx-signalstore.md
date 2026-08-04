@@ -404,14 +404,14 @@ See [`docs/myths-and-misconceptions.md`](../myths-and-misconceptions.md) for the
 
 ### What we did about it — measured outcome
 
-In v10.2 (2026-05-29), we ran a reproducible benchmark with 4 frontier and 2 cost-tier models across 8 prompts × 5 libraries × 3 priming modes = **720 cells**. A v10.3.3 re-run (2026-06-01), after ~98 documented doc-accuracy fixes, raised the ceiling further. With `llms.txt` (+ `myths.md`) injected as priming context:
+In v10.2 (2026-05-29), we ran a reproducible benchmark across 6 agents (4 frontier + 2 cost-tier models) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. A v10.3.3 re-run (2026-06-01), after ~98 documented doc-accuracy fixes, raised the ceiling further. With `llms.txt` (+ `myths.md`) injected as priming context:
 
 | Library | Cold (no priming) | Primed (best mode) | Lift |
 |---|---|---|---|
 | **SignalTree** | **54%** | **98%** | **+44pp** |
 | @ngrx/signals | 87% | 76% | −11pp* |
 | @ngrx/store | 93% | 95% | +2pp |
-| Akita | 94% | 91% | −2pp |
+| Akita | 94% | 92% | −2pp |
 | Elf | 99% | 94% | −5pp |
 
 \* SignalTree priming context still costs cross-library accuracy for most competitors because models try to cross-pollinate when in "SignalTree mindset" — though @ngrx/store actually improved this run. Acceptable trade since priming users are SignalTree users.

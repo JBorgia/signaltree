@@ -713,10 +713,14 @@ export class SignalTreeVsNgrxSignalsComponent {
 
     // Warm up
     for (let i = 0; i < 5; i++) {
-      tree.$.users.update((users) => {
-        users[i].name = `Warm Up User ${i}`;
-        return users;
-      });
+      // Immutable rebuild, matching the measured loop below and the NgRx arm.
+      // Returning the same array reference hits core's ref-equality
+      // short-circuit, so the warm-up would not exercise notification at all.
+      tree.$.users.update((users) =>
+        users.map((u, idx) =>
+          idx === i ? { ...u, name: `Warm Up User ${i}` } : u
+        )
+      );
       computation();
     }
     renderCount = 0;

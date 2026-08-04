@@ -147,6 +147,13 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
  * - Can be called with an updater function to transform state
  * - Have enumerable properties for child nodes (signals or nested accessors)
  *
+ * **This is a plain function, NOT an Angular signal.** Only leaves are signals.
+ * The accessor deliberately has no `.set()`/`.update()` — being callable for
+ * reads *and* both write forms is the whole point, and adding those methods
+ * would both duplicate the call signatures and collide with any state key
+ * named `set` or `update`. See the `NodeAccessor` docs in ./types.ts for the
+ * leaf-vs-node table and why `@signaltree/callable-syntax` targets leaves only.
+ *
  * ## Auto-Batching for Partial Updates
  *
  * When called with an object argument (partial update), all child signal

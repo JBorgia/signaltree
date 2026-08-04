@@ -89,9 +89,54 @@ export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
 // '@signaltree/callable-syntax'` (side-effect import) or include the
 // package in their tsconfig `types`.
 
+/**
+ * A branch (non-leaf) node in the tree.
+ *
+ * ## READ THIS BEFORE "FIXING" ANYTHING THAT TOUCHES NODES
+ *
+ * The single fact that explains SignalTree's shape:
+ * **only LEAVES are Angular signals.** A node is not a signal at all — it is a
+ * plain function built by `makeNodeAccessor` with its child keys hung off it
+ * as properties.
+ *
+ * That gives the two halves of the tree different, deliberate surfaces:
+ *
+ * | | leaf (`WritableSignal<T>`) | node (`NodeAccessor<T>`) |
+ * |---|---|---|
+ * | read | `leaf()` | `node()` — unwraps the whole subtree |
+ * | write a value | `leaf.set(v)` | `node({ partial })` — deep merge |
+ * | write from current | `leaf.update(fn)` | `node(fn)` — fn gets the unwrapped value |
+ * | has `.set` / `.update` | yes | **no — and it needs none** |
+ *
+ * Nodes are callable *by nature*: the three signatures below are the complete
+ * write surface, and `node({ a: 1 })` merges — keys you don't pass are left
+ * untouched, at every depth. Leaves are the opposite: calling a leaf with an
+ * argument does **nothing at all**, because an Angular signal getter ignores
+ * extra arguments. That asymmetry is the whole reason
+ * `@signaltree/callable-syntax` exists — it is a build-time transform that
+ * rewrites *leaf* calls into `.set()`/`.update()` so one call syntax works at
+ * every depth. It emits exactly what you would have typed by hand; nothing
+ * ships at runtime.
+ *
+ * Two mistakes this comment exists to prevent:
+ *
+ * 1. **Do not add `.set()`/`.update()` to `NodeAccessor`.** It is not a
+ *    missing feature. The call signatures already do both writes, and adding
+ *    methods would collide with any state key literally named `set`/`update`.
+ * 2. **Do not describe node call-syntax as depending on the transform,** or as
+ *    something to avoid. It is core behaviour, works with zero build tooling,
+ *    and predates the transform.
+ *
+ * Runtime, if you want to confirm rather than trust this comment:
+ * `typeof node === 'function'`, `node.set === undefined`,
+ * `node.update === undefined`, while `leaf.set` / `leaf.update` are functions.
+ */
 export interface NodeAccessor<T> {
+  /** Read: unwraps this node and everything under it. */
   (): T;
+  /** Write: deep partial merge — keys not present are preserved. */
   (value: Partial<T>): void;
+  /** Write: receives the current unwrapped value; the result is merged. */
   (updater: (current: T) => T): void;
 }
 

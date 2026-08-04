@@ -190,8 +190,10 @@ store.$.settings.theme.flush(); // Commit a pending debounced write synchronousl
 ```
 
 Writes are debounced (default 100 ms) and drained automatically on
-`visibilitychange` → hidden / `pagehide`, so backgrounding or killing the app
-does not lose a just-set value. Options: `debounceMs` (0 = synchronous write),
+`visibilitychange` → hidden / `pagehide`, so a value set just before the app is
+backgrounded or the tab closes is not lost. (A hard kill with no preceding
+lifecycle event can still drop it — use `debounceMs: 0` for keys that must
+never sit in a debounce window.) Options: `debounceMs` (0 = synchronous write),
 `maxWaitMs` (caps write delay under continuous updates), `onError(error, { key, operation })`
 (storage failure hook). `flushAllStoredSignals()` (exported from
 `@signaltree/core`) drains every stored signal — call it from native lifecycle

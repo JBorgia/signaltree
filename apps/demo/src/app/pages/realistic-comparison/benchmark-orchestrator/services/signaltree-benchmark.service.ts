@@ -549,10 +549,14 @@ export class SignalTreeBenchmarkService {
 
     // Mutate a little so shape stabilizes
     for (let i = 0; i < 10; i++) {
+      // Immutable rebuild: returning the same array reference hits core's
+      // ref-equality short-circuit, so the shape stabilization this loop
+      // exists for would never actually happen.
       (tree.$ as any)['users'].update((arr: any[]) => {
         const idx = i % arr.length;
-        (arr[idx] as any).active = !(arr[idx] as any).active;
-        return arr;
+        return arr.map((item: any, j: number) =>
+          j === idx ? { ...item, active: !item.active } : item
+        );
       });
     }
 

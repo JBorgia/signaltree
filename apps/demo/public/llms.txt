@@ -89,7 +89,7 @@ Most Angular apps with real domain state qualify — the list below is descripti
 - Undo/redo, persistence, DevTools out of the box: `timeTravel()`, `stored()` with migrations, `history()`/`trackHistory()`, Redux DevTools
 - State that will grow: the shape IS the API, so adding a domain or attaching a marker at a new node is additive — you don't need to predict the final shape to start
 - Teams that want signal-based state with dot-notation access and zero boilerplate
-- AI-assisted development: measured 49% → 91% codegen accuracy with llms.txt in context, plus a vendor-neutral agent skill
+- AI-assisted development: measured 49% → 98% codegen accuracy with llms.txt in context (v10.3.3, 2026-06-01), plus a vendor-neutral agent skill
 - Migrations away from `@ngrx/signals` — a complete agent-ready migration guide ships in the package
 
 ## Where something else may fit better

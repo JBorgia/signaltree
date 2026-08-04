@@ -1461,3 +1461,119 @@ describe('stored() durability and draining', () => {
     });
   });
 });
+
+// =============================================================================
+// Regressions found auditing the shipped 13.3.0 durability work
+// =============================================================================
+
+describe('stored() — deferred migration re-persist vs authoritative ops', () => {
+  let mockStorage: Storage;
+
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+  });
+
+  const migratingSignal = (key: string) =>
+    createStoredSignal<string>({
+      [STORED_MARKER]: true,
+      key,
+      defaultValue: 'default',
+      options: {
+        storage: mockStorage,
+        version: 2,
+        migrate: (old) => `migrated-${old as string}`,
+      },
+    });
+
+  it('clear() is not undone by the migration re-persist microtask', async () => {
+    mockStorage.setItem('k', JSON.stringify({ __v: 1, data: 'old' }));
+
+    const sig = migratingSignal('k'); // migration runs, re-persist scheduled
+    sig.clear();
+    expect(mockStorage.getItem('k')).toBe(null);
+
+    await new Promise((r) => queueMicrotask(r));
+
+    // Before the fix the migrated value reappeared here.
+    expect(mockStorage.getItem('k')).toBe(null);
+    expect(sig()).toBe('default');
+  });
+
+  it('reload() is not undone by the migration re-persist microtask', async () => {
+    mockStorage.setItem('k', JSON.stringify({ __v: 1, data: 'old' }));
+
+    const sig = migratingSignal('k');
+    mockStorage.removeItem('k'); // another tab clears it
+    sig.reload();
+    expect(sig()).toBe('default');
+
+    await new Promise((r) => queueMicrotask(r));
+
+    // Signal and storage must agree — this is the drift the release claimed to close.
+    expect(mockStorage.getItem('k')).toBe(null);
+    expect(sig()).toBe('default');
+  });
+
+  it('still re-persists the migrated value when nothing authoritative intervenes', async () => {
+    mockStorage.setItem('k', JSON.stringify({ __v: 1, data: 'old' }));
+
+    const sig = migratingSignal('k');
+    expect(sig()).toBe('migrated-old');
+
+    await new Promise((r) => queueMicrotask(r));
+
+    const persisted = JSON.parse(mockStorage.getItem('k') as string);
+    expect(persisted.__v).toBe(2);
+    expect(persisted.data).toBe('migrated-old');
+  });
+
+  it('reports a removal failure with operation "remove"', () => {
+    const failing: Storage = {
+      ...mockStorage,
+      removeItem: () => {
+        throw new Error('nope');
+      },
+    };
+    const seen: string[] = [];
+    const sig = createStoredSignal({
+      [STORED_MARKER]: true,
+      key: 'k',
+      defaultValue: 'd',
+      options: { storage: failing, onError: (_e, c) => seen.push(c.operation) },
+    });
+
+    expect(() => sig.clear()).not.toThrow();
+    expect(seen).toEqual(['remove']);
+  });
+});
+
+describe('stored() — lifecycle registry holds signals weakly', () => {
+  it('registers via WeakRef so a dropped tree can be collected', () => {
+    const mockStorage = createMockStorage();
+    const sig = createStoredSignal({
+      [STORED_MARKER]: true,
+      key: 'weak',
+      defaultValue: 0,
+      options: { storage: mockStorage },
+    });
+
+    // Sanity: a live signal is still drained by the global flush.
+    sig.set(7);
+    flushAllStoredSignals();
+    expect(JSON.parse(mockStorage.getItem('weak') as string).data).toBe(7);
+  });
+
+  it('flushAllStoredSignals() tolerates many signals without error', () => {
+    const mockStorage = createMockStorage();
+    for (let i = 0; i < 200; i++) {
+      createStoredSignal({
+        [STORED_MARKER]: true,
+        key: `bulk-${i}`,
+        defaultValue: i,
+        options: { storage: mockStorage },
+      }).set(i + 1);
+    }
+    expect(() => flushAllStoredSignals()).not.toThrow();
+    expect(JSON.parse(mockStorage.getItem('bulk-0') as string).data).toBe(1);
+  });
+});

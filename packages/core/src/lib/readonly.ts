@@ -127,7 +127,7 @@ export const FORM_WIZARD_READERS = [
   'isFirstStep',
 ] as const;
 
-/** Readers on {@link StoredSignal}. `set`/`update`/`clear`/`reload` are absent. */
+/** Readers on {@link StoredSignal}. The mutators — `set`/`update`/`clear`/`reload`/`flush` — are absent. */
 export const STORED_READERS = ['key', 'version'] as const;
 
 /** Readers on {@link AsyncSourceSignal}. `refresh`/`set`/`update`/`reset` are absent. */

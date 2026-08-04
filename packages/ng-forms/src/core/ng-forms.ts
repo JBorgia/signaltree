@@ -155,8 +155,18 @@ export type FormTree<T extends Record<string, unknown>> = {
   isFieldValid(field: string): Signal<boolean>;
   isFieldAsyncValidating(field: string): Signal<boolean | undefined>;
 
-  // Direct access to field errors
+  /**
+   * Lazily-populated cache of per-field error signals.
+   *
+   * Seeded with the non-glob validator paths, then extended on demand by
+   * `getFieldError()`. Its key set therefore depends on which fields have been
+   * queried — do NOT enumerate it to discover a form's errors. Use
+   * `getFieldError(path)` for one field (works for any concrete path,
+   * including array indices matched by a glob validator), or `errors()` for
+   * the complete current error map.
+   */
   fieldErrors: Record<string, Signal<string | undefined>>;
+  /** Async counterpart of {@link FormTree.fieldErrors} — same caching caveat. */
   fieldAsyncErrors: Record<string, Signal<string | undefined>>;
 
   // Keep values tree for backward compatibility
@@ -332,10 +342,16 @@ export function createFormTree<T extends Record<string, unknown>>(
   // Don't persist immediately - let the form stabilize first with conditionals applied
   // persistController.persistImmediately();
 
-  const fieldErrorKeys = new Set([
-    ...Object.keys(syncValidators),
-    ...Object.keys(asyncValidators),
-  ]);
+  // Seed one computed per validator path. GLOB keys ('phones.*.value') are
+  // skipped on purpose: errors()/asyncErrors() are keyed by CONCRETE traversal
+  // paths ('phones.0.value'), so a glob entry could only ever read undefined —
+  // seeding it publishes a signal that is permanently empty and looks broken.
+  // Concrete paths are added lazily by getFieldError()/getFieldAsyncError().
+  const fieldErrorKeys = new Set(
+    [...Object.keys(syncValidators), ...Object.keys(asyncValidators)].filter(
+      (key) => !key.includes('*')
+    )
+  );
 
   const fieldErrors: Record<string, Signal<string | undefined>> = {};
   const fieldAsyncErrors: Record<string, Signal<string | undefined>> = {};

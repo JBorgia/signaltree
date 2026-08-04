@@ -62,10 +62,20 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
   private readonly config: GuardrailsConfig<GuardrailsDemoState> = {
     treeId: 'demo-guardrails',
     mode: 'warn',
-    // This config only takes effect in dev builds. Production builds swap
-    // in @signaltree/guardrails' noop module (see package.json `exports` /
-    // src/noop.ts), which ignores this config entirely regardless of
-    // `enabled` — that's what gives guardrails zero production cost.
+    // `enabled: true` is honoured here, including in this demo's production
+    // build — so the panel below shows live guardrail output rather than a
+    // dead UI.
+    //
+    // How that squares with "zero production cost": for an app consuming
+    // @signaltree/guardrails from npm, the package's `exports` map resolves
+    // the `production` condition to `dist/noop.js` (src/noop.ts), which
+    // ignores config entirely. This demo does NOT go through that path — the
+    // package is not in node_modules, and tsconfig.base.json maps
+    // `@signaltree/guardrails` directly to `packages/guardrails/src`, which
+    // TypeScript resolves before any `exports` condition applies. Verified in
+    // the build output: dist/apps/demo/browser contains the real rule strings
+    // and none of noop.ts's. So this page is a deliberate exception, not a
+    // demonstration of what your production bundle will contain.
     enabled: true,
     budgets: {
       maxUpdateTime: 6,
