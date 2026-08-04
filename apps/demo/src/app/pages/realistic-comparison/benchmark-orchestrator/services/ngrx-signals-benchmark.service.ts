@@ -499,9 +499,8 @@ export class NgRxSignalsBenchmarkService {
   }
 
   async runDataFetchingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate data fetching with NgRx SignalStore
     const state = signalState({
       users: [] as Array<{
@@ -536,9 +535,15 @@ export class NgRxSignalsBenchmarkService {
     const beforeMem = safeGetHeapUsed();
     const start = performance.now();
 
-    // Simulate fetching 1000 user records from API
+    // Scale the fetched record count with dataSize (same cap as
+    // signaltree-benchmark.service.ts's runDataFetchingBenchmark) instead of
+    // always hydrating a fixed record count regardless of the size slider.
+    const fetchCount = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING,
+      BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING
+    );
     const users = Array.from(
-      { length: BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING },
+      { length: fetchCount },
       (_, i) => ({
         id: i + 1,
         name: `User ${i + 1}`,
@@ -580,9 +585,8 @@ export class NgRxSignalsBenchmarkService {
   }
 
   async runRealTimeUpdatesBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate real-time updates with NgRx SignalStore
     const state = signalState({
       metrics: {
@@ -601,8 +605,14 @@ export class NgRxSignalsBenchmarkService {
     const beforeMem = safeGetHeapUsed();
     const start = performance.now();
 
-    // Simulate 500 real-time metric updates
-    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES; i++) {
+    // Scale update count with dataSize (same pattern as
+    // signaltree-benchmark.service.ts's runRealTimeUpdatesBenchmark) instead
+    // of always running a fixed iteration count regardless of the size slider.
+    const updateFrequency = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES,
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES
+    );
+    for (let i = 0; i < updateFrequency; i++) {
       const metrics = {
         activeUsers: Math.floor(Math.random() * 1000) + 100,
         messagesPerSecond: Math.floor(Math.random() * 50) + 10,
@@ -640,10 +650,9 @@ export class NgRxSignalsBenchmarkService {
   }
 
   async runStateSizeScalingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
-    // Test performance with large state size (10,000 items)
+    // Test performance with large state size
     const state = signalState({
       largeDataset: [] as Array<{
         id: number;
@@ -689,9 +698,16 @@ export class NgRxSignalsBenchmarkService {
     const beforeMem = (performance as any).memory?.usedJSHeapSize ?? null;
     const start = performance.now();
 
-    // Create large dataset (10,000 items)
+    // Scale entity count with dataSize (aligned to LARGE_DATASET, same as
+    // signaltree/ngxs/elf) instead of always allocating a fixed 10,000 items
+    // regardless of the size slider.
+    const entityCount = Math.min(
+      (dataSize ?? BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX) *
+        BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX
+    );
     const largeDataset = Array.from(
-      { length: BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX },
+      { length: entityCount },
       (_, i) => ({
         id: i + 1,
         title: `Item ${i + 1}`,

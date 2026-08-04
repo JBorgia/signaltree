@@ -37,6 +37,11 @@
 
   &__body {
     position: relative;
+
+    @media (max-width: $breakpoint-sm) {
+      display: flex;
+      flex-direction: column;
+    }
   }
 
   &__copy {
@@ -58,6 +63,16 @@
     &:hover {
       color: var(--color-white);
       background: rgba(255, 255, 255, 0.2);
+    }
+
+    // On narrow viewports the floating button eats a much bigger share of the
+    // (smaller) visible width, so it sits directly over the first line of
+    // horizontally-scrollable code. Drop it out of the absolute-positioned
+    // corner and let it flow as its own header strip above the code instead.
+    @media (max-width: $breakpoint-sm) {
+      position: static;
+      align-self: flex-end;
+      margin: $spacing-sm $spacing-sm 0;
     }
   }
 

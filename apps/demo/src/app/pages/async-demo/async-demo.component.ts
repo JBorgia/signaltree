@@ -79,7 +79,7 @@ store.$.users.reset();     // clear data/error/loading`,
 store.$.search.input.set('alice');
 
 // Or two-way bind in the template:
-<input [(ngModel)]="store.$.search.input">
+<input [ngModel]="store.$.search.input()" (ngModelChange)="store.$.search.input.set($event)">
 
 // Read results:
 store.$.search();          // results

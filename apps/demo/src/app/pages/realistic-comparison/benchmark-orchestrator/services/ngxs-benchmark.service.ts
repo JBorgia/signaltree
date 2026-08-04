@@ -552,6 +552,7 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Create and update large amounts of data to test memory efficiency
+    const promises: Promise<void>[] = [];
     for (
       let i = 0;
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.MEMORY_EFFICIENCY);
@@ -559,17 +560,29 @@ export class NgxsBenchmarkService {
     ) {
       // Create nested data
       const path = [`memory_test`, `item_${i}`];
-      this.store.dispatch(
-        new UpdateDeepNested(path, {
-          id: i,
-          data: new Array(BENCHMARK_CONSTANTS.DATA_GENERATION.ARRAY_SIZE_100)
-            .fill(0)
-            .map(() => Math.random()),
-          metadata: { created: Date.now(), index: i },
-        })
+      promises.push(
+        this.store
+          .dispatch(
+            new UpdateDeepNested(path, {
+              id: i,
+              data: new Array(
+                BENCHMARK_CONSTANTS.DATA_GENERATION.ARRAY_SIZE_100
+              )
+                .fill(0)
+                .map(() => Math.random()),
+              metadata: { created: Date.now(), index: i },
+            })
+          )
+          .toPromise()
       );
+
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -606,10 +619,19 @@ export class NgxsBenchmarkService {
     );
 
     // Hydrate state with fetched data
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < mockApiData.length; i++) {
-      this.store.dispatch(new UpdateArray(i, mockApiData[i]));
+      promises.push(
+        this.store.dispatch(new UpdateArray(i, mockApiData[i])).toPromise()
+      );
+
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -622,52 +644,79 @@ export class NgxsBenchmarkService {
       BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES
     );
 
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < updateCount; i++) {
       // Simulate different types of real-time updates
       const updateType = i % 4;
 
       switch (updateType) {
         case 0: // Live metrics update
-          this.store.dispatch(
-            new UpdateDeepNested(['live_metrics', 'current'], {
-              timestamp: Date.now(),
-              value: Math.random() * 100,
-            })
+          promises.push(
+            this.store
+              .dispatch(
+                new UpdateDeepNested(['live_metrics', 'current'], {
+                  timestamp: Date.now(),
+                  value: Math.random() * 100,
+                })
+              )
+              .toPromise()
           );
           break;
         case 1: // User status update
-          this.store.dispatch(
-            new UpdateArray(i % 50, {
-              id: i,
-              value: i,
-              userId: `user_${i}`,
-              status: Math.random() > 0.5 ? 'online' : 'offline',
-              lastSeen: Date.now(),
-            })
+          promises.push(
+            this.store
+              .dispatch(
+                new UpdateArray(i % 50, {
+                  id: i,
+                  value: i,
+                  userId: `user_${i}`,
+                  status: Math.random() > 0.5 ? 'online' : 'offline',
+                  lastSeen: Date.now(),
+                })
+              )
+              .toPromise()
           );
           break;
         case 2: // Chat message
-          this.store.dispatch(
-            new UpdateDeepNested(['chat', 'messages', i.toString()], {
-              id: i,
-              message: `Message ${i}`,
-              timestamp: Date.now(),
-            })
+          promises.push(
+            this.store
+              .dispatch(
+                new UpdateDeepNested(['chat', 'messages', i.toString()], {
+                  id: i,
+                  message: `Message ${i}`,
+                  timestamp: Date.now(),
+                })
+              )
+              .toPromise()
           );
           break;
         case 3: // System notification
-          this.store.dispatch(
-            new BatchUpdate([
-              {
-                key: `notification_${i}`,
-                value: { type: 'info', message: `Update ${i}`, read: false },
-              },
-            ])
+          promises.push(
+            this.store
+              .dispatch(
+                new BatchUpdate([
+                  {
+                    key: `notification_${i}`,
+                    value: {
+                      type: 'info',
+                      message: `Update ${i}`,
+                      read: false,
+                    },
+                  },
+                ])
+              )
+              .toPromise()
           );
           break;
       }
+
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -675,11 +724,16 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Test performance with large state by creating many entities with relationships
+    // Aligned to LARGE_DATASET.MAX (10000) to match SignalTree/NgRx/Elf for
+    // this scenario — previously capped at MEMORY_TEST.MAX (2000), which gave
+    // NgXs a 5x-smaller workload than every other library at the same
+    // dataSize slider position.
     const entityCount = Math.min(
       dataSize * BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
-      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MEMORY_TEST.MAX
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX
     );
 
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < entityCount; i++) {
       const entity = {
         id: i,
@@ -705,11 +759,19 @@ export class NgxsBenchmarkService {
         },
       };
 
-      this.store.dispatch(
-        new UpdateDeepNested(['entities', i.toString()], entity)
+      promises.push(
+        this.store
+          .dispatch(new UpdateDeepNested(['entities', i.toString()], entity))
+          .toPromise()
       );
+
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 

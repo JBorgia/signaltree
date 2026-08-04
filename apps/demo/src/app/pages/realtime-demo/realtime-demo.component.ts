@@ -403,50 +403,48 @@ export class RealtimeDemoComponent implements OnDestroy {
       language: 'typescript',
       source: `import { realtime } from '@signaltree/realtime';
 import { createSupabaseAdapter } from '@signaltree/realtime/supabase';
+import { signalTree, entityMap } from '@signaltree/core';
 
-// Create adapter for your backend
+// Create adapter for your backend (client only — no extra options)
 const adapter = createSupabaseAdapter(supabaseClient);
 
-// Create the enhancer
+// Config maps tree paths to table subscriptions
 const realtimeEnhancer = realtime(adapter, {
-  autoConnect: true,
+  messages: {
+    table: 'messages',
+    event: '*',                    // INSERT, UPDATE, DELETE
+    selectId: (m: Message) => m.id,
+  },
+  users: {
+    table: 'users',
+    event: '*',
+  },
+}, {
   autoReconnect: true,
   reconnectDelay: 1000,
+  maxReconnectAttempts: 10,
 });
 
-// Apply to your tree
+// Apply to your tree — connects automatically on .with()
 const store = signalTree({
   messages: entityMap<Message, string>({ selectId: m => m.id }),
   users: entityMap<User, string>({ selectId: u => u.id }),
-})
-.with(realtimeEnhancer)
-.with(realtimeEnhancer.sync({
-  // Sync messages table to messages entityMap
-  path: ['messages'],
-  config: {
-    table: 'messages',
-    event: '*',  // INSERT, UPDATE, DELETE
-    selectId: (m: Message) => m.id,
-  }
-}))
-.with(realtimeEnhancer.sync({
-  path: ['users'],
-  config: {
-    table: 'users',
-    event: '*',
-  }
-}));
+}).with(realtimeEnhancer);
 
-// Access connection state
-store.realtime.status();        // 'connected' | 'connecting' | ...
-store.realtime.isConnected();   // boolean signal
-store.realtime.error();         // Error | null
-store.realtime.lastConnectedAt(); // Date | null
+// Connection state lives under store.realtime.connection
+store.realtime.connection.status();          // ConnectionStatus
+store.realtime.connection.isConnected();     // Signal<boolean>
+store.realtime.connection.error();           // Signal<string | null>
+store.realtime.connection.lastConnectedAt(); // Signal<Date | null>
 
-// Manual control
-store.realtime.connect();
+// Manual control (no store.realtime.connect() — connect happens
+// automatically; reconnect() tears down and reconnects)
+store.realtime.reconnect();
 store.realtime.disconnect();
-store.realtime.reconnect();`,
+
+// Dynamic subscribe/unsubscribe for paths not in the initial config
+store.realtime.subscribe('messages', { table: 'messages', event: 'INSERT' });
+store.realtime.unsubscribe('messages');`,
     },
   ];
 
@@ -454,48 +452,59 @@ store.realtime.reconnect();`,
     {
       label: 'Custom Adapter',
       language: 'typescript',
-      source: `// Custom adapter interface
+      source: `// The RealtimeAdapter interface — implement this for any backend
 interface RealtimeAdapter {
-  connect(): void;
+  connect(): Promise<void>;
   disconnect(): void;
   isConnected(): boolean;
-  
-  // Subscribe to table changes
-  subscribe(
-    table: string,
-    callback: (event: RealtimeEvent) => void
+
+  // Subscribe to a table/channel
+  subscribe<T>(
+    config: RealtimeSubscription<T>,
+    callback: (event: RealtimeEvent<T>) => void
   ): () => void;  // Returns unsubscribe function
-  
+
   // Connection status changes
   onConnectionChange(
-    callback: (connected: boolean) => void
+    callback: (connected: boolean, error?: Error) => void
   ): () => void;
 }
 
-// RealtimeEvent structure
-interface RealtimeEvent {
-  type: 'INSERT' | 'UPDATE' | 'DELETE';
-  record: unknown;
-  oldRecord?: unknown;  // For UPDATE/DELETE
+// RealtimeSubscription — per-path config passed to the enhancer
+interface RealtimeSubscription<T> {
+  table: string;
+  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+  filter?: string;                   // e.g. 'status=eq.active'
+  schema?: string;                   // defaults to 'public'
+  selectId?: (entity: T) => string | number;
+  transform?: (row: unknown) => T;   // e.g. snake_case -> camelCase
 }
 
-// Supabase adapter (included)
+// RealtimeEvent structure delivered to your callback
+interface RealtimeEvent<T> {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+  new?: T;             // present for INSERT/UPDATE
+  old?: Partial<T>;    // present for UPDATE/DELETE
+  table: string;
+  schema?: string;
+  timestamp?: Date;
+}
+
+// Supabase adapter (included) — takes only the client
 import { createSupabaseAdapter } from '@signaltree/realtime/supabase';
-const adapter = createSupabaseAdapter(supabaseClient, {
-  schema: 'public',  // Optional, defaults to 'public'
-});
+const adapter = createSupabaseAdapter(supabaseClient);
 
 // Custom adapter example
 const myAdapter: RealtimeAdapter = {
-  connect() { websocket.connect(); },
+  async connect() { await websocket.connect(); },
   disconnect() { websocket.close(); },
   isConnected() { return websocket.readyState === WebSocket.OPEN; },
-  subscribe(table, callback) {
-    // Subscribe to your websocket/SSE/polling source
+  subscribe(config, callback) {
+    // Subscribe to your websocket/SSE/polling source for config.table
     return () => { /* cleanup */ };
   },
   onConnectionChange(callback) {
-    // Track connection status
+    // Track connection status: callback(true) / callback(false, err)
     return () => { /* cleanup */ };
   },
 };`,

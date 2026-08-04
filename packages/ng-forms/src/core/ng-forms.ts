@@ -556,10 +556,15 @@ export function createFormTree<T extends Record<string, unknown>>(
     reset,
     submit,
     validate,
+    // errors()/asyncErrors() are keyed by CONCRETE traversal paths
+    // (e.g. 'phones.0.value'), while fieldErrors is pre-seeded from the
+    // validator map's literal keys (which may be globs like 'phones.*.value').
+    // Lazily create + cache a computed for any concrete path so per-index
+    // lookups work instead of falling into an always-undefined stub.
     getFieldError: (field: string) =>
-      fieldErrors[field] || computed(() => undefined),
+      (fieldErrors[field] ??= computed(() => errors()[field])),
     getFieldAsyncError: (field: string) =>
-      fieldAsyncErrors[field] || computed(() => undefined),
+      (fieldAsyncErrors[field] ??= computed(() => asyncErrors()[field])),
     getFieldTouched: (field: string) =>
       computed(() => formGroup.get(field)?.touched ?? false),
     isFieldValid: (field: string) =>

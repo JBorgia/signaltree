@@ -784,7 +784,7 @@ export class TicketsService &#123;
   readonly $ = signalTree(&#123;
     entities: entityMap&lt;Ticket, string&gt;(),
     filter: '',
-    load: status(),
+    load: status&lt;string&gt;(),
   &#125;).derived($ =&gt; (&#123;
     visible: computed(() =&gt; &#123;
       const f = $.filter().toLowerCase();
@@ -1495,7 +1495,7 @@ export function ticketsState() &#123;
   return &#123;
     entities: entityMap&lt;Ticket, string&gt;(),
     activeId: null as string | null,
-    load: status(),
+    load: status&lt;string&gt;(),
   &#125;;
 &#125;
 

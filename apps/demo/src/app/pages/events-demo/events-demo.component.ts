@@ -357,17 +357,17 @@ eventBus.subscribe('TradeProposed', handler);`,
       label: 'effect.ts',
       language: 'typescript',
       source: `// Re-runs whenever filters change
-tree.effect(state => {
-  const filters = state.tickets.filters;
+effect(() => {
+  const filters = tree.$.tickets.filters();
   untracked(() => ticketOps.load(filters));
 });
 
 // With cleanup
-tree.effect(state => {
-  const userId = state.auth.user()?.id;
+effect((onCleanup) => {
+  const userId = tree.$.auth.user()?.id;
   const sub = ws.subscribe(userId, onMessage);
-  return () => sub.unsubscribe(); // cleanup on re-run
-})`,
+  onCleanup(() => sub.unsubscribe()); // cleanup on re-run
+});`,
     },
   ];
 

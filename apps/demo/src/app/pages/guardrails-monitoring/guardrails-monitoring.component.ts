@@ -62,9 +62,10 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
   private readonly config: GuardrailsConfig<GuardrailsDemoState> = {
     treeId: 'demo-guardrails',
     mode: 'warn',
-    // The demo site ships as a production build; explicit `enabled: true`
-    // overrides the dev-only default so the page actually demonstrates
-    // guardrails. Real apps should omit this (dev-only, zero prod cost).
+    // This config only takes effect in dev builds. Production builds swap
+    // in @signaltree/guardrails' noop module (see package.json `exports` /
+    // src/noop.ts), which ignores this config entirely regardless of
+    // `enabled` — that's what gives guardrails zero production cost.
     enabled: true,
     budgets: {
       maxUpdateTime: 6,

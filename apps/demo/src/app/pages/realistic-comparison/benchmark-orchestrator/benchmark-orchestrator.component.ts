@@ -461,8 +461,9 @@ export class BenchmarkOrchestratorComponent
     },
     {
       id: 'ngrx-store',
-      name: 'NgRx Store',
-      description: 'Redux pattern with immutable updates',
+      name: 'NgRx (reducer-only)',
+      description:
+        'Redux pattern with immutable updates — measures createReducer() calls directly, not a live Store/dispatch/action-stream round trip (see ngrx-benchmark.service.ts header comment)',
       color: '#ef4444',
       selected: false,
       stats: {
@@ -1731,18 +1732,21 @@ export class BenchmarkOrchestratorComponent
         const stSamples = stResults.flatMap((r) => r.samples);
         const libSamples = libResults.flatMap((r) => r.samples);
 
-        // Calculate t-test
-        const tTest = this.calculateTTest(stSamples, libSamples);
+        // Real Mann-Whitney U test (was a crude 6-bucket step-function
+        // p-value duplicating BenchmarkComparison's proper implementation —
+        // see benchmark-runner.ts). `tStatistic` here is the test's z-score
+        // (large-sample normal approximation) or raw U statistic (small
+        // samples); field name kept as `tStatistic` for template compatibility.
+        const mw = BenchmarkComparison.mannWhitneyUTest(stSamples, libSamples);
 
         comparisons.push({
           name: `${this.baselineName()} vs ${lib.name}`,
           sampleSize: Math.min(stSamples.length, libSamples.length),
-          tStatistic: tTest.tStatistic,
-          pValue: tTest.pValue,
-          conclusion:
-            tTest.pValue < 0.05
-              ? 'Statistically significant difference'
-              : 'No significant difference',
+          tStatistic: mw.statistic,
+          pValue: mw.pValue,
+          conclusion: mw.isSignificant
+            ? 'Statistically significant difference'
+            : 'No significant difference',
         });
       });
 
@@ -2866,24 +2870,20 @@ export class BenchmarkOrchestratorComponent
   onDataSizeChange(value: number | string) {
     const v = typeof value === 'string' ? parseInt(value, 10) : value;
     this.config.update((c) => ({ ...c, dataSize: Number(v) }));
-    this.updateEstimates();
   }
 
   onComplexityChange(value: BenchmarkConfig['complexity']) {
     this.config.update((c) => ({ ...c, complexity: value }));
-    this.updateEstimates();
   }
 
   onIterationsChange(value: number | string) {
     const v = typeof value === 'string' ? parseInt(value, 10) : value;
     this.config.update((c) => ({ ...c, iterations: Number(v) }));
-    this.updateEstimates();
   }
 
   onWarmupChange(value: number | string) {
     const v = typeof value === 'string' ? parseInt(value, 10) : value;
     this.config.update((c) => ({ ...c, warmupRuns: Number(v) }));
-    this.updateEstimates();
   }
 
   // Accessibility: keyboard toggle support
@@ -3407,10 +3407,6 @@ export class BenchmarkOrchestratorComponent
     }
   }
 
-  // Utility functions
-  updateEstimates() {
-    // Triggers recomputation of computed signals
-  }
 
   private isDevToolsOpen(): boolean {
     const widthThreshold = window.outerWidth - window.innerWidth > 160;
@@ -3469,43 +3465,6 @@ export class BenchmarkOrchestratorComponent
     const squaredDiffs = arr.map((val) => Math.pow(val - mean, 2));
     const variance = this.average(squaredDiffs);
     return Math.sqrt(variance);
-  }
-
-  private calculateTTest(
-    sample1: number[],
-    sample2: number[]
-  ): { tStatistic: number; pValue: number } {
-    const mean1 = this.average(sample1);
-    const mean2 = this.average(sample2);
-    const std1 = this.standardDeviation(sample1);
-    const std2 = this.standardDeviation(sample2);
-    const n1 = sample1.length;
-    const n2 = sample2.length;
-
-    const pooledStd = Math.sqrt(
-      ((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2)
-    );
-    const tStatistic =
-      (mean1 - mean2) / (pooledStd * Math.sqrt(1 / n1 + 1 / n2));
-
-    // Simplified p-value calculation (would need proper t-distribution in production)
-    const df = n1 + n2 - 2;
-    const pValue = this.approximatePValue(Math.abs(tStatistic), df);
-
-    return { tStatistic, pValue };
-  }
-
-  private approximatePValue(t: number, df: number): number {
-    // touch df to avoid unused-param warnings
-    if (df < 0) {
-      // no-op
-    }
-    if (t > 3.5) return 0.001;
-    if (t > 3.0) return 0.01;
-    if (t > 2.5) return 0.02;
-    if (t > 2.0) return 0.05;
-    if (t > 1.5) return 0.1;
-    return 0.5;
   }
 
   private createHistogramBins(data: number[], binCount: number) {

@@ -7,7 +7,8 @@
       The production pattern is three pillars applied consistently:
       <strong>READ</strong> through <code>store.$</code>,
       <strong>WRITE</strong> through <code>store.ops</code>, and
-      <strong>REACT</strong> through <code>tree.effect()</code> — where a state
+      <strong>REACT</strong> through Angular's <code>effect()</code> reading
+      <code>store.$</code> — where a state
       change <em>is</em> the event, so there are no actions and nothing to
       dispatch. API services sit underneath as a supporting layer: HTTP only,
       no state knowledge.
@@ -58,7 +59,7 @@
         [class.pillar--active]="lastPillar() === 'react'"
       >
         <header>
-          <span class="pillar__tag">REACT</span><code>tree.effect()</code>
+          <span class="pillar__tag">REACT</span><code>effect(() =&gt; store.$…)</code>
         </header>
         <ul>
           <li>State changes are the events</li>

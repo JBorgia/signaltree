@@ -95,7 +95,7 @@
     <h2>🏗️ Live Enterprise Structure</h2>
     <div class="structure-demo">
       <div class="path-display">
-        <h3>Current Depth: {{ targetDepth }} levels</h3>
+        <h3>Current Depth: {{ currentDepth }} levels</h3>
         <p class="depth-description">{{ depthDescription }}</p>
       </div>
 
@@ -183,18 +183,6 @@
           <div class="stat-label">Confidence</div>
         </div>
       </div>
-
-      <!-- <div class="json-display">
-        <h3>📦 Live Object Structure ({{ targetDepth }} levels)</h3>
-        <p class="json-description">
-          This shows the complete live state object with full type safety at
-          every level. Watch it update in real-time as you interact with the
-          controls!
-        </p>
-        <div class="code-example">
-          <pre><code>{{ treeObjectPreview }}</code></pre>
-        </div> 
-      </div> -->
     </div>
   </div>
 

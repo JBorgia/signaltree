@@ -706,12 +706,24 @@ export class BenchmarkComparison {
     return this.mannWhitneyUTest(sample1, sample2).isSignificant;
   }
 
-  private static mannWhitneyUTest(
+  /**
+   * Mann-Whitney U test for statistical significance between two raw sample
+   * sets. Public so callers outside this class (e.g. the orchestrator's
+   * "Statistical Comparisons" panel) can get a real p-value instead of
+   * hand-rolling a second, cruder significance test.
+   *
+   * `statistic` is the z-score of the normal approximation for large samples
+   * (n1, n2 > 20), or the raw U statistic itself for small samples (where we
+   * fall back to a conservative "not significant" result rather than trusting
+   * the normal approximation).
+   */
+  static mannWhitneyUTest(
     sample1: number[],
     sample2: number[]
   ): {
     isSignificant: boolean;
     pValue: number;
+    statistic: number;
   } {
     const n1 = sample1.length;
     const n2 = sample2.length;
@@ -744,6 +756,7 @@ export class BenchmarkComparison {
       return {
         isSignificant: pValue < 0.05,
         pValue,
+        statistic: z,
       };
     }
 
@@ -751,6 +764,7 @@ export class BenchmarkComparison {
     return {
       isSignificant: false,
       pValue: 1,
+      statistic: u,
     };
   }
 

@@ -69,6 +69,30 @@ describe('NgForms', () => {
       expect(form.valid()).toBe(false);
     });
 
+    it('should resolve getFieldError for concrete array-index paths validated via a glob key (regression: fieldErrors was keyed by the literal glob, so per-index lookups always returned undefined)', async () => {
+      const form = (createFormTree as any)(
+        { phones: [{ value: '' }, { value: '555' }] },
+        {
+          validators: {
+            'phones.*.value': required('Phone is required'),
+          },
+        }
+      );
+
+      form.setValue('phones.0.value', '');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Summary surface (concrete-keyed) and per-field surface must agree
+      expect(form.errors()['phones.0.value']).toBe('Phone is required');
+      expect(form.getFieldError('phones.0.value')()).toBe('Phone is required');
+      expect(form.getFieldError('phones.1.value')()).toBeUndefined();
+
+      // Error clears reactively through the same lazily-created computed
+      form.setValue('phones.0.value', '555-0100');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(form.getFieldError('phones.0.value')()).toBeUndefined();
+    });
+
     it('should track touched fields', () => {
       const form = (createFormTree as any)(initialFormData);
 

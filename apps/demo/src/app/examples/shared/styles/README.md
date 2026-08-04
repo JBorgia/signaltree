@@ -348,7 +348,6 @@ To migrate an existing component:
 See these components for reference:
 
 - `signals-examples.component.scss` - Basic usage
-- `demo-nav.component.scss` - Navigation pattern
 - `entities-demo.component.scss` - Complex layout
 
 ---

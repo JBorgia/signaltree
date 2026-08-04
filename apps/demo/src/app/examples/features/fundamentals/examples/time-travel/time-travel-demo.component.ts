@@ -79,6 +79,7 @@ export class TimeTravelDemoComponent {
   // Helper to refresh time travel state
   private refreshTimeTravelState() {
     this.history.set(this.tree.getHistory());
+    this.currentIndex.set(this.tree.getCurrentIndex());
     this.canUndo.set(this.tree.canUndo());
     this.canRedo.set(this.tree.canRedo());
   }

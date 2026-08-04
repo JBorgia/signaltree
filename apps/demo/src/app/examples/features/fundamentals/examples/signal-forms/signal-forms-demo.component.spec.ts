@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { provideRouter } from '@angular/router';
 
 import { SignalFormsDemoComponent } from './signal-forms-demo.component';
 
@@ -10,6 +11,7 @@ describe('SignalFormsDemoComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SignalFormsDemoComponent, ReactiveFormsModule],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SignalFormsDemoComponent);

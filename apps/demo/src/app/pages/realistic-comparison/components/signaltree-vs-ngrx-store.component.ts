@@ -824,10 +824,16 @@ export class SignalTreeVsNgrxStoreComponent {
         const k = i * innerOps + j;
         const idx = indexPlan ? indexPlan[k] % this.arraySize : 500 + (j % 500);
         const newVal = valuePlan ? valuePlan[k] : i * innerOps + j;
-        store.$.items.update((items) => {
-          items[idx].value = newVal;
-          return items;
-        });
+        // New array + new element reference so the signal actually notifies —
+        // same observable outcome as the NgRx immutable rebuild below.
+        // (Mutating items[idx] in place and returning the same reference let
+        // the ref-equality short-circuit skip notification, so the dependent
+        // computed()s below never re-ran after warm-up.)
+        store.$.items.update((items) =>
+          items.map((item, index) =>
+            index === idx ? { ...item, value: newVal } : item
+          )
+        );
         // Force evaluation to trigger ALL computations
         const result1 = totalComputed();
         const result2 = filteredComputed();
@@ -974,10 +980,18 @@ export class SignalTreeVsNgrxStoreComponent {
         expensiveComputation();
         totalComputed();
         averageComputed();
-        // Update an item to trigger recomputation
+        // Update an item to trigger recomputation — new array + new element
+        // reference so the signal actually notifies, matching the NgRx
+        // selector side's immutable state replacement below. (Mutating
+        // items[idx] in place and .set()-ing the same reference back let the
+        // ref-equality short-circuit skip notification, so the computeds
+        // above never re-ran after warm-up.)
         const items = store.$.items();
-        items[idx].value = newVal;
-        store.$.items.set(items);
+        store.$.items.set(
+          items.map((item, index) =>
+            index === idx ? { ...item, value: newVal } : item
+          )
+        );
         // Re-access after update
         expensiveComputation();
         totalComputed();

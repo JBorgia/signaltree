@@ -114,7 +114,7 @@
     </article>
 
     <article class="card highlight">
-      <span class="badge">v10.2 — measured</span>
+      <span class="badge">v10.3.3 — measured</span>
       <h3>AI-codegen accuracy benchmark</h3>
       <p>
         A reproducible matrix scoring how reliably each major AI agent generates
@@ -123,23 +123,23 @@
         validators.
       </p>
       <p>
-        <strong>v10.2 expanded result (2026-05-29):</strong>
+        <strong>v10.3.3 result (2026-06-01), re-run after ~98 doc-accuracy fixes:</strong>
       </p>
       <ul class="bench-headline">
-        <li><strong>49%</strong> — cold-run accuracy (no priming)</li>
-        <li><strong>91%</strong> — primed with <code>/llms.txt</code></li>
-        <li><strong>+42 percentage points</strong> from a single retrievable file</li>
-        <li><strong>99%</strong> — Claude Sonnet 4.6 primed (near-ceiling)</li>
+        <li><strong>49%</strong> — cold-run accuracy (v10.2 baseline)</li>
+        <li><strong>98%</strong> — primed with <code>/llms.txt</code> + <code>myths.md</code></li>
+        <li><strong>+49 percentage points</strong> from priming alone</li>
+        <li><strong>100%</strong> — 4 of 6 agents primed (at ceiling)</li>
       </ul>
       <p>
-        Across <strong>6 models</strong> (Claude Sonnet 4.6, GPT-5.4, Gemini 3.1
-        Pro, Perplexity Sonar Pro, Claude Haiku 4.5, GPT-5.4-mini) on
-        <strong>8 prompts × 5 libraries × 3 priming modes = 720 cells</strong>.
+        Across <strong>6 agents × 8 prompts × 5 libraries × 3 priming modes
+        = 720 cells</strong> (Claude Sonnet 4.6, GPT-5.4, Gemini 3.1 Pro,
+        Perplexity Sonar Pro, Claude Haiku 4.5, GPT-5.4-mini).
         Scored on idiomatic pattern + import-resolution + marker-method validity.
       </p>
       <p>
         <strong>Key finding:</strong> primed Haiku 4.5 (97/100) outscores
-        cold Sonnet 4.6 (41/100) by 2.4×. Priming closes the model-tier gap
+        cold Sonnet 4.6 (44/100) by 2.2×. Priming closes the model-tier gap
         — your code agent on a cheap model still writes correct SignalTree.
       </p>
       <p>
@@ -186,7 +186,7 @@
       <div class="proof-item">
         <h3>Marketable metric</h3>
         <p>
-          "SignalTree codegen jumps from 49% correct cold to 91% correct when
+          "SignalTree codegen jumps from 49% correct cold to 98% correct when
           primed with <code>/llms.txt</code>" is a developer-experience headline
           you can quote. Bundle-size
           charts don't move teams — measurable AI-correctness does.

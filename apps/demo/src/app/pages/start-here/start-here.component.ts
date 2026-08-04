@@ -79,7 +79,7 @@ export const appTree = signalTree({
 })
   .with(devTools())      // Redux DevTools at the root
   .with(timeTravel())    // Undo/redo at the root
-  .with(persistence());  // Auto-save at the root
+  .with(persistence({ key: 'app-tree' }));  // Auto-save at the root
 
 // Use it anywhere — features get typed slices
 @Component({ /* ... */ })

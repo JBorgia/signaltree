@@ -16,6 +16,11 @@ interface User {
 
 // Code shown in the st-example source panel (was two hand-rolled code tabs).
 const CALLABLE_SOURCE = `// ✨ New Callable Syntax (transforms at build time)
+// The @signaltree/callable-syntax build transform rewrites LEAF calls like
+// tree.$.name('Jane') into tree.$.name.set('Jane'). Without the transform,
+// calling a leaf is a SILENT NO-OP: a leaf is a plain Angular signal(), and
+// calling a signal with an argument just ignores it and returns the current
+// value — nothing is written.
 
 // Basic value setting
 tree.$.name('Jane');                           // → .set('Jane')
@@ -26,11 +31,8 @@ tree.$.active(true);                          // → .set(true)
 tree.$.age(current => current + 1);          // → .update(fn)
 tree.$.tags(tags => [...tags, 'new']);       // → .update(fn)
 
-// Deep nested objects
+// Deep nested leaf
 tree.$.user.profile.email('new@email.com');  // → .set('new@email.com')
-
-// Complex updates
-tree.$.user.profile(profile => updateProfile(profile));  // → .update(fn)
 
 // Array operations
 tree.$.numbers([10, 20, 30]);                // → .set([10, 20, 30])
@@ -38,9 +40,24 @@ tree.$.users(users => users.filter(u => u.active)); // → .update(fn)
 
 // Reading values (unchanged)
 const name = tree.$.name();                  // Always works
-const age = tree.$.user.profile.age();      // Deep access`;
+const age = tree.$.user.profile.age();      // Deep access
 
-const CURRENT_SOURCE = `// 🔧 Current Explicit Syntax (always works)
+// ── Already native — no transform needed ────────────────────────────────
+// Calling a BRANCH (an object node, not a leaf) with a function or a
+// partial object is built into NodeAccessor itself (see makeNodeAccessor
+// in @signaltree/core) — it works with zero build tooling.
+tree.$.user.profile(profile => updateProfile(profile));  // native update(fn)
+tree.$.user.profile({ email: 'new@email.com' });          // native partial merge
+
+// ⚠️ CAVEAT: don't mix the two styles in a file the transform processes.
+// The transform rewrites ANY tree.$.path(args) call to .set()/.update() —
+// it can't tell a leaf from a branch. Branch NodeAccessors have NO
+// .set()/.update() method, so a branch call like the ones above would be
+// rewritten into a call to a method that doesn't exist and THROW at
+// runtime. Keep branch-call syntax out of transformed files, or stick to
+// tree.$.branch.leaf(...) leaf calls there instead.`;
+
+const CURRENT_SOURCE = `// 🔧 Current Explicit Syntax (always works, no transform needed)
 
 // Basic value setting
 tree.$.name.set('Jane');
@@ -51,11 +68,8 @@ tree.$.active.set(true);
 tree.$.age.update(current => current + 1);
 tree.$.tags.update(tags => [...tags, 'new']);
 
-// Deep nested objects
+// Deep nested leaf
 tree.$.user.profile.email.set('new@email.com');
-
-// Complex updates
-tree.$.user.profile.update(profile => updateProfile(profile));
 
 // Array operations
 tree.$.numbers.set([10, 20, 30]);
@@ -63,7 +77,12 @@ tree.$.users.update(users => users.filter(u => u.active));
 
 // Reading values
 const name = tree.$.name();
-const age = tree.$.user.profile.age();`;
+const age = tree.$.user.profile.age();
+
+// Branches (object nodes) have NO .set()/.update() method — the callable
+// form IS the explicit syntax for branches, and it's native already:
+tree.$.user.profile(profile => updateProfile(profile));  // update via fn
+tree.$.user.profile({ email: 'new@email.com' });          // partial merge`;
 
 @Component({
   selector: 'app-callable-syntax-demo',

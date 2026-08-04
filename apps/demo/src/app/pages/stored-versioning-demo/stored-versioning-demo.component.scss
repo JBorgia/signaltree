@@ -447,3 +447,19 @@
   color: var(--text-secondary, var(--color-neutral-500));
   font-style: italic;
 }
+
+// Durability pending/persisted indicator
+.pending-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--warning-color, var(--color-warning-500));
+  color: white;
+
+  &.persisted {
+    background: var(--color-success-500, #10b981);
+  }
+}

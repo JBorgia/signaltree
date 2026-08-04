@@ -116,18 +116,38 @@ export class RawSignalsBenchmarkService {
         metadata: { category: i % 5, priority: i % 3 },
       }))
     );
+    // Three selectors and an invalidation cadence matching every other
+    // library's selector benchmark (see signaltree-benchmark.service.ts's
+    // runSelectorBenchmark) — this baseline previously implemented only 2 of
+    // 3 selectors and invalidated the memoized computed()s on every
+    // iteration instead of ~1-in-64, understating memoization's benefit for
+    // the naive native-signals approach.
     const selectEven = computed(() => items().filter((x) => x.flag).length);
     const selectHighValue = computed(() => items().filter((x) => x.value > 50).length);
-    const iterations = Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR);
+    const selectByCategory = computed(() => {
+      const arr = items();
+      return arr.reduce((acc: Record<number, number>, item) => {
+        const cat = item.metadata.category;
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+    });
+    const iterations = BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR;
     for (let i = 0; i < iterations; i++) {
-      // Touch the collection so selectors re-evaluate (memoized).
-      items.update((arr) => {
-        const next = arr.slice();
-        const idx = i % arr.length;
-        next[idx] = { ...next[idx], value: Math.random() * 100 };
-        return next;
-      });
-      this.sink = selectEven() + selectHighValue();
+      selectEven(); // Memoized - returns cached result if no changes
+      selectHighValue(); // Test cache hit rate with multiple selectors
+      selectByCategory(); // More complex computation
+      this.sink = selectEven();
+
+      // Occasionally update to test cache invalidation (same frequency as peers)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        items.update((arr) => {
+          const next = arr.slice();
+          const idx = i % arr.length;
+          next[idx] = { ...next[idx], flag: !next[idx].flag };
+          return next;
+        });
+      }
     }
     return this.toResult(performance.now() - start, 'Raw signals selectors');
   }

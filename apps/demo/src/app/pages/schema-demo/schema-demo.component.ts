@@ -12,7 +12,6 @@ import {
 
 // Demo state — a profile form with sync + async validation
 interface ProfileForm {
-  [key: string]: unknown;
   name: string;
   email: string;
   age: number;
@@ -126,23 +125,23 @@ const ok = await tree.schemas.validate();`;
 
   onNameInput(value: string) {
     this.name.set(value);
-    (this.store as unknown as { $: { name: { set: (v: string) => void } } }).$.name.set(value);
+    this.store.$.name.set(value);
   }
 
   onEmailInput(value: string) {
     this.email.set(value);
-    (this.store as unknown as { $: { email: { set: (v: string) => void } } }).$.email.set(value);
+    this.store.$.email.set(value);
   }
 
   onAgeInput(value: string) {
     const n = Number(value);
     this.age.set(n);
-    (this.store as unknown as { $: { age: { set: (v: number) => void } } }).$.age.set(n);
+    this.store.$.age.set(n);
   }
 
   onUsernameInput(value: string) {
     this.username.set(value);
-    (this.store as unknown as { $: { username: { set: (v: string) => void } } }).$.username.set(value);
+    this.store.$.username.set(value);
   }
 
   async submit() {
@@ -161,10 +160,10 @@ const ok = await tree.schemas.validate();`;
     this.email.set('');
     this.age.set(0);
     this.username.set('');
-    (this.store as unknown as { $: ProfileForm & { name: { set: (v: string) => void }; email: { set: (v: string) => void }; age: { set: (v: number) => void }; username: { set: (v: string) => void } } }).$.name.set('');
-    (this.store as unknown as { $: { email: { set: (v: string) => void } } }).$.email.set('');
-    (this.store as unknown as { $: { age: { set: (v: number) => void } } }).$.age.set(0);
-    (this.store as unknown as { $: { username: { set: (v: string) => void } } }).$.username.set('');
+    this.store.$.name.set('');
+    this.store.$.email.set('');
+    this.store.$.age.set(0);
+    this.store.$.username.set('');
     this.lastResult.set(null);
   }
 }

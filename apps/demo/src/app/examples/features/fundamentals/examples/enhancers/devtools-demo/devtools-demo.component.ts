@@ -8,6 +8,21 @@ import {
   ExampleComponent,
 } from '../../../../../shared/components/example-shell';
 
+import type { DevToolsMethods, ISignalTree } from '@signaltree/core';
+
+// devTools() attaches exportDebugSession() at runtime (see
+// devtools-impl.ts), but the public DevToolsMethods type only declares
+// connectDevTools/disconnectDevTools. Extend it locally so the store keeps
+// its real accessor typing instead of reaching in with a Record cast.
+interface DevToolsDemoMethods extends DevToolsMethods {
+  exportDebugSession(): {
+    metrics: unknown;
+    modules: unknown[];
+    logs: unknown[];
+    compositionHistory: Array<{ timestamp: Date; chain: string[] }>;
+  };
+}
+
 interface DevtoolsState {
   counter: number;
   user: {
@@ -89,7 +104,7 @@ export class DevtoolsDemoComponent {
       enableLogging: true,
       enableBrowserDevTools: true,
     })
-  );
+  ) as unknown as ISignalTree<DevtoolsState> & DevToolsDemoMethods;
 
   // Computed properties
   counter = this.store.$.counter;
@@ -207,23 +222,13 @@ export class DevtoolsDemoComponent {
 
   triggerSnapshot() {
     // Export current debug session as a snapshot
-    const devTools = (this.store as unknown as Record<string, unknown>)[
-      '__devTools'
-    ];
-    (
-      devTools as { exportDebugSession?: () => unknown }
-    )?.exportDebugSession?.();
+    this.store.exportDebugSession();
     this.lastAction = 'Take state snapshot';
   }
 
   resetMetrics() {
     // Reset metrics by reconnecting devtools
-    const devTools = (this.store as unknown as Record<string, unknown>)[
-      '__devTools'
-    ];
-    (
-      devTools as { connectDevTools?: (name: string) => void }
-    )?.connectDevTools?.('DevTools Demo');
+    this.store.connectDevTools('DevTools Demo');
     this.lastAction = 'Reset performance metrics';
   }
 

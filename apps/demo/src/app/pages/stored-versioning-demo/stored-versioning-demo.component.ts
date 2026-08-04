@@ -1,7 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { clearStoragePrefix, signalTree, stored } from '@signaltree/core';
+import {
+  clearStoragePrefix,
+  createStorageKeys,
+  signalTree,
+  stored,
+} from '@signaltree/core';
 
 import {
   type CodeFile,
@@ -82,7 +94,9 @@ function migrateV2toV3(v2: UserSettingsV2): UserSettingsV3 {
 })
 export class StoredVersioningDemoComponent {
   // Demo selection
-  activeDemo = signal<'basic' | 'migration' | 'utilities'>('basic');
+  activeDemo = signal<'basic' | 'migration' | 'utilities' | 'durability'>(
+    'basic'
+  );
 
   // Storage key prefix for this demo
   readonly storagePrefix = 'st-demo';
@@ -283,23 +297,35 @@ export class StoredVersioningDemoComponent {
   // Prefix for utilities demo
   readonly appPrefix = 'myapp';
 
+  // createStorageKeys() is what clearStoragePrefix() is designed to pair
+  // with: it colon-delimits every key ("myapp:user:profile"), and
+  // clearStoragePrefix() only matches keys starting with "prefix:". Hand-built
+  // dash-joined keys (the old `${appPrefix}-user-profile` shape) never match.
+  readonly storageKeys = createStorageKeys(this.appPrefix, {
+    user: {
+      profile: 'profile',
+      settings: 'settings',
+    },
+    cache: {
+      lastFetch: 'lastFetch',
+      data: 'data',
+    },
+  } as const);
+
   utilitiesStore = signalTree({
     user: {
       profile: stored<{ name: string; avatar: string }>(
-        `${this.appPrefix}-user-profile`,
+        this.storageKeys.user.profile,
         { name: '', avatar: '' }
       ),
       settings: stored<{ darkMode: boolean }>(
-        `${this.appPrefix}-user-settings`,
+        this.storageKeys.user.settings,
         { darkMode: false }
       ),
     },
     cache: {
-      lastFetch: stored<string | null>(
-        `${this.appPrefix}-cache-lastFetch`,
-        null
-      ),
-      data: stored<string[]>(`${this.appPrefix}-cache-data`, []),
+      lastFetch: stored<string | null>(this.storageKeys.cache.lastFetch, null),
+      data: stored<string[]>(this.storageKeys.cache.data, []),
     },
   });
 
@@ -334,9 +360,10 @@ export class StoredVersioningDemoComponent {
     }
     this.allStorageKeys.set(allKeys.sort());
 
-    // Filter to just our prefix
+    // Filter to just our prefix - createStorageKeys() colon-delimits
+    // ("myapp:user:profile"), which is what clearStoragePrefix() matches on.
     this.prefixedKeys.set(
-      allKeys.filter((k) => k.startsWith(`${this.appPrefix}-`)).sort()
+      allKeys.filter((k) => k.startsWith(`${this.appPrefix}:`)).sort()
     );
   }
 
@@ -351,14 +378,112 @@ export class StoredVersioningDemoComponent {
   }
 
   clearAllMyAppStorage() {
-    clearStoragePrefix(`${this.appPrefix}-`);
-    // Reset in-memory state
-    this.utilitiesStore.$.user.profile.clear();
-    this.utilitiesStore.$.user.settings.clear();
-    this.utilitiesStore.$.cache.lastFetch.clear();
-    this.utilitiesStore.$.cache.data.clear();
+    // Removes every "myapp:" key from storage in one call - including any
+    // orphaned keys left behind by a stored() signal that isn't currently
+    // mounted (e.g. from a previous session/version).
+    clearStoragePrefix(this.appPrefix);
+    // clearStoragePrefix() only touches storage - it doesn't know about the
+    // live tree, so reload() re-reads each signal to sync the in-memory
+    // value with the now-empty storage.
+    this.utilitiesStore.$.user.profile.reload();
+    this.utilitiesStore.$.user.settings.reload();
+    this.utilitiesStore.$.cache.lastFetch.reload();
+    this.utilitiesStore.$.cache.data.reload();
     this.refreshStorageKeys();
   }
+
+  // =============================================================================
+  // DEMO 4: Durability (13.3.0)
+  // =============================================================================
+
+  readonly durabilityKey = `${this.storagePrefix}-durability-note`;
+
+  // Default debounce (100ms) - deliberately left unset here to demo the
+  // out-of-the-box behavior described in the 13.3.0 release.
+  durabilityStore = signalTree({
+    note: stored<string>(this.durabilityKey, ''),
+  });
+
+  // Raw storage is polled (not read once) so the UI visibly catches up
+  // when the debounce timer commits - stored() has no "pending" signal of
+  // its own to read, so this reconstructs it from the outside.
+  durabilityRawStorage = signal<string | null>(null);
+  durabilityHasInteracted = signal(false);
+
+  durabilityPersistedValue = computed<string | undefined>(() => {
+    const raw = this.durabilityRawStorage();
+    if (raw === null) return undefined;
+    try {
+      return (JSON.parse(raw) as { data: string }).data;
+    } catch {
+      return undefined;
+    }
+  });
+
+  durabilityIsPending = computed(() => {
+    if (!this.durabilityHasInteracted()) return false;
+    return this.durabilityStore.$.note() !== this.durabilityPersistedValue();
+  });
+
+  setDurabilityValue(): void {
+    this.durabilityHasInteracted.set(true);
+    this.durabilityStore.$.note.set(
+      `Set at ${new Date().toLocaleTimeString()}`
+    );
+    this.refreshDurabilityRaw();
+  }
+
+  flushDurability(): void {
+    this.durabilityStore.$.note.flush();
+    this.refreshDurabilityRaw();
+  }
+
+  refreshDurabilityRaw(): void {
+    this.durabilityRawStorage.set(localStorage.getItem(this.durabilityKey));
+  }
+
+  durabilityCode = `// Default debounce (100ms) coalesces rapid writes into
+// a single localStorage write
+signalTree({
+  note: stored('durability-note', ''),
+});
+
+tree.$.note.set('draft...'); // in storage ~100ms later, not immediately
+tree.$.note.flush();         // commit the pending write right now
+
+// Debounced writes also drain automatically on visibilitychange -> hidden
+// and pagehide, so a value set right before the tab is backgrounded or
+// killed is not lost - no code required.
+
+// Native shells the DOM can't see (e.g. Capacitor) call the same drain:
+import { flushAllStoredSignals } from '@signaltree/core';
+App.addListener('pause', () => flushAllStoredSignals());
+
+// Per-key durability levers
+signalTree({
+  criticalFlag: stored('critical-flag', false, {
+    debounceMs: 0, // write synchronously, in set()'s stack
+  }),
+  draft: stored('draft', '', {
+    // Bounds staleness under continuous writes - plain debouncing resets
+    // its timer on every update, so a key updated faster than debounceMs
+    // is never persisted until updates stop.
+    maxWaitMs: 2000,
+  }),
+  tracked: stored('tracked', null, {
+    onError: (error, { key, operation }) => {
+      // operation: 'read' | 'write' | 'migrate'
+      reportToTelemetry(error, { key, operation });
+    },
+  }),
+});
+
+// clear() and reload() both cancel any pending debounced write before
+// acting - a cleared value can't be resurrected by an already-armed timer,
+// and reload() treats storage as the source of truth, running migrate()
+// if the stored version differs (same as initial load).
+tree.$.note.clear();
+tree.$.note.reload();`;
 
   // =============================================================================
   // CODE EXAMPLES
@@ -375,11 +500,12 @@ signalTree({
 
 // Storage format: { __v: 1, data: { notifications: true, ... } }
 
-// Non-versioned for simple values
+// Omitting \`version\` does NOT skip the wrapper - it defaults to 1.
+// There is no unwrapped write path; every stored() value is versioned.
 signalTree({
   counter: stored<number>('counter', 0),
 });
-// Storage format: 0 (raw value, no wrapper)`;
+// Storage format: { __v: 1, data: 0 }`;
 
   migrationCode = `// Multi-version migration with single migrate function
 interface SettingsV1 { theme: 'light' | 'dark'; }
@@ -413,22 +539,33 @@ signalTree({
 // Migrations run automatically on reload()
 // Old data transformed: v1 → v2 → v3`;
 
-  utilitiesCode = `// Use consistent prefixes for namespaced storage
-const prefix = 'myapp';
+  utilitiesCode = `// createStorageKeys() colon-delimits every key - it's the
+// only key shape clearStoragePrefix() is designed to match against.
+const STORAGE_KEYS = createStorageKeys('myapp', {
+  user: { profile: 'profile', settings: 'settings' },
+  cache: { lastFetch: 'lastFetch', data: 'data' },
+} as const);
+// STORAGE_KEYS.user.profile === 'myapp:user:profile'
 
 signalTree({
   user: {
-    profile: stored(\`\${prefix}-user-profile\`, defaultProfile),
-    settings: stored(\`\${prefix}-user-settings\`, defaultSettings),
+    profile: stored(STORAGE_KEYS.user.profile, defaultProfile),
+    settings: stored(STORAGE_KEYS.user.settings, defaultSettings),
   },
   cache: {
-    data: stored(\`\${prefix}-cache-data\`, []),
+    lastFetch: stored(STORAGE_KEYS.cache.lastFetch, null),
+    data: stored(STORAGE_KEYS.cache.data, []),
   },
 });
 
-// Clear all keys with a prefix
-clearStoragePrefix('myapp-');
-// Removes: myapp-user-profile, myapp-user-settings, myapp-cache-data`;
+// clearStoragePrefix() matches keys starting with "prefix:" - a hand-built
+// dash-joined key ('myapp-user-profile') will NOT match and silently no-op.
+clearStoragePrefix('myapp');
+// Removes: myapp:user:profile, myapp:user:settings,
+//          myapp:cache:lastFetch, myapp:cache:data
+
+// clearStoragePrefix() only touches storage - reload() (or clear()) still
+// syncs any live signal's in-memory value with the cleared storage.`;
 
   // Source strings wrapped for the shared tabbed code viewer
   basicVersioningFiles: CodeFile[] = [
@@ -444,9 +581,22 @@ clearStoragePrefix('myapp-');
   utilitiesFiles: CodeFile[] = [
     { label: 'utilities.ts', language: 'typescript', source: this.utilitiesCode },
   ];
+  durabilityFiles: CodeFile[] = [
+    { label: 'durability.ts', language: 'typescript', source: this.durabilityCode },
+  ];
 
   constructor() {
     // Initialize storage keys list
     this.refreshStorageKeys();
+
+    // Poll the raw storage value so the "pending vs persisted" indicator on
+    // the Durability tab visibly catches up once the debounce timer fires -
+    // stored() itself exposes no event for a completed write.
+    this.refreshDurabilityRaw();
+    const durabilityPollId = setInterval(
+      () => this.refreshDurabilityRaw(),
+      25
+    );
+    inject(DestroyRef).onDestroy(() => clearInterval(durabilityPollId));
   }
 }

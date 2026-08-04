@@ -198,7 +198,7 @@ export class NavigationComponent {
     {
       id: 'benchmark',
       title: 'AI-codegen benchmark scorecard',
-      description: '720-cell measured result — SignalTree 49% cold → 91% primed (+42pp). Per-library, per-agent breakdowns.',
+      description: '720-cell measured result — SignalTree 49% cold → 98% primed (+49pp). Per-library, per-agent breakdowns.',
       route: '/benchmark',
       category: 'learn',
     },

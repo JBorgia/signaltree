@@ -210,11 +210,19 @@ export class AkitaBenchmarkService {
         ? { value: 0, data: 'test' }
         : { level: createNested(level - 1) };
 
-    let state: any = createNested(depth);
     const updateDeep = (obj: any, lvl: number, value: number): any =>
       lvl === 0
         ? { ...obj, value }
         : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1, value) };
+
+    // Real Akita Store (not a plain-object simulation) — same pattern as
+    // SingleMiddlewareStore/ConditionalMiddlewareStore above.
+    class DeepNestedStore extends Store<any> {
+      constructor() {
+        super(createNested(depth));
+      }
+    }
+    const store = new DeepNestedStore();
 
     const start = performance.now();
     // Match NgXs cap of 1000 iterations for fair comparison
@@ -223,10 +231,11 @@ export class AkitaBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
       i++
     ) {
-      state = updateDeep(state, depth - 1, i);
+      store.update((state) => updateDeep(state, depth - 1, i));
     }
     // consume state so it isn't DCE'd
-    void (state?.level?.level === null);
+    const finalState = store.getValue();
+    void (finalState?.level?.level === null);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -269,15 +278,33 @@ export class AkitaBenchmarkService {
   async runComputedBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    // Akita has queries; we simulate derived computation over plain object state
-    let state = {
-      value: 0,
-      factors: Array.from(
-        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
-        (_, i) => i + 1
-      ),
-    };
-    const compute = () => {
+    interface ComputedState {
+      value: number;
+      factors: number[];
+    }
+
+    // Real Akita Store (not a plain-object simulation) — same pattern as
+    // SingleMiddlewareStore/ConditionalMiddlewareStore above. Akita has no
+    // built-in memoized-selector primitive at the Store level (that lives in
+    // the separate Query layer, not exercised elsewhere in this file), so —
+    // matching every other library's "computed" scenario here (NgXs/NgRx also
+    // just recompute from the store's current value on every update, with
+    // memoization tested separately in runSelectorBenchmark) — this measures
+    // real Store.update()/getValue() recompute cost.
+    class ComputedStore extends Store<ComputedState> {
+      constructor() {
+        super({
+          value: 0,
+          factors: Array.from(
+            { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+            (_, i) => i + 1
+          ),
+        });
+      }
+    }
+    const store = new ComputedStore();
+
+    const compute = (state: ComputedState) => {
       let acc = 0;
       for (const f of state.factors)
         acc += Math.sin(state.value * f) * Math.cos(f);
@@ -291,8 +318,8 @@ export class AkitaBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
       i++
     ) {
-      state = { ...state, value: i };
-      compute();
+      store.update((state) => ({ ...state, value: i }));
+      compute(store.getValue());
     }
     const duration = performance.now() - start;
     return this.toResult(duration);

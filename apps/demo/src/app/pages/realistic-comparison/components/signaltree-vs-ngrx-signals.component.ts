@@ -727,14 +727,30 @@ export class SignalTreeVsNgrxSignalsComponent {
 
       // Perform N operations per iteration for measurable work
       for (let j = 0; j < innerOps; j++) {
-        tree.$.users.update((users) => {
-          const index = (i * innerOps + j) % 100;
-          users[index].name = `Updated User ${index}`;
-          users[index].email = `updated${index}@example.com`;
-          users[index].profile.settings.theme =
-            index % 2 === 0 ? 'dark' : 'light';
-          return users;
-        });
+        const index = (i * innerOps + j) % 100;
+        // New array + new element reference so the signal actually notifies —
+        // same observable outcome as the NgRx SignalStore immutable rebuild
+        // below. (Mutating users[index] in place and returning the same
+        // array reference let the ref-equality short-circuit skip
+        // notification, so `computation` above never re-ran after warm-up.)
+        tree.$.users.update((users) =>
+          users.map((user, userIndex) =>
+            userIndex === index
+              ? {
+                  ...user,
+                  name: `Updated User ${index}`,
+                  email: `updated${index}@example.com`,
+                  profile: {
+                    ...user.profile,
+                    settings: {
+                      ...user.profile.settings,
+                      theme: index % 2 === 0 ? 'dark' : 'light',
+                    },
+                  },
+                }
+              : user
+          )
+        );
         computation();
       }
 

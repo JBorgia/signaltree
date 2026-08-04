@@ -209,7 +209,7 @@ export class EntitiesDemoComponent {
   editingUserName = '';
   editingUserEmail = '';
 
-  // Entity selectors using v5.0 EntitySignal API
+  // Entity selectors via the EntitySignal API
   userCount = this.store.$.users.count;
   postCount = this.store.$.posts.count;
   allUsers = this.store.$.users.all;

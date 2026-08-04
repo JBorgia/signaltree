@@ -148,7 +148,7 @@
             <span class="metric-label">CPU Performance</span>
             <span class="metric-value"
               >{{
-                $safeNavigationMigration(calibrationData()?.cpuOpsPerMs) | number : '1.0-0'
+                (calibrationData()?.cpuOpsPerMs) | number : '1.0-0'
               }}
               ops/ms</span
             >
@@ -163,7 +163,7 @@
             <span class="metric-label">Memory Available</span>
             <span class="metric-value"
               >{{
-                $safeNavigationMigration(calibrationData()?.availableMemoryMB) | number : '1.0-0'
+                (calibrationData()?.availableMemoryMB) | number : '1.0-0'
               }}
               MB</span
             >
@@ -177,7 +177,7 @@
           <div class="calibration-metric">
             <span class="metric-label">Recommended Test Size</span>
             <span class="metric-value"
-              >{{ $safeNavigationMigration(calibrationData()?.recommendedSize) | number }} items</span
+              >{{ (calibrationData()?.recommendedSize) | number }} items</span
             >
           </div>
           <div class="calibration-metric">
@@ -416,7 +416,6 @@
           (ngModelChange)="onIterationsChange($event)"
           min="10"
           max="1000"
-          (change)="updateEstimates()"
         />
         <small>More iterations improve statistical significance</small>
       </div>
@@ -438,7 +437,6 @@
           (ngModelChange)="onWarmupChange($event)"
           min="5"
           max="50"
-          (change)="updateEstimates()"
         />
         <small>Warmup runs allow JIT optimization</small>
       </div>

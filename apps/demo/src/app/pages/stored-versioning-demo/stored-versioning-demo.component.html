@@ -30,6 +30,13 @@
     >
       🛠️ Storage Utilities
     </button>
+    <button
+      class="btn-tab"
+      [class.active]="activeDemo() === 'durability'"
+      (click)="activeDemo.set('durability')"
+    >
+      🛡️ Durability (13.3.0)
+    </button>
   </nav>
 
   <!-- DEMO 1: Basic Versioning -->
@@ -112,8 +119,13 @@
 
           <div class="storage-value">
             <strong>In localStorage:</strong>
-            <code>{{ basicStore.$.simpleCounter() }}</code>
-            <span class="note">(raw value, no wrapper)</span>
+            <code>{{
+              '{ __v: 1, data: ' + basicStore.$.simpleCounter() + ' }'
+            }}</code>
+            <span class="note"
+              >(version defaults to 1 - every stored() write is
+              wrapped)</span
+            >
           </div>
 
           <div class="form-actions">
@@ -308,8 +320,10 @@
   <section class="demo-section">
     <h2>Storage Key Utilities</h2>
     <p class="info-text">
-      ℹ️ Namespace keys with a template-literal prefix (as shown below) and use
-      <code>clearStoragePrefix()</code> to bulk-clear.
+      ℹ️ Namespace keys with <code>createStorageKeys()</code> (colon-delimited,
+      e.g. <code>myapp:user:profile</code>) and use
+      <code>clearStoragePrefix()</code> to bulk-clear them - it only matches
+      keys of that shape.
     </p>
 
     <div class="demo-grid">
@@ -376,7 +390,7 @@
           <h3>Storage Keys</h3>
 
           <div class="key-section">
-            <h4>Keys with "myapp-" prefix:</h4>
+            <h4>Keys with "myapp:" prefix:</h4>
             <div class="key-list">
               @for (key of prefixedKeys(); track key) {
               <code class="storage-key">{{ key }}</code>
@@ -391,7 +405,7 @@
               🔄 Refresh Keys
             </button>
             <button class="btn-danger" (click)="clearAllMyAppStorage()">
-              🗑️ Clear All "myapp-" Keys
+              🗑️ Clear All "myapp:" Keys
             </button>
           </div>
         </div>
@@ -400,6 +414,72 @@
       <div class="code-panel">
         <h3>Code</h3>
         <st-code-tabs [files]="utilitiesFiles" />
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 4: Durability (13.3.0) -->
+  @if (activeDemo() === 'durability') {
+  <section class="demo-section">
+    <h2>Durability (13.3.0)</h2>
+    <p class="info-text">
+      ℹ️ Writes are debounced (100ms default) so rapid updates coalesce into a
+      single <code>localStorage</code> write. Debounced writes drain
+      automatically when the page is hidden or unloaded
+      (<code>visibilitychange</code> → hidden, <code>pagehide</code>), so a
+      value set right before the tab is backgrounded or killed is not lost.
+      Call <code>flushAllStoredSignals()</code> from native lifecycle hooks
+      the DOM can't see (e.g. Capacitor's
+      <code>App.addListener('pause', ...)</code>).
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-card">
+          <h3>Debounced Write (default 100ms)</h3>
+
+          <div class="form-actions">
+            <button class="btn-primary" (click)="setDurabilityValue()">
+              ✏️ Set Value
+            </button>
+            <button class="btn-secondary" (click)="flushDurability()">
+              ⚡ Flush Now
+            </button>
+          </div>
+
+          <div class="current-value">
+            <strong>Signal value:</strong>
+            <code>{{ durabilityStore.$.note() || '(empty)' }}</code>
+          </div>
+
+          <div class="storage-value">
+            <strong>In localStorage:</strong>
+            <code>{{ durabilityRawStorage() ?? '(empty)' }}</code>
+            @if (durabilityIsPending()) {
+            <span class="pending-badge">⏳ pending write…</span>
+            } @else {
+            <span class="pending-badge persisted">✅ persisted</span>
+            }
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h3>Also fixed in 13.3.0</h3>
+          <p class="info-text">
+            ℹ️ <code>clear()</code> and <code>reload()</code> both cancel any
+            pending debounced write before acting — a cleared value can't be
+            resurrected by an already-armed timer, and <code>reload()</code>
+            re-reads storage as the source of truth, running the
+            <code>migrate</code> function if the stored version differs (same
+            as initial load).
+          </p>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <st-code-tabs [files]="durabilityFiles" />
       </div>
     </div>
   </section>

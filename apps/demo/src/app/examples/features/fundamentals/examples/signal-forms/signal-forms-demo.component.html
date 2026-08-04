@@ -1,15 +1,20 @@
 <div class="demo-container">
   <st-example
-    heading="🔗 Angular Signal Forms Integration"
+    heading="🔗 Bridging Reactive Forms to SignalTree"
     [state]="stateSnapshot()"
     stateLabel="Complete State Tree"
     [code]="codeFiles"
   >
     <div intro>
       <p>
-        <strong>Angular Signal Forms</strong> (Angular 20.3+) with SignalTree
-        using <code>toWritableSignal()</code> for slices and direct
-        <code>connect()</code> for leaves.
+        Bridging classic <strong>Reactive Forms</strong> to SignalTree state.
+        Angular has no <code>FormControl.connect(signal)</code> API, so this
+        bridges manually — an <code>effect()</code> pushes the signal into the
+        control and <code>valueChanges</code> pushes the control back into the
+        signal — using <code>toWritableSignal()</code> to convert slices.
+        Want signal-native forms instead? See
+        <code>signalForm()</code> from <code>&#64;signaltree/ng-forms</code>
+        on the <a routerLink="/signal-forms">/signal-forms</a> page.
       </p>
       <div class="sync-status">
         <span>Status: {{ statusIcon }} {{ syncStatus() }}</span>
@@ -21,8 +26,8 @@
       <div class="example-card">
         <h3>📄 Example 1: Leaf Signals</h3>
         <p class="description">
-          Leaves are <code>WritableSignal&lt;T&gt;</code> and work directly with
-          <code>connect()</code>
+          Leaves are <code>WritableSignal&lt;T&gt;</code> — bridged manually
+          with <code>effect()</code> + <code>valueChanges</code>
         </p>
 
         <div class="form-section">
@@ -34,7 +39,7 @@
               class="input-field"
             />
             <code class="code-hint"
-              >control.connect(tree.$.personal.firstName)</code
+              >effect(() =&gt; control.setValue(tree.$.personal.firstName()))</code
             >
           </div>
 
@@ -46,7 +51,7 @@
               class="input-field"
             />
             <code class="code-hint"
-              >control.connect(tree.$.personal.lastName)</code
+              >effect(() =&gt; control.setValue(tree.$.personal.lastName()))</code
             >
           </div>
 
@@ -58,7 +63,9 @@
               type="email"
               class="input-field"
             />
-            <code class="code-hint">control.connect(tree.$.contact.email)</code>
+            <code class="code-hint"
+              >effect(() =&gt; control.setValue(tree.$.contact.email()))</code
+            >
           </div>
         </div>
 
@@ -104,7 +111,8 @@
           </div>
           <code class="code-hint">
             const personalSignal = toWritableSignal(tree.$.personal);<br />
-            formGroup.connect(personalSignal);
+            effect(() =&gt; formGroup.patchValue(personalSignal(), &#123; emitEvent: false &#125;));<br />
+            formGroup.valueChanges.subscribe(v =&gt; personalSignal.set(v));
           </code>
         </div>
 
@@ -150,7 +158,8 @@
           </div>
           <code class="code-hint">
             const contactSignal = toWritableSignal(tree.$.contact);<br />
-            contactForm.connect(contactSignal);
+            effect(() =&gt; contactForm.patchValue(contactSignal(), &#123; emitEvent: false &#125;));<br />
+            contactForm.valueChanges.subscribe(v =&gt; contactSignal.set(v));
           </code>
         </div>
 
@@ -196,7 +205,8 @@
           </div>
           <code class="code-hint">
             const prefsSignal = toWritableSignal(tree.$.preferences);<br />
-            prefsForm.connect(prefsSignal);
+            effect(() =&gt; prefsForm.patchValue(prefsSignal(), &#123; emitEvent: false &#125;));<br />
+            prefsForm.valueChanges.subscribe(v =&gt; prefsSignal.set(v));
           </code>
         </div>
 

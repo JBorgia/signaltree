@@ -1,16 +1,16 @@
 <div class="page">
   <header class="hero">
-    <span class="kicker">v10.2 measured · 2026-05-29</span>
+    <span class="kicker">v10.3.3 measured · 2026-06-01</span>
     <h1>AI-codegen accuracy benchmark</h1>
     <p class="lead">
       How reliably do frontier AI coding agents generate <strong>correct</strong> Angular state code
       with each major state library? We measured 720 cells. Here is the scorecard.
     </p>
     <ul class="headline">
-      <li><strong>49%</strong> — SignalTree cold-run accuracy (no priming)</li>
-      <li><strong>91%</strong> — SignalTree primed with <code>llms.txt</code></li>
-      <li class="lift"><strong>+42 percentage points</strong> from a single retrievable file</li>
-      <li><strong>99/100</strong> — Claude Sonnet 4.6 primed (near ceiling)</li>
+      <li><strong>49%</strong> — SignalTree cold-run accuracy (v10.2 baseline)</li>
+      <li><strong>98%</strong> — SignalTree primed with <code>llms.txt</code> + <code>myths.md</code></li>
+      <li class="lift"><strong>+49 percentage points</strong> from priming alone</li>
+      <li><strong>4 of 6</strong> agents now hit <strong>100/100</strong> primed</li>
     </ul>
   </header>
 
@@ -22,7 +22,7 @@
       <div><strong>5</strong> libraries</div>
       <div><strong>6</strong> agents</div>
       <div><strong>3</strong> priming modes</div>
-      <div><strong>~$12</strong> in API spend</div>
+      <div><strong>~$15</strong> in API spend</div>
     </div>
     <p>
       Cold (no priming) · Primed with <code>llms.txt</code> only · Primed with <code>llms.txt + myths.md</code>.
@@ -64,8 +64,9 @@
       </tbody>
     </table>
     <p class="honest-note">
-      <strong>Honest read:</strong> SignalTree-specific priming context slightly degrades
-      cross-library accuracy (-3 to -9pp). Models occasionally cross-pollinate when in
+      <strong>Honest read:</strong> SignalTree-specific priming context mostly still costs
+      cross-library accuracy (-11 to -2pp for ngrx-signals/akita/elf), though @ngrx/store
+      actually ticked up (+2pp) this run. Models occasionally cross-pollinate when in
       "SignalTree mindset." Acceptable trade — priming users are SignalTree users.
     </p>
   </section>
@@ -107,33 +108,36 @@
       <article>
         <h3>Priming closes the model-tier gap</h3>
         <p>
-          Cold scores are roughly tier-agnostic (range 41–56).
-          Primed scores are also tier-agnostic (range 80–99).
+          Cold scores are roughly tier-agnostic (range 44–63).
+          Primed scores are also tier-agnostic (range 78–100).
         </p>
         <p>
-          <strong>Primed Haiku 4.5 (97) outscores cold Sonnet 4.6 (41) by 2.4×.</strong>
+          <strong>Primed Haiku 4.5 (97) outscores cold Sonnet 4.6 (44) by 2.2×.</strong>
           Your code agent on a cheap model still writes correct SignalTree.
         </p>
       </article>
 
       <article>
-        <h3>Claude Sonnet 4.6 hits the ceiling</h3>
+        <h3>Four of six agents hit the ceiling</h3>
         <p>
-          Primed Claude scored <strong>99/100</strong> across all 8 prompts.
-          Further improvement is at the prompt/scorer level, not the model level.
+          Primed Claude, GPT-5.4, Perplexity Sonar Pro, and GPT-5.4-mini all scored
+          <strong>100/100</strong>. Only Gemini (91, long-context dilution) and Haiku
+          (97, one residual hallucination class) are still short of it.
         </p>
       </article>
 
       <article>
-        <h3>Adding myths.md regressed accuracy</h3>
+        <h3>Adding myths.md now boosts accuracy — reversed from v10.2</h3>
         <p>
-          We tested two priming compositions:
-          <code>llms.txt</code> alone (91%) vs <code>llms.txt + myths.md</code> (87%).
-          More context wasn't better — likely context dilution.
+          In v10.2, <code>llms.txt + myths.md</code> (87%) scored <em>worse</em> than
+          <code>llms.txt</code> alone (91%) — context dilution. After the doc-patch
+          quadrilogy, that flipped: <code>llms.txt</code> alone now scores 95%, and
+          adding <code>myths.md</code> pushes it to <strong>98%</strong>.
         </p>
         <p>
-          Gemini regressed sharply (83 → 64). Implication: prioritize focused priming
-          over breadth.
+          Gemini shows the reversal most sharply: it regressed 83 → 64 with myths.md in
+          v10.2, and now improves 78 → 91 with myths.md in v10.3.3. Recommendation flip:
+          ship myths.md alongside llms.txt as priming.
         </p>
       </article>
 
@@ -156,9 +160,10 @@
   <section class="residuals">
     <h2>What's still wrong (residual failure modes)</h2>
     <p class="caption">
-      The 9pp gap between primed-SignalTree (91) and ceiling (100) lives in these
-      specific marker-method hallucinations. All package/import hallucinations were
-      eliminated by the v10.2 disambiguation table.
+      The 2pp gap between primed-SignalTree (98) and ceiling (100) lives in this one
+      residual marker-method hallucination. The v10.2 disambiguation table eliminated
+      the package/import class entirely; the v10.3.3 doc-patch quadrilogy eliminated
+      6 of the remaining 8 marker-method confusions.
     </p>
     <table>
       <thead>
@@ -179,10 +184,16 @@
       </tbody>
     </table>
     <p class="next-target">
-      <strong>v10.3 target:</strong> apply the "meet AI where it is" alias model
-      (shipped on <code>status()</code> in v10.2) to <code>form()</code> and <code>entityMap</code>
-      markers. Unified accessor shape across all markers eliminates the within-SignalTree
-      pattern-matching confusion. Expected lift: +3-5pp → ~95% average.
+      <strong>Done:</strong> the "meet AI where it is" alias model (shipped on
+      <code>status()</code> in v10.2) was applied to <code>form()</code> and
+      <code>entityMap</code> markers in v10.3, closing 6 of the 8 marker-method
+      confusions and pushing the primed average to 98%. The one residual pattern
+      this run still found — <code>form().data()</code> — was itself promoted to a
+      permanent read alias in v10.4, the same finding-to-fix loop that produced this
+      benchmark's whole discoverability push. <strong>Next up:</strong> Gemini's
+      context-handling quirk (91, the only non-ceiling primed score) and Haiku's
+      residual category (97). Expected next-run primed average: 99–100% across all
+      6 agents.
     </p>
   </section>
 
@@ -198,7 +209,7 @@
     <p>
       The marker-method validator catches the dominant primed-run failure mode
       (hallucinated method names) that text pattern-matching alone misses.
-      Compile + behavior testing in TestBed is deferred to v10.3.
+      Compile + behavior testing in TestBed remains deferred to a future run.
     </p>
   </section>
 
@@ -225,7 +236,7 @@ node scripts/ai-codegen-benchmark/aggregate.mjs \
     <div class="links">
       <a href="https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark"
          target="_blank" rel="noopener">Benchmark source →</a>
-      <a href="https://github.com/JBorgia/signaltree/blob/main/scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md"
+      <a href="https://github.com/JBorgia/signaltree/blob/main/scripts/ai-codegen-benchmark/RESULTS-v10.3.3-VS-v10.2.md"
          target="_blank" rel="noopener">Full scorecard markdown →</a>
       <a href="https://github.com/JBorgia/signaltree/blob/main/scripts/ai-codegen-benchmark/CADENCE.md"
          target="_blank" rel="noopener">Re-run cadence →</a>

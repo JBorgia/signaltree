@@ -406,10 +406,16 @@ export class SignalTreeBenchmarkService {
 
       // Occasionally update to test cache invalidation (same frequency as NgRx)
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        // New array reference + new element object → signal notifies, matching
+        // the observable outcome of every immutable competitor. (Previously
+        // mutated items[idx] in place and returned the same reference, which
+        // the ref-equality short-circuit treated as a no-op — the dependent
+        // computed()s never re-ran after warm-up.)
         tree.$.items.update((items: any[]) => {
           const idx = i % items.length;
-          items[idx].flag = !items[idx].flag;
-          return items;
+          const next = items.slice();
+          next[idx] = { ...next[idx], flag: !next[idx].flag };
+          return next;
         });
       }
     }
@@ -824,13 +830,21 @@ export class SignalTreeBenchmarkService {
     for (let i = 0; i < operations; i++) {
       const entityId = i % largeDataSet.length;
 
-      // Update entity
+      // Update entity — immutable rebuild so the signal actually notifies
+      // (mutating entities[entityId] in place and returning the same array
+      // reference let the ref-equality short-circuit skip notification).
       tree.$.entities.update((entities: any[]) => {
         const entity = entities[entityId];
-        if (entity) {
-          entity.properties[0].value = `updated_${Date.now()}`;
-        }
-        return entities;
+        if (!entity) return entities;
+        const next = entities.slice();
+        next[entityId] = {
+          ...entity,
+          properties: [
+            { ...entity.properties[0], value: `updated_${Date.now()}` },
+            ...entity.properties.slice(1),
+          ],
+        };
+        return next;
       });
 
       // Update cache/index occasionally

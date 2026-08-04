@@ -89,16 +89,24 @@ export class ElfBenchmarkService {
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
   ): Promise<number | BenchmarkResult> {
-    // Elf targets entity stores; for nested we simulate with plain object and immutable updates
+    // Real Elf store via withProps() (not a plain-object simulation) — the
+    // same props-store API used by runServerPayloadSyncBenchmark below. Elf
+    // is entity-focused, but withProps()/setProps() is its native mechanism
+    // for non-entity slices, so this is natural library usage, not a
+    // work-around.
     const createNested = (level: number): any =>
       level === 0
         ? { value: 0, data: 'test' }
         : { level: createNested(level - 1) };
-    let state: any = createNested(depth);
     const updateDeep = (obj: any, lvl: number, value: number): any =>
       lvl === 0
         ? { ...obj, value }
         : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1, value) };
+
+    const store = createStore(
+      { name: 'elf-bench-deep-nested' },
+      withProps<any>(createNested(depth))
+    );
 
     const start = performance.now();
     // Match NgXs cap of 1000 iterations for fair comparison
@@ -107,10 +115,11 @@ export class ElfBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
       i++
     ) {
-      state = updateDeep(state, depth - 1, i);
+      store.update(setProps((state) => updateDeep(state, depth - 1, i)));
     }
     // consume state so it isn't DCE'd
-    void (state?.level?.value === -1);
+    const finalState = store.getValue();
+    void (finalState?.level?.value === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -151,14 +160,28 @@ export class ElfBenchmarkService {
   async runComputedBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    let state = {
-      value: 0,
-      factors: Array.from(
-        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
-        (_, i) => i + 1
-      ),
-    };
-    const compute = () => {
+    interface ComputedState {
+      value: number;
+      factors: number[];
+    }
+
+    // Real Elf props-store — matching every other library's "computed"
+    // scenario here (NgXs/NgRx/Akita also just recompute from the store's
+    // current value on every update; memoization is exercised separately in
+    // runSelectorBenchmark), this measures real store.update()/getValue()
+    // recompute cost rather than a bare-object simulation.
+    const store = createStore(
+      { name: 'elf-bench-computed' },
+      withProps<ComputedState>({
+        value: 0,
+        factors: Array.from(
+          { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+          (_, i) => i + 1
+        ),
+      })
+    );
+
+    const compute = (state: ComputedState) => {
       let acc = 0;
       for (const f of state.factors)
         acc += Math.sin(state.value * f) * Math.cos(f);
@@ -172,8 +195,8 @@ export class ElfBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
       i++
     ) {
-      state = { ...state, value: i };
-      compute();
+      store.update(setProps((state) => ({ ...state, value: i })));
+      compute(store.getValue());
     }
     const duration = performance.now() - start;
     return this.toResult(duration);
@@ -434,9 +457,8 @@ export class ElfBenchmarkService {
   }
 
   async runDataFetchingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate data fetching with Elf entity store
     type User = {
       id: number;
@@ -451,9 +473,15 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
 
-    // Simulate fetching 1000 user records from API
+    // Scale the fetched record count with dataSize (same cap as
+    // signaltree-benchmark.service.ts's runDataFetchingBenchmark) instead of
+    // always hydrating a fixed record count regardless of the size slider.
+    const fetchCount = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING,
+      BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING
+    );
     const users = Array.from(
-      { length: BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING },
+      { length: fetchCount },
       (_, i) => ({
         id: i + 1,
         name: `User ${i + 1}`,
@@ -504,9 +532,8 @@ export class ElfBenchmarkService {
   }
 
   async runRealTimeUpdatesBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate real-time updates with Elf stores
     type Metric = {
       id: number;
@@ -535,8 +562,14 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
 
-    // Simulate 500 real-time metric updates
-    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES; i++) {
+    // Scale update count with dataSize (same pattern as
+    // signaltree-benchmark.service.ts's runRealTimeUpdatesBenchmark) instead
+    // of always running a fixed iteration count regardless of the size slider.
+    const updateFrequency = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES,
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES
+    );
+    for (let i = 0; i < updateFrequency; i++) {
       const metric: Metric = {
         id: i,
         activeUsers: Math.floor(Math.random() * 1000) + 100,
@@ -576,10 +609,9 @@ export class ElfBenchmarkService {
   }
 
   async runStateSizeScalingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
-    // Test performance with large state size (10,000 items)
+    // Test performance with large state size
     type LargeDataItem = {
       id: number;
       title: string;
@@ -601,8 +633,15 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
 
-    // Create large dataset (10,000 items)
-    const largeDataset = Array.from({ length: 10000 }, (_, i) => ({
+    // Scale entity count with dataSize (aligned to LARGE_DATASET, same as
+    // signaltree/ngxs/ngrx) instead of always allocating a fixed 10,000 items
+    // regardless of the size slider.
+    const entityCount = Math.min(
+      (dataSize ?? BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX) *
+        BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX
+    );
+    const largeDataset = Array.from({ length: entityCount }, (_, i) => ({
       id: i + 1,
       title: `Item ${i + 1}`,
       description: `Description for item ${

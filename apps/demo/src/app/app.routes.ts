@@ -109,7 +109,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'AI-codegen accuracy benchmark — measured scorecard',
       description:
-        'Reproducible 720-cell benchmark measuring how reliably each major AI agent generates correct SignalTree, NgRx, Akita, and Elf code. v10.2: SignalTree 49% cold → 91% primed with llms.txt (+42pp).',
+        'Reproducible 720-cell benchmark measuring how reliably each major AI agent generates correct SignalTree, NgRx, Akita, and Elf code. v10.3.3: SignalTree 49% cold → 98% primed with llms.txt + myths.md (+49pp).',
     },
   },
   // /rxmethod redirected to /async — rxMethod was removed in 9.6.0 (was briefly

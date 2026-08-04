@@ -78,8 +78,8 @@
         <label for="library-winner-select">Library Winner:</label>
         <select
           id="library-winner-select"
-          [(ngModel)]="selectedLibrary"
-          (change)="selectedLibrary.set($any($event.target).value)"
+          [ngModel]="selectedLibrary()"
+          (ngModelChange)="selectedLibrary.set($event)"
         >
           <option value="all">All Libraries</option>
           @for (lib of uniqueLibraries; track lib) {
@@ -94,8 +94,8 @@
         <label for="machine-type-select">Machine Type:</label>
         <select
           id="machine-type-select"
-          [(ngModel)]="selectedMachineType"
-          (change)="selectedMachineType.set($any($event.target).value)"
+          [ngModel]="selectedMachineType()"
+          (ngModelChange)="selectedMachineType.set($event)"
         >
           <option value="all">All Machines</option>
           @for (type of uniqueMachineTypes; track type) {
@@ -111,10 +111,8 @@
         <input
           id="min-reliability-input"
           type="number"
-          [(ngModel)]="minReliability"
-          (change)="
-            minReliability.set($any($event.target).value); loadBenchmarks()
-          "
+          [ngModel]="minReliability()"
+          (ngModelChange)="minReliability.set(+$event); loadBenchmarks()"
           min="0"
           max="100"
           placeholder="0-100"

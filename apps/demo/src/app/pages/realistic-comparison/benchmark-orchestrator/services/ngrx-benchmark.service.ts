@@ -8,6 +8,38 @@ import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 import { BenchmarkResult } from './_types';
 
+/**
+ * METHODOLOGY NOTE — reducer-only measurement, not a live Store round trip.
+ *
+ * Every scenario below calls `createReducer()`-produced reducer functions
+ * directly (`state = reducer(state, action)`), the same way `ngxs-benchmark
+ * .service.ts` calls `store.dispatch(...)` through a real, DI-provided NgXs
+ * `Store`. There is no @ngrx/store `Store` instance here: the app only
+ * registers `provideStore()` for NgXs (see `app.config.ts`), so `inject(Store)`
+ * from '@ngrx/store' would throw at runtime unless a parallel `provideStore()`
+ * for @ngrx/store were also wired up app-wide.
+ *
+ * That wiring was evaluated and rejected for this file: @ngrx/store's real
+ * Store is a single global singleton with reducers registered once at
+ * bootstrap (or dynamically via `ReducerManager.addReducer`/`removeReducer`),
+ * whereas nearly every scenario here constructs its own ad-hoc
+ * `createAction`/`createReducer` pair scoped to that single method call. Doing
+ * this "for real" would mean register/deregister a feature reducer per
+ * benchmark invocation, dispatch through the store's async action stream, and
+ * read state back via `store.select(...)` subscriptions — a different
+ * measurement shape than "call the pure function", not a drop-in swap.
+ *
+ * So this label is honest about what it measures: pure reducer-function
+ * throughput (immutable-update cost), NOT the Store/dispatch/action-stream/
+ * DevTools overhead a real `@ngrx/store` app pays on every dispatch. The UI
+ * library label for this row is 'NgRx (reducer-only)' — see
+ * `benchmark-orchestrator.component.ts`'s `libraries` array (id: 'ngrx-store').
+ * `Actions`/`ofType` ARE used for the two effects-driven async scenarios
+ * below (`runAsyncWorkflowBenchmark`, `runAsyncCancellationBenchmark`), which
+ * exercise the real `@ngrx/effects` operators against a manually-created
+ * `Subject`-backed `Actions` stream (no Store needed for those two).
+ */
+
 // State interface for complex benchmarks
 interface User {
   id: number;
@@ -889,9 +921,8 @@ export class NgRxBenchmarkService {
   }
 
   async runDataFetchingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate data fetching with NgRx Store pattern
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
@@ -899,8 +930,14 @@ export class NgRxBenchmarkService {
     // Memory measurement removed for consistency
     const start = performance.now();
 
-    // Simulate fetching 1000 user records from API
-    const users = Array.from({ length: 1000 }, (_, i) => ({
+    // Scale the fetched record count with dataSize (same cap as
+    // signaltree-benchmark.service.ts's runDataFetchingBenchmark) instead of
+    // always hydrating a fixed 1000 users regardless of the size slider.
+    const fetchCount = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX,
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX
+    );
+    const users = Array.from({ length: fetchCount }, (_, i) => ({
       id: i + 1,
       name: `User ${i + 1}`,
       email: `user${i + 1}@example.com`,
@@ -941,9 +978,8 @@ export class NgRxBenchmarkService {
   }
 
   async runRealTimeUpdatesBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
     // Simulate real-time updates (WebSocket-like) with NgRx Store
     const initialState: NgRxState = {
       groups: [],
@@ -956,8 +992,14 @@ export class NgRxBenchmarkService {
     // Memory measurement removed for consistency
     const start = performance.now();
 
-    // Simulate real-time metric updates using consistent iteration count
-    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES; i++) {
+    // Scale update count with dataSize (same pattern as
+    // signaltree-benchmark.service.ts's runRealTimeUpdatesBenchmark) instead
+    // of always running a fixed iteration count regardless of the size slider.
+    const updateFrequency = Math.min(
+      dataSize ?? BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES,
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES
+    );
+    for (let i = 0; i < updateFrequency; i++) {
       const metrics = {
         activeUsers: Math.floor(Math.random() * 1000) + 100,
         messagesPerSecond: Math.floor(Math.random() * 50) + 10,
@@ -989,19 +1031,25 @@ export class NgRxBenchmarkService {
   }
 
   async runStateSizeScalingBenchmark(
-    _dataSize?: number
+    dataSize?: number
   ): Promise<number | BenchmarkResult> {
-    void _dataSize;
-    // Test performance with large state size (10,000 items)
+    // Test performance with large state size
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
 
     // Memory measurement removed for consistency
     const start = performance.now();
 
-    // Create large dataset (10,000 items)
+    // Scale entity count with dataSize (aligned to LARGE_DATASET, same as
+    // signaltree/ngxs/elf) instead of always allocating a fixed 10,000 items
+    // regardless of the size slider.
+    const entityCount = Math.min(
+      (dataSize ?? BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX) *
+        BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX
+    );
     const largeDataset: LargeDataItem[] = Array.from(
-      { length: 10000 },
+      { length: entityCount },
       (_, i) => ({
         id: i + 1,
         title: `Item ${i + 1}`,

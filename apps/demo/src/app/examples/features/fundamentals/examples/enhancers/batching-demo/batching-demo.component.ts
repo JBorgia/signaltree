@@ -18,9 +18,6 @@ interface BatchingState {
   processing: boolean;
   completedOperations: BatchOperation[];
   batchResults: BatchResult[];
-  autoProcess: boolean;
-  batchSize: number;
-  processingDelay: number;
 }
 
 // NOTE: This interface forces data to be Record<string, unknown> which is why
@@ -100,9 +97,6 @@ export class BatchingDemoComponent {
     processing: false,
     completedOperations: [],
     batchResults: [],
-    autoProcess: true,
-    batchSize: 5,
-    processingDelay: 1000,
   }).with(
     batching({
       enabled: true,
@@ -122,9 +116,9 @@ export class BatchingDemoComponent {
   batchResults = this.store.$.batchResults;
 
   // Form fields
-  batchSize = this.store.$.batchSize();
-  processingDelay = this.store.$.processingDelay();
-  autoProcess = this.store.$.autoProcess();
+  batchSize = 5;
+  processingDelay = 1000;
+  autoProcess = true;
 
   // Computed values
   pendingOperationsCount = computed(
@@ -143,13 +137,6 @@ export class BatchingDemoComponent {
       ) {
         this.processBatch();
       }
-    });
-
-    // Sync form fields with store
-    effect(() => {
-      this.store.$.batchSize.set(this.batchSize);
-      this.store.$.processingDelay.set(this.processingDelay);
-      this.store.$.autoProcess.set(this.autoProcess);
     });
   }
 

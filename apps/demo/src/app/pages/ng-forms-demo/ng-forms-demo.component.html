@@ -27,7 +27,11 @@
         </li>
         <li>
           <strong>History Tracking:</strong> Undo/redo out of the box—not
-          available in Angular 22
+          available in Angular 22.
+          <code>withFormHistory()</code> on <code>createFormTree()</code> is
+          deprecated since 13.0; use the <code>form()</code> marker's
+          <code>history()</code> config instead
+          (<code>form({{ '{' }} history: history() {{ '}' }})</code>)
         </li>
         <li>
           <strong>Reactive Bridge:</strong> Works with existing
@@ -430,7 +434,11 @@
               <tr>
                 <td>History/undo</td>
                 <td>❌ Not available</td>
-                <td>✅ Built-in</td>
+                <td>
+                  ✅ Built-in (<code>withFormHistory()</code> deprecated since
+                  13.0 — use the <code>form()</code> marker's
+                  <code>history()</code> config)
+                </td>
               </tr>
               <tr>
                 <td>Reactive bridge</td>

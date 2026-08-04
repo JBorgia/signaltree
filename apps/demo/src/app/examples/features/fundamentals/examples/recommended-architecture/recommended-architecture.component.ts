@@ -127,7 +127,7 @@ export class AppComponent {
  *
  *   - **READ**  → `store.$.<domain>.<path>()`     (all computed on `$`, tiered)
  *   - **WRITE** → `store.ops.<domain>.<method>()` (mutations + async only)
- *   - **REACT** → `tree.effect()`                 (state changes are the events)
+ *   - **REACT** → Angular `effect()` over `$`     (state changes are the events)
  *
  * API services are a *supporting* layer beneath those three — HTTP only, no
  * state knowledge. The interactive demo is hosted in the shared `st-example`

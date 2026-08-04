@@ -404,19 +404,19 @@ See [`docs/myths-and-misconceptions.md`](../myths-and-misconceptions.md) for the
 
 ### What we did about it — measured outcome
 
-In v10.2 (2026-05-29), we ran a reproducible benchmark with 4 frontier and 2 cost-tier models across 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With `llms.txt` injected as priming context:
+In v10.2 (2026-05-29), we ran a reproducible benchmark with 4 frontier and 2 cost-tier models across 8 prompts × 5 libraries × 3 priming modes = **720 cells**. A v10.3.3 re-run (2026-06-01), after ~98 documented doc-accuracy fixes, raised the ceiling further. With `llms.txt` (+ `myths.md`) injected as priming context:
 
-| Library | Cold (no priming) | Primed with `llms.txt` | Lift |
+| Library | Cold (no priming) | Primed (best mode) | Lift |
 |---|---|---|---|
-| **SignalTree** | **49%** | **91%** | **+42pp** |
-| @ngrx/signals | 86% | 80% | −6pp* |
-| @ngrx/store | 91% | 88% | −3pp |
-| Akita | 94% | 85% | −9pp |
-| Elf | 94% | 87% | −7pp |
+| **SignalTree** | **54%** | **98%** | **+44pp** |
+| @ngrx/signals | 87% | 76% | −11pp* |
+| @ngrx/store | 93% | 95% | +2pp |
+| Akita | 94% | 91% | −2pp |
+| Elf | 99% | 94% | −5pp |
 
-\* SignalTree priming context slightly degrades cross-library accuracy because models try to cross-pollinate when in "SignalTree mindset." Acceptable trade since priming users are SignalTree users.
+\* SignalTree priming context still costs cross-library accuracy for most competitors because models try to cross-pollinate when in "SignalTree mindset" — though @ngrx/store actually improved this run. Acceptable trade since priming users are SignalTree users.
 
-**Key result:** primed Haiku 4.5 (97/100) outscores cold Sonnet 4.6 (41/100) by 2.4× — priming closes the model-tier gap. Full scorecard: [`scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md`](../../scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
+**Key result:** primed Haiku 4.5 (97/100) outscores cold Sonnet 4.6 (44/100) by 2.2× — priming closes the model-tier gap. Full scorecard: [`scripts/ai-codegen-benchmark/RESULTS-v10.3.3-VS-v10.2.md`](../../scripts/ai-codegen-benchmark/RESULTS-v10.3.3-VS-v10.2.md).
 
 **The priming surface ships with `npm install @signaltree/core`** — `node_modules/@signaltree/core/llms.txt` and the disambiguation table at the top of `README.md` reach every user automatically.
 

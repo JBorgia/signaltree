@@ -147,8 +147,8 @@ export class TicketOps {
       label: 'ticket.effect.ts',
       language: 'typescript',
       source: `// Registered once in a root service
-tree.effect(state => {
-  const filters = state.tickets.filters;
+effect(() => {
+  const filters = tree.$.tickets.filters();
   // re-runs whenever filters change
   untracked(() => ticketOps.load(filters));
 });`,

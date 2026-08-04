@@ -74,7 +74,10 @@
           The FieldTree's model IS the marker's values signal. Type below, or
           write through the marker API — both stay in sync because there is
           only one source of truth. Marker validators surface as Signal Forms
-          errors (<code>kind: 'signalTree'</code>).
+          errors — tagged built-ins (<code>validators.required</code>,
+          <code>.email</code>, etc.) keep their own kind (e.g.
+          <code>'required'</code>, <code>'email'</code>); untagged custom
+          validators fall back to <code>kind: 'signalTree'</code>.
         </p>
 
         <div class="field">

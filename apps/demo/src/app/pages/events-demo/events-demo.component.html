@@ -509,11 +509,11 @@
   <!-- State Reactions Tab -->
   @if (activeTab() === 'reactions') {
   <div class="demo-section">
-    <h2>State Reactions — <code>tree.effect()</code></h2>
+    <h2>State Reactions — <code>effect()</code></h2>
     <p class="section-description">
-      <strong>Don't confuse <code>&#64;signaltree/events</code> with <code>tree.effect()</code>.</strong>
+      <strong>Don't confuse <code>&#64;signaltree/events</code> with native Angular <code>effect()</code>.</strong>
       The events package is an external typed event bus for cross-system communication.
-      <code>tree.effect()</code> is the <strong>REACT pillar</strong> of the 3-pillar architecture —
+      <code>effect()</code> is the <strong>REACT pillar</strong> of the 3-pillar architecture —
       it runs whenever state changes, with no actions or dispatch required.
     </p>
 
@@ -526,7 +526,7 @@
         <st-code-tabs [files]="reactionsEventBusCode" />
       </div>
       <div>
-        <h3><code>tree.effect()</code> — state-reactive side effects</h3>
+        <h3><code>effect()</code> — state-reactive side effects</h3>
         <p style="font-size:0.875rem;color:var(--text-secondary,#666);margin-bottom:0.75rem">
           For reacting to app state changes within the same Angular app. No events, no dispatch.
         </p>
@@ -538,8 +538,8 @@
       <strong>When to use which:</strong>
       <ul style="margin:0.5rem 0 0;padding-left:1.25rem;line-height:1.8">
         <li>Typed, cross-service/cross-app message → <strong>&#64;signaltree/events</strong></li>
-        <li>React to in-app state change (filter, auth, selection) → <strong>tree.effect()</strong></li>
-        <li>Side effect triggered by user action → write state in Ops, react with <strong>tree.effect()</strong></li>
+        <li>React to in-app state change (filter, auth, selection) → <strong>effect()</strong></li>
+        <li>Side effect triggered by user action → write state in Ops, react with <strong>effect()</strong></li>
       </ul>
     </div>
   </div>
