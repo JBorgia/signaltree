@@ -1,7 +1,42 @@
 ## Unreleased (13.3.1)
 
+Correctness follow-up to 13.3.0. An independent audit of that release found two
+real defects in the shipped `stored()` durability work — one of them undermining
+the exact guarantee 13.3.0 was written to provide. **Anyone on 13.3.0 who uses
+`stored()` with `version`/`migrate`, or who creates and destroys trees, should
+take this patch.**
+
 ### Fixed
 
+- **`stored()`: `clear()` and `reload()` are no longer undone by a migration
+  re-persist** (`@signaltree/core`). When a stored value is migrated on load,
+  the migrated data is written back in a queued microtask. `clear()` and
+  `reload()` cancelled the debounce/maxWait *timers*, but a microtask cannot be
+  cancelled and its guards still passed — so calling `clear()` in the same tick
+  that a tree materialized with a version migration removed the key, and one
+  microtask later the migrated value was written straight back. `reload()` had
+  the mirror form, leaving the signal on its default while storage silently
+  held stale migrated data — reintroducing precisely the signal/storage drift
+  13.3.0 claimed to eliminate. Both operations are authoritative now: they bump
+  the write generation the deferred re-persist checks, so it becomes a no-op.
+  The window was narrow (same-tick, migration-only), but `clearStoragePrefix()`
+  on logout during bootstrap hits it.
+- **`stored()`: the lifecycle-drain registry no longer retains destroyed trees**
+  (`@signaltree/core`). Every debounced stored signal registered its flush
+  closure in a module-level `Set` that was never cleaned, on the stated premise
+  that stored signals "live as long as their tree, typically the app". That
+  premise was wrong — `signalTree()` has `destroy()`, and per-route or
+  per-dialog trees are routine. Each stale entry retained the `Storage`
+  backend, the marker's `defaultValue`, the signal's current value, and any
+  `serialize`/`deserialize`/`migrate`/`onError` callbacks, so a `stored()`
+  holding a cached list leaked that payload for the life of the page (measured:
+  ~4 MB across 20 short-lived trees), and every drain walked signals nobody
+  could reach. Registration is now by `WeakRef`, pruned on drain, so the graph
+  is collected with its tree. No API change.
+- **`stored()`: removal failures report `operation: 'remove'`** instead of the
+  misleading `'write'`. `StoredErrorContext['operation']` gains `'remove'` — a
+  widening, so existing exhaustive handlers keep compiling but should add the
+  case if they switch on it.
 - **`createFormTree()`: `getFieldError()` / `getFieldAsyncError()` now resolve
   concrete array-index paths validated via glob keys** (`@signaltree/ng-forms`).
   The per-field error map was pre-seeded only from the validator map's literal
@@ -14,6 +49,29 @@
   Found via the ng-forms demo page, which exercises exactly this pattern.
   (`createFormTree` remains deprecated in favor of `form()` + `signalForm()`;
   the fix keeps the legacy bridge honest for existing consumers.)
+- **`createFormTree()`: glob validator keys are no longer seeded into the public
+  `fieldErrors` / `fieldAsyncErrors` records** (`@signaltree/ng-forms`). Those
+  records are keyed by concrete paths, so a `phones.*.value` entry could only
+  ever read `undefined` — publishing a signal that looked broken. The records
+  are now documented as lazily-populated caches whose key set depends on which
+  fields have been queried; `getFieldError(path)` is the supported per-field
+  accessor and `errors()` the complete map. Do not enumerate the records.
+
+### Changed
+
+- **Documentation: the leaf-vs-node contract is now stated at the source.**
+  `NodeAccessor`, `makeNodeAccessor`, `@signaltree/callable-syntax`'s transform,
+  and the agent skill each carry it explicitly: only leaves are Angular signals;
+  nodes are callable by nature (`node()` reads, `node({partial})` deep-merges,
+  `node(fn)` updates) and deliberately have no `.set()`/`.update()`. Repeated
+  incorrect "fixes" in this area motivated writing it down where the code is.
+- **`@signaltree/callable-syntax`: known defects are documented and pinned by
+  tests.** The rewrite is purely syntactic, so it also rewrites branch writes,
+  `entityMap`/marker methods, and marker reads that take an argument, producing
+  `.set`/`.update` on targets that have neither. These are transform defects,
+  not constraints on core; fixing them needs a type-aware rewrite. 68 tests now
+  pin the real behavior, including the defects, so a fix is a visible change.
+  No behavior change in this release.
 
 ## 13.3.0 (2026-08-04)
 
