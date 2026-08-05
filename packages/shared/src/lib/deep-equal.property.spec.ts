@@ -269,3 +269,45 @@ describe('deepEqual — built-in identity (13.5.0)', () => {
     expect(deepEqual(new Error('x') as never, {} as never)).toBe(false);
   });
 });
+
+describe('deepEqual — built-in SUBCLASSES carrying state (audit regression)', () => {
+  class ApiError extends Error {
+    constructor(message: string, public status: number) {
+      super(message);
+      this.name = 'ApiError';
+    }
+  }
+  class Money extends Number {
+    constructor(v: number, public currency: string) {
+      super(v);
+    }
+  }
+
+  it('an error subclass differing only in its own state is NOT equal', () => {
+    // The ordinary shape of an HTTP error. A terminal `name`/`message` check
+    // dropped the write: the leaf kept 404, updateAndReport returned [], and
+    // nothing re-rendered.
+    expect(
+      deepEqual(
+        new ApiError('Request failed', 404) as never,
+        new ApiError('Request failed', 500) as never
+      )
+    ).toBe(false);
+    expect(
+      deepEqual(
+        new ApiError('Request failed', 404) as never,
+        new ApiError('Request failed', 404) as never
+      )
+    ).toBe(true);
+  });
+
+  it('a wrapper subclass differing only in its own state is NOT equal', () => {
+    expect(deepEqual(new Money(5, 'USD') as never, new Money(5, 'EUR') as never)).toBe(false);
+    expect(deepEqual(new Money(5, 'USD') as never, new Money(5, 'USD') as never)).toBe(true);
+  });
+
+  it('still separates plain errors, and value still gates the wrapper', () => {
+    expect(deepEqual(new Error('a'), new Error('b'))).toBe(false);
+    expect(deepEqual(new Money(5, 'USD') as never, new Money(6, 'USD') as never)).toBe(false);
+  });
+});

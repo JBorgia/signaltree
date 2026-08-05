@@ -3,8 +3,8 @@
  *
  * # @signaltree/enterprise — DEPRECATED as of 13.5.0
  *
- * Use `tree.updateAndReport()` and `tree.onPathChange()` from `@signaltree/core`.
- * Both are built in, need no enhancer, and are measurably faster than this
+ * Use `tree.updateAndReport()` from `@signaltree/core`. It is built in, needs
+ * no enhancer, and is measurably faster than this
  * package: the diff engine benchmarks slower in every workload measured — at
  * 2,000 leaves, ~7x when 10% of leaves change, ~2x on an identical re-fetch and
  * ~160-190x when every leaf changes — and the ratio grows with tree size.

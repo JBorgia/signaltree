@@ -8,8 +8,9 @@
 ## Summary
 
 Deprecate `@signaltree/enterprise` on npm. Do not unpublish it. Move
-`onPathChange` into `@signaltree/core`, where `updateAndReport()` already
-provided the other half of what the package was for.
+`updateAndReport()` into the role — it already provided the useful half of what
+the package was for. (`onPathChange` was ported and then CUT before release;
+see the Decision section.)
 
 ## Why this RFC exists
 
@@ -61,7 +62,8 @@ shape; the only way to win is to not do the walk.
 ### 2. It no longer offers anything core lacks
 
 `changedPaths` and `updateAndReport()` return the same information.
-`onPathChange` is ~15 lines over `updateAndReport` and is now in core. Core's
+`onPathChange` was ~15 lines over `updateAndReport`, was ported, and was then
+cut before release — see the Decision section. Core's
 own source already carried the comment that `updateAndReport` exists
 "without pulling in the `@signaltree/enterprise` diff engine" — the
 supersession was recognised in code before it was recognised in the docs.
@@ -95,20 +97,22 @@ dependencies**. By our own stated rule it should never have been a package.
 | - | ------ | ------- |
 | 1 | Fix the array defect, keep the package | **Rejected.** Attempted twice, reverted twice. And the correct fix — making array leaves a *filter over `diff.changes`* rather than a parallel walk — makes the package a thin, slower wrapper over `updateAndReport()`. Fixing it proves it redundant. |
 | 2 | Rewrite the diff engine for speed | **Rejected.** The cost is the walk itself, and the walk is the package. |
-| 3 | Repurpose as an observability package (path index, stats, heatmaps) | **Rejected.** `onPathChange` in core covers the real use case; the rest is a devtools concern, and `devTools()` already exists in core. |
+| 3 | Repurpose as an observability package (path index, stats, heatmaps) | **Rejected.** `updateAndReport()` covers the real use case; the rest is a devtools concern, and `devTools()` already exists in core. |
 | 4 | Fold it into core behind a flag | **Rejected.** Adds bundle and a second write path to core for a slower implementation. |
 | 5 | Unpublish | **Rejected.** Breaks every existing lockfile that resolves it, for no benefit. |
-| 6 | **Deprecate, keep published, harvest `onPathChange`** | **Accepted.** |
+| 6 | **Deprecate, keep published, harvest `updateAndReport()`'s correctness** | **Accepted.** |
 
 ## Decision
 
 1. `npm deprecate @signaltree/enterprise` with a message pointing at
-   `tree.updateAndReport()` / `tree.onPathChange()`. Entry added to
+   `tree.updateAndReport()`. Entry added to
    `scripts/deprecate-packages.sh`.
 2. Keep it published. Security fixes only; no features, and the array defect is
    documented rather than fixed.
-3. Port `onPathChange` to core (done, 13.5.0), fixing the over-reporting bug in
-   `updateAndReport()` on the way.
+3. Fix the over-reporting bug in `updateAndReport()` (done, 13.5.0).
+   `onPathChange` was ported to core and then CUT before release: it had no
+   consumers, and the change-notification design points at a pull shape rather
+   than the push shape it had.
 4. Remove the dead `scheduler` / `thread-pools` subpath exports.
 5. Correct the inverted performance claim everywhere it shipped — README, agent
    skill, enhancer JSDoc, demo page — rather than quietly deleting it.

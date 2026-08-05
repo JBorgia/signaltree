@@ -856,7 +856,7 @@ const cleanup = tree.effect((state) => {
 These are the **only** separate packages in the SignalTree ecosystem:
 
 - **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
-- **`@signaltree/enterprise`** - _deprecated in 13.5.0;_ use `tree.updateAndReport()` / `tree.onPathChange()` in core
+- **`@signaltree/enterprise`** - _deprecated in 13.5.0;_ use `tree.updateAndReport()` in core
 - **`@signaltree/callable-syntax`** - Build-time transform for callable syntax (dev dependency, separate package)
 
 #### Composition Patterns
@@ -2867,8 +2867,7 @@ const tree = signalTree(largeState);
 const changed = tree.updateAndReport(serverPayload);
 if (changed.length) persist(changed);
 
-// Or subscribe to every root write.
-const off = tree.onPathChange((paths) => auditLog.record(paths));
+// There is deliberately NO subscription API — see below.
 ```
 
 Measured against `tree.updateAndReport()`, which returns the same paths, the

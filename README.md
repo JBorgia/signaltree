@@ -366,7 +366,7 @@ store.registerCleanup(() => ws.close());
 | Package                       | Purpose                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------- |
 | `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms          |
-| `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` / `tree.onPathChange()` in core |
+| `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core |
 | `@signaltree/callable-syntax` | Compile-time callable syntax transform (Vite/Webpack plugin, dev dependency) |
 | `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
 | `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |

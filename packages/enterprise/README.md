@@ -2,7 +2,7 @@
 
 > # ⚠️ Deprecated as of 13.5.0
 >
-> **Use `tree.updateAndReport()` and `tree.onPathChange()` from `@signaltree/core`.** They are built in, need no enhancer, add no bundle, and are faster than this package.
+> **Use `tree.updateAndReport()` from `@signaltree/core`.** They are built in, need no enhancer, add no bundle, and are faster than this package.
 >
 > This package remains published so existing installs keep resolving, and will receive security fixes only. No new features, and the array defect below is not being fixed.
 

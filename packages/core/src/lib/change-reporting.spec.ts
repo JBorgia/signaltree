@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 import { signalTree } from '../index';
 
 /**
- * Change reporting: `updateAndReport()` and `onPathChange()`.
+ * Change reporting: `updateAndReport()`.
  *
  * Both answer the same question — "what did that write actually change?" —
  * and the whole value of the answer is that it is TRUE. A path reported for a

@@ -1,7 +1,7 @@
 {
   "name": "@signaltree/enterprise",
   "version": "13.4.0",
-  "description": "DEPRECATED — use tree.updateAndReport() and tree.onPathChange() in @signaltree/core instead. The diff engine is measurably slower than the core API that replaced it.",
+  "description": "DEPRECATED — use tree.updateAndReport() in @signaltree/core instead. The diff engine is measurably slower than the core API that replaced it.",
   "license": "BUSL-1.1",
   "type": "module",
   "sideEffects": false,

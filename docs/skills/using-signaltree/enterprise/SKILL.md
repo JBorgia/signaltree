@@ -1,6 +1,6 @@
 ---
 name: signaltree-enterprise
-description: Migrating off the deprecated @signaltree/enterprise package to tree.updateAndReport() and tree.onPathChange() in @signaltree/core. Triggers on @signaltree/enterprise, updateOptimized, enterprise enhancer, diff engine, path index, getPathIndex, updateAuto, bulk updates on a large state tree, 500+ signals, diff-based patching.
+description: Migrating off the deprecated @signaltree/enterprise package to tree.updateAndReport() in @signaltree/core (there is no onPathChange in core). Triggers on @signaltree/enterprise, updateOptimized, enterprise enhancer, diff engine, path index, getPathIndex, updateAuto, bulk updates on a large state tree, 500+ signals, diff-based patching.
 ---
 
 # @signaltree/enterprise is DEPRECATED — use core
@@ -87,7 +87,7 @@ tree.$.users.set(nextUsers); // works
 ## Behaviour differences to flag during migration
 
 1. **`updateAndReport()` is stricter about "changed".** It reports only paths whose leaf actually accepted the write, so a re-fetched payload identical to current state reports `[]`. The diff engine reported every key in it. Code that logs or syncs on those counts will correctly do less work.
-2. **Core's `onPathChange` fires for every root write** — `tree({...})`, `batchUpdate()` and `updateAndReport()` — not just `updateOptimized()`. It does **not** fire for direct leaf writes (`tree.$.a.b.set(x)`), which bypass the root.
+2. **Core has no `onPathChange`.** It was built for 13.5.0 and cut before release — call `updateAndReport()` where you write. Previously this said core's version fires for every root write — `tree({...})`, `batchUpdate()` and `updateAndReport()` — not just `updateOptimized()`. It does **not** fire for direct leaf writes (`tree.$.a.b.set(x)`), which bypass the root.
 3. **`snapshot()` used `structuredClone`** and threw `DataCloneError` on a tree holding a function. `tree()` has no such limit.
 4. **`undefined` at a path still means "no change"** in core. Use `null` or an empty sentinel to clear a value explicitly.
 

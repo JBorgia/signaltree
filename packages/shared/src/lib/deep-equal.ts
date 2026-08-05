@@ -72,25 +72,38 @@ export function deepEqual<T>(a: T, b: T): boolean {
     return true;
   }
 
+  // Error and the primitive wrappers are checked ADDITIVELY: their intrinsic
+  // identity must match, and then execution FALLS THROUGH to the own-enumerable
+  // key comparison at the bottom. Returning here instead was a regression that
+  // shipped and was caught by audit — `class ApiError extends Error { status }`
+  // is the ordinary shape of an HTTP error, and a leaf holding
+  // `ApiError('Request failed', 404)` set to the same message with status 500
+  // compared EQUAL, so the write was dropped, `updateAndReport` returned [], and
+  // the UI kept showing the old error. Fixing "errors always compare equal" must
+  // not create "errors with differing state compare equal".
   if (a instanceof Error && b instanceof Error) {
-    // `name` and `message` are OWN but NON-enumerable, so the key comparison at
-    // the bottom saw nothing and reported EVERY pair of Errors as equal — a
-    // leaf holding an error never reported a change, which is the opposite of
-    // what an error state is for.
-    return a.name === b.name && a.message === b.message;
-  }
-
-  if (
+    // `name`/`message` are OWN but NON-enumerable, so the key comparison alone
+    // saw nothing and reported EVERY pair of Errors as equal.
+    if (a.name !== b.name || a.message !== b.message) return false;
+  } else if (
     (a instanceof Number && b instanceof Number) ||
     (a instanceof String && b instanceof String) ||
     (a instanceof Boolean && b instanceof Boolean)
   ) {
-    // Primitive wrapper objects — same shape of bug, no own enumerable keys, so
-    // `new Number(1)` and `new Number(2)` compared equal.
+    // Same shape: no own enumerable keys, so `new Number(1)` and
+    // `new Number(2)` compared equal.
     const va = (a as unknown as { valueOf(): unknown }).valueOf();
     const vb = (b as unknown as { valueOf(): unknown }).valueOf();
-    return va === vb || (va !== va && vb !== vb);
+    if (!(va === vb || (va !== va && vb !== vb))) return false;
   }
+
+  // KNOWN LIMITATION, pre-existing and deliberately not changed here: the Date
+  // branch above returns early, so a `class Stamped extends Date { note }` with
+  // the same time but a different `note` compares equal. Making Date additive
+  // too would add an `Object.keys()` pair to every Date comparison — the most
+  // common built-in on the hot path — to serve a shape that is vanishingly rare,
+  // where error subclasses carrying a status code are not. Revisit with a
+  // measurement if a Date subclass with state ever shows up.
 
   // A built-in on ONE side only — `new Date(0)` vs `{}`, a Map vs a plain
   // object, a typed array vs `{}`. None has own enumerable keys, so the key
