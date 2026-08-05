@@ -36,6 +36,16 @@ function warnApplyStateOverwrite(key: string, target: unknown): void {
   );
 }
 
+/**
+ * Library-internal symbol keys that must never reach a snapshot. Kept as a Set
+ * so adding one is a single edit rather than another `sym !== X` in a chain.
+ */
+const INTERNAL_SYMBOLS: ReadonlySet<symbol> = new Set([
+  Symbol.for('SignalTree:NodeAccessor'),
+  Symbol.for('SignalTree:NodeStore'),
+  Symbol.for('SignalTree:NodeChildren'),
+]);
+
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
@@ -380,7 +390,14 @@ export function unwrap<T>(node: unknown): T {
     }
   }
 
-  const symbols = Object.getOwnPropertySymbols(node as object);
+  // Symbol-keyed STATE is preserved in snapshots, but the library's own
+  // symbol-keyed metadata must never leak into one. getOwnPropertySymbols
+  // returns non-enumerable symbols too, so a `enumerable: false` definition is
+  // not enough on its own — the child index landed in every snapshot until
+  // this filter existed.
+  const symbols = Object.getOwnPropertySymbols(node as object).filter(
+    (sym) => !INTERNAL_SYMBOLS.has(sym)
+  );
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
 

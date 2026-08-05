@@ -2017,6 +2017,86 @@ visible for free, because its values are leaves like any other.
 - Unmeasured: everything above. No option in this doc has bundle or runtime
   numbers yet, and Track A explicitly flagged that gap.
 
+## SPIKE RESULT — branch `spike/indexed-node-store`
+
+Built. The thesis holds; the measurement is inconclusive and I nearly reported
+noise as a finding.
+
+### What was built
+
+A parallel authoritative child index — `Map<stateKey, child>` per node, attached
+by a non-enumerable symbol — and `recursiveUpdate` rewritten to resolve external
+keys through it (`resolveChild(node, key)`) instead of dereferencing them
+(`node[key]`). Properties stay exactly as they were, so `tree.$.user.name()` and
+`TreeNode<T>` are untouched: a DEVELOPER-written key is still property access, an
+OUTSIDE key is now a lookup. New file: `internals/child-index.ts`.
+
+### The thesis holds — `indexed-store.spec.ts`
+
+`recursiveUpdate` now contains **no name check of any kind**, and all of these
+are inert:
+
+```
+tree(JSON.parse('{"__proto__":{"zzP":1}}'))
+tree(JSON.parse('{"b":{"__proto__":{"zzP":1}}}'))
+tree(JSON.parse('{"constructor":{"prototype":{"zzP":1}}}'))
+tree(JSON.parse('{"__proto__":0}')) then ({"__proto__":{"isAdmin":true}})   // mint-then-walk
+```
+
+They resolve to `undefined` because they were never keys in the Map, and fall
+into the ST2010 not-in-initial-shape discard that already existed. The
+mint-then-walk bypass that defeated the own-property guard has nothing to mint
+into. And state legitimately named `constructor`/`prototype` still round-trips —
+the thing the name-blocklist version broke.
+
+**744/744 core tests pass. 11/11 projects green. Bundle budgets pass.**
+
+### Cost, honestly
+
+Integration was smaller than expected: **two** shape-mutation points needed to
+keep the index in sync (marker materialization, `.derived()`).
+
+`unwrap()` needed an internal-symbol filter, and that is a **latent bug found by
+the spike, not caused by it**: `unwrap` copies own symbols into snapshots via
+`getOwnPropertySymbols`, which returns NON-ENUMERABLE symbols too — so
+`enumerable: false` was never sufficient to keep library metadata out of user
+snapshots. Fixed with an `INTERNAL_SYMBOLS` set.
+
+### Performance — INCONCLUSIVE, and a caution
+
+Medians of 3 runs, µs/op (`zz-bench`, since deleted):
+
+| metric | main | Map + `{}` | Map + null-proto |
+| ------ | ---- | ---------- | ---------------- |
+| construct 1.7k leaves | 1434 | 1279 | 1790 |
+| deep read (15 levels) | 0.012 | 0.007 | 0.007 |
+| deep walk + read (15) | 0.050 | 0.036 | 0.048 |
+| write 1 of 40 | 0.227 | 0.269 | 0.243 |
+| write 20 of 40 | 2.256 | 2.346 | 2.401 |
+| unwrap 512 leaves | 360 | 381 | 414 |
+
+**Run-to-run variance swamps the effect.** Baseline `deepWalk` alone ranged
+0.042–0.091 across three runs; construct ranged 1188–1664. On single runs I had
+computed "+47% deepWalk" and "+37% write" and was about to report them — they
+were noise, and that is the same mistake pattern this session has already made
+twice. Nothing here is a measured regression.
+
+What is *suggestive* but not established: the null-prototype store may cost on
+construct and unwrap (its ranges sit above baseline on both), consistent with
+V8 putting null-prototype objects in dictionary mode. The **Map index alone
+shows no detectable cost at all**.
+
+Next measurement, before any decision rests on this: a real harness (fixed
+iteration budget, interleaved A/B in one process where possible, ≥10 samples,
+report medians and IQR) against the existing depth benchmarks — not this.
+
+### What the spike does NOT yet cover
+
+`applyState`, the lazy proxy, `mergeDeep`, `diff-engine` and the ~34 other
+payload sites still resolve by dereference; only `recursiveUpdate` was converted.
+The version-stamp / notify-and-pull half of the endpoint (Q2) is not built at
+all. Both are deliberate — the point was to test the load-bearing risk first.
+
 ## Options considered
 
 _pending — to be filled once A/B/C land, with each option weighed on:

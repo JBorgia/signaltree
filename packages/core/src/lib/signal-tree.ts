@@ -2,6 +2,12 @@ import { isSignal, signal, untracked, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { batchScope } from './internals/batch-scope';
+import {
+  attachChildren,
+  getChildren,
+  NODE_CHILDREN_SYMBOL,
+  resolveChild,
+} from './internals/child-index';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
 import {
@@ -38,6 +44,7 @@ const NODE_ACCESSOR_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
  * snapshot.
  */
 const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
+
 
 // =============================================================================
 // TYPE GUARDS
@@ -235,6 +242,19 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
     configurable: true,
   });
 
+  // Share the store's child index with the accessor so `resolveChild` works
+  // whichever of the two a walker is holding. Same Map object, not a copy —
+  // marker materialization mutates it and both must see that.
+  const sharedChildren = getChildren(store);
+  if (sharedChildren !== undefined) {
+    Object.defineProperty(accessor, NODE_CHILDREN_SYMBOL, {
+      value: sharedChildren,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+
   // Copy store properties onto accessor
   // CRITICAL: Properties must be writable to allow materializeMarkers()
   // to replace markers with their signal forms. Without writable: true,
@@ -293,7 +313,16 @@ function recursiveUpdate(
     // resolved to its result below, and everything downstream then sees one
     // shape rather than each branch re-implementing the updater case.
     let value = rawValue;
-    const prop = targetObj[key];
+    // THE change. `key` came from the caller's payload, so it is resolved
+    // through the node's child index — never `targetObj[key]`.
+    //
+    // This single substitution is what closes the class here: `__proto__`,
+    // `constructor` and `prototype` are simply not keys in the Map, so they
+    // resolve to `undefined` and fall into the existing ST2010
+    // "not in the tree's initial shape" discard. No name blocklist, no
+    // own-property check, no ordering subtlety between the two — and nothing
+    // for the next person to forget.
+    const prop = resolveChild(targetObj, key);
     const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
     if (prop === undefined) {
@@ -459,24 +488,34 @@ function createSignalStore<T>(
     return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
   }
 
-  // Regular object - recursive
-  const store: Record<string, unknown> = {};
+  // Regular object - recursive.
+  //
+  // INVARIANT I2: an accumulator built from EXTERNAL keys is null-prototype.
+  // `store[key] = value` is a plain assignment, so with an ordinary `{}` a key
+  // named `__proto__` invoked the Object.prototype SETTER instead of adding a
+  // property. `Object.create(null)` has no such accessor, so the same
+  // assignment stores inert data. The sink is gone rather than guarded.
+  const store: Record<string, unknown> = Object.create(null);
+  // Authoritative child index — see NODE_CHILDREN_SYMBOL. Non-enumerable so it
+  // never reaches a snapshot, a walker, or JSON.
+  const children = attachChildren(store);
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    // SECURITY: every `store[key] = …` below is a plain assignment, so a key
-    // named `__proto__` invokes the Object.prototype SETTER on the store rather
-    // than adding a property. `JSON.parse` creates a real own `__proto__` key,
-    // and rehydrating from localStorage / SSR transfer state / a fetch body is
-    // the ordinary way that input reaches `signalTree()`.
+    // The store is null-prototype (I2), so `store['__proto__'] = …` no longer
+    // invokes a setter — the POLLUTION sink is gone structurally and this is no
+    // longer a security guard.
     //
-    // The damage is contained but real: the ROOT store IS `tree.$`, so its
-    // prototype became an attacker-controlled node. `tree.$.isAdmin` then read
-    // back a live signal holding `true` while `tree()` reported only the
-    // legitimate keys — invisible to snapshots, serialization, persistence,
-    // devtools and time-travel — and a later `tree({ isAdmin: … })` wrote
-    // THROUGH to it, bypassing the ST2010 not-in-initial-shape discard.
-    // Nested branches were safe (each accessor gets a fresh Function.prototype);
-    // the root is the only victim, which is exactly why it was easy to miss.
+    // It stays for a different and weaker reason: SNAPSHOT HYGIENE. With no
+    // setter, `__proto__` would become a perfectly ordinary state key, appear in
+    // `tree()`, and survive `JSON.stringify` — at which point any consumer who
+    // `JSON.parse`s our output into an ordinary object inherits the sink we just
+    // removed from ourselves. Refusing the key at the boundary keeps the hazard
+    // from propagating outward.
+    //
+    // The distinction matters for how much weight this line carries: it is
+    // defence in depth, not the mechanism. The spike's evidence is that
+    // blocklists do not converge — four of six deployments traced needed a
+    // second advisory — so nothing load-bearing should rest on one.
     if (key === '__proto__') {
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         console.error(
@@ -491,6 +530,7 @@ function createSignalStore<T>(
     // Entity map markers - preserve for entities() enhancer
     if (isEntityMapMarker(value)) {
       store[key] = value;
+    children.set(key, store[key]);
       continue;
     }
 
@@ -504,6 +544,7 @@ function createSignalStore<T>(
     // `markers/stored` out of the bundle when those markers are never used.
     if (isRegisteredMarker(value)) {
       store[key] = value;
+    children.set(key, store[key]);
       continue;
     }
 
@@ -527,24 +568,28 @@ function createSignalStore<T>(
     // Existing signals - preserve
     if (isSignal(value)) {
       store[key] = value;
+    children.set(key, store[key]);
       continue;
     }
 
     // Null, undefined, primitives
     if (value === null || value === undefined || typeof value !== 'object') {
       store[key] = signal(value, { equal: equalityFn });
+    children.set(key, store[key]);
       continue;
     }
 
     // Arrays, built-ins
     if (Array.isArray(value) || isBuiltInObject(value)) {
       store[key] = signal(value, { equal: equalityFn });
+    children.set(key, store[key]);
       continue;
     }
 
     // Nested object - recurse and wrap in NodeAccessor
     const nested = createSignalStore(value, equalityFn);
     store[key] = makeNodeAccessor(nested);
+    children.set(key, store[key]);
   }
 
   return store as TreeNode<T>;

@@ -736,7 +736,9 @@ describe('signalTree construction — prototype pollution', () => {
       );
       const $ = tree.$ as unknown as Record<string, unknown>;
 
-      expect(Object.getPrototypeOf($)).toBe(Object.prototype);
+      // Null-prototype: stricter than Object.prototype, and the point of I2 —
+      // there is no inherited accessor left for a payload to reach.
+      expect(Object.getPrototypeOf($)).toBeNull();
       expect($['isAdmin']).toBeUndefined();
       expect(tree()).toEqual({ a: 1 });
       expect(spy).toHaveBeenCalled();
