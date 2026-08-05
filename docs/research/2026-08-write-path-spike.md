@@ -2062,7 +2062,53 @@ the spike, not caused by it**: `unwrap` copies own symbols into snapshots via
 `enumerable: false` was never sufficient to keep library metadata out of user
 snapshots. Fixed with an `INTERNAL_SYMBOLS` set.
 
-### Performance — INCONCLUSIVE, and a caution
+### Performance — MEASURED (superseded the inconclusive first attempt)
+
+Harness: `scripts/benchmarks/ab-indexed-store.mjs`. All three builds imported
+into ONE process with samples INTERLEAVED and arm order rotated per sample, so
+process noise hits every arm equally instead of being confounded with the arm.
+15 samples, medians, and a difference is only called real if it exceeds the IQR
+of both arms. The first attempt ran arms in separate processes and the variance
+swamped everything — those numbers were noise and are discarded.
+
+Costs are split by how they are PAID, which is the axis that decides:
+
+| | | base | +Map, `{}` store | +Map, null-proto |
+| - | - | ---- | ---------------- | ---------------- |
+| ONE-TIME | construct 1.7k leaves | 680 µs | +3.3% ~ | +10.9% ~ |
+| RECURRING | deep read (15 levels) | 0.005 µs | −0.0% ~ | +0.2% ~ |
+| RECURRING | shallow read | 0.005 µs | +0.4% ~ | +1.0% ~ |
+| RECURRING | deep walk + read | 0.082 µs | +2.8% ~ | +2.8% |
+| RECURRING | write 1 of 40 | 0.080 µs | +3.6% ~ | +3.5% ~ |
+| RECURRING | write 20 of 40 | 1.78 µs | **+6.1%** | +7.5% |
+| RECURRING | nested write (depth 3) | 0.34 µs | **+18.5%** | +12.8% |
+| RECURRING | unwrap 512 leaves | 56 µs | **+7.6%** | **+50.2%** |
+| RECURRING | retained memory | 3961 B/node | **+311 B (+7.9%)** | +660 B (+16.7%) |
+
+**Reads are free.** Both variants are within noise on every read metric, which
+matters most — reads dominate any real application.
+
+**Null-prototype storage is rejected on measurement.** It is the more elegant
+answer (it removes the construction sink structurally rather than guarding it)
+and it costs **~43 percentage points of every `unwrap()`** plus 351 more bytes
+per node. V8 puts null-prototype objects in dictionary mode. `unwrap` is on the
+hot path of every snapshot, every persistence write and every devtools frame;
+construction happens once per tree. Paying O(keys) of string comparison once
+beats paying 43% forever, so the construction-time `__proto__` check stays and
+is documented as load-bearing rather than defence-in-depth.
+
+**The accepted cost of the Map index** is: reads free, +3.6% on a single-key
+write (within noise), +6.1% on a wide write, +18.5% on a nested write, +7.6% on
+unwrap, +311 B/node, +3.3% construct. The unwrap and memory costs are GC
+pressure from one extra Map per node — removing a per-node `.filter()` I had
+added recovered only ~1 point, so the rest is allocation, not code.
+
+Whether +18.5% on nested writes is worth closing a CWE-915 class structurally is
+a judgement call, not a measurement. Recorded so it is made with numbers rather
+than vibes. Not yet attempted: caching the index reference to collapse
+`resolveChild`'s two lookups (symbol read, then `Map.get`) into one.
+
+### First attempt — INCONCLUSIVE, kept as a caution
 
 Medians of 3 runs, µs/op (`zz-bench`, since deleted):
 
