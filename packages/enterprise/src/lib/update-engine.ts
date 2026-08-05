@@ -447,6 +447,12 @@ export class OptimizedUpdateEngine {
       // defineProperty rather than `current[k] = v` for the surviving case:
       // assignment can still hit an inherited setter, and this keeps the
       // written shape explicit.
+      // THIS is the site that minted the own `__proto__` in the two-call bypass
+      // an audit used against an earlier fix. `lastKey` comes from a diff of the
+      // caller's payload, so it is genuinely untrusted — it is safe only because
+      // isUnsafeKey() rejects it above AND the write requires an existing
+      // ENUMERABLE own property, which `__proto__` never is.
+      // eslint-disable-next-line no-restricted-syntax
       Object.defineProperty(current, lastKey, {
         value: patch.value,
         enumerable: true,

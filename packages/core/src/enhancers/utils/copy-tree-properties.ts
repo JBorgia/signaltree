@@ -17,6 +17,7 @@ export function copyTreeProperties<T extends object>(
     if (!descriptor) continue;
     // Avoid copying non-configurable descriptors which would block later redefinition.
     if (descriptor.configurable === false) continue;
+    // eslint-disable-next-line no-restricted-syntax -- key comes from the SOURCE TREE's own keys, never a payload.
     Object.defineProperty(target, key, descriptor);
   }
 
@@ -29,6 +30,7 @@ export function copyTreeProperties<T extends object>(
     );
     if (!descriptor) continue;
     if (descriptor.configurable === false) continue;
+    // eslint-disable-next-line no-restricted-syntax -- a Symbol key cannot be '__proto__'.
     Object.defineProperty(target, sym, descriptor);
   }
 }

@@ -1,4 +1,3 @@
-import { setChild } from './child-index';
 import { computed, isSignal, Signal } from '@angular/core';
 
 import { isDerivedMarker } from '../markers/derived';
@@ -169,7 +168,6 @@ export function mergeDerivedState(
 
       // Create computed signal - factory is lazy (won't execute until read)
       target[key] = computed(value.factory);
-      setChild(target, key, target[key]);
     } else if (isSignalLike(value)) {
       // Already a signal (computed, signal, etc.) - add directly
       const target = ensurePathAndGetTarget($, path);
@@ -186,7 +184,6 @@ export function mergeDerivedState(
 
       target[key] = value;
 
-      setChild(target, key, target[key]);
     } else if (typeof value === 'object' && value !== null) {
       // =========================================================================
       // DEEP MERGE: Nested derived object - merge into existing structure
@@ -203,7 +200,6 @@ export function mergeDerivedState(
       // Ensure nested object exists in target (create if new path)
       if (!(key in target)) {
         target[key] = {};
-        setChild(target, key, target[key]);
       } else if (isSignalLike(target[key])) {
         // Target is a signal - can't merge object into it
         throw new Error(

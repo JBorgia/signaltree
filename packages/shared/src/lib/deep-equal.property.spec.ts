@@ -259,3 +259,34 @@ describe('untrusted-key ingress in shared helpers (13.5.0 spike)', () => {
     expect(Object.keys(getChanges({} as never, next))).toEqual(['own']);
   });
 });
+
+describe('deepClone — own-key minting (found by the no-mint lint rule)', () => {
+  it('does not carry an own __proto__ onto the clone', async () => {
+    const { deepClone } = await import('./deep-clone');
+
+    // deepClone copies DESCRIPTORS from Reflect.ownKeys(source), and JSON.parse
+    // creates a real own `__proto__` key. Copying its descriptor mints that key
+    // on the clone — the primitive that permanently defeats an own-property
+    // guard downstream, which is exactly the bypass an audit used against an
+    // earlier fix.
+    const clone = deepClone(
+      JSON.parse('{"a":1,"__proto__":{"zzClone":"pwned"}}')
+    ) as Record<string, unknown>;
+
+    expect(Object.prototype.hasOwnProperty.call(clone, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(clone)).toBe(Object.prototype);
+    expect(clone['a']).toBe(1);
+    expect(({} as Record<string, unknown>)['zzClone']).toBeUndefined();
+  });
+
+  it('still clones ordinary nested data', async () => {
+    const { deepClone } = await import('./deep-clone');
+    const src = { a: 1, b: { c: [1, 2], d: new Date(5) } };
+
+    const clone = deepClone(src);
+
+    expect(clone).toEqual(src);
+    expect(clone).not.toBe(src);
+    expect(clone.b).not.toBe(src.b);
+  });
+});

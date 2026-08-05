@@ -259,6 +259,9 @@ export function createEntitySignal<
         asReadonly: () => fieldSignal,
       });
 
+      // key is an entity FIELD name derived from the tree's declared entity
+      // shape, never from a payload.
+      // eslint-disable-next-line no-restricted-syntax
       Object.defineProperty(node, key, {
         get: () => fieldSignal,
         enumerable: true,

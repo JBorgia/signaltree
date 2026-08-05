@@ -633,6 +633,10 @@ export function createFormSignal<T extends Record<string, unknown>>(
         // configurable, so defineProperty redefines them cleanly — letting
         // forms have nested fields called `name`, `length`, etc.
         for (const childKey of Object.keys(nested)) {
+          // childKey comes from the form's own field shape; persisted values
+          // have `__proto__` stripped at hydration (see readFromStorage) before
+          // they can reach here.
+          // eslint-disable-next-line no-restricted-syntax
           Object.defineProperty(fieldAccessor, childKey, {
             value: (nested as Record<string, unknown>)[childKey],
             writable: true,

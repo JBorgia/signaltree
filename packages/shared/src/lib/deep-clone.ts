@@ -10,9 +10,31 @@ const globalStructuredClone: StructuredCloneFn | undefined =
  * Falls back to manual cloning logic when the platform does not support
  * `structuredClone` or when the runtime throws for unsupported inputs.
  */
+/**
+ * True when `value` carries an own `__proto__` key — which `JSON.parse` creates
+ * and `structuredClone` faithfully copies onto its result, minting the key that
+ * permanently defeats an own-property guard downstream.
+ */
+function hasOwnProtoKey(value: unknown): boolean {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    Object.prototype.hasOwnProperty.call(value, '__proto__')
+  );
+}
+
 export function deepClone<T>(value: T): T {
   if (globalStructuredClone) {
     try {
+      // structuredClone COPIES an own `__proto__` onto its result. Fall through
+      // to the manual path, which drops it. Checked at the top level only: that
+      // is the shape `JSON.parse` produces and the one `mergeDeep` hands us, and
+      // a deep pre-scan would cost more than the clone it guards. A nested own
+      // `__proto__` inside an already-cloned subtree still survives — it is
+      // inert inside the tree (leaf values are never traversed for structure)
+      // but can ride out through a snapshot, so this is a partial guard and
+      // says so.
+      if (hasOwnProtoKey(value)) throw new Error('own __proto__');
       return globalStructuredClone(value);
     } catch {
       // Fall through to manual implementation if structuredClone fails.
@@ -112,6 +134,15 @@ function cloneValue<T>(value: T, seen: WeakMap<object, unknown>): T {
       descriptor.value = cloneValue(descriptor.value, seen);
     }
 
+    // `source` can be untrusted data (deepClone is called on payload values),
+    // and JSON.parse creates a real OWN `__proto__` key. Copying its descriptor
+    // MINTS that key on the clone — which is the primitive that permanently
+    // defeats an own-property guard downstream. Drop it: a cloned value is
+    // data, and data has no business carrying a prototype override.
+    if (key === '__proto__') continue;
+    // key comes from Reflect.ownKeys(source) and `__proto__` is excluded
+    // immediately above.
+    // eslint-disable-next-line no-restricted-syntax
     Object.defineProperty(result, key, descriptor);
   }
 

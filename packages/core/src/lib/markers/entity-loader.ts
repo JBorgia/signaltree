@@ -654,6 +654,7 @@ export function attachLoader<
   });
 
   // Brand + tags for invalidateTag()'s tree walk.
+  // eslint-disable-next-line no-restricted-syntax -- a Symbol constant, not data.
   Object.defineProperty(target, ENTITY_LOADER_SIGNAL, { value: true });
   Object.defineProperty(target, '__tags', {
     value: tags ? new Set(tags) : null,

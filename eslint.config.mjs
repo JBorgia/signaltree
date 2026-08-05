@@ -64,6 +64,27 @@ export default [
           message:
             "Hand-rolled 'object or function' walker guard — use isTraversableNode() from @signaltree/core (packages/core/src/lib/utils.ts) instead. See docs/rfcs/0004-v12-optimal-iteration.md §3 V-P1.",
         },
+        {
+          // Mechanises the ONE invariant `resolveChild()` depends on.
+          //
+          // Resolution of an untrusted key is an own-property check, which is
+          // sufficient ONLY while nothing mints an own `__proto__` on a node —
+          // once such a key exists, own-ness is satisfied forever after and the
+          // guard is inert. That is the exact two-call bypass an audit used to
+          // defeat an earlier fix in @signaltree/enterprise, where a
+          // defineProperty write created the key that unlocked the check.
+          //
+          // A computed key is where that can happen, so a computed key has to
+          // be a deliberate, annotated act. Every current site iterates
+          // TREE-derived keys (Object.keys of a node) and is fine; the rule
+          // exists so a new one cannot be added quietly. Suppress with an
+          // eslint-disable-next-line and a comment saying where the key comes
+          // from.
+          selector:
+            'CallExpression[callee.object.name="Object"][callee.property.name="defineProperty"]:not([arguments.1.type="Literal"]):not([arguments.1.type="Identifier"][arguments.1.name=/_SYMBOL$|^Symbol/])',
+          message:
+            'Object.defineProperty with a computed key can MINT an own `__proto__`, which permanently defeats the own-property check in resolveChild(). Confirm the key is tree-derived (never from a payload), then suppress with a comment saying so. See packages/core/src/lib/internals/resolve-child.ts.',
+        },
       ],
     },
   },

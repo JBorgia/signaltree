@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
-import { resolveChild } from './internals/child-index';
+import { resolveChild } from './internals/resolve-child';
 
 declare const ngDevMode: boolean | undefined;
 
@@ -45,7 +45,6 @@ function warnApplyStateOverwrite(key: string, target: unknown): void {
 const INTERNAL_SYMBOLS: ReadonlySet<symbol> = new Set([
   Symbol.for('SignalTree:NodeAccessor'),
   Symbol.for('SignalTree:NodeStore'),
-  Symbol.for('SignalTree:NodeChildren'),
 ]);
 
 /** Symbol to mark callable signals - must match symbol used by signal-tree */

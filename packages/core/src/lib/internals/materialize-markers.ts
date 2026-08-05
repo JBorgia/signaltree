@@ -1,6 +1,5 @@
 import { isSignal } from '@angular/core';
 
-import { setChild } from './child-index';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor, isTraversableNode } from '../utils';
 
@@ -268,14 +267,6 @@ export function materializeMarkers(
           ] as Record<string, unknown> | undefined;
           if (backingStore && backingStore !== node) {
             backingStore[key] = materialized;
-          }
-          // ...and the child index, which is the view LIBRARY code resolves
-          // through. Letting it drift from the properties is the failure mode
-          // this call exists to prevent: writes would silently stop landing on
-          // any materialized marker.
-          setChild(node, key, materialized);
-          if (backingStore && backingStore !== node) {
-            setChild(backingStore, key, materialized);
           }
           processed = true;
         } catch (err) {

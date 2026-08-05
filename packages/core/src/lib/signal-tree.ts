@@ -2,12 +2,7 @@ import { isSignal, signal, untracked, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { batchScope } from './internals/batch-scope';
-import {
-  attachChildren,
-  getChildren,
-  NODE_CHILDREN_SYMBOL,
-  resolveChild,
-} from './internals/child-index';
+import { resolveChild } from './internals/resolve-child';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
 import {
@@ -242,12 +237,6 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
     configurable: true,
   });
 
-  // NOTE: the child index is deliberately NOT attached to the accessor. Every
-  // extra own property changes the accessor's shape, and a deep read WALKS one
-  // accessor per level — measured at +6-7% on a 10-15 level walk, which is the
-  // depth this library advertises. `resolveChild` reaches the index through
-  // NODE_STORE_SYMBOL instead: one extra hop on the WRITE path (rare) to keep
-  // the READ path's object shape untouched (hot).
 
   // Copy store properties onto accessor
   // CRITICAL: Properties must be writable to allow materializeMarkers()
@@ -255,6 +244,9 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   // this assignment silently fails in non-strict mode, causing runtime errors
   // like "$.users.upsertOne is not a function".
   for (const key of Object.keys(store as object)) {
+    // key comes from Object.keys(store), and createSignalStore refuses
+    // `__proto__` as a state key.
+    // eslint-disable-next-line no-restricted-syntax
     Object.defineProperty(accessor, key, {
       value: (store as Record<string, unknown>)[key],
       enumerable: true,
@@ -497,9 +489,6 @@ function createSignalStore<T>(
   // every devtools frame; construction happens once. Paying O(keys) of string
   // comparison once (the check below) beats paying 43% forever.
   const store: Record<string, unknown> = {};
-  // Authoritative child index — see NODE_CHILDREN_SYMBOL. Non-enumerable so it
-  // never reaches a snapshot, a walker, or JSON.
-  const children = attachChildren(store);
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     // Two jobs, and the store being an ordinary `{}` (see above) means this one
@@ -533,7 +522,6 @@ function createSignalStore<T>(
     // Entity map markers - preserve for entities() enhancer
     if (isEntityMapMarker(value)) {
       store[key] = value;
-    children.set(key, store[key]);
       continue;
     }
 
@@ -547,7 +535,6 @@ function createSignalStore<T>(
     // `markers/stored` out of the bundle when those markers are never used.
     if (isRegisteredMarker(value)) {
       store[key] = value;
-    children.set(key, store[key]);
       continue;
     }
 
@@ -571,28 +558,24 @@ function createSignalStore<T>(
     // Existing signals - preserve
     if (isSignal(value)) {
       store[key] = value;
-    children.set(key, store[key]);
       continue;
     }
 
     // Null, undefined, primitives
     if (value === null || value === undefined || typeof value !== 'object') {
       store[key] = signal(value, { equal: equalityFn });
-    children.set(key, store[key]);
       continue;
     }
 
     // Arrays, built-ins
     if (Array.isArray(value) || isBuiltInObject(value)) {
       store[key] = signal(value, { equal: equalityFn });
-    children.set(key, store[key]);
       continue;
     }
 
     // Nested object - recurse and wrap in NodeAccessor
     const nested = createSignalStore(value, equalityFn);
     store[key] = makeNodeAccessor(nested);
-    children.set(key, store[key]);
   }
 
   return store as TreeNode<T>;
@@ -1006,6 +989,9 @@ function create<T extends object>(
   // Consumers should use tree.$ for state access
   for (const key of Object.keys(signalState as object)) {
     if (!(key in tree)) {
+      // key comes from Object.keys(signalState); `__proto__` was refused at
+      // construction.
+      // eslint-disable-next-line no-restricted-syntax
       Object.defineProperty(tree, key, {
         value: (signalState as Record<string, unknown>)[key],
         enumerable: true,
