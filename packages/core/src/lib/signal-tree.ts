@@ -267,11 +267,8 @@ function recursiveUpdate(
       // for hours when the demo wrote an optional key it had never seeded.
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         console.error(
-          `SignalTree: write to "${childPath}" (relative to the node written) ` +
-            `was DISCARDED — that key is not ` +
-            `part of the tree's initial shape, so no signal exists for it. Add ` +
-            `it to the object passed to signalTree() (a declared-but-optional ` +
-            `TypeScript property is not enough). [ST2010]`
+          `SignalTree: write to "${childPath}" DISCARDED — key is not in the ` +
+            `tree's initial shape. [ST2010]`
         );
       }
       continue;

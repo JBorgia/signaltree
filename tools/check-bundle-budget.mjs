@@ -48,7 +48,15 @@ const TARGETS = {
     // pay for the machinery via `loader()`; plain collections do not. This
     // budget locks the win in — a regression back toward 9.9 means something
     // re-introduced a static reference to the loader machinery on the plain path.
-    budgetKB: 8.6,
+    //
+    // Bumped 8.6 → 8.7 for 13.4.0: the traversal diagnostics (ST2008-ST2011)
+    // added in that release live in recursiveUpdate/unwrap/applyState — paths
+    // EVERY tree reaches, so they cannot tree-shake for a consumer who never
+    // triggers them. Measured 8.66KB; +0.06KB of guarded message strings, not
+    // a leaked optional module. Defining `ngDevMode: false` removes them
+    // entirely (see docs/performance/dropping-dev-code.md, which measures
+    // ~1.15KB reclaimed for this scenario). Deliberate, not a regression.
+    budgetKB: 8.7,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -64,7 +72,12 @@ const TARGETS = {
     // to the history engine leaked onto the plain form() path. The
     // forbidden-identifier assertion in scripts/verify-tree-shaking.js is the
     // companion structural check.
-    budgetKB: 7.8,
+    //
+    // Bumped 7.8 → 7.9 for 13.4.0: same cause as signaltree-entities — the
+    // ST2008-ST2011 traversal diagnostics sit on paths every tree reaches.
+    // Measured 7.86KB. Not a history-engine leak; the forbidden-identifier
+    // check in scripts/verify-tree-shaking.js still guards that.
+    budgetKB: 7.9,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });

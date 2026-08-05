@@ -11,7 +11,7 @@ describe('F2: markers in a lazy tree fail loudly', () => {
 
     // Before this guard, the marker stayed a placeholder: it read as an opaque
     // getter and vanished from every snapshot without a word.
-    expect(() => JSON.stringify(tree())).toThrow(/ST2012/);
+    expect(() => JSON.stringify(tree())).toThrow(/ST2011/);
   });
 
   it('leaves marker-free lazy trees alone', () => {

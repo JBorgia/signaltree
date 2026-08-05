@@ -22,10 +22,8 @@ declare const ngDevMode: boolean | undefined;
  */
 function warnUnwrapSkipped(key: string): void {
   console.error(
-    `SignalTree: "${key}" was OMITTED from the snapshot — the value there is a ` +
-      `function that is neither a signal nor a node accessor, so unwrap() has ` +
-      `no value to read. Anything snapshotting this tree (serialize, ` +
-      `persistence, devtools, audit) is missing that key. [ST2008]`
+    `SignalTree: "${key}" OMITTED from snapshot — value is a function that is ` +
+      `neither signal nor node accessor. [ST2008]`
   );
 }
 
@@ -34,8 +32,7 @@ function warnApplyStateOverwrite(key: string, target: unknown): void {
   if (typeof target !== 'function') return;
   console.error(
     `SignalTree: applyState REPLACED the live value at "${key}" with a raw ` +
-      `value. It was a callable that is neither a signal nor a node accessor, ` +
-      `so the signal there is now gone and reading it will throw. [ST2009]`
+      `value; its signal is gone. [ST2009]`
   );
 }
 

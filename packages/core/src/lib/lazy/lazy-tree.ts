@@ -92,12 +92,8 @@ export function createLazySignalTree<T extends object>(
       // snapshot silently. Fail loudly instead of corrupting data quietly.
       if (isRegisteredMarker(value)) {
         const message =
-          `SignalTree: the marker at "${path}" cannot be used in a LAZY tree. ` +
-          `Lazy trees resolve values through a proxy that never materializes ` +
-          `markers, so this one would stay a placeholder — omitted from ` +
-          `tree()/unwrap() and unusable as a signal. Use markers only in ` +
-          `eagerly-built trees (drop \`useLazySignals\`/\`lazy()\` for this ` +
-          `tree), or move the marker out of the lazy subtree. [ST2012]`;
+          `SignalTree: marker at "${path}" cannot be used in a LAZY tree — it ` +
+          `is never materialized. [ST2011]`;
         if (typeof ngDevMode === 'undefined' || ngDevMode) {
           throw new Error(message);
         }
