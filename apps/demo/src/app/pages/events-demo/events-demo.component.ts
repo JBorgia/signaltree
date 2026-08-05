@@ -135,8 +135,21 @@ export class EventsDemoComponent {
     isValid: boolean;
     errors: string[];
   } | null>(null);
+  // A COMPLETE event. The sample used to carry only `type` and `data`, so
+  // validating it — the first thing anyone clicks on this page — reported six
+  // errors about envelope fields the sample never mentioned, and the demo's
+  // happy path was unreachable. createEventSchema() extends BaseEventSchema,
+  // which requires the full envelope (id/version/timestamp/correlationId/
+  // actor/metadata). Delete any field below to watch validation fail.
   readonly validationInput = signal(`{
+  "id": "550e8400-e29b-41d4-a716-446655440010",
   "type": "TradeProposalCreated",
+  "version": { "major": 1, "minor": 0 },
+  "timestamp": "2026-08-05T12:00:00.000Z",
+  "correlationId": "550e8400-e29b-41d4-a716-446655440011",
+  "actor": { "id": "user-42", "type": "user", "name": "Ada" },
+  "metadata": { "source": "demo-ui", "environment": "development" },
+  "aggregate": { "type": "Trade", "id": "trade-1" },
   "data": {
     "tradeId": "550e8400-e29b-41d4-a716-446655440000",
     "initiatorId": "550e8400-e29b-41d4-a716-446655440001",
@@ -695,8 +708,19 @@ rollback();`,
   }
 
   setValidInput() {
+    // Must carry the full event envelope. This button is labelled "valid
+    // input", and it used to set an event missing id/version/timestamp/
+    // correlationId/actor/metadata — so pressing it and validating reported
+    // errors, which is the opposite of what it advertises.
     this.validationInput.set(`{
+  "id": "550e8400-e29b-41d4-a716-446655440010",
   "type": "TradeProposalCreated",
+  "version": { "major": 1, "minor": 0 },
+  "timestamp": "2026-08-05T12:00:00.000Z",
+  "correlationId": "550e8400-e29b-41d4-a716-446655440011",
+  "actor": { "id": "user-42", "type": "user", "name": "Ada" },
+  "metadata": { "source": "demo-ui", "environment": "development" },
+  "aggregate": { "type": "Trade", "id": "trade-1" },
   "data": {
     "tradeId": "550e8400-e29b-41d4-a716-446655440000",
     "initiatorId": "550e8400-e29b-41d4-a716-446655440001",
