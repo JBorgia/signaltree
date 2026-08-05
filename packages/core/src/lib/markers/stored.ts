@@ -313,6 +313,30 @@ let storedRegistered = false;
  * @param options - Optional serialization config
  * @returns StoredMarker to be processed during tree finalization
  *
+ * ## Known limitations
+ *
+ * A materialized `StoredSignal` is a plain callable function — neither an
+ * Angular signal nor a `NodeAccessor`. Tree traversal recognises those two
+ * shapes, so a stored leaf is invisible to it:
+ *
+ * - **`tree()` / `unwrap()` skip stored values.** A top-level stored leaf is
+ *   omitted from the snapshot; a nested one can surface the raw marker object
+ *   (including the `Storage` instance) instead of its value. Anything that
+ *   snapshots a tree — `serialization()`, `persistence()`, devtools, audit —
+ *   inherits this. Read stored values directly (`tree.$.theme()`).
+ * - **Writing through a parent silently no-ops.** `tree.$.settings({ theme })`
+ *   does not reach a `stored()` leaf beneath it: the deep-merge tests for
+ *   signal-ness then node-ness and a stored signal matches neither, so the
+ *   write is dropped with no error. Use `tree.$.settings.theme.set(...)`.
+ * - **Two stored signals on one key are independent.** Last write wins and
+ *   `clear()` on one leaves the other reporting a stale value; there is no
+ *   cross-signal coherence.
+ * - **`reload()` on unparseable data** resets the signal to its default but
+ *   deliberately leaves storage untouched, so the two disagree until written.
+ *
+ * These predate the 13.3 durability work and are documented rather than
+ * silently patched, because fixing the first two means changing core traversal.
+ *
  * @example
  * ```typescript
  * signalTree({

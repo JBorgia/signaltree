@@ -91,6 +91,19 @@ take this patch.**
   fields have been queried; `getFieldError(path)` is the supported per-field
   accessor and `errors()` the complete map. Do not enumerate the records.
 
+### Known limitations (documented, not changed)
+
+- **`stored()` leaves are invisible to tree traversal.** A materialized
+  `StoredSignal` is a plain callable — neither an Angular signal nor a
+  `NodeAccessor` — so `tree()`/`unwrap()` skip it (a nested one can surface the
+  raw marker object, `Storage` instance included), and a deep-merge write
+  through a parent (`tree.$.settings({ theme })`) is silently dropped rather
+  than reaching the stored leaf. Read and write stored values directly. Two
+  stored signals sharing a key are also independent, with no coherence between
+  them. These predate 13.3 and are now documented on `stored()` itself; fixing
+  the first two requires changing core traversal, which does not belong in a
+  patch release.
+
 ### Changed
 
 - **Documentation: the leaf-vs-node contract is now stated at the source.**

@@ -1,5 +1,71 @@
 # @signaltree/core Changelog
 
+## 13.3.1 (2026-08-04)
+
+Correctness follow-up to 13.3.0's `stored()` durability work. **If you are on
+13.3.0 and use `stored()` with `version`/`migrate`, or create and destroy trees,
+take this patch.**
+
+### Fixed
+
+- **`clear()` / `reload()` are no longer undone by a migration re-persist.** A
+  migrated value is written back in a queued microtask, which the timer
+  cancellation could not reach — so `clear()` in the same tick a tree
+  materialised with a version migration removed the key and got it back one
+  microtask later. `reload()` had the mirror form, leaving the signal on its
+  default while storage kept stale data. Both operations are authoritative now.
+- **The lifecycle-drain registry no longer retains destroyed trees.** It held
+  every debounced signal's flush closure forever, retaining the `Storage`
+  backend, `defaultValue`, current value and user callbacks (~4 MB measured
+  across 20 short-lived trees). Membership is now scoped to *pending writes*:
+  a signal enrols when a write is armed and leaves when it commits or is
+  cancelled — nothing to leak when idle, always reachable when unpersisted.
+- **One failing signal no longer abandons the rest of a drain.**
+  `flushAllStoredSignals()` now isolates each commit, so an exception escaping
+  one (e.g. an instrumented `console.warn`) cannot leave later signals
+  unpersisted or propagate out of the `pagehide` listener.
+- **Removal failures report `operation: 'remove'`** instead of `'write'`.
+  `StoredErrorContext['operation']` widens to include it.
+
+### Note on 13.3.0
+
+13.3.0 also made `clear()` swallow a throwing `storage.removeItem()` and route
+it to `onError` rather than propagating to the caller, and surfaced previously
+silent migration-re-persist failures through `onError`/`console.warn`. Neither
+was called out at the time.
+
+## 13.3.0 (2026-08-04)
+
+Durability for the `stored()` marker, prompted by a Capacitor field report: a
+value `.set()` just before the app was backgrounded could be lost, because the
+debounced write (default 100 ms) had not fired and nothing drained it.
+
+### Added
+
+- `flush()` on every stored signal, and exported `flushAllStoredSignals()` for
+  native lifecycle hooks (e.g. Capacitor `App` `'pause'`).
+- Automatic drain on `visibilitychange` → hidden and `pagehide`.
+- `maxWaitMs` — bounds staleness under continuous updates.
+- `onError` + `StoredErrorContext` — surfaces read/write/migrate failures that
+  previously only warned in dev and were silent in production.
+
+### Fixed
+
+- `clear()` / `reload()` cancel a pending debounced write (a cleared value could
+  be resurrected by an already-armed timer).
+- `reload()` runs migrations, sharing the initial-load path.
+
+### Changed
+
+- `debounceMs: 0` now writes synchronously in the caller's stack.
+
+## 13.0.0 – 13.2.0
+
+Packaging principle + ng-forms re-slice, `history()`, events↔entityMap bridge,
+`audit` moved into core, typed `entityMap().computed()` slices, and
+`signalForm()`'s `nativeErrors` defaulting to `true`. See the workspace
+[CHANGELOG](../../CHANGELOG.md) for the full detail of those releases.
+
 ## 11.4.0 (2026-07-20)
 
 > `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`)

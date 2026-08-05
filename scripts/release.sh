@@ -436,7 +436,7 @@ print_success "Package builds completed"
 
 # Copy AI-discoverability priming surfaces into the core tarball so that
 # `node_modules/@signaltree/core/llms.txt` exists for retrieval-aware AI agents
-# without requiring a separate web/GitHub fetch. The +42pp lift we measure
+# without requiring a separate web/GitHub fetch. The +49pp lift we measure
 # only fires when llms.txt is in the agent's context — shipping it via npm
 # install reaches every user automatically.
 if [ -f "apps/demo/public/llms.txt" ] && [ -d "dist/packages/core" ]; then

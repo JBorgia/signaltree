@@ -136,8 +136,12 @@ let asyncQueryRegistered = false;
  *   }),
  * });
  *
- * // Wire to a form input via ngModel:
- * <input [(ngModel)]="store.$.search.input">
+ * // Wire to a form input. Use the split form — `[(ngModel)]` would assign to
+ * // the accessor itself rather than write through it:
+ * <input
+ *   [ngModel]="store.$.search.input()"
+ *   (ngModelChange)="store.$.search.input.set($event)"
+ * >
  *
  * // Or push values imperatively:
  * store.$.search.input.set('alice');
