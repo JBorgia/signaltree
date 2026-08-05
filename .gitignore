@@ -97,3 +97,11 @@ tmp/
 .nx/migrate-runs
 # Playwright route-smoke artifacts (scripts/playwright/route-smoke.config.ts)
 test-results/
+
+# Throwaway probe/audit specs. Investigating a defect here means dropping a
+# scratch spec next to the code (vitest only picks up specs inside a package),
+# and those files are transient by definition — they encode a hypothesis, not a
+# contract. Ignored because `git add -A` swept a batch of them into five
+# commits (2026-08-05) while an audit was mid-flight. A test worth keeping gets
+# a real name.
+zz-*.spec.ts
