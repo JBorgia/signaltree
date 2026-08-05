@@ -177,6 +177,7 @@ export {
   type StoredSignal,
   type StoredOptions,
   type StoredErrorContext,
+  type StoredReloadResult,
 } from './lib/markers/stored';
 
 // Form marker (v7.2) - tree-integrated forms with validation
