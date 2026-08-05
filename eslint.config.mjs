@@ -77,9 +77,9 @@ export default [
           // A computed key is where that can happen, so a computed key has to
           // be a deliberate, annotated act. Every current site iterates
           // TREE-derived keys (Object.keys of a node) and is fine; the rule
-          // exists so a new one cannot be added quietly. Suppress with an
-          // eslint-disable-next-line and a comment saying where the key comes
-          // from.
+          // exists so a new one cannot be added quietly. Suppress with a
+          // one-line disable directive for this rule, plus a comment saying
+          // where the key comes from.
           selector:
             'CallExpression[callee.object.name="Object"][callee.property.name="defineProperty"]:not([arguments.1.type="Literal"]):not([arguments.1.type="Identifier"][arguments.1.name=/_SYMBOL$|^Symbol/])',
           message:
