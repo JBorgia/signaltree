@@ -75,8 +75,10 @@ decision record.
 
   **The headline performance claim was inverted.** Measured against
   `tree.updateAndReport()`, which returns the same changed paths,
-  `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at
-  2,000**, and the gap widens with tree size. The "2-5x faster" claim was never
+  `updateOptimized()` is slower in every workload measured — at 2,000 leaves,
+  **~7x** when 10% of leaves change, **~2x** on an identical re-fetch and
+  **~160-190x** when every leaf changes (at 500 leaves: ~4x, ~1.5x, ~43x) — and
+  the ratio grows with tree size in all of them. The "2-5x faster" claim was never
   measured against core. This is structural rather than a tuning problem: core
   leaves already use deep equality plus a reference-equality short-circuit, so
   "only write what changed" is core behaviour for free — the diff engine pays
@@ -86,6 +88,15 @@ decision record.
 
   The package also has no independent runtime dependency, which puts it on the
   wrong side of the packaging rule in RFC 0007.
+
+  **Bundle cost corrected to ~3.8KB gzipped** (previously documented as 2.4KB,
+  then 3.1KB). CI never caught either figure because
+  `scripts/consolidated-bundle-analysis.js` measures this package's 235-byte
+  re-export barrel rather than its bundled output.
+
+  **Two migration rows are an upgrade, not an equivalence.** `restore()` and
+  `updateAuto()` (with a threshold configured) both inherit the array defect;
+  the core forms handle arrays correctly. See RFC 0010.
 
 ### Removed
 

@@ -28,7 +28,7 @@ if (changed.length) sync(changed);</code></pre>
         This page previously claimed roughly 2-5x faster bulk updates. That was
         never measured against <code>&#64;signaltree/core</code>, and it is
         backwards: <code>updateOptimized()</code> measures
-        <strong>6.8x slower at 500 leaves and 14.4x slower at 2,000</strong> than
+        <strong>slower in every workload measured &mdash; about 7x at 2,000 leaves when a tenth of them change, and about 160x when all of them do</strong> compared with
         <code>tree.updateAndReport()</code>, with the gap widening as the tree
         grows. Core leaves already use deep equality plus a reference-equality
         short-circuit, so &ldquo;only write what changed&rdquo; is core behaviour

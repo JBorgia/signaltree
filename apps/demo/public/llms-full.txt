@@ -1004,7 +1004,7 @@ session.pullFromSource();
 | `@signaltree/events` | Primarily a standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — the bus itself does NOT integrate with the signal tree. Exception (v13+): `@signaltree/events/angular`'s `entityEventHandler`/`applyOptimisticEntityChange` bridge event batches onto `@signaltree/core`'s `entityMap` batch ops | `createEventSchema()`, `EventBusModule`, `entityEventHandler()` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
 | `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
-| `@signaltree/enterprise` | **DEPRECATED (13.5.0) — do not use.** Superseded by `tree.updateAndReport()` / `tree.onPathChange()` in core. Measured 6.8x slower at 500 leaves, 14.4x at 2,000; silently drops writes targeting arrays. The enhancer was named `enterprise()`, never `optimized()`. | *(migrate to core)* |
+| `@signaltree/enterprise` | **DEPRECATED (13.5.0) — do not use.** Superseded by `tree.updateAndReport()` / `tree.onPathChange()` in core. Measured slower in every workload (~7x at 2,000 leaves when 10% change, ~160x when all do); silently drops writes targeting arrays. The enhancer was named `enterprise()`, never `optimized()`. | *(migrate to core)* |
 
 ---
 

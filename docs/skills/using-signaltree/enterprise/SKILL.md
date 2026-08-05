@@ -50,14 +50,21 @@ off();
 | `enterprise({ autoOptimizeThreshold: n })` | drop it — core has one write path                   |
 | diff options (`maxDepth`, `equalityFn`, …) | drop them — core writes leaf-by-leaf, no diff pass  |
 
+**Two of those rows are an upgrade, not a swap.** `restore()` and `updateAuto()`
+both inherit the array defect below: `restore()` leaves arrays at their mutated
+value while reporting their element paths as changed, and `updateAuto()` drops
+array writes for any payload over a configured `autoOptimizeThreshold`. The core
+forms handle arrays correctly. Without a threshold, `updateAuto` is a plain
+passthrough and is exactly equivalent.
+
 ## Why it was deprecated
 
 State this accurately if a user asks, because the package's own older docs claimed the opposite:
 
-- **It is slower, not faster.** Measured against `tree.updateAndReport()`, which returns the same paths: **6.8x slower at 500 leaves, 14.4x slower at 2,000**, widening with size. The old "2–5x faster" claim was never measured against core.
+- **It is slower, not faster.** Measured against `tree.updateAndReport()`, which returns the same paths, at 2,000 leaves: **~7x slower** when 10% of leaves change, **~2x** on an identical re-fetch, **~160-190x** when every leaf changes. At 500 leaves: ~4x, ~1.5x, ~43x. The ratio grows with tree size in every workload — the opposite of the scaling story it was sold on. The old "2-5x faster" claim was never measured against core.
 - **The reason is structural.** Core leaves are `signal(value, { equal })` — deep equality plus a reference-equality short-circuit — so "only write what changed" is already core behaviour. The diff engine pays O(state) to skip writes that were already no-ops.
 - **It has a live data-loss defect** (below) that is not being fixed.
-- **It adds ~3.1KB gzipped** for that.
+- **It adds ~3.8KB gzipped** for that.
 
 ## Known defect in the deprecated package
 

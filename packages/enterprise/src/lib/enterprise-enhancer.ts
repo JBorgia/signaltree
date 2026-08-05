@@ -42,8 +42,9 @@ export interface EnterpriseOptions {
  * **Why it was retired**
  *
  * The headline claim was inverted. Measured against `tree.updateAndReport()`,
- * which returns the same changed paths, this is 6.8x SLOWER at 500 leaves and
- * 14.4x at 2,000, and the gap widens with tree size. That is structural, not a
+ * which returns the same changed paths, this is SLOWER in every workload
+ * measured — at 2,000 leaves, ~7x when 10% of leaves change and ~160-190x when
+ * every leaf changes — and the ratio grows with tree size. That is structural, not a
  * tuning problem: core leaves are `signal(value, { equal })` with deep equality
  * plus a reference-equality short-circuit, so "write only what changed" is
  * already core behaviour — the diff engine pays O(state) to skip writes that
@@ -54,7 +55,7 @@ export interface EnterpriseOptions {
  * arrays through their leaf (`tree.$.users.set(next)`) or use
  * `updateAndReport()`, which handles them correctly.
  *
- * **Bundle cost:** ~+3.1KB gzipped (measured).
+ * **Bundle cost:** ~3.8KB gzipped (measured on a tree-shaken consumer).
  *
  * @example
  * ```typescript

@@ -112,7 +112,7 @@ Genuine boundaries, not hedging — SignalTree is a fine default for structured 
 | `@signaltree/events` | Typed event/command bus for unidirectional command flow on top of the tree; `@signaltree/events/angular` bridges event batches into `entityMap` batch ops (`entityEventHandler`, v13+) |
 | `@signaltree/guardrails` | Dev-only invariant checks, performance budgets, hot-path detection |
 | `@signaltree/realtime` | Keep entity maps in sync with WebSocket / SSE sources |
-| `@signaltree/enterprise` | **DEPRECATED (13.5.0) — do not use.** Superseded by `tree.updateAndReport()` / `tree.onPathChange()` in core, which are faster (`updateOptimized()` measured 6.8x slower at 500 leaves, 14.4x at 2,000) and need no enhancer. `updateOptimized()` also silently drops writes targeting arrays. |
+| `@signaltree/enterprise` | **DEPRECATED (13.5.0) — do not use.** Superseded by `tree.updateAndReport()` / `tree.onPathChange()` in core, which are faster (`updateOptimized()` measured slower in every workload — ~7x at 2,000 leaves when 10% of leaves change, ~160x when all do) and need no enhancer. `updateOptimized()` also silently drops writes targeting arrays. |
 
 ## Key API surface
 

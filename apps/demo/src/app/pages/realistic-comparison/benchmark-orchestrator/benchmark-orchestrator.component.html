@@ -574,8 +574,10 @@
         {{ enhancerExplanation() }}
         <br />
         <small>
-          Enterprise variant adds <code>enterprise</code> enhancer on top of the
-          above.
+          Enterprise variant adds the <code>enterprise</code> enhancer on top of
+          the above. That package is <strong>deprecated in 13.5.0</strong> and
+          measured slower than core in every workload &mdash; it is kept in the
+          comparison as an honest record, not as a recommendation.
         </small>
       </p>
     </div>
@@ -975,8 +977,9 @@
           >Enterprise</span
         >
         <span
-          >SignalTree Enterprise (adds diff engine + scheduler
-          optimizations)</span
+          >SignalTree Enterprise (adds the diff engine &mdash; DEPRECATED in
+          13.5.0, and slower than core's
+          <code>tree.updateAndReport()</code>)</span
         >
       </div>
       <div style="display: flex; align-items: center; gap: 0.3rem">

@@ -5,8 +5,9 @@
  *
  * Use `tree.updateAndReport()` and `tree.onPathChange()` from `@signaltree/core`.
  * Both are built in, need no enhancer, and are measurably faster than this
- * package: the diff engine benchmarks 6.8x slower at 500 leaves and 14.4x
- * slower at 2,000, and the gap widens with tree size.
+ * package: the diff engine benchmarks slower in every workload measured — at
+ * 2,000 leaves, ~7x when 10% of leaves change, ~2x on an identical re-fetch and
+ * ~160-190x when every leaf changes — and the ratio grows with tree size.
  *
  * The reason is structural rather than a tuning problem. Core leaves are
  * `signal(value, { equal })` with a deep equality check and a reference-

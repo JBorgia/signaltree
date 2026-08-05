@@ -30,10 +30,22 @@ the skill and the demo page. That number was never measured against
 `@signaltree/core`. Measured against `tree.updateAndReport()`, which returns the
 same changed paths:
 
-| Leaves | `updateOptimized()` | `updateAndReport()` | Ratio            |
-| ------ | ------------------- | ------------------- | ---------------- |
-| 500    | 0.1370 ms           | 0.0201 ms           | **6.8x slower**  |
-| 2,000  | 0.5797 ms           | 0.0404 ms           | **14.4x slower** |
+| Workload (2,000 leaves)         | `updateOptimized()` | `updateAndReport()` | Ratio                |
+| ------------------------------- | ------------------- | ------------------- | -------------------- |
+| 10% of leaves changed           | ~0.53 ms            | ~0.08 ms            | **~7x slower**       |
+| identical re-fetch (all no-op)  | ~0.14 ms            | ~0.07 ms            | **~2x slower**       |
+| every leaf changed              | ~24-27 ms           | ~0.12-0.17 ms       | **~160-190x slower** |
+
+At 500 leaves: ~4-4.5x, ~1.2-1.6x, ~43x.
+
+An earlier revision of this RFC published a single pair, 6.8x/14.4x, without
+naming the workload. Independent re-measurement during audit did not reproduce
+those exact figures — they sit roughly double the 10%-changed ratio and an order
+of magnitude under full replacement. The DIRECTION is robust and reproduced in
+every workload tried; the specific pair was not, so it is replaced by the range
+and the workloads it was measured over. A comparative number without its
+workload is the same mistake as the "2-5x faster" claim this RFC exists to
+correct.
 
 The gap widens with tree size, which is the opposite of the package's stated
 scaling story ("use it at 500+ signals").
@@ -66,10 +78,13 @@ dependencies**. By our own stated rule it should never have been a package.
 - `snapshot()` — `structuredClone`, so it throws `DataCloneError` on any tree
   holding a function. `tree()` has no such limit.
 - `getPathIndex()` — already deprecated as debug-only.
-- `scheduler` / `thread-pools` — dead subpath exports: no caller, no tests, no
-  docs. `thread-pools` shipped `createMockPool()`, a test double, to production
-  consumers; `scheduler`'s advertised "yield to the event loop" was
-  `await Promise.resolve()`, a microtask, which does not yield.
+- `scheduler` / `thread-pools` — dead subpath exports: no caller anywhere in the
+  repo and no tests. (They were *mentioned* — in this plan's predecessor and on
+  a demo benchmark page — but never documented as an API, and an earlier draft
+  of this RFC overstated that as "no docs".) `thread-pools` shipped
+  `createMockPool()`, a test double, to production consumers; `scheduler`'s
+  advertised "yield to the event loop" was `await Promise.resolve()`, a
+  microtask, which does not yield.
 - A prototype-pollution sink in patch application, reachable from any
   `JSON.parse`-sourced payload (fixed in 13.5.0 — deprecated is not the same as
   vulnerable).
@@ -106,14 +121,29 @@ dependencies**. By our own stated rule it should never have been a package.
 | `tree.updateOptimized(p)`                  | `tree.updateAndReport(p)`                           |
 | `result.changedPaths` / `result.changed`   | the returned array / `changed.length > 0`           |
 | `tree.onPathChange(fn)`                    | `tree.onPathChange(fn)` — same signature            |
-| `tree.snapshot()` / `tree.restore(s)`      | `const s = tree()` / `tree(s)`                      |
-| `tree.updateAuto(p)`                       | `tree(p)`                                           |
+| `tree.snapshot()` / `tree.restore(s)`      | `const s = tree()` / `tree(s)` — see note           |
+| `tree.updateAuto(p)`                       | `tree(p)` — see note                                |
 | `tree.getPathIndex()`                      | no replacement                                      |
 
 `updateAndReport()` is **stricter** about what counts as a change: it reports
 only paths whose leaf actually accepted the write, so a re-fetched payload
 identical to current state reports `[]`. The diff engine reported every key in
 it. Consumers will correctly do less work, not less-correct work.
+
+**Two of those rows are an upgrade, not an equivalence** — verified by audit,
+because "equivalent" was asserted here without being tested:
+
+- `restore()` inherits the array defect. Restoring a snapshot over mutated state
+  leaves arrays at their MUTATED value while reporting their element paths as
+  changed — paths it never wrote. `tree(snap)` restores them. Neither deletes
+  keys absent from the snapshot; both merge.
+- `updateAuto()` is exactly equivalent to `tree(p)` only when no
+  `autoOptimizeThreshold` is configured (it is then a plain passthrough). With a
+  threshold, any payload over it routes through the diff engine and drops array
+  writes.
+- `snapshot()` → `tree()` IS equivalent for plain data, and `tree()` is strictly
+  more capable: `structuredClone` throws `DataCloneError` on a tree holding a
+  function.
 
 ## The array defect, for the record
 
@@ -141,6 +171,24 @@ The diagnosis from that audit is the one worth keeping:
 `ignoreArrayOrder`, `equalityFn` and `keyValidator` for free. That is also
 precisely the shape that reduces the package to a slower `updateAndReport()`,
 which is why option 1 was rejected.
+
+## The bundle-size gate does not measure this package
+
+The published cost was "~2.4KB", corrected to "~3.1KB", and re-measurement
+during audit put it at **~3.8KB gzipped** (11.4KB raw) for a tree-shaken
+consumer importing only `enterprise()`. Three numbers for one artefact, none of
+them checked by CI.
+
+The reason CI never caught it: `scripts/consolidated-bundle-analysis.js`
+measures `dist/packages/enterprise/dist/index.js`, which is a **235-byte
+re-export barrel** (146 B gzipped), against a claimed budget of 6026 B. The
+check passes by measuring the wrong file, and the script even emits its own
+"may be a re-export barrel" warning while doing so.
+
+Not fixed here — the package is being retired, so the gate that matters is the
+one on core, which `scripts/v9-budget-checks.js` measures correctly against
+tree-shaken consumer bundles. Recorded so the barrel-measuring pattern is not
+trusted for any other package.
 
 ## Follow-up found while writing this, not fixed here
 

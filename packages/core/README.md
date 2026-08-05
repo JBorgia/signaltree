@@ -2872,8 +2872,8 @@ const off = tree.onPathChange((paths) => auditLog.record(paths));
 ```
 
 Measured against `tree.updateAndReport()`, which returns the same paths, the
-package's `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at
-2,000**. Core leaves already use deep equality plus a reference-equality
+package's `updateOptimized()` is slower in every workload measured — at 2,000
+leaves, ~7x when a tenth of them change and ~160x when all of them do. Core leaves already use deep equality plus a reference-equality
 short-circuit, so "only write what changed" is core behaviour for free — the
 diff engine pays O(state) to skip writes that were already no-ops.
 

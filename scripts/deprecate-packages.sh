@@ -72,7 +72,7 @@ PACKAGES=(
     "memoization:The memoization enhancer was removed in v10. Use Angular computed() directly."
     "presets:Preset factories were removed in v10. Apply individual enhancers explicitly."
     "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
-    "enterprise:Deprecated in 13.5.0. Use tree.updateAndReport(partial) and tree.onPathChange(fn) from @signaltree/core — built in, no enhancer, and faster (updateOptimized measured 6.8x slower at 500 leaves, 14.4x at 2000). updateOptimized also silently drops writes targeting arrays; see https://github.com/JBorgia/signaltree/tree/main/packages/enterprise#readme"
+    "enterprise:Deprecated in 13.5.0. Use tree.updateAndReport(partial) and tree.onPathChange(fn) from @signaltree/core — built in, no enhancer, and faster (updateOptimized measured slower in every workload, ~7x at 2000 leaves when 10% change). updateOptimized also silently drops writes targeting arrays; see https://github.com/JBorgia/signaltree/tree/main/packages/enterprise#readme"
 )
 
 # NOTE ON @signaltree/enterprise: deprecate, do NOT unpublish. Unpublishing
