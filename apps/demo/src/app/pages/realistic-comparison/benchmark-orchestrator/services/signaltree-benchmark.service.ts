@@ -212,8 +212,6 @@ export class SignalTreeBenchmarkService {
     dataSize: number,
     depth = 15
   ): Promise<number | BenchmarkResult> {
-    const start = performance.now();
-
     const createNested = (level: number): any =>
       level === 0
         ? { value: 0, data: 'test' }
@@ -223,6 +221,10 @@ export class SignalTreeBenchmarkService {
     // Use case: Complex forms, nested configuration objects, tree-like data
     const base = signalTree(createNested(depth));
     const tree = this.applyConfiguredEnhancers(base, [batching()]);
+
+    // Clock starts AFTER construction — every other library's arm excludes its
+    // own store construction, and timing ours penalised SignalTree.
+    const start = performance.now();
 
     // Match NgXs cap of 1000 iterations for fair comparison
     for (
@@ -250,8 +252,6 @@ export class SignalTreeBenchmarkService {
   }
 
   async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
-    const start = performance.now();
-
     // Real-time dashboards, live data grids, scoreboards.
     // NOTE: this scenario must produce an OBSERVABLE state change on every
     // update (new array reference) so the signal actually notifies its
@@ -282,6 +282,12 @@ export class SignalTreeBenchmarkService {
       BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
       dataSize
     );
+
+    // Clock starts AFTER construction — allocating `dataSize` (up to 50k)
+    // objects was inside the timed region here and outside it for every
+    // competitor.
+    const start = performance.now();
+
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
       // New array reference + new element object → signal notifies, matching

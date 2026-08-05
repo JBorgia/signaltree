@@ -201,12 +201,15 @@ export class NgRxSignalsBenchmarkService {
     );
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
-      patchState(state, (s) => ({
-        ...s,
-        items: s.items.map((item, j) =>
-          j === idx ? { ...item, value: Math.random() * 1000 } : item
-        ),
-      }));
+      // slice(), NOT map(cb) — the SignalTree arm uses slice, and map invokes a
+      // callback per element (50k of them per update) for the same result. Both
+      // are idiomatic; using the slower one only on this side was worth ~8x and
+      // flattered SignalTree.
+      patchState(state, (s) => {
+        const next = s.items.slice();
+        next[idx] = { ...next[idx], value: Math.random() * 1000 };
+        return { ...s, items: next };
+      });
     }
     const duration = performance.now() - start;
     return this.toResult(duration);
