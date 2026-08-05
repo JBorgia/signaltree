@@ -298,29 +298,6 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
    * ```
    */
   updateAndReport(updates: Partial<T> | ((current: T) => Partial<T>)): string[];
-  /**
-   * Subscribe to "what just changed". The listener receives the dot-paths of
-   * leaf signals that a write actually landed on — the same paths
-   * {@link ISignalTree.updateAndReport} returns. Returns an unsubscribe
-   * function.
-   *
-   * Fires for writes through this tree's own update entry points: the call
-   * form `tree({...})`, `batchUpdate()` and `updateAndReport()`. It does NOT
-   * fire for writes made directly against a nested accessor or leaf
-   * (`tree.$.user.name.set('x')`), which bypass the root — route writes you
-   * want observed through the tree.
-   *
-   * A listener that throws is reported in dev mode and otherwise ignored; the
-   * state is already committed by the time listeners run.
-   *
-   * @example
-   * ```ts
-   * const off = tree.onPathChange((paths) => auditLog.record(paths));
-   * tree({ user: { name: 'Ada' } }); // listener gets ['user.name']
-   * off();
-   * ```
-   */
-  onPathChange(listener: PathChangeListener): () => void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
   // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
 }
@@ -328,12 +305,6 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
 /** Cleanup function returned or registered by enhancers. */
 export type EnhancerCleanup = () => void;
 
-/**
- * Listener for {@link ISignalTree.onPathChange}. Receives the dot-paths of
- * leaf signals a write actually landed on. The array is owned by the tree —
- * copy it if you intend to keep it past the callback.
- */
-export type PathChangeListener = (paths: readonly string[]) => void;
 
 // Method interfaces
 export interface EffectsMethods<T> {

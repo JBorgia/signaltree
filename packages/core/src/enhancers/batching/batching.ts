@@ -1,5 +1,4 @@
 import { copyTreeProperties } from '../utils/copy-tree-properties';
-import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { visitTree } from '../../lib/internals/visit-tree';
 
 import type {

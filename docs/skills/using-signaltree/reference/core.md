@@ -93,10 +93,10 @@ update, because branch/root writes are already batched by construction. Reach
 for `batching()` only when you want to coalesce multiple _separate_ writes
 (different call sites) within a tick.
 
-## Change reporting — `updateAndReport()` and `onPathChange()`
+## Change reporting — `updateAndReport()`
 
-Two tree-level methods answer "what did that write actually change?". They
-replace `@signaltree/enterprise`, deprecated in 13.5.0.
+Answers "what did that write actually change?". It replaces
+`@signaltree/enterprise`, deprecated in 13.5.0.
 
 ```ts
 import { signalTree } from '@signaltree/core';
@@ -112,14 +112,9 @@ const changed = tree.updateAndReport({
 });
 // → ['user.name']
 if (changed.length) console.log('persist', changed);
-
-// Subscribe to those same paths for every root write.
-const off = tree.onPathChange((paths) => console.log('changed:', paths));
-tree({ counter: 1 }); // listener receives ['counter']
-off();
 ```
 
-**Both report only writes that LANDED.** Leaves are created with a deep `equal`,
+**It reports only writes that LANDED.** Leaves are created with a deep `equal`,
 so a value that is a new reference but deep-equal to the current one is rejected
 by the leaf and notifies nobody — and is therefore not reported. A re-fetched
 server payload identical to what you already hold reports `[]`, not every key in
@@ -134,13 +129,11 @@ tree.updateAndReport({ users: [{ id: 1 }] }); // → [] (deep-equal, no write)
 tree.updateAndReport({ users: [{ id: 2 }] }); // → ['users']
 ```
 
-`onPathChange` fires for the root write paths — `tree({...})`, `batchUpdate()`
-and `updateAndReport()` — and returns an unsubscribe function. It does **not**
-fire for a direct leaf or nested-accessor write (`tree.$.user.name.set('x')`),
-which bypasses the root entirely; instrumenting every leaf would cost every
-consumer for a feature few use. Route writes you want observed through the tree.
-A listener that throws is reported in dev and otherwise ignored — the state is
-already committed by the time listeners run.
+**There is deliberately no subscription API.** A push-shaped `onPathChange` was
+built for 13.5.0 and cut before release: it had no consumers, and the change-
+notification design points at a *pull* shape (notify with a version; the
+consumer asks what changed) — shipping both would mean supporting both forever.
+Call `updateAndReport()` where you write.
 
 **Typing caveat.** The parameter is `Partial<T>`, which is SHALLOW, so a nested
 partial such as `{ user: { name: 'Grace' } }` does not typecheck even though it

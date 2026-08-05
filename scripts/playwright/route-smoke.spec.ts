@@ -149,8 +149,8 @@ test('/enterprise-enhancer shows the deprecation banner and the core replacement
   const banner = page.locator('.deprecation-banner');
   await expect(banner).toBeVisible({ timeout: 20_000 });
   await expect(banner).toContainText(/deprecated/i);
-  // Both replacements must be named — a banner that says "deprecated" without
+  // The replacement must be named — a banner that says "deprecated" without
   // saying what to use instead just strands the reader.
   await expect(banner).toContainText('updateAndReport');
-  await expect(banner).toContainText('onPathChange');
+
 });

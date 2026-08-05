@@ -32,7 +32,7 @@
  * | Enterprise                 | Core replacement                             |
  * | -------------------------- | -------------------------------------------- |
  * | `updateOptimized(p)`       | `updateAndReport(p)` — returns changed paths |
- * | `onPathChange(fn)`         | `onPathChange(fn)` — same signature          |
+ * | `onPathChange(fn)`         | none yet — use `updateAndReport(p)` per call |
  * | `snapshot()` / `restore()` | `const s = tree(); ... tree(s)`              |
  * | `updateAuto(p)`            | `tree(p)`                                    |
  * | `getPathIndex()`           | no replacement (was debug-only)              |

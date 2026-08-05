@@ -48,19 +48,6 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     expect(tree.$.count()).toBe(3);
   });
 
-  it('onPathChange fires', () => {
-    const tree = signalTree({ count: 0 }).with(make() as never);
-    const seen: string[][] = [];
-
-    (
-      tree as unknown as {
-        onPathChange: (f: (p: readonly string[]) => void) => () => void;
-      }
-    ).onPathChange((p) => seen.push([...p]));
-    (tree as unknown as (u: unknown) => void)({ count: 1 });
-
-    expect(seen).toEqual([['count']]);
-  });
 
   it('the call form still writes', () => {
     const tree = signalTree({ count: 0 }).with(make() as never);

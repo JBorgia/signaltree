@@ -40,7 +40,7 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 - **@signaltree/events**: domain-event bus with an `entityMap` bridge and optimistic-update manager
 - **@signaltree/realtime**: SSE/SignalR wiring onto tag-based cache invalidation
 - **@signaltree/guardrails**: opt-in runtime write auditing and intent-aware suppression
-- **@signaltree/enterprise**: _deprecated in 13.5.0_ — superseded by `tree.updateAndReport()` and `tree.onPathChange()` in `@signaltree/core`, which are faster and need no enhancer
+- **@signaltree/enterprise**: _deprecated in 13.5.0_ — superseded by `tree.updateAndReport()` in `@signaltree/core`, which is faster and needs no enhancer
 - **@signaltree/callable-syntax**: build-time transform for callable signal syntax (dev dependency)
 
 **All enhancers are exported from `@signaltree/core`** — no need for separate enhancer packages.

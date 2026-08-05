@@ -54,7 +54,7 @@ if (changed.length) sync(changed);
 | Enterprise                                | Core replacement                                    |
 | ----------------------------------------- | --------------------------------------------------- |
 | `tree.updateOptimized(p)`                 | `tree.updateAndReport(p)` — returns changed paths   |
-| `tree.onPathChange(fn)`                   | `tree.onPathChange(fn)` — same signature            |
+| `tree.onPathChange(fn)`                   | **no direct replacement yet** — use `tree.updateAndReport(p)` at the call site; a subscription API is being designed |
 | `tree.snapshot()`                         | `const snap = tree()`                               |
 | `tree.restore(snap)`                      | `tree(snap)`                                        |
 | `tree.updateAuto(p)`                      | `tree(p)`                                           |

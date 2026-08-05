@@ -20,7 +20,6 @@ import type {
   EntityMapMarker,
   ISignalTree,
   EnhancerMeta,
-  PathChangeListener,
 } from './types';
 
 import { ENHANCER_META } from './types';
@@ -636,89 +635,19 @@ function create<T extends object>(
     signalState = createSignalStore(initialState, equalityFn);
   }
 
-  // onPathChange listeners. Declared before `tree` because the call form
-  // below closes over them; `notifyPaths` is only reached once a listener
-  // has been registered, so a tree nobody subscribes to pays one Set size
-  // check per write and allocates nothing.
-  const pathListeners = new Set<PathChangeListener>();
-  const collectPaths = (): string[] | undefined =>
-    pathListeners.size ? [] : undefined;
-  // Dispatch queue. A listener is allowed to write to the tree, and that write
-  // notifies too — dispatching it inline delivered events to the OTHER
-  // listeners in the wrong order (write A, then a listener writes B, and every
-  // later listener saw B before A). For the advertised use case, an audit log,
-  // that is a reversed trail. Queue instead, and drain after the current round
-  // so every listener sees writes in the order they happened.
-  const pathQueue: ReadonlyArray<string>[] = [];
-  let draining = false;
-  /** Runaway guard: a listener that writes on every notification never settles. */
-  const MAX_DRAIN = 1000;
-
-  const notifyPaths = (out: string[] | undefined): void => {
-    if (!out || !out.length || !pathListeners.size) return;
-    // Frozen COPY: the same array is also returned by updateAndReport(), so a
-    // listener that pushed into it corrupted the caller's result (and every
-    // later listener's view). Callers own the array they are returned; the one
-    // listeners see is immutable.
-    pathQueue.push(Object.freeze(out.slice()));
-    if (draining) return;
-
-    draining = true;
-    try {
-      let rounds = 0;
-      while (pathQueue.length) {
-        if (++rounds > MAX_DRAIN) {
-          pathQueue.length = 0;
-          if (typeof ngDevMode === 'undefined' || ngDevMode) {
-            console.error(
-              `SignalTree: onPathChange dispatch did not settle after ` +
-                `${MAX_DRAIN} rounds — a listener is writing to the tree on ` +
-                `every notification. Remaining events dropped. [ST2015]`
-            );
-          }
-          break;
-        }
-        const paths = pathQueue.shift() as ReadonlyArray<string>;
-        // Snapshot so a listener SUBSCRIBING here is not called for the
-        // in-flight event, and re-check membership so one UNSUBSCRIBING another
-        // takes effect immediately — otherwise a listener that tears a child
-        // down still sees the child's handler fire against dead state.
-        for (const fn of Array.from(pathListeners)) {
-          if (!pathListeners.has(fn)) continue;
-          try {
-            fn(paths);
-          } catch (error) {
-            // A listener must never break the write that triggered it — the
-            // state is already committed by the time we get here.
-            if (typeof ngDevMode === 'undefined' || ngDevMode) {
-              console.error(
-                'SignalTree: onPathChange listener threw. [ST2013]',
-                error
-              );
-            }
-          }
-        }
-      }
-    } finally {
-      draining = false;
-    }
-  };
-
   // Create root callable function
   const tree = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
       return unwrap(signalState) as unknown as T;
     }
 
-    const out = collectPaths();
     if (typeof arg === 'function') {
       const updater = arg as (current: T) => T;
       const current = unwrap(signalState) as T;
-      recursiveUpdate(signalState, updater(current), out);
+      recursiveUpdate(signalState, updater(current));
     } else {
-      recursiveUpdate(signalState, arg, out);
+      recursiveUpdate(signalState, arg);
     }
-    notifyPaths(out);
   } as ISignalTree<T>;
 
   // Mark as NodeAccessor
@@ -843,11 +772,6 @@ function create<T extends object>(
         }
       }
       cleanupFns.length = 0;
-      // Drop onPathChange subscribers. Without this a destroyed tree kept
-      // dispatching to every listener, and each listener closure (usually a
-      // component) stayed reachable from the tree for the tree's whole life.
-      pathListeners.clear();
-      pathQueue.length = 0;
       if (disposeLazy) {
         disposeLazy();
       }
@@ -901,15 +825,13 @@ function create<T extends object>(
     value: function (arg?: unknown): void {
       if (arguments.length === 0) return;
 
-      const out = collectPaths();
       if (typeof arg === 'function') {
         const updater = arg as (current: T) => T;
         const current = unwrap(signalState) as T;
-        recursiveUpdate(signalState, updater(current), out);
+        recursiveUpdate(signalState, updater(current));
       } else {
-        recursiveUpdate(signalState, arg, out);
+        recursiveUpdate(signalState, arg);
       }
-      notifyPaths(out);
     },
     enumerable: false,
     writable: true,
@@ -938,38 +860,7 @@ function create<T extends object>(
       } else {
         recursiveUpdate(signalState, arg, out);
       }
-      notifyPaths(out);
       return out;
-    },
-    enumerable: false,
-    writable: true,
-    configurable: true,
-  });
-
-  // onPathChange(): subscribe to "what just changed" for writes made through
-  // this tree's own update entry points — the call form `tree({...})`,
-  // `batchUpdate()` and `updateAndReport()`. Returns an unsubscribe function.
-  //
-  // Ported from @signaltree/enterprise, which is deprecated as of 13.5.0. The
-  // enterprise version only fired for `updateOptimized()`; this one fires for
-  // every root-level write, and reports the same paths `updateAndReport()`
-  // returns — meaning paths that ACTUALLY landed, deep-equal no-ops excluded.
-  //
-  // Deliberate boundary: a write made directly against a nested accessor or
-  // leaf (`tree.$.user.name.set('x')`) does NOT notify. Those bypass the root
-  // entirely, and catching them would mean instrumenting every leaf signal in
-  // the tree — a cost every consumer would pay for a feature few use. Route
-  // writes you want observed through the tree.
-  Object.defineProperty(tree, 'onPathChange', {
-    value: function (listener: PathChangeListener): () => void {
-      if (typeof listener !== 'function') return () => undefined;
-      // Subscribing to a destroyed tree would leak the listener immediately —
-      // nothing will ever clear it again.
-      if (untracked(destroyedSig)) return () => undefined;
-      pathListeners.add(listener);
-      return () => {
-        pathListeners.delete(listener);
-      };
     },
     enumerable: false,
     writable: true,
@@ -1256,25 +1147,6 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     },
     enumerable: false,
     writable: false,
-    configurable: true,
-  });
-
-  // Forward 'onPathChange' from baseTree. Deliberately does NOT finalize():
-  // subscribing is not a write, and finalizing here would lock out a
-  // subsequent .derived() purely because the consumer attached a listener.
-  Object.defineProperty(builder, 'onPathChange', {
-    value: function (this: unknown, listener: PathChangeListener): () => void {
-      const fn = (baseTree as unknown as Record<string, unknown>)[
-        'onPathChange'
-      ] as ((l: PathChangeListener) => () => void) | undefined;
-      if (!fn) {
-        warnMissingForward('onPathChange');
-        return () => undefined;
-      }
-      return fn.call(baseTree, listener);
-    },
-    enumerable: false,
-    writable: true,
     configurable: true,
   });
 

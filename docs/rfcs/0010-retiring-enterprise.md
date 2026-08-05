@@ -120,7 +120,7 @@ dependencies**. By our own stated rule it should never have been a package.
 | `signalTree(s).with(enterprise())`         | `signalTree(s)`                                     |
 | `tree.updateOptimized(p)`                  | `tree.updateAndReport(p)`                           |
 | `result.changedPaths` / `result.changed`   | the returned array / `changed.length > 0`           |
-| `tree.onPathChange(fn)`                    | `tree.onPathChange(fn)` — same signature            |
+| `tree.onPathChange(fn)`                    | none yet — `updateAndReport(p)` at the call site    |
 | `tree.snapshot()` / `tree.restore(s)`      | `const s = tree()` / `tree(s)` — see note           |
 | `tree.updateAuto(p)`                       | `tree(p)` — see note                                |
 | `tree.getPathIndex()`                      | no replacement                                      |

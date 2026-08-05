@@ -6,7 +6,7 @@
 import type { Signal } from '@angular/core';
 
 import type { ProcessDerived } from './derived-types';
-import type { ISignalTree, PathChangeListener, TreeNode } from '../types';
+import type { ISignalTree, TreeNode } from '../types';
 
 // =============================================================================
 // SIGNAL TREE BUILDER
@@ -79,12 +79,6 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
   updateAndReport(
     updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
   ): string[];
-
-  /**
-   * Subscribe to the dot-paths a write actually landed on; returns an
-   * unsubscribe function. See {@link ISignalTree.onPathChange}.
-   */
-  onPathChange(listener: PathChangeListener): () => void;
 
   /**
    * Apply a partial update in a single batch. Same forwarded-but-untyped gap

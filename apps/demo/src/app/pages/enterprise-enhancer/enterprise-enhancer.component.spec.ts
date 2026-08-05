@@ -140,7 +140,6 @@ describe('EnterpriseEnhancerComponent', () => {
     expect(banner).toBeTruthy();
     expect(banner.textContent).toContain('deprecated');
     expect(banner.textContent).toContain('updateAndReport');
-    expect(banner.textContent).toContain('onPathChange');
   });
 
   it('reset button in the DOM drives the same reset()', () => {

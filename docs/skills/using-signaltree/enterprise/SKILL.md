@@ -28,11 +28,14 @@ const changed = tree.updateAndReport({
   lastSyncAt: new Date().toISOString(),
 });
 if (changed.length) console.log(`${changed.length} paths changed`);
-
-// Or subscribe to every root write.
-const off = tree.onPathChange((paths) => console.log('changed:', paths));
-off();
 ```
+
+**There is no subscription API in core.** `onPathChange` was built for this
+release and then CUT before shipping: it had no consumers, and the design work
+for change notification points at a *pull* shape (notify with a version, let the
+consumer ask what changed) rather than the *push* shape `onPathChange` had.
+Shipping both would have meant supporting both forever. Call
+`updateAndReport()` at the write site and act on what it returns.
 
 ## Migration table
 
@@ -42,7 +45,7 @@ off();
 | `tree.updateOptimized(p)`                  | `tree.updateAndReport(p)` — returns `string[]`      |
 | `result.changedPaths`                      | the returned array itself                           |
 | `result.changed`                           | `changed.length > 0`                                |
-| `tree.onPathChange(fn)`                    | `tree.onPathChange(fn)` — same signature            |
+| `tree.onPathChange(fn)`                    | **no direct replacement yet** — call `tree.updateAndReport(p)` and act on the returned paths |
 | `tree.snapshot()`                          | `const snap = tree()`                               |
 | `tree.restore(snap)`                       | `tree(snap)`                                        |
 | `tree.updateAuto(p)`                       | `tree(p)`                                           |
