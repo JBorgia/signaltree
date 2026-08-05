@@ -1893,6 +1893,130 @@ overlapping mechanisms exist, several are broken, `form()` is invisible to all o
 them, and guardrails observes nothing at all on a plain-object tree.** That is
 its own RFC.
 
+## The endpoint — what this should look like if built once, correctly
+
+Derived from the tracks, not from what is cheap to reach from here. Migration
+comes after; it is not allowed to shape the target.
+
+### The one structural idea
+
+Both questions have the same answer, but it is **not** the write chokepoint I
+guessed. It is:
+
+> **A node's children are a first-class indexed structure, not JS object
+> properties.**
+
+Every finding in this spike falls out of that one decision:
+
+- **Pollution immunity is definitional.** A `Map` has no `__proto__` accessor and
+  no prototype chain to walk off. Track A found CodeQL prescribes exactly this
+  for the *indexing* shape, and Track C found this repo's own `path-index.ts` is
+  already Map-backed and is the one walker with no sink. There is nothing to
+  guard, so there is nothing to forget to guard — which is the property the
+  blocklist strategy provably lacks (4 of 6 deployments needed a second
+  advisory).
+- **It gives change-recording a home.** The same index that resolves a child is
+  the natural place to stamp "this path is dirty as of version N".
+- **It kills the depth-dynamic provenance problem** that defeated H1: a payload
+  key is *looked up*, never *dereferenced*, so it never matters how deep the
+  recursion is or whose keys we are holding.
+
+SignalTree has a property almost nothing else in the corpus has, and currently
+does not exploit: **its shape is declared and fixed at construction.** That makes
+it structurally closer to Redux — whose immunity Track A established comes from
+`combineReducers` iterating the *developer's* map, so payload keys never reach a
+property access — than to lodash, whose model it currently follows.
+
+### Three invariants
+
+**I1 — External keys resolve through a lookup, never a dereference.**
+`children.get(key)` instead of `node[key]`. O(1), O(payload) not O(tree), and
+pollution-immune by construction. Closes the write class *and* the read class —
+which matters, because the canonical lodash CVE was a **read** bug and four of my
+five fixes were write-biased.
+
+**I2 — Accumulators built from external keys are null-prototype.**
+`Object.create(null)` wherever a fresh object is built from foreign keys. Track C
+counted **13 such sites**; this closes all of them, costs nothing, and changes no
+behaviour. (Track A's caveat is noted and does not apply: null-prototype bases
+destroy *immer's* emergent protection, and we are not immer.)
+
+**I3 — A leaf's value is opaque data, never traversed for structure.**
+This is the invariant whose absence produced the newest sink: `unwrap` is
+trusted at depth 0 and untrusted the instant it recurses into a leaf's value.
+Never crossing that boundary means provenance stops being depth-dependent.
+
+Enforced by a lint rule and a conformance suite — not by review, which is what
+has been failing.
+
+### Notification: one invalidation primitive, N pull-based consumers
+
+Track B's evidence points one way:
+
+- **Nobody achieves a root chokepoint** (NgRx SignalStore verified leaking
+  `count.set(999)` past `watchState`). Complete coverage means instrumenting the
+  **leaves**.
+- **The standards track chose notify-without-payload.** TC39's `Watcher.notify()`
+  takes no arguments and forbids reading signals inside it; you call
+  `getPending()`. Angular and Vue both already run on a global version/epoch.
+- **Path strings are the expensive part.** 0.047 µs to *build* one dot-path
+  string versus 0.003 µs to answer "did this change?" by reference identity —
+  and the string is paid on every write in a push model, versus only when asked
+  in a pull model.
+- **Do not unify sync/persistence/observation.** Only CRDTs do, and they pay:
+  Yjs needs a separate replay stack for undo, Automerge has no undo API at all.
+
+So the endpoint is: **every write bumps a monotonic version and stamps its node
+dirty. Nothing else happens.** No allocation, no string building, no dispatch,
+no listener list — unless someone asks. Consumers pull `changedSince(version)`.
+
+**Core owns the leaf write path at construction, and this is the key move.**
+SignalTree *creates every leaf signal itself*, so it does not need Angular's
+`setPostSignalSetFn` — that hook is a real capability (Track B proved it
+captures a direct `tree.$.a.b.set(x)`) but it is an unannotated internal in a
+single global slot, and depending on it is an avoidable bet. Owning the leaf at
+creation gives the same coverage with no external dependency, **and it is
+idempotent by construction** — which fixes the defect Track C found where four
+separate mechanisms monkey-patch `.set` after the fact and
+`.with(devTools()).with(timeTravel())` therefore emits every event twice.
+
+Nine mechanisms collapse into one primitive plus consumers:
+`updateAndReport` becomes a pull at the call site; `onPathChange` becomes
+notify-then-pull; `PathNotifier`, guardrails' 100 ms poll, the audit tracker's
+100 ms poll, persistence, devtools and time-travel all become consumers of the
+same version stamp. `form()` — currently invisible to every one of them — becomes
+visible for free, because its values are leaves like any other.
+
+### What this endpoint explicitly does NOT include
+
+- **No diff engine.** Track B measured after-the-fact diffing at 0.783 ms/op
+  versus 0.068 for commit-scoped. This is the model already retired with
+  `@signaltree/enterprise`; it should not return by another door.
+- **No patch/op stream.** immer does not actually emit patches from the write
+  path (it diffs at commit), valtio's ops are off by default, and MobX's docs
+  call the equivalent API an anti-pattern. A raw op stream also leaks
+  implementation noise — valtio emits 4 ops including a `length` write for one
+  `splice`.
+- **No CRDT/log-derived state.** Enormous data-model cost for capabilities not
+  asked for.
+- **No blocklist as the primary defence.** Retained only as belt-and-braces where
+  it costs nothing.
+
+### Honest cost of the endpoint
+
+- **Map-backed children is the expensive change.** `tree.$.user.name()` is
+  property access, so the accessor must stay property-shaped while the store
+  becomes indexed — the two already diverge today (that is what
+  `NODE_STORE_SYMBOL` exists for), but this widens the split and needs measuring
+  against the existing depth benchmarks.
+- **Pull-based reporting changes `updateAndReport`'s cost profile**, from
+  paid-per-write to paid-per-question. Better for the common case, worse for a
+  caller that asks after every single write.
+- **I1 across 38 payload sites is a large mechanical change** touching five
+  packages.
+- Unmeasured: everything above. No option in this doc has bundle or runtime
+  numbers yet, and Track A explicitly flagged that gap.
+
 ## Options considered
 
 _pending — to be filled once A/B/C land, with each option weighed on:
