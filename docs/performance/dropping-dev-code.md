@@ -6,7 +6,7 @@ writes, and dropped derived values. They're advisory: useful while writing code,
 useless at runtime in production.
 
 **By default they ship to production anyway.** One line in your build config
-removes them, worth **~0.5–0.9 KB gzip** of SignalTree's own code.
+removes them, worth **~0.8–1.2 KB gzip** of SignalTree's own code.
 
 ## Why they don't drop on their own
 
@@ -74,11 +74,26 @@ external) — the same methodology as the bundle-budget gate:
 
 | Tree | Default | `ngDevMode: false` | Saved |
 |---|---|---|---|
-| bare `signalTree()` | 5.55 KB | 5.04 KB | **0.52 KB** |
-| with `entityMap()` | 8.48 KB | 7.61 KB | **0.87 KB** |
-| with `form()` | 7.69 KB | 7.00 KB | **0.68 KB** |
+| bare `signalTree()` | 5.86 KB | 5.05 KB | **0.82 KB** |
+| with `stored()` | 7.19 KB | 6.23 KB | **0.96 KB** |
+| with `form()` | 7.96 KB | 7.00 KB | **0.96 KB** |
+| with `entityMap()` | 8.76 KB | 7.61 KB | **1.15 KB** |
+| with `persistence()` | 8.55 KB | 7.69 KB | **0.86 KB** |
 
-Reproduce with `node tools/check-devmode-foldable.mjs`.
+Re-measured for 13.4.0. The saving grew because that release added four
+traversal diagnostics (`ST2008`–`ST2012`) on paths every tree reaches, and made
+the debug logging in `persistence()`/devtools/memory-manager foldable — it was
+guarded only by a runtime flag before, so its message strings shipped
+unconditionally.
+
+Reproduce with `node tools/check-devmode-foldable.mjs`, or measure a scenario
+directly the way the budget gate does (`node scripts/v9-budget-checks.js`).
+
+**The guard must be inline to fold.** Writing
+`const DEV = typeof ngDevMode === 'undefined' || ngDevMode;` and testing `DEV`
+does *not* get folded by esbuild — the const survives minification and the
+guarded strings ship anyway. Verified empirically; use the full expression at
+each site.
 
 ## What does NOT go away, deliberately
 

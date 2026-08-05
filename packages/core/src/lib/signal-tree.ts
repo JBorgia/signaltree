@@ -27,6 +27,16 @@ import { ENHANCER_META } from './types';
 // INTERNAL SYMBOLS
 // =============================================================================
 const NODE_ACCESSOR_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
+/**
+ * @internal Back-reference from an accessor to the TreeNode its call path
+ * closes over. `makeNodeAccessor` COPIES the store's properties onto the
+ * accessor, so the two drift the moment anything replaces a property on one of
+ * them — which is exactly what marker materialization does. Exposing the store
+ * lets `materializeMarkers` update both, instead of leaving the closed-over
+ * store holding a raw marker forever. Non-enumerable so it never reaches a
+ * snapshot.
+ */
+const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
 
 // =============================================================================
 // TYPE GUARDS
@@ -126,7 +136,10 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
   // must NOT silently skip validation — that is fail-open for a security
   // control. TS consumers get a compile error from the `SecurityFeature` type;
   // this guard catches the JS/`any`/dynamic case and fails loudly instead.
-  const sec = security as { __signalTreeSecurity?: unknown; validate?: unknown };
+  const sec = security as {
+    __signalTreeSecurity?: unknown;
+    validate?: unknown;
+  };
   if (sec.__signalTreeSecurity !== true || typeof sec.validate !== 'function') {
     throw new Error(SIGNAL_TREE_MESSAGES.SECURITY_INVALID);
   }
@@ -202,6 +215,12 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   } as NodeAccessor<T>;
 
   (accessor as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
+  Object.defineProperty(accessor, NODE_STORE_SYMBOL, {
+    value: store,
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
 
   // Copy store properties onto accessor
   // CRITICAL: Properties must be writable to allow materializeMarkers()
@@ -239,9 +258,24 @@ function recursiveUpdate(
     updates as Record<string, unknown>
   )) {
     const prop = targetObj[key];
-    if (prop === undefined) continue;
-
     const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+
+    if (prop === undefined) {
+      // A tree's signal graph is built from its INITIAL shape, so a write to a
+      // key that was never in that shape has nowhere to go and is discarded.
+      // Silently, until now: this is what made a guardrails rule look broken
+      // for hours when the demo wrote an optional key it had never seeded.
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.error(
+          `SignalTree: write to "${childPath}" (relative to the node written) ` +
+            `was DISCARDED — that key is not ` +
+            `part of the tree's initial shape, so no signal exists for it. Add ` +
+            `it to the object passed to signalTree() (a declared-but-optional ` +
+            `TypeScript property is not enough). [ST2010]`
+        );
+      }
+      continue;
+    }
 
     if (isSignal(prop) && 'set' in prop) {
       const sig = prop as WritableSignal<unknown>;
@@ -284,6 +318,13 @@ function recursiveUpdate(
         if (out) out.push(childPath);
       }
     }
+    // NOTE: no diagnostic for "matched neither guard". Since stored() became a
+    // real signal, the only values reaching here are materialized markers
+    // (entityMap/status/form), which do not accept merge writes BY DESIGN —
+    // each has its own API. Warning would fire on `tree(tree())`, the ordinary
+    // snapshot-restore pattern, and the obvious remediation (`.set()`) does not
+    // exist on those markers. A diagnostic that cries wolf on documented usage
+    // is worse than none — the same bar that rejected the duplicate-key warning.
   }
 }
 
@@ -516,16 +557,15 @@ function create<T extends object>(
       }
 
       // Duplicate detection via enhancer metadata
-      const meta = (enhancer as unknown as Record<symbol, EnhancerMeta>)[
-        ENHANCER_META
-      ] ??
+      const meta =
+        (enhancer as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] ??
         (enhancer as unknown as { metadata?: EnhancerMeta }).metadata;
 
       if (meta?.name) {
         if (appliedEnhancers.has(meta.name)) {
           throw new Error(
             `Enhancer "${meta.name}" has already been applied to this tree. ` +
-            `Each enhancer can only be applied once.`
+              `Each enhancer can only be applied once.`
           );
         }
         // Dependency validation
@@ -657,7 +697,11 @@ function create<T extends object>(
         const updater = arg as (current: T) => T;
         const current = unwrap(signalState) as T;
         batchScope(() => recursiveUpdate(signalState, updater(current), out));
-      } else if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+      } else if (
+        typeof arg === 'object' &&
+        arg !== null &&
+        !Array.isArray(arg)
+      ) {
         batchScope(() => recursiveUpdate(signalState, arg, out));
       } else {
         recursiveUpdate(signalState, arg, out);
@@ -771,6 +815,21 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   const derivedQueue: Array<($: unknown) => object> = [];
   let isFinalized = false;
 
+  let markersMaterialized = false;
+
+  /**
+   * Materialize markers only — idempotent, and deliberately does NOT latch
+   * `isFinalized`, so it stays legal to add `.derived()` afterwards. Reading
+   * or writing through the tree needs real signals; it does not need the
+   * derived queue applied.
+   */
+  const materializeOnly = () => {
+    if (markersMaterialized) return;
+    markersMaterialized = true;
+    materializeMarkers(baseTree.$);
+    _recordTreeConstruction();
+  };
+
   const finalize = () => {
     if (isFinalized) return;
     isFinalized = true;
@@ -778,10 +837,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     // Step 1: Materialize ALL markers (entityMap, status, stored, etc.)
     // This must happen BEFORE derived processing so that derived factories
     // can reference entity methods, status signals, and stored signals.
-    materializeMarkers(baseTree.$);
-    // Record that a tree has been constructed so registerMarkerProcessor()
-    // can warn if user-defined markers are registered AFTER the fact.
-    _recordTreeConstruction();
+    materializeOnly();
 
     // Step 2: Apply all queued derived factories
     if (derivedQueue.length > 0) {
@@ -791,6 +847,13 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
 
   // Create callable builder function that delegates to baseTree
   const builder = function (arg?: unknown): TSource | void {
+    // Materialize markers WITHOUT finalizing. Calling tree() used to return
+    // raw markers because this path skipped materialization entirely; but a
+    // full finalize() here would also latch `isFinalized`, and `.derived()`
+    // throws on that flag — so `tree(); tree.derived(...)` would start failing
+    // with a message about `$` that the caller never touched.
+    materializeOnly();
+
     // Delegate to baseTree's call signature
     if (arguments.length === 0) {
       return (baseTree as unknown as () => TSource)();

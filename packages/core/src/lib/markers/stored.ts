@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, untracked } from '@angular/core';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
@@ -124,6 +124,16 @@ export interface StoredOptions<T> {
    */
   clearOnMigrationFailure?: boolean;
 }
+
+/**
+ * Outcome of a {@link StoredSignal.reload}.
+ *
+ * `'error'` deliberately leaves the unreadable data in storage rather than
+ * destroying something a human could still recover; the signal falls back to
+ * its default, so signal and storage disagree until the next write. Handle it
+ * (or `onError` with `operation: 'read'`) if your app needs them reconciled.
+ */
+export type StoredReloadResult = 'ok' | 'default' | 'error';
 
 /**
  * Context passed to a {@link StoredOptions.onError} handler.
@@ -279,8 +289,16 @@ export interface StoredSignal<T> {
   update(fn: (current: T) => T): void;
   /** Clear from storage and reset to default (cancels any pending write) */
   clear(): void;
-  /** Force reload from storage, running migrations if the stored version differs (cancels any pending write) */
-  reload(): void;
+  /**
+   * Force reload from storage, running migrations if the stored version
+   * differs (cancels any pending write).
+   *
+   * @returns what the reload found — `'ok'` when a stored value was read,
+   * `'default'` when the key was absent, `'error'` when the stored data could
+   * not be read or migrated (the signal falls back to the default and storage
+   * is left untouched, so the two disagree until something writes).
+   */
+  reload(): StoredReloadResult;
   /**
    * Commit any pending debounced write to storage synchronously.
    * No-op when nothing is pending. Called automatically for all stored
@@ -333,6 +351,17 @@ let storedRegistered = false;
  *   cross-signal coherence.
  * - **`reload()` on unparseable data** resets the signal to its default but
  *   deliberately leaves storage untouched, so the two disagree until written.
+ *   `reload()` returns `'error'` in that case, and `onError` fires with
+ *   `operation: 'read'`, so an app that needs them reconciled can act:
+ *   `if (sig.reload() === 'error') sig.set(sig());` — destroying unreadable
+ *   data is a policy choice, so it is left to the caller rather than assumed.
+ *
+ * A note on the duplicate-key case: a dev-mode warning was tried and removed.
+ * The registry can only see that a key was claimed before, not whether the
+ * earlier signal is still alive — so it fired on the entirely legitimate
+ * pattern of a per-route tree being destroyed and recreated on navigation.
+ * A warning that cries wolf on normal usage is worse than none; detecting it
+ * properly needs liveness tracking that is not worth its complexity here.
  *
  * These predate the 13.3 durability work and are documented rather than
  * silently patched, because fixing the first two means changing core traversal.
@@ -533,11 +562,7 @@ export function createStoredSignal<T>(
       };
       storage.setItem(key, serialize(versionedData as unknown as T));
     } catch (e) {
-      reportError(
-        'write',
-        e,
-        `SignalTree: Failed to save "${key}" to storage`
-      );
+      reportError('write', e, `SignalTree: Failed to save "${key}" to storage`);
     }
   };
 
@@ -553,11 +578,15 @@ export function createStoredSignal<T>(
 
   // Read + migrate. Shared by init and reload() so both apply the same
   // versioning rules.
+  let lastLoadResult: StoredReloadResult = 'default';
+
   const loadFromStorage = (): T => {
+    lastLoadResult = 'default';
     if (!storage) return defaultValue;
     try {
       const storedRaw = storage.getItem(key);
       if (storedRaw === null) return defaultValue;
+      lastLoadResult = 'ok';
       const parsed = deserialize(storedRaw);
 
       // Check if data has version metadata
@@ -579,8 +608,17 @@ export function createStoredSignal<T>(
             if (clearOnMigrationFailure) {
               storage.removeItem(key);
             }
+            lastLoadResult = 'error';
             return defaultValue;
           }
+        } else if (storedVersion !== version) {
+          // Version mismatch with NO migrator: the data was written by a
+          // different schema and is being handed to code expecting this one.
+          // It still loads (dropping a user's data would be worse), but the
+          // caller must be able to tell — this is the likeliest field case,
+          // someone bumping `version` and forgetting the migrator, and
+          // reporting 'ok' for it defeats the point of the return value.
+          lastLoadResult = 'error';
         }
         return data;
       }
@@ -600,6 +638,7 @@ export function createStoredSignal<T>(
           if (clearOnMigrationFailure) {
             storage.removeItem(key);
           }
+          lastLoadResult = 'error';
           return defaultValue;
         }
       }
@@ -612,6 +651,7 @@ export function createStoredSignal<T>(
         e,
         `SignalTree: Failed to read "${key}" from storage`
       );
+      lastLoadResult = 'error';
       return defaultValue;
     }
   };
@@ -679,17 +719,33 @@ export function createStoredSignal<T>(
     }
   };
 
-  // Create the stored signal interface
-  const storedSignal = (() => sig()) as StoredSignal<T>;
+  // The stored signal IS the Angular signal, not a wrapper around it.
+  //
+  // It used to be `(() => sig())` with methods bolted on — a plain callable
+  // that satisfied neither `isSignal` nor `isNodeAccessor`. Every traversal in
+  // the library branches on exactly those two guards, so a stored leaf fell
+  // through all of them: omitted from `tree()`/`unwrap()`, skipped by a merge
+  // write through its parent, and REPLACED with a raw value by `applyState`
+  // (the devtools replay path), after which reading it threw.
+  //
+  // Conforming to the protocol that already exists fixes every one of those at
+  // once, with no changes outside this file, because `unwrap`,
+  // `recursiveUpdate`, `applyState`, `serialization`, `enterprise/path-index`,
+  // `schema/matcher` and `ng-forms` all already handle a real signal.
+  const storedSignal = sig as unknown as StoredSignal<T>;
+
+  // Capture the raw signal writers BEFORE overriding them, so the persisting
+  // versions below don't recurse into themselves.
+  const rawSet = sig.set.bind(sig);
 
   storedSignal.set = (value: T): void => {
-    sig.set(value); // Immediate signal update
+    rawSet(value); // Immediate signal update
     saveToStorage(value); // Debounced storage write
   };
 
   storedSignal.update = (fn: (current: T) => T): void => {
-    const newValue = fn(sig());
-    sig.set(newValue); // Immediate signal update
+    const newValue = fn(untracked(() => sig()));
+    rawSet(newValue); // Immediate signal update
     saveToStorage(newValue); // Debounced storage write
   };
 
@@ -701,7 +757,7 @@ export function createStoredSignal<T>(
     // later — the key comes back and the signal disagrees with storage.
     cancelPending();
     writeGeneration++;
-    sig.set(defaultValue);
+    rawSet(defaultValue);
     if (storage) {
       try {
         storage.removeItem(key);
@@ -715,13 +771,14 @@ export function createStoredSignal<T>(
     }
   };
 
-  storedSignal.reload = (): void => {
-    if (!storage) return;
+  storedSignal.reload = (): StoredReloadResult => {
+    if (!storage) return 'default';
     // Same reasoning as clear(): storage is authoritative for a reload, so no
     // earlier deferred write — timer or migration microtask — may land after it.
     cancelPending();
     writeGeneration++;
-    sig.set(loadFromStorage());
+    rawSet(loadFromStorage());
+    return lastLoadResult;
   };
 
   storedSignal.flush = commitPending;

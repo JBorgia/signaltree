@@ -1,3 +1,101 @@
+## Unreleased (13.4.0)
+
+Closes the traversal gap that made markers invisible to the tree's own snapshot
+and write paths — including a case that leaked unrelated storage contents into
+serialized output — and adds the diagnostics that would have surfaced it years
+earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
+
+### Security
+
+- **An explicit `storage:` option no longer reaches snapshots — for markers
+  nested under OBJECT parents.** Such a marker used to surface as its RAW
+  MARKER from `tree()`, carrying `options.storage` with it, and `unwrap`
+  deep-copied that storage object, enumerating unrelated keys into the
+  snapshot. Anyone passing `storage:` explicitly *and* using `serialization()`,
+  `persistence()`, devtools or `createAuditTracker` was emitting that storage's
+  contents into those payloads. The default path was never affected (the
+  marker's `options` stays empty because `createStoredSignal` resolves storage
+  itself).
+
+  **Still leaking, not fixed here:** a marker placed inside an ARRAY or a `Map`
+  (`{ list: [stored(...)] }`). `createSignalStore` hands arrays and built-ins
+  straight to `signal(value)` without walking into them, so materialization
+  never sees the marker. Do not put markers inside arrays or Maps; if you pass
+  an explicit `storage:`, treat that combination as unsafe to snapshot until a
+  later release extends traversal.
+
+- **Markers in LAZY trees now throw in dev instead of corrupting snapshots.**
+  A lazy tree resolves values through a Proxy that never runs marker
+  materialization, so a marker there stayed a placeholder. Before this release
+  that leaked a raw marker; after it, the placeholder simply reads as an opaque
+  getter and its value is dropped from every snapshot **silently** — strictly
+  worse. `[ST2012]` now fails loudly at the point of use.
+
+### Fixed
+
+- **`stored()` leaves are visible to tree traversal** (`@signaltree/core`). A
+  materialized `StoredSignal` was a plain callable satisfying neither
+  `isSignal` nor `isNodeAccessor`, and every traversal branches on exactly
+  those two guards — so a top-level stored leaf was omitted from
+  `tree()`/`unwrap()`, a deep-merge write through a parent was silently
+  dropped, and `applyState()` (the devtools replay path) REPLACED the live
+  signal with a raw value, after which reading it threw. The stored signal now
+  *is* the Angular signal.
+- **Nested markers no longer emit their raw marker object.** `makeNodeAccessor`
+  copies a store's properties onto the accessor while its call path closes over
+  the original store; materialization wrote only to the accessor, so the store
+  kept the raw marker forever. This affected **every** marker — nested
+  `status()`, `entityMap()`, `form()` and `asyncSource()` all leaked raw
+  markers into `tree()`; only `stored()` was noticed, because its marker
+  carries a `Storage` handle.
+- **`tree()` called before `tree.$` now finalizes.** Every other entry point
+  (`$`, `with`, `updateAndReport`, `batchUpdate`) did; the builder's own call
+  path was the sole omission, so `tree()` as a first operation returned raw
+  markers and wrote through unmaterialized ones.
+
+### Added
+
+- **Dev-mode diagnostics for writes and snapshots that go nowhere**
+  (`ngDevMode`-guarded, deduped per path, zero production cost):
+  `ST2010` a write to a key absent from the tree's initial shape (it has no
+  signal to land on and is discarded); `ST2005` a write to a value that is
+  neither a writable signal nor a node accessor; `ST2008` such a value being
+  omitted from a snapshot; `ST2009` `applyState` overwriting a live callable.
+  Every one of these was previously silent — `ST2010` in particular is what
+  made a guardrails rule appear broken for hours.
+- **`reload()` returns `'ok' | 'default' | 'error'`** (was `void`; additive).
+  `'error'` means the stored data could not be read or migrated: the signal
+  falls back to its default while storage is left **intact**, because
+  destroying data a human might still recover is the caller's policy choice.
+  `StoredReloadResult` is exported.
+
+### Changed
+
+- `tree()`/`unwrap()` output now contains stored leaves and real marker values
+  where omissions or raw markers used to be, and a merge write through a parent
+  now reaches stored leaves — and therefore writes to storage. Both are the
+  fix; code relying on the previous behaviour is the compatibility risk, which
+  is why the diagnostics above ship in the same release.
+- **A merge write REPLACES an object-valued stored leaf, it does not merge into
+  it.** `tree({ cfg: { prefs: { theme: 'dark' } } })` where `prefs` is a
+  `stored()` holding `{ theme, lang }` leaves `{ theme: 'dark' }` — `lang` is
+  gone from memory and from storage. A plain nested namespace in the same
+  position deep-merges. Previously the write was dropped entirely, so this is a
+  change from silently-skipped to destructive: audit merge writes that cross an
+  object-valued stored leaf.
+- **Persisted values now appear in time-travel and devtools payloads.** They
+  were absent only because the leaf was invisible to traversal. Since `stored()`
+  is the documented home for drafts and tokens, review what your history and
+  devtools frames now carry.
+
+### Considered and rejected
+
+- **A duplicate-storage-key dev warning.** Implemented, then removed: the
+  registry can only see that a key was claimed before, not whether the earlier
+  signal is still alive, so it fired on the legitimate pattern of a per-route
+  tree being destroyed and recreated on navigation. A warning that cries wolf
+  on normal usage is worse than none.
+
 ## 13.3.1 (2026-08-05)
 
 Correctness follow-up to 13.3.0. An independent audit of that release found two

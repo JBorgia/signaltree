@@ -1,3 +1,4 @@
+declare const ngDevMode: boolean | undefined;
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { isTraversableNode } from '../../lib/utils';
@@ -6,6 +7,7 @@ import type { EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
 import type { StorageAdapter } from './storage-adapters';
+
 
 /**
  * SignalTree Serialization Module
@@ -1056,10 +1058,10 @@ export function persistence(
           await Promise.resolve(storageAdapter.setItem(key, serialized));
           lastCacheKey = cacheKey;
 
-          if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+          if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
             console.log(`[SignalTree] State saved to storage key: ${key}`);
           }
-        } else if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+        } else if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
           console.log(
             `[SignalTree] State unchanged, skipping storage write for key: ${key}`
           );
@@ -1084,7 +1086,7 @@ export function persistence(
             includeMetadata: false,
           });
 
-          if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+          if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
             console.log(`[SignalTree] State loaded from storage key: ${key}`);
           }
         }
@@ -1102,7 +1104,7 @@ export function persistence(
         await Promise.resolve(storageAdapter.removeItem(key));
         lastCacheKey = null;
 
-        if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+        if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
           console.log(`[SignalTree] State cleared from storage key: ${key}`);
         }
       } catch (error) {

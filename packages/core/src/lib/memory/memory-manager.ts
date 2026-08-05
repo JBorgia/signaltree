@@ -1,3 +1,4 @@
+declare const ngDevMode: boolean | undefined;
 /**
  * Memory Manager for SignalTree
  * Provides automatic cleanup and memory leak prevention for lazy-loaded signal trees
@@ -5,6 +6,7 @@
  */
 
 import type { WritableSignal } from '@angular/core';
+
 
 /**
  * Memory statistics for monitoring
@@ -130,7 +132,7 @@ export class SignalMemoryManager {
       });
     }
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log('[SignalMemoryManager] Initialized', {
         autoCleanup: this.config.enableAutoCleanup,
         hasRegistry: !!this.registry,
@@ -168,7 +170,7 @@ export class SignalMemoryManager {
       this.stats.peakCachedSignals = currentSize;
     }
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log(`[SignalMemoryManager] Cached signal: ${path}`, {
         cacheSize: currentSize,
         peak: this.stats.peakCachedSignals,
@@ -197,7 +199,7 @@ export class SignalMemoryManager {
       // Signal was garbage collected, remove from cache
       this.cache.delete(path);
 
-      if (this.config.debugMode) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
         console.log(`[SignalMemoryManager] Signal GC'd: ${path}`);
       }
 
@@ -238,7 +240,7 @@ export class SignalMemoryManager {
 
     this.cache.delete(path);
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log(`[SignalMemoryManager] Removed signal: ${path}`);
     }
 
@@ -255,7 +257,7 @@ export class SignalMemoryManager {
 
     const currentStats = this.getStats();
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log(`[SignalMemoryManager] Auto cleanup: ${path}`, currentStats);
     }
 
@@ -297,7 +299,7 @@ export class SignalMemoryManager {
    * Call this when destroying a SignalTree to prevent memory leaks
    */
   dispose(): void {
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log('[SignalMemoryManager] Disposing', {
         cachedSignals: this.cache.size,
       });
@@ -317,7 +319,7 @@ export class SignalMemoryManager {
     this.cache.clear();
     this.stats.manualDisposes++;
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log('[SignalMemoryManager] Disposed', this.getStats());
     }
   }
@@ -373,7 +375,7 @@ export class SignalMemoryManager {
       manualDisposes: 0,
     };
 
-    if (this.config.debugMode) {
+    if ((typeof ngDevMode === 'undefined' || ngDevMode) && this.config.debugMode) {
       console.log('[SignalMemoryManager] Stats reset');
     }
   }
