@@ -1,3 +1,75 @@
+## Unreleased (13.4.0)
+
+Closes the traversal gap that made markers invisible to the tree's own snapshot
+and write paths — including a case that leaked unrelated storage contents into
+serialized output — and adds the diagnostics that would have surfaced it years
+earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
+
+### Security
+
+- **An explicit `storage:` option no longer reaches snapshots.** A `stored()`
+  marker nested under a parent used to surface as its RAW MARKER from `tree()`,
+  carrying its `options.storage` with it — and `unwrap` deep-copied that storage
+  object, enumerating unrelated keys into the snapshot. Anyone passing
+  `storage:` explicitly *and* using `serialization()`, `persistence()`,
+  devtools or `createAuditTracker` was emitting that storage's contents into
+  those payloads. The default path was unaffected (the marker's `options` stays
+  empty because `createStoredSignal` resolves storage itself).
+
+### Fixed
+
+- **`stored()` leaves are visible to tree traversal** (`@signaltree/core`). A
+  materialized `StoredSignal` was a plain callable satisfying neither
+  `isSignal` nor `isNodeAccessor`, and every traversal branches on exactly
+  those two guards — so a top-level stored leaf was omitted from
+  `tree()`/`unwrap()`, a deep-merge write through a parent was silently
+  dropped, and `applyState()` (the devtools replay path) REPLACED the live
+  signal with a raw value, after which reading it threw. The stored signal now
+  *is* the Angular signal.
+- **Nested markers no longer emit their raw marker object.** `makeNodeAccessor`
+  copies a store's properties onto the accessor while its call path closes over
+  the original store; materialization wrote only to the accessor, so the store
+  kept the raw marker forever. This affected **every** marker — nested
+  `status()`, `entityMap()`, `form()` and `asyncSource()` all leaked raw
+  markers into `tree()`; only `stored()` was noticed, because its marker
+  carries a `Storage` handle.
+- **`tree()` called before `tree.$` now finalizes.** Every other entry point
+  (`$`, `with`, `updateAndReport`, `batchUpdate`) did; the builder's own call
+  path was the sole omission, so `tree()` as a first operation returned raw
+  markers and wrote through unmaterialized ones.
+
+### Added
+
+- **Dev-mode diagnostics for writes and snapshots that go nowhere**
+  (`ngDevMode`-guarded, deduped per path, zero production cost):
+  `ST2010` a write to a key absent from the tree's initial shape (it has no
+  signal to land on and is discarded); `ST2005` a write to a value that is
+  neither a writable signal nor a node accessor; `ST2008` such a value being
+  omitted from a snapshot; `ST2009` `applyState` overwriting a live callable.
+  Every one of these was previously silent — `ST2010` in particular is what
+  made a guardrails rule appear broken for hours.
+- **`reload()` returns `'ok' | 'default' | 'error'`** (was `void`; additive).
+  `'error'` means the stored data could not be read or migrated: the signal
+  falls back to its default while storage is left **intact**, because
+  destroying data a human might still recover is the caller's policy choice.
+  `StoredReloadResult` is exported.
+
+### Changed
+
+- `tree()`/`unwrap()` output now contains stored leaves and real marker values
+  where omissions or raw markers used to be, and a merge write through a parent
+  now reaches stored leaves — and therefore writes to storage. Both are the
+  fix; code relying on the previous behaviour is the compatibility risk, which
+  is why the diagnostics above ship in the same release.
+
+### Considered and rejected
+
+- **A duplicate-storage-key dev warning.** Implemented, then removed: the
+  registry can only see that a key was claimed before, not whether the earlier
+  signal is still alive, so it fired on the legitimate pattern of a per-route
+  tree being destroyed and recreated on navigation. A warning that cries wolf
+  on normal usage is worse than none.
+
 ## Unreleased (13.3.1)
 
 Correctness follow-up to 13.3.0. An independent audit of that release found two
