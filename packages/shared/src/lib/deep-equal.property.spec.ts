@@ -146,3 +146,45 @@ describe('deepEqual — property based (seeded)', () => {
     expect(deepEqual(null, undefined)).toBe(false);
   });
 });
+
+describe('deepEqual — SameValueZero for NaN (13.5.0)', () => {
+  // These assert the FUNCTION directly. An earlier attempt tested the symptom
+  // through a tree, and both the reported-paths version and the effect-count
+  // version passed against unfixed code — the Object.is readback in
+  // recursiveUpdate masks the primitive case, and a worktree check was
+  // contaminated by a symlinked node_modules resolving shared back to source.
+  // A pure-function assertion cannot be masked by either.
+  it('treats NaN as equal to NaN', () => {
+    expect(deepEqual(Number.NaN, Number.NaN)).toBe(true);
+  });
+
+  it('treats two Invalid Dates as equal', () => {
+    // `new Date(blankField).getTime()` is NaN, so `===` called them different
+    // and a leaf holding one re-notified every dependent on every rewrite.
+    expect(deepEqual(new Date(Number.NaN), new Date(Number.NaN))).toBe(true);
+    expect(deepEqual(new Date('nonsense'), new Date('nonsense'))).toBe(true);
+  });
+
+  it('still separates a valid Date from an Invalid one, and unequal dates', () => {
+    expect(deepEqual(new Date(0), new Date(Number.NaN))).toBe(false);
+    expect(deepEqual(new Date(Number.NaN), new Date(0))).toBe(false);
+    expect(deepEqual(new Date(0), new Date(5))).toBe(false);
+    expect(deepEqual(new Date(5), new Date(5))).toBe(true);
+  });
+
+  it('propagates NaN equality through containers', () => {
+    expect(deepEqual([Number.NaN], [Number.NaN])).toBe(true);
+    expect(deepEqual({ a: Number.NaN }, { a: Number.NaN })).toBe(true);
+    expect(
+      deepEqual({ d: new Date(Number.NaN) }, { d: new Date(Number.NaN) })
+    ).toBe(true);
+  });
+
+  it('does not make unrelated primitives equal', () => {
+    expect(deepEqual(1, 2)).toBe(false);
+    expect(deepEqual('a', 'b')).toBe(false);
+    expect(deepEqual(Number.NaN, 1)).toBe(false);
+    expect(deepEqual(1, Number.NaN)).toBe(false);
+    expect(deepEqual(0, -0)).toBe(true); // SameValueZero, as before
+  });
+});

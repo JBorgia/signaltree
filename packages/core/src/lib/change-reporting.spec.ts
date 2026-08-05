@@ -81,6 +81,67 @@ describe('updateAndReport — reports only what landed', () => {
     expect(tree.updateAndReport({ n: 1 })).toEqual(['n']);
   });
 
+  // The test above CANNOT fail if deepEqual(NaN, NaN) regresses to false: the
+  // set() lands, the leaf holds a fresh NaN, and the Object.is readback still
+  // says "unchanged". It looked like coverage and was not — an audit reverted
+  // the deepEqual fix and the whole repo stayed green. The user-visible symptom
+  // is REACTIVITY, so that is what these measure.
+  it('a NaN rewrite notifies nobody', () => {
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ n: Number.NaN });
+      let runs = 0;
+      effect(() => {
+        tree.$.n();
+        runs++;
+      });
+      TestBed.flushEffects();
+      const base = runs;
+
+      tree.updateAndReport({ n: Number.NaN });
+      TestBed.flushEffects();
+
+      expect(runs).toBe(base);
+    });
+  });
+
+  it('an Invalid Date rewrite notifies nobody', () => {
+    // Same class as NaN and reached the same way — `new Date(blankField)`.
+    // getTime() is NaN, so `===` called two Invalid Dates different.
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ d: new Date(Number.NaN) });
+      let runs = 0;
+      effect(() => {
+        tree.$.d();
+        runs++;
+      });
+      TestBed.flushEffects();
+      const base = runs;
+
+      const changed = tree.updateAndReport({ d: new Date(Number.NaN) });
+      TestBed.flushEffects();
+
+      expect(changed).toEqual([]);
+      expect(runs).toBe(base);
+    });
+  });
+
+  it('a real Date change is still reported and notified', () => {
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ d: new Date(0) });
+      let runs = 0;
+      effect(() => {
+        tree.$.d();
+        runs++;
+      });
+      TestBed.flushEffects();
+      const base = runs;
+
+      expect(tree.updateAndReport({ d: new Date(5) })).toEqual(['d']);
+      TestBed.flushEffects();
+      expect(runs).toBe(base + 1);
+    });
+  });
+
   it('reports nested paths with dots', () => {
     const tree = signalTree({ a: { b: { c: 1 } } });
 
@@ -230,6 +291,23 @@ describe('onPathChange', () => {
     expect(seen).toEqual(['first', 'second']);
   });
 
+  // NOTE: the test above passes with or without the Array.from() snapshot — JS
+  // Set iteration already tolerates deleting the CURRENT element, so it never
+  // gated anything. This is the case the snapshot actually exists for.
+  it('a listener subscribed during dispatch is not called for that event', () => {
+    const tree = signalTree({ count: 0 });
+    const late: string[][] = [];
+    tree.onPathChange(() => {
+      tree.onPathChange((p) => late.push([...p]));
+    });
+
+    tree({ count: 1 });
+    expect(late).toEqual([]); // not called for the in-flight event
+
+    tree({ count: 2 });
+    expect(late.length).toBeGreaterThan(0); // but live from the next one
+  });
+
   it('is documented as root-only: a direct leaf write does not notify', () => {
     const tree = signalTree({ user: { name: 'Ada' } });
     const seen: string[][] = [];
@@ -297,5 +375,138 @@ describe('state keys that collide with Function own-properties', () => {
     expect(structuredClone(tree())).toEqual({
       cfg: { prototype: 1, set: 2, length: 3 },
     });
+  });
+});
+
+describe('change reporting — defects found by adversarial audit', () => {
+  it('does not report a branch write that is discarded', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' } });
+
+      // A server payload sending null for a whole object. The write has
+      // nowhere to go — a branch cannot be replaced by a non-object — and was
+      // always discarded, but the path was reported as changed anyway.
+      expect(tree.updateAndReport({ user: null } as never)).toEqual([]);
+      expect(tree.updateAndReport({ user: 5 } as never)).toEqual([]);
+      expect(tree()).toEqual({ user: { name: 'Ada' } });
+      // And it says so, rather than failing silently.
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('does not notify onPathChange for a discarded branch write', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' } });
+      const seen: string[][] = [];
+      tree.onPathChange((p) => seen.push([...p]));
+
+      tree({ user: null } as never);
+
+      expect(seen).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('reports LEAF paths for a per-branch updater, not the branch', () => {
+    const tree = signalTree({ user: { name: 'Ada', age: 1 } });
+
+    const changed = tree.updateAndReport({
+      user: (u: { name: string; age: number }) => ({ ...u, name: 'Grace' }),
+    } as never);
+
+    expect(changed).toEqual(['user.name']);
+    expect(tree.$.user.name()).toBe('Grace');
+  });
+
+  it('reports nothing for a per-branch updater that changes nothing', () => {
+    const tree = signalTree({ user: { name: 'Ada', age: 1 } });
+
+    const changed = tree.updateAndReport({
+      user: (u: { name: string; age: number }) => ({ ...u }),
+    } as never);
+
+    expect(changed).toEqual([]);
+  });
+
+  it('destroy() drops onPathChange listeners', () => {
+    const tree = signalTree({ count: 0 });
+    let calls = 0;
+    for (let i = 0; i < 10; i++) tree.onPathChange(() => calls++);
+
+    tree.destroy();
+    tree({ count: 1 });
+
+    // Previously every listener still fired, and each closure (usually a
+    // component) stayed reachable from the tree for the tree's whole life.
+    expect(calls).toBe(0);
+  });
+
+  it('subscribing to a destroyed tree does not leak the listener', () => {
+    const tree = signalTree({ count: 0 });
+    tree.destroy();
+    let calls = 0;
+
+    const off = tree.onPathChange(() => calls++);
+    tree({ count: 1 });
+
+    expect(calls).toBe(0);
+    expect(() => off()).not.toThrow();
+  });
+
+  it('a listener cannot mutate the array updateAndReport returns', () => {
+    const tree = signalTree({ count: 0 });
+    const seenBySecond: string[][] = [];
+    tree.onPathChange((p) => {
+      // Listeners receive a frozen copy; a rogue push must not reach the
+      // caller's result or the next listener's view.
+      try {
+        (p as string[]).push('INJECTED');
+      } catch {
+        /* frozen — throwing is the correct outcome in strict mode */
+      }
+    });
+    tree.onPathChange((p) => seenBySecond.push([...p]));
+
+    const returned = tree.updateAndReport({ count: 1 });
+
+    expect(returned).toEqual(['count']);
+    expect(seenBySecond).toEqual([['count']]);
+  });
+
+  it('delivers events in write order when a listener writes', () => {
+    const tree = signalTree({ a: 0, b: 0 });
+    const seen: string[][] = [];
+    tree.onPathChange((p) => {
+      if (p.includes('a')) tree({ b: 1 });
+    });
+    tree.onPathChange((p) => seen.push([...p]));
+
+    tree({ a: 1 });
+
+    // The writes happened a then b. Dispatching the nested write inline
+    // delivered b BEFORE a to this listener — a reversed audit trail, which is
+    // the advertised use case.
+    expect(seen).toEqual([['a'], ['b']]);
+  });
+
+  it('a listener that writes on every notification does not hang forever', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ count: 0 });
+      tree.onPathChange(() => {
+        tree({ count: (tree.$.count() as number) + 1 });
+      });
+
+      // Bounded by the drain guard rather than growing the queue forever.
+      expect(() => tree({ count: 1 })).not.toThrow();
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

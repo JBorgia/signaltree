@@ -18,7 +18,14 @@ export function deepEqual<T>(a: T, b: T): boolean {
   if (typeA !== 'object') return a !== a && b !== b;
 
   if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime();
+    // getTime() is NaN for an Invalid Date, so `===` reported two Invalid
+    // Dates as different and a leaf holding one re-notified every dependent on
+    // every rewrite — the same churn the primitive NaN case above fixes, and
+    // the ordinary result of `new Date(userInput)` on a blank or malformed
+    // field. lodash isEqual treats them as equal; so do we.
+    const ta = a.getTime();
+    const tb = b.getTime();
+    return ta === tb || (ta !== ta && tb !== tb);
   }
 
   if (a instanceof RegExp && b instanceof RegExp) {

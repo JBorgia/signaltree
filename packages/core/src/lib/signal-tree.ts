@@ -335,11 +335,35 @@ function recursiveUpdate(
         if (!Object.is(untracked(() => sig()), current)) out.push(childPath);
       }
     } else if (isNodeAccessor(prop)) {
-      if (value && typeof value === 'object') {
+      if (typeof value === 'function') {
+        // Updater function aimed at a BRANCH, e.g. tree({ user: u => ({...}) }).
+        // Resolve it here and recurse rather than handing it to the accessor:
+        // the accessor's own updater path drops `out` and `pathPrefix`, so the
+        // reported path was the branch ('user') instead of the leaves that
+        // changed ('user.name'), and a pure no-op updater still reported a
+        // change. Resolving here keeps one code path for reporting.
+        const updater = value as (current: unknown) => unknown;
+        batchScope(() =>
+          recursiveUpdate(prop, updater(unwrap(prop)), out, childPath)
+        );
+      } else if (value && typeof value === 'object') {
         recursiveUpdate(prop, value, out, childPath);
       } else {
-        (prop as (v: unknown) => void)(value);
-        if (out) out.push(childPath);
+        // A primitive, null or undefined aimed at a BRANCH. This has always
+        // been discarded — the accessor forwards to recursiveUpdate, which
+        // returns immediately for a non-object — but the path was reported as
+        // changed anyway. That is the same defect the leaf branch above was
+        // fixed for, and it is the shape a server payload takes when it sends
+        // `null` for a whole object. Report nothing, and say why in dev.
+        if (typeof ngDevMode === 'undefined' || ngDevMode) {
+          console.error(
+            `SignalTree: write to "${childPath}" DISCARDED — a branch cannot ` +
+              `be replaced by a non-object value (received ${
+                value === null ? 'null' : typeof value
+              }). Write the leaves, or use a marker if this position should ` +
+              `hold a value. [ST2014]`
+          );
+        }
       }
     }
     // NOTE: no diagnostic for "matched neither guard". Since stored() became a
@@ -512,19 +536,60 @@ function create<T extends object>(
   const pathListeners = new Set<PathChangeListener>();
   const collectPaths = (): string[] | undefined =>
     pathListeners.size ? [] : undefined;
+  // Dispatch queue. A listener is allowed to write to the tree, and that write
+  // notifies too — dispatching it inline delivered events to the OTHER
+  // listeners in the wrong order (write A, then a listener writes B, and every
+  // later listener saw B before A). For the advertised use case, an audit log,
+  // that is a reversed trail. Queue instead, and drain after the current round
+  // so every listener sees writes in the order they happened.
+  const pathQueue: ReadonlyArray<string>[] = [];
+  let draining = false;
+  /** Runaway guard: a listener that writes on every notification never settles. */
+  const MAX_DRAIN = 1000;
+
   const notifyPaths = (out: string[] | undefined): void => {
     if (!out || !out.length || !pathListeners.size) return;
-    // Snapshot: a listener may subscribe or unsubscribe during dispatch.
-    for (const fn of Array.from(pathListeners)) {
-      try {
-        fn(out);
-      } catch (error) {
-        // A listener must never break the write that triggered it — the
-        // state is already committed by the time we get here.
-        if (typeof ngDevMode === 'undefined' || ngDevMode) {
-          console.error('SignalTree: onPathChange listener threw. [ST2013]', error);
+    // Frozen COPY: the same array is also returned by updateAndReport(), so a
+    // listener that pushed into it corrupted the caller's result (and every
+    // later listener's view). Callers own the array they are returned; the one
+    // listeners see is immutable.
+    pathQueue.push(Object.freeze(out.slice()));
+    if (draining) return;
+
+    draining = true;
+    try {
+      let rounds = 0;
+      while (pathQueue.length) {
+        if (++rounds > MAX_DRAIN) {
+          pathQueue.length = 0;
+          if (typeof ngDevMode === 'undefined' || ngDevMode) {
+            console.error(
+              `SignalTree: onPathChange dispatch did not settle after ` +
+                `${MAX_DRAIN} rounds — a listener is writing to the tree on ` +
+                `every notification. Remaining events dropped. [ST2015]`
+            );
+          }
+          break;
+        }
+        const paths = pathQueue.shift() as ReadonlyArray<string>;
+        // Snapshot the listener set: one may subscribe or unsubscribe here.
+        for (const fn of Array.from(pathListeners)) {
+          try {
+            fn(paths);
+          } catch (error) {
+            // A listener must never break the write that triggered it — the
+            // state is already committed by the time we get here.
+            if (typeof ngDevMode === 'undefined' || ngDevMode) {
+              console.error(
+                'SignalTree: onPathChange listener threw. [ST2013]',
+                error
+              );
+            }
+          }
         }
       }
+    } finally {
+      draining = false;
     }
   };
 
@@ -667,6 +732,11 @@ function create<T extends object>(
         }
       }
       cleanupFns.length = 0;
+      // Drop onPathChange subscribers. Without this a destroyed tree kept
+      // dispatching to every listener, and each listener closure (usually a
+      // component) stayed reachable from the tree for the tree's whole life.
+      pathListeners.clear();
+      pathQueue.length = 0;
       if (disposeLazy) {
         disposeLazy();
       }
@@ -782,6 +852,9 @@ function create<T extends object>(
   Object.defineProperty(tree, 'onPathChange', {
     value: function (listener: PathChangeListener): () => void {
       if (typeof listener !== 'function') return () => undefined;
+      // Subscribing to a destroyed tree would leak the listener immediately —
+      // nothing will ever clear it again.
+      if (destroyedSig()) return () => undefined;
       pathListeners.add(listener);
       return () => {
         pathListeners.delete(listener);
