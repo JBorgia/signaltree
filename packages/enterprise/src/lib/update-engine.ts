@@ -44,6 +44,25 @@ export interface UpdateResult {
 }
 
 /**
+ * Property names that must never be traversed into or written through.
+ *
+ * `__proto__` is an accessor on Object.prototype, so both `obj['__proto__'] = v`
+ * and a `defineProperty` write reach the prototype; `JSON.parse` creates a real
+ * OWN `__proto__` key, so any untrusted payload can carry one. `constructor`
+ * and `prototype` are the two-hop route to the same place.
+ *
+ * Duplicated from `@signaltree/shared` rather than imported: `shared` is a
+ * private workspace package bundled INTO core, so an import here would either
+ * inline it or leave an unresolvable specifier in this package's dist. Three
+ * strings are the cheaper trade.
+ */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isUnsafeKey(key: unknown): boolean {
+  return typeof key === 'string' && UNSAFE_KEYS.has(key);
+}
+
+/**
  * Patch to apply
  */
 interface Patch {
@@ -358,11 +377,12 @@ export class OptimizedUpdateEngine {
       let current: Record<string, unknown> = tree as Record<string, unknown>;
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
-        // Descend only through OWN properties. Bare `current[key]` with
-        // key === '__proto__' hands back the prototype and walks the patch
-        // straight out of the tree; 'constructor' does the same one hop later.
-        // Own-property rather than a name blocklist so state legitimately
-        // holding a key called `constructor` or `prototype` still works.
+        // SECURITY: name check FIRST, then own-ness. An earlier version relied
+        // on own-ness alone and was bypassed in two calls: the write below
+        // minted a real own `__proto__` key, after which every own-ness check
+        // passed and the second call walked into the prototype. A guard that
+        // the guarded code can unlock is not a guard.
+        if (isUnsafeKey(key)) return false;
         if (!Object.prototype.hasOwnProperty.call(current, key)) {
           return false;
         }
@@ -373,6 +393,7 @@ export class OptimizedUpdateEngine {
       }
 
       const lastKey = patch.path[patch.path.length - 1];
+      if (isUnsafeKey(lastKey)) return false;
       const target = Object.prototype.hasOwnProperty.call(current, lastKey)
         ? current[lastKey]
         : undefined;
@@ -403,11 +424,29 @@ export class OptimizedUpdateEngine {
         return false;
       }
 
-      // Apply update directly to object. defineProperty, NOT `current[k] = v`:
-      // assignment to '__proto__' invokes the prototype SETTER, so a payload
-      // from JSON.parse (which creates a real own '__proto__' key) polluted
-      // Object.prototype for the whole process. defineProperty always creates
-      // an own data property, so the hostile key lands as inert data.
+      // Only ever overwrite an existing ENUMERABLE own property.
+      //
+      // Own-ness alone is not enough: a node IS a function, so `name`, `length`
+      // and `prototype` are genuinely own properties of it. Plain assignment
+      // used to throw on those (they are read-only) and the patch was skipped;
+      // `Object.defineProperty` succeeds, which turned a payload carrying a
+      // field called `name` into permanent corruption of the node's shape —
+      // phantom enumerable children that every `Object.keys()` walker in core
+      // then reports, while the write itself was still lost.
+      //
+      // Enumerability is the exact discriminator: `makeNodeAccessor` copies
+      // real state keys with `enumerable: true`, and every function intrinsic
+      // is non-enumerable. Creating BRAND-NEW raw keys is rejected by the same
+      // check, which is correct — `tree()` reads the signal graph and never
+      // reflected them anyway, and minting one was step one of the bypass.
+      const existing = Object.getOwnPropertyDescriptor(current, lastKey);
+      if (!existing || !existing.enumerable) {
+        return false;
+      }
+
+      // defineProperty rather than `current[k] = v` for the surviving case:
+      // assignment can still hit an inherited setter, and this keeps the
+      // written shape explicit.
       Object.defineProperty(current, lastKey, {
         value: patch.value,
         enumerable: true,
@@ -440,8 +479,9 @@ export class OptimizedUpdateEngine {
       for (const [key, child] of Object.entries(
         value as Record<string, unknown>
       )) {
-        // Own-property only — see applyPatch. `node['__proto__']` would hand
-        // back the prototype and recurse the patch outside the tree.
+        // Name check then own-property — see applyPatch. `node['__proto__']`
+        // would hand back the prototype and recurse the patch outside the tree.
+        if (isUnsafeKey(key)) continue;
         if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
         changed =
           this.applyDeepToNode(

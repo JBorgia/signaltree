@@ -11,6 +11,26 @@ import {
 declare const ngDevMode: boolean | undefined;
 
 /**
+ * Property names that must never be read through, written through, or reported
+ * as present on a lazy node.
+ *
+ * `__proto__` is an accessor on Object.prototype, so reading it walks OFF the
+ * tree and writing it mutates every object in the process; `constructor` and
+ * `prototype` are the two-hop route to the same place.
+ *
+ * Inlined rather than imported from `@signaltree/shared` on purpose. `shared`
+ * is a private package bundled into core, and its consumers build with
+ * `stripInternal`, so a guard exported from there resolves as an empty module
+ * across that boundary. A security primitive is also better read at its use
+ * site than one indirection away.
+ */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isUnsafeKey(key: string | symbol): boolean {
+  return typeof key === 'string' && UNSAFE_KEYS.has(key);
+}
+
+/**
  * Creates a lazy signal tree using Proxy for on-demand signal creation.
  *
  * Lives in its own module (not `utils.ts`) so it ships ONLY when the `lazy()`
@@ -61,7 +81,16 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
-      if (!(key in target)) return undefined;
+      // SECURITY: never hand out a view of the prototype chain. `key in target`
+      // walks it, so `$.__proto__` resolved to Object.prototype, and because it
+      // is an object it got wrapped in a nested lazy Proxy below and cached —
+      // a live, WRITABLE handle on Object.prototype reachable from any code
+      // holding the tree. `$.__proto__.isAdmin = true` polluted every object in
+      // the process. Own-properties only, and the three prototype-chain keys are
+      // refused outright even when own (a `defineProperty` write can mint an own
+      // `__proto__`, which would otherwise satisfy the own-ness check forever).
+      if (isUnsafeKey(key)) return undefined;
+      if (!Object.prototype.hasOwnProperty.call(target, key)) return undefined;
 
       const value = (target as Record<string, unknown>)[key];
 
@@ -176,6 +205,10 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
+      // SECURITY: `target['__proto__'] = v` invokes the prototype SETTER, so
+      // this trap was a direct pollution sink. See the `get` trap.
+      if (isUnsafeKey(key)) return false;
+
       try {
         (target as Record<string, unknown>)[key] = value;
 
@@ -200,7 +233,20 @@ export function createLazySignalTree<T extends object>(
       }
     },
 
+    // SECURITY: without this trap, Object.defineProperty(proxy, '__proto__', …)
+    // forwards to the raw target and mints a REAL own `__proto__` key. That was
+    // step one of a two-call bypass: once the own key exists, every downstream
+    // own-property guard is satisfied and the second call walks into the
+    // prototype. Refuse the write outright rather than rely on own-ness.
+    defineProperty(target, prop, descriptor) {
+      if (isUnsafeKey(prop)) return false;
+      return Reflect.defineProperty(target, prop, descriptor);
+    },
+
     has(target, prop) {
+      // Mirrors the `get` trap: a key the proxy will not hand out must not be
+      // reported as present, or `in` checks disagree with reads.
+      if (isUnsafeKey(prop)) return false;
       return prop in target;
     },
 
