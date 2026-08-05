@@ -3,6 +3,34 @@ import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 declare const ngDevMode: boolean | undefined;
 
+/** Dev-mode: keys already warned about, so a loop cannot flood the console. */
+const warnedUnwrapKeys = new Set<string>();
+const warnedApplyStateKeys = new Set<string>();
+
+/** @internal Dev-mode notice that a snapshot silently omitted a value. */
+function warnUnwrapSkipped(key: string): void {
+  if (warnedUnwrapKeys.has(key)) return;
+  warnedUnwrapKeys.add(key);
+  console.error(
+    `SignalTree: "${key}" was OMITTED from the snapshot — the value there is a ` +
+      `function that is neither a signal nor a node accessor, so unwrap() has ` +
+      `no value to read. Anything snapshotting this tree (serialize, ` +
+      `persistence, devtools, audit) is missing that key. [ST2008]`
+  );
+}
+
+/** @internal Dev-mode notice that applyState clobbered a live node. */
+function warnApplyStateOverwrite(key: string, target: unknown): void {
+  if (warnedApplyStateKeys.has(key) || typeof target !== 'function') return;
+  warnedApplyStateKeys.add(key);
+  console.error(
+    `SignalTree: applyState REPLACED the live value at "${key}" with a raw ` +
+      `value. It was a callable that is neither a signal nor a node accessor, ` +
+      `so the signal there is now gone and reading it will throw. [ST2009]`
+  );
+}
+
+
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
@@ -239,7 +267,12 @@ export function unwrap<T>(node: unknown): T {
           result[key] = unwrappedValue;
         }
       } else if (typeof value === 'function') {
-        // Skip functions so snapshots stay plain-data.
+        // Skip functions so snapshots stay plain-data. A materialized marker
+        // that is a plain callable lands here too, so its VALUE silently
+        // vanishes from the snapshot rather than being unwrapped.
+        if (typeof ngDevMode === 'undefined' || ngDevMode) {
+          warnUnwrapSkipped(key);
+        }
         continue;
       } else if (
         typeof value === 'object' &&
@@ -467,6 +500,13 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
         }
       }
     } else {
+      // Neither a writable signal nor a traversable node: this assignment
+      // REPLACES whatever lives at that key with a raw value. If it was a
+      // materialized marker (a plain callable), the live signal is destroyed
+      // and subsequent reads of it throw.
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        warnApplyStateOverwrite(key, target);
+      }
       try {
         (stateNode as Record<string, unknown>)[key] = val as unknown;
       } catch {

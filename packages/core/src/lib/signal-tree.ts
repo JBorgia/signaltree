@@ -223,6 +223,14 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
 
+/**
+ * Dev-mode: paths already warned about for writes that went nowhere — either
+ * the key is absent from the tree's initial shape (ST2010) or the value at
+ * that path is a shape traversal doesn't recognise (ST2005). Deduped so a
+ * write inside a loop doesn't flood the console.
+ */
+const warnedDroppedPaths = new Set<string>();
+
 function recursiveUpdate(
   target: unknown,
   updates: unknown,
@@ -239,9 +247,27 @@ function recursiveUpdate(
     updates as Record<string, unknown>
   )) {
     const prop = targetObj[key];
-    if (prop === undefined) continue;
-
     const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+
+    if (prop === undefined) {
+      // A tree's signal graph is built from its INITIAL shape, so a write to a
+      // key that was never in that shape has nowhere to go and is discarded.
+      // Silently, until now: this is what made a guardrails rule look broken
+      // for hours when the demo wrote an optional key it had never seeded.
+      if (
+        (typeof ngDevMode === 'undefined' || ngDevMode) &&
+        !warnedDroppedPaths.has(childPath)
+      ) {
+        warnedDroppedPaths.add(childPath);
+        console.error(
+          `SignalTree: write to "${childPath}" was DISCARDED — that key is not ` +
+            `part of the tree's initial shape, so no signal exists for it. Add ` +
+            `it to the object passed to signalTree() (a declared-but-optional ` +
+            `TypeScript property is not enough). [ST2010]`
+        );
+      }
+      continue;
+    }
 
     if (isSignal(prop) && 'set' in prop) {
       const sig = prop as WritableSignal<unknown>;
@@ -283,6 +309,21 @@ function recursiveUpdate(
         (prop as (v: unknown) => void)(value);
         if (out) out.push(childPath);
       }
+    } else if (
+      (typeof ngDevMode === 'undefined' || ngDevMode) &&
+      !warnedDroppedPaths.has(childPath)
+    ) {
+      // Neither a writable signal nor a node accessor: traversal recognises
+      // exactly those two shapes, so anything else is dropped here without a
+      // trace. Materialized markers that are plain callables land in this
+      // branch — a merge write through a parent reaches them and vanishes.
+      warnedDroppedPaths.add(childPath);
+      console.error(
+        `SignalTree: write to "${childPath}" was DROPPED — the value at that ` +
+          `path is neither a writable signal nor a node accessor, so the tree ` +
+          `cannot write through it. Write the leaf directly (e.g. ` +
+          `tree.$.${childPath}.set(value)). [ST2005]`
+      );
     }
   }
 }
@@ -791,6 +832,12 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
 
   // Create callable builder function that delegates to baseTree
   const builder = function (arg?: unknown): TSource | void {
+    // Finalize first. Every other entry point ($, with, updateAndReport,
+    // batchUpdate) does; this one used to be the sole omission, so calling
+    // tree() before ever touching tree.$ returned RAW MARKERS instead of
+    // values, and a write through it landed on unmaterialized markers.
+    finalize();
+
     // Delegate to baseTree's call signature
     if (arguments.length === 0) {
       return (baseTree as unknown as () => TSource)();
