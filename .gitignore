@@ -105,3 +105,8 @@ test-results/
 # commits (2026-08-05) while an audit was mid-flight. A test worth keeping gets
 # a real name.
 zz-*.spec.ts
+
+# Benchmark harnesses import the built core through this symlink (see
+# scripts/benchmarks/README or the header of task-collection-update.mjs).
+# Recreate with: nx build core && ln -sfn ../../dist/packages/core scripts/benchmarks/dist-core
+scripts/benchmarks/dist-core

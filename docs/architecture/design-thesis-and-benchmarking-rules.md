@@ -78,9 +78,10 @@ This rule was violated repeatedly and it cost the most:
 
 - Forcing SignalTree to rebuild a 50k array immutably (because `patchState` must)
   produced **"SignalTree is 8× slower on large collections."** A real app uses
-  `entityMap()`. With the idiomatic API the same task is **56× faster** than
-  SignalStore. Wrong API, wrong conclusion — and the wrong framing **hid a real
-  O(n) defect in `entityMap` for weeks**.
+  `entityMap()`. With the idiomatic API the same task is **28.5× faster** than
+  SignalStore (1.63 ms vs 46.56 ms; the array-leaf idiom is 49.80 ms, i.e. at
+  parity, not 8× behind). Wrong API, wrong conclusion — and the wrong framing
+  **hid a real O(n) defect in `entityMap` for weeks**.
 - "Fairness" edits that equalise implementations usually *introduce* bias. Two
   were found in the demo pointing in opposite directions: our arm started the
   clock before constructing a 50k array (penalising us); their arm used
@@ -99,9 +100,13 @@ This rule was violated repeatedly and it cost the most:
 - **A skipped scenario must be loud.** An unimplemented benchmark once silently
   dropped from *our* aggregate while still counting against every competitor
   that ran it.
-- **Single runs lie.** Interleave arms in one process, rotate arm order per
-  sample, report medians and IQR, and call a difference real only if it exceeds
-  both arms' spread. Two wrong conclusions in this project came from single runs.
+- **Single runs lie.** Report medians and spread, and call a difference real
+  only if it exceeds both arms' spread. Two wrong conclusions in this project
+  came from single runs.
+- **But do NOT interleave arms in one process** — that advice, which this
+  document previously gave, was measured and is wrong here. See realisation 13:
+  a third arm of a different kind made one arm 7.5× slower while leaving the
+  others untouched. **One process per arm**, repeated, is the ground truth.
 
 ---
 
@@ -141,7 +146,9 @@ anything changed.
 deep-equality compare on each. `updateOne` was O(size) — 2,831 µs on 50k rows —
 in the flagship *collection* API whose storage write is O(1). Now the queries are
 lazily computed from a version counter: **under 1 µs, flat across 1k/10k/50k**
-(0.91 µs vs 432 µs for a plain array leaf — 474×), with a fan-out of exactly 1
+(0.91 µs vs 432 µs for a plain array leaf on a single-write micro-benchmark;
+at TASK level, 1000 toggles of a 50k collection, it is 1.63 ms vs 49.80 ms —
+quote the task number, not the micro one), with a fan-out of exactly 1
 (100 updates to one entity caused ZERO recomputes of a computed reading another;
 the array leaf re-ran 100/100).
 
@@ -227,7 +234,26 @@ Each of these was learned the expensive way.
     9.7 ms as three unrelated 10k-leaf trees were kept alive. Fixed by gating on
     a self-dirty flag; cost is now flat.
 
-12. **A held `byId()` reference used to die permanently across remove → re-add.**
+12. **The benchmark harness's own array-leaf figure swings 5.7× on WHERE the
+    change lands**, because deepEqual is O(index of first difference). Same 1000
+    updates to a 50k array leaf: index 0 → 89 ms, moving index → 92 ms, last
+    index → 487 ms, no change at all → 506 ms. The target index is part of the
+    workload definition and must be stated with any array-leaf number.
+
+13. **Interleaving arms in one process produced a 7.5× phantom.** The SignalTree
+    array-leaf arm measured ~50 ms alone, ~50 ms against any ONE other arm, and
+    ~375 ms as soon as a THIRD arm of a DIFFERENT KIND joined — while the
+    plain-JS and SignalStore arms were unmoved. Three IDENTICAL SignalTree arms
+    were all fast (55/54/54 ms), so it is not arm count; an 8 GB old-space and a
+    64 MB semi-space changed nothing, so it is not GC. It is V8 megamorphism at
+    a call site shared by the arms, and the cost lands on whichever arm's hot
+    loop sits inside a shared generic function.
+
+    This is the worst class of measurement bug: the number **moves when you add
+    an unrelated arm**, so the same library scores differently depending on who
+    else is in the benchmark that day. Run one process per arm.
+
+14. **A held `byId()` reference used to die permanently across remove → re-add.**
     The node captured the per-entity signal once; removal deleted it from the
     map and the re-add made a new one, leaving the held reference reading an
     orphan forever. Holding a nested reference is the capability this library has
