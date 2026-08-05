@@ -1,4 +1,4 @@
-## Unreleased (13.3.1)
+## 13.3.1 (2026-08-05)
 
 Correctness follow-up to 13.3.0. An independent audit of that release found two
 real defects in the shipped `stored()` durability work — one of them undermining
