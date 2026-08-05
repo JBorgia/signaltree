@@ -1,0 +1,301 @@
+import { effect } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+
+import { signalTree } from '../index';
+
+/**
+ * Change reporting: `updateAndReport()` and `onPathChange()`.
+ *
+ * Both answer the same question — "what did that write actually change?" —
+ * and the whole value of the answer is that it is TRUE. A path reported for a
+ * write that never landed sends audit logs, change feeds and targeted
+ * persistence off to do work for nothing, and it is invisible: the state is
+ * correct, so nothing looks broken.
+ *
+ * The deep-equal cases below all FAIL against pre-13.5.0 core, which pushed a
+ * path for every `set()` it attempted rather than every `set()` that landed.
+ */
+describe('updateAndReport — reports only what landed', () => {
+  it('reports nothing for a deep-equal array leaf (new reference)', () => {
+    const tree = signalTree({ users: [{ id: 1, name: 'Ada' }] });
+    const before = tree.$.users();
+
+    // A re-fetched payload: structurally identical, freshly allocated.
+    const changed = tree.updateAndReport({ users: [{ id: 1, name: 'Ada' }] });
+
+    expect(changed).toEqual([]);
+    // And the report matches reality — the leaf still holds the old reference,
+    // so no consumer of this signal was notified either.
+    expect(tree.$.users()).toBe(before);
+  });
+
+  it('reports nothing for a deep-equal object leaf', () => {
+    const tree = signalTree({ meta: { tags: ['a', 'b'] } });
+    const before = tree.$.meta.tags();
+
+    const changed = tree.updateAndReport({ meta: { tags: ['a', 'b'] } });
+
+    expect(changed).toEqual([]);
+    expect(tree.$.meta.tags()).toBe(before);
+  });
+
+  it('still reports a genuinely changed array leaf', () => {
+    const tree = signalTree({ users: [{ id: 1, name: 'Ada' }] });
+
+    const changed = tree.updateAndReport({
+      users: [{ id: 1, name: 'Grace' }],
+    });
+
+    expect(changed).toEqual(['users']);
+    expect(tree.$.users()).toEqual([{ id: 1, name: 'Grace' }]);
+  });
+
+  it('separates landed from no-op keys within one payload', () => {
+    const tree = signalTree({
+      user: { name: 'Ada', tags: ['x'] },
+      count: 1,
+    });
+
+    const changed = tree.updateAndReport({
+      user: { name: 'Ada', tags: ['x'] }, // both deep-equal no-ops
+      count: 2, // real
+    });
+
+    expect(changed).toEqual(['count']);
+  });
+
+  it('reports primitives honestly', () => {
+    const tree = signalTree({ n: 1, s: 'a', flag: false });
+
+    expect(tree.updateAndReport({ n: 1, s: 'a', flag: false })).toEqual([]);
+    expect(tree.updateAndReport({ n: 2, s: 'a' })).toEqual(['n']);
+  });
+
+  it('reports a NaN leaf honestly', () => {
+    const tree = signalTree({ n: Number.NaN });
+
+    // NaN !== NaN, so the ref-equality short-circuit does not fire and a
+    // `set()` is attempted. It must not be reported as a change.
+    expect(tree.updateAndReport({ n: Number.NaN })).toEqual([]);
+    expect(tree.updateAndReport({ n: 1 })).toEqual(['n']);
+  });
+
+  it('reports nested paths with dots', () => {
+    const tree = signalTree({ a: { b: { c: 1 } } });
+
+    expect(tree.updateAndReport({ a: { b: { c: 2 } } })).toEqual(['a.b.c']);
+  });
+
+  it('agrees with the reactive system: every reported path notified', () => {
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ users: [{ id: 1 }], count: 0 });
+      let usersRuns = 0;
+      let countRuns = 0;
+      effect(() => {
+        tree.$.users();
+        usersRuns++;
+      });
+      effect(() => {
+        tree.$.count();
+        countRuns++;
+      });
+      TestBed.flushEffects();
+      const baseUsers = usersRuns;
+      const baseCount = countRuns;
+
+      const changed = tree.updateAndReport({
+        users: [{ id: 1 }], // deep-equal, must not notify
+        count: 5, // real
+      });
+      TestBed.flushEffects();
+
+      expect(changed).toEqual(['count']);
+      expect(usersRuns).toBe(baseUsers); // not reported, not notified
+      expect(countRuns).toBe(baseCount + 1); // reported, notified
+    });
+  });
+});
+
+describe('onPathChange', () => {
+  it('fires with the paths that landed, via the call form', () => {
+    const tree = signalTree({ user: { name: 'Ada' }, count: 0 });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree({ user: { name: 'Grace' } });
+
+    expect(seen).toEqual([['user.name']]);
+  });
+
+  it('fires for batchUpdate and updateAndReport', () => {
+    const tree = signalTree({ count: 0 });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree.batchUpdate({ count: 1 });
+    tree.updateAndReport({ count: 2 });
+
+    expect(seen).toEqual([['count'], ['count']]);
+  });
+
+  it('fires for an updater function', () => {
+    const tree = signalTree({ count: 0, other: 'x' });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree((current) => ({ ...current, count: current.count + 1 }));
+
+    expect(seen).toEqual([['count']]);
+  });
+
+  it('does not fire when nothing landed', () => {
+    const tree = signalTree({ users: [{ id: 1 }] });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree({ users: [{ id: 1 }] }); // deep-equal no-op
+
+    expect(seen).toEqual([]);
+  });
+
+  it('does not fire on a read', () => {
+    const tree = signalTree({ count: 0 });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree();
+    tree.$.count();
+
+    expect(seen).toEqual([]);
+  });
+
+  it('stops firing after unsubscribe', () => {
+    const tree = signalTree({ count: 0 });
+    const seen: string[][] = [];
+    const off = tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree({ count: 1 });
+    off();
+    tree({ count: 2 });
+
+    expect(seen).toEqual([['count']]);
+    expect(tree.$.count()).toBe(2); // the write still happened
+  });
+
+  it('supports multiple independent listeners', () => {
+    const tree = signalTree({ count: 0 });
+    const a: string[][] = [];
+    const b: string[][] = [];
+    const offA = tree.onPathChange((p) => a.push([...p]));
+    tree.onPathChange((p) => b.push([...p]));
+
+    tree({ count: 1 });
+    offA();
+    tree({ count: 2 });
+
+    expect(a).toEqual([['count']]);
+    expect(b).toEqual([['count'], ['count']]);
+  });
+
+  it('a throwing listener neither breaks the write nor the other listeners', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ count: 0 });
+      const seen: string[][] = [];
+      tree.onPathChange(() => {
+        throw new Error('listener blew up');
+      });
+      tree.onPathChange((p) => seen.push([...p]));
+
+      expect(() => tree({ count: 1 })).not.toThrow();
+      expect(tree.$.count()).toBe(1);
+      expect(seen).toEqual([['count']]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('unsubscribing during dispatch does not skip the next listener', () => {
+    const tree = signalTree({ count: 0 });
+    const seen: string[] = [];
+    const offSelf = tree.onPathChange(() => {
+      seen.push('first');
+      offSelf();
+    });
+    tree.onPathChange(() => seen.push('second'));
+
+    tree({ count: 1 });
+
+    expect(seen).toEqual(['first', 'second']);
+  });
+
+  it('is documented as root-only: a direct leaf write does not notify', () => {
+    const tree = signalTree({ user: { name: 'Ada' } });
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree.$.user.name.set('Grace');
+
+    // Not an oversight — see the onPathChange docs. Pinned so a future change
+    // to this boundary is a deliberate, visible decision.
+    expect(seen).toEqual([]);
+    expect(tree.$.user.name()).toBe('Grace');
+  });
+
+  it('survives an enhancer builder (forwarded from the base tree)', () => {
+    const tree = signalTree({ count: 0 }).with((t) => t);
+    const seen: string[][] = [];
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    tree.updateAndReport({ count: 1 });
+
+    expect(seen).toEqual([['count']]);
+  });
+
+  it('ignores a non-function listener instead of corrupting the set', () => {
+    const tree = signalTree({ count: 0 });
+    const seen: string[][] = [];
+    (tree.onPathChange as unknown as (l: unknown) => () => void)(null);
+    tree.onPathChange((paths) => seen.push([...paths]));
+
+    expect(() => tree({ count: 1 })).not.toThrow();
+    expect(seen).toEqual([['count']]);
+  });
+});
+
+describe('state keys that collide with Function own-properties', () => {
+  // Nodes ARE functions and carry state keys as their own properties, so every
+  // own property a function already has is a name state could not use. Only
+  // `prototype` was ever a problem (non-configurable); it used to crash tree
+  // construction with "TypeError: Cannot redefine property: prototype".
+  it.each(['prototype', 'length', 'name', 'caller', 'arguments', 'call'])(
+    'accepts a nested state key named %s',
+    (key) => {
+      const tree = signalTree({ cfg: { [key]: 'V', other: 1 } });
+
+      expect((tree.$.cfg as Record<string, () => unknown>)[key]()).toBe('V');
+      expect(tree()).toEqual({ cfg: { [key]: 'V', other: 1 } });
+    }
+  );
+
+  it('accepts state keys named set and update', () => {
+    // The reason nodes are callable rather than carrying named methods: a
+    // node with a `.set()` method would make `state.set` unusable as data.
+    const tree = signalTree({ perms: { set: 'admin', update: 'editor' } });
+
+    expect(tree.$.perms.set()).toBe('admin');
+    expect(tree.$.perms.update()).toBe('editor');
+
+    tree({ perms: { set: 'viewer' } });
+    expect(tree.$.perms.set()).toBe('viewer');
+  });
+
+  it('round-trips a colliding key through unwrap and structuredClone', () => {
+    const tree = signalTree({ cfg: { prototype: 1, set: 2, length: 3 } });
+
+    expect(structuredClone(tree())).toEqual({
+      cfg: { prototype: 1, set: 2, length: 3 },
+    });
+  });
+});

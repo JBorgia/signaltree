@@ -9,7 +9,13 @@ export function deepEqual<T>(a: T, b: T): boolean {
   const typeA = typeof a;
   const typeB = typeof b;
   if (typeA !== typeB) return false;
-  if (typeA !== 'object') return false;
+  // SameValueZero for primitives: NaN equals NaN. `a === b` above already
+  // handled every other primitive pair, so reaching here with a non-object
+  // means unequal UNLESS both are NaN. Without this a leaf holding NaN — a
+  // failed parse, a 0/0, `Number(input)` on a blank field — was considered
+  // changed by every re-write of the same NaN, notifying every dependent
+  // computed and effect on a no-op. Matches lodash isEqual and Object.is.
+  if (typeA !== 'object') return a !== a && b !== b;
 
   if (a instanceof Date && b instanceof Date) {
     return a.getTime() === b.getTime();

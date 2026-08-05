@@ -243,19 +243,21 @@ export function unwrap<T>(node: unknown): T {
     for (const key in node as unknown as Record<string, unknown>) {
       if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
 
-      // Skip function prototype properties only, not user properties
-      if (key === 'length' || key === 'prototype') continue;
-
-      // Special handling for 'name' - if it's a signal or NodeAccessor, include it
-      if (key === 'name') {
-        const value = (node as unknown as Record<string, unknown>)[key];
-        if (!isSignal(value) && !isNodeAccessor(value)) {
-          // Skip if it's just the function name property
-          continue;
-        }
-      }
-
       const value = (node as unknown as Record<string, unknown>)[key];
+
+      // A node IS a function, so `length`, `name` and `prototype` may be the
+      // function's own intrinsics rather than state. Distinguish by VALUE, not
+      // by name: state always arrives as a leaf signal or a child accessor, so
+      // anything else under these keys is the intrinsic and is skipped.
+      // Name-only skipping silently deleted real state — `{ cfg: { length: 3 } }`
+      // unwrapped to `{ cfg: {} }`.
+      if (
+        (key === 'length' || key === 'prototype' || key === 'name') &&
+        !isSignal(value) &&
+        !isNodeAccessor(value)
+      ) {
+        continue;
+      }
 
       if (isNodeAccessor(value)) {
         result[key] = unwrap(value);
@@ -323,12 +325,15 @@ export function unwrap<T>(node: unknown): T {
   for (const key in node as Record<string, unknown>) {
     if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
 
-    if (key === 'set' || key === 'update') {
-      const v = (node as Record<string, unknown>)[key];
-      if (typeof v === 'function') continue;
-    }
-
     const value = (node as Record<string, unknown>)[key];
+
+    // NOTE: there was a name-based skip for `set`/`update` here. A leaf signal
+    // IS a function, so it dropped state stored under those keys — `set` and
+    // `update` are ordinary words (permission sets, an `update` timestamp) and
+    // they vanished from every snapshot, every persisted payload and every
+    // structuredClone, silently. The general plain-function skip below already
+    // covers the case it was written for, and covers it by value rather than
+    // by name.
 
     if (
       typeof value === 'function' &&

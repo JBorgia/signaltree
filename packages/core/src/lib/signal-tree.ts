@@ -20,6 +20,7 @@ import type {
   EntityMapMarker,
   ISignalTree,
   EnhancerMeta,
+  PathChangeListener,
 } from './types';
 
 import { ENHANCER_META } from './types';
@@ -190,29 +191,41 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
  * materializeMarkers(), it needs to replace markers with their signal forms.
  */
 function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
-  const accessor = function (arg?: unknown): T | void {
-    // GET - no argument
-    if (arguments.length === 0) {
-      return unwrap(store) as unknown as T;
-    }
+  // Declared as a METHOD SHORTHAND, not `function () {}`, and this is
+  // load-bearing. A node carries the user's state keys as its own enumerable
+  // properties, so every own property name a function already has is a name
+  // the user cannot use for state. Ordinary function expressions own a
+  // NON-CONFIGURABLE `prototype`, which made `signalTree({ a: { prototype: 1 } })`
+  // die inside the copy loop below with "Cannot redefine property: prototype".
+  // Concise methods are not constructors and have no `prototype` at all, while
+  // still binding `arguments` (which an arrow function would not). That takes
+  // the reserved-name list for state keys down to zero — `length`, `name`,
+  // `caller` and `arguments` are all configurable and were already fine.
+  const accessor = {
+    node(arg?: unknown): T | void {
+      // GET - no argument
+      if (arguments.length === 0) {
+        return unwrap(store) as unknown as T;
+      }
 
-    // UPDATE with function - auto-batch
-    if (typeof arg === 'function') {
-      const updater = arg as (current: T) => T;
-      const current = unwrap(store) as T;
-      batchScope(() => recursiveUpdate(store, updater(current)));
-      return;
-    }
+      // UPDATE with function - auto-batch
+      if (typeof arg === 'function') {
+        const updater = arg as (current: T) => T;
+        const current = unwrap(store) as T;
+        batchScope(() => recursiveUpdate(store, updater(current)));
+        return;
+      }
 
-    // PARTIAL UPDATE with object - auto-batch
-    if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
-      batchScope(() => recursiveUpdate(store, arg as Partial<T>));
-      return;
-    }
+      // PARTIAL UPDATE with object - auto-batch
+      if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+        batchScope(() => recursiveUpdate(store, arg as Partial<T>));
+        return;
+      }
 
-    // FULL SET with primitive/array - single value, no batch needed
-    recursiveUpdate(store, arg);
-  } as NodeAccessor<T>;
+      // FULL SET with primitive/array - single value, no batch needed
+      recursiveUpdate(store, arg);
+    },
+  }.node as NodeAccessor<T>;
 
   (accessor as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
   Object.defineProperty(accessor, NODE_STORE_SYMBOL, {
@@ -306,7 +319,21 @@ function recursiveUpdate(
         continue;
       }
       sig.set(value);
-      if (out) out.push(childPath);
+      if (out) {
+        // Report only what LANDED. Leaves are created with a deep `equal`, so
+        // a new-reference-but-deep-equal value — the ordinary shape of a
+        // re-fetched server payload — is rejected by the signal and notifies
+        // nobody. Pushing the path anyway told audit trails, change logs and
+        // targeted-persistence callers to do work for a write that never
+        // happened.
+        //
+        // Compare against the PREVIOUS value, not the incoming one: "the leaf
+        // now holds `value`" is also true when the leaf already held it, which
+        // is exactly the no-op case (and Object.is(NaN, NaN) makes that
+        // indistinguishable). "The leaf no longer holds what it held" is the
+        // question actually being asked.
+        if (!Object.is(untracked(() => sig()), current)) out.push(childPath);
+      }
     } else if (isNodeAccessor(prop)) {
       if (value && typeof value === 'object') {
         recursiveUpdate(prop, value, out, childPath);
@@ -478,19 +505,44 @@ function create<T extends object>(
     signalState = createSignalStore(initialState, equalityFn);
   }
 
+  // onPathChange listeners. Declared before `tree` because the call form
+  // below closes over them; `notifyPaths` is only reached once a listener
+  // has been registered, so a tree nobody subscribes to pays one Set size
+  // check per write and allocates nothing.
+  const pathListeners = new Set<PathChangeListener>();
+  const collectPaths = (): string[] | undefined =>
+    pathListeners.size ? [] : undefined;
+  const notifyPaths = (out: string[] | undefined): void => {
+    if (!out || !out.length || !pathListeners.size) return;
+    // Snapshot: a listener may subscribe or unsubscribe during dispatch.
+    for (const fn of Array.from(pathListeners)) {
+      try {
+        fn(out);
+      } catch (error) {
+        // A listener must never break the write that triggered it — the
+        // state is already committed by the time we get here.
+        if (typeof ngDevMode === 'undefined' || ngDevMode) {
+          console.error('SignalTree: onPathChange listener threw. [ST2013]', error);
+        }
+      }
+    }
+  };
+
   // Create root callable function
   const tree = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
       return unwrap(signalState) as unknown as T;
     }
 
+    const out = collectPaths();
     if (typeof arg === 'function') {
       const updater = arg as (current: T) => T;
       const current = unwrap(signalState) as T;
-      recursiveUpdate(signalState, updater(current));
+      recursiveUpdate(signalState, updater(current), out);
     } else {
-      recursiveUpdate(signalState, arg);
+      recursiveUpdate(signalState, arg, out);
     }
+    notifyPaths(out);
   } as ISignalTree<T>;
 
   // Mark as NodeAccessor
@@ -668,13 +720,15 @@ function create<T extends object>(
     value: function (arg?: unknown): void {
       if (arguments.length === 0) return;
 
+      const out = collectPaths();
       if (typeof arg === 'function') {
         const updater = arg as (current: T) => T;
         const current = unwrap(signalState) as T;
-        recursiveUpdate(signalState, updater(current));
+        recursiveUpdate(signalState, updater(current), out);
       } else {
-        recursiveUpdate(signalState, arg);
+        recursiveUpdate(signalState, arg, out);
       }
+      notifyPaths(out);
     },
     enumerable: false,
     writable: true,
@@ -703,7 +757,35 @@ function create<T extends object>(
       } else {
         recursiveUpdate(signalState, arg, out);
       }
+      notifyPaths(out);
       return out;
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
+
+  // onPathChange(): subscribe to "what just changed" for writes made through
+  // this tree's own update entry points — the call form `tree({...})`,
+  // `batchUpdate()` and `updateAndReport()`. Returns an unsubscribe function.
+  //
+  // Ported from @signaltree/enterprise, which is deprecated as of 13.5.0. The
+  // enterprise version only fired for `updateOptimized()`; this one fires for
+  // every root-level write, and reports the same paths `updateAndReport()`
+  // returns — meaning paths that ACTUALLY landed, deep-equal no-ops excluded.
+  //
+  // Deliberate boundary: a write made directly against a nested accessor or
+  // leaf (`tree.$.user.name.set('x')`) does NOT notify. Those bypass the root
+  // entirely, and catching them would mean instrumenting every leaf signal in
+  // the tree — a cost every consumer would pay for a feature few use. Route
+  // writes you want observed through the tree.
+  Object.defineProperty(tree, 'onPathChange', {
+    value: function (listener: PathChangeListener): () => void {
+      if (typeof listener !== 'function') return () => undefined;
+      pathListeners.add(listener);
+      return () => {
+        pathListeners.delete(listener);
+      };
     },
     enumerable: false,
     writable: true,
@@ -982,6 +1064,21 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     },
     enumerable: false,
     writable: false,
+    configurable: true,
+  });
+
+  // Forward 'onPathChange' from baseTree. Deliberately does NOT finalize():
+  // subscribing is not a write, and finalizing here would lock out a
+  // subsequent .derived() purely because the consumer attached a listener.
+  Object.defineProperty(builder, 'onPathChange', {
+    value: function (this: unknown, listener: PathChangeListener): () => void {
+      const fn = (baseTree as unknown as Record<string, unknown>)[
+        'onPathChange'
+      ] as ((l: PathChangeListener) => () => void) | undefined;
+      return fn ? fn.call(baseTree, listener) : () => undefined;
+    },
+    enumerable: false,
+    writable: true,
     configurable: true,
   });
 
