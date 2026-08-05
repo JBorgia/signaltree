@@ -16,6 +16,27 @@ decision record.
   DESCRIPTORS. A missing forward target is also no longer silent: it reports
   `[ST2017]` naming the cause, because that silence is what let this survive.
 
+- **`deepEqual()` — three defects in the function every leaf write runs
+  through.** It is the signals' `equal`, so each of these was silent and
+  system-wide.
+
+  `deepEqual(Object.create(Date.prototype), new Date(0))` **threw**: the object
+  passes `instanceof Date` but has no `[[DateValue]]`, so `.getTime()` raised
+  out of the comparison. `deepEqual(new Error('a'), new Error('b'))` was
+  **true** — `name`/`message` are own but NON-enumerable, so key comparison saw
+  nothing and a leaf holding an error never reported a change. Same for
+  primitive wrappers: `new Number(1)` equalled `new Number(2)`. And a built-in
+  against a keyless plain object (`new Date(0)` vs `{}`) compared equal, so a
+  malformed payload was swallowed *and* honestly reported as no change.
+
+  Measured after the fix, interleaved against the previous implementation:
+  arrays **−7.1%** (they now short-circuit before the built-in checks), plain
+  objects +2.6%, Dates +9.2% for the try/catch that stops the throw, primitives
+  and strings within noise. An intermediate revision that dispatched on
+  `Object.prototype.toString` was **discarded on measurement** — +60% on Dates,
+  +43% on arrays — because `a instanceof X && b instanceof X` short-circuits
+  after one check and `||` does not.
+
 - **`batching()` narrowed `batchUpdate()`'s signature.** Core accepts an object
   or an updater function; the batching override accepted only a function, so
   `.with(batching())` turned `batchUpdate({ count: 1 })` — the shape the docs

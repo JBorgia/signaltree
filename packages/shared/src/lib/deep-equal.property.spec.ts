@@ -213,3 +213,59 @@ describe('deepEqual — a built-in on one side only is never equal (13.5.0)', ()
     expect(deepEqual({ a: 1 }, { a: 2 })).toBe(false);
   });
 });
+
+describe('deepEqual — built-in identity (13.5.0)', () => {
+  it('distinguishes Errors by name and message', () => {
+    // name/message are OWN but NON-enumerable, so key comparison saw nothing
+    // and reported every pair of Errors as equal — a leaf holding an error
+    // never reported a change, the opposite of what an error state is for.
+    expect(deepEqual(new Error('a'), new Error('b'))).toBe(false);
+    expect(deepEqual(new Error('a'), new Error('a'))).toBe(true);
+    expect(deepEqual(new TypeError('a'), new Error('a'))).toBe(false);
+    expect(deepEqual(new RangeError('x'), new RangeError('x'))).toBe(true);
+  });
+
+  it('distinguishes primitive wrapper objects by value', () => {
+    expect(deepEqual(new Number(1) as never, new Number(2) as never)).toBe(false);
+    expect(deepEqual(new Number(1) as never, new Number(1) as never)).toBe(true);
+    expect(deepEqual(new String('a') as never, new String('b') as never)).toBe(false);
+    expect(deepEqual(new Boolean(true) as never, new Boolean(false) as never)).toBe(false);
+    expect(deepEqual(new Number(NaN) as never, new Number(NaN) as never)).toBe(true);
+  });
+
+  it('does not throw on an object that merely inherits Date.prototype', () => {
+    // `instanceof Date` is true but there is no [[DateValue]], so `.getTime()`
+    // threw out of the equality function every leaf comparison runs through.
+    const fake = Object.create(Date.prototype);
+    expect(() => deepEqual(fake, new Date(0))).not.toThrow();
+    expect(deepEqual(fake, new Date(0))).toBe(false);
+    expect(() => deepEqual(new Date(0), fake)).not.toThrow();
+  });
+
+  it('still compares real built-ins correctly', () => {
+    expect(deepEqual(new Date(5), new Date(5))).toBe(true);
+    expect(deepEqual(new Date(5), new Date(6))).toBe(false);
+    expect(deepEqual(/a/gi, /a/gi)).toBe(true);
+    expect(deepEqual(/a/g, /a/i)).toBe(false);
+    expect(deepEqual(new Map([['a', 1]]), new Map([['a', 1]]))).toBe(true);
+    expect(deepEqual(new Map([['a', 1]]), new Map([['a', 2]]))).toBe(false);
+    expect(deepEqual(new Set([1, 2]), new Set([1, 2]))).toBe(true);
+    expect(deepEqual(new Set([1]), new Set([2]))).toBe(false);
+  });
+
+  it('still compares class instances structurally', () => {
+    // Deliberately preserved: a matching tag falls through to key comparison,
+    // which is the previous behaviour callers may rely on.
+    class Pt {
+      constructor(public x: number) {}
+    }
+    expect(deepEqual(new Pt(1), new Pt(1))).toBe(true);
+    expect(deepEqual(new Pt(1), new Pt(2))).toBe(false);
+  });
+
+  it('rejects a built-in against a keyless plain object', () => {
+    expect(deepEqual(new Date(0), {} as never)).toBe(false);
+    expect(deepEqual(new Map() as never, {} as never)).toBe(false);
+    expect(deepEqual(new Error('x') as never, {} as never)).toBe(false);
+  });
+});
