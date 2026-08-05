@@ -3,6 +3,9 @@ import { isSignal } from '@angular/core';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor, isTraversableNode } from '../utils';
 
+/** @internal Must match the symbol set by `makeNodeAccessor`. */
+const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
+
 /**
  * Unified Marker Processing
  *
@@ -253,6 +256,18 @@ export function materializeMarkers(
             pathString
           );
           (node as Record<string, unknown>)[key] = materialized;
+          // A node accessor copies its store's properties, but its CALL path
+          // closes over the original store. Writing only to the accessor
+          // leaves that store holding the raw marker forever — which is why a
+          // nested marker used to surface as a raw marker object from `tree()`
+          // and why a merge write through a parent never reached it. Update
+          // both so the two views agree.
+          const backingStore = (node as Record<symbol, unknown>)[
+            NODE_STORE_SYMBOL
+          ] as Record<string, unknown> | undefined;
+          if (backingStore && backingStore !== node) {
+            backingStore[key] = materialized;
+          }
           processed = true;
         } catch (err) {
           if (typeof ngDevMode === 'undefined' || ngDevMode) {

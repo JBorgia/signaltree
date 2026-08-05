@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, untracked } from '@angular/core';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
@@ -679,17 +679,33 @@ export function createStoredSignal<T>(
     }
   };
 
-  // Create the stored signal interface
-  const storedSignal = (() => sig()) as StoredSignal<T>;
+  // The stored signal IS the Angular signal, not a wrapper around it.
+  //
+  // It used to be `(() => sig())` with methods bolted on — a plain callable
+  // that satisfied neither `isSignal` nor `isNodeAccessor`. Every traversal in
+  // the library branches on exactly those two guards, so a stored leaf fell
+  // through all of them: omitted from `tree()`/`unwrap()`, skipped by a merge
+  // write through its parent, and REPLACED with a raw value by `applyState`
+  // (the devtools replay path), after which reading it threw.
+  //
+  // Conforming to the protocol that already exists fixes every one of those at
+  // once, with no changes outside this file, because `unwrap`,
+  // `recursiveUpdate`, `applyState`, `serialization`, `enterprise/path-index`,
+  // `schema/matcher` and `ng-forms` all already handle a real signal.
+  const storedSignal = sig as unknown as StoredSignal<T>;
+
+  // Capture the raw signal writers BEFORE overriding them, so the persisting
+  // versions below don't recurse into themselves.
+  const rawSet = sig.set.bind(sig);
 
   storedSignal.set = (value: T): void => {
-    sig.set(value); // Immediate signal update
+    rawSet(value); // Immediate signal update
     saveToStorage(value); // Debounced storage write
   };
 
   storedSignal.update = (fn: (current: T) => T): void => {
-    const newValue = fn(sig());
-    sig.set(newValue); // Immediate signal update
+    const newValue = fn(untracked(() => sig()));
+    rawSet(newValue); // Immediate signal update
     saveToStorage(newValue); // Debounced storage write
   };
 
@@ -701,7 +717,7 @@ export function createStoredSignal<T>(
     // later — the key comes back and the signal disagrees with storage.
     cancelPending();
     writeGeneration++;
-    sig.set(defaultValue);
+    rawSet(defaultValue);
     if (storage) {
       try {
         storage.removeItem(key);
@@ -721,7 +737,7 @@ export function createStoredSignal<T>(
     // earlier deferred write — timer or migration microtask — may land after it.
     cancelPending();
     writeGeneration++;
-    sig.set(loadFromStorage());
+    rawSet(loadFromStorage());
   };
 
   storedSignal.flush = commitPending;

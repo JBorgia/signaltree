@@ -27,6 +27,16 @@ import { ENHANCER_META } from './types';
 // INTERNAL SYMBOLS
 // =============================================================================
 const NODE_ACCESSOR_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
+/**
+ * @internal Back-reference from an accessor to the TreeNode its call path
+ * closes over. `makeNodeAccessor` COPIES the store's properties onto the
+ * accessor, so the two drift the moment anything replaces a property on one of
+ * them — which is exactly what marker materialization does. Exposing the store
+ * lets `materializeMarkers` update both, instead of leaving the closed-over
+ * store holding a raw marker forever. Non-enumerable so it never reaches a
+ * snapshot.
+ */
+const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
 
 // =============================================================================
 // TYPE GUARDS
@@ -202,6 +212,12 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   } as NodeAccessor<T>;
 
   (accessor as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
+  Object.defineProperty(accessor, NODE_STORE_SYMBOL, {
+    value: store,
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
 
   // Copy store properties onto accessor
   // CRITICAL: Properties must be writable to allow materializeMarkers()
