@@ -53,13 +53,21 @@ const UPDATES = 1000;
 const nested = (l) => (l === 0 ? { value: 0, data: 'test' } : { level: nested(l - 1) });
 
 // ---- deep nested: 1000 updates to a 15-level leaf -------------------------
+// NOTE: the path is WALKED inside the loop, deliberately. An earlier version of
+// this file hoisted the 15-level walk out and reused the leaf reference, so
+// SignalTree was timed doing 1000 setter calls while SignalStore did 1000 full
+// rebuilds. That inflated the result from 20.2x to 31.2x. Real code — and the
+// demo's own arm — resolves the path each time.
 race('deep-nested', '1 leaf write vs 15-object rebuild',
   () => {
     const t = signalTree(nested(DEPTH));
-    let cur = t.$;
-    for (let j = 0; j < DEPTH; j++) cur = cur.level;
-    const leaf = cur.value;
-    return () => { for (let i = 0; i < UPDATES; i++) leaf.set(i); };
+    return () => {
+      for (let i = 0; i < UPDATES; i++) {
+        let cur = t.$;
+        for (let j = 0; j < DEPTH; j++) cur = cur.level;
+        cur.value.set(i);
+      }
+    };
   },
   () => {
     const st = signalState(nested(DEPTH));
