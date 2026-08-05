@@ -1,11 +1,13 @@
 # @signaltree/enterprise
 
+> ⚠️ **Superseded — do not reach for this for performance.** Measured against `tree.updateAndReport()` in `@signaltree/core`, `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at 2 000**, and the gap widens with tree size. The long-standing "2-5x faster" claim was never measured against core and is inverted. Core's leaves already use deep-equality (`signal(value, { equal })`) plus a reference-equality short-circuit, so "only write what changed" is core behaviour for free — the diff engine pays O(state) to save writes that were already no-ops. Use `tree.updateAndReport(partial)`, which returns the same changed paths.
+
 Enterprise-grade optimizations for SignalTree. Designed for large-scale applications with 500+ signals and high-frequency bulk updates.
 
 ## Features
 
 - **Diff-based updates** - Only update signals that actually changed
-- **Bulk operation optimization** - 2-5x faster for large state updates
+- **Bulk operation optimization** - see the performance note below; measured SLOWER than core
 - **Advanced change tracking** - Detailed statistics and monitoring
 - **Path-change subscriptions** - React to specific dot-paths changing (9.1+)
 - **Snapshot / restore** - Cheap structured-clone snapshots with diff-engine restore (9.1+)
@@ -56,7 +58,7 @@ console.log(result.stats);
 - Small to medium apps (<100 signals)
 - Infrequent state updates
 - Startup/prototype projects
-- Bundle size is critical (adds +2.4KB gzipped)
+- Bundle size is critical (adds ~+3.1KB gzipped, measured)
 
 ## API
 
@@ -250,12 +252,12 @@ tree.updateOptimized(newState, {
 
 **Bundle Size:**
 
-- Adds +2.4KB gzipped to your bundle
+- Adds ~+3.1KB gzipped to your bundle (measured; the previously documented 2.4KB understated it)
 - Zero overhead until first `updateOptimized()` call (lazy initialization)
 
 **Performance Gains:**
 
-- 2-5x faster for bulk updates on large state trees
+- NOT faster: measured 6.8x slower at 500 leaves and 14.4x at 2 000 vs `tree.updateAndReport()`
 - Scales efficiently with tree depth and complexity
 - Minimal memory overhead with path indexing
 

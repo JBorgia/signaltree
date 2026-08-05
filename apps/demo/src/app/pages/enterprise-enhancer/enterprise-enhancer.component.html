@@ -13,12 +13,18 @@
     <div class="value-proposition">
       <h2>🎯 When to Use Enterprise Optimizations</h2>
       <p>
-        <strong>Designed for scale, not for every app.</strong> Most state
-        management libraries apply the same overhead to every update, regardless
-        of size. Enterprise enhancer uses diff-based updates to skip unchanged
-        signals. In one bulk-update workload we measured roughly 2-5x faster
-        updates &mdash; your results depend on tree size, change ratio, and
-        hardware, so measure your own.
+        <strong>Superseded &mdash; don't reach for this for performance.</strong>
+        This page previously claimed roughly 2-5x faster bulk updates. That was
+        never measured against <code>@signaltree/core</code>, and it is
+        backwards: <code>updateOptimized()</code> measures
+        <strong>6.8x slower at 500 leaves and 14.4x slower at 2,000</strong> than
+        <code>tree.updateAndReport()</code>, with the gap widening as the tree
+        grows. Core leaves already use deep equality plus a reference-equality
+        short-circuit, so &ldquo;only write what changed&rdquo; is core behaviour
+        for free &mdash; the diff engine pays O(state) to skip writes that were
+        already no-ops. Use <code>tree.updateAndReport(partial)</code>, which
+        returns the same changed paths. The page is kept as an honest record of
+        the API and this finding.
       </p>
 
       <div class="key-benefits">

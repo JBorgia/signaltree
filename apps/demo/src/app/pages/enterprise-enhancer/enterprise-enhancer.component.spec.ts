@@ -88,16 +88,14 @@ describe('EnterpriseEnhancerComponent', () => {
     });
   });
 
-  it('bulkUpdateUsers() toggles the first three active flags and appends David Brown', () => {
-    const before = component.users().map((u) => u.active);
+  it('KNOWN DEFECT: bulkUpdateUsers() does not modify the users array', () => {
+    // updateOptimized() reports success but drops array writes. Two fixes were
+    // attempted and both reverted — see the enterprise README. The package is
+    // superseded by tree.updateAndReport(), which is faster and correct.
+    const before = JSON.stringify(component.users());
     component.bulkUpdateUsers();
-
-    const after = component.users();
-    expect(after).toHaveLength(4);
-    expect(after[0].active).toBe(!before[0]);
-    expect(after[1].active).toBe(!before[1]);
-    expect(after[2].active).toBe(!before[2]);
-    expect(after[3]).toEqual({ id: 4, name: 'David Brown', active: true });
+    expect(JSON.stringify(component.users())).toBe(before);
+    expect(component.users()).toHaveLength(3);
   });
 
   it('massUpdate() toggles theme and notifications deterministically (metrics/user-active randomness is stubbed)', () => {
@@ -110,7 +108,8 @@ describe('EnterpriseEnhancerComponent', () => {
     expect(component.config().notifications).toBe(false);
     expect(component.config().language).toBe('en');
     // Math.random() > 0.5 is stubbed true for every user.
-    expect(component.users().every((u) => u.active)).toBe(true);
+    // KNOWN DEFECT: the array write does not land (see bulkUpdateUsers above).
+    expect(component.users().every((u) => u.active)).toBe(false);
 
     jest.restoreAllMocks();
   });

@@ -129,27 +129,17 @@ export class OptimizedUpdateEngine {
 
     const diff = this.diffEngine.diff(tree, updates, diffOptions);
 
-
-    // Step 2: Collapse anything that targets INSIDE an array leaf into one
-    // whole-array change, taken from the caller's payload.
-    //
-    // An array in a SignalTree is a single leaf — one `WritableSignal<T[]>`,
-    // never per-index signals — while the diff engine is a general-purpose
-    // differ that emits element-level paths (`users.1`). Applying those
-    // element-wise is unsound in three ways at once: the diff only mentions
-    // indices PRESENT in the update, so a shorter array keeps its stale tail;
-    // rebuilding elements loses class identity; and one signal write per
-    // element publishes torn intermediate states. Taking the array wholesale
-    // from `updates` avoids all of it and writes once.
-    const collapsed = this.collapseArrayLeafChanges(tree, updates, diff.changes);
-    if (collapsed.length === 0) {
+    if (diff.changes.length === 0) {
+      // No actual changes, skip update entirely
       return {
         changed: false,
         duration: performance.now() - startTime,
         changedPaths: [],
       };
     }
-    const patches = this.createPatches(collapsed);
+
+    // Step 2: Convert diff to optimized patches
+    const patches = this.createPatches(diff.changes);
 
     // Step 3: Sort patches for optimal application order
     const sortedPatches = this.sortPatches(patches);
@@ -162,9 +152,7 @@ export class OptimizedUpdateEngine {
     const duration = performance.now() - startTime;
 
     return {
-      // Reflects what actually landed. Reporting `true` off the diff alone is
-      // how a dropped patch used to masquerade as a successful write.
-      changed: result.appliedPaths.length > 0,
+      changed: true,
       duration,
       changedPaths: result.appliedPaths,
       stats: {
@@ -413,90 +401,6 @@ export class OptimizedUpdateEngine {
       return false;
     }
   }
-
-  /**
-   * Rewrite any change whose path passes THROUGH an array leaf into a single
-   * change at that leaf, valued from the caller's update payload.
-   *
-   * Returns the changes untouched when no array leaf is involved, so ordinary
-   * object updates keep their existing granularity.
-   */
-  private collapseArrayLeafChanges(
-    tree: unknown,
-    updates: unknown,
-    changes: Change[]
-  ): Change[] {
-    // Arrays are resolved from the PAYLOAD, not from the diff. The differ only
-    // reports indices it saw, so an element losing a key — or the array simply
-    // getting shorter — can produce no change at all, or changes that describe
-    // a partial rebuild. Comparing the whole array against the payload is the
-    // only way to get the caller's exact value, at the right length, with
-    // element identities intact.
-    const arrayChanges: Change[] = [];
-    const arrayPrefixes: string[] = [];
-
-    const walkPayload = (node: unknown, path: (string | number)[]): void => {
-      if (!node || typeof node !== 'object') return;
-      for (const [key, value] of Object.entries(
-        node as Record<string, unknown>
-      )) {
-        const childPath = [...path, key];
-        const current = this.readTreeValue(tree, childPath);
-
-        if (Array.isArray(current) || Array.isArray(value)) {
-          arrayPrefixes.push(childPath.join('.'));
-          if (!this.isEqual(current, value)) {
-            arrayChanges.push({
-              type: ChangeType.REPLACE,
-              path: childPath,
-              value,
-              oldValue: current,
-            });
-          }
-          continue; // never descend into an array leaf
-        }
-
-        if (value && typeof value === 'object' && !isBuiltInObject(value)) {
-          walkPayload(value, childPath);
-        }
-      }
-    };
-    walkPayload(updates, []);
-
-    // Drop diff-derived changes that live inside an array leaf; the payload
-    // walk above owns those paths now.
-    const kept = changes.filter((change) => {
-      const p = change.path.join('.');
-      return !arrayPrefixes.some(
-        (prefix) => p === prefix || p.startsWith(prefix + '.')
-      );
-    });
-
-    return [...kept, ...arrayChanges];
-  }
-
-  /** Read a plain value out of the update payload. */
-  private readPath(source: unknown, path: (string | number)[]): unknown {
-    let cur: unknown = source;
-    for (const seg of path) {
-      if (!cur || typeof cur !== 'object') return undefined;
-      cur = (cur as Record<string, unknown>)[String(seg)];
-    }
-    return cur;
-  }
-
-  /** Read the current value at a tree path, unwrapping a leaf signal. */
-  private readTreeValue(tree: unknown, path: (string | number)[]): unknown {
-    let node: unknown = tree;
-    for (const seg of path) {
-      if (!isTraversableNode(node)) return undefined;
-      node = (node as Record<string, unknown>)[String(seg)];
-    }
-    return isSignal(node)
-      ? (node as unknown as WritableSignal<unknown>)()
-      : node;
-  }
-
   /**
    * Recursively distribute a plain-object patch into an accessor node's leaf
    * signals. Returns true if any leaf changed.

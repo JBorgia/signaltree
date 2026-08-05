@@ -36,7 +36,8 @@ export interface EnterpriseOptions {
  *
  * **Includes:**
  * - Diff-based updates (only update changed signals)
- * - Bulk operation optimization (2-5x faster)
+ * - Bulk operation optimization (SUPERSEDED — measured slower than core's
+ *   `updateAndReport()`; see the note on `enterprise()` below)
  * - Advanced change tracking
  * - Update statistics and monitoring
  *
@@ -51,8 +52,12 @@ export interface EnterpriseOptions {
  * - Infrequent state updates
  * - Startup/prototype projects
  *
- * **Bundle cost:** +2.4KB gzipped
- * **Performance gain:** 2-5x faster bulk updates, detailed monitoring
+ * **Bundle cost:** ~+3.1KB gzipped (measured)
+ * **Performance:** NOT a gain. Measured 6.8x slower at 500 leaves and 14.4x at
+ * 2,000 than `tree.updateAndReport()` in @signaltree/core, which returns the
+ * same changed paths. Core leaves already use deep equality plus a
+ * reference-equality short-circuit, so the diff engine pays O(state) to skip
+ * writes that were already no-ops.
  *
  * @example
  * ```typescript

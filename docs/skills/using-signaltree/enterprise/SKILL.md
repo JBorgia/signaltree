@@ -5,7 +5,9 @@ description: Guides AI agents applying @signaltree/enterprise to large SignalTre
 
 # Using @signaltree/enterprise
 
-Use when the tree has 100s of signals and a single action replaces a large state slice (API hydration, tick-driven snapshots, subtree migrations). Diffs `Partial<T>` and only writes signals whose values changed — 2–5× faster than naive `tree.update()` for large collections. Skip for small/mostly-static trees.
+**Superseded — do not reach for this for performance.** Measured against `tree.updateAndReport()` in `@signaltree/core`, `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at 2 000**, and the gap widens with tree size. The long-standing "2-5x faster" claim was never measured against core and is inverted. Core's leaves already use deep-equality (`signal(value, { equal })`) plus a reference-equality short-circuit, so "only write what changed" is core behaviour for free — the diff engine pays O(state) to save writes that were already no-ops. Use `tree.updateAndReport(partial)`, which returns the same changed paths.
+
+Historically positioned for API hydration, tick-driven snapshots and subtree migrations over trees with hundreds of signals. `tree.updateAndReport()` covers all of those and is faster in every size measured.
 
 **License: BSL-1.1** (not MIT). Surface this when user is building for production commercial deployment.
 
