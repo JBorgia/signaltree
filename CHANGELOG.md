@@ -4,20 +4,23 @@ Retires `@signaltree/enterprise` and moves the two capabilities worth keeping
 into core. See [RFC 0010](docs/rfcs/0010-retiring-enterprise.md) for the full
 decision record.
 
-### Added
-
-- **`tree.onPathChange(listener)` in `@signaltree/core`.** Subscribe to the
-  dot-paths a write actually landed on; returns an unsubscribe function. Fires
-  for the call form `tree({...})`, `batchUpdate()` and `updateAndReport()`.
-  Costs nothing when unused — no listeners means one `Set` size check per write
-  and no allocation.
-
-  It deliberately does **not** fire for direct leaf writes
-  (`tree.$.a.b.set(x)`), which bypass the root. Catching those would mean
-  instrumenting every leaf in the tree, a cost every consumer would pay for a
-  feature few use.
-
 ### Fixed
+
+- **Enhancers silently dropped every tree method, losing writes.**
+  `.with(timeTravel())` made `updateAndReport({count:1})` return `[]` and never
+  write — the value did not change, nothing threw, and an empty report is
+  indistinguishable from "nothing changed". Same for `batchUpdate()`.
+  `timeTravel` and `batching` build a new tree object and copied the base tree
+  across with `Object.assign`, which takes only ENUMERABLE own properties — and
+  every tree method is defined `enumerable: false`. They now copy property
+  DESCRIPTORS. A missing forward target is also no longer silent: it reports
+  `[ST2017]` naming the cause, because that silence is what let this survive.
+
+- **`batching()` narrowed `batchUpdate()`'s signature.** Core accepts an object
+  or an updater function; the batching override accepted only a function, so
+  `.with(batching())` turned `batchUpdate({ count: 1 })` — the shape the docs
+  use — into `TypeError: updater is not a function`. Restored to parity.
+
 
 - **`updateAndReport()` reported writes that never happened.** Leaves are
   `signal(value, { equal })`, so a new-reference-but-deep-equal value is
@@ -69,7 +72,7 @@ decision record.
 ### Deprecated
 
 - **`@signaltree/enterprise` is deprecated.** Use `tree.updateAndReport()` and
-  `tree.onPathChange()` from `@signaltree/core`. The package stays published so
+  `tree.updateAndReport()` from `@signaltree/core`. The package stays published so
   existing installs keep resolving, and receives security fixes only. Full
   migration table in the [package README](packages/enterprise/README.md).
 
