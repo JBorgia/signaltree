@@ -98,7 +98,15 @@ export class EnterpriseEnhancerComponent {
   totalChanges = computed(
     () => this.lastUpdateResult()?.changedPaths?.length ?? 0
   );
-  hasPathIndex = computed(() => this.tree.getPathIndex() !== null);
+  // A plain method, NOT a computed(). getPathIndex() reads a closure variable
+  // inside the enhancer, not a signal, so a computed() over it has no reactive
+  // dependency to invalidate: it evaluated `false` before the first
+  // updateOptimized() built the index and then reported that forever. Template
+  // bindings re-evaluate a method each change-detection pass, which is what
+  // this needs.
+  hasPathIndex(): boolean {
+    return this.tree.getPathIndex() !== null;
+  }
   lastDuration = computed(() => this.lastUpdateResult()?.duration ?? 0);
   totalPaths = computed(() => this.lastUpdateResult()?.stats?.totalPaths ?? 0);
   optimizedPaths = computed(

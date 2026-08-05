@@ -73,10 +73,7 @@ describe('EnterpriseEnhancerComponent', () => {
         network: 50,
       });
       expect(component.updateCount()).toBe(1);
-      // KNOWN DEFECT: tree.getPathIndex() stays null on this page, so the
-      // path index never activates. Pinned as-is so a fix shows up as a test
-      // change rather than going unnoticed.
-      expect(component.hasPathIndex()).toBe(false);
+      expect(component.hasPathIndex()).toBe(true);
       expect(component.lastUpdateResult()).not.toBeNull();
       expect(component.totalChanges()).toBe(
         component.lastUpdateResult()?.changedPaths.length
@@ -91,19 +88,16 @@ describe('EnterpriseEnhancerComponent', () => {
     });
   });
 
-  it('KNOWN DEFECT: bulkUpdateUsers() does not modify the users array', () => {
-    // It builds a new array toggling the first three `active` flags and
-    // appending David Brown, then writes it via tree.updateOptimized(...).
-    // The write never lands: the array is byte-identical afterwards and no
-    // fourth user appears. Verified by probe, not inferred.
-    //
-    // Pinned so the button's real behaviour is on the record. When the write
-    // is fixed, this test fails and should be replaced with the toggle
-    // assertions it deserves.
-    const before = JSON.stringify(component.users());
+  it('bulkUpdateUsers() toggles the first three active flags and appends David Brown', () => {
+    const before = component.users().map((u) => u.active);
     component.bulkUpdateUsers();
-    expect(JSON.stringify(component.users())).toBe(before);
-    expect(component.users()).toHaveLength(3);
+
+    const after = component.users();
+    expect(after).toHaveLength(4);
+    expect(after[0].active).toBe(!before[0]);
+    expect(after[1].active).toBe(!before[1]);
+    expect(after[2].active).toBe(!before[2]);
+    expect(after[3]).toEqual({ id: 4, name: 'David Brown', active: true });
   });
 
   it('massUpdate() toggles theme and notifications deterministically (metrics/user-active randomness is stubbed)', () => {
@@ -116,9 +110,7 @@ describe('EnterpriseEnhancerComponent', () => {
     expect(component.config().notifications).toBe(false);
     expect(component.config().language).toBe('en');
     // Math.random() > 0.5 is stubbed true for every user.
-    // KNOWN DEFECT (same root cause as bulkUpdateUsers below): the user-array
-    // write does not land, so the active flags are untouched.
-    expect(component.users().every((u) => u.active)).toBe(false);
+    expect(component.users().every((u) => u.active)).toBe(true);
 
     jest.restoreAllMocks();
   });
