@@ -271,6 +271,28 @@ function warnDiscardedBranchWrite(path: string, value: unknown): void {
   }
 }
 
+/**
+ * @internal Dev-mode notice that a builder could not forward a method to its
+ * base tree — which means an enhancer in the chain returned a tree missing it.
+ *
+ * The cause every time so far has been `Object.assign(newTree, tree)` inside an
+ * enhancer: it copies only ENUMERABLE own properties, and every tree method is
+ * defined `enumerable: false`. The forwarder then returned an empty result,
+ * which reads exactly like "nothing changed" — so a dropped write looked
+ * healthy. Fail loudly instead.
+ */
+function warnMissingForward(method: string): void {
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.error(
+      `SignalTree: "${method}" could not be forwarded — an enhancer in the ` +
+        `chain returned a tree without it, so this call did NOTHING. An ` +
+        `enhancer that builds a new tree object must copy own property ` +
+        `DESCRIPTORS (see copyTreeProperties), not Object.assign, which skips ` +
+        `non-enumerable methods. [ST2017]`
+    );
+  }
+}
+
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
 
@@ -1222,7 +1244,15 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       const fn = (baseTree as unknown as Record<string, unknown>)[
         'updateAndReport'
       ] as ((a?: unknown) => string[]) | undefined;
-      return fn ? fn.call(baseTree, arg) : [];
+      if (!fn) {
+        // This is what made the enhancer bug SILENT: a missing method meant an
+        // empty report and a dropped write, indistinguishable from "nothing
+        // changed". A missing forward target is a broken enhancer chain, never
+        // a legitimate state, so say so.
+        warnMissingForward('updateAndReport');
+        return [];
+      }
+      return fn.call(baseTree, arg);
     },
     enumerable: false,
     writable: false,
@@ -1237,7 +1267,11 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       const fn = (baseTree as unknown as Record<string, unknown>)[
         'onPathChange'
       ] as ((l: PathChangeListener) => () => void) | undefined;
-      return fn ? fn.call(baseTree, listener) : () => undefined;
+      if (!fn) {
+        warnMissingForward('onPathChange');
+        return () => undefined;
+      }
+      return fn.call(baseTree, listener);
     },
     enumerable: false,
     writable: true,
@@ -1253,7 +1287,11 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       const fn = (baseTree as unknown as Record<string, unknown>)[
         'batchUpdate'
       ] as ((a?: unknown) => void) | undefined;
-      if (fn) fn.call(baseTree, arg);
+      if (!fn) {
+        warnMissingForward('batchUpdate');
+        return;
+      }
+      fn.call(baseTree, arg);
     },
     enumerable: false,
     writable: true,

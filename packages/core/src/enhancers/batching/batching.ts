@@ -1,4 +1,5 @@
 import { copyTreeProperties } from '../utils/copy-tree-properties';
+import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { visitTree } from '../../lib/internals/visit-tree';
 
 import type {
@@ -310,7 +311,13 @@ export function batching(
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
 
     // Copy enumerable properties
-    Object.assign(enhancedTree, tree);
+    // copyTreeProperties, NOT Object.assign: `Object.assign` copies only
+    // ENUMERABLE own properties, and every tree method (`updateAndReport`,
+    // `batchUpdate`, `onPathChange`, `registerCleanup`, …) is defined
+    // `enumerable: false`. They were silently dropped, so the builder that
+    // wraps this enhanced tree found no method to forward to and returned an
+    // empty result — `updateAndReport({count:1})` returned [] and never wrote.
+    copyTreeProperties(tree as unknown as object, enhancedTree as unknown as object);
 
     // Copy non-enumerable properties
     try {
@@ -345,20 +352,38 @@ export function batching(
     // Add batching methods
     Object.assign(enhancedTree, batchingMethods);
 
-    // Backwards compat: batchUpdate method
+    // batchUpdate — MUST accept the same arguments as core's, which takes an
+    // object OR an updater function. This override previously took only a
+    // function, so `.with(batching())` turned `batchUpdate({ count: 1 })` —
+    // valid everywhere else and the shape the docs use — into
+    // `TypeError: updater is not a function`. An enhancer may add behaviour to
+    // a method; narrowing its signature is a silent breaking change.
     (enhancedTree as any).batchUpdate = (
-      updater: (current: T) => Partial<T>
+      arg: Partial<T> | ((current: T) => Partial<T>)
     ) => {
       (enhancedTree as any).batch(() => {
-        const current = originalTreeCall();
-        const updates = updater(current);
+        const updates =
+          typeof arg === 'function'
+            ? (arg as (current: T) => Partial<T>)(originalTreeCall())
+            : arg;
+        if (!updates || typeof updates !== 'object') return;
 
         Object.entries(updates).forEach(([key, value]) => {
-          const property = ((enhancedTree as ISignalTree<T>).$ as any)[key];
-          if (property && typeof property.set === 'function') {
-            property.set(value);
+          // Own-property read: `updates` is caller-supplied, so `$[key]` with
+          // key === '__proto__' would walk off the tree.
+          const $ = (enhancedTree as ISignalTree<T>).$ as Record<string, unknown>;
+          if (!Object.prototype.hasOwnProperty.call($, key)) return;
+          const property = $[key] as
+            | { set?: (v: unknown) => void }
+            | ((v: unknown) => void)
+            | undefined;
+          if (
+            property &&
+            typeof (property as { set?: unknown }).set === 'function'
+          ) {
+            (property as { set: (v: unknown) => void }).set(value);
           } else if (typeof property === 'function') {
-            property(value);
+            (property as (v: unknown) => void)(value);
           }
         });
       });

@@ -1,4 +1,5 @@
 import { snapshotState } from '../../lib/utils';
+import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { withWriteContext } from '../../lib/write-context';
@@ -404,7 +405,13 @@ export function timeTravel(
     } as unknown as ISignalTree<T>;
 
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
-    Object.assign(enhancedTree, tree);
+    // copyTreeProperties, NOT Object.assign: `Object.assign` copies only
+    // ENUMERABLE own properties, and every tree method (`updateAndReport`,
+    // `batchUpdate`, `onPathChange`, `registerCleanup`, …) is defined
+    // `enumerable: false`. They were silently dropped, so the builder that
+    // wraps this enhanced tree found no method to forward to and returned an
+    // empty result — `updateAndReport({count:1})` returned [] and never wrote.
+    copyTreeProperties(tree as unknown as object, enhancedTree as unknown as object);
 
     // Define new .with() method that passes enhancedTree (not the original tree)
     // to subsequent enhancers. This is critical for preserving the enhancer chain.
