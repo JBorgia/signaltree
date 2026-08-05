@@ -386,6 +386,23 @@ Enterprise provides `updateOptimized()` (diff-based updates), path indexing, and
 - [ ] If not moved, add clear documentation on when to reach for enterprise vs core
 - [ ] Evaluate: is the enterprise package used by anyone besides Cartula? If not, consider deprecating and moving useful parts to core
 
+### RESOLVED in 13.5.0 — see [RFC 0010](docs/rfcs/0010-retiring-enterprise.md)
+
+The last bullet won, and for a reason this plan did not anticipate: the package
+is measurably SLOWER than core. `updateOptimized()` benchmarks 6.8x slower at
+500 leaves and 14.4x at 2,000 than `tree.updateAndReport()`, which returns the
+same changed paths — core leaves already deep-compare with a ref-equality
+short-circuit, so the diff engine pays O(state) to skip writes that were already
+no-ops.
+
+`updateOptimized()` was therefore NOT moved to core; `updateAndReport()` already
+superseded it, and `onPathChange()` was ported. The thread pool and scheduler
+were not "genuinely niche" — they were dead: no caller, no tests, no docs, and
+`scheduler`'s advertised event-loop yield was a microtask. Both removed.
+
+The package is deprecated on npm and stays published for existing installs.
+This section is historical; do not re-open these boxes.
+
 ---
 
 ## 13. README Rewrite
