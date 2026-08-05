@@ -130,6 +130,19 @@ describe('EnterpriseEnhancerComponent', () => {
     expect(component.lastUpdateResult()).toBeNull();
   });
 
+  it('shows the deprecation banner with the core replacement', () => {
+    // The page teaches an API that should no longer be adopted. If a future
+    // refactor drops this banner the page silently goes back to advertising a
+    // deprecated package, so it is pinned rather than left to review.
+    const banner: HTMLElement =
+      fixture.nativeElement.querySelector('.deprecation-banner');
+
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toContain('deprecated');
+    expect(banner.textContent).toContain('updateAndReport');
+    expect(banner.textContent).toContain('onPathChange');
+  });
+
   it('reset button in the DOM drives the same reset()', () => {
     component.updateMetrics();
     fixture.detectChanges();
