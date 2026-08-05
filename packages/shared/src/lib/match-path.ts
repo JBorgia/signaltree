@@ -29,3 +29,20 @@ export function matchPath(pattern: string, path: string): boolean {
     (segment, index) => segment === '*' || segment === pathSegments[index]
   );
 }
+
+/**
+ * True when `key` is a wildcard PATTERN rather than a literal path.
+ *
+ * Segment-based, matching {@link matchPath}: only a whole segment equal to `*`
+ * is a wildcard. A substring test (`key.includes('*')`) is wrong — it also
+ * catches a field genuinely named `weird*name`, which `matchPath` treats as a
+ * literal that matches only itself.
+ *
+ * @example
+ * isGlobKey('phones.*.value'); // true
+ * isGlobKey('*');              // true
+ * isGlobKey('weird*name');     // false — a literal field name
+ */
+export function isGlobKey(key: string): boolean {
+  return key.split('.').includes('*');
+}

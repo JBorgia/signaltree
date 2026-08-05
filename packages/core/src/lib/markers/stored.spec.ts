@@ -1663,6 +1663,47 @@ describe('stored() — lifecycle drain reaches every unpersisted write', () => {
     vi.useRealTimers();
   });
 
+  it('drains a write that becomes pending DURING the drain', () => {
+    vi.useFakeTimers();
+
+    const failing: Storage = {
+      ...createMockStorage(),
+      setItem: () => {
+        throw new Error('quota');
+      },
+    };
+
+    const fallback = createStoredSignal<string>({
+      [STORED_MARKER]: true,
+      key: 'fallback',
+      defaultValue: '',
+      options: { storage: mockStorage, debounceMs: 100 },
+    });
+
+    createStoredSignal<string>({
+      [STORED_MARKER]: true,
+      key: 'primary',
+      defaultValue: '',
+      options: {
+        storage: failing,
+        debounceMs: 100,
+        // A plausible quota-fallback: on failure, write somewhere else.
+        onError: () => fallback.set('written-from-onError'),
+      },
+    }).set('trigger');
+
+    flushAllStoredSignals();
+
+    // The fallback enrolled mid-drain. Iterating a COPY of the registry would
+    // skip it — losing the write and stranding a strong reference at exactly
+    // the moment (page hide) when no timer will fire to clear it.
+    expect(JSON.parse(mockStorage.getItem('fallback') as string).data).toBe(
+      'written-from-onError'
+    );
+
+    vi.useRealTimers();
+  });
+
   it('drains many pending writes in one pass', () => {
     vi.useFakeTimers();
 

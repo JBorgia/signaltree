@@ -29,7 +29,13 @@ import {
     ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
 import { isTraversableNode, signalTree } from '@signaltree/core';
-import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
+import {
+  deepClone,
+  isGlobKey,
+  matchPath,
+  mergeDeep,
+  parsePath,
+} from '@signaltree/shared';
 import { firstValueFrom, isObservable, Observable, Subscription } from 'rxjs';
 
 // ============================================
@@ -184,6 +190,20 @@ export class FormValidationError extends Error {
     super('Form validation failed');
     this.name = 'FormValidationError';
   }
+}
+
+/**
+ * Own-property read for maps indexed by caller-supplied field paths.
+ *
+ * `errors()` and friends are plain objects handed back to users, so a bare
+ * `map[path]` resolves 'toString'/'constructor'/'valueOf' to inherited
+ * Object.prototype members — returning a function where an error message
+ * belongs, or throwing inside change detection for the ones needing a
+ * receiver. Guarding the read keeps those maps ordinary objects for consumers
+ * while making the lookup safe.
+ */
+function readOwn<T>(map: Record<string, T>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 }
 
 type SyncValidatorMap = Record<string, (value: unknown) => string | null>;
@@ -343,13 +363,14 @@ export function createFormTree<T extends Record<string, unknown>>(
   // persistController.persistImmediately();
 
   // Seed one computed per validator path. GLOB keys ('phones.*.value') are
-  // skipped on purpose: errors()/asyncErrors() are keyed by CONCRETE traversal
+  // skipped on purpose — note `isGlobKey` is segment-based like `matchPath`,
+  // so a field genuinely named `weird*name` is a literal and IS seeded: errors()/asyncErrors() are keyed by CONCRETE traversal
   // paths ('phones.0.value'), so a glob entry could only ever read undefined —
   // seeding it publishes a signal that is permanently empty and looks broken.
   // Concrete paths are added lazily by getFieldError()/getFieldAsyncError().
   const fieldErrorKeys = new Set(
     [...Object.keys(syncValidators), ...Object.keys(asyncValidators)].filter(
-      (key) => !key.includes('*')
+      (key) => !isGlobKey(key)
     )
   );
 
@@ -368,14 +389,6 @@ export function createFormTree<T extends Record<string, unknown>>(
     fieldAsyncErrors[fieldPath] = computed(() => asyncErrors()[fieldPath]);
   });
 
-  // Shared no-error signal for paths that carry no validator. Errors only ever
-  // originate from a validator, so such a path can never have one — returning
-  // this instead of caching a per-path computed keeps the lazy cache bounded
-  // by the paths that can actually produce an error.
-  const noFieldError = computed<string | undefined>(() => undefined);
-  const hasValidatorFor = (path: string) =>
-    findValidator(syncValidators, path) !== undefined ||
-    findValidator(asyncValidators, path) !== undefined;
 
   const fieldConfigLookup = (path: string) =>
     resolveFieldConfig(fieldConfigs, path);
@@ -569,10 +582,6 @@ export function createFormTree<T extends Record<string, unknown>>(
 
   const destroy = () => {
     cleanupCallbacks.splice(0).forEach((fn) => fn());
-    // Release the lazily-cached per-path signals; they are keyed by paths this
-    // form's callers asked for and are useless once the form is gone.
-    for (const key of Object.keys(fieldErrors)) delete fieldErrors[key];
-    for (const key of Object.keys(fieldAsyncErrors)) delete fieldAsyncErrors[key];
   };
 
   const formTree = {
@@ -602,13 +611,11 @@ export function createFormTree<T extends Record<string, unknown>>(
     // must not accumulate a computed per index for fields that have no
     // validator at all.
     getFieldError: (field: string) =>
-      hasValidatorFor(field)
-        ? (fieldErrors[field] ??= computed(() => errors()[field]))
-        : noFieldError,
+      (fieldErrors[field] ??= computed(() => readOwn(errors(), field))),
     getFieldAsyncError: (field: string) =>
-      hasValidatorFor(field)
-        ? (fieldAsyncErrors[field] ??= computed(() => asyncErrors()[field]))
-        : noFieldError,
+      (fieldAsyncErrors[field] ??= computed(() =>
+        readOwn(asyncErrors(), field)
+      )),
     getFieldTouched: (field: string) =>
       computed(() => formGroup.get(field)?.touched ?? false),
     isFieldValid: (field: string) =>
@@ -1075,15 +1082,16 @@ interface ControlSnapshot {
 }
 
 function collectControlSnapshot(control: AbstractControl): ControlSnapshot {
-  // Null-prototype: these maps are indexed by caller-supplied field paths, so a
-  // plain `{}` would resolve 'toString'/'constructor'/'valueOf' to inherited
-  // Object.prototype members and report a function as if it were an error
-  // message.
+  // Plain objects on purpose: these maps are handed to users via errors(),
+  // asyncErrors(), touched() and asyncValidating(), where calling
+  // `hasOwnProperty` on them is ordinary. Lookups by caller-supplied path go
+  // through readOwn(), which is what keeps an inherited 'toString' from being
+  // reported as an error message.
   const snapshot: ControlSnapshot = {
-    syncErrors: Object.create(null),
-    asyncErrors: Object.create(null),
-    touched: Object.create(null),
-    pending: Object.create(null),
+    syncErrors: {},
+    asyncErrors: {},
+    touched: {},
+    pending: {},
   };
 
   traverseControls(
@@ -1306,7 +1314,7 @@ function resolveFieldConfig(
   let match: { key: string; config: FieldConfig } | undefined;
 
   for (const key of keys) {
-    if (!key.includes('*')) {
+    if (!isGlobKey(key)) {
       continue;
     }
     if (matchPath(key, path)) {
@@ -1337,7 +1345,7 @@ function findValidator<T>(map: Record<string, T>, path: string): T | undefined {
 
   let candidate: { key: string; value: T } | undefined;
   for (const key of Object.keys(map)) {
-    if (!key.includes('*')) {
+    if (!isGlobKey(key)) {
       continue;
     }
     if (matchPath(key, path)) {

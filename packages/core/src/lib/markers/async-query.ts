@@ -136,12 +136,10 @@ let asyncQueryRegistered = false;
  *   }),
  * });
  *
- * // Wire to a form input. Use the split form — `[(ngModel)]` would assign to
- * // the accessor itself rather than write through it:
- * <input
- *   [ngModel]="store.$.search.input()"
- *   (ngModelChange)="store.$.search.input.set($event)"
- * >
+ * // Wire to a form input via ngModel. Two-way binding works directly: the
+ * // input signal is a real WritableSignal, and Angular's two-way write goes
+ * // through `.set()` for signal targets (17.2+).
+ * <input [(ngModel)]="store.$.search.input">
  *
  * // Or push values imperatively:
  * store.$.search.input.set('alice');

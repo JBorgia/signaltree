@@ -118,6 +118,13 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     forms: {
       signup: {
         email: 'jane.doe@example.com',
+        // Must be seeded, not just declared optional on the interface: a tree's
+        // signal graph is built from this initial shape, so a write to a key
+        // that was never here is silently discarded. Without this line
+        // `triggerRuleViolation()` writes authToken, the write goes nowhere,
+        // no changed path is ever reported, and the noSensitiveData rule
+        // cannot fire — the demo looked broken while the rule was correct.
+        authToken: '',
       },
     },
     events: [],

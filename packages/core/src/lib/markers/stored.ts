@@ -442,12 +442,18 @@ function installLifecycleFlush(): void {
  * (e.g. Capacitor's `App.addListener('pause', ...)`).
  */
 export function flushAllStoredSignals(): void {
-  // Iterate a copy: each commit removes its own entry, and a listener running
-  // during teardown must not be derailed by one bad key. Errors are already
-  // routed to onError/console inside writeNow; the guard here is for anything
-  // that escapes it (e.g. an instrumented console), which would otherwise
-  // abandon every signal after it in the drain.
-  for (const commit of [...pendingStoredWrites]) {
+  // Iterate the LIVE set, not a copy. JS Set iteration already does both
+  // things a copy would be taken for: removing the current entry mid-iteration
+  // is safe, and entries added during iteration ARE visited. Iterating a copy
+  // instead loses that second property — a signal that becomes pending during
+  // the drain (an onError handler writing a fallback key, say) would be missed
+  // and left in the set, which is both a lost write and a retained reference,
+  // at the one moment the timer will never fire to clean it up.
+  //
+  // The try/catch is for anything that escapes writeNow's own error handling
+  // (e.g. an instrumented console), which would otherwise abandon every signal
+  // after it in the drain.
+  for (const commit of pendingStoredWrites) {
     try {
       commit();
     } catch {

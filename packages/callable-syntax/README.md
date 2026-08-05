@@ -30,8 +30,18 @@ npm install -D @signaltree/callable-syntax
 
 #### Angular Projects
 
+> **⚠️ Not currently supported on Angular 20+.** The setup below requires the
+> legacy `@angular-devkit/build-angular:browser` webpack builder via
+> `@angular-builders/custom-webpack`. Modern Angular uses the esbuild-based
+> `@angular/build:application` builder, which exposes no supported plugin hook:
+> its schema has no `plugins` option, the experimental `codePlugins` passthrough
+> runs *after* Angular's compiler plugin has already claimed every `.ts` file
+> (so a user plugin receives none of them), and ngtsc's transformer list is
+> hardcoded. This was verified against a real build. Until this is resolved,
+> treat the transform as unavailable for Angular applications.
+
 ```typescript
-// angular.json - add to build options
+// angular.json - add to build options (legacy webpack builder only)
 {
   "build": {
     "options": {
@@ -111,7 +121,11 @@ No per-file imports required in this repo. Types are loaded via root `tsconfig`:
 
 - Pure dev-time; adds 0 bytes to production bundle.
 - Does not modify runtime; you can mix standard `.set()` / `.update()` calls freely.
-- Safe fallback: if plugin absent, callable writes just become runtime errors you can catch in CI (recommend lint rule if enforcing).
+- **NOT a safe fallback.** If the transform does not run, a callable write is a
+  SILENT NO-OP, not an error: a leaf is an Angular signal, and calling a signal
+  with an argument returns the current value and ignores the argument. Nothing
+  throws and nothing is written. Verify the transform actually runs in every
+  build configuration you ship.
 
 ### License
 

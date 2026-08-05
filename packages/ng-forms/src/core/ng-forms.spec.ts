@@ -281,18 +281,18 @@ describe('createFormTree field-error lookup hardening', () => {
     expect(form.getFieldError('toString')()).toBe('toString is required');
   });
 
-  it('does not grow the cache for paths no validator covers', () => {
+  it('caches per path so a repeated lookup is a plain record hit', () => {
     const form = (createFormTree as any)(
       { username: '' },
       { validators: { username: required() } }
     );
 
-    for (let i = 0; i < 500; i++) {
-      form.getFieldError(`rows.${i}.value`);
-    }
-
-    // Uncovered paths share one constant signal instead of caching per path.
-    expect(Object.keys(form.fieldErrors).length).toBeLessThan(10);
+    // Identity stability matters for template bindings, and the lookup must
+    // NOT re-scan the validator map on a cache hit — gating the cache behind a
+    // glob scan made this path 15-40x slower than the read it guarded.
+    const first = form.getFieldError('rows.0.value');
+    expect(form.getFieldError('rows.0.value')).toBe(first);
+    expect(first()).toBeUndefined();
   });
 
   it('caches per concrete path when a glob validator covers it', () => {
@@ -306,16 +306,63 @@ describe('createFormTree field-error lookup hardening', () => {
     expect(first).toBe(again); // stable identity for template bindings
   });
 
-  it('releases cached path signals on destroy()', () => {
+  it('keeps seeded entries usable after destroy()', () => {
     const form = (createFormTree as any)(
-      { phones: [{ value: '' }] },
-      { validators: { 'phones.*.value': required() } }
+      { name: '' },
+      { validators: { name: required('name required') } }
     );
 
-    for (let i = 0; i < 50; i++) form.getFieldError(`phones.${i}.value`);
-    expect(Object.keys(form.fieldErrors).length).toBeGreaterThan(0);
-
+    const captured = form.getFieldError('name');
     form.destroy();
-    expect(Object.keys(form.fieldErrors).length).toBe(0);
+
+    // fieldErrors is public: a held reference must stay callable rather than
+    // becoming undefined, so destroy() does not evict entries.
+    expect(typeof form.fieldErrors['name']).toBe('function');
+    expect(() => captured()).not.toThrow();
+  });
+
+  it('getFieldError agrees with errors() for an externally-set error', async () => {
+    const form = (createFormTree as any)(
+      { a: '', b: '' },
+      { validators: { a: required('a required') } }
+    );
+
+    // 'b' has no validator, but a control error can arrive from elsewhere
+    // (setErrors, a server-error push). The two surfaces must not disagree.
+    form.form.get('b')?.setErrors({ signaltree: 'externally set error' });
+    await form.validate();
+
+    expect(form.errors()['b']).toBe('externally set error');
+    expect(form.getFieldError('b')()).toBe('externally set error');
+  });
+});
+
+describe('createFormTree glob-vs-literal validator keys', () => {
+  it('seeds a field whose literal name contains an asterisk', () => {
+    const form = (createFormTree as any)(
+      { 'weird*name': '', normal: '' },
+      {
+        validators: {
+          'weird*name': required('star required'),
+          normal: required('normal required'),
+        },
+      }
+    );
+
+    // `matchPath` only treats a WHOLE segment equal to '*' as a wildcard, so
+    // 'weird*name' is a literal path and belongs in the seeded record.
+    expect(Object.keys(form.fieldErrors)).toContain('weird*name');
+    expect(Object.keys(form.fieldErrors)).toContain('normal');
+  });
+
+  it('still excludes genuine glob patterns from the seeded record', () => {
+    const form = (createFormTree as any)(
+      { phones: [{ value: '' }] },
+      { validators: { 'phones.*.value': required('phone required') } }
+    );
+
+    expect(Object.keys(form.fieldErrors)).not.toContain('phones.*.value');
+    // ...and the concrete path still resolves through the lazy path.
+    expect(form.getFieldError('phones.0.value')).toBeDefined();
   });
 });

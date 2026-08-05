@@ -2295,8 +2295,10 @@ For fair, reproducible measurements that reflect your app and hardware, use the 
       </div>
 
       <!-- User Form -->
-      <!-- Branch accessors aren't writable via [(ngModel)] (it can't bind to a function
-           call); read the leaf with [ngModel] and write the leaf with (ngModelChange). -->
+      <!-- Leaves ARE writable via [(ngModel)]: a leaf is a real WritableSignal and
+           Angular's two-way write calls .set() on signal targets (17.2+). The split
+           [ngModel]/(ngModelChange) form below is equivalent, just more explicit.
+           BRANCH nodes are what you can't two-way bind — they're plain callables. -->
       <form (ngSubmit)="saveUser()" #form="ngForm">
         <input [ngModel]="userTree.$.form.name()" (ngModelChange)="userTree.$.form.name.set($event)" name="name" placeholder="Name" required />
         <input [ngModel]="userTree.$.form.email()" (ngModelChange)="userTree.$.form.email.set($event)" name="email" type="email" placeholder="Email" required />
