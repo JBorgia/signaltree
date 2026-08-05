@@ -1,4 +1,4 @@
-import { effect } from '@angular/core';
+import { computed, effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
@@ -416,7 +416,13 @@ describe('change reporting — defects found by adversarial audit', () => {
     const tree = signalTree({ user: { name: 'Ada', age: 1 } });
 
     const changed = tree.updateAndReport({
-      user: (u: { name: string; age: number }) => ({ ...u, name: 'Grace' }),
+      user: (u: { name: string; age: number }) => {
+        // Asserting the ARGUMENT matters: passing `undefined` here left the
+        // whole suite green while breaking every real caller, which would
+        // TypeError on `u.age + 1`.
+        expect(u).toEqual({ name: 'Ada', age: 1 });
+        return { ...u, name: 'Grace' };
+      },
     } as never);
 
     expect(changed).toEqual(['user.name']);
@@ -476,6 +482,9 @@ describe('change reporting — defects found by adversarial audit', () => {
 
     expect(returned).toEqual(['count']);
     expect(seenBySecond).toEqual([['count']]);
+    // The caller owns their array. Freezing `out` itself (rather than a copy)
+    // would satisfy every assertion above while handing callers a frozen result.
+    expect(() => returned.push('x')).not.toThrow();
   });
 
   it('delivers events in write order when a listener writes', () => {
@@ -508,5 +517,121 @@ describe('change reporting — defects found by adversarial audit', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe('change reporting — second-round audit findings', () => {
+  it('resolves an updater function at a LEAF instead of storing it', () => {
+    const tree = signalTree({ count: 0, list: [1, 2] });
+
+    // Same syntax as the branch form one level up. Storing the function put a
+    // raw function into state and reported the path as changed — the leaf then
+    // renders as "[object Function]" and JSON.stringify drops it.
+    expect(tree.updateAndReport({ count: (c: number) => c + 1 } as never)).toEqual(
+      ['count']
+    );
+    expect(tree.$.count()).toBe(1);
+    expect(typeof tree.$.count()).toBe('number');
+
+    tree.updateAndReport({ list: (l: number[]) => [...l, 3] } as never);
+    expect(Array.isArray(tree.$.list())).toBe(true);
+    expect(tree.$.list()).toEqual([1, 2, 3]);
+  });
+
+  it('still lets a leaf that HOLDS a function be replaced', () => {
+    const first = () => 'a';
+    const second = () => 'b';
+    const tree = signalTree({ cb: first as () => string });
+
+    tree.updateAndReport({ cb: second } as never);
+
+    expect(tree.$.cb()).toBe(second);
+  });
+
+  it('diagnoses a discarded branch write that arrives via an updater', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' } });
+
+      expect(tree.updateAndReport({ user: () => null } as never)).toEqual([]);
+      expect(spy).toHaveBeenCalled();
+      spy.mockClear();
+
+      // The forgotten-await case: an async updater returns a Promise, which IS
+      // an object, so Object.entries() is empty and the write vanished in
+      // silence — the worst shape of this bug.
+      expect(
+        tree.updateAndReport({ user: async (u: unknown) => u } as never)
+      ).toEqual([]);
+      expect(tree()).toEqual({ user: { name: 'Ada' } });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('does not warn for `undefined` at a branch — that is legal Partial<T>', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' }, count: 0 });
+
+      // Exactly what `{ ...defaults, ...patch }` produces for an absent
+      // optional key. Needs no cast, so a console.error here is crying wolf on
+      // correct, type-checked code.
+      const changed = tree.updateAndReport({ count: 1, user: undefined });
+
+      expect(changed).toEqual(['count']);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('onPathChange does not create a reactive dependency on destroyed', () => {
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ count: 0 });
+      let runs = 0;
+      const c = computed(() => {
+        runs++;
+        tree.onPathChange(() => undefined);
+        return runs;
+      });
+      c();
+      const base = runs;
+
+      tree.destroy();
+      c();
+
+      // Registering a listener inside a component effect() is the ordinary
+      // place to do it; destroying the tree must not re-run that effect body.
+      expect(runs).toBe(base);
+    });
+  });
+
+  it('unsubscribing ANOTHER listener during dispatch takes effect immediately', () => {
+    const tree = signalTree({ a: 0 });
+    const seen: string[] = [];
+    tree.onPathChange(() => {
+      seen.push('L1');
+      off2();
+    });
+    const off2 = tree.onPathChange(() => seen.push('L2'));
+    tree.onPathChange(() => seen.push('L3'));
+
+    tree({ a: 1 });
+
+    // L2 running after being torn down is use-after-teardown: a listener that
+    // disposes a child still sees the child's handler fire against dead state.
+    expect(seen).toEqual(['L1', 'L3']);
+  });
+
+  it('does not treat a Date as equal to a keyless object', () => {
+    const tree = signalTree({ at: new Date(0) });
+
+    // A malformed payload sending {} for a date field was silently swallowed
+    // AND honestly reported as "no change" — correct reporting of a lost write.
+    const changed = tree.updateAndReport({ at: {} } as never);
+
+    expect(changed).toEqual(['at']);
+    expect(tree.$.at()).toEqual({});
   });
 });

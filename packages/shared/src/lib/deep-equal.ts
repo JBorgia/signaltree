@@ -57,6 +57,19 @@ export function deepEqual<T>(a: T, b: T): boolean {
 
   if (Array.isArray(b)) return false;
 
+  // A built-in on ONE side only must be unequal. Every branch above requires
+  // BOTH sides to match, so a Date vs a keyless object fell through to the
+  // generic key comparison below and compared EQUAL — `deepEqual(new Date(0), {})`
+  // was true, so a malformed payload sending `{}` for a date field was silently
+  // swallowed AND honestly reported as no change. Same for Map/Set/RegExp/Error
+  // and the primitive wrapper objects, which all have no own enumerable keys:
+  // "no differing keys" is not the same as "equal".
+  if (
+    Object.prototype.toString.call(a) !== Object.prototype.toString.call(b)
+  ) {
+    return false;
+  }
+
   const objA = a as Record<string, unknown>;
   const objB = b as Record<string, unknown>;
   const keysA = Object.keys(objA);

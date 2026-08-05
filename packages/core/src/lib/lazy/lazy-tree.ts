@@ -11,23 +11,21 @@ import {
 declare const ngDevMode: boolean | undefined;
 
 /**
- * Property names that must never be read through, written through, or reported
- * as present on a lazy node.
+ * `__proto__` is the ONLY name that must be refused outright: it is an accessor
+ * on Object.prototype, so reading it walks off the tree and writing it mutates
+ * every object in the process.
  *
- * `__proto__` is an accessor on Object.prototype, so reading it walks OFF the
- * tree and writing it mutates every object in the process; `constructor` and
- * `prototype` are the two-hop route to the same place.
- *
- * Inlined rather than imported from `@signaltree/shared` on purpose. `shared`
- * is a private package bundled into core, and its consumers build with
- * `stripInternal`, so a guard exported from there resolves as an empty module
- * across that boundary. A security primitive is also better read at its use
- * site than one indirection away.
+ * `constructor` and `prototype` are dangerous only as a FALL-THROUGH to the
+ * prototype chain, which the own-property check at each trap already prevents —
+ * an own `constructor` reads back the user's own value and can never yield
+ * `Object`. Blocklisting them by name (as a previous revision did) silently
+ * DELETED legitimate state: `signalTree({ constructor: 'x' }, lazy)` unwrapped
+ * to `{}`, eager and lazy trees disagreed, and `makeNodeAccessor` is written as
+ * a concise method specifically so `prototype` works as a state key. Two guards
+ * that each cover the real hole beat one that also eats data.
  */
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
 function isUnsafeKey(key: string | symbol): boolean {
-  return typeof key === 'string' && UNSAFE_KEYS.has(key);
+  return key === '__proto__';
 }
 
 /**
@@ -86,9 +84,9 @@ export function createLazySignalTree<T extends object>(
       // is an object it got wrapped in a nested lazy Proxy below and cached —
       // a live, WRITABLE handle on Object.prototype reachable from any code
       // holding the tree. `$.__proto__.isAdmin = true` polluted every object in
-      // the process. Own-properties only, and the three prototype-chain keys are
-      // refused outright even when own (a `defineProperty` write can mint an own
-      // `__proto__`, which would otherwise satisfy the own-ness check forever).
+      // the process. Own-properties only, plus `__proto__` refused even when own
+      // (a defineProperty write can mint an own `__proto__`, which would
+      // otherwise satisfy the own-ness check forever).
       if (isUnsafeKey(key)) return undefined;
       if (!Object.prototype.hasOwnProperty.call(target, key)) return undefined;
 

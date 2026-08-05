@@ -85,6 +85,9 @@ describe('updateOptimized — prototype pollution', () => {
         JSON.parse('{"config":{"constructor":{"prototype":{"zzPwn":1}}}}')
       );
 
+      // NOTE: this shape never polluted, on any version — audit measured its
+      // detection power as ZERO. Kept as a regression pin and labelled as one,
+      // rather than counted as proof that a guard works.
       expect(pollutionHits()).toEqual([]);
     });
 
@@ -235,6 +238,32 @@ describe('lazy tree — prototype access without enterprise', () => {
       /* refused loudly — also acceptable */
     }
 
+    // The assertions this test is NAMED for and previously lacked.
+    // pollutionHits() alone never fails here, because neither operation
+    // touches a GLOBAL prototype: the `set` trap silently replaced the tree's
+    // own raw state object's prototype with attacker data, and defineProperty
+    // minted the own `__proto__` key that unlocks every downstream own-ness
+    // check. With only the hits assertion, deleting either guard left this
+    // green — audit proved it by deleting them.
+    expect(Object.getPrototypeOf($)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call($, '__proto__')).toBe(false);
+    expect(pollutionHits()).toEqual([]);
+  });
+
+  it('keeps state legitimately named constructor or prototype', () => {
+    // The guard must be NARROW. Blocking these by name (a previous revision
+    // did) silently deleted real state on lazy trees only, so eager and lazy
+    // disagreed — and `makeNodeAccessor` is a concise method precisely so
+    // `prototype` works as a state key.
+    const state = { constructor: 'ctor', prototype: 'proto', ok: 1 };
+    const eager = signalTree({ ...state });
+    const lazyTree = signalTree(
+      { ...state },
+      { lazy: lazy(), useLazySignals: true }
+    );
+
+    expect(eager()).toEqual(state);
+    expect(lazyTree()).toEqual(state);
     expect(pollutionHits()).toEqual([]);
   });
 
@@ -250,3 +279,4 @@ describe('lazy tree — prototype access without enterprise', () => {
     expect(tree.$.n()).toBe(1);
   });
 });
+

@@ -466,6 +466,23 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   }
 
   for (const key of Object.keys(snapshot as Record<string, unknown>)) {
+    // SECURITY: `snapshot` is untrusted. The devtools channel reaches here via
+    // a bare JSON.parse of a window.postMessage payload, and JSON.parse creates
+    // a real OWN `__proto__` key, so Object.keys yields it. Reading
+    // `stateNode['__proto__']` then handed back Object.prototype, which is an
+    // object, so the branch below RECURSED INTO Object.prototype and the next
+    // level assigned onto it — full process-wide pollution from one message,
+    // with no enterprise package and no lazy tree involved.
+    //
+    // Own-ness is the load-bearing guard — without it applyState walks into
+    // ANYTHING on the prototype chain, not just a named few — and `__proto__`
+    // is refused by name on top, because a minted own `__proto__` would
+    // otherwise satisfy own-ness forever. `constructor`/`prototype` need no
+    // name check: own-ness already stops the fall-through, and blocking them by
+    // name would delete legitimate state under those keys.
+    if (key === '__proto__') continue;
+    if (!Object.prototype.hasOwnProperty.call(stateNode, key)) continue;
+
     const val = (snapshot as Record<string, unknown>)[key];
     const target = (stateNode as Record<string, unknown>)[key];
 

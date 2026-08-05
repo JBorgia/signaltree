@@ -188,3 +188,28 @@ describe('deepEqual — SameValueZero for NaN (13.5.0)', () => {
     expect(deepEqual(0, -0)).toBe(true); // SameValueZero, as before
   });
 });
+
+describe('deepEqual — a built-in on one side only is never equal (13.5.0)', () => {
+  // Every built-in branch requires BOTH sides to match, so a Date vs a keyless
+  // object fell through to generic key comparison: neither has own enumerable
+  // keys, so "no differing keys" was read as "equal". A malformed payload
+  // sending {} for a date field was then silently swallowed AND honestly
+  // reported as no change — correct reporting of a lost write.
+  it('does not equate a Date with a keyless object', () => {
+    expect(deepEqual(new Date(0), {} as never)).toBe(false);
+    expect(deepEqual({} as never, new Date(0))).toBe(false);
+  });
+
+  it('does not equate other keyless built-ins across types', () => {
+    expect(deepEqual(new Map() as never, {} as never)).toBe(false);
+    expect(deepEqual(new Set() as never, {} as never)).toBe(false);
+    expect(deepEqual(/a/ as never, {} as never)).toBe(false);
+    expect(deepEqual(new Date(0) as never, new Map() as never)).toBe(false);
+  });
+
+  it('still equates matching plain objects', () => {
+    expect(deepEqual({ a: 1 }, { a: 1 })).toBe(true);
+    expect(deepEqual({}, {})).toBe(true);
+    expect(deepEqual({ a: 1 }, { a: 2 })).toBe(false);
+  });
+});

@@ -252,6 +252,25 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   return accessor;
 }
 
+/**
+ * @internal Dev-mode notice that a write to a BRANCH position was discarded
+ * because its value is not an object. Reached both directly (`{ user: null }`)
+ * and via an updater that returned one (`{ user: () => null }`) — the second
+ * used to vanish in silence, including the forgotten-`await` case where the
+ * updater returns a Promise.
+ */
+function warnDiscardedBranchWrite(path: string, value: unknown): void {
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.error(
+      `SignalTree: write to "${path}" DISCARDED — a branch cannot be replaced ` +
+        `by a non-object value (received ${
+          value === null ? 'null' : typeof value
+        }). Write the leaves, or use a marker if this position should hold a ` +
+        `value. [ST2014]`
+    );
+  }
+}
+
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
 
@@ -267,9 +286,13 @@ function recursiveUpdate(
     ? (target as unknown as Record<string, unknown>)
     : (target as Record<string, unknown>);
 
-  for (const [key, value] of Object.entries(
+  for (const [key, rawValue] of Object.entries(
     updates as Record<string, unknown>
   )) {
+    // Reassignable: an updater FUNCTION at either a leaf or a branch is
+    // resolved to its result below, and everything downstream then sees one
+    // shape rather than each branch re-implementing the updater case.
+    let value = rawValue;
     const prop = targetObj[key];
     const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
@@ -289,6 +312,20 @@ function recursiveUpdate(
 
     if (isSignal(prop) && 'set' in prop) {
       const sig = prop as WritableSignal<unknown>;
+      // A function at a LEAF is an updater, the same as at a branch — resolve
+      // it. Storing it verbatim put a raw function into state and then reported
+      // the path as CHANGED, which is the exact opposite of this method's
+      // contract: what landed was garbage. Downstream the leaf renders as
+      // "[object Function]", JSON.stringify drops it, persistence writes
+      // nothing. Reachable without a cast on any leaf typed unknown/any.
+      //
+      // A leaf that legitimately HOLDS a function is left alone — replacing a
+      // callback by assigning a new one must keep working.
+      if (typeof value === 'function' && typeof untracked(() => sig()) !== 'function') {
+        value = (value as (current: unknown) => unknown)(
+          untracked(() => sig())
+        );
+      }
       // Ref-equality short-circuit: skip the .set() entirely when the
       // incoming value is identical to the current value. Saves the
       // function-call + Angular's internal equality check + any glitch
@@ -341,13 +378,25 @@ function recursiveUpdate(
         // the accessor's own updater path drops `out` and `pathPrefix`, so the
         // reported path was the branch ('user') instead of the leaves that
         // changed ('user.name'), and a pure no-op updater still reported a
-        // change. Resolving here keeps one code path for reporting.
+        // change. Resolving here keeps one code path for reporting — and one
+        // code path for the discard diagnostic below, which the resolved value
+        // now falls through to. Without that, `u => null` and a forgotten
+        // `await` (an async updater returns a Promise, whose Object.entries is
+        // empty) were both SILENT no-ops.
         const updater = value as (current: unknown) => unknown;
-        batchScope(() =>
-          recursiveUpdate(prop, updater(unwrap(prop)), out, childPath)
-        );
+        value = updater(unwrap(prop));
+      }
+      if (typeof value === 'function') {
+        // An updater that returned another function. Nothing sane to do.
+        warnDiscardedBranchWrite(childPath, value);
       } else if (value && typeof value === 'object') {
-        recursiveUpdate(prop, value, out, childPath);
+        batchScope(() => recursiveUpdate(prop, value, out, childPath));
+      } else if (value === undefined) {
+        // `{ user: undefined }` is type-legal for Partial<T> and is exactly what
+        // `{ ...defaults, ...patch }` produces for an absent optional key. It
+        // means "no change", so it is skipped WITHOUT a diagnostic — warning
+        // here cried wolf on correct, type-checked code.
+        continue;
       } else {
         // A primitive, null or undefined aimed at a BRANCH. This has always
         // been discarded — the accessor forwards to recursiveUpdate, which
@@ -355,15 +404,7 @@ function recursiveUpdate(
         // changed anyway. That is the same defect the leaf branch above was
         // fixed for, and it is the shape a server payload takes when it sends
         // `null` for a whole object. Report nothing, and say why in dev.
-        if (typeof ngDevMode === 'undefined' || ngDevMode) {
-          console.error(
-            `SignalTree: write to "${childPath}" DISCARDED — a branch cannot ` +
-              `be replaced by a non-object value (received ${
-                value === null ? 'null' : typeof value
-              }). Write the leaves, or use a marker if this position should ` +
-              `hold a value. [ST2014]`
-          );
-        }
+        warnDiscardedBranchWrite(childPath, value);
       }
     }
     // NOTE: no diagnostic for "matched neither guard". Since stored() became a
@@ -572,8 +613,12 @@ function create<T extends object>(
           break;
         }
         const paths = pathQueue.shift() as ReadonlyArray<string>;
-        // Snapshot the listener set: one may subscribe or unsubscribe here.
+        // Snapshot so a listener SUBSCRIBING here is not called for the
+        // in-flight event, and re-check membership so one UNSUBSCRIBING another
+        // takes effect immediately — otherwise a listener that tears a child
+        // down still sees the child's handler fire against dead state.
         for (const fn of Array.from(pathListeners)) {
+          if (!pathListeners.has(fn)) continue;
           try {
             fn(paths);
           } catch (error) {
@@ -854,7 +899,7 @@ function create<T extends object>(
       if (typeof listener !== 'function') return () => undefined;
       // Subscribing to a destroyed tree would leak the listener immediately —
       // nothing will ever clear it again.
-      if (destroyedSig()) return () => undefined;
+      if (untracked(destroyedSig)) return () => undefined;
       pathListeners.add(listener);
       return () => {
         pathListeners.delete(listener);
