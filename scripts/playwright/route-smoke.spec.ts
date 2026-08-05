@@ -35,6 +35,7 @@ const ROUTES = [
   '/form-marker', // form() marker: validation, wizard, history
   '/time-travel', // undo/redo history
   '/persistence', // persistence() enhancer
+  '/enterprise-enhancer', // deprecated package (see content assertion below)
 ];
 
 // Noise that is not a product bug and would make the gate flaky.
@@ -132,4 +133,24 @@ test('/guardrails hot-path panel populates after the scenario runs', async ({
   await expect(hotPathItems.first()).toBeVisible({ timeout: 20_000 });
   expect(await hotPathItems.count()).toBeGreaterThan(0);
   await expect(page.getByText(/No hot paths yet/i)).toHaveCount(0);
+});
+
+/**
+ * The enterprise page teaches an API that should no longer be adopted, so the
+ * deprecation banner is the page's most important content. A unit spec already
+ * asserts it renders; this checks it survives the production build and the
+ * route actually resolves, which the unit spec cannot see.
+ */
+test('/enterprise-enhancer shows the deprecation banner and the core replacement', async ({
+  page,
+}) => {
+  await page.goto('/enterprise-enhancer', { waitUntil: 'load' });
+
+  const banner = page.locator('.deprecation-banner');
+  await expect(banner).toBeVisible({ timeout: 20_000 });
+  await expect(banner).toContainText(/deprecated/i);
+  // Both replacements must be named — a banner that says "deprecated" without
+  // saying what to use instead just strands the reader.
+  await expect(banner).toContainText('updateAndReport');
+  await expect(banner).toContainText('onPathChange');
 });
