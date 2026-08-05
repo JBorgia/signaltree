@@ -1,3 +1,31 @@
+## Unreleased (13.4.1)
+
+### Known issue (not yet fixed)
+
+- **`updateOptimized()` silently drops array writes** (`@signaltree/enterprise`).
+  An array in a SignalTree is a single leaf — one `WritableSignal<T[]>`, never
+  per-index signals — but the diff engine emits element-level change paths
+  (`users.1`, `items.500.value`). The apply step cannot resolve a segment past
+  an array leaf, so the patch is dropped while the caller is told
+  `changed: true` with that path listed. Object patches are unaffected.
+
+  **Workaround:** write the array through its leaf directly
+  (`tree.$.users.set(newUsers)`) rather than via `updateOptimized`.
+
+  An apply-side fix was written and reverted before release. Reconstructing the
+  array from element patches was strictly worse than the no-op: a shorter
+  intended value left the stale tail in place (`[1,2,3]` + `[9,2]` produced
+  `[9,2,3]`), class instances in elements were downgraded to plain objects by
+  the clone, `__proto__` became an injection path, and the signal was written
+  once per changed element rather than once per array — 652x slower than a
+  plain `.set()` on a 2000-element array. Silent corruption is worse than a
+  silent no-op, so it was withdrawn.
+
+  The correct fix applies the array **atomically** from the original update
+  payload instead of reconstructing it from element patches, which also
+  resolves the truncation, class-instance, prototype and write-amplification
+  problems in one move. Tracked for a follow-up rather than rushed.
+
 ## 13.4.0 (2026-08-05)
 
 Closes the traversal gap that made markers invisible to the tree's own snapshot

@@ -359,48 +359,6 @@ export class OptimizedUpdateEngine {
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
         current = current[key] as Record<string, unknown>;
-
-        // An ARRAY in a SignalTree is a single leaf — one
-        // `WritableSignal<T[]>`, never per-index signals. The diff engine
-        // still emits element-level paths (`users.1`, `items.500.value`), so
-        // the walk lands on the array signal with path segments left over.
-        // Before this, `isTraversableNode` rejected it and the patch was
-        // dropped — while the caller was still told `changed: true` with that
-        // path listed. `updateOptimized({ users: [...] })` therefore reported
-        // success and wrote nothing.
-        //
-        // Apply the remainder into a COPY of the array and set the signal, so
-        // the write lands and reactivity fires once for the whole array.
-        if (isSignal(current)) {
-          const leaf = current as unknown as WritableSignal<unknown>;
-          const value = leaf();
-          if (!Array.isArray(value)) return false;
-
-          const rest = patch.path.slice(i + 1);
-          const copy = value.slice();
-          let cursor: Record<string, unknown> = copy as unknown as Record<
-            string,
-            unknown
-          >;
-          for (let j = 0; j < rest.length - 1; j++) {
-            const seg = rest[j];
-            const child = cursor[seg];
-            if (!child || typeof child !== 'object') return false;
-            // Clone each level so we never mutate the array still held by the
-            // signal — an in-place edit would be invisible to change detection.
-            const clone = Array.isArray(child)
-              ? (child as unknown[]).slice()
-              : { ...(child as Record<string, unknown>) };
-            cursor[seg] = clone;
-            cursor = clone as Record<string, unknown>;
-          }
-          cursor[rest[rest.length - 1]] = patch.value;
-
-          if (this.isEqual(value, copy)) return false;
-          leaf.set(copy);
-          return true;
-        }
-
         if (!isTraversableNode(current)) {
           return false;
         }
