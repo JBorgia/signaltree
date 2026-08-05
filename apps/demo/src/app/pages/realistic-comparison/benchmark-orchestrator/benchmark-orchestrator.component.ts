@@ -100,6 +100,16 @@ interface LibrarySummary {
   p95: number;
   opsPerSecond: number;
   relativeSpeed: number;
+  /**
+   * How many scenarios this library actually ran, and how many it could not.
+   *
+   * Surfaced because a skipped scenario used to be INVISIBLE: it was filtered
+   * out of the library's own aggregate while still counting against every
+   * competitor that did run it. A comparison that omits work for one side has
+   * to say so.
+   */
+  scenariosRun?: number;
+  scenariosSkipped?: number;
   // Aggregated per-sample distribution, retained so the vs-baseline delta can
   // be significance-tested rather than reported from medians alone.
   samples?: number[];
@@ -1531,21 +1541,45 @@ export class BenchmarkOrchestratorComponent
             relativeSpeed: -1,
           };
         }
-        // Aggregate samples across all supported scenarios for a library-level distribution
+        // Library-level summary.
+        //
+        // The previous version pooled raw per-call samples from every scenario
+        // into one array and took its median. That is not a comparison: a
+        // deep-nested sample is ~0.1ms and a selector-memoization sample is
+        // ~15ms, so the pooled median lands on whichever scenario happens to sit
+        // in the middle, and the headline moves when you ADD a scenario rather
+        // than when a library gets faster. It produced "SignalTree 1267 ops/s vs
+        // SignalStore 178" — a number that measures the scenario mix, not the
+        // libraries.
+        //
+        // It was also BIASED. `supportedResults` drops scenarios a library did
+        // not run (median === -1), so SignalTree's unimplemented
+        // concurrent-updates vanished from ITS pool while SignalStore's
+        // (an expensive 11.9ms) still counted against SignalStore. The one
+        // scenario we could not do was excluded for us and included for them.
+        //
+        // Per-scenario medians ARE directly comparable (`perCall` already
+        // divides by innerOps), so the summary is now their geometric mean —
+        // the right average for ratios, and unlike the arithmetic mean it is not
+        // dominated by whichever scenario has the largest absolute numbers.
+        const logSum = supportedResults.reduce(
+          (acc, r) => acc + Math.log(Math.max(r.median, 1e-6)),
+          0
+        );
+        const geoMean = Math.exp(logSum / supportedResults.length);
         const aggregatedSamples = supportedResults.flatMap((r) => r.samples);
         aggregatedSamples.sort((a, b) => a - b);
-        const aggMedian = this.percentile(aggregatedSamples, 50);
-        const aggP95 = this.percentile(aggregatedSamples, 95);
-        const aggOps = aggMedian > 0 ? 1000 / aggMedian : 0;
         return {
           name: lib.name,
           color: lib.color,
           rank: 0,
-          median: aggMedian,
-          p95: aggP95,
-          opsPerSecond: aggOps,
+          median: geoMean,
+          p95: this.percentile(aggregatedSamples, 95),
+          opsPerSecond: geoMean > 0 ? 1000 / geoMean : 0,
           relativeSpeed: 1,
           samples: aggregatedSamples,
+          scenariosRun: supportedResults.length,
+          scenariosSkipped: libResults.length - supportedResults.length,
         };
       })
       .filter((s) => s !== null) as LibrarySummary[];
@@ -1582,6 +1616,12 @@ export class BenchmarkOrchestratorComponent
     if (signalTree) {
       supportedSummaries.forEach((s) => {
         s.relativeSpeed = signalTree.median / s.median;
+        // NOTE: this significance test runs over POOLED samples from different
+        // scenarios, so it is testing two mixture distributions rather than two
+        // measurements of one thing — with enough samples it reports p≈0 for
+        // any mix difference. It is retained only as a weak "these libraries
+        // differ somewhere" signal; the per-scenario table is the real
+        // comparison. Do not quote it as a headline.
         s.significant =
           s.name === signalTree.name
             ? false

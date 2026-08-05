@@ -571,6 +571,53 @@ export class SignalTreeBenchmarkService {
     return this.toResult(duration, undefined, 'SignalTree serialization');
   }
 
+  /**
+   * Concurrent updates — previously UNIMPLEMENTED here, which was not a neutral
+   * omission: the orchestrator recorded -1, the library summary silently
+   * dropped the scenario for SignalTree, and every competitor that DID run it
+   * still had its (expensive) result counted. The comparison was skewed in our
+   * own favour by an absent method.
+   *
+   * Mirrors the SignalStore arm exactly — same counter count, same update
+   * count, same interleaving — so the only difference measured is how each
+   * library applies one counter increment.
+   */
+  async runConcurrentUpdatesBenchmark(
+    concurrency = BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW,
+    updatesPerWorker = 200
+  ): Promise<number | BenchmarkResult> {
+    const base = signalTree({
+      counters: Array.from({ length: concurrency }, () => ({ value: 0 })),
+    });
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
+
+    const start = performance.now();
+
+    for (let u = 0; u < updatesPerWorker; u++) {
+      for (let w = 0; w < concurrency; w++) {
+        const target = w;
+        // Same immutable array rebuild the SignalStore arm performs — `counters`
+        // is ONE leaf signal holding an array, so a per-element write is not
+        // available to either library here. Keeping the shape identical is the
+        // point; using a per-index API on one side only would measure the
+        // benchmark, not the library.
+        (tree.$ as unknown as { counters: { update: (f: (a: Array<{ value: number }>) => Array<{ value: number }>) => void } })[
+          'counters'
+        ].update((arr) =>
+          arr.map((c, i) => (i === target ? { value: (c.value + 1) | 0 } : c))
+        );
+      }
+    }
+
+    void (
+      (tree.$ as unknown as { counters: () => Array<{ value: number }> })[
+        'counters'
+      ]()[0].value === -1
+    );
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree concurrent updates');
+  }
+
   async runMemoryEfficiencyBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
