@@ -13,6 +13,12 @@ export default [
       '**/.nx', // Nx cache — generated
       '**/.versus', // local Versus tooling (gitignored)
       '**/tmp', // scratch dir (gitignored)
+      // Throwaway probe/audit specs. Investigating a defect here means dropping
+      // a scratch spec next to the code (vitest only collects specs inside a
+      // package), so these appear and vanish constantly. Already gitignored;
+      // ignored here too so a probe in flight cannot fail the lint gate. A test
+      // worth keeping gets a real name and is not matched by this pattern.
+      '**/zz-*.ts',
       'scripts/ai-codegen-benchmark/results/**', // raw LLM outputs, malformed by design
     ],
   },
