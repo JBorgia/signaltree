@@ -28,9 +28,21 @@
 export const NODE_CHILDREN_SYMBOL = Symbol.for('SignalTree:NodeChildren');
 
 /** @internal A node's child index, if it has one. */
+const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
+
 export function getChildren(node: unknown): Map<string, unknown> | undefined {
   if (node == null) return undefined;
-  return (node as Record<symbol, unknown>)[NODE_CHILDREN_SYMBOL] as
+  const own = (node as Record<symbol, unknown>)[NODE_CHILDREN_SYMBOL] as
+    | Map<string, unknown>
+    | undefined;
+  if (own !== undefined) return own;
+  // A node ACCESSOR does not carry the index — attaching it changed the
+  // accessor's object shape and cost 6-7% on a 10-15 level read walk, which is
+  // the hot path. Reach the backing store instead: one extra hop, paid only on
+  // the write path.
+  const store = (node as Record<symbol, unknown>)[NODE_STORE_SYMBOL];
+  if (store == null) return undefined;
+  return (store as Record<symbol, unknown>)[NODE_CHILDREN_SYMBOL] as
     | Map<string, unknown>
     | undefined;
 }

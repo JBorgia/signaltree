@@ -2283,6 +2283,51 @@ Unchanged from round 1, and the reason is structural: `applyState`, `mergeDeep`,
 safety is free where it was added. **SignalTree keeps a 2.7x–5.7x lead over
 SignalStore, and the lead still widens with subscriber count.**
 
+### Round 3 — "reads are free" was WRONG, and fixing it improved writes too
+
+I had reported "reads are free" on the strength of a held-leaf-reference
+benchmark. That is not the read an application performs. An Angular template
+does `tree.$.user.profile.name()` — it WALKS the tree on every
+change-detection pass. Measured separately
+(`scripts/benchmarks/ab-read-patterns.mjs`), the two are not the same operation:
+
+| read pattern | index on ACCESSOR | index on STORE only |
+| ------------ | ----------------- | ------------------- |
+| held leaf ref (depth 1/5/15) | free | free |
+| walk + read, depth 1 / 3 / 5 | free | free |
+| walk + read, depth 10 | **+7.1%** | **+0.6%** ~ |
+| walk + read, depth 15 | **+6.3%** | **+4.4%** |
+| branch read (subtree unwrap) | +12.7% | +12.3% |
+
+**Cause and fix.** The index was attached to the node ACCESSOR as well as the
+store. Every own property changes an object's shape, and a deep walk touches one
+accessor per level — so the cost scaled with depth, on the exact workload this
+library advertises (15+ levels).
+
+Removing it from the accessor and reaching the index through the existing
+`NODE_STORE_SYMBOL` fixed most of it. Counter-intuitively it also made WRITES
+faster:
+
+| metric | index on ACCESSOR | index on STORE only |
+| ------ | ----------------- | ------------------- |
+| nested write (depth 3) | +18.3% | **+5.9%** |
+| write 20 of 40 | +7.7% | +8.3% |
+| write 1 of 40 | +3.3% ~ | +4.1% |
+| unwrap 512 leaves | +7.2% | +6.4% |
+| memory | +312 B/node | +313 B/node |
+
+Two lookups on a plain store with a small stable shape beat one lookup on a
+callable accessor carrying many properties. The "extra hop" is cheaper than the
+shape it avoids.
+
+Full cycle vs SignalStore after the change: **2.57x / 4.09x / 5.70x**, indexed
+cost +1.9% / +1.3% / −0.4%.
+
+**What still regresses, honestly:** a depth-15 walk (+4.4%) and a subtree read
+(+12.3%). Both are heap/GC effects from one extra Map per node, not lookup —
+which is exactly what the lazy-Map optimisation would remove, since a subtree
+read never resolves an external key at all.
+
 ### What the spike STILL does not cover
 
 - `diff-engine` (enterprise) — deprecated package, deliberately skipped.
