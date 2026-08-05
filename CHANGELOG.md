@@ -31,8 +31,25 @@ take this patch.**
   `serialize`/`deserialize`/`migrate`/`onError` callbacks, so a `stored()`
   holding a cached list leaked that payload for the life of the page (measured:
   ~4 MB across 20 short-lived trees), and every drain walked signals nobody
-  could reach. Registration is now by `WeakRef`, pruned on drain, so the graph
-  is collected with its tree. No API change.
+  could reach. Membership is now scoped to **pending writes** rather than to
+  signal lifetime: a signal enrols when a debounced write is armed and leaves
+  the moment it commits or is cancelled. Idle signals are never registered, so
+  there is nothing to leak, while anything unpersisted stays reachable by the
+  drain. No API change.
+
+  (A `WeakRef`-based version of this fix was written first and rejected in
+  review: `WeakRef` to the signal watches the wrong object — the drain needs
+  the commit closure, which does not reference the signal, so a signal could be
+  collected while its write was still armed and the value silently dropped.
+  Page-hide is precisely when a mobile WebView both collects and stops firing
+  timers, making that the common case rather than a corner one. Weakness must
+  not be able to outrace durability.)
+- **`stored()`: one failing signal no longer abandons the rest of a drain**
+  (`@signaltree/core`). `flushAllStoredSignals()` had no isolation between
+  signals, so an exception escaping one commit — e.g. an instrumented
+  `console.warn` from Sentry/LogRocket/Datadog on the no-`onError` path — left
+  every signal after it in the iteration unpersisted and propagated out of the
+  `pagehide`/`visibilitychange` listener. Each commit is now isolated.
 - **`stored()`: removal failures report `operation: 'remove'`** instead of the
   misleading `'write'`. `StoredErrorContext['operation']` gains `'remove'` — a
   widening, so existing exhaustive handlers keep compiling but should add the
@@ -49,6 +66,23 @@ take this patch.**
   Found via the ng-forms demo page, which exercises exactly this pattern.
   (`createFormTree` remains deprecated in favor of `form()` + `signalForm()`;
   the fix keeps the legacy bridge honest for existing consumers.)
+- **`createFormTree()`: field lookups no longer resolve `Object.prototype`
+  members** (`@signaltree/ng-forms`). The per-field error caches, the
+  `errors()`/`asyncErrors()` snapshots, and `findValidator()` were all plain
+  object literals indexed by caller-supplied field paths — so a field named
+  `toString`, `constructor`, or `valueOf` resolved to the inherited method.
+  `getFieldError('toString')()` returned `"[object Undefined]"` where an error
+  message belonged; `valueOf`/`hasOwnProperty`/`toLocaleString` threw inside
+  change detection; and worst, `findValidator()` could hand
+  `Object.prototype.toString` back to be **invoked as a validator**. All three
+  now use null-prototype records or an own-property guard.
+- **`createFormTree()`: the per-path error cache is bounded and released**
+  (`@signaltree/ng-forms`). Only paths a validator actually covers are cached —
+  errors can only originate from a validator, so uncovered paths share one
+  constant signal instead of accumulating a `computed` per path — and
+  `destroy()` now clears the cache. Without this, a template calling
+  `getFieldError()` per row of a long or virtualised `FormArray` retained one
+  computed per index ever rendered, for the life of the form.
 - **`createFormTree()`: glob validator keys are no longer seeded into the public
   `fieldErrors` / `fieldAsyncErrors` records** (`@signaltree/ng-forms`). Those
   records are keyed by concrete paths, so a `phones.*.value` entry could only
