@@ -1,3 +1,4 @@
+declare const ngDevMode: boolean | undefined;
 import { Signal, signal } from '@angular/core';
 
 import { copyTreeProperties } from '../utils/copy-tree-properties';
@@ -18,6 +19,7 @@ import type {
   EnhancerMeta,
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
+
 
 // Heavy devtools implementation. Imported by ./devtools.ts ONLY past its
 // ngDevMode prod-strip guard, so a production build (ngDevMode=false) drops the
@@ -150,7 +152,7 @@ function createActivityTracker(options?: { enableConsole?: boolean }): ModuleAct
       if (existing) {
         existing.errorCount++;
       }
-      if (enableConsole) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
         console.error(
           `❌ [${module}] Error${context ? ` in ${context}` : ''}:`,
           error
@@ -188,7 +190,7 @@ function createCompositionLogger(options?: { enableConsole?: boolean }): Composi
   return {
     logComposition: (modules: string[], action: 'with' | 'enhance') => {
       addLog('core', 'composition', { modules, action });
-      if (enableConsole) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
         console.log(`🔗 Composition ${action}:`, modules.join(' → '));
       }
     },
@@ -200,7 +202,7 @@ function createCompositionLogger(options?: { enableConsole?: boolean }): Composi
       result: unknown
     ) => {
       addLog(module, 'method', { method, args, result });
-      if (enableConsole) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
         console.debug(`🔧 [${module}] ${method}`, { args, result });
       }
     },
@@ -212,7 +214,7 @@ function createCompositionLogger(options?: { enableConsole?: boolean }): Composi
       newValue: unknown
     ) => {
       addLog(module, 'state', { path, oldValue, newValue });
-      if (enableConsole) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
         console.debug(`📝 [${module}] State change at ${path}:`, {
           from: oldValue,
           to: newValue,
@@ -227,7 +229,7 @@ function createCompositionLogger(options?: { enableConsole?: boolean }): Composi
       threshold: number
     ) => {
       addLog(module, 'performance', { operation, duration, threshold });
-      if (enableConsole) {
+      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
         console.warn(
           `⚠️ [${module}] Slow ${operation}: ${duration.toFixed(
             2
@@ -1614,7 +1616,7 @@ export function createDevToolsEnhancer(
 
         sendInit();
         isConnected = true;
-        if (enableLogging) {
+        if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableLogging) {
           console.log(`🔗 Connected to Redux DevTools as "${displayName}"`);
         }
       } catch (e) {

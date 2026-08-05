@@ -17,7 +17,26 @@ const CORE_INDEX = path.resolve(__dirname, '../packages/core/src/index.ts');
 
 // Budget thresholds
 const MAX_EXPORTS = 60;
-const MAX_BUNDLE_SIZE_KB = 200; // raw dist total in KB (preserveModules emits all modules)
+/**
+ * Tree-shaken consumer budgets, in GZIPPED bytes of a bundled production build
+ * (`ngDevMode` defined false). Headroom is ~15% over the measured size at the
+ * time of writing, so ordinary work does not trip the gate but a structural
+ * regression does. Update deliberately, with the measurement in the commit.
+ */
+const CONSUMER_SCENARIOS = [
+  {
+    name: 'minimal tree (no markers)',
+    imports: 'signalTree',
+    code: "const t = signalTree({ user: { name: 'a' }, count: 0 }); t.$.count.set(5); globalThis.o = t();",
+    budget: 6000,
+  },
+  {
+    name: 'tree + stored()',
+    imports: 'signalTree, stored',
+    code: "const t = signalTree({ th: stored('t', 'light'), count: 0 }); t.$.count.set(5); globalThis.o = t();",
+    budget: 7400,
+  },
+];
 
 let failed = false;
 
@@ -55,7 +74,8 @@ function countExports() {
   const total = typeCount + valueCount;
   console.log(`  Value exports: ${valueCount}`);
   console.log(`  Type exports: ${typeCount}`);
-  console.log(`  Total: ${total} (budget: ${MAX_EXPORTS})`);
+  console.log(`  Total: ${total} (value exports are what the budget gates)`);
+  console.log(`  Value-export budget: ${MAX_EXPORTS}`);
   if (valueCount > MAX_EXPORTS) {
     console.error(
       `  ❌ Value export count ${valueCount} exceeds budget of ${MAX_EXPORTS}`
@@ -66,8 +86,17 @@ function countExports() {
   }
 }
 
-// ─── 2. Bundle Size ───────────────────────────────────────────────────────────
+// ─── 2. Bundle Size ──────────────────────────────────────────────────────────
 
+/**
+ * The number that matters is what a consumer actually ships after
+ * tree-shaking, not the sum of every file in dist/. The raw total counts
+ * devtools, serialization, enterprise paths and every other entry point that
+ * a given app may never import — so it is red no matter what you do, which is
+ * exactly why it stopped being informative. It is reported below as drift
+ * information; the GATE is the bundled+minified+gzipped size of real consumer
+ * entry points.
+ */
 function checkBundleSize() {
   console.log('\n📏 Checking bundle size...');
 
@@ -78,27 +107,64 @@ function checkBundleSize() {
   }
 
   let totalBytes = 0;
-  function walkDir(dir) {
+  (function walkDir(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.name.endsWith('.js')) {
+      if (entry.isDirectory()) walkDir(fullPath);
+      else if (entry.name.endsWith('.js'))
         totalBytes += fs.statSync(fullPath).size;
-      }
     }
-  }
-  walkDir(CORE_DIST);
+  })(CORE_DIST);
+  console.log(
+    `  Raw dist total: ${(totalBytes / 1024).toFixed(1)}KB (informational — ` +
+      `unbundled, every entry point, NOT what a consumer ships)`
+  );
 
-  const totalKB = (totalBytes / 1024).toFixed(1);
-  console.log(`  Total JS: ${totalKB}KB (budget: ${MAX_BUNDLE_SIZE_KB}KB)`);
-  if (parseFloat(totalKB) > MAX_BUNDLE_SIZE_KB) {
-    console.error(
-      `  ❌ Bundle size ${totalKB}KB exceeds budget of ${MAX_BUNDLE_SIZE_KB}KB`
+  const { execFileSync } = require('child_process');
+  const os = require('os');
+  const zlib = require('zlib');
+  const entry = path.join(CORE_DIST, 'index.js');
+
+  for (const scenario of CONSUMER_SCENARIOS) {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'st-budget-'));
+    const src = path.join(tmp, 'entry.mjs');
+    const out = path.join(tmp, 'out.js');
+    fs.writeFileSync(
+      src,
+      `import { ${scenario.imports} } from ${JSON.stringify(entry)};\n` +
+        `${scenario.code}\n`
     );
-    failed = true;
-  } else {
-    console.log('  ✅ Within budget');
+    try {
+      execFileSync(
+        path.resolve(__dirname, '../node_modules/.bin/esbuild'),
+        [
+          src,
+          '--bundle',
+          '--minify',
+          '--format=esm',
+          '--platform=browser',
+          '--external:@angular/core',
+          '--define:ngDevMode=false',
+          `--outfile=${out}`,
+        ],
+        { stdio: 'pipe' }
+      );
+      const gzip = zlib.gzipSync(fs.readFileSync(out)).length;
+      const label = `${scenario.name} (prod, ngDevMode=false)`;
+      if (gzip > scenario.budget) {
+        console.error(
+          `  ❌ ${label}: ${gzip}B gzip exceeds budget of ${scenario.budget}B`
+        );
+        failed = true;
+      } else {
+        console.log(`  ✅ ${label}: ${gzip}B gzip (budget ${scenario.budget}B)`);
+      }
+    } catch (err) {
+      console.error(`  ❌ Could not bundle "${scenario.name}":`, err.message);
+      failed = true;
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   }
 }
 
@@ -124,16 +190,17 @@ function checkDevCodeLeaks() {
         const lines = content.split('\n');
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
-          // Flag unguarded console.log (not inside if blocks or ternaries)
-          if (
-            /console\.log\(/.test(line) &&
-            !/if\s*\(/.test(line) &&
-            !/debugMode/.test(line) &&
-            !/enableConsole/.test(line) &&
-            !/ngDevMode/.test(line) &&
-            !/\?\s*console/.test(line) &&
-            !/&&\s*console/.test(line)
-          ) {
+          // Flag unguarded console.log. The guard is usually on the ENCLOSING
+          // line, not this one (`if (ngDevMode && cfg.debugMode) {`), so look
+          // back a short window as well. Checking only the same line reported
+          // every block-guarded log as a leak, which is how this check became
+          // permanently noisy and got ignored.
+          const guardWindow = lines.slice(Math.max(0, i - 3), i + 1).join('\n');
+          const guarded =
+            /debugMode|enableConsole|enableLogging|ngDevMode|\?\s*console|&&\s*console/.test(
+              guardWindow
+            );
+          if (/console\.log\(/.test(line) && !/if\s*\(/.test(line) && !guarded) {
             const relPath = path.relative(CORE_DIST, fullPath);
             leaks.push(`${relPath}:${i + 1}: ${line.trim()}`);
           }
