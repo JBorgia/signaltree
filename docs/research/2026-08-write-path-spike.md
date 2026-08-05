@@ -2136,6 +2136,106 @@ Next measurement, before any decision rests on this: a real harness (fixed
 iteration budget, interleaved A/B in one process where possible, ≥10 samples,
 report medians and IQR) against the existing depth benchmarks — not this.
 
+### WHERE the cost comes from — attribution, measured
+
+The obvious question about "+12.7% on nested writes" is *why*, and I had only
+guessed ("GC pressure"). A third build settles it: **the Map is allocated and
+attached, but `recursiveUpdate` still resolves by property access.** That splits
+the cost into ALLOCATION (one extra Map per node) versus LOOKUP (symbol read +
+`Map.get` instead of a property read).
+
+| metric | alloc-only | alloc + lookup | attributable to LOOKUP |
+| ------ | ---------- | -------------- | ---------------------- |
+| construct 1.7k leaves | +11.5% | +11.7% | ~0 |
+| deep read (15) | +0.2% ~ | +1.0% ~ | ~0 |
+| shallow read | +1.0% ~ | +0.3% ~ | ~0 |
+| deep walk + read | +4.3% | +4.5% | ~0 |
+| write 1 of 40 | +4.0% | +3.5% | ~0 |
+| write 20 of 40 | +4.3% | **+9.1%** | **~4.8 pp** |
+| nested write (depth 3) | +7.5% | **+12.7%** | **~5.2 pp** |
+| unwrap 512 leaves | +6.9% | +7.0% | ~0 |
+| retained memory | +310 B/node | +308 B/node | 0 |
+
+**Roughly two thirds of the cost is one extra Map object per node, and one third
+is the lookup — with the lookup showing up ONLY on multi-key and nested writes**,
+in proportion to how many keys get resolved.
+
+That is why `unwrap` is affected at all despite never calling `resolveChild`: it
+is not resolution, it is 73 extra Map objects per tree (+310 B/node) making the
+heap bigger and GC more expensive. `deep walk + read` is the same story — pure
+property access, slowed only by heap shape.
+
+**Which points straight at the optimisation: make the Map LAZY.** Build it on
+first external-key resolution rather than at construction, from `Object.keys` of
+the store, so it stays authoritative. A tree that is only ever read — very
+common — allocates nothing, and construct / read / unwrap / memory all return to
+baseline. Only the write path would pay, which is the path that gets the safety.
+Not built; it is the obvious next step and would remove most of the measured
+cost.
+
+### Competitive position — vs `@ngrx/signals` SignalStore 21.1.1
+
+The microbenchmarks above time a write in ISOLATION. Applications write and then
+read. Measured on the full cycle — update one deeply nested field, then read it
+through N subscribers — against the actual competitor, same reactive substrate,
+same operation (`scripts/benchmarks/ab-signalstore-cycle.mjs`):
+
+| subscribers | SignalStore | SignalTree base | SignalTree indexed |
+| ----------- | ----------- | --------------- | ------------------ |
+| 1 | 0.969 µs | 0.374 µs (**2.59x**) | 0.374 µs (**2.59x**) |
+| 10 | 3.360 µs | 0.730 µs (**4.60x**) | 0.736 µs (**4.57x**) |
+| 100 | 25.293 µs | 3.885 µs (**6.51x**) | 4.200 µs (**6.02x**) |
+
+**The indexed store does not move the competitive position.** Its cost on the
+full cycle is −0.0% / +0.8% / +8.1% — the write is a minority of the work, so
+the isolated +12.7% dilutes to near nothing. SignalTree leads SignalStore by
+2.6x–6.5x with or without it, and the lead WIDENS with subscriber count because
+SignalTree writes one leaf while `patchState` rebuilds the object down the path
+and invalidates the deep-signal chain above it.
+
+(Classic `@ngrx/store` was measured too and is a different animal: a bare
+reducer + memoised selectors is ~8-14x faster on this operation because it does
+far less — it allocates a new object and defers everything else. It is not the
+competitor and not a like-for-like comparison; recorded only so nobody
+rediscovers it and mistakes it for a regression.)
+
+### RISK of not doing this
+
+- **The class stays open.** 38 payload-key sites, 25 unguarded. Three sinks
+  found by Track C are still live: `unwrap()` hands attacker-controlled
+  prototypes to every snapshot consumer; `form.ts:391` mints a real own
+  `__proto__` via `{...initial, ...JSON.parse(stored)}`; `get-changes.ts`
+  returns an object with an attacker-supplied prototype. `mergeDeep` has a live
+  path — `localStorage` → `JSON.parse` → ng-forms `hydrateInitialValues`.
+- **Guards demonstrably do not converge.** Four of six blocklist deployments
+  traced needed a second advisory; lodash has shipped five pollution CVEs across
+  eight years, the newest in April 2026. This session is its own evidence: four
+  audit rounds, each finding a sink the previous round missed, **including one I
+  introduced while fixing another**.
+- **The failure mode is invisible to review.** Provenance changes with recursion
+  depth inside a single loop, so "is this key trusted?" has no answer a reviewer
+  can check at a glance.
+- **A name blocklist has a live behavioural cost**: the version that shipped
+  briefly this session silently DELETED legitimate state named `constructor` or
+  `prototype` on lazy trees, and made eager and lazy trees disagree.
+
+### GAIN
+
+- **The update path needs no name check at all.** `__proto__`, `constructor` and
+  `prototype` are not keys in the index, so they resolve to `undefined` and fall
+  into the ST2010 discard that already existed. Nothing to forget.
+- **No behaviour change**, because discarding unknown keys is already the
+  semantics. Legitimate state named `constructor`/`prototype` works again.
+- **The two-call mint-then-walk bypass has nothing to mint into** — the class of
+  bug that defeated the own-property guard is structurally unreachable.
+- **Provenance stops being depth-dependent**, removing the property that made
+  this class invisible to four rounds of review.
+- **It gives change-recording a home** — the same index is where a version stamp
+  would live, which is the other half of the endpoint.
+- **It found a latent bug**: `unwrap` copied non-enumerable internal symbols into
+  user snapshots, so `enumerable: false` was never sufficient.
+- **Competitive position unaffected**, as measured above.
+
 ### What the spike does NOT yet cover
 
 `applyState`, the lazy proxy, `mergeDeep`, `diff-engine` and the ~34 other
