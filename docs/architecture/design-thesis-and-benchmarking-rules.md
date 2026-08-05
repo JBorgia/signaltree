@@ -45,7 +45,7 @@ property, no POJO anywhere) and its `toJS` on the same fixture measures
 
 **The correct response is not to make materialisation fast. It is to stop
 calling it.** Serialisation is rare in real applications. Anything that
-materialises the whole tree *on every change* has imported the Redux cost model
+materialises the whole tree _on every change_ has imported the Redux cost model
 into a library built to escape it.
 
 ### The measured landscape
@@ -53,12 +53,12 @@ into a library built to escape it.
 From `docs/research/2026-08-state-data-model-spike.md` (Track E — 11
 configurations, one fixture, same four operations):
 
-| model | who | partial write | whole-state read | snapshot |
-| ----- | --- | ------------- | ---------------- | -------- |
-| Immutable value at the root | immer, Immutable.js, @ngrx/signals | slow (path copy; 42–66 µs for a 50k collection) | **O(1)** | **free** |
-| Mutable POJO + lazy side-index | Vue, Solid, Legend-State | **sub-µs** | **O(1)** | deep clone (18–38 ms) |
-| Per-leaf owned | **SignalTree**, MobX | **O(1)** | materialise | materialise |
-| CRDT | Yjs, Automerge | slow | slow | **structural** |
+| model                          | who                                | partial write                                   | whole-state read | snapshot              |
+| ------------------------------ | ---------------------------------- | ----------------------------------------------- | ---------------- | --------------------- |
+| Immutable value at the root    | immer, Immutable.js, @ngrx/signals | slow (path copy; 42–66 µs for a 50k collection) | **O(1)**         | **free**              |
+| Mutable POJO + lazy side-index | Vue, Solid, Legend-State           | **sub-µs**                                      | **O(1)**         | deep clone (18–38 ms) |
+| Per-leaf owned                 | **SignalTree**, MobX               | **O(1)**                                        | materialise      | materialise           |
+| CRDT                           | Yjs, Automerge                     | slow                                            | slow             | **structural**        |
 
 **Nothing surveyed gets all three of** {O(1) whole-state read, O(1) snapshot,
 sub-µs partial write}. The trade is real. SignalTree bought the write.
@@ -69,7 +69,7 @@ sub-µs partial write}. The trade is real. SignalTree bought the write.
 
 > **Compare TASKS, not implementations.**
 
-Normalise the *user-facing outcome*. Let each library use its own best idiom to
+Normalise the _user-facing outcome_. Let each library use its own best idiom to
 get there. Never force one library to adopt another's data model "for fairness" —
 that measures the first library impersonating the second, which is a thing no
 application ever does.
@@ -82,7 +82,7 @@ This rule was violated repeatedly and it cost the most:
   SignalStore (1.63 ms vs 46.56 ms; the array-leaf idiom is 49.80 ms, i.e. at
   parity, not 8× behind). Wrong API, wrong conclusion — and the wrong framing
   **hid a real O(n) defect in `entityMap` for weeks**.
-- "Fairness" edits that equalise implementations usually *introduce* bias. Two
+- "Fairness" edits that equalise implementations usually _introduce_ bias. Two
   were found in the demo pointing in opposite directions: our arm started the
   clock before constructing a 50k array (penalising us); their arm used
   `map(cb)` where ours used `slice()` (flattering us, ~8×).
@@ -94,11 +94,11 @@ This rule was violated repeatedly and it cost the most:
   do this at depth 1 only; immer, Immutable.js and Automerge cannot at all.
   Measuring it is legitimate — just label it, and report the walked path too.
 - **Never pool samples across scenarios.** A deep-nested sample is ~0.1 ms and a
-  selector sample is ~15 ms; a pooled median measures the scenario *mix*, and
+  selector sample is ~15 ms; a pooled median measures the scenario _mix_, and
   moves when you add a scenario rather than when a library gets faster. Use the
   geometric mean of per-scenario ratios.
 - **A skipped scenario must be loud.** An unimplemented benchmark once silently
-  dropped from *our* aggregate while still counting against every competitor
+  dropped from _our_ aggregate while still counting against every competitor
   that ran it.
 - **Single runs lie.** Report medians and spread, and call a difference real
   only if it exceeds both arms' spread. Two wrong conclusions in this project
@@ -126,9 +126,9 @@ writes that each change ONE number:
 
 | collection size | no timeTravel | with timeTravel |
 | --------------- | ------------- | --------------- |
-| 100 rows | 0.06 ms | 2.85 ms |
-| 1,000 rows | 0.03 ms | 29.51 ms |
-| 10,000 rows | **0.03 ms** | **340.60 ms** |
+| 100 rows        | 0.06 ms       | 2.85 ms         |
+| 1,000 rows      | 0.03 ms       | 29.51 ms        |
+| 10,000 rows     | **0.03 ms**   | **340.60 ms**   |
 
 Writes are O(1) until you turn on time travel, at which point they become
 O(state) and scale with data you did not touch. ~17 KB retained per entry at
@@ -144,7 +144,7 @@ anything changed.
 **`entityMap` — FIXED (13.5.0), with a caveat.** `updateSignals()` rebuilt `all`/`ids`/`count`/
 `map` on every single-entity mutation: three full copies of the collection plus a
 deep-equality compare on each. `updateOne` was O(size) — 2,831 µs on 50k rows —
-in the flagship *collection* API whose storage write is O(1). Now the queries are
+in the flagship _collection_ API whose storage write is O(1). Now the queries are
 lazily computed from a version counter: **under 1 µs, flat across 1k/10k/50k**
 (0.91 µs vs 432 µs for a plain array leaf on a single-write micro-benchmark;
 at TASK level, 1000 toggles of a 50k collection, it is 1.63 ms vs 49.80 ms —
@@ -153,7 +153,7 @@ quote the task number, not the micro one), with a fan-out of exactly 1
 the array leaf re-ran 100/100).
 
 The caveat: the O(N) work is **deferred, not removed**. `update + byId()` is
-1.90 µs, but `update + all()` is 97.47 µs — 1.8× *slower* than a
+1.90 µs, but `update + all()` is 97.47 µs — 1.8× _slower_ than a
 shallow-compared array leaf. `entityMap` wins decisively when readers are
 per-entity and loses when every write is followed by a whole-collection read.
 Also: `tree()` over an `entityMap` emits the collection three times (`all`,
@@ -199,6 +199,7 @@ Each of these was learned the expensive way.
    measurement: cost per element is flat, so a size threshold picks an arbitrary
    point on a straight line and silently flips semantics either side of it.
    `useShallowComparison` stays an explicit opt-in.
+
 4. **A `Map` is not automatically faster.** A per-node `Map` index cost +12% on
    subtree reads and 310 B/node with no measured safety benefit over an
    own-property check; it was built, measured and reverted.
@@ -262,7 +263,91 @@ Each of these was learned the expensive way.
 
 ---
 
-## 6. Open optimisation candidates, ranked
+## 6. What the data-model survey settled (Track D)
+
+Independent measurement of persistent/immutable structures, run against the
+premises in section 2 rather than in support of them. Three overturned
+something.
+
+### The four goals are two
+
+Fast partial updates, cheap time travel, and cheap "what changed" are **not
+three goals** — they are one property with one cause: **no node has more than
+~32 children.** `immutable.List` at 50k gets all three at once with nothing
+traded: update 97 ns, 2.0 KB retained per version, restore 3.9 ns (deref a held
+root), and localise a change in 152 ns **flat in N** (95 ns at 1k → 187 ns at
+1M).
+
+Only **fast whole-state reads** is in genuine tension, and it is structural, not
+a constant factor. "Read the whole state in O(1)" means _returning a reference to
+a POJO_, and a POJO's array node **is** the collection. The same fact runs both
+ways: POJO state reads in 0.3 ns and updates one of 50k elements in 32 µs /
+400 KB; trie state updates in 97 ns / 2.0 KB and materialises in 967 µs.
+
+Chunking at C ≈ √N is the resolvable middle — update 110 ns (343×), 4.1 KB per
+version (98×), diff 2.1 µs, materialise 52 µs — and you pay for it by giving up
+"return the reference".
+
+### Overturned premises
+
+- **Structural sharing alone buys nothing for diffing.** Reference-equality
+  diffing measured **2.7× SLOWER than the deep comparison** on a plain 50k array
+  (232 µs vs 87 µs): you still scan 50,000 slots, and the per-slot recursion
+  overhead beats `deepEqual`'s inlined loop. The trie version is 0.26 µs. **The
+  win is bounded fanout, not sharing.**
+- **Depth is free; width is the entire bill.** immer's 15-deep, 50k-wide
+  single-field update allocates 392 KB, of which **99.6% is one array node and
+  0.4% is the fifteen levels of depth.** Measuring structural sharing by object
+  count is a vanity metric — everything shares >99.6% of objects. Note what this
+  does to our own framing: the deep-nested win is real, but it is not "we avoid
+  a huge copy," because the copy along a deep path is cheap. It is that we avoid
+  the _wide_ node, and that we do no allocation at all.
+- **A 32-way trie is not 32-way in practice.** `immutable.Map` measured fanout
+  **3.79** and depth **6** at 1M string keys (30.6 / 4 on integer keys) — the
+  JVM-style string hash leaves high bits correlated for common-prefix keys, and
+  one level-5 fragment occupies 13 of 32 values.
+- `@thi.ng/associative` contains **no HAMT** at all; its `HashMap` is a mutable
+  open-bucket map. `immutable.List.splice` is worse than a plain array at every
+  size (31.7 ms vs 806 µs at 1M) where RRB does it in 1.5 µs.
+- `Object.create(null)` is **always** dictionary mode: 33× on spread, 9.9× on
+  read. (Consistent with realisation 5's +51% on `unwrap`, and worse than it.)
+
+### The "free win" that is not free, and not that big
+
+Track D proposed that a leaf's `equal()` could be `===` (3.9 ns) instead of
+`deepEqual` (90.6 µs) once the write path guarantees unchanged subtrees are
+reference-identical, projecting 90.6 ms → 4 µs on the 1000-write/50k-array
+scenario. Both halves need correcting:
+
+1. **The projection came off the 385 ms figure, which was the in-process
+   megamorphism phantom** (realisation 13) plus the no-op fixture. Re-measured
+   in isolated processes, `deepEqual` vs `Object.is` on the same workload:
+
+   | change position    | deepEqual | `Object.is` | deepEqual's share |
+   | ------------------ | --------- | ----------- | ----------------- |
+   | head (index 0–999) | 49.11 ms  | 40.67 ms    | **8.4 ms — 17%**  |
+   | tail (index N−1−i) | 379.96 ms | 42.30 ms    | 338 ms — 89%      |
+   | no change at all   | 383.88 ms | 41.28 ms    | 343 ms — 89%      |
+
+   `Object.is` is **flat at ~41 ms** regardless of position, so `deepEqual` is
+   the entire position-sensitivity — and ~41 ms is the irreducible
+   `slice()`+spread floor that no equality change can touch.
+
+2. **The guarantee does not exist at a leaf.** Reference-identity of unchanged
+   subtrees is something an internal write path can promise; a leaf value comes
+   from the caller. An HTTP re-fetch hands you a brand-new array, and no write
+   path can make it reference-identical to the old one. Switching the default to
+   `===` would report every re-fetch as a change — which is exactly the
+   correctness property `deepEqual` is there to provide.
+
+**The actionable conclusion is not to tune the equality.** Even the best case for
+an array leaf (40.67 ms, shallow) barely beats SignalStore's 46.56 ms, while
+`entityMap` is 1.63 ms — 25× better than either. Modelling a collection as an
+array leaf is the mistake; the equality function is a rounding error on it.
+
+---
+
+## 7. Open optimisation candidates, ranked
 
 1. **Diff-based time travel.** Biggest win available; turns the flagship feature
    from O(state)-per-write into O(changes)-per-write and makes deep histories
@@ -271,6 +356,14 @@ Each of these was learned the expensive way.
    cannot restore a direct leaf write.
 3. **Push-based serialisation change detection**, replacing the
    `JSON.stringify(tree())` poll.
-4. **Size-adaptive leaf equality**, with a measured crossover.
+4. **Bounded fanout for large leaf collections** (chunking at C ≈ √N). Track D's
+   result says this is the single change that would buy fast partial updates,
+   cheap time travel and cheap change-detection _together_, because they share
+   one cause. It is also the only candidate here that is a data-structure
+   change rather than a bookkeeping change. Cost: `tree()` can no longer return
+   a reference. `entityMap` already achieves the same effect for the case that
+   matters, so this is only worth it if plain large array leaves must be fast.
+   (Size-adaptive leaf equality was previously listed here and is **rejected** —
+   see realisation 3.)
 5. **Lazy/cached `tree()`** — a version-stamped materialisation so repeated reads
    between writes are free, mirroring what `entityMap` now does for `all()`.

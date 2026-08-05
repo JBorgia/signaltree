@@ -52,7 +52,618 @@ hour.
 
 ## Findings D — persistent structures
 
-_pending_
+**Method.** Node 24.3.0 (V8 13.6), darwin arm64, `--expose-gc
+--max-old-space-size=8192`, some runs with `--allow-natives-syntax`. Every
+number below is a median of 7 auto-calibrated trials; memory is
+`heapUsed` delta across a double `global.gc()`. Libraries measured at
+`immutable@5.1.9`, `immer@11.1.16`, `hamt@2.2.2`, `list@2.0.19`
+(funkia/list, RRB), `@thi.ng/associative@7.1.45`. Scripts lived under
+`tmp/trackD/` (gitignored, deleted). Everything is Node — **not re-run in
+Chrome**, see the "could not establish" list.
+
+Primary sources, verified bibliography:
+
+- Bagwell, "Ideal Hash Trees", EPFL tech report, **2001** — infoscience.epfl.ch/record/64398
+- Bagwell, "Fast And Space Efficient Trie Searches", EPFL, 2000 — record/64394
+- Bagwell & Rompf, "RRB-Trees: Efficient Immutable Vectors", EPFL-REPORT-169879, 2011 — record/169879
+- Stucki, Rompf, Ureche, Bagwell, "RRB Vector: A Practical General Purpose Immutable Sequence", ICFP 2015, 342–354, doi:10.1145/2784731.2784739
+- Driscoll, Sarnak, Sleator, Tarjan, "Making Data Structures Persistent", JCSS 38(1):86–124, 1989, doi:10.1016/0022-0000(89)90034-2
+- Merkle, "A Digital Signature Based on a Conventional Encryption Function", CRYPTO '87, LNCS 293, 369–378, doi:10.1007/3-540-48184-2_32
+
+Library internals read as source, not documentation:
+`node_modules/immutable/dist/immutable.js` (`SHIFT = 5`, `SIZE = 32`,
+`MAX_ARRAY_MAP_SIZE = 8`, `MAX_BITMAP_INDEXED_SIZE = 16`,
+`MIN_HASH_ARRAY_MAP_SIZE = 8`, `List._tail`); `node_modules/hamt/hamt.js`
+(`SIZE = 5`, `BUCKET_SIZE = 32`, `MAX_INDEX_NODE = 16`,
+`MIN_ARRAY_NODE = 8`, `popcount(bitmap & bit-1)`);
+`node_modules/list/dist/index.js` (`branchingFactor = 32`,
+`branchBits = 5`, `prefix`/`suffix` affixes capped at 32);
+`node_modules/immer/dist/immer.mjs` (`prepareCopy` → `shallowCopy` →
+`markChanged` walks to the parent).
+
+### Headline table — 50,000-element collection, one element changed
+
+| structure | random get | persistent update@idx | whole-state read (→ POJO) | "what changed" | mem / retained version |
+| --- | --- | --- | --- | --- | --- |
+| plain array + `slice()` (immer) | **4.1 ns** | 32.3 µs (37.7 µs w/ record spread) | **0.3 ns** (return the ref) | 87 µs deepEqual · 232 µs ref-walk · 18 µs inline ref scan | **400 KB** |
+| 2-level chunked, C = 224 | 6.4 ns | **0.11 µs** | 52 µs (`[].concat(...)`) | **2.1 µs** | 4.1 KB |
+| 32-way vector trie (hand-rolled) | — | — | — | **0.26 µs** | — |
+| `immutable.List` (32-way trie + tail) | 13.4 ns | **0.097 µs** | 967 µs `toArray()` | **0.15 µs** (internal-node walk) | **2.0 KB** |
+| `list` (funkia, RRB) | 9.5 ns | 0.174 µs | 184 µs `toArray()` | — | 1.6 KB |
+| `hamt` (HAMT, int keys) | 34.1 ns | 0.178 µs | — | — | — |
+| journal of inverse deltas (mutate in place) | 4.1 ns | ~0.08 µs | **0.3 ns** | free (you logged it) | **0.5 KB** |
+
+Same shape, 1000 retained versions of a 50k collection, measured retained
+heap: plain `slice()` **381.6 MB** · immer **381.7 MB** · chunked C=224
+**3.94 MB** · `immutable.List` **1.94 MB** · journal **0.49 MB**.
+That is a **197x** memory difference between immer and `immutable.List`
+for identical logical content, and it is entirely a fanout effect.
+
+---
+
+### 1. HAMT — the branching factor is a lie on string keys
+
+Source says 32 (`SHIFT = 5` in immutable.js; `SIZE = 5`,
+`BUCKET_SIZE = 32` in `hamt`), with popcount-compacted sparse nodes
+exactly as Bagwell 2001 describes. Measured shape of a fully built
+`immutable.Map` is different:
+
+| N (string keys `key_0…`) | node types | **measured avg branch fanout** | **measured max depth** | log₃₂ N |
+| --- | --- | --- | --- | --- |
+| 1,000 | 16 HashArrayMap, 258 BitmapIndexed, 1000 Value | **4.65** | 3 | 2 |
+| 100,000 | 835 / 30,265 / 100,000 | **4.22** | 5 | 4 |
+| 1,000,000 | 17,948 / 341,084 / 1,000,000 | **3.79** | **6** | 4 |
+| 1,000,000, **integer** keys | 33,825 HashArrayMap, 0 BitmapIndexed | **30.56** | **4** | 4 |
+
+At 1M string keys the fanout histogram is dominated by 2-child nodes
+(202,324 of 359,032 branch nodes). Proximate cause: immutable.js hashes
+strings with the JVM recurrence `hashed = (31*hashed + charCodeAt(i))|0`
+then `smi()`; for common-prefix keys the *high* bits stay correlated —
+the level-5 hash fragment occupies only **13 of 32** possible values with
+a max slot load of 150,000 against an ideal of 31,250. Marginal
+distribution at levels 0–4 is fine; the joint distribution is not.
+Integer keys hash to themselves and the trie behaves as designed.
+
+Get/set, medians:
+
+| N | `immutable.Map` get | `hamt` get | plain obj get | `Map` get | `immutable.Map` set | `hamt` set | `{...obj}` copy | `new Map(m)` copy |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1,000 | 32.7 ns | 26.5 ns | **9.3 ns** | 10.4 ns | 141 ns | **111 ns** | 138 µs | 25.3 µs |
+| 100,000 | 76.6 ns | 59.7 ns | **12.0 ns** | 15.4 ns | 317 ns | **231 ns** | 33.8 ms | 6.1 ms |
+| 1,000,000 | 154.5 ns | 101.9 ns | **10.4 ns** | 14.4 ns | 365 ns | **288 ns** | 490 ms | 127 ms |
+
+So a HAMT get is **10–15x slower than a plain property read** and that
+gap *grows* with N (it should be ~flat; it isn't, because depth grows).
+The HAMT wins on the persistent-set column by 3–4 orders of magnitude at
+100k+, and that is the entire case for it.
+
+**Structural sharing survival** (whole object graph walked by identity,
+`|reachable(v1) ∩ reachable(v2)| / |reachable(v2)|`), one `set`:
+
+| structure | v2 nodes | shared | **freshly allocated** |
+| --- | --- | --- | --- |
+| `immutable.Map` N=1,000 | 2,550 | 99.647% | **9** |
+| `immutable.Map` N=100,000 | 262,202 | 99.996% | **11** |
+| `hamt` N=1,000 | 1,549 | 99.484% | **8** |
+| `hamt` N=100,000 | 162,201 | 99.994% | **10** |
+
+Memory: `immutable.Map` **155 B/entry** at both 1k and 100k; `hamt`
+**108.8 B/entry**; plain object 42–63 B/entry; `Map` 32–37 B/entry.
+A HAMT costs roughly **4x the memory of a `Map`** for the same data.
+
+`@thi.ng/associative` does **not** contain a HAMT. Its `HashMap` is a
+mutable open-bucket hash map (`_bins`, `_mask`, `_load`, `ceilPow2`
+resize) with no persistence and no structural sharing. The premise in the
+question is wrong.
+
+### 2. RRB / persistent vectors vs HAMT for array-shaped state
+
+`immutable.List` is a 32-way radix trie with a **32-element tail buffer**
+(`List._tail`, `tailOffset`). `list` (funkia) is a genuine RRB tree:
+`branchingFactor = 32`, plus **prefix and suffix affixes capped at 32**,
+and relaxed nodes carrying size tables — verified by construction: a
+plain `from()` produces 0 nodes with `.sizes`, `concat` of two 1000-lists
+produces **2** relaxed nodes, `slice`+`concat` (the splice path) produces
+**4**.
+
+Per-operation, medians (ns unless marked):
+
+| op | N | plain array | `immutable.List` | `list` (RRB) | `hamt` |
+| --- | --- | --- | --- | --- | --- |
+| get | 1,000 | **0.64** | 7.6 | 5.1 | 10.4 |
+| get | 50,000 | **4.1** | 13.4 | 9.5 | 34.1 |
+| get | 1,000,000 | **4.6** | 21.4 | 15.6 | 34.0 |
+| set@idx | 1,000 | 268 | **50** | 105 | 86 |
+| set@idx | 50,000 | 32,309 | **97** | 174 | 178 |
+| set@idx | 1,000,000 | 531,676 | **127** | 327 | 205 |
+| append | 50,000 | 132,306 | 77 | **37** | — |
+| append | 1,000,000 | 2.64 ms | 135 | **54** | — |
+| prepend | 50,000 | 414,171 | 334 | **14** | — |
+| prepend | 1,000,000 | 10.05 ms | 141 | **14.6** | — |
+| splice −1 @mid | 50,000 | **46,476** | 1,401,000 | 1,358 | — |
+| splice −1 @mid | 1,000,000 | 805,824 | 31,667,000 | **1,499** | — |
+| full iterate (sum) | 50,000 | **20,978** | 1,412,000 | 286,169 | — |
+| full iterate (sum) | 1,000,000 | **690,906** | 24,890,000 | 4,559,000 | — |
+| → plain array | 50,000 | 38,106 (`slice`) | 1,151,000 | **350,998** | — |
+
+**What RRB buys over a plain radix trie is exactly two things, and they
+are large:** prepend is **O(1) at any size** (14.6 ns at 1M vs 141 ns for
+`immutable.List` and **10 ms** for `[x, ...a]`), and **splice is
+O(log n)** — 1.5 µs at 1M against `immutable.List`'s **31.7 ms** (a
+21,000x gap) and the plain array's 806 µs. `immutable.List.splice` is
+implemented as a full rebuild, so it is *worse than a plain array* at
+every size measured.
+
+**What it costs is iteration.** A `immutable.List` full scan is **28
+ns/element** vs a plain array's **0.42 ns/element** — **67x**. RRB is
+better but still **13.6x**. Any read path that touches every element
+pays this, every time.
+
+Memory per element: plain array 6.4 B/slot, `immutable.List` 14.5 B,
+`list` 15.0 B — the trie roughly **doubles** the per-element cost of the
+spine.
+
+### 3. Path copying vs fat nodes vs node copying (Driscoll et al. 1989)
+
+The paper names three techniques with these bounds (verified against the
+JCSS reprint): **fat node** — O(1) space per update, **O(log m)** time
+per access *and* update, via a per-field binary search *tree* keyed on
+version stamp (not literally a sorted-array binary search); **node
+copying** — amortized O(1) time and space per update, worst-case O(1)
+per access, requires constant bounded in-degree; **node splitting** —
+same bounds, for full (not just partial) persistence.
+
+**What the libraries actually implement: path copying, both of them, and
+nothing else.**
+
+- **immer** — verified in `immer.mjs`: `prepareCopy(state)` calls
+  `shallowCopy(base)` (`Array.prototype.slice` for arrays, `new Map` /
+  `new Set`, otherwise `{...base}` or `Object.create(proto, descriptors)`
+  in strict mode), and `markChanged(state)` recurses to `state.parent_`.
+  That is path copying over the **user's own schema**, so the fanout is
+  whatever the user's objects and arrays happen to be — **unbounded**.
+- **immutable.js** — path copying too, but over **bounded-fanout tries**
+  (HAMT for `Map`, 32-way radix trie + tail for `List`), so the copied
+  spine is O(log₃₂ n) nodes of ≤32 slots instead of O(schema depth) nodes
+  of arbitrary width.
+- Neither implements fat nodes or node copying. I found no JS library
+  that does.
+
+Measured, on a 5-deep / fanout-4 store (1024 leaves), 1000 versions:
+
+| technique | update | read leaf (current) | read leaf at old version | **snapshot** | **restore** | mem/version |
+| --- | --- | --- | --- | --- | --- | --- |
+| hand path copy (spread spine) | 329 ns | 50.0 ns | (hold the root) | **O(1), free** | **3.9 ns** (deref a held pointer) | 341 B |
+| immer `produce` | 1,311 ns | 50.0 ns | — | O(1), free | 3.9 ns | 413 B |
+| `immutable.js` `setIn` | 490 ns | — | — | O(1), free | 3.9 ns | 2,473 B |
+| **fat node** (append version to slot) | **50 ns** | 22.3 ns | **28.1 ns** (bsearch) | **4.96 ns** (bump a counter) | **4.96 ns** | 388 B |
+| **journal of inverse deltas** | 79 ns | 36.3 ns | n/a | O(1) | **63 ns single step, 83 µs to jump 1000** | **130 B** |
+| `structuredClone` per version | 419,610 ns | — | — | — | — | **101,016 B** |
+
+Time travel specifically:
+
+- **Path copying gives O(1) snapshot *and* O(1) restore** — a version *is*
+  a pointer. That is the strongest single result here: 3.9 ns to restore
+  any of 1000 versions, and all versions are simultaneously addressable
+  and immutable. It pays O(depth) allocations per write.
+- **Fat nodes give the cheapest write** (50 ns, 6.6x cheaper than a spread
+  spine) and O(1) version stamping, but there is **no root pointer** —
+  you cannot hand version *k* to code that walks the tree without
+  threading *k* through every read, and materialising a whole state at
+  version *k* is O(size · log m). They win point queries and lose
+  snapshots-as-values.
+- **Journals are the cheapest memory** (130 B/version here, 508 B/version
+  on the 50k-collection shape — **750x** less than immer) and the
+  cheapest single-step undo (63 ns), but restoration is **O(k) in the
+  distance travelled** (83 µs to walk 1000 versions and back) and only
+  one version exists at a time. This is what SignalTree does.
+- **`structuredClone` per version is 101 KB/version and 420 µs/write** on
+  a 1024-leaf store. It is not a strategy, it is a control.
+
+### 4. Copy-on-write over plain objects (immer) — sharing by node count is a vanity metric
+
+Object-graph identity intersection after a single-field update:
+
+| shape | v2 nodes | shared | fresh |
+| --- | --- | --- | --- |
+| immer, 15-deep fanout-2 (32,768 leaves) | 65,535 | **99.976%** | **16** |
+| immer, `{rows: 50k records}` | 50,002 | **99.994%** | **3** |
+| immer, 15-deep spine → 50k rows | 50,032 | **99.964%** | **18** |
+| `immutable.js` Map→List→Map, 50k | 303,235 | **99.994%** | 17 |
+| plain `slice()` + record spread, 50k | 50,001 | **99.996%** | 2 |
+
+Every structure shares >99.6% of *objects*. The number is useless.
+In **bytes**, on the 15-deep / 50k-wide shape:
+
+- total retained by one version: **392.4 KB**
+- the 50k outer array alone: **390.9 KB**
+- all 16 fresh spine objects: **1,416 B**
+
+So a single-field update allocates **392.4 KB fresh, of which 99.6% is
+one array node**, and the fifteen levels of depth cost **0.4%**. Measured
+delta-retained-bytes for v2 given v1 held: plain `slice()`+spread
+**391.0 KB**, immer on `{rows:[50k]}` **397.2 KB**, 15-deep spine + immer
+**404.6 KB**, chunked C=224 **4.6 KB**, `list` update **15.0 KB**.
+(`immutable.List.set` and `immutable.Map.set` measured at −7.9 KB and
+−19.7 KB — i.e. below this method's noise floor of roughly ±20 KB; the
+1000-version aggregates above are the trustworthy version of that
+number.)
+
+**Depth is free. Width is the entire bill.** immer's cost is not
+"immutability", it is that a plain array of 50,000 records is a single
+node with 50,000 slots.
+
+### 5. Chunked / paged arrays
+
+Splitting a 50k collection into fixed-size chunks makes a persistent
+single-element update cost O(C + N/C) — copy one chunk, copy the chunk
+index — minimised at C = √N. It tracks the model almost exactly:
+
+| C | chunks | C + N/C | measured update |
+| --- | --- | --- | --- |
+| 8 | 6250 | 6258 | 882 ns |
+| 16 | 3125 | 3141 | 601 ns |
+| 32 | 1563 | 1595 | 804 ns |
+| 64 | 782 | 846 | 235 ns |
+| 128 | 391 | 519 | 114 ns |
+| **192** | **261** | **453** | **104 ns** |
+| **224 (=√50000)** | **224** | **448** | **110 ns** |
+| **256** | **196** | **452** | **106 ns** |
+| 512 | 98 | 610 | 152 ns |
+| 1024 | 49 | 1073 | 308 ns |
+| plain array | 1 | 50000 | **37,722 ns** |
+
+**343x faster than a plain `slice()`+spread**, at C = 192–256. The
+optimum is flat across 128–320, so exact tuning does not matter; being
+within 2x of √N does.
+
+What it costs:
+
+- **iteration: 1.16–1.34x**, and that is all. Nested `for` over chunks:
+  37.6 µs at C=224 vs 28.0 µs plain — and *larger* chunks are cheaper
+  (32.4 µs at C=16384), so the penalty is per-chunk loop setup, not
+  cache behaviour.
+- **random get: 4.5 ns → 6.4 ns** (1.4x). Power-of-two C lets you use
+  shift/mask (4.9 ns at C=32) instead of div/mod (6.4 ns at C=224).
+- **flatten to a POJO: 52 µs** via `[].concat(...ch)` vs 38 µs for
+  `slice()` (1.4x). Note `Array.prototype.flat()` is **7.7x slower than
+  `concat`** (380 µs vs 49 µs) at every chunk size measured — do not use
+  `flat()`.
+- memory: 4.1 KB/retained version at C=224 vs 400 KB for plain, and the
+  structure itself is 403 KB vs 391 KB (3% overhead). C=32 is worse
+  (13.1 KB/version) because the 1563-entry chunk index dominates.
+
+**Who does this.** Verified in source: `immutable.List` keeps a
+**32-element tail buffer** (`_tail`) so appends do not touch the trie;
+`list` (funkia) keeps **prefix and suffix affixes capped at 32**
+(`suffixSize < 32`), which is why its prepend is O(1). Both are the
+tail-chunk idea from Clojure's `PersistentVector` / Bagwell & Rompf 2011.
+A 2-level chunked array is just a fixed-depth-2 version of the same
+trie. I found **no JS state-management library that chunks a user's
+collection** — the technique exists only inside the vector libraries.
+
+### 6. Reference-equality change detection — the win is fanout, not sharing
+
+This is the answer to the question that matters, and the naive version of
+it is **wrong**. Structural sharing alone does not make "what changed"
+cheap. Localising a change is O(fanout of every node on the path), and a
+plain 50k array is one node with fanout 50,000.
+
+50k records, one field changed, all versions structurally shared:
+
+| strategy | cost | what it returns |
+| --- | --- | --- |
+| root pointer compare `a === b` | **3.9 ns** | a boolean, no location |
+| `deepEqual(base, next)`, shared refs | 87–94 µs | boolean |
+| `deepEqual(base, structuredClone)` | **1.84 ms** | boolean |
+| generic recursive ref-walk over the plain array | **232 µs** | the path `["rows",25000,"v"]` |
+| hand-inlined `a[i] !== b[i]` scan over the plain array | **18 µs** | the index |
+| **ref-walk over chunked C=224** | **2.1 µs** | `[111,136,"v"]` |
+| **ref-walk over a 32-way trie (hand-rolled)** | **0.26 µs** | index 25000 |
+| **ref-walk over `immutable.List` internal nodes** | **0.15 µs** | the changed slot |
+
+The generic ref-walk on a plain array is **2.7x slower than the deep
+comparison it was supposed to replace.** Sharing bought nothing, because
+the array node changed and you must scan all 50,000 slots to find out
+where; the per-slot recursion overhead (4.6 ns) is worse than
+`deepEqual`'s inlined loop (1.7 ns). Bounded fanout is what buys the win,
+and it buys a lot:
+
+| N (one element changed) | plain ref-walk | plain deepEqual | 32-way trie walk | `immutable.List` internal walk |
+| --- | --- | --- | --- | --- |
+| 1,000 | 4.4 µs | 1.7 µs | **0.16 µs** | **0.095 µs** |
+| 50,000 | 235 µs | 104 µs | **0.32 µs** | **0.156 µs** |
+| 1,000,000 | 4.76 ms | 1.71 ms | **0.41 µs** | **0.187 µs** |
+
+**The trie walk is flat in N** — 95 ns → 187 ns across three orders of
+magnitude, which is the O(depth) claim, measured. At 1M it is **9,100x**
+faster than the deep comparison.
+
+As k changed elements grow (50k collection), the trie stays ahead on
+*enumeration*: k=1 → 318 ns, k=10 → 1.75 µs, k=100 → 9.6 µs, k=1000 →
+38 µs, k=10000 → 82 µs, against a plain ref-walk's flat 232–699 µs.
+`deepEqual` gets *cheaper* as k grows (42 ns at k=1000) only because it
+short-circuits on the first difference — it answers a different question
+and cannot enumerate.
+
+Applied to SignalTree's leaf-equality problem — projected cost of the
+**equality term alone** for 1000 writes to a 50k-element leaf:
+
+| leaf `equal()` | per write | × 1000 writes |
+| --- | --- | --- |
+| `deepEqual` over the whole leaf | 90.6 µs | **90.6 ms** |
+| inline ref scan over 50k slots | 18.4 µs | 18.4 ms |
+| `deepEqual` over one 224-chunk | 516 ns | **0.52 ms** |
+| ref scan over one 224-chunk | 96.8 ns | **0.10 ms** |
+| `===` only | 3.9 ns | **0.004 ms** |
+
+### 7. Merkle-style content hashing of subtree identity
+
+Implemented FNV-1a over the tree with a `WeakMap` memo keyed on node
+identity (the only way to make it incremental in JS):
+
+| operation | 50k plain array | 50k as a 32-way trie |
+| --- | --- | --- |
+| hash from scratch | **4.02 ms** | 4.21 ms |
+| re-hash after 1 change, children memoised | **762 µs** | **2.2 µs** |
+| compare two hashes | 4.2 ns | 4.2 ns |
+| whole-tree hash, all nodes cached | 375 ns | — |
+
+Same fanout lesson: re-hashing after one change costs 762 µs on a plain
+array because the changed array node still has to re-mix 50,000 child
+hashes, versus 2.2 µs on a trie. **Maintaining a Merkle hash is strictly
+more expensive than maintaining reference identity, and buys nothing you
+did not already have** — structural sharing already gives you O(1)
+"unchanged?" for free at 3.9 ns, with no maintenance and no collisions.
+
+The one thing it buys that pointers cannot: comparing trees from
+*different allocation lineages*. `deepEqual(a, structuredClone(a))` costs
+**2.53 ms**; comparing two cached hashes costs **11.4 ns** (222,000x).
+But cold-hashing both sides costs **8.11 ms** — 3.2x worse than just
+deep-comparing. So it only pays if the hashes are already maintained,
+which only makes sense if the trees arrive from elsewhere (network, disk,
+another process).
+
+Collision surface: a 32-bit content hash over 1e6 distinct records
+produced **131 collisions**, against a birthday expectation of ~116. A
+32-bit hash behaves exactly like a random function and is **not usable as
+proof of equality** at this scale. You need ≥64 bits, which in JS means
+two words or a string, and the mixing cost roughly doubles.
+
+Who does this in JS state management: **nobody I could find**. Verified
+absent from immer and immutable.js by source. Content-hash-addressed
+state exists (git; Merkle-DAG systems; Automerge's hash-linked change
+DAG) but as a *sync/identity* mechanism across processes, not as a
+change-detection mechanism inside a store — which is exactly what the
+lineage result above predicts.
+
+### 8. V8 realities — several of these dominate the data-structure choice
+
+**Element kinds** (`%HasSmiElements` etc., 50k arrays):
+
+| kind | random get | `slice()` | full iterate | bytes/slot |
+| --- | --- | --- | --- | --- |
+| PACKED_SMI | **0.68 ns** | 41.8 µs | 17.3 µs | **7.80** |
+| PACKED_DOUBLE | 1.89 ns | 38.5 µs | 28.4 µs | 8.01 |
+| PACKED_ELEMENTS (objects) | 2.07 ns | 40.9 µs | 69.9 µs | 8.01 |
+| HOLEY_SMI | 2.20 ns | 40.6 µs | 41.3 µs | 8.01 |
+| **DICTIONARY** | **14.2 ns** | **126.5 ms** | **118.9 ms** | **800.01** |
+
+Dictionary-mode arrays are **3,100x slower to copy** and **100x the
+memory per slot**. One `arr[100 * len] = x` does it. Everything else is
+benign: `slice()`, `[...a]`, `concat`, `Array.from`, and `map` all
+**preserve** PACKED_SMI (verified with natives), so copy-on-write over
+arrays does not degrade the element kind. Holey costs 3.2x on get and
+2.4x on iterate versus packed — `new Array(n)` without filling is the
+common way to get there.
+
+**Inline caches.** Property read at a site seeing k object shapes,
+self-timed (measurement loop inside the generated function, so no shared
+harness call site):
+
+| shapes at the site | 1 | 2 | 3 | **4** | **5** | 6 | 8 | 16 | 64 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ns/read | 0.79 | 0.80 | 0.83 | **0.94** | **2.57** | 2.56 | 2.58 | 2.58 | 2.57 |
+
+The cliff is **exactly at 4 → 5 shapes** (V8's polymorphic IC limit), the
+penalty is **3.3x**, and it then plateaus — megamorphic reads are not
+catastrophic.
+
+**Object spread is a different story.** Same experiment for `{...o}` on
+8-property objects:
+
+| shapes at the site | 1 | 2 | 4 | 8 | 16 | 64 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `{...o}` ns | **12.0** | 13.3 | 14.0 | **77.6** | 86.3 | 102.5 |
+| `Object.assign` ns | 59.2 | 64.7 | 65.9 | 97.6 | 73.2 | 97.7 |
+
+**6.5x**, because `CloneObjectIC` has no megamorphic fast path. This is
+load-bearing: a *generic* path-copy helper (`setIn(obj, path, v)` with a
+single `{...o, [k]: v}` site handling every node shape in the store) is
+inherently polymorphic. Measured directly on a 5-deep spine: a
+specialised inlined spread chain costs **40.4 ns**, the generic recursive
+`setIn` costs **61.9 ns** — **1.53x**, and that is with only 6 shapes in
+play. immer's `produce` on the same 5-deep store costs **1,311 ns**
+against 329 ns hand-rolled (**4x**), which is proxy overhead on top of
+this.
+
+**Dictionary-mode objects.** Spread cost per property:
+
+| props | fast-mode ns/prop | dictionary-mode ns/prop | ratio |
+| --- | --- | --- | --- |
+| 4 | 9.4 | 76.0 | 8.1x |
+| 8 | 8.3 | 69.3 | 8.4x |
+| 16 | 8.6 | 69.8 | 8.1x |
+| 32 | 9.7 | 78.9 | 8.1x |
+| 128 | 17.4 | 89.2 | 5.1x |
+
+A single `delete o.k` on a store node makes every subsequent copy of that
+node **~8x more expensive, permanently**.
+
+**`Object.create(null)` is always dictionary mode** — `%HasFastProperties`
+returns `false` even for an empty one, and it never recovers:
+
+| | `{}` / `{a,b,c,d}` | `Object.create(null)` (+4 keys) |
+| --- | --- | --- |
+| read `.c` | **0.28 ns** | **2.80 ns** (9.9x) |
+| `{...o}` | **8.77 ns** | **292.7 ns** (33.4x) |
+| create | 5.3 ns / 4.5 ns | 10.3 ns / 58.8 ns |
+| retained bytes (empty / +4) | 64.8 / 64.1 B | **192.6 / 288.7 B** (3–4.5x) |
+
+Using `Object.create(null)` for store nodes to avoid prototype pollution
+costs **33x on the copy path**. Also note `{...nullProtoObj}` returns an
+object with `Object.prototype` — the spread does not preserve the null
+prototype.
+
+**Map vs object.** Crossover depends entirely on the operation, not on N:
+
+| | N=8 | N=64 | N=1,000 | N=100,000 |
+| --- | --- | --- | --- | --- |
+| `obj[strKey]` | **7.3 ns** | **9.1 ns** | **9.2 ns** | **10.3 ns** |
+| `Map.get(strKey)` | 11.3 | 9.2 | 9.9 | 12.6 |
+| `obj[intKey]` | **3.7** | **4.1** | **3.7** | **3.7** |
+| `Map.get(int)` | 5.1 | 6.1 | 6.0 | 5.9 |
+| full copy `{...o}` | **12.4 ns** | 5.20 µs | 129 µs | 26.0 ms |
+| full copy `new Map(m)` | 185 ns | **1.37 µs** | **24.6 µs** | **5.0 ms** |
+| iterate `Object.keys`+read | 47 ns | 800 ns | 17.0 µs | 9.00 ms |
+| iterate `map.forEach` | **41 ns** | **289 ns** | **4.3 µs** | **0.56 ms** |
+| build from scratch | **58 ns** | 825 ns | 75.0 µs | 4.84 ms |
+| build into a `Map` | 92 ns | **783 ns** | **12.6 µs** | **4.04 ms** |
+
+**Objects always win single-key reads** (1.3–1.6x, at every size).
+**`Map` always wins bulk copy, bulk iteration, and bulk build**, and the
+margin grows: at 1,000 keys `new Map(m)` is **5.3x** faster than
+`{...o}` and `forEach` is **4.0x** faster than `Object.keys`; at 100,000
+it is 5.2x and 16x. The crossover for copy sits between N=8 and N=64.
+For a store node that is read constantly and copied rarely, use an
+object; for a keyed *collection* that is copied or scanned wholesale, use
+a `Map`.
+
+---
+
+### Direct answer: which pairs are compatible, which are in tension
+
+The four goals: **(a)** fast partial updates, **(b)** fast whole-state
+reads, **(c)** cheap time travel, **(d)** cheap "what changed".
+
+**Compatible, same mechanism — (a) + (c) + (d) are one property, not
+three.** Path copying over **bounded fanout** gives all three at once,
+and the evidence is that they are literally the same pointer discipline:
+`immutable.List` at 50k does update in **97 ns**, retains **2.0 KB per
+version**, restores any version in **3.9 ns** (deref a held root), and
+localises a change in **152 ns flat in N**. Nothing was traded between
+them. The single design parameter producing all three is that no node has
+more than 32 children.
+
+**In tension: (b) against everything else — and it is a hard tension, not
+a constant factor.** "Fast whole-state read" in the O(1) sense means
+*returning a reference to a plain JS value*, and a plain JS value's array
+node **is** the whole collection. So:
+
+- If the whole state is a POJO, reading it is **0.3 ns** and updating one
+  element of a 50k array is **32.3 µs** and **400 KB** (immer).
+- If the collection is a trie, updating is **97 ns** and **2.0 KB**, and
+  materialising a POJO is **967 µs** (`toArray`) or **4.7 ms**
+  (`toJS` on nested Maps) — a **3-million-x** swing on the read.
+
+These are the same fact viewed twice. **(a) and (b) are provably in
+tension** for wide collections: you cannot both (i) hand out a reference
+to a plain array in O(1) and (ii) avoid copying that array's 50,000
+slots on write, because the reference *is* the array. Likewise **(b) and
+(c)**: an O(1) addressable snapshot of a POJO state requires the POJO to
+be immutable, which forces the O(width) write.
+
+**The tension is resolvable in constants, not asymptotics, and the
+resolution is chunking.** A 2-level chunked collection at C ≈ √N sits
+between the two regimes: update **110 ns** (343x better than plain),
+memory **4.1 KB/version** (98x better), what-changed **2.1 µs** (43x
+better than `deepEqual`), and whole-state materialisation **52 µs** — 1.4x
+worse than `slice()` but *not* O(1). That last number is the entire
+price: you give up "return the reference" and accept "rebuild the array",
+which for a 50k collection is 52 µs.
+
+Restated as a rule the synthesis can use:
+
+| you want | you must accept |
+| --- | --- |
+| whole-state read as a returned reference (0.3 ns) | O(width) writes and O(width) memory per version — immer's profile |
+| O(log n) writes, O(1) snapshots, O(depth) diffs | whole-state reads become O(n) materialisation (52 µs chunked, 967 µs trie) and iteration slows 1.2–67x |
+| cheapest memory per version (0.5 KB) and cheapest write | journals: only one version exists at a time, restore is O(distance) |
+| cheapest write **and** simultaneously-addressable versions | fat nodes — but then there is no root pointer, and whole-state read at version k is O(n log m) |
+
+The one thing that is **free** and that we are not currently taking: a
+leaf's `equal()` can be `===` (**3.9 ns**) instead of `deepEqual`
+(**90.6 µs**) the moment the write path guarantees that unchanged
+subtrees are reference-identical. That is a **23,000x** difference on the
+equality term alone, needs no new data structure, and the 1000-write /
+50k-array scenario's equality term drops from **90.6 ms to 4 µs**.
+
+### What surprised me
+
+1. **`immutable.Map` is not a 32-way trie in practice.** On string keys
+   it measures at **fanout 3.79 and depth 6** at 1M entries; on integer
+   keys, 30.56 and depth 4. The JVM-style string hash correlates high
+   bits for common-prefix keys.
+2. **Structural sharing by object count is meaningless.** Every structure
+   measured shares >99.6% of objects after a single-field update. In
+   bytes, immer's 15-deep/50k-wide update allocates **392 KB, of which
+   99.6% is one array node and 0.4% is the fifteen levels of depth.**
+3. **Reference-equality diffing was 2.7x *slower* than the deep
+   comparison** it was meant to replace, on a plain 50k array. The win
+   comes from bounded fanout, not from sharing. I had this backwards
+   going in.
+4. **`immutable.List.splice` is worse than a plain array at every size** —
+   31.7 ms vs 806 µs at 1M — while RRB does it in 1.5 µs.
+5. **The V8 polymorphic-IC cliff is at exactly 4→5 shapes for reads
+   (3.3x) but 4→8 for spread (6.5x)**, and the spread penalty is much
+   larger because `CloneObjectIC` has no megamorphic fallback. Generic
+   path-copy helpers are structurally megamorphic.
+6. **`Object.create(null)` is always dictionary mode** — 33x on spread,
+   9.9x on read, 3–4.5x memory.
+7. **`Array.prototype.flat()` is 7.7x slower than `[].concat(...)`** for
+   re-flattening chunks (380 µs vs 49 µs at 50k).
+8. **`JSON.parse(JSON.stringify(x))` beats `structuredClone(x)`** on a
+   50k-record state: 7.7 ms vs 13.7 ms.
+9. **Optimal chunk size tracks the analytic C + N/C minimum almost
+   perfectly** and the optimum is flat across 128–320, so tuning is
+   forgiving.
+10. **A HAMT costs ~4x a `Map` in memory** (155 B/entry vs 37 B/entry at
+    100k) — the price of sharing is paid on every entry, not just the
+    changed ones.
+
+### What I could NOT establish
+
+- **Large-object spread throughput (>32 properties).** Measurements swing
+  between 0.86 and 18 ns/prop across otherwise-identical runs, apparently
+  GC/tiering dependent. Small objects (≤16 props, the realistic store
+  node) are stable at ~9 ns/prop and I trust those.
+- **Why objects built by dynamic key addition alternate in and out of
+  dictionary mode** at exactly n = 20, 23, 26, 29, 32, 35, 38.
+  Reproducible, `%HasFastProperties` confirms it, cause unknown.
+- **Chrome vs Node.** Everything is Node 24.3.0 / V8 13.6 on darwin
+  arm64. The demo-vs-harness discrepancy in the open-measurements section
+  may well be a Chrome/Node difference and this track does not settle it.
+- **Whether SignalTree's ~8x large-array regression is fully explained by
+  the `deepEqual` term.** My projection for the equality term alone is
+  **90.6 ms** for 1000 writes; the independent harness reports ~385 ms.
+  Same order of magnitude, not a full account — roughly 4x is unattributed.
+- **A full survey of Merkle hashing in JS state management.** I verified
+  its absence in immer and immutable.js by source, and found no library
+  that does it, but I did not exhaustively enumerate the ecosystem.
+- **Whether RRB's relaxed nodes actually carried the 50k splice
+  benchmark.** I confirmed `list` produces size-table-bearing nodes on
+  `concat` and on `slice`+`concat` (2 and 4 relaxed nodes respectively on
+  a 2000-element case), but did not verify the node composition at 50k/1M.
+- **`hamt` memory at N=1000 on the first pass** measured negative (GC
+  noise); the corrected repeated-allocation measurement gives 108.8
+  B/entry and that is the one quoted. Single-update delta-byte
+  measurements below ~20 KB are likewise inside this method's noise floor
+  and are not quoted as results.
+- **Fat nodes and node copying in a real JS store.** My fat-node
+  implementation is a 60-line model, not a library. The 50 ns write and
+  28 ns versioned read are real but come from a purpose-built flat slot
+  map, not from a general tree, and would not survive a realistic nested
+  schema unchanged.
 
 ## Findings E — shipping libraries
 
