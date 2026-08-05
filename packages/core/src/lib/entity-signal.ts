@@ -246,9 +246,19 @@ export function createEntitySignal<
     //   node()           → reads current entity (reactive via mapSignal)
     //   node(value)      → full entity replace via updateOne (throws if entity removed)
     //   node(updater)    → updater-based replace via updateOne (throws if entity removed)
-    // Ensure the per-entity signal exists so field computeds below subscribe
-    // to it (granular) rather than to the whole-collection mapSignal.
-    const entitySig = getEntitySignal(id);
+    // Resolve the per-entity signal on EVERY read rather than capturing it
+    // once. Capturing it made a held node reference permanently dead across a
+    // remove -> re-add of the same id: `removeEntitySignal` deletes the signal
+    // from the map, the re-add creates a NEW one, and the captured reference
+    // kept reading the orphaned signal — `undefined` forever, while a fresh
+    // `byId()` worked. Holding a reference to a nested position is the
+    // capability this library has and its competitors do not, so it must
+    // survive the collection churning underneath it.
+    //
+    // `getEntitySignal` re-materialises from storage when absent, so a node
+    // held across a removal reads `undefined` while the entity is gone and
+    // starts reading again the moment it comes back.
+    const entitySig = () => getEntitySignal(id)();
 
     const node = ((valueOrUpdater?: E | ((current: E) => E)): E | undefined => {
       if (valueOrUpdater === undefined) {

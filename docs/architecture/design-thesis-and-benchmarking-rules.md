@@ -33,6 +33,11 @@ The bill for per-leaf ownership is **materialisation**: there is no plain object
 anywhere until you build one. `tree()` walks the signal graph and constructs a
 POJO, O(state).
 
+How big a bill: a POJO-backed store returns its state **by reference** in
+~0.0007 ms; `tree()` at 100k leaves is **13.9 ms**. That is four orders of
+magnitude, not the "~2.25x" an earlier revision of this document claimed — that
+figure came from a demo scenario that measured something else entirely.
+
 This is not an implementation flaw; it is a property of the model, and there is
 independent evidence. MobX is the closest structural cousin (one atom per
 property, no POJO anywhere) and its `toJS` on the same fixture measures
@@ -131,11 +136,21 @@ leaves history untouched), so undo silently cannot restore them.
 materialise plus stringify the entire tree, on a timer, to discover whether
 anything changed.
 
-**`entityMap` — FIXED (13.5.0).** `updateSignals()` rebuilt `all`/`ids`/`count`/
+**`entityMap` — FIXED (13.5.0), with a caveat.** `updateSignals()` rebuilt `all`/`ids`/`count`/
 `map` on every single-entity mutation: three full copies of the collection plus a
 deep-equality compare on each. `updateOne` was O(size) — 2,831 µs on 50k rows —
 in the flagship *collection* API whose storage write is O(1). Now the queries are
-lazily computed from a version counter: **under 1 µs, flat across 1k/10k/50k.**
+lazily computed from a version counter: **under 1 µs, flat across 1k/10k/50k**
+(0.91 µs vs 432 µs for a plain array leaf — 474×), with a fan-out of exactly 1
+(100 updates to one entity caused ZERO recomputes of a computed reading another;
+the array leaf re-ran 100/100).
+
+The caveat: the O(N) work is **deferred, not removed**. `update + byId()` is
+1.90 µs, but `update + all()` is 97.47 µs — 1.8× *slower* than a
+shallow-compared array leaf. `entityMap` wins decisively when readers are
+per-entity and loses when every write is followed by a whole-collection read.
+Also: `tree()` over an `entityMap` emits the collection three times (`all`,
+`ids`, `map`), which is why time travel over one costs 414× the bare write.
 
 ### The fix pattern
 
@@ -161,10 +176,22 @@ Each of these was learned the expensive way.
    why `@signaltree/callable-syntax` exists as a build-time transform.
 2. **Materialisation is the tax for O(1) writes.** Don't try to make `tree()`
    fast; make fewer things call it.
-3. **Deep equality on leaves is O(value size) per write.** It is what makes
-   `updateAndReport` honest (an identical re-fetch reports nothing), and it is
-   worth paying on a settings object and not on a 50k array. `useShallowComparison`
-   exists; a size-adaptive default is an open question.
+3. **Deep equality on leaves costs O(index of first difference), not O(size).**
+   It short-circuits — ~7.7 ns per reference-identical element — so a change near
+   the front of a 50k array costs +3.8 µs and a change at random costs +170 µs.
+   The pathological case is a payload with NO difference at all (+337 µs), which
+   is exactly what a re-fetch produces.
+
+   It never pays for itself on CPU: ~124 ns/row versus ~0.8 ns for a selector
+   pass, so one deep compare is worth ~155 selector passes, and it loses at every
+   size and dependent count measured. It is defensible **purely as correctness** —
+   `updateAndReport` reports 0 changed paths across 100 identical re-fetches
+   under `deepEqual` and 100 under `Object.is`.
+
+   **A size-adaptive default is NOT defensible** and was rejected on the
+   measurement: cost per element is flat, so a size threshold picks an arbitrary
+   point on a straight line and silently flips semantics either side of it.
+   `useShallowComparison` stays an explicit opt-in.
 4. **A `Map` is not automatically faster.** A per-node `Map` index cost +12% on
    subtree reads and 310 B/node with no measured safety benefit over an
    own-property check; it was built, measured and reverted.
@@ -179,10 +206,33 @@ Each of these was learned the expensive way.
    notification, guardrails. Any feature that must see all writes has to
    instrument the leaves, not the root. No surveyed library achieves a root
    chokepoint; the ones with full coverage instrument leaves.
-9. **The demo's `large-array` numbers do not reproduce outside it** (11.3 ms in
-   the demo vs ~385 ms in an independent harness for what reads as the same
-   workload). `benchmark-constants.ts` declares `ARRAY_UPDATES` twice (1000 and
-   255). Unresolved — do not quote that scenario until it is.
+9. **The demo's `large-array` number is arithmetically impossible.** It reports
+   11.3 ms for 1000 updates — 11.3 µs each — when a bare `slice()` of a 50k array
+   is 47–49 µs on its own. Do not cite that scenario. (The duplicated
+   `ARRAY_UPDATES` constant was investigated and is NOT the cause: the two live
+   in different namespaces, `ITERATIONS.*` and `YIELD_FREQUENCY.*`.)
+
+10. **Benchmark fixtures must actually change the value.** Three harnesses in
+    this repo built items as `{id: i, value: i}` and then "updated" index `i % N`
+    with `value: i` — writing the value already there. Every update was a
+    structurally identical no-op, which is deepEqual's WORST case (no
+    short-circuit, full walk) and inflated a 53–218 ms workload to 385 ms. A
+    per-pass counter that never repeats avoids it, and the replay variant of the
+    same trap (fixtures are reused across samples, so `-(i+1)` degenerates from
+    pass 2).
+
+11. **`timeTravel()` used to cost you other people's trees.** It subscribes to
+    the GLOBAL PathNotifier flush, so every time-travelled tree materialised and
+    deep-cloned ITSELF whenever any tree in the process flushed — 0.008 ms →
+    9.7 ms as three unrelated 10k-leaf trees were kept alive. Fixed by gating on
+    a self-dirty flag; cost is now flat.
+
+12. **A held `byId()` reference used to die permanently across remove → re-add.**
+    The node captured the per-entity signal once; removal deleted it from the
+    map and the re-add made a new one, leaving the held reference reading an
+    orphan forever. Holding a nested reference is the capability this library has
+    and immutable stores do not, so it has to survive churn. Now resolved through
+    the map per read.
 
 ---
 

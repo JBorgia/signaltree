@@ -337,6 +337,8 @@ export function timeTravel(
     // intercept every plain writable signal and route their writes through
     // the global notifier. Without this interception, time-travel would
     // silently miss every leaf .set()/.update() in the tree.
+    /** Set by this tree's own leaf interceptors; read by the global flush hook. */
+    let selfDirty = false;
     let unsubscribeFlush: (() => void) | null = null;
     let restoreLeafInterceptors: (() => void) | null = null;
     try {
@@ -347,6 +349,10 @@ export function timeTravel(
             (tree as ISignalTree<T>).$ as Record<string, unknown>,
             (path, next, prev) => {
               if (isRestoring) return;
+              // Mark THIS tree dirty. The flush hook below is global, so
+              // without this flag every time-travelled tree snapshotted itself
+              // whenever ANY tree in the process flushed.
+              selfDirty = true;
               notifier.notify(path, next, prev);
             }
           );
@@ -355,6 +361,15 @@ export function timeTravel(
           unsubscribeFlush = notifier.onFlush(() => {
             // Avoid recording history while restoring
             if (isRestoring) return;
+            // `onFlush` is on the GLOBAL PathNotifier, so this fires for writes
+            // to trees that have nothing to do with this one. Recording
+            // unconditionally meant a full materialise + structuredClone of
+            // THIS tree on every unrelated flush, then throwing it away:
+            // measured 0.008ms -> 3.7 -> 7.2 -> 9.7ms as 1/2/3 unrelated
+            // 10k-leaf trees were kept alive. Cost that scales with OTHER
+            // people's trees is the worst kind.
+            if (!selfDirty) return;
+            selfDirty = false;
             const afterState = originalTreeCall();
             timeTravelManager.addEntry('batch', afterState);
           });

@@ -436,7 +436,489 @@ SSR shim.
 
 ## Findings F — SignalTree's measured profile
 
-_pending_
+**Harness:** `scripts/benchmarks/data-model-profile.mjs`. Run with
+`node --expose-gc scripts/benchmarks/data-model-profile.mjs [section…]`; sections
+are `write read collection construct entitymap timetravel equality ttentity
+ttleak`. `ttentity` and `ttleak` **must** run in their own process (see F-1d-ter).
+Arms are interleaved in one process, arm order rotates per sample, 15 samples,
+medians + IQR. Node v24.3.0, Apple M4, `dist/packages/core` built from HEAD.
+
+**Two fixture bugs were found and fixed inside this track before any number
+below was trusted** — both had produced wrong conclusions, and one of them is
+the explanation for a number already in this document:
+
+1. `mkItems` builds `{ id: i, value: i }` and the update writes `value: i` at
+   `idx = i % N`. For `i < N` that writes **the value already there**, so every
+   "update" is a structurally-identical no-op and `deepEqual` runs its full
+   `N`-element walk instead of short-circuiting. This is what
+   `fair-signalstore-headtohead.mjs` and `deep-equality-cost.mjs` still do.
+2. Fixtures are built once and each arm is replayed ~18 times (warmup +
+   samples). A per-loop value like `-(i + 1)` writes the value the previous pass
+   already wrote, which degenerates into case 1 from the second pass on. The
+   written value has to be globally unique across the whole run.
+
+---
+
+### F-1a. Partial write — walked path vs held leaf reference
+
+Per write, 10 000 writes per sample. A `nested(d)` chain; the leaf is a number.
+
+| depth | walked each time | held leaf ref | bare `signal()` | held + 1 dependent computed | POJO immutable rebuild |
+| ----- | ---------------- | ------------- | --------------- | --------------------------- | ---------------------- |
+| 1     | 6.5 ns           | 5.1 ns        | 3.0 ns          | 23.5 ns                     | 15.7 ns                |
+| 5     | 32.0 ns          | 15.6 ns       | 16.0 ns         | 43.4 ns                     | 40.6 ns                |
+| 15    | 46.7 ns          | 15.5 ns       | 16.0 ns         | 43.1 ns                     | 110.3 ns               |
+
+Both forms are legitimate and both are cheap. Read:
+
+- **The held reference is free.** At depth 15 it costs 15.5 ns — statistically
+  identical to a bare Angular `signal()` (16.0 ns). SignalTree adds *nothing*
+  measurable to a leaf write once the leaf is resolved. This is the strongest
+  single result in the track.
+- **Walking costs ~2.9 ns per level** (46.7 ns at depth 15 vs 6.5 ns at depth 1).
+  Path resolution is one property read per level and nothing else.
+- **The advantage over an immutable rebuild grows with depth**, as it must:
+  1.0x at depth 1 (rebuilding one small object is cheap), 2.4x at depth 15
+  walked, **7.1x** held. Note this baseline is a *hand-written* POJO rebuild —
+  the floor. A real store (`patchState`) adds its own overhead on top, which is
+  where the "~20x / ~31x vs `@ngrx/signals`" in the header table comes from.
+  Those figures are not re-derived here; this table is the architecture-only
+  comparison.
+- **The notification, not the write, is the cost.** Adding one dependent
+  computed takes a depth-15 held write from 15.5 ns to 43.1 ns — propagation is
+  ~2x the write itself. Any "write cost" number taken on a leaf with no live
+  consumer (including several in this repo) understates real cost by ~3x.
+
+### F-1b. Whole-state read — `tree()` materialisation
+
+Per `tree()` call, on a wide object with 10 primitive leaves per group.
+
+| leaves  | `tree()` | `structuredClone(POJO)` | POJO by reference |
+| ------- | -------- | ----------------------- | ----------------- |
+| 1 000   | 0.088 ms | 0.055 ms                | 0.0001 ms         |
+| 10 000  | 0.936 ms | 0.568 ms                | 0.0001 ms         |
+| 100 000 | 13.90 ms | 7.86 ms                 | 0.0007 ms         |
+
+`tree()` is **linear and ~1.6–1.8x the cost of a `structuredClone`** of the
+equivalent POJO. It allocates a complete fresh object graph on every call and
+caches nothing.
+
+**The header table's "read the WHOLE state ~2.25x slower" is the wrong
+comparison and should be corrected.** `@ngrx/signals`' `signalState` holds a
+POJO and returns it by reference — that is the third column, 0.0007 ms. The
+honest statement is: *any* competitor that stores a POJO answers a whole-state
+read in O(1), and we answer it in O(leaves). At 100 000 leaves that is four
+orders of magnitude, not 2.25x. The 2.25x figure is measuring something else and
+should not be cited until re-derived.
+
+### F-1c. Large collection — 1000 single-element updates on an array leaf
+
+Per update, in µs. `ST` = `signalTree({ items: [...] })`, one array leaf.
+
+| N      | pattern                          | ST deepEqual (default) | ST `useShallowComparison` | bare signal `Object.is` | no signal (slice only) |
+| ------ | -------------------------------- | ---------------------- | ------------------------- | ----------------------- | ---------------------- |
+| 1 000  | front idx, new value             | 4.00                   | 0.27                      | 0.26                    | 0.26                   |
+| 1 000  | random idx, new value            | 3.83                   | 0.29                      | 0.28                    | 0.25                   |
+| 1 000  | front idx, **identical** (no-op) | 7.53                   | 0.27                      | 0.33                    | 0.30                   |
+| 10 000 | front idx, new value             | 6.29                   | 2.44                      | 2.48                    | 2.44                   |
+| 10 000 | random idx, new value            | 34.94                  | 2.50                      | 2.53                    | 2.41                   |
+| 10 000 | front idx, **identical** (no-op) | 70.14                  | 2.40                      | 2.36                    | 2.44                   |
+| 50 000 | front idx, new value             | 53.16                  | 49.10                     | 49.05                   | 49.44                  |
+| 50 000 | random idx, new value            | 218.35                 | 48.16                     | 48.21                   | 48.34                  |
+| 50 000 | front idx, **identical** (no-op) | 384.83                 | 47.67                     | 47.40                   | 47.48                  |
+
+Three facts fall out, and together they close the open measurement at the top of
+this document:
+
+1. **SignalTree adds nothing over a bare Angular signal.** The
+   `useShallowComparison` column and the `Object.is` column match the *no signal
+   at all* column at every size. The array-leaf write path is a `slice()` plus a
+   signal set; the tree itself costs nothing.
+2. **`slice()` dominates at 50k.** 47–49 µs of every arm is the array copy. Any
+   claim about "SignalTree on large arrays" that does not subtract this is
+   measuring `Array.prototype.slice`.
+3. **`deepEqual`'s cost is O(index of the first difference), not O(N).** Because
+   `slice()` leaves every untouched element reference-identical, the walk exits
+   at the first changed element, at ~7.7 ns per reference-identical element:
+   - mismatch at the front → 50k: 53.2 − 49.4 = **3.8 µs**
+   - uniform-random mismatch (~N/2) → 50k: 218.4 − 48.3 = **170 µs**
+   - **no mismatch at all** → full walk *plus* a field-by-field compare of every
+     element → 50k: 384.8 − 47.5 = **337 µs**
+
+**This resolves "the demo reports 11.3 ms, an independent harness measures
+~385 ms".** The ~385 ms harness is running case (3): its fixture writes the
+value that is already present, so all 1000 updates pay the full 50 000-element
+walk. 385 µs/update × 1000 = 385 ms — the number reproduces exactly. Correct the
+fixture and the same workload is **53 ms** (front idx) to **218 ms** (random
+idx). `benchmark-constants.ts` is **not** a cause: the two `ARRAY_UPDATES` are
+`ITERATIONS.ARRAY_UPDATES = 1000` and `YIELD_FREQUENCY.ARRAY_UPDATES = 255`,
+different namespaces, not a redeclaration. **Strike that candidate.**
+
+The demo's own 11.3 ms is still unexplained, but it can now be bounded. The demo
+writes `Math.random()` values (always different) at `idx = i % dataSize` — the
+cheapest case — yet 11.3 ms for 1000 updates is **11.3 µs per update**, and a
+bare `slice()` of a 50 000-element array measures 47–49 µs with no signal
+involved at all. 11.3 ms is arithmetically impossible for the workload the demo
+claims to run. Whatever it is timing, it is not 1000 single-element updates over
+a 50 000-element array. **Do not cite 11.3 ms.**
+
+### F-1d. Time travel
+
+**Recording granularity is per-microtask-flush, not per-write.** 100 synchronous
+leaf writes produce **2** history entries (INIT + one coalesced flush); 100
+writes each awaiting a microtask produce 100. One `undo()` after a synchronous
+burst therefore reverts the entire burst. This is a behavioural fact, not a perf
+number, and I could not find it documented anywhere.
+
+Cost of recording ONE history entry, by state size:
+
+| state         | `timeTravel()` | no enhancer | manual immutable snapshot (structural sharing) | manual `structuredClone` snapshot |
+| ------------- | -------------- | ----------- | ---------------------------------------------- | --------------------------------- |
+| 1 000 leaves  | **832 µs**     | 0.3 µs      | 0.3 µs                                         | 59 µs                             |
+| 10 000 leaves | **4 342 µs**   | 0.3 µs      | 1.2 µs                                         | 542 µs                            |
+
+`undo()`: 0.060 ms @1 000 leaves, 0.531 ms @10 000.
+Retained per history entry: **25.3 KB @1 000 leaves, 249.4 KB @10 000** — ~25
+bytes per leaf per entry, a fully materialised clone with no sharing. With the
+default `maxHistorySize: 50`, a 10 000-leaf tree retains ~12 MB of history.
+
+`addEntry` is **8–14x more expensive than a naive full `structuredClone`** of the
+state, because it makes three full passes: `snapshotState()` walks the whole
+signal graph and materialises a POJO, `structuredClone` copies that POJO, then
+`deepEqual` compares it against the previous entry to dedupe. Against the
+structural-sharing alternative (keep the immutable POJO, push the new root) it is
+**2 700x** at 1 000 leaves and **3 600x** at 10 000 — and that alternative
+retains O(depth) per entry instead of O(state).
+
+Time travel is by a wide margin the most expensive thing in the library.
+
+#### F-1d-bis. `entityMap` under time travel
+
+| operation                                           | median   |
+| --------------------------------------------------- | -------- |
+| `entityMap(5000).updateOne` + flush, no enhancer    | 0.010 ms |
+| `entityMap(5000).updateOne` + flush, `timeTravel()` | 4.141 ms |
+
+**414x.** `entityMap`'s O(1) write is completely erased by time travel, because
+`snapshotState` materialises the collection — and `tree()` emits **five** keys
+for an `entityMap` (`all`, `count`, `ids`, `map`, `empty`), so the snapshot
+contains the collection **three times** (as an array, as a key array, and as a
+`Map`) before `structuredClone` copies all three and `deepEqual` walks all three.
+
+#### F-1d-ter. `timeTravel()` leaks its cost across unrelated trees
+
+`timeTravel()` subscribes to the **global** `PathNotifier` flush event. Every
+live `timeTravel` tree therefore runs a full `snapshotState` + `structuredClone`
++ `deepEqual` on **every flush anywhere in the process** — including flushes
+caused by a completely unrelated tree — and then throws the result away when the
+dedupe finds nothing changed.
+
+| unrelated 10 000-leaf `timeTravel` trees alive | cost of one `entityMap(2000).updateOne` + flush |
+| ---------------------------------------------- | ----------------------------------------------- |
+| 0                                              | 0.008 ms                                        |
+| 1                                              | 3.749 ms                                        |
+| 2                                              | 7.165 ms                                        |
+| 3                                              | 9.701 ms                                        |
+
+Perfectly linear, ~3.2 ms per extra tree, all of it discarded (their histories
+stay at 1 entry). In an app with several time-travelled stores, every write in
+*any* store pays for *all* of them. This is a defect, not a tuning parameter.
+
+The trigger has to be a write that actually notifies. A plain leaf `.set()` on an
+unenhanced tree never calls the notifier, so a leaf-only benchmark cannot see
+this; only `entityMap` mutations and enhanced trees reveal it. It silently
+contaminated my own numbers until those cases were moved into separate
+processes — hence the two extra harness sections.
+
+### F-1e. Construction and retained memory
+
+| leaves  | `signalTree(shape)` | `structuredClone` | retained (tree) | B/leaf  | retained (POJO) | ratio |
+| ------- | ------------------- | ----------------- | --------------- | ------- | --------------- | ----- |
+| 1 000   | 0.205 ms            | 0.055 ms          | 544 KB          | **558** | 16 KB           | 33.9x |
+| 10 000  | 2.303 ms            | 0.550 ms          | 5.42 MB         | **555** | 157 KB          | 34.6x |
+| 100 000 | 39.9 ms             | 8.23 ms           | 54.0 MB         | **553** | 1.56 MB         | 34.7x |
+
+Construction is linear, ~0.4 µs per leaf, ~4x a `structuredClone`.
+**Retained memory is a flat ~555 bytes per leaf, 35x the POJO.**
+
+The decomposition says where a fix would have to aim:
+
+| thing                                              | retained @10 000     |
+| -------------------------------------------------- | -------------------- |
+| 10 000 bare Angular `signal()`                     | 5.09 MB (521 B each) |
+| 10 000 bare `signal(v, { equal: deepEqual })`      | 5.09 MB (521 B each) |
+| `signalTree` with 10 000 primitive leaves          | 5.52 MB              |
+| `signalTree` with ONE array leaf of 10 000 objects | 790 KB               |
+| the same 10 000 objects as a raw array             | 783 KB               |
+
+**~94% of the per-leaf cost is Angular's signal node, not SignalTree.**
+SignalTree adds ~34 B/leaf on top of the 521 B Angular charges for a writable
+signal, and the custom `equal` costs nothing. "One signal per leaf" is the
+expensive decision, and it is expensive *because of Angular's signal*, not
+because of anything in this repo. A tree with one array leaf holding the same
+data costs 790 KB against 5.5 MB — **7x less** — which is the same trade-off
+`entityMap` makes, from the other direction.
+
+All of the above is the **eager** path. `useLazySignals` exists but is opt-in and
+inert without `lazy: lazy()` from `@signaltree/core/lazy`; `LAZY_THRESHOLD: 50`
+only chooses the default *when the lazy feature is installed*. Nothing here
+measures that path.
+
+---
+
+### F-2. What `entityMap` already does differently
+
+**How it stores entities** (`packages/core/src/lib/entity-signal.ts`, as of
+commit `6d9aae8b`, which landed *during* this track):
+
+- The source of truth is a plain **`Map<K, E>`** closed over in
+  `createEntitySignal`. It is not a signal.
+- A single `signal(0)` **version counter** is the only writable signal for the
+  collection. Every mutation calls `updateSignals()`, which is exactly
+  `version.update(v => v + 1)`.
+- The four collection queries — `all`, `count`, `ids`, `map` — are **lazy
+  `computed`s** that read `version()` and rebuild from the `Map`.
+- **Per-entity signals**: a `Map<K, WritableSignal<E | undefined>>`, materialised
+  lazily on first `byId()`. `byId(id).field()` is a `computed` over *that
+  entity's* signal only. A mutation calls `syncEntitySignal(id)`, a no-op if
+  nobody has ever asked for that entity.
+
+Read this: **the version-counter design is what makes the write O(1), and it
+landed hours ago.** Before `6d9aae8b`, `updateSignals()` eagerly rebuilt three
+full copies of the collection and `.set()` them, so every single-entity update
+was O(size) — that commit's own message records 2.8 ms per `updateOne` on
+50 000 rows. Every number below is post-fix.
+
+#### Does a single-entity update avoid the O(size) work an array leaf pays?
+
+Yes, decisively. 1000 single-entity updates at random ids, per update:
+
+| N      | `entityMap.updateOne` | array leaf, deepEqual | array leaf, shallow | plain `Map.set` |
+| ------ | --------------------- | --------------------- | ------------------- | --------------- |
+| 1 000  | **0.245 µs**          | 5.14 µs (21x)         | 0.250 µs (1.0x)     | 0.033 µs        |
+| 10 000 | **0.471 µs**          | 70.3 µs (149x)        | 2.70 µs (5.7x)      | 0.082 µs        |
+| 50 000 | **0.911 µs**          | 432 µs (474x)         | 56.5 µs (62x)       | 0.168 µs        |
+
+The write is ~5x a bare `Map.set` and effectively independent of collection size.
+
+#### Is `byId(id).field()` genuinely body-granular?
+
+Yes. Measured fan-out over 100 updates:
+
+| what re-ran                   | 100 updates to entity #1 | 100 updates to entity #500 |
+| ----------------------------- | ------------------------ | -------------------------- |
+| `computed(byId(500).value())` | **0**                    | 100                        |
+| `computed(byId(500)())`       | **0**                    | 100                        |
+| `computed(all().length)`      | 100                      | 100                        |
+| `computed(count())`           | **0**                    | **0**                      |
+
+Fan-out is exactly 1. The claim holds. (`count()` re-runs 0 times because it is
+itself a `computed` whose *value* does not change, so Angular's equality stops
+propagation at that node — a correct diamond, worth knowing.)
+
+For contrast, on an array leaf: **100 updates to element #1 re-ran a computed
+that reads only element #500 100 times.** No granularity at all.
+
+#### Whole-collection read
+
+Per `tree()` call:
+
+| N      | `tree()` entityMap, CACHED | `tree()` entityMap, COLD (1 update first) | `tree()` array leaf |
+| ------ | -------------------------- | ----------------------------------------- | ------------------- |
+| 1 000  | 9.58 µs                    | 45.8 µs                                   | 0.63 µs             |
+| 10 000 | 9.33 µs                    | **443.7 µs**                              | 0.67 µs             |
+
+`entityMap.all()` alone: 0.58 µs cached, 12.3 µs cold @10 000. `tree()` on an
+`entityMap` emits `[all, count, ids, map, empty]` — the collection materialised
+**three times**. Retained memory is 1.18x an array leaf at 10 000 (927 KB vs
+786 KB) once the computeds are warm.
+
+#### The verdict, with its condition attached
+
+**Does `entityMap` solve the large-collection case? Yes for the write — and only
+if consumers read granularly.** The lazy computeds do not remove the O(N) work;
+they defer it to the next whole-collection read. Measured as 1000 × (update,
+then read):
+
+| N      | `updateOne` + `all()` | `updateOne` + `byId()` | array leaf (shallow) + read |
+| ------ | --------------------- | ---------------------- | --------------------------- |
+| 10 000 | 13.05 µs              | **1.56 µs**            | 3.37 µs                     |
+| 50 000 | 97.47 µs              | **1.90 µs**            | 53.34 µs                    |
+
+- Update + **granular** read: entityMap is **28x** faster than a
+  shallow-compared array leaf at 50 000, and ~475x faster than the default array
+  leaf.
+- Update + **whole-collection** read: entityMap is **1.8x SLOWER** than the
+  array leaf at 50 000 (97 µs vs 53 µs) — it rebuilds the array from the `Map` on
+  every read, where the array leaf hands back the reference it already holds.
+
+So: is the "8x slower on large-array" finding about the wrong API? **Yes,
+mostly.** The right API for a 50 000-row collection is `entityMap` + `byId()`,
+and it is ~475x faster than the benchmarked one. But `entityMap` is not a free
+win: a component that renders the whole list from `all()` after every write is
+*worse off* than a plain array leaf with `useShallowComparison`. The benchmark
+should be re-cut into two scenarios — granular consumer and whole-list consumer —
+rather than simply replaced.
+
+#### Two `entityMap` defects found while measuring
+
+1. **A held `byId()` reference is permanently dead after remove → re-add of the
+   same id.** `removeEntitySignal` deletes the per-entity signal, so a node
+   captured earlier closes over an orphan. Verified: after `removeOne(1)` then
+   `addOne({ id: 1, … })`, the held node reads `undefined` forever while a fresh
+   `byId(1)` returns the new entity. Held references survive *updates* correctly
+   (same per-entity signal), so this is specifically the remove/re-add path — and
+   the held reference is exactly the capability the header table calls the
+   product.
+2. **`byId()` allocates a new node on every call after a mutation.** Every
+   mutation does `nodeCache.delete(id)`, so the next `byId()` rebuilds the node
+   and one `computed` per field. ~1.0–1.1 µs per post-write `byId()` on a 3-field
+   entity (1.56 µs for update+byId vs 0.47 µs for the update alone). A template
+   calling `byId()` every change-detection pass pays this per field per pass.
+
+---
+
+### F-3. Where the deep-equality default actually pays for itself
+
+**Establish the scope first, because it is much narrower than it looks:**
+`signalTree` recurses into plain objects, so **a plain object is never a leaf** —
+it becomes one signal per primitive field. Verified: `tree.$.obj.set` is
+`undefined` (a branch), `tree.$.arr.set` is a function (a leaf). For a primitive
+leaf `deepEqual` returns at its first line, `a === b`. **The `equal: deepEqual`
+bill is paid only by leaves holding arrays or built-ins.** Everything below is
+therefore a question about collection leaves.
+
+#### What it suppresses (500 polls of a 200-row list)
+
+| workload                        | real changes     | deepEqual notified | `Object.is` notified | spurious suppressed |
+| ------------------------------- | ---------------- | ------------------ | -------------------- | ------------------- |
+| identical payload every poll    | 0                | **0**              | 500                  | 500 (100%)          |
+| one row changes every 10th poll | 50 (+49 reverts) | **99**             | 500                  | 401 (80%)           |
+| one row changes every poll      | 500              | 500                | 500                  | 0 (0%)              |
+
+It does exactly what it claims: 100% suppression on a steady-state poll, 80% on
+a mostly-quiet one. And the honesty argument is real, and is *not* a performance
+trade-off:
+
+> 100 re-fetches of an identical payload, paths reported by `updateAndReport`:
+> **deepEqual = 0, `Object.is` = 100.**
+
+Under reference equality `updateAndReport` reports a change on every re-fetch
+that changed nothing. That is the feature breaking, not getting slower.
+
+#### What it costs per write
+
+Linear in leaf size, and it depends entirely on whether the elements are
+reference-shared with the previous value:
+
+- **Elements shared by reference** (a local edit via `slice()`): **~7.7 ns per
+  element** up to the first difference (see F-1c).
+- **Elements all fresh** (a network re-fetch, `JSON.parse`): **~124 ns per row**
+  for a 4-field row, dead flat from 10 to 100 000 rows (1.22 µs → 12 494 µs).
+
+Per write on a leaf holding an identical fresh payload (the worst case):
+
+| rows   | deepEqual  | `Object.is` |
+| ------ | ---------- | ----------- |
+| 1      | 0.14 µs    | 0.03 µs     |
+| 10     | 1.17 µs    | 0.03 µs     |
+| 100    | 11.09 µs   | 0.05 µs     |
+| 1 000  | 108.8 µs   | 0.28 µs     |
+| 10 000 | 1 075.7 µs | 1.37 µs     |
+
+#### Crossover — and there isn't one
+
+Does the deep compare cost less than the downstream recomputes it prevents?
+Measured with D dependent selectors, each an O(leaf) pass, on an
+identical-payload poll (deepEqual / `Object.is`, µs per poll):
+
+| rows   | D = 1        | D = 2        | D = 4        |
+| ------ | ------------ | ------------ | ------------ |
+| 10     | 1.16 / 0.18  | 1.16 / 0.14  | 1.19 / 0.25  |
+| 100    | 11.34 / 0.20 | 11.08 / 0.28 | 11.35 / 0.50 |
+| 1 000  | 113.5 / 0.93 | 113.7 / 1.64 | 119.6 / 3.13 |
+| 10 000 | 1 132 / 8.24 | 1 178 / 17.1 | 1 202 / 31.2 |
+
+**deepEqual loses at every size and every fan-out tested.** The reason is a
+constant: `deepEqual` costs ~124 ns per row while a selector pass over the same
+row costs ~0.8 ns. One deep compare is worth **~155 selector passes**. You would
+need roughly 150 dependent computeds over the same leaf — or one whose per-row
+work is ≥124 ns, e.g. a DOM write or a date parse per row — before it pays for
+itself on CPU alone.
+
+So: **`equal: deepEqual` on collection leaves is not defensible as a performance
+optimisation. It is defensible only as a correctness guarantee** — the
+`updateAndReport` result above, and not notifying on a no-op re-fetch. That is a
+real guarantee and worth keeping; it should just stop being described as though
+it saves work.
+
+#### Is a size-adaptive default defensible?
+
+**Not on the axis of size — on the axis of provenance.** Cost per element does
+not change with size (124 ns/row, flat across four orders of magnitude), so any
+element-count threshold is arbitrary: it does not separate a cheap case from an
+expensive one, it picks a point on a straight line and changes the *semantics* on
+either side of it. A leaf that silently switches from "honest change reporting"
+to "reports every re-fetch as a change" at 501 rows is a worse API than either
+endpoint.
+
+What the data actually separates is:
+
+- **reference-shared writes** (local edit through `update()`/`slice()`) —
+  7.7 ns/element, short-circuits at the first difference, effectively free. Keep
+  `deepEqual`.
+- **all-fresh writes** (a re-fetch replacing the leaf wholesale) — 124 ns/row,
+  full walk, and simultaneously *the only case where the suppression is worth
+  anything*. The expensive case and the valuable case are the same case.
+
+If a threshold is wanted anyway, the numbers to hang it on: the walk stays under
+100 µs to ~800 fresh rows and under 1 ms to ~8 000; above ~10 000 fresh rows a
+single re-fetch write costs more than a frame. My recommendation is an **opt-in
+per-leaf** escape (`Object.is` on a named leaf, or an `entityMap`, which sidesteps
+the question by never putting the collection in a leaf) rather than a
+size-adaptive global default.
+
+---
+
+### What I could not establish
+
+- **Why the demo reports 11.3 ms.** I bounded it (impossible for the stated
+  workload: a bare `slice()` of 50 000 elements is 47–49 µs, the demo implies
+  11.3 µs per update) but did not instrument the demo in Chrome. Remaining
+  candidates: `dataSize` is not what the label says, the timed region is not what
+  it looks like, or the reported result is not that scenario's.
+- **Everything here is Node v24.3.0 on an Apple M4.** No Chrome numbers. The
+  ordering should hold; the constants will not. The 385 ms reproduction is the
+  one cross-checked result.
+- **Retained memory is a process-heap delta under `--expose-gc`**, not
+  heap-snapshot retainer analysis. The 555 B/leaf figure is stable to ~±1% across
+  three sizes and three runs, so I trust the magnitude, but I have not attributed
+  it field-by-field inside Angular's `SIGNAL_NODE`.
+- **`entityMap` with a `sortComparer`** — `all()`/`ids()` gain a sort, so the
+  cold-read numbers in F-2 are a lower bound. Not measured.
+- **The `lazy: lazy()` path** — every construction, read and memory number is the
+  eager default. Whether lazy materialisation moves the 555 B/leaf figure is open,
+  and is probably the highest-value follow-up.
+- **`entityMap` in cache-aware/`loader()` mode** — only the plain client-side
+  collection was measured.
+- **Time travel with `includePayload: false`**, and with the default
+  `maxHistorySize: 50` — large caps were used to isolate per-entry cost. The
+  default caps *retained* memory at 50 × entry (~12 MB at 10 000 leaves) but does
+  not change per-entry CPU.
+- **Whether F-1d-ter reproduces in a browser** under Angular's own microtask
+  scheduling. The mechanism is in the source (`getPathNotifier().onFlush`, never
+  scoped to the tree), so I expect it to, but it was measured only in Node.
+- **The other unreconciled item** — batch-updates / computed-chains /
+  selector-memo / concurrent-updates — is untouched by this track.
+
+### Reproduction
+
+```bash
+npx nx build core
+node --expose-gc scripts/benchmarks/data-model-profile.mjs           # all but the two below
+node --expose-gc scripts/benchmarks/data-model-profile.mjs ttentity  # needs a clean process
+node --expose-gc scripts/benchmarks/data-model-profile.mjs ttleak    # needs a clean process
+```
 
 ## Synthesis
 

@@ -21,6 +21,20 @@ import { computed } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import { signalTree } from './dist-core/dist/index.js';
 
+// FIXTURE CORRECTNESS — read before editing.
+//
+// An earlier version built items as `{id: i, value: i}` and then "updated"
+// index `i % N` with `value: i`. For i < N that writes the value ALREADY THERE,
+// so every update was a structurally identical no-op — which is the worst case
+// for deepEqual (it walks all N elements instead of short-circuiting at the
+// first difference) and measured 385ms where a real update measures 53-218ms.
+// It made SignalTree look ~7x worse than it is.
+//
+// A per-pass counter that never repeats avoids both that and the replay variant
+// of the same trap (fixtures are reused across samples, so `-(i+1)` degenerates
+// into a no-op from the second pass onward).
+let __writeSeq = 0;
+
 const SAMPLES = 11;
 const stats = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -91,7 +105,7 @@ race('large-array', 'both slice(); SS also rebuilds root',
         const idx = i % N;
         t.$.items.update((items) => {
           const next = items.slice();
-          next[idx] = { ...next[idx], value: i };
+          next[idx] = { ...next[idx], value: ++__writeSeq };
           return next;
         });
       }
@@ -106,7 +120,7 @@ race('large-array', 'both slice(); SS also rebuilds root',
         // which is 50k callback invocations per update and flattered us.
         patchState(st, (s) => {
           const next = s.items.slice();
-          next[idx] = { ...next[idx], value: i };
+          next[idx] = { ...next[idx], value: ++__writeSeq };
           return { ...s, items: next };
         });
       }
