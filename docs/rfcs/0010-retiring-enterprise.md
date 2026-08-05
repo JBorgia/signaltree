@@ -142,6 +142,22 @@ The diagnosis from that audit is the one worth keeping:
 precisely the shape that reduces the package to a slower `updateAndReport()`,
 which is why option 1 was rejected.
 
+## Follow-up found while writing this, not fixed here
+
+`updateAndReport()`, `batchUpdate()` and the root call form `tree(partial)` are
+all typed `Partial<T>`, which is **shallow**. A nested partial —
+`tree({ user: { name: 'Grace' } })` — works correctly at runtime (the merge is
+deep; omitted keys are preserved, and `llms.txt` teaches exactly this as
+"Partial / deep-merge update") but does **not** typecheck. Caught by the skills
+doc linter while documenting the migration target.
+
+Not fixed here because a correct `DeepPartial<T>` has to stop at arrays, `Date`,
+`Map`/`Set`, branded types, signals and every marker, and getting that wrong
+would silently widen or break the accepted shape across the whole write API.
+That deserves its own pass with the generated typing-subset suite as the gate,
+not a change tacked onto a deprecation. Workaround meanwhile: pass the complete
+nested object, or write the branch directly (`tree.$.user({ name: 'Grace' })`).
+
 ## Lessons recorded
 
 - **An unmeasured comparative claim is a liability.** "2–5x faster" survived

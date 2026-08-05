@@ -93,6 +93,62 @@ update, because branch/root writes are already batched by construction. Reach
 for `batching()` only when you want to coalesce multiple _separate_ writes
 (different call sites) within a tick.
 
+## Change reporting — `updateAndReport()` and `onPathChange()`
+
+Two tree-level methods answer "what did that write actually change?". They
+replace `@signaltree/enterprise`, deprecated in 13.5.0.
+
+```ts
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  user: { name: 'Ada', email: 'ada@example.com' },
+  counter: 0,
+});
+
+// Apply a partial update; get back the dot-paths of leaves that CHANGED.
+const changed = tree.updateAndReport({
+  user: { name: 'Grace', email: 'grace@example.com' },
+});
+// → ['user.name']
+if (changed.length) console.log('persist', changed);
+
+// Subscribe to those same paths for every root write.
+const off = tree.onPathChange((paths) => console.log('changed:', paths));
+tree({ counter: 1 }); // listener receives ['counter']
+off();
+```
+
+**Both report only writes that LANDED.** Leaves are created with a deep `equal`,
+so a value that is a new reference but deep-equal to the current one is rejected
+by the leaf and notifies nobody — and is therefore not reported. A re-fetched
+server payload identical to what you already hold reports `[]`, not every key in
+the payload. That is what makes the list safe to drive audit logs, change feeds
+and targeted persistence from.
+
+```ts
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({ users: [{ id: 1 }] });
+tree.updateAndReport({ users: [{ id: 1 }] }); // → [] (deep-equal, no write)
+tree.updateAndReport({ users: [{ id: 2 }] }); // → ['users']
+```
+
+`onPathChange` fires for the root write paths — `tree({...})`, `batchUpdate()`
+and `updateAndReport()` — and returns an unsubscribe function. It does **not**
+fire for a direct leaf or nested-accessor write (`tree.$.user.name.set('x')`),
+which bypasses the root entirely; instrumenting every leaf would cost every
+consumer for a feature few use. Route writes you want observed through the tree.
+A listener that throws is reported in dev and otherwise ignored — the state is
+already committed by the time listeners run.
+
+**Typing caveat.** The parameter is `Partial<T>`, which is SHALLOW, so a nested
+partial such as `{ user: { name: 'Grace' } }` does not typecheck even though it
+works correctly at runtime (the merge is deep — keys you omit are preserved).
+Until the signature takes a deep partial, either pass the complete nested object
+as above, or write the branch directly: `tree.$.user({ name: 'Grace' })`. The
+same caveat applies to the root call form `tree(partial)` and to `batchUpdate()`.
+
 ## Markers
 
 Markers are typed placeholders you put in the initial state. `signalTree()` replaces them at that path with the real runtime API.
