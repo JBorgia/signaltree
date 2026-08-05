@@ -47,3 +47,38 @@ describe('thesis: Map resolution closes the class with no name check', () => {
     expect(tree()).toEqual({ ...state, constructor: 'changed' });
   });
 });
+
+describe('form() persist hydration — untrusted localStorage', () => {
+  const scrub = () => {
+    delete (Object.prototype as unknown as Record<string, unknown>)['zzForm'];
+  };
+  beforeEach(scrub);
+  afterEach(scrub);
+
+  it('does not carry an own __proto__ out of stored form values', async () => {
+    const { form } = await import('./markers/form');
+    const store: Record<string, string> = {
+      f: '{"__proto__":{"zzForm":"pwned"},"name":"Ada"}',
+    };
+    const fakeStorage = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => void (store[k] = v),
+      removeItem: (k: string) => void delete store[k],
+    } as unknown as Storage;
+
+    const tree = signalTree({
+      f: form<{ name: string }>({
+        initial: { name: '' },
+        persist: 'f',
+        storage: fakeStorage,
+      } as never),
+    });
+    const values = (tree.$.f as unknown as () => Record<string, unknown>)();
+
+    // Spread does not invoke the setter, but it DOES copy an own __proto__
+    // through — which then satisfies every downstream hasOwnProperty guard.
+    expect(Object.prototype.hasOwnProperty.call(values, '__proto__')).toBe(false);
+    expect(({} as Record<string, unknown>)['zzForm']).toBeUndefined();
+    expect(values['name']).toBe('Ada'); // legitimate stored value survives
+  });
+});

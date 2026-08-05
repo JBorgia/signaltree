@@ -388,7 +388,18 @@ export function createFormSignal<T extends Record<string, unknown>>(
     try {
       const stored = persistStorage.getItem(config.persist);
       if (stored) {
-        return { ...initial, ...JSON.parse(stored) };
+        // Spread does NOT invoke the prototype setter, but it DOES copy an own
+        // `__proto__` key — which JSON.parse creates — straight through as a
+        // real own property. That is the "own-key minting" shape: the result
+        // then satisfies every downstream `hasOwnProperty` guard forever, which
+        // is precisely the two-call bypass an audit used to defeat the previous
+        // fix. Drop it at the boundary; localStorage is untrusted (any script on
+        // the origin can write it).
+        const parsed = JSON.parse(stored) as Record<string, unknown>;
+        if (Object.prototype.hasOwnProperty.call(parsed, '__proto__')) {
+          delete parsed['__proto__'];
+        }
+        return { ...initial, ...parsed } as T;
       }
     } catch {
       // Ignore parse errors

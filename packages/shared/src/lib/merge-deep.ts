@@ -20,6 +20,18 @@ export function mergeDeep<T>(target: T, source: Partial<T>): T {
     if (value === undefined) {
       continue;
     }
+    // `source` is untrusted — the live path is
+    // localStorage -> JSON.parse -> ng-forms hydrateInitialValues -> here.
+    // `targetObj['__proto__'] = …` sets the TARGET's prototype to
+    // attacker-supplied data (verified: `Object.getPrototypeOf(target)` changed,
+    // and the injected keys were readable through it). Not global pollution,
+    // but an attacker-chosen prototype on an object the app then trusts.
+    //
+    // No child index exists here — mergeDeep operates on plain data, not tree
+    // nodes — so this is the accumulator shape, and the guard is a name skip.
+    // `constructor`/`prototype` are not blocked: they cannot reach the chain
+    // through a plain assignment, and blocking them would eat real data.
+    if (key === '__proto__') continue;
     const current = targetObj[key];
     if (isPlainObject(current) && isPlainObject(value)) {
       targetObj[key] = mergeDeep(

@@ -2236,12 +2236,67 @@ rediscovers it and mistakes it for a regression.)
   user snapshots, so `enumerable: false` was never sufficient.
 - **Competitive position unaffected**, as measured above.
 
-### What the spike does NOT yet cover
+### Round 2 — remaining core/shared sites converted, and RE-MEASURED
 
-`applyState`, the lazy proxy, `mergeDeep`, `diff-engine` and the ~34 other
-payload sites still resolve by dereference; only `recursiveUpdate` was converted.
-The version-stamp / notify-and-pull half of the endpoint (Q2) is not built at
-all. Both are deliberate — the point was to test the load-bearing risk first.
+The open question was whether the numbers move once more sites resolve through
+the index. They do not.
+
+Converted or closed, each by the shape it actually is:
+
+| Site | Shape | Fix |
+| ---- | ----- | --- |
+| `applyState` (core) | tree resolution | index resolution — **no name check left in the loop** |
+| lazy proxy `get` (core) | tree resolution | own-property only; a lazy node has no index yet (signals are created on demand), so own-ness IS the structural equivalent — the chain is never consulted. `__proto__` refused by name because a `defineProperty` write can mint an own one |
+| `mergeDeep` (shared) | accumulator | `__proto__` skip. Live path: localStorage → `JSON.parse` → ng-forms `hydrateInitialValues` |
+| `getChanges` (shared) | accumulator | own-property only (`for...in` walked the chain and reported inherited keys as changes) + `__proto__` skip |
+| `form()` persist hydration | own-key minting | `{...initial, ...JSON.parse(stored)}` copies an own `__proto__` straight through — spread does not invoke the setter but does *mint the key*, which then satisfies every downstream `hasOwnProperty` guard. Deleted at the boundary |
+
+Note the pattern: **tree-node sites get the structural fix; plain-data
+accumulators get a one-name skip.** They are genuinely different shapes — an
+accumulator has no declared key set to resolve against — and Track A found
+CodeQL prescribes different remediation for each. Only `__proto__` is ever
+blocked by name; `constructor`/`prototype` never are, because own-ness already
+stops the fall-through and blocking them eats real data.
+
+Post-conversion measurements — micro (base → indexed):
+
+| metric | delta |
+| ------ | ----- |
+| deep read / shallow read | ~0 (within noise) |
+| write 1 of 40 | +3.3% (within noise) |
+| write 20 of 40 | +7.7% |
+| nested write (depth 3) | +18.3% |
+| unwrap 512 leaves | +7.2% |
+| retained memory | +312 B/node |
+| construct (ONE-TIME) | +17.4% (within noise) |
+
+Full cycle vs `@ngrx/signals` SignalStore 21.1.1:
+
+| subscribers | SignalStore | base | indexed | indexed cost |
+| ----------- | ----------- | ---- | ------- | ------------ |
+| 1 | 0.968 µs | 0.355 (2.72x) | 0.364 (**2.66x**) | +2.5% |
+| 10 | 2.827 µs | 0.686 (4.12x) | 0.698 (**4.05x**) | +1.7% |
+| 100 | 21.130 µs | 3.678 (5.74x) | 3.731 (**5.66x**) | +1.4% |
+
+Unchanged from round 1, and the reason is structural: `applyState`, `mergeDeep`,
+`getChanges` and form hydration are not on the hot write path, so the extra
+safety is free where it was added. **SignalTree keeps a 2.7x–5.7x lead over
+SignalStore, and the lead still widens with subscriber count.**
+
+### What the spike STILL does not cover
+
+- `diff-engine` (enterprise) — deprecated package, deliberately skipped.
+- The ~34 payload sites in `ng-forms`, `schema`, `events`, `realtime` and
+  `guardrails` that Track C's sub-agent enumerated. None is a proven sink; all
+  are unconverted.
+- **The Q2 half of the endpoint — version stamp + notify-and-pull — is not built
+  at all.** The index is the natural place for it, which is the whole reason the
+  two questions share an answer, but nothing has been written.
+- **The lazy-Map optimisation**, which the attribution says would remove roughly
+  two thirds of the measured cost.
+- Whether `+18.3%` on nested writes is acceptable. That is a judgement call and
+  it is the user's, not a measurement's — though the full-cycle number (+1.4% to
+  +2.5%) is the one an application actually experiences.
 
 ## Options considered
 

@@ -181,3 +181,28 @@ describe('applyState — each guard pinned separately', () => {
     expect(tree()).toEqual({ a: 1 });
   });
 });
+
+describe('applyState — now resolved through the child index', () => {
+  // Converted from own-property + name check to index resolution, so the same
+  // guarantee holds with no name check in the loop at all.
+  beforeEach(scrub);
+  afterEach(scrub);
+
+  it('refuses every prototype-chain key without a name check', () => {
+    const tree = signalTree({ a: 1, b: { c: 2 } });
+
+    applyState(tree.$ as never, JSON.parse('{"__proto__":{"zzPwn":1}}') as never);
+    applyState(tree.$ as never, JSON.parse('{"constructor":{"prototype":{"zzPwn":1}}}') as never);
+    applyState(tree.$ as never, JSON.parse('{"toString":1,"valueOf":2}') as never);
+
+    expect(pollutionHits()).toEqual([]);
+    expect(Object.prototype.toString).toBeInstanceOf(Function);
+    expect(tree()).toEqual({ a: 1, b: { c: 2 } });
+  });
+
+  it('still applies legitimate nested snapshots', () => {
+    const tree = signalTree({ a: 1, b: { c: 2 } });
+    applyState(tree.$ as never, { a: 9, b: { c: 8 } } as never);
+    expect(tree()).toEqual({ a: 9, b: { c: 8 } });
+  });
+});

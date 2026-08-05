@@ -79,14 +79,22 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
-      // SECURITY: never hand out a view of the prototype chain. `key in target`
-      // walks it, so `$.__proto__` resolved to Object.prototype, and because it
-      // is an object it got wrapped in a nested lazy Proxy below and cached —
-      // a live, WRITABLE handle on Object.prototype reachable from any code
-      // holding the tree. `$.__proto__.isAdmin = true` polluted every object in
-      // the process. Own-properties only, plus `__proto__` refused even when own
-      // (a defineProperty write can mint an own `__proto__`, which would
-      // otherwise satisfy the own-ness check forever).
+      // SECURITY: never hand out a view of the prototype chain. This trap used
+      // `key in target`, which WALKS it — so `$.__proto__` resolved to
+      // Object.prototype, got wrapped in a nested writable Proxy below and
+      // cached, handing any holder of the tree a live handle on
+      // Object.prototype.
+      //
+      // A lazy node's raw target has no child index (signals are created on
+      // demand, so there is nothing to index yet), so the structural equivalent
+      // here is an OWN-PROPERTY read: the prototype chain is simply never
+      // consulted. `__proto__` is refused by name on top because a
+      // `defineProperty` write can mint an own `__proto__`, which would satisfy
+      // an own-ness check forever — the exact two-call bypass found by audit.
+      // `constructor`/`prototype` deliberately get NO name check: own-ness
+      // already stops the fall-through, and blocking them by name silently
+      // deleted legitimate state under those keys and made lazy and eager trees
+      // disagree.
       if (isUnsafeKey(key)) return undefined;
       if (!Object.prototype.hasOwnProperty.call(target, key)) return undefined;
 

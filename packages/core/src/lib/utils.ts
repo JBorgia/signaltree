@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
+import { resolveChild } from './internals/child-index';
+
 declare const ngDevMode: boolean | undefined;
 
 /**
@@ -493,17 +495,17 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
     // level assigned onto it — full process-wide pollution from one message,
     // with no enterprise package and no lazy tree involved.
     //
-    // Own-ness is the load-bearing guard — without it applyState walks into
-    // ANYTHING on the prototype chain, not just a named few — and `__proto__`
-    // is refused by name on top, because a minted own `__proto__` would
-    // otherwise satisfy own-ness forever. `constructor`/`prototype` need no
-    // name check: own-ness already stops the fall-through, and blocking them by
-    // name would delete legitimate state under those keys.
-    if (key === '__proto__') continue;
-    if (!Object.prototype.hasOwnProperty.call(stateNode, key)) continue;
-
+    // `snapshot` is untrusted — the devtools channel reaches here via a bare
+    // JSON.parse of a window.postMessage payload. Resolve through the node's
+    // child index, never `stateNode[key]`: `__proto__` is not a key in the
+    // index, so it returns undefined and the branch below skips it. No name
+    // check, no own-property check, and no ordering subtlety between the two.
     const val = (snapshot as Record<string, unknown>)[key];
-    const target = (stateNode as Record<string, unknown>)[key];
+    const target = resolveChild(stateNode, key);
+    if (target === undefined && !isNodeAccessor(stateNode)) {
+      // Not a key this tree declares. Already the semantics (ST2010).
+      continue;
+    }
 
     if (isNodeAccessor(target)) {
       if (val && typeof val === 'object') {

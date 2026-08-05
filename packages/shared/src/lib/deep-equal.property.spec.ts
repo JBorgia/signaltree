@@ -213,3 +213,49 @@ describe('deepEqual — a built-in on one side only is never equal (13.5.0)', ()
     expect(deepEqual({ a: 1 }, { a: 2 })).toBe(false);
   });
 });
+
+describe('untrusted-key ingress in shared helpers (13.5.0 spike)', () => {
+  const scrub = () => {
+    for (const k of ['zzP', 'evil'])
+      delete (Object.prototype as unknown as Record<string, unknown>)[k];
+  };
+  beforeEach(scrub);
+  afterEach(scrub);
+
+  it('mergeDeep does not let a payload set the target prototype', async () => {
+    const { mergeDeep } = await import('./merge-deep');
+    const target: Record<string, unknown> = { a: 1 };
+
+    // Live path: localStorage -> JSON.parse -> ng-forms hydrateInitialValues.
+    mergeDeep(target, JSON.parse('{"__proto__":{"zzP":"pwned"},"a":2}'));
+
+    expect(Object.getPrototypeOf(target)).toBe(Object.prototype);
+    expect((target as Record<string, unknown>)['zzP']).toBeUndefined();
+    expect(({} as Record<string, unknown>)['zzP']).toBeUndefined();
+    expect(target['a']).toBe(2); // the legitimate key still merges
+  });
+
+  it('getChanges does not return an object with an attacker prototype', async () => {
+    const { getChanges } = await import('./get-changes');
+
+    const changes = getChanges(
+      JSON.parse('{"a":1}'),
+      JSON.parse('{"a":2,"__proto__":{"evil":1}}')
+    ) as Record<string, unknown>;
+
+    // Previously: prototype replaced while Object.keys(changes) read empty —
+    // invisible to every caller that inspects the result.
+    expect(Object.getPrototypeOf(changes)).toBe(Object.prototype);
+    expect(changes['evil']).toBeUndefined();
+    expect(changes['a']).toBe(2);
+  });
+
+  it('getChanges ignores inherited keys', async () => {
+    const { getChanges } = await import('./get-changes');
+    const proto = { inherited: 'x' };
+    const next = Object.create(proto);
+    next.own = 1;
+
+    expect(Object.keys(getChanges({} as never, next))).toEqual(['own']);
+  });
+});
