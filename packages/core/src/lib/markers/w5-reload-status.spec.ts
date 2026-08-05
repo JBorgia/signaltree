@@ -84,3 +84,54 @@ describe('W5: reload() reports what it found', () => {
     expect(sig.reload()).toBe('default');
   });
 });
+
+describe('W5/F8: version mismatch without a migrator', () => {
+  it("returns 'error', not 'ok', when the stored version differs and no migrator exists", () => {
+    const m = new Map<string, string>();
+    const storage: Storage = {
+      getItem: (k) => m.get(k) ?? null,
+      setItem: (k, v) => m.set(k, v),
+      removeItem: (k) => m.delete(k),
+      clear: () => m.clear(),
+      get length() {
+        return m.size;
+      },
+      key: (i) => Array.from(m.keys())[i] ?? null,
+    };
+    storage.setItem('f8', JSON.stringify({ __v: 99, data: { legacy: true } }));
+
+    const sig = createStoredSignal<{ v: number }>({
+      [STORED_MARKER]: true,
+      key: 'f8',
+      defaultValue: { v: 1 },
+      options: { storage, version: 1 },
+    });
+
+    // The likeliest field mistake: `version` bumped, migrator forgotten.
+    expect(sig.reload()).toBe('error');
+    // Data is still loaded rather than discarded — dropping it would be worse.
+    expect(sig()).toEqual({ legacy: true });
+  });
+
+  it("still returns 'ok' when versions match", () => {
+    const m = new Map<string, string>();
+    const storage: Storage = {
+      getItem: (k) => m.get(k) ?? null,
+      setItem: (k, v) => m.set(k, v),
+      removeItem: (k) => m.delete(k),
+      clear: () => m.clear(),
+      get length() {
+        return m.size;
+      },
+      key: (i) => Array.from(m.keys())[i] ?? null,
+    };
+    storage.setItem('f8b', JSON.stringify({ __v: 1, data: 'value' }));
+    const sig = createStoredSignal<string>({
+      [STORED_MARKER]: true,
+      key: 'f8b',
+      defaultValue: 'default',
+      options: { storage, version: 1 },
+    });
+    expect(sig.reload()).toBe('ok');
+  });
+});

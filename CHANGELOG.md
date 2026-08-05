@@ -7,14 +7,29 @@ earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
 
 ### Security
 
-- **An explicit `storage:` option no longer reaches snapshots.** A `stored()`
-  marker nested under a parent used to surface as its RAW MARKER from `tree()`,
-  carrying its `options.storage` with it — and `unwrap` deep-copied that storage
-  object, enumerating unrelated keys into the snapshot. Anyone passing
-  `storage:` explicitly *and* using `serialization()`, `persistence()`,
-  devtools or `createAuditTracker` was emitting that storage's contents into
-  those payloads. The default path was unaffected (the marker's `options` stays
-  empty because `createStoredSignal` resolves storage itself).
+- **An explicit `storage:` option no longer reaches snapshots — for markers
+  nested under OBJECT parents.** Such a marker used to surface as its RAW
+  MARKER from `tree()`, carrying `options.storage` with it, and `unwrap`
+  deep-copied that storage object, enumerating unrelated keys into the
+  snapshot. Anyone passing `storage:` explicitly *and* using `serialization()`,
+  `persistence()`, devtools or `createAuditTracker` was emitting that storage's
+  contents into those payloads. The default path was never affected (the
+  marker's `options` stays empty because `createStoredSignal` resolves storage
+  itself).
+
+  **Still leaking, not fixed here:** a marker placed inside an ARRAY or a `Map`
+  (`{ list: [stored(...)] }`). `createSignalStore` hands arrays and built-ins
+  straight to `signal(value)` without walking into them, so materialization
+  never sees the marker. Do not put markers inside arrays or Maps; if you pass
+  an explicit `storage:`, treat that combination as unsafe to snapshot until a
+  later release extends traversal.
+
+- **Markers in LAZY trees now throw in dev instead of corrupting snapshots.**
+  A lazy tree resolves values through a Proxy that never runs marker
+  materialization, so a marker there stayed a placeholder. Before this release
+  that leaked a raw marker; after it, the placeholder simply reads as an opaque
+  getter and its value is dropped from every snapshot **silently** — strictly
+  worse. `[ST2012]` now fails loudly at the point of use.
 
 ### Fixed
 
@@ -61,6 +76,17 @@ earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
   now reaches stored leaves — and therefore writes to storage. Both are the
   fix; code relying on the previous behaviour is the compatibility risk, which
   is why the diagnostics above ship in the same release.
+- **A merge write REPLACES an object-valued stored leaf, it does not merge into
+  it.** `tree({ cfg: { prefs: { theme: 'dark' } } })` where `prefs` is a
+  `stored()` holding `{ theme, lang }` leaves `{ theme: 'dark' }` — `lang` is
+  gone from memory and from storage. A plain nested namespace in the same
+  position deep-merges. Previously the write was dropped entirely, so this is a
+  change from silently-skipped to destructive: audit merge writes that cross an
+  object-valued stored leaf.
+- **Persisted values now appear in time-travel and devtools payloads.** They
+  were absent only because the leaf was invisible to traversal. Since `stored()`
+  is the documented home for drafts and tokens, review what your history and
+  devtools frames now carry.
 
 ### Considered and rejected
 

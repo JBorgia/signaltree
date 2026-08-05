@@ -1,16 +1,26 @@
-import { effect, Injector, isSignal, runInInjectionContext, Signal, signal, WritableSignal } from '@angular/core';
+import {
+  effect,
+  Injector,
+  isSignal,
+  runInInjectionContext,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 declare const ngDevMode: boolean | undefined;
 
-/** Dev-mode: keys already warned about, so a loop cannot flood the console. */
-const warnedUnwrapKeys = new Set<string>();
-const warnedApplyStateKeys = new Set<string>();
-
-/** @internal Dev-mode notice that a snapshot silently omitted a value. */
+/**
+ * @internal Dev-mode notice that a snapshot silently omitted a value.
+ *
+ * Deliberately NOT deduped. An earlier version keyed a suppression Set on the
+ * bare property name, so the first `value`/`id`/`name` anywhere in the process
+ * silenced every later one — including in a different tree — for the process
+ * lifetime, hiding the second instance of every bug it found. Repeating in dev
+ * is the lesser evil, and it also stops the Set growing without bound.
+ */
 function warnUnwrapSkipped(key: string): void {
-  if (warnedUnwrapKeys.has(key)) return;
-  warnedUnwrapKeys.add(key);
   console.error(
     `SignalTree: "${key}" was OMITTED from the snapshot — the value there is a ` +
       `function that is neither a signal nor a node accessor, so unwrap() has ` +
@@ -19,17 +29,15 @@ function warnUnwrapSkipped(key: string): void {
   );
 }
 
-/** @internal Dev-mode notice that applyState clobbered a live node. */
+/** @internal Dev-mode notice that applyState clobbered a live node. Not deduped — see above. */
 function warnApplyStateOverwrite(key: string, target: unknown): void {
-  if (warnedApplyStateKeys.has(key) || typeof target !== 'function') return;
-  warnedApplyStateKeys.add(key);
+  if (typeof target !== 'function') return;
   console.error(
     `SignalTree: applyState REPLACED the live value at "${key}" with a raw ` +
       `value. It was a callable that is neither a signal nor a node accessor, ` +
       `so the signal there is now gone and reading it will throw. [ST2009]`
   );
 }
-
 
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
@@ -325,7 +333,11 @@ export function unwrap<T>(node: unknown): T {
 
     const value = (node as Record<string, unknown>)[key];
 
-    if (typeof value === 'function' && !isNodeAccessor(value) && !isSignal(value)) {
+    if (
+      typeof value === 'function' &&
+      !isNodeAccessor(value) &&
+      !isSignal(value)
+    ) {
       // Skip plain functions so snapshots stay plain-data.
       continue;
     }
@@ -370,7 +382,11 @@ export function unwrap<T>(node: unknown): T {
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
 
-    if (typeof value === 'function' && !isNodeAccessor(value) && !isSignal(value)) {
+    if (
+      typeof value === 'function' &&
+      !isNodeAccessor(value) &&
+      !isSignal(value)
+    ) {
       // Skip plain functions so snapshots stay plain-data.
       continue;
     }
@@ -491,7 +507,10 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
       !Array.isArray(val)
     ) {
       try {
-        applyState(target as unknown as TreeNode<unknown>, val as unknown as any);
+        applyState(
+          target as unknown as TreeNode<unknown>,
+          val as unknown as any
+        );
       } catch {
         try {
           (stateNode as Record<string, unknown>)[key] = val as unknown;

@@ -175,8 +175,8 @@ function registerProcessor<T, R>(
         `signalTree() had already been constructed (${treesConstructedCount} trees so far). ` +
         'Existing trees will NOT pick up this marker — only trees built after ' +
         'this point will use it. To process your custom marker in existing ' +
-        "trees, register it at module load time (before any signalTree() call), " +
-        "or rebuild the tree after registration."
+        'trees, register it at module load time (before any signalTree() call), ' +
+        'or rebuild the tree after registration.'
     );
   }
 

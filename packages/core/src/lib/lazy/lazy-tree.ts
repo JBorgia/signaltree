@@ -1,11 +1,14 @@
 import { isSignal, signal, WritableSignal } from '@angular/core';
 
+import { isRegisteredMarker } from '../internals/materialize-markers';
 import type { TreeNode } from '../types';
 import {
   isBuiltInObject,
   isEntityMapMarker,
   type MemoryManager,
 } from '../utils';
+
+declare const ngDevMode: boolean | undefined;
 
 /**
  * Creates a lazy signal tree using Proxy for on-demand signal creation.
@@ -79,6 +82,28 @@ export function createLazySignalTree<T extends object>(
 
       // Preserve EntityMapMarker so entities can materialize them later
       if (isEntityMapMarker(value)) return value;
+
+      // Lazy trees never run marker materialization: this Proxy is the only
+      // path to a value and it does not consult MARKER_PROCESSORS. Before
+      // 13.4 that surfaced as a raw marker in snapshots (visibly wrong, and
+      // for stored() a storage-contents leak); now that markers materialize
+      // into real signals elsewhere, an unmaterialized one here is WORSE — it
+      // reads as an opaque getter and its value is dropped from every
+      // snapshot silently. Fail loudly instead of corrupting data quietly.
+      if (isRegisteredMarker(value)) {
+        const message =
+          `SignalTree: the marker at "${path}" cannot be used in a LAZY tree. ` +
+          `Lazy trees resolve values through a proxy that never materializes ` +
+          `markers, so this one would stay a placeholder — omitted from ` +
+          `tree()/unwrap() and unusable as a signal. Use markers only in ` +
+          `eagerly-built trees (drop \`useLazySignals\`/\`lazy()\` for this ` +
+          `tree), or move the marker out of the lazy subtree. [ST2012]`;
+        if (typeof ngDevMode === 'undefined' || ngDevMode) {
+          throw new Error(message);
+        }
+        console.error(message);
+        return value;
+      }
 
       // Check memory manager cache first
       if (memoryManager) {

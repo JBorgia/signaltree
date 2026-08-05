@@ -73,15 +73,34 @@ describe('W1: diagnostics for writes that go nowhere', () => {
     expect(tree.$.known()).toBe(2);
   });
 
-  it('dedupes repeated warnings for the same path', () => {
+  it('reports every occurrence rather than suppressing later ones', () => {
+    // Deliberately NOT deduped: a global suppression Set silenced the SECOND
+    // occurrence of a genuine bug — a different tree or a different namespace
+    // reaching the same relative path — for the whole process lifetime.
     const tree = signalTree({ known: 1 } as Record<string, unknown>);
     void tree.$;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       (tree as unknown as (v: object) => void)({ repeatedlyMissing: i });
     }
     const hits = errSpy.mock.calls.filter((c) =>
       String(c[0]).includes('repeatedlyMissing')
     );
-    expect(hits.length).toBe(1);
+    expect(hits.length).toBe(3);
+  });
+
+  it('does not suppress the same relative path in a DIFFERENT namespace', () => {
+    const tree = signalTree({
+      billing: { present: 1 },
+      shipping: { present: 1 },
+    });
+    void tree.$;
+
+    (tree.$.billing as unknown as (v: object) => void)({ absentKey: 1 });
+    (tree.$.shipping as unknown as (v: object) => void)({ absentKey: 1 });
+
+    const hits = errSpy.mock.calls.filter((c) =>
+      String(c[0]).includes('absentKey')
+    );
+    expect(hits.length).toBe(2);
   });
 });

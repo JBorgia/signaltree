@@ -446,7 +446,6 @@ const pendingStoredWrites = new Set<() => void>();
 /** @internal */
 let lifecycleFlushInstalled = false;
 
-
 /**
  * @internal - Installs a single pair of page-lifecycle listeners that drain
  * all pending stored writes when the page is hidden or unloading.
@@ -563,11 +562,7 @@ export function createStoredSignal<T>(
       };
       storage.setItem(key, serialize(versionedData as unknown as T));
     } catch (e) {
-      reportError(
-        'write',
-        e,
-        `SignalTree: Failed to save "${key}" to storage`
-      );
+      reportError('write', e, `SignalTree: Failed to save "${key}" to storage`);
     }
   };
 
@@ -616,6 +611,14 @@ export function createStoredSignal<T>(
             lastLoadResult = 'error';
             return defaultValue;
           }
+        } else if (storedVersion !== version) {
+          // Version mismatch with NO migrator: the data was written by a
+          // different schema and is being handed to code expecting this one.
+          // It still loads (dropping a user's data would be worse), but the
+          // caller must be able to tell — this is the likeliest field case,
+          // someone bumping `version` and forgetting the migrator, and
+          // reporting 'ok' for it defeats the point of the return value.
+          lastLoadResult = 'error';
         }
         return data;
       }

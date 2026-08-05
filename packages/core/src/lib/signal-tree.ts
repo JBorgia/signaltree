@@ -136,7 +136,10 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
   // must NOT silently skip validation — that is fail-open for a security
   // control. TS consumers get a compile error from the `SecurityFeature` type;
   // this guard catches the JS/`any`/dynamic case and fails loudly instead.
-  const sec = security as { __signalTreeSecurity?: unknown; validate?: unknown };
+  const sec = security as {
+    __signalTreeSecurity?: unknown;
+    validate?: unknown;
+  };
   if (sec.__signalTreeSecurity !== true || typeof sec.validate !== 'function') {
     throw new Error(SIGNAL_TREE_MESSAGES.SECURITY_INVALID);
   }
@@ -239,14 +242,6 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
 
-/**
- * Dev-mode: paths already warned about for writes that went nowhere — either
- * the key is absent from the tree's initial shape (ST2010) or the value at
- * that path is a shape traversal doesn't recognise (ST2005). Deduped so a
- * write inside a loop doesn't flood the console.
- */
-const warnedDroppedPaths = new Set<string>();
-
 function recursiveUpdate(
   target: unknown,
   updates: unknown,
@@ -270,13 +265,10 @@ function recursiveUpdate(
       // key that was never in that shape has nowhere to go and is discarded.
       // Silently, until now: this is what made a guardrails rule look broken
       // for hours when the demo wrote an optional key it had never seeded.
-      if (
-        (typeof ngDevMode === 'undefined' || ngDevMode) &&
-        !warnedDroppedPaths.has(childPath)
-      ) {
-        warnedDroppedPaths.add(childPath);
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
         console.error(
-          `SignalTree: write to "${childPath}" was DISCARDED — that key is not ` +
+          `SignalTree: write to "${childPath}" (relative to the node written) ` +
+            `was DISCARDED — that key is not ` +
             `part of the tree's initial shape, so no signal exists for it. Add ` +
             `it to the object passed to signalTree() (a declared-but-optional ` +
             `TypeScript property is not enough). [ST2010]`
@@ -325,22 +317,14 @@ function recursiveUpdate(
         (prop as (v: unknown) => void)(value);
         if (out) out.push(childPath);
       }
-    } else if (
-      (typeof ngDevMode === 'undefined' || ngDevMode) &&
-      !warnedDroppedPaths.has(childPath)
-    ) {
-      // Neither a writable signal nor a node accessor: traversal recognises
-      // exactly those two shapes, so anything else is dropped here without a
-      // trace. Materialized markers that are plain callables land in this
-      // branch — a merge write through a parent reaches them and vanishes.
-      warnedDroppedPaths.add(childPath);
-      console.error(
-        `SignalTree: write to "${childPath}" was DROPPED — the value at that ` +
-          `path is neither a writable signal nor a node accessor, so the tree ` +
-          `cannot write through it. Write the leaf directly (e.g. ` +
-          `tree.$.${childPath}.set(value)). [ST2005]`
-      );
     }
+    // NOTE: no diagnostic for "matched neither guard". Since stored() became a
+    // real signal, the only values reaching here are materialized markers
+    // (entityMap/status/form), which do not accept merge writes BY DESIGN —
+    // each has its own API. Warning would fire on `tree(tree())`, the ordinary
+    // snapshot-restore pattern, and the obvious remediation (`.set()`) does not
+    // exist on those markers. A diagnostic that cries wolf on documented usage
+    // is worse than none — the same bar that rejected the duplicate-key warning.
   }
 }
 
@@ -573,16 +557,15 @@ function create<T extends object>(
       }
 
       // Duplicate detection via enhancer metadata
-      const meta = (enhancer as unknown as Record<symbol, EnhancerMeta>)[
-        ENHANCER_META
-      ] ??
+      const meta =
+        (enhancer as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] ??
         (enhancer as unknown as { metadata?: EnhancerMeta }).metadata;
 
       if (meta?.name) {
         if (appliedEnhancers.has(meta.name)) {
           throw new Error(
             `Enhancer "${meta.name}" has already been applied to this tree. ` +
-            `Each enhancer can only be applied once.`
+              `Each enhancer can only be applied once.`
           );
         }
         // Dependency validation
@@ -714,7 +697,11 @@ function create<T extends object>(
         const updater = arg as (current: T) => T;
         const current = unwrap(signalState) as T;
         batchScope(() => recursiveUpdate(signalState, updater(current), out));
-      } else if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+      } else if (
+        typeof arg === 'object' &&
+        arg !== null &&
+        !Array.isArray(arg)
+      ) {
         batchScope(() => recursiveUpdate(signalState, arg, out));
       } else {
         recursiveUpdate(signalState, arg, out);
@@ -828,6 +815,21 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   const derivedQueue: Array<($: unknown) => object> = [];
   let isFinalized = false;
 
+  let markersMaterialized = false;
+
+  /**
+   * Materialize markers only — idempotent, and deliberately does NOT latch
+   * `isFinalized`, so it stays legal to add `.derived()` afterwards. Reading
+   * or writing through the tree needs real signals; it does not need the
+   * derived queue applied.
+   */
+  const materializeOnly = () => {
+    if (markersMaterialized) return;
+    markersMaterialized = true;
+    materializeMarkers(baseTree.$);
+    _recordTreeConstruction();
+  };
+
   const finalize = () => {
     if (isFinalized) return;
     isFinalized = true;
@@ -835,10 +837,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     // Step 1: Materialize ALL markers (entityMap, status, stored, etc.)
     // This must happen BEFORE derived processing so that derived factories
     // can reference entity methods, status signals, and stored signals.
-    materializeMarkers(baseTree.$);
-    // Record that a tree has been constructed so registerMarkerProcessor()
-    // can warn if user-defined markers are registered AFTER the fact.
-    _recordTreeConstruction();
+    materializeOnly();
 
     // Step 2: Apply all queued derived factories
     if (derivedQueue.length > 0) {
@@ -848,11 +847,12 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
 
   // Create callable builder function that delegates to baseTree
   const builder = function (arg?: unknown): TSource | void {
-    // Finalize first. Every other entry point ($, with, updateAndReport,
-    // batchUpdate) does; this one used to be the sole omission, so calling
-    // tree() before ever touching tree.$ returned RAW MARKERS instead of
-    // values, and a write through it landed on unmaterialized markers.
-    finalize();
+    // Materialize markers WITHOUT finalizing. Calling tree() used to return
+    // raw markers because this path skipped materialization entirely; but a
+    // full finalize() here would also latch `isFinalized`, and `.derived()`
+    // throws on that flag — so `tree(); tree.derived(...)` would start failing
+    // with a message about `$` that the caller never touched.
+    materializeOnly();
 
     // Delegate to baseTree's call signature
     if (arguments.length === 0) {
