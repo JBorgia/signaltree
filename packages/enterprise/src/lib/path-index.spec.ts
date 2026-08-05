@@ -268,49 +268,37 @@ describe("PathIndex", () => {
     });
 
     it("should have O(k) lookup time regardless of total size", () => {
-      // Add 100 signals
+      // A single lookup is tens of nanoseconds — below the resolution of
+      // performance.now() and cheaper than the call to it. Timing one lookup
+      // at a time measured the CLOCK, not the index, and flaked accordingly
+      // (a 140x "regression" from pure timer noise). Time a large BATCH so
+      // each measurement is milliseconds, well clear of that floor.
+      const ITERATIONS = 200_000;
+      const measure = () => {
+        const start = performance.now();
+        for (let i = 0; i < ITERATIONS; i++) {
+          index.get(["items", 50]);
+        }
+        return performance.now() - start;
+      };
+
       for (let i = 0; i < 100; i++) {
         index.set(["items", i], signal(i));
       }
+      measure(); // warm-up: let the JIT settle before the timed run
+      const duration100 = measure();
 
-      // Warm-up runs to stabilize JIT compilation
-      for (let i = 0; i < 10; i++) {
-        index.get(["items", 50]);
-      }
-
-      // Measure with 100 items (multiple runs to reduce variance)
-      let duration100 = 0;
-      const runs = 100;
-      for (let run = 0; run < runs; run++) {
-        const time = performance.now();
-        index.get(["items", 50]);
-        duration100 += performance.now() - time;
-      }
-      duration100 /= runs;
-
-      // Add 900 more signals (10x more data)
+      // 10x more data
       for (let i = 100; i < 1000; i++) {
         index.set(["items", i], signal(i));
       }
+      measure(); // warm-up again after the shape change
+      const duration1000 = measure();
 
-      // Warm-up after adding more data
-      for (let i = 0; i < 10; i++) {
-        index.get(["items", 50]);
-      }
-
-      // Measure with 1000 items (multiple runs to reduce variance)
-      let duration1000 = 0;
-      for (let run = 0; run < runs; run++) {
-        const time = performance.now();
-        index.get(["items", 50]);
-        duration1000 += performance.now() - time;
-      }
-      duration1000 /= runs;
-
-      // Lookup time should not increase significantly with 10x more data
-      // O(k) means constant time regardless of total size
-      // Allow 10x tolerance for CI environment variance
-      expect(duration1000).toBeLessThan(duration100 * 10);
+      // O(k) means lookup cost tracks PATH LENGTH, not index size, so 10x the
+      // entries should cost about the same. 3x tolerance absorbs CI noise and
+      // still fails loudly if someone makes this a scan.
+      expect(duration1000).toBeLessThan(duration100 * 3);
     });
   });
 });

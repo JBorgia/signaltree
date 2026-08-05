@@ -39,13 +39,9 @@ npm install @signaltree/ng-forms
 
 Adds `@angular/forms ^20.0.0 || ^21.0.0 || ^22.0.0` and `rxjs ^7.0.0` as peers. Read [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md).
 
-### `@signaltree/enterprise`
+### `@signaltree/enterprise` — DEPRECATED, do not install
 
-```bash
-npm install @signaltree/enterprise
-```
-
-Licensed under BSL-1.1 (see the package `package.json`). Peers: `@angular/core ^20.0.0 || ^21.0.0 || ^22.0.0`, `@signaltree/core`. Read [`../enterprise/SKILL.md`](../enterprise/SKILL.md).
+Deprecated in 13.5.0 and superseded by `tree.updateAndReport()` and `tree.onPathChange()`, both built into `@signaltree/core`. It is measurably slower than the core methods that replaced it and has an unfixed array data-loss defect. Read [`../enterprise/SKILL.md`](../enterprise/SKILL.md) only to migrate an existing dependency off it.
 
 ### `@signaltree/callable-syntax`
 

@@ -1,7 +1,7 @@
 {
   "name": "@signaltree/enterprise",
   "version": "13.4.0",
-  "description": "Enterprise optimizations for SignalTree reactive JSON. Diff-based updates, bulk operations, and advanced change tracking for large-scale applications.",
+  "description": "DEPRECATED — use tree.updateAndReport() and tree.onPathChange() in @signaltree/core instead. The diff engine is measurably slower than the core API that replaced it.",
   "license": "BUSL-1.1",
   "type": "module",
   "sideEffects": false,
@@ -33,16 +33,6 @@
       "types": "./src/lib/enterprise-enhancer.d.ts",
       "import": "./dist/lib/enterprise-enhancer.js",
       "default": "./dist/lib/enterprise-enhancer.js"
-    },
-    "./scheduler": {
-      "types": "./src/lib/scheduler.d.ts",
-      "import": "./dist/lib/scheduler.js",
-      "default": "./dist/lib/scheduler.js"
-    },
-    "./thread-pools": {
-      "types": "./src/lib/thread-pools.d.ts",
-      "import": "./dist/lib/thread-pools.js",
-      "default": "./dist/lib/thread-pools.js"
     }
   },
   "keywords": [

@@ -1,30 +1,132 @@
-## Unreleased (13.4.1)
+## Unreleased (13.5.0)
 
-### Known issue (not yet fixed)
+Retires `@signaltree/enterprise` and moves the two capabilities worth keeping
+into core. See [RFC 0010](docs/rfcs/0010-retiring-enterprise.md) for the full
+decision record.
+
+### Added
+
+- **`tree.onPathChange(listener)` in `@signaltree/core`.** Subscribe to the
+  dot-paths a write actually landed on; returns an unsubscribe function. Fires
+  for the call form `tree({...})`, `batchUpdate()` and `updateAndReport()`.
+  Costs nothing when unused — no listeners means one `Set` size check per write
+  and no allocation.
+
+  It deliberately does **not** fire for direct leaf writes
+  (`tree.$.a.b.set(x)`), which bypass the root. Catching those would mean
+  instrumenting every leaf in the tree, a cost every consumer would pay for a
+  feature few use.
+
+### Fixed
+
+- **`updateAndReport()` reported writes that never happened.** Leaves are
+  `signal(value, { equal })`, so a new-reference-but-deep-equal value is
+  rejected by the leaf and notifies nobody — but the path was reported as
+  changed anyway. The ordinary case is a re-fetched server payload identical to
+  what you already hold: every key in it was reported.
+
+  Audit trails, change feeds and targeted persistence all consume that list to
+  decide what work to do, and the failure was silent — state stayed correct, so
+  nothing looked broken; you simply synced, logged and wrote far more than
+  necessary. It now reports only paths whose leaf accepted the write.
+
+- **A state key named `prototype` crashed tree construction.** Nodes are
+  callable functions and carry state keys as their own properties, and an
+  ordinary function expression owns a non-configurable `prototype`, so
+  `signalTree({ cfg: { prototype: 1 } })` died with
+  `TypeError: Cannot redefine property: prototype` from inside
+  `makeNodeAccessor`. Node accessors are now built as concise methods, which
+  are not constructors and have no `prototype` at all. The reserved-name list
+  for state keys is now empty.
+
+- **`unwrap()` silently deleted state stored under `set` or `update`.** A leaf
+  signal *is* a function, and the guard skipped those keys by name whenever
+  their value was a function — so a permission `set` or an `update` timestamp
+  vanished from every snapshot, every persisted payload and every
+  `structuredClone`. The general plain-function skip already covered the case
+  the guard was written for, and covers it by value rather than by name. Keys
+  named `length` and `prototype` were dropped the same way on the accessor path
+  and are fixed alongside.
+
+- **`deepEqual(NaN, NaN)` returned `false`** (`@signaltree/shared`), so a leaf
+  holding `NaN` — a failed parse, a `0/0`, `Number('')` on a blank field —
+  counted as changed on every rewrite of the same `NaN` and notified every
+  dependent computed and effect. Now SameValueZero for primitives, matching
+  `lodash.isEqual` and `Object.is`.
+
+### Security
+
+- **Prototype pollution in `updateOptimized()`** (`@signaltree/enterprise`).
+  Patch application walked and assigned with plain bracket access, so a
+  top-level `__proto__` key reached the prototype setter and polluted
+  `Object.prototype` process-wide. `JSON.parse` creates a real own `__proto__`
+  key, making this reachable from any untrusted server or user payload:
+  `tree.updateOptimized(JSON.parse('{"__proto__":{"isAdmin":true}}'))` set
+  `({}).isAdmin`. Traversal is now own-property-only and the final write uses
+  `Object.defineProperty`, so a hostile key lands as inert data. Five tests,
+  verified to fail against 13.4.0.
+
+### Deprecated
+
+- **`@signaltree/enterprise` is deprecated.** Use `tree.updateAndReport()` and
+  `tree.onPathChange()` from `@signaltree/core`. The package stays published so
+  existing installs keep resolving, and receives security fixes only. Full
+  migration table in the [package README](packages/enterprise/README.md).
+
+  **The headline performance claim was inverted.** Measured against
+  `tree.updateAndReport()`, which returns the same changed paths,
+  `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at
+  2,000**, and the gap widens with tree size. The "2-5x faster" claim was never
+  measured against core. This is structural rather than a tuning problem: core
+  leaves already use deep equality plus a reference-equality short-circuit, so
+  "only write what changed" is core behaviour for free — the diff engine pays
+  O(state) to skip writes that were already no-ops. The claim has been
+  corrected in the package README, the agent skill, the enhancer JSDoc and the
+  demo page.
+
+  The package also has no independent runtime dependency, which puts it on the
+  wrong side of the packaging rule in RFC 0007.
+
+### Removed
+
+- **`@signaltree/enterprise/scheduler` and `@signaltree/enterprise/thread-pools`
+  subpath exports.** Both were dead: no caller anywhere in the repo, no tests,
+  no documentation. `thread-pools` only ever exported `createMockPool()`, a test
+  double that should not have shipped to production consumers, and `scheduler`'s
+  advertised "yield to the event loop" was `await Promise.resolve()` — a
+  microtask, which does not yield.
+
+### Known issue (not being fixed)
 
 - **`updateOptimized()` silently drops array writes** (`@signaltree/enterprise`).
   An array in a SignalTree is a single leaf — one `WritableSignal<T[]>`, never
   per-index signals — but the diff engine emits element-level change paths
-  (`users.1`, `items.500.value`). The apply step cannot resolve a segment past
-  an array leaf, so the patch is dropped while the caller is told
-  `changed: true` with that path listed. Object patches are unaffected.
+  (`users.1`). The apply step cannot resolve a segment past an array leaf, so
+  the patch is dropped while the caller is told `changed: true` with that path
+  listed. Object patches are unaffected.
 
-  **Workaround:** write the array through its leaf directly
-  (`tree.$.users.set(newUsers)`) rather than via `updateOptimized`.
+  **Workaround:** write the array through its leaf
+  (`tree.$.users.set(newUsers)`), or migrate to `tree.updateAndReport()`, which
+  handles arrays correctly.
 
-  An apply-side fix was written and reverted before release. Reconstructing the
-  array from element patches was strictly worse than the no-op: a shorter
-  intended value left the stale tail in place (`[1,2,3]` + `[9,2]` produced
-  `[9,2,3]`), class instances in elements were downgraded to plain objects by
-  the clone, `__proto__` became an injection path, and the signal was written
-  once per changed element rather than once per array — 652x slower than a
-  plain `.set()` on a 2000-element array. Silent corruption is worse than a
-  silent no-op, so it was withdrawn.
+  Two fixes were attempted and both withdrawn before release, each having
+  introduced defects worse than the one it closed.
 
-  The correct fix applies the array **atomically** from the original update
-  payload instead of reconstructing it from element patches, which also
-  resolves the truncation, class-instance, prototype and write-amplification
-  problems in one move. Tracked for a follow-up rather than rushed.
+  The first reconstructed the array from element patches: a shorter intended
+  value left the stale tail in place (`[1,2,3]` + `[9,2]` produced `[9,2,3]`),
+  class instances were downgraded to plain objects by the clone, `__proto__`
+  became an injection path, and the signal was written once per changed element
+  rather than once per array — 652x slower than a plain `.set()` on a
+  2000-element array.
+
+  The second took arrays whole from the payload, which fixed all four, but added
+  a second traversal that duplicated the differ's job while honouring none of
+  its contracts: sibling keys containing a literal dot were silently dropped
+  (`{ items: [...], 'items.count': 3 }` wrote the array and lost the count),
+  unchanged arrays from `JSON.parse` compared unequal forever and reported 30 of
+  30 no-op polls as changes, circular payloads crashed it, and `maxDepth`,
+  `ignoreArrayOrder` and `equalityFn` were bypassed. Given the package is now
+  superseded, the defect is documented rather than fixed.
 
 ## 13.4.0 (2026-08-05)
 

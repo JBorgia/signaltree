@@ -856,7 +856,7 @@ const cleanup = tree.effect((state) => {
 These are the **only** separate packages in the SignalTree ecosystem:
 
 - **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
-- **`@signaltree/enterprise`** - Enterprise-scale optimizations for 500+ signals (separate package)
+- **`@signaltree/enterprise`** - _deprecated in 13.5.0;_ use `tree.updateAndReport()` / `tree.onPathChange()` in core
 - **`@signaltree/callable-syntax`** - Build-time transform for callable syntax (dev dependency, separate package)
 
 #### Composition Patterns
@@ -2570,7 +2570,7 @@ Consider enhancers when you need:
 Consider separate packages when you need:
 
 - 📝 Angular forms integration (@signaltree/ng-forms)
-- 🏢 Enterprise-scale optimizations (@signaltree/enterprise)
+- 🏢 ~~Enterprise-scale optimizations (@signaltree/enterprise)~~ — deprecated in 13.5.0, now core
 - 🎯 Callable syntax transform (@signaltree/callable-syntax)
 
 ## Migration from NgRx
@@ -2854,68 +2854,31 @@ class UserFormComponent {
 
 ---
 
-### 🏢 @signaltree/enterprise
+### 🏢 @signaltree/enterprise — DEPRECATED
 
-**Enterprise-scale optimizations for large applications**
-
-Advanced performance optimizations designed for applications with 500+ signals and complex state trees.
-
-```bash
-npm install @signaltree/enterprise
-```
-
-**Features:**
-
-- ⚡ PathIndex for O(k) lookup time regardless of tree size
-- 🗜️ Advanced memory optimization algorithms
-- 📊 Performance profiling and monitoring
-- 🔍 Efficient path-based signal resolution
-- 🎯 Optimized for large-scale applications
-
-**Quick Example:**
+**Deprecated in 13.5.0. Do not install it.** Its two useful capabilities now live in core:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { enterpriseOptimizations } from '@signaltree/enterprise';
 
-const tree = signalTree({
-  // Large application state with hundreds of signals
-  modules: {
-    auth: {
-      /* ... */
-    },
-    data: {
-      /* ... */
-    },
-    ui: {
-      /* ... */
-    },
-    // ... many more modules
-  },
-}).with(
-  enterpriseOptimizations({
-    enablePathIndex: true,
-    enableMemoryOptimizations: true,
-    enablePerformanceMonitoring: true,
-  })
-);
+const tree = signalTree(largeState);
+
+// Apply a partial update, get back the dot-paths that actually changed.
+const changed = tree.updateAndReport(serverPayload);
+if (changed.length) persist(changed);
+
+// Or subscribe to every root write.
+const off = tree.onPathChange((paths) => auditLog.record(paths));
 ```
 
-**Performance Benefits:**
+Measured against `tree.updateAndReport()`, which returns the same paths, the
+package's `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at
+2,000**. Core leaves already use deep equality plus a reference-equality
+short-circuit, so "only write what changed" is core behaviour for free — the
+diff engine pays O(state) to skip writes that were already no-ops.
 
-- **Constant-time lookups:** O(k) lookup where k is path depth, not total signal count
-- **Memory efficiency:** Up to 40% reduction in memory usage for large trees
-- **Faster updates:** Optimized update batching for high-frequency scenarios
-
-**When to use:**
-
-- Applications with 500+ signals
-- Complex nested state structures (10+ levels deep)
-- High-frequency state updates
-- Enterprise-scale applications with performance requirements
-- Need detailed performance profiling
-
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/enterprise)
+See the [migration table](../enterprise/README.md) to move an existing
+dependency off it.
 
 ---
 

@@ -1,97 +1,88 @@
 ---
 name: signaltree-enterprise
-description: Guides AI agents applying @signaltree/enterprise to large SignalTree state for diff-based bulk updates, optimized partial writes, and path-index monitoring. Triggers on @signaltree/enterprise, updateOptimized, bulk updates, large state tree, diff engine, path index, getPathIndex, 500+ signals, enterprise enhancer.
+description: Migrating off the deprecated @signaltree/enterprise package to tree.updateAndReport() and tree.onPathChange() in @signaltree/core. Triggers on @signaltree/enterprise, updateOptimized, enterprise enhancer, diff engine, path index, getPathIndex, updateAuto, bulk updates on a large state tree, 500+ signals, diff-based patching.
 ---
 
-# Using @signaltree/enterprise
+# @signaltree/enterprise is DEPRECATED — use core
 
-**Superseded — do not reach for this for performance.** Measured against `tree.updateAndReport()` in `@signaltree/core`, `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at 2 000**, and the gap widens with tree size. The long-standing "2-5x faster" claim was never measured against core and is inverted. Core's leaves already use deep-equality (`signal(value, { equal })`) plus a reference-equality short-circuit, so "only write what changed" is core behaviour for free — the diff engine pays O(state) to save writes that were already no-ops. Use `tree.updateAndReport(partial)`, which returns the same changed paths.
+**Do not add `@signaltree/enterprise` to any project.** As of 13.5.0 it is deprecated and superseded by two methods built into `@signaltree/core`. If you are reading this because a user asked for diff-based bulk updates, change tracking, or "what changed" reporting on a large tree, the answer is core — no enhancer, no extra package, no extra bundle.
 
-Historically positioned for API hydration, tick-driven snapshots and subtree migrations over trees with hundreds of signals. `tree.updateAndReport()` covers all of those and is faster in every size measured.
+If the project already depends on it, migrate it off using the table below.
 
-**License: BSL-1.1** (not MIT). Surface this when user is building for production commercial deployment.
-
-Install:
-
-```bash
-npm install @signaltree/core @signaltree/enterprise
-```
-
-Peer: `@angular/core ^20`, `@signaltree/core ^9`. No additional runtime deps.
-
-Apply the enhancer:
+## Use this instead
 
 ```ts
 import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(initial).with(enterprise());
-```
+interface State {
+  entities: { id: number }[];
+  lastSyncAt: string;
+}
 
-Bulk replace with `updateOptimized`:
+const tree = signalTree<State>({ entities: [], lastSyncAt: '' });
+const entities: State['entities'] = [{ id: 1 }];
 
-```ts
-import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
-
-interface State { entities: { id: number }[]; lastSyncAt: string }
-declare const entities: State['entities'];
-const tree = signalTree<State>({ entities: [], lastSyncAt: '' }).with(enterprise());
-
-const result = tree.updateOptimized({
+// Apply a partial update, get back the dot-paths that actually changed.
+const changed = tree.updateAndReport({
   entities,
   lastSyncAt: new Date().toISOString(),
 });
-console.log(`${result.changedPaths.length} paths changed in ${result.duration}ms`);
+if (changed.length) console.log(`${changed.length} paths changed`);
+
+// Or subscribe to every root write.
+const off = tree.onPathChange((paths) => console.log('changed:', paths));
+off();
 ```
 
-`updateOptimized` takes `Partial<T>` (not an updater fn). Only diffed keys are touched; other branches are completely untouched.
+## Migration table
 
-Diff options:
+| Deprecated enterprise API                  | Core replacement                                    |
+| ------------------------------------------ | --------------------------------------------------- |
+| `signalTree(s).with(enterprise())`         | `signalTree(s)` — drop the enhancer                 |
+| `tree.updateOptimized(p)`                  | `tree.updateAndReport(p)` — returns `string[]`      |
+| `result.changedPaths`                      | the returned array itself                           |
+| `result.changed`                           | `changed.length > 0`                                |
+| `tree.onPathChange(fn)`                    | `tree.onPathChange(fn)` — same signature            |
+| `tree.snapshot()`                          | `const snap = tree()`                               |
+| `tree.restore(snap)`                       | `tree(snap)`                                        |
+| `tree.updateAuto(p)`                       | `tree(p)`                                           |
+| `tree.getPathIndex()`                      | no replacement — was debug-only, already deprecated |
+| `enterprise({ autoOptimizeThreshold: n })` | drop it — core has one write path                   |
+| diff options (`maxDepth`, `equalityFn`, …) | drop them — core writes leaf-by-leaf, no diff pass  |
+
+## Why it was deprecated
+
+State this accurately if a user asks, because the package's own older docs claimed the opposite:
+
+- **It is slower, not faster.** Measured against `tree.updateAndReport()`, which returns the same paths: **6.8x slower at 500 leaves, 14.4x slower at 2,000**, widening with size. The old "2–5x faster" claim was never measured against core.
+- **The reason is structural.** Core leaves are `signal(value, { equal })` — deep equality plus a reference-equality short-circuit — so "only write what changed" is already core behaviour. The diff engine pays O(state) to skip writes that were already no-ops.
+- **It has a live data-loss defect** (below) that is not being fixed.
+- **It adds ~3.1KB gzipped** for that.
+
+## Known defect in the deprecated package
+
+`updateOptimized()` **silently drops any write targeting an array** — reports `changed: true`, lists the paths, writes nothing. An array is one leaf signal, but the diff engine emits element-level paths (`users.1`) the apply step cannot consume.
+
+If you find code relying on this, it is already broken. Fix it by migrating, or as a stopgap write the array through its leaf:
 
 ```ts
 import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
 
-interface State { entities: { id: number }[] }
-declare const nextEntities: State['entities'];
-const tree = signalTree<State>({ entities: [] }).with(enterprise());
+const tree = signalTree({ users: [] as { id: number }[] });
+const nextUsers = [{ id: 1 }, { id: 2 }];
 
-tree.updateOptimized(
-  { entities: nextEntities },
-  {
-    ignoreArrayOrder: true,  // treat arrays as unordered sets — only use when item identity is stable
-    maxDepth: 6,             // stop diffing below this depth; replace whole subtree instead
-    equalityFn: (a, b) =>
-      a === b || (a instanceof Date && b instanceof Date && a.getTime() === b.getTime()),
-    autoBatch: true,
-    batchSize: 500,          // chunk writes to keep microtasks short
-  }
-);
+tree.$.users.set(nextUsers); // works
 ```
 
-`UpdateResult` shape: `{ changed: boolean, duration: number (ms), changedPaths: string[], stats? }`.
+## Behaviour differences to flag during migration
 
-`getPathIndex()` — returns `PathIndex` (dotted paths of every leaf) or `null` before first `updateOptimized` call:
+1. **`updateAndReport()` is stricter about "changed".** It reports only paths whose leaf actually accepted the write, so a re-fetched payload identical to current state reports `[]`. The diff engine reported every key in it. Code that logs or syncs on those counts will correctly do less work.
+2. **Core's `onPathChange` fires for every root write** — `tree({...})`, `batchUpdate()` and `updateAndReport()` — not just `updateOptimized()`. It does **not** fire for direct leaf writes (`tree.$.a.b.set(x)`), which bypass the root.
+3. **`snapshot()` used `structuredClone`** and threw `DataCloneError` on a tree holding a function. `tree()` has no such limit.
+4. **`undefined` at a path still means "no change"** in core. Use `null` or an empty sentinel to clear a value explicitly.
 
-```ts
-import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
+## If the package must stay for now
 
-const tree = signalTree({ count: 0 }).with(enterprise());
-const idx = tree.getPathIndex();
-if (idx) { /* use idx with result.changedPaths for heatmaps, etc. */ }
-```
+It remains published and receives security fixes only. Do not add new call sites. Do not present it as a performance option.
 
-Key contracts:
-- `undefined` at a path = no change. Use `null` (or empty sentinel) to clear explicitly.
-- `getPathIndex()` is `null` until first `updateOptimized` call. Not live between calls — rebuilt on next optimized write.
-- Dynamic paths (added beyond initial shape) are not auto-indexed; force rebuild via `updateOptimized({})`.
-- Keep using `tree.update(...)` for small targeted writes; `updateOptimized` for large `Partial<T>` replacements only.
-
-Gotchas:
-- `ignoreArrayOrder: true` treats arrays as sets — reorders silently missed if item identity isn't stable.
-- `updateOptimized` returns `changed: false` when nothing differed — don't assume it always mutates.
-- `maxDepth` stops recursion at that depth; subtree written as unit. `getPathIndex()` rebuilt after plain `update()` on next optimized write — consistent but not live.
-
-Related: `using-signaltree` (root), `spec-auditing`, `compression`
+Related: `using-signaltree` (root), `spec-auditing`

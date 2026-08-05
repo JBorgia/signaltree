@@ -32,48 +32,41 @@ export interface EnterpriseOptions {
 }
 
 /**
- * Enterprise-grade optimizations for large-scale applications.
+ * Diff-based bulk updates for a SignalTree.
  *
- * **Includes:**
- * - Diff-based updates (only update changed signals)
- * - Bulk operation optimization (SUPERSEDED — measured slower than core's
- *   `updateAndReport()`; see the note on `enterprise()` below)
- * - Advanced change tracking
- * - Update statistics and monitoring
+ * @deprecated Since 13.5.0. Use `tree.updateAndReport()` and
+ * `tree.onPathChange()` from `@signaltree/core` — both are built in, need no
+ * enhancer, and are faster. This enhancer is maintained for security fixes
+ * only. See the migration table in the package docs.
  *
- * **Use when:**
- * - 500+ signals in state tree
- * - Bulk updates at high frequency (60Hz+)
- * - Real-time dashboards or data feeds
- * - Enterprise-scale applications
+ * **Why it was retired**
  *
- * **Skip when:**
- * - Small to medium apps (<100 signals)
- * - Infrequent state updates
- * - Startup/prototype projects
+ * The headline claim was inverted. Measured against `tree.updateAndReport()`,
+ * which returns the same changed paths, this is 6.8x SLOWER at 500 leaves and
+ * 14.4x at 2,000, and the gap widens with tree size. That is structural, not a
+ * tuning problem: core leaves are `signal(value, { equal })` with deep equality
+ * plus a reference-equality short-circuit, so "write only what changed" is
+ * already core behaviour — the diff engine pays O(state) to skip writes that
+ * were already no-ops.
  *
- * **Bundle cost:** ~+3.1KB gzipped (measured)
- * **Performance:** NOT a gain. Measured 6.8x slower at 500 leaves and 14.4x at
- * 2,000 than `tree.updateAndReport()` in @signaltree/core, which returns the
- * same changed paths. Core leaves already use deep equality plus a
- * reference-equality short-circuit, so the diff engine pays O(state) to skip
- * writes that were already no-ops.
+ * **Known defect, not being fixed:** `updateOptimized()` silently drops writes
+ * that target an array — it reports `changed: true` and writes nothing. Write
+ * arrays through their leaf (`tree.$.users.set(next)`) or use
+ * `updateAndReport()`, which handles them correctly.
+ *
+ * **Bundle cost:** ~+3.1KB gzipped (measured).
  *
  * @example
  * ```typescript
- * import { signalTree } from '@signaltree/core';
- * import { enterprise } from '@signaltree/enterprise';
- *
+ * // DEPRECATED
  * const tree = signalTree(largeState).with(enterprise());
+ * const result = tree.updateOptimized(newData);
+ * if (result.changed) sync(result.changedPaths);
  *
- * // Now available: optimized bulk updates
- * const result = tree.updateOptimized(newData, {
- *   ignoreArrayOrder: true,
- *   maxDepth: 10
- * });
- *
- * console.log(result.stats);
- * // { totalChanges: 45, adds: 10, updates: 30, deletes: 5 }
+ * // Replacement — no enhancer, no extra bundle
+ * const tree = signalTree(largeState);
+ * const changed = tree.updateAndReport(newData);
+ * if (changed.length) sync(changed);
  * ```
  *
  * @public

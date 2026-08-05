@@ -77,7 +77,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 - Persist tree to `localStorage` → `persistence({ key, autoSave, autoLoad, debounceMs })` from `@signaltree/core`. Single leaf → `stored()` marker.
 - `computed()` running too often → use Angular's `computed()` — it already memoizes by reference. SignalTree no longer ships a `memoization` enhancer (removed in 9.0.1); for deep-equality cache keys, derive via your own `computed()` with explicit comparison.
 - Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`.
-- Large app, bulk updates slow, diff-based patching → add `@signaltree/enterprise`, compose `enterprise()`. Read [`enterprise/SKILL.md`](enterprise/SKILL.md).
+- Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)` and `tree.onPathChange(fn)`, both built into `@signaltree/core`. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and measurably slower than core. Read [`enterprise/SKILL.md`](enterprise/SKILL.md) only to migrate an existing dependency off it.
 - Reactive forms (validation, dirty/touched, wizards, FormGroup interop) → add `@signaltree/ng-forms`; on Angular 22+ the same package bridges to **Signal Forms** via `signalForm` from `@signaltree/ng-forms/signals`. Read [`ng-forms/SKILL.md`](ng-forms/SKILL.md).
 - `tree.$.field('value')` sugar over `.set()` → add `@signaltree/callable-syntax` (build-time transform, zero runtime cost). Read [`callable-syntax/SKILL.md`](callable-syntax/SKILL.md).
 - Dev-time perf budgets, memory-leak detection, anti-pattern warnings → add `@signaltree/guardrails` (dev-only; noop in production). Read [`guardrails/SKILL.md`](guardrails/SKILL.md).
@@ -99,7 +99,7 @@ const tree = signalTree<AppState>({ counter: 0, ui: { theme: 'light' } })
   .with(devTools({ treeName: 'AppStore' }));
 ```
 
-Cross-package enhancers (`enterprise()`, `guardrails()`, `formBridge()`, `supabaseRealtime(...)`) slot into same chain.
+Cross-package enhancers (`guardrails()`, `formBridge()`, `supabaseRealtime(...)`) slot into same chain.
 
 Angular Signal Forms bridge (Angular 22+, v11.6+) — not an enhancer; `signalForm` from `@signaltree/ng-forms/signals` turns a `form()` marker into a Signal Forms `FieldTree` sharing the marker's values signal (one model, no sync loops):
 
@@ -148,7 +148,7 @@ Deep dives:
 Sub-skills:
 
 - [`ng-forms/SKILL.md`](ng-forms/SKILL.md)
-- [`enterprise/SKILL.md`](enterprise/SKILL.md)
+- [`enterprise/SKILL.md`](enterprise/SKILL.md) — deprecated package; migration only
 - [`callable-syntax/SKILL.md`](callable-syntax/SKILL.md)
 - [`guardrails/SKILL.md`](guardrails/SKILL.md)
 - [`events/SKILL.md`](events/SKILL.md)

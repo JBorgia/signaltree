@@ -1,274 +1,93 @@
 # @signaltree/enterprise
 
-> ⚠️ **Superseded — do not reach for this for performance.** Measured against `tree.updateAndReport()` in `@signaltree/core`, `updateOptimized()` is **6.8x slower at 500 leaves and 14.4x slower at 2 000**, and the gap widens with tree size. The long-standing "2-5x faster" claim was never measured against core and is inverted. Core's leaves already use deep-equality (`signal(value, { equal })`) plus a reference-equality short-circuit, so "only write what changed" is core behaviour for free — the diff engine pays O(state) to save writes that were already no-ops. Use `tree.updateAndReport(partial)`, which returns the same changed paths.
+> # ⚠️ Deprecated as of 13.5.0
+>
+> **Use `tree.updateAndReport()` and `tree.onPathChange()` from `@signaltree/core`.** They are built in, need no enhancer, add no bundle, and are faster than this package.
+>
+> This package remains published so existing installs keep resolving, and will receive security fixes only. No new features, and the array defect below is not being fixed.
 
-Enterprise-grade optimizations for SignalTree. Designed for large-scale applications with 500+ signals and high-frequency bulk updates.
+## Why it was retired
 
-## Features
+**The headline performance claim was inverted.** Measured against `tree.updateAndReport()` — which returns the same changed paths — `updateOptimized()` is:
 
-- **Diff-based updates** - Only update signals that actually changed
-- **Bulk operation optimization** - see the performance note below; measured SLOWER than core
-- **Advanced change tracking** - Detailed statistics and monitoring
-- **Path-change subscriptions** - React to specific dot-paths changing (9.1+)
-- **Snapshot / restore** - Cheap structured-clone snapshots with diff-engine restore (9.1+)
-- **Auto-optimize threshold** - Route large updates through the diff engine automatically (9.1+)
-- **Lazy initialization** - Zero overhead until first use
+| Leaves | `updateOptimized()` | `updateAndReport()` | Result           |
+| ------ | ------------------- | ------------------- | ---------------- |
+| 500    | 0.1370 ms           | 0.0201 ms           | **6.8x slower**  |
+| 2,000  | 0.5797 ms           | 0.0404 ms           | **14.4x slower** |
 
-## Installation
+The gap widens with tree size. The long-standing "2–5x faster" claim was never measured against core.
 
-```bash
-npm install @signaltree/core @signaltree/enterprise
-```
+This is structural, not a tuning problem. Core leaves are `signal(value, { equal })` — deep equality plus a reference-equality short-circuit — so **"only write what actually changed" is already core behaviour, for free**. The diff engine walks the whole state to decide which writes to skip, and the writes it skips were already no-ops. No amount of optimization changes that shape; the work it does is work core does not need to do.
 
-## Type Definitions
+Two further reasons:
 
-Type declarations are shipped as `src/**/*.d.ts` and referenced by the package exports.
-No extra build step is needed to consume types.
+- **It no longer offers anything core lacks.** `changedPaths` and `updateAndReport()` return the same information, and `onPathChange` now ships in core.
+- **It has no independent runtime dependency**, which puts it on the wrong side of the packaging rule in [RFC 0007](../../docs/rfcs/0007-packaging-principle-and-ng-forms-reslice.md) — a package should exist because it pulls in a dependency core should not.
 
-## Quick Start
+## Migration
 
 ```typescript
+// Before
 import { signalTree } from '@signaltree/core';
 import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(largeState).with(enterprise());
+const tree = signalTree(state).with(enterprise());
+const result = tree.updateOptimized(payload);
+if (result.changed) sync(result.changedPaths);
 
-// Use optimized bulk updates
-const result = tree.updateOptimized(newData, {
-  ignoreArrayOrder: true,
-  maxDepth: 10,
-});
-
-console.log(result.stats);
-// { totalChanges: 45, adds: 10, updates: 30, deletes: 5 }
-```
-
-## When to Use
-
-### ✅ Use @signaltree/enterprise when:
-
-- You have 500+ signals in your state tree
-- Bulk updates happen at high frequency (60Hz+)
-- You need real-time dashboards or data feeds
-- You're building enterprise-scale applications
-- You need detailed update monitoring and statistics
-
-### ❌ Skip @signaltree/enterprise when:
-
-- Small to medium apps (<100 signals)
-- Infrequent state updates
-- Startup/prototype projects
-- Bundle size is critical (adds ~+3.1KB gzipped, measured)
-
-## API
-
-### `enterprise(options?)`
-
-Enhancer that adds enterprise optimizations to a SignalTree.
-
-```typescript
+// After — no enhancer, no extra bundle
 import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(initialState).with(enterprise());
-
-// Or with auto-optimize threshold (9.1+):
-const tree2 = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 100 }));
+const tree = signalTree(state);
+const changed = tree.updateAndReport(payload);
+if (changed.length) sync(changed);
 ```
 
-**Options (9.1+):**
+| Enterprise                                | Core replacement                                    |
+| ----------------------------------------- | --------------------------------------------------- |
+| `tree.updateOptimized(p)`                 | `tree.updateAndReport(p)` — returns changed paths   |
+| `tree.onPathChange(fn)`                   | `tree.onPathChange(fn)` — same signature            |
+| `tree.snapshot()`                         | `const snap = tree()`                               |
+| `tree.restore(snap)`                      | `tree(snap)`                                        |
+| `tree.updateAuto(p)`                      | `tree(p)`                                           |
+| `tree.getPathIndex()`                     | no replacement — was debug-only, already deprecated |
+| `enterprise({ autoOptimizeThreshold: n })` | drop it — core has one write path                   |
+
+### Three behaviour differences worth knowing
+
+**1. `updateAndReport()` is stricter about what counts as a change.** It reports only paths whose leaf signal actually accepted the write. A re-fetched payload identical to what you already hold reports `[]`; the diff engine reported every key in it. If you were counting on the old numbers, they were counting no-ops.
+
+**2. `onPathChange` in core fires for every root write** — the call form `tree({...})`, `batchUpdate()` and `updateAndReport()` — not just `updateOptimized()`. It does **not** fire for direct leaf writes (`tree.$.a.b.set(x)`), which bypass the root.
+
+**3. `snapshot()` here used `structuredClone`,** so it threw `DataCloneError` on any tree holding a function. `tree()` has no such limit.
+
+## Known defect (not being fixed)
+
+`updateOptimized()` **silently drops writes that target an array.** It reports `changed: true`, lists the paths, and writes nothing.
+
+An array in a SignalTree is a single leaf — one `WritableSignal<T[]>` — while the diff engine is a general-purpose differ emitting element-level paths (`users.1`). The apply step cannot consume those against a leaf, so it bails and reports success anyway.
+
+Two fixes were attempted and both withdrawn, each having introduced defects worse than the one it closed (silent truncation and prototype injection in the first; dotted-key data loss and spurious writes in the second). Given the package is superseded, it stays documented rather than fixed.
+
+**Workaround** — write the array through its leaf:
 
 ```typescript
-{
-  autoOptimizeThreshold?: number; // If set, tree.updateAuto(...) routes through
-                                  // updateOptimized when the payload has at
-                                  // least this many top-level keys.
-}
+tree.$.users.set(nextUsers); // works
+tree.updateOptimized({ users: nextUsers }); // silently does nothing
 ```
 
-### `tree.updateOptimized(updates, options?)`
+Or migrate to `updateAndReport()`, which handles arrays correctly.
 
-Performs optimized bulk updates using diff-based change detection.
+## Removed in 13.5.0
 
-**Parameters:**
-
-- `updates: Partial<T>` - The new state values
-- `options?: UpdateOptions` - Configuration options
-
-**Options:**
-
-```typescript
-{
-  maxDepth?: number;              // Maximum depth to traverse (default: 100)
-  ignoreArrayOrder?: boolean;     // Ignore array element order (default: false)
-  equalityFn?: (a, b) => boolean; // Custom equality function
-  autoBatch?: boolean;            // Automatically batch updates (default: true)
-  batchSize?: number;             // Patches per batch (default: 10)
-}
-```
-
-**Returns:**
-
-```typescript
-{
-  changed: boolean; // Whether any changes were made
-  stats: {
-    totalChanges: number; // Total number of changes
-    adds: number; // New properties added
-    updates: number; // Properties updated
-    deletes: number; // Properties deleted
-  }
-}
-```
-
-### `tree.getPathIndex()`
-
-> **Deprecated (9.1+):** Path-index access is an internal detail and will be
-> removed in a future major. Use `onPathChange` for change observation.
-
-Get the PathIndex for debugging/monitoring. Returns `null` if `updateOptimized` hasn't been called yet (lazy initialization).
-
-```typescript
-const index = tree.getPathIndex();
-if (index) {
-  console.log('Path index active');
-}
-```
-
-### `tree.onPathChange(listener)` (9.1+)
-
-Subscribe to dot-paths that change on each `updateOptimized` (or
-`updateAuto` when it routes through the diff engine). Returns an
-unsubscribe function.
-
-```typescript
-const off = tree.onPathChange((paths) => {
-  console.log('changed:', paths); // e.g. ['user.name', 'cart.items.0.qty']
-});
-
-tree.updateOptimized({ user: { name: 'Ada' } });
-// → listener fires with ['user.name']
-
-off(); // stop listening
-```
-
-### `tree.snapshot()` / `tree.restore(snap)` (9.1+)
-
-Capture and restore the entire state via a `structuredClone`. `restore`
-routes through the diff engine, so listeners and stats fire as if the
-restored values were a normal optimized update.
-
-```typescript
-const snap = tree.snapshot();
-
-tree.updateOptimized({ user: { name: 'Grace' } });
-
-// later... roll back
-tree.restore(snap);
-```
-
-### `tree.updateAuto(updates)` (9.1+)
-
-When `enterprise({ autoOptimizeThreshold: N })` is configured, payloads
-with `≥ N` top-level keys are routed through `updateOptimized`; smaller
-payloads use the regular fast path. Without a threshold this is a plain
-`update`.
-
-```typescript
-const tree = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 50 }));
-
-tree.updateAuto({ a: 1, b: 2 }); // fast path
-tree.updateAuto(largeServerPayload); // diff engine
-```
-
-## Examples
-
-### Real-time Dashboard
-
-```typescript
-import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
-
-interface DashboardState {
-  metrics: Record<string, number>;
-  alerts: Alert[];
-  users: User[];
-  // ... hundreds more properties
-}
-
-const dashboard = signalTree<DashboardState>(initialState).with(enterprise());
-
-// High-frequency updates from WebSocket
-socket.on('metrics', (newMetrics) => {
-  const result = dashboard.updateOptimized({ metrics: newMetrics }, { ignoreArrayOrder: true });
-
-  console.log(`Updated ${result.stats.updates} metrics`);
-});
-```
-
-### Data Grid with Bulk Operations
-
-```typescript
-import { signalTree } from '@signaltree/core';
-import { enterprise } from '@signaltree/enterprise';
-
-const grid = signalTree({
-  rows: [] as GridRow[],
-  columns: [] as GridColumn[],
-  filters: {} as FilterState,
-  selection: new Set<string>(),
-}).with(enterprise());
-
-// Bulk update from API
-async function loadData() {
-  const data = await fetchGridData();
-
-  const result = grid.updateOptimized(data, {
-    maxDepth: 5,
-    autoBatch: true,
-  });
-
-  console.log(`Loaded ${result.stats.adds} rows in bulk`);
-}
-```
-
-### Custom Equality for Complex Objects
-
-```typescript
-const tree = signalTree(complexState).with(enterprise());
-
-tree.updateOptimized(newState, {
-  equalityFn: (a, b) => {
-    // Custom deep equality for specific object types
-    if (a instanceof Date && b instanceof Date) {
-      return a.getTime() === b.getTime();
-    }
-    return a === b;
-  },
-});
-```
-
-## Performance
-
-**Bundle Size:**
-
-- Adds ~+3.1KB gzipped to your bundle (measured; the previously documented 2.4KB understated it)
-- Zero overhead until first `updateOptimized()` call (lazy initialization)
-
-**Performance Gains:**
-
-- NOT faster: measured 6.8x slower at 500 leaves and 14.4x at 2 000 vs `tree.updateAndReport()`
-- Scales efficiently with tree depth and complexity
-- Minimal memory overhead with path indexing
+`./scheduler` and `./thread-pools` subpath exports are gone. Both were dead — no caller anywhere in the repo, no tests, no documentation — and `thread-pools` only ever exported `createMockPool()`, a test double that should never have shipped to production consumers. `scheduler`'s advertised "yield to the event loop" was `await Promise.resolve()`, a microtask, which does not yield.
 
 ## License
 
-Business Source License 1.1 (BSL-1.1) - See [LICENSE](../../LICENSE) for details.
+Business Source License 1.1 (BSL-1.1) — see [LICENSE](../../LICENSE). Converts to MIT on the Change Date specified in the license.
 
-Converts to MIT license on the Change Date specified in the license.
+## Related packages
 
-## Related Packages
-
-- [@signaltree/core](../core) - Core SignalTree functionality
-- [@signaltree/ng-forms](../ng-forms) - Angular forms integration
-- [@signaltree/callable-syntax](../callable-syntax) - Callable syntax transform
+- [@signaltree/core](../core) — where `updateAndReport()` and `onPathChange()` now live
+- [@signaltree/ng-forms](../ng-forms) — Angular forms integration
+- [@signaltree/callable-syntax](../callable-syntax) — callable syntax transform

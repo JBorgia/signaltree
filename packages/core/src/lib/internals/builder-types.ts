@@ -6,7 +6,7 @@
 import type { Signal } from '@angular/core';
 
 import type { ProcessDerived } from './derived-types';
-import type { ISignalTree, TreeNode } from '../types';
+import type { ISignalTree, PathChangeListener, TreeNode } from '../types';
 
 // =============================================================================
 // SIGNAL TREE BUILDER
@@ -64,6 +64,35 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
    * but type-missing gap as `destroyed` — see note above.
    */
   registerCleanup(fn: () => void): void;
+
+  /**
+   * Apply a partial update and return the dot-paths of leaf signals that
+   * actually changed. See {@link ISignalTree.updateAndReport}.
+   *
+   * Same runtime-present-but-type-missing gap as `destroyed` above:
+   * `signalTree({...}).updateAndReport(payload)` worked at runtime (the
+   * builder forwards it) but failed to compile. Caught by the skills doc
+   * linter in 13.5.0, while documenting it as the replacement for the
+   * deprecated `@signaltree/enterprise` — so the entire recommended
+   * migration target did not typecheck.
+   */
+  updateAndReport(
+    updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
+  ): string[];
+
+  /**
+   * Subscribe to the dot-paths a write actually landed on; returns an
+   * unsubscribe function. See {@link ISignalTree.onPathChange}.
+   */
+  onPathChange(listener: PathChangeListener): () => void;
+
+  /**
+   * Apply a partial update in a single batch. Same forwarded-but-untyped gap
+   * as `updateAndReport`.
+   */
+  batchUpdate(
+    updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
+  ): void;
 
   /**
    * Add a layer of derived state.

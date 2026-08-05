@@ -72,7 +72,14 @@ PACKAGES=(
     "memoization:The memoization enhancer was removed in v10. Use Angular computed() directly."
     "presets:Preset factories were removed in v10. Apply individual enhancers explicitly."
     "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
+    "enterprise:Deprecated in 13.5.0. Use tree.updateAndReport(partial) and tree.onPathChange(fn) from @signaltree/core — built in, no enhancer, and faster (updateOptimized measured 6.8x slower at 500 leaves, 14.4x at 2000). updateOptimized also silently drops writes targeting arrays; see https://github.com/JBorgia/signaltree/tree/main/packages/enterprise#readme"
 )
+
+# NOTE ON @signaltree/enterprise: deprecate, do NOT unpublish. Unpublishing
+# breaks every existing lockfile that resolves it, for no benefit — a
+# deprecation warning reaches exactly the people who need it, at install time,
+# without breaking anyone's build. The package stays on npm and receives
+# security fixes only.
 
 # Function to deprecate a single package
 deprecate_package() {

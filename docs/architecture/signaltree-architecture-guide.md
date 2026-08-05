@@ -3684,6 +3684,6 @@ const tree = signalTree({ myForm: form({ name: '', email: '' }) });
 | **Prototype**  | 1-2       | Single tree, direct access (A1)                        | None                       |
 | **Feature**    | 2-5       | Service-wrapped (B1) or Feature-scoped (C1)            | `batching()` if needed     |
 | **Product**    | 5-15      | Domain-scoped trees (D1) with shared selectors         | `batching()`, `devTools()` |
-| **Enterprise** | 15+       | Domain-scoped + `@signaltree/enterprise` for hot paths | Full stack as needed       |
+| **Enterprise** | 15+       | Domain-scoped + `tree.updateAndReport()` on hot paths | Full stack as needed       |
 
 The key insight: **start simple and add complexity only when you feel pain.** SignalTree's enhancer model means you can add capabilities without restructuring your state.

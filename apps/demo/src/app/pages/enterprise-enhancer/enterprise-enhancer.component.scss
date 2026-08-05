@@ -34,6 +34,44 @@
   }
 }
 
+.deprecation-banner {
+  background: var(--color-warning-50, #fffbeb);
+  border: 2px solid var(--color-warning-400, #f59e0b);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  color: var(--color-neutral-900);
+
+  h2 {
+    font-size: 1.15rem;
+    margin: 0 0 0.75rem;
+    color: var(--color-neutral-900);
+  }
+
+  p {
+    margin: 0 0 1rem;
+    line-height: 1.6;
+  }
+
+  pre {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    background: var(--color-neutral-900, #111827);
+    color: var(--color-neutral-50, #f9fafb);
+    border-radius: 0.5rem;
+    // Long lines must scroll inside the block, never widen the page.
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+
+    code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      white-space: pre;
+    }
+  }
+}
+
 .value-proposition {
   background: var(--color-neutral-50);
   border-radius: 1rem;

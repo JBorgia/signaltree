@@ -358,6 +358,14 @@ export class OptimizedUpdateEngine {
       let current: Record<string, unknown> = tree as Record<string, unknown>;
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
+        // Descend only through OWN properties. Bare `current[key]` with
+        // key === '__proto__' hands back the prototype and walks the patch
+        // straight out of the tree; 'constructor' does the same one hop later.
+        // Own-property rather than a name blocklist so state legitimately
+        // holding a key called `constructor` or `prototype` still works.
+        if (!Object.prototype.hasOwnProperty.call(current, key)) {
+          return false;
+        }
         current = current[key] as Record<string, unknown>;
         if (!isTraversableNode(current)) {
           return false;
@@ -365,7 +373,9 @@ export class OptimizedUpdateEngine {
       }
 
       const lastKey = patch.path[patch.path.length - 1];
-      const target = current[lastKey];
+      const target = Object.prototype.hasOwnProperty.call(current, lastKey)
+        ? current[lastKey]
+        : undefined;
 
       // Accessor-tree targets: distribute the patch into the underlying
       // signals. A leaf accessor IS a signal — set through it so reactivity
@@ -389,12 +399,21 @@ export class OptimizedUpdateEngine {
       }
 
       // Only update if value actually changed
-      if (this.isEqual(current[lastKey], patch.value)) {
+      if (this.isEqual(target, patch.value)) {
         return false;
       }
 
-      // Apply update directly to object
-      current[lastKey] = patch.value;
+      // Apply update directly to object. defineProperty, NOT `current[k] = v`:
+      // assignment to '__proto__' invokes the prototype SETTER, so a payload
+      // from JSON.parse (which creates a real own '__proto__' key) polluted
+      // Object.prototype for the whole process. defineProperty always creates
+      // an own data property, so the hostile key lands as inert data.
+      Object.defineProperty(current, lastKey, {
+        value: patch.value,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
       return true;
     } catch (error) {
       console.error(`Failed to apply patch at ${patch.path.join('.')}:`, error);
@@ -421,6 +440,9 @@ export class OptimizedUpdateEngine {
       for (const [key, child] of Object.entries(
         value as Record<string, unknown>
       )) {
+        // Own-property only — see applyPatch. `node['__proto__']` would hand
+        // back the prototype and recurse the patch outside the tree.
+        if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
         changed =
           this.applyDeepToNode(
             (node as Record<string, unknown>)[key],
