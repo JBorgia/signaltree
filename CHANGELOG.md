@@ -1,4 +1,4 @@
-## Unreleased (13.4.0)
+## 13.4.0 (2026-08-05)
 
 Closes the traversal gap that made markers invisible to the tree's own snapshot
 and write paths — including a case that leaked unrelated storage contents into
