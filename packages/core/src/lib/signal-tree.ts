@@ -11,7 +11,7 @@ import {
 } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { getPathNotifier } from './path-notifier';
-import { equal, isBuiltInObject, unwrap } from './utils';
+import { equal, isBuiltInObject, isTraversableNode, unwrap } from './utils';
 
 import type {
   TreeNode,
@@ -312,20 +312,20 @@ function recursiveUpdate(
 
     if (isSignal(prop) && 'set' in prop) {
       const sig = prop as WritableSignal<unknown>;
-      // A function at a LEAF is an updater, the same as at a branch — resolve
-      // it. Storing it verbatim put a raw function into state and then reported
-      // the path as CHANGED, which is the exact opposite of this method's
-      // contract: what landed was garbage. Downstream the leaf renders as
-      // "[object Function]", JSON.stringify drops it, persistence writes
-      // nothing. Reachable without a cast on any leaf typed unknown/any.
+      // NOTE: a function value is STORED, never invoked. Updaters are supported
+      // at branches and at the root, NOT at leaves — `tree.$.count.update(fn)`
+      // is the leaf form, mirroring Angular's own signal API.
       //
-      // A leaf that legitimately HOLDS a function is left alone — replacing a
-      // callback by assigning a new one must keep working.
-      if (typeof value === 'function' && typeof untracked(() => sig()) !== 'function') {
-        value = (value as (current: unknown) => unknown)(
-          untracked(() => sig())
-        );
-      }
+      // A previous revision tried to resolve leaf updaters, guarded on "the
+      // current value is not a function". That predicate is unknowable at
+      // runtime: the right question is whether the leaf's DECLARED TYPE is a
+      // function, and a leaf typed `null | (() => void)` sitting at `null` is
+      // the ordinary callback field. Assigning a handler to one then INVOKED it
+      // (running `() => this.submit()` at write time), stored its return value,
+      // and reported the path as landed; a class constructor threw out of the
+      // middle of the write loop, committing earlier keys and dropping later
+      // ones while reporting nothing. Strictly worse than the inert
+      // stored-function it replaced, so it is gone.
       // Ref-equality short-circuit: skip the .set() entirely when the
       // incoming value is identical to the current value. Saves the
       // function-call + Angular's internal equality check + any glitch
@@ -385,6 +385,25 @@ function recursiveUpdate(
         // empty) were both SILENT no-ops.
         const updater = value as (current: unknown) => unknown;
         value = updater(unwrap(prop));
+        // Only a PLAIN object merges into a branch. Everything else an updater
+        // can return is a discard, and each used to be silent:
+        //   - a Promise, from a forgotten `await` — it IS an object, so
+        //     `Object.entries()` on it is empty and the whole write vanished.
+        //     A previous revision claimed to diagnose this and did not.
+        //   - a Date/Map/Set/array, which merge key-by-key into nonsense.
+        //   - `undefined`, which differs from a LITERAL `undefined` in the
+        //     payload: that legitimately means "no change" for an absent
+        //     optional key, whereas an updater returning it is a mistake.
+        const mergeable =
+          isTraversableNode(value) &&
+          typeof value !== 'function' &&
+          !isBuiltInObject(value) &&
+          !Array.isArray(value) &&
+          typeof (value as { then?: unknown }).then !== 'function';
+        if (!mergeable) {
+          warnDiscardedBranchWrite(childPath, value);
+          continue;
+        }
       }
       if (typeof value === 'function') {
         // An updater that returned another function. Nothing sane to do.
@@ -444,6 +463,31 @@ function createSignalStore<T>(
   const store: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    // SECURITY: every `store[key] = …` below is a plain assignment, so a key
+    // named `__proto__` invokes the Object.prototype SETTER on the store rather
+    // than adding a property. `JSON.parse` creates a real own `__proto__` key,
+    // and rehydrating from localStorage / SSR transfer state / a fetch body is
+    // the ordinary way that input reaches `signalTree()`.
+    //
+    // The damage is contained but real: the ROOT store IS `tree.$`, so its
+    // prototype became an attacker-controlled node. `tree.$.isAdmin` then read
+    // back a live signal holding `true` while `tree()` reported only the
+    // legitimate keys — invisible to snapshots, serialization, persistence,
+    // devtools and time-travel — and a later `tree({ isAdmin: … })` wrote
+    // THROUGH to it, bypassing the ST2010 not-in-initial-shape discard.
+    // Nested branches were safe (each accessor gets a fresh Function.prototype);
+    // the root is the only victim, which is exactly why it was easy to miss.
+    if (key === '__proto__') {
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.error(
+          `SignalTree: dropped a "__proto__" key from the initial state — it ` +
+            `cannot be a state key. If this came from JSON.parse, the payload ` +
+            `is attempting prototype pollution. [ST2016]`
+        );
+      }
+      continue;
+    }
+
     // Entity map markers - preserve for entities() enhancer
     if (isEntityMapMarker(value)) {
       store[key] = value;

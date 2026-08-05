@@ -521,21 +521,54 @@ describe('change reporting — defects found by adversarial audit', () => {
 });
 
 describe('change reporting — second-round audit findings', () => {
-  it('resolves an updater function at a LEAF instead of storing it', () => {
-    const tree = signalTree({ count: 0, list: [1, 2] });
+  // A leaf NEVER invokes a function value. Updaters are a branch/root form;
+  // `tree.$.count.update(fn)` is the leaf form, mirroring Angular's signal API.
+  //
+  // A revision of this suite once asserted the opposite — that a function at a
+  // leaf is resolved as an updater — guarded on "the current value is not a
+  // function". That predicate is unknowable at runtime, and the tests below are
+  // the states it got wrong. All of them are ordinary callback fields.
+  it('stores a handler assigned to a callback leaf sitting at null', () => {
+    let ran = 0;
+    const handler = () => {
+      ran++;
+    };
+    const tree = signalTree({ onConfirm: null as null | (() => void) });
 
-    // Same syntax as the branch form one level up. Storing the function put a
-    // raw function into state and reported the path as changed — the leaf then
-    // renders as "[object Function]" and JSON.stringify drops it.
-    expect(tree.updateAndReport({ count: (c: number) => c + 1 } as never)).toEqual(
-      ['count']
-    );
-    expect(tree.$.count()).toBe(1);
-    expect(typeof tree.$.count()).toBe('number');
+    // No cast: Partial<T>['onConfirm'] already includes the function type.
+    tree({ onConfirm: handler });
 
-    tree.updateAndReport({ list: (l: number[]) => [...l, 3] } as never);
-    expect(Array.isArray(tree.$.list())).toBe(true);
-    expect(tree.$.list()).toEqual([1, 2, 3]);
+    expect(tree.$.onConfirm()).toBe(handler);
+    expect(ran).toBe(0); // assigning a handler must never RUN it
+  });
+
+  it('survives the clear-then-reassign cycle', () => {
+    const first = () => 'a';
+    const second = () => 'b';
+    const tree = signalTree({ cb: first as (() => string) | null });
+
+    tree({ cb: null });
+    tree({ cb: second });
+
+    expect(tree.$.cb()).toBe(second);
+  });
+
+  it('stores a class constructor without invoking it', () => {
+    class Thing {}
+    const tree = signalTree({
+      a: 0,
+      ctor: null as (typeof Thing) | null,
+      b: 0,
+    });
+
+    // A class is `typeof 'function'`; invoking one throws, which used to escape
+    // mid-loop leaving `a` written, `b` unwritten and nothing reported.
+    expect(() =>
+      tree.updateAndReport({ a: 1, ctor: Thing, b: 2 })
+    ).not.toThrow();
+    expect(tree.$.ctor()).toBe(Thing);
+    expect(tree.$.a()).toBe(1);
+    expect(tree.$.b()).toBe(2);
   });
 
   it('still lets a leaf that HOLDS a function be replaced', () => {
@@ -563,7 +596,18 @@ describe('change reporting — second-round audit findings', () => {
       expect(
         tree.updateAndReport({ user: async (u: unknown) => u } as never)
       ).toEqual([]);
+      // Previously this half asserted nothing after mockClear() — it documented
+      // a diagnostic that did not exist, over a write that vanished silently.
+      expect(spy).toHaveBeenCalled();
       expect(tree()).toEqual({ user: { name: 'Ada' } });
+      spy.mockClear();
+
+      // An updater returning undefined is a discard too, unlike a LITERAL
+      // undefined in the payload (an absent optional key, which is legal).
+      expect(tree.updateAndReport({ user: () => undefined } as never)).toEqual(
+        []
+      );
+      expect(spy).toHaveBeenCalled();
     } finally {
       spy.mockRestore();
     }
@@ -633,5 +677,95 @@ describe('change reporting — second-round audit findings', () => {
 
     expect(changed).toEqual(['at']);
     expect(tree.$.at()).toEqual({});
+  });
+});
+
+describe('change reporting — fourth-round audit findings', () => {
+  it('warns when a branch updater returns a function', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' } });
+
+      // Previously uncovered: mutating this branch to `&& false` left the whole
+      // suite green.
+      expect(
+        tree.updateAndReport({ user: () => () => 1 } as never)
+      ).toEqual([]);
+      expect(spy).toHaveBeenCalled();
+      expect(tree()).toEqual({ user: { name: 'Ada' } });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('warns when a branch updater returns a built-in or array', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree({ user: { name: 'Ada' } });
+
+      for (const bad of [() => new Date(), () => [1, 2], () => new Map()]) {
+        spy.mockClear();
+        expect(tree.updateAndReport({ user: bad } as never)).toEqual([]);
+        expect(spy).toHaveBeenCalled();
+      }
+      expect(tree()).toEqual({ user: { name: 'Ada' } });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('signalTree construction — prototype pollution', () => {
+  const scrub = () => {
+    for (const k of ['zzCtor', 'isAdmin']) {
+      delete (Object.prototype as unknown as Record<string, unknown>)[k];
+    }
+  };
+  beforeEach(scrub);
+  afterEach(scrub);
+
+  it('drops a __proto__ key from JSON-parsed initial state', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      // Rehydrating from localStorage / SSR transfer state / a fetch body is
+      // the ordinary way this input arrives. Every `store[key] = …` is a plain
+      // assignment, so `__proto__` invoked the prototype SETTER on the store —
+      // and the ROOT store IS `tree.$`.
+      const tree = signalTree(
+        JSON.parse('{"__proto__":{"isAdmin":true},"a":1}')
+      );
+      const $ = tree.$ as unknown as Record<string, unknown>;
+
+      expect(Object.getPrototypeOf($)).toBe(Object.prototype);
+      expect($['isAdmin']).toBeUndefined();
+      expect(tree()).toEqual({ a: 1 });
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('does not let a hidden node be written through afterwards', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const tree = signalTree(
+        JSON.parse('{"__proto__":{"zzCtor":"x"},"a":1}')
+      );
+
+      // The hidden node used to accept writes, bypassing the ST2010
+      // not-in-initial-shape discard while staying invisible to tree().
+      tree({ zzCtor: 'written-through' } as never);
+
+      expect(tree()).toEqual({ a: 1 });
+      expect(({} as Record<string, unknown>)['zzCtor']).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('still accepts nested state and ordinary keys', () => {
+    const tree = signalTree(JSON.parse('{"a":1,"b":{"c":2}}'));
+
+    expect(tree()).toEqual({ a: 1, b: { c: 2 } });
   });
 });

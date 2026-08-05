@@ -127,3 +127,57 @@ describe('applyState — prototype pollution', () => {
     expect(tree()).toEqual({ constructor: 'z', prototype: 'y', ok: 2 });
   });
 });
+
+describe('applyState — each guard pinned separately', () => {
+  // Audit finding: the six tests above pass with EITHER guard deleted, because
+  // the two are mutually redundant against a global-pollution probe. Redundancy
+  // in the code is fine; redundancy that leaves a spec unable to detect the
+  // removal of a guard is not — that is how three earlier rounds shipped.
+  beforeEach(scrub);
+  afterEach(scrub);
+
+  it('refuses __proto__ even once an own key of that name exists', () => {
+    const tree = signalTree({ a: 1 });
+    Object.defineProperty(tree.$, '__proto__', {
+      value: {},
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+
+    applyState(
+      tree.$ as never,
+      JSON.parse('{"__proto__":{"zzPwn":"pwned"}}') as never
+    );
+
+    expect(pollutionHits()).toEqual([]);
+  });
+
+  // HONESTY NOTE, verified by mutation: deleting the `__proto__` NAME check
+  // from applyState leaves this whole file green, and that is CORRECT rather
+  // than a coverage hole. The two guards are not independently reachable here:
+  // own-ness only passes once an own `__proto__` exists, and once it does,
+  // reading it yields that own value rather than the prototype — so there is no
+  // state in which the name check is the only thing standing in the way. It is
+  // kept as defence in depth against a future refactor of the own-ness check,
+  // not because a test can distinguish it. An earlier version of this file
+  // claimed otherwise; the claim was false, and a test asserting a guard it
+  // cannot detect is exactly the false-green pattern this suite exists to end.
+  //
+  // The own-ness check IS independently detectable — see the test below.
+
+  it('the OWN-NESS check refuses a key the tree does not have', () => {
+    const tree = signalTree({ a: 1 });
+    const before = Object.prototype.toString;
+
+    // `toString` is on the chain, not own. Without the own-ness guard,
+    // applyState walks to it and the terminal branch assigns over it.
+    applyState(tree.$ as never, { toString: 'clobbered' } as never);
+
+    expect(Object.prototype.toString).toBe(before);
+    expect(
+      Object.prototype.hasOwnProperty.call(tree.$, 'toString')
+    ).toBe(false);
+    expect(tree()).toEqual({ a: 1 });
+  });
+});
