@@ -2328,6 +2328,62 @@ cost +1.9% / +1.3% / −0.4%.
 which is exactly what the lazy-Map optimisation would remove, since a subtree
 read never resolves an external key at all.
 
+### Round 4 — the cost does NOT offload to construction, and a cheaper variant matches it
+
+The working assumption was: pay at construction, be free afterwards. **That is
+not what the Map does.** The Map is built at construction but is a PERMANENT
+per-node object — so it costs memory forever and shows up on every read that
+touches heap shape.
+
+So a fourth variant was built: **no Map at all.** Resolution becomes
+`hasOwnProperty(node, key) ? node[key] : undefined` — one check, zero allocation.
+
+| | base | own-property | indexed (Map) |
+| - | ---- | ------------ | ------------- |
+| construct 1.7k leaves (ONE-TIME) | 681 µs | −0.0% ~ | +4.9% ~ |
+| walk + read depth 15 | 0.0369 µs | +0.4% ~ | +3.4% |
+| branch read (subtree) | 4.77 µs | +0.6% ~ | **+12.1%** |
+| write 1 of 40 | 0.072 µs | +4.5% | +8.9% |
+| write 20 of 40 | 1.89 µs | +4.0% ~ | +3.3% ~ |
+| nested write depth 3 | 0.317 µs | +4.2% ~ | +8.3% |
+| unwrap 512 leaves | 54.7 µs | −0.4% ~ | +6.3% |
+| memory | 3959 B/node | **+14 B** | +310 B |
+
+**The own-property variant is essentially free** — everything within noise
+except a single-key write (+4.5%) — and it passes **all 750 tests, including all
+69 pollution and thesis tests.** Every attack the Map closes, it also closes.
+
+#### So what does the Map actually buy?
+
+One thing, and it is not a test result — it is the strength of the safety
+argument:
+
+- **own-property** is safe *provided nothing mints an own `__proto__` on a node*.
+  That is a whole-program invariant. It holds today (the only place a payload key
+  can create a property is `createSignalStore`, which drops `__proto__`), and it
+  must be re-verified whenever someone adds a `defineProperty` or assignment
+  keyed by external input. It is exactly the invariant an audit broke in the
+  enterprise package, where `defineProperty` minted the key that unlocked the
+  guard.
+- **indexed** is safe regardless, because there is no key to mint into.
+
+The honest trade: **the Map buys freedom from a global invariant, and costs
++12.1% on subtree reads, +8.3% on nested writes and 310 B/node, forever.**
+
+#### Revised recommendation
+
+**Own-property resolution, plus a lint rule** banning `defineProperty` or
+assignment on a tree node keyed by external input — which mechanises the one
+invariant own-property depends on, at the site where it could break. That gets
+the safety at approximately zero cost, and the lint rule is the same class of
+enforcement the spike already recommends for the invariants.
+
+This REVERSES the round-1 recommendation. The Map was chosen when its cost was
+unmeasured and its unique benefit assumed; measured, its unique benefit is one
+invariant and its cost is permanent. If the Q2 version-stamp work later needs
+per-node state, that is a single number behind a symbol — not a Map — so it does
+not resurrect the case.
+
 ### What the spike STILL does not cover
 
 - `diff-engine` (enterprise) — deprecated package, deliberately skipped.
