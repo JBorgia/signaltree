@@ -2,6 +2,154 @@
   <h2>🚀 What's New</h2>
 
   <h3>
+    🔍 v13.4.0 — markers are visible to the tree's own snapshot and write paths
+    (August 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      A durability release invites people to snapshot state — and doing that
+      revealed the tree could not see its own markers. Two independent causes,
+      both fixed here, plus the diagnostics that would have surfaced them years
+      earlier.
+    </p>
+    <h4>🔐 Security</h4>
+    <ul>
+      <li>
+        <strong>An explicit <code>storage:</code> option no longer reaches
+        snapshots.</strong> A <code>stored()</code> marker nested under an object
+        parent used to surface as its <em>raw marker</em> from
+        <code>tree()</code>, carrying <code>options.storage</code> with it — and
+        <code>unwrap</code> deep-copied that storage object, enumerating
+        unrelated keys into the snapshot. Anyone passing <code>storage:</code>
+        explicitly <em>and</em> using <code>serialization()</code>,
+        <code>persistence()</code>, devtools or <code>createAuditTracker</code>
+        was emitting that storage's contents into those payloads. The default
+        path was never affected.
+        <br />
+        <strong>Still open:</strong> a marker inside an <em>array</em> or a
+        <code>Map</code> is not traversed, so it still leaks. Don't put markers
+        in arrays or Maps.
+      </li>
+    </ul>
+    <h4>✨ Fixed</h4>
+    <ul>
+      <li>
+        <strong><code>stored()</code> is now a real Angular signal.</strong> It
+        was a plain callable satisfying neither <code>isSignal</code> nor the
+        node-accessor guard — and every traversal in the library branches on
+        exactly those two. So a top-level stored leaf was missing from
+        <code>tree()</code>, a merge write through a parent was silently
+        dropped, and <code>applyState()</code> (the devtools replay path)
+        <em>replaced</em> the live signal with a raw value, after which reading
+        it threw.
+      </li>
+      <li>
+        <strong>Nested markers no longer emit their raw marker object.</strong>
+        A node accessor copies its store's properties while its call path closes
+        over the original store; materialization only wrote to the accessor.
+        This hit <em>every</em> marker — nested <code>status()</code>,
+        <code>entityMap()</code>, <code>form()</code> and
+        <code>asyncSource()</code> all leaked raw markers into
+        <code>tree()</code>. Only <code>stored()</code> got noticed, because its
+        marker carries a <code>Storage</code> handle.
+      </li>
+      <li>
+        <strong><code>tree()</code> called before <code>tree.$</code> now
+        finalizes.</strong> Every other entry point did; the builder's own call
+        path was the sole omission, so <code>tree()</code> as a first operation
+        returned raw markers.
+      </li>
+    </ul>
+    <h4>🆕 Added</h4>
+    <ul>
+      <li>
+        <strong>Dev-mode diagnostics for writes and snapshots that go
+        nowhere</strong> — <code>ST2008</code> (a value omitted from a
+        snapshot), <code>ST2009</code> (<code>applyState</code> replacing a live
+        value), <code>ST2010</code> (a write to a key absent from the tree's
+        initial shape — it has no signal to land on and is discarded), and
+        <code>ST2011</code> (a marker inside a <code>lazy()</code> tree, which
+        is never materialized). All four were previously silent.
+        <code>ngDevMode: false</code> removes them entirely.
+      </li>
+      <li>
+        <strong><code>reload()</code> returns
+        <code>'ok' | 'default' | 'error'</code></strong> (was
+        <code>void</code>). <code>'error'</code> means the stored data couldn't
+        be read or migrated: the signal falls back to its default while storage
+        is left <em>intact</em>, because destroying data a human might still
+        recover is your call, not the library's.
+      </li>
+    </ul>
+    <h4>⚠️ Changed (behavior)</h4>
+    <ul>
+      <li>
+        Stored leaves now appear in <code>tree()</code>/<code>unwrap()</code>
+        output, and a merge write through a parent reaches them — so it also
+        writes to storage. A merge <strong>replaces</strong> an object-valued
+        stored leaf rather than merging into it, where a plain nested namespace
+        would deep-merge. Persisted values now also flow into time-travel and
+        devtools payloads.
+      </li>
+    </ul>
+    <pre><code>// reload() now tells you what it found
+const outcome = tree.$.settings.reload();
+if (outcome === 'error') &#123;
+  // unreadable or unmigratable — storage was left untouched
+&#125;
+
+// A snapshot now contains stored values instead of omitting them
+tree();  // &#123; settings: &#123; theme: 'dark' &#125; &#125;  — not a raw marker</code></pre>
+  </div>
+
+  <h3>
+    🧪 v13.3.1 — correctness follow-up to the durability release (August 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      An independent audit of 13.3.0 found two real defects in the work that
+      release shipped — one of them undermining the exact guarantee it was
+      written to provide. <strong>13.3.0 is deprecated on npm; take this patch
+      if you use <code>stored()</code> with
+      <code>version</code>/<code>migrate</code>, or create and destroy
+      trees.</strong>
+    </p>
+    <h4>✨ Fixed</h4>
+    <ul>
+      <li>
+        <strong><code>clear()</code> and <code>reload()</code> are no longer
+        undone by a migration re-persist.</strong> A migrated value is written
+        back in a queued microtask, which the timer cancellation couldn't
+        reach — so <code>clear()</code> in the same tick that a tree
+        materialized with a version migration removed the key, and one
+        microtask later the migrated value was written straight back. That is
+        precisely the signal/storage drift 13.3.0 claimed to eliminate.
+      </li>
+      <li>
+        <strong>The lifecycle-drain registry no longer retains destroyed
+        trees.</strong> It held every debounced signal's flush closure forever —
+        and through it the <code>Storage</code> backend, the default value, the
+        current value and your callbacks (~4&nbsp;MB measured across 20
+        short-lived trees). Membership is now scoped to <em>pending writes</em>:
+        a signal enrols when a write is armed and leaves when it commits or is
+        cancelled.
+      </li>
+      <li>
+        <strong>One failing signal no longer abandons the rest of a
+        drain</strong>, and removal failures report
+        <code>operation: 'remove'</code> instead of <code>'write'</code>.
+      </li>
+      <li>
+        <strong><code>createFormTree()</code>: field lookups no longer resolve
+        <code>Object.prototype</code> members</strong> (a field named
+        <code>toString</code> returned the inherited method where an error
+        message belonged), per-index errors under a glob validator resolve, and
+        the per-path cache is bounded.
+      </li>
+    </ul>
+  </div>
+
+  <h3>
     💾 v13.3.0 — <code>stored()</code> writes are durable: <code>flush()</code>,
     lifecycle drain, cancel-on-clear (August 2026)
   </h3>

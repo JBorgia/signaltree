@@ -207,13 +207,22 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     this.scheduleRefresh();
   }
 
-  triggerHotPath(): void {
+  async triggerHotPath(): Promise<void> {
     if (!this.guardrails) {
       this.recordScenario('Guardrails API not attached on this tree.');
       return;
     }
 
+    // The updates are SPACED, not fired in a synchronous loop. Guardrails
+    // detects a hot path by counting hits on the same path inside
+    // `hotPaths.windowMs`, and the polling strategy this page forces samples the
+    // tree on an interval — so six writes in one tick look like a single
+    // aggregate change and never reach `threshold: 3`. Spacing them is also
+    // closer to what a real hot path is: repeated updates over time, not one
+    // burst. (Symptom before this: the scenario logged "triggered" while the
+    // Hot Paths panel stayed on its empty state forever.)
     for (let i = 0; i < 6; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 60));
       this.tree((state) => ({
         ...state,
         performance: {

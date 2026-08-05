@@ -483,7 +483,29 @@ signalTree({
 // and reload() treats storage as the source of truth, running migrate()
 // if the stored version differs (same as initial load).
 tree.$.note.clear();
-tree.$.note.reload();`;
+tree.$.note.reload();
+
+// ── 13.4.0 ──────────────────────────────────────────────────────────────
+// reload() now REPORTS what it found instead of returning void:
+//   'ok'      a stored value was read
+//   'default' the key was absent
+//   'error'   the data could not be read or migrated. The signal falls back
+//             to its default and storage is left INTACT — destroying data a
+//             human might still recover is a policy call left to you.
+const outcome = tree.$.note.reload();
+if (outcome === 'error') {
+  // surface a "couldn't restore your draft" notice, or quarantine the key
+}
+
+// Also 13.4.0: a stored leaf is a REAL Angular signal, so the tree can
+// finally see it. Before, tree() omitted a top-level stored leaf entirely and
+// emitted the raw marker for a nested one; a merge write through the parent
+// was silently dropped.
+tree();                              // { note: 'draft...' } — value, not marker
+tree.$.settings({ theme: 'dark' });  // reaches a stored leaf under settings
+
+// Careful: a merge REPLACES an object-valued stored leaf rather than merging
+// into it (a plain nested namespace would deep-merge).`;
 
   // =============================================================================
   // CODE EXAMPLES

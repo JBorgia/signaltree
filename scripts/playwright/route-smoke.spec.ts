@@ -29,6 +29,12 @@ const ROUTES = [
   '/benchmarks', // live cross-library benchmarks
   '/migrate', // NgRx migration recipe
   '/docs', // package documentation
+  '/stored-versioning', // stored() versioning + durability + 13.4 reload status
+  '/guardrails', // guardrails monitoring panels (see content assertion below)
+  '/realtime', // realtime enhancer teaching tabs
+  '/form-marker', // form() marker: validation, wizard, history
+  '/time-travel', // undo/redo history
+  '/persistence', // persistence() enhancer
 ];
 
 // Noise that is not a product bug and would make the gate flaky.
@@ -90,3 +96,40 @@ for (const route of ROUTES) {
     ).toEqual([]);
   });
 }
+
+/**
+ * CONTENT-level check for /guardrails.
+ *
+ * The shell assertions above pass even when every panel silently reads zero,
+ * which is exactly how this page shipped broken: guardrails prefers core's
+ * path-notifier (which only emits for entityMap collections), and this page's
+ * state is plain objects, so no metric ever moved behind a UI that looked
+ * wired up. Two things were needed to fix it — forcing the polling strategy,
+ * AND spacing the scenario's writes so the poller can see them individually.
+ *
+ * Asserts on the RENDERED hot-path rows, not a number scraped from page text:
+ * a loose text regex passed even with the page deliberately broken, because it
+ * matched an unrelated figure elsewhere. This locator was verified to FAIL
+ * against the synchronous-write version of the scenario.
+ */
+test('/guardrails hot-path panel populates after the scenario runs', async ({
+  page,
+}) => {
+  await page.goto('/guardrails', { waitUntil: 'load' });
+  await expect(page.locator('h1, main').first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // The introspection API must be attached at all.
+  await expect(page.getByText(/not attached on this tree/i)).toHaveCount(0);
+
+  // Empty state before the scenario runs.
+  await expect(page.getByText(/No hot paths yet/i)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Trigger Hot Path' }).click();
+
+  const hotPathItems = page.locator('.hotpaths-list li');
+  await expect(hotPathItems.first()).toBeVisible({ timeout: 20_000 });
+  expect(await hotPathItems.count()).toBeGreaterThan(0);
+  await expect(page.getByText(/No hot paths yet/i)).toHaveCount(0);
+});
