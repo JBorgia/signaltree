@@ -59,7 +59,7 @@ interface TimeTravelInterface {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './time-travel-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './time-travel-demo.component.scss',
 })
 export class TimeTravelDemoComponent {

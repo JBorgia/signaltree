@@ -61,7 +61,7 @@ interface DashboardState extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, ExampleComponent],
   templateUrl: './enterprise-enhancer.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './enterprise-enhancer.component.scss',
 })
 export class EnterpriseEnhancerComponent {

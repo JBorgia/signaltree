@@ -41,7 +41,7 @@ interface FormState {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './forms-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './forms-demo.component.scss',
 })
 export class FormsDemoComponent {

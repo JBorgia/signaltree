@@ -17,7 +17,7 @@ import type { FilterState } from '../../../../core/models';
   standalone: true,
   imports: [FormsModule, RouterModule, ExampleCardComponent],
   templateUrl: './fundamentals-page.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './fundamentals-page.component.scss',
 })
 export class FundamentalsPageComponent {

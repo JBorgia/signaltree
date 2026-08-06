@@ -8,7 +8,7 @@ import { ExampleComponent } from '../../../../../shared/components/example-shell
   standalone: true,
   imports: [ExampleComponent],
   templateUrl: './batching-comparison.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './batching-comparison.component.scss',
 })
 export class BatchingComparisonComponent {

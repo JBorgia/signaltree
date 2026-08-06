@@ -7,7 +7,7 @@ import { BenchmarkOrchestratorComponent } from './benchmark-orchestrator/benchma
   selector: 'app-realistic-comparison',
   standalone: true,
   imports: [BenchmarkOrchestratorComponent],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <app-benchmark-orchestrator /> `,
 })
 export class RealisticComparisonComponent {}

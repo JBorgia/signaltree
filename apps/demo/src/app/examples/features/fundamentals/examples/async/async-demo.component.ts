@@ -22,7 +22,7 @@ import {
   standalone: true,
   imports: [RouterModule, ExampleComponent],
   templateUrl: './async-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './async-demo.component.scss',
 })
 export class AsyncDemoComponent {

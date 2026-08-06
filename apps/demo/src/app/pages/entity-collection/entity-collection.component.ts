@@ -38,7 +38,7 @@ const SEEDS: Item[] = [
   standalone: true,
   imports: [RouterModule, CodeTabsComponent],
   templateUrl: './entity-collection.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './entity-collection.component.scss',
 })
 export class EntityCollectionShowcaseComponent implements OnDestroy {

@@ -139,7 +139,7 @@ export class AppComponent {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './recommended-architecture.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './recommended-architecture.component.scss',
 })
 export class RecommendedArchitectureComponent {

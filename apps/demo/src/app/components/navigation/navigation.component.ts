@@ -34,7 +34,7 @@ export interface ExternalLink {
   standalone: true,
   imports: [RouterModule],
   templateUrl: './navigation.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './navigation.component.scss',
 })
 export class NavigationComponent {

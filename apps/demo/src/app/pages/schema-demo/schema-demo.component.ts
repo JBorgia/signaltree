@@ -23,7 +23,7 @@ interface ProfileForm {
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './schema-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './schema-demo.component.scss',
 })
 export class SchemaDemoComponent {

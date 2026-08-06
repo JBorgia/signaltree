@@ -178,7 +178,7 @@ interface DeepNestedState {
       </div>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       /* Overlay styles */

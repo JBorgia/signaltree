@@ -24,7 +24,7 @@ import type { ExampleMeta } from '../../../core/models';
   standalone: true,
   imports: [],
   templateUrl: './example-card.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './example-card.component.scss',
 })
 export class ExampleCardComponent implements AfterViewInit, OnDestroy {

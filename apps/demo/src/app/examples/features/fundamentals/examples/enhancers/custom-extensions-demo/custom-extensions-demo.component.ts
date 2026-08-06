@@ -320,7 +320,7 @@ interface Task {
   standalone: true,
   imports: [FormsModule, CodeTabsComponent],
   templateUrl: './custom-extensions-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './custom-extensions-demo.component.scss',
 })
 export class CustomExtensionsDemoComponent {

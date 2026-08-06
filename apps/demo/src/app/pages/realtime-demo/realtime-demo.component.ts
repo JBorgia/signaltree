@@ -103,7 +103,7 @@ class SimulatedRealtimeAdapter {
   standalone: true,
   imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './realtime-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './realtime-demo.component.scss',
 })
 export class RealtimeDemoComponent implements OnDestroy {

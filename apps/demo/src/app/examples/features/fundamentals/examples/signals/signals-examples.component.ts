@@ -11,7 +11,7 @@ import {
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './signals-examples.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './signals-examples.component.scss',
 })
 export class SignalsExamplesComponent {

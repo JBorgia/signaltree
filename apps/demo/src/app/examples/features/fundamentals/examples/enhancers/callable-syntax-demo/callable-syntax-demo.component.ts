@@ -83,7 +83,7 @@ const CURRENT_SOURCE = `// 🔧 WHY THE LEAF FORM WAS REMOVED IN 14.0.0
   standalone: true,
   imports: [ExampleComponent],
   templateUrl: './callable-syntax-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './callable-syntax-demo.component.scss',
 })
 export class CallableSyntaxDemoComponent {

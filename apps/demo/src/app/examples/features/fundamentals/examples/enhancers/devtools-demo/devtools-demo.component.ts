@@ -76,7 +76,7 @@ store.$.todos.update((t) => [...t, { id: 1, text: 'New', completed: false }]);`;
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './devtools-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './devtools-demo.component.scss',
 })
 export class DevtoolsDemoComponent {

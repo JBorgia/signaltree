@@ -60,7 +60,7 @@ interface LeaderboardState {
       </div>
     </st-example>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       .demo {

@@ -38,7 +38,7 @@ interface MarkersState {
   standalone: true,
   imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './markers-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './markers-demo.component.scss',
 })
 export class MarkersDemoComponent {

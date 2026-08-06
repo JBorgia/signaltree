@@ -23,7 +23,7 @@ import {
   imports: [CommonModule, FormsModule, BenchmarkResultsTableComponent],
   templateUrl: './realistic-benchmark-history.component.html',
   styleUrl: './realistic-benchmark-history.component.scss',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None, // Disable view encapsulation for modal to work
 })
 export class RealisticBenchmarkHistoryComponent implements OnInit {

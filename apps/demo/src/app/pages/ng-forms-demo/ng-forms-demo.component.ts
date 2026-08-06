@@ -37,7 +37,7 @@ interface ProfileForm extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ExampleComponent],
   templateUrl: './ng-forms-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './ng-forms-demo.component.scss',
 })
 export class NgFormsDemoComponent {

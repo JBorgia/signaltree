@@ -21,7 +21,7 @@ import type { CodeFile } from '../../examples/shared/components/example-shell';
   standalone: true,
   imports: [RouterModule, CodeTabsComponent],
   templateUrl: './built-for-ai.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './built-for-ai.component.scss',
 })
 export class BuiltForAIComponent {

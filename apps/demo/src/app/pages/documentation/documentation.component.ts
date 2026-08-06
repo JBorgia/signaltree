@@ -27,7 +27,7 @@ interface DocQuickLink {
   standalone: true,
   imports: [RouterModule],
   templateUrl: './documentation.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './documentation.component.scss',
 })
 export class DocumentationComponent implements OnInit {

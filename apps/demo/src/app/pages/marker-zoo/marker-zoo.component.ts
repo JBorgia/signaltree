@@ -76,7 +76,7 @@ const ALL_PLANTS: Plant[] = [
   standalone: true,
   imports: [FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './marker-zoo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './marker-zoo.component.scss',
 })
 export class MarkerZooComponent {

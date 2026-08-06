@@ -22,7 +22,7 @@ export interface BenchmarkResult {
   standalone: true,
   imports: [],
   templateUrl: './benchmark-results-table.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './benchmark-results-table.component.scss',
 })
 export class BenchmarkResultsTableComponent {

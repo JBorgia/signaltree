@@ -55,7 +55,7 @@ interface TestState {
   standalone: true,
   imports: [ExampleComponent],
   templateUrl: './effect-reactivity-test.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './effect-reactivity-test.component.scss',
 })
 export class EffectReactivityTestComponent {

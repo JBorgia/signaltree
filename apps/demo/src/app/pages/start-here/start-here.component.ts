@@ -15,7 +15,7 @@ interface NextStepCard {
   standalone: true,
   imports: [RouterModule],
   templateUrl: './start-here.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './start-here.component.scss',
 })
 export class StartHereComponent {

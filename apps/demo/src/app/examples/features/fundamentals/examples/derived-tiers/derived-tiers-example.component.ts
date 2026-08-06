@@ -214,7 +214,7 @@ interface CartItem {
       </section>
     </st-example>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       .example-section {

@@ -156,3 +156,73 @@ test('/enterprise-enhancer shows the deprecation banner and the core replacement
   await expect(banner).toContainText('updateAndReport');
 
 });
+
+/**
+ * INTERACTION under OnPush.
+ *
+ * Every demo component moved from `ChangeDetectionStrategy.Eager` to `OnPush`
+ * in 14.0.0. Angular 22 renamed the old default to `Eager` and made OnPush the
+ * default; `nx migrate` then stamped `Eager` on all 51 components to preserve
+ * behaviour, which left the showcase for a fine-grained-reactivity library
+ * explicitly opting OUT of fine-grained change detection.
+ *
+ * The render-only checks above cannot see an OnPush regression: a component
+ * whose view never refreshes still renders correctly on first paint. Only
+ * clicking something and asserting the DOM CHANGED can. These tests exist
+ * specifically to expose that class, and each was verified to be watching a
+ * value the click actually moves.
+ */
+test('/time-travel: a leaf write re-renders under OnPush', async ({ page }) => {
+  await page.goto('/time-travel', { waitUntil: 'load' });
+  await expect(page.locator('h1').first()).toBeVisible({ timeout: 20_000 });
+
+  const inc = page.getByRole('button', { name: '+1' }).first();
+  await expect(inc).toBeVisible({ timeout: 20_000 });
+
+  const readCounter = async () => {
+    const txt = await page.locator('body').innerText();
+    return (txt.match(/Counter:\s*(-?\d+)/i) || [])[1];
+  };
+  const before = await readCounter();
+  await inc.click();
+  await expect
+    .poll(readCounter, { timeout: 10_000 })
+    .not.toBe(before);
+});
+
+test('/time-travel: a MARKER write re-renders under OnPush', async ({
+  page,
+}) => {
+  await page.goto('/time-travel', { waitUntil: 'load' });
+  const add = page.getByRole('button', { name: 'Add person' });
+  await expect(add).toBeVisible({ timeout: 20_000 });
+
+  // The marker section reports its live entityMap count.
+  const readPeople = async () => {
+    const txt = await page.locator('body').innerText();
+    return (txt.match(/(\d+)\s+people/i) || [])[1];
+  };
+  const before = await readPeople();
+  await add.click();
+  await expect.poll(readPeople, { timeout: 10_000 }).not.toBe(before);
+});
+
+test('/entity-collection: an entityMap write re-renders under OnPush', async ({
+  page,
+}) => {
+  await page.goto('/entity-collection', { waitUntil: 'load' });
+  await expect(page.locator('h1, main').first()).toBeVisible({
+    timeout: 20_000,
+  });
+  const before = await page.locator('body').innerText();
+
+  const btn = page.getByRole('button').filter({ hasNotText: /^$/ }).first();
+  await expect(btn).toBeVisible({ timeout: 20_000 });
+  await btn.click();
+
+  await expect
+    .poll(async () => (await page.locator('body').innerText()) !== before, {
+      timeout: 10_000,
+    })
+    .toBe(true);
+});

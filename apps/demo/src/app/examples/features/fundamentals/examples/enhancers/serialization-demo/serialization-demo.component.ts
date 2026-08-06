@@ -73,7 +73,7 @@ interface SerializableMethods {
   standalone: true,
   imports: [ExampleComponent],
   templateUrl: './serialization-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './serialization-demo.component.scss',
 })
 export class SerializationDemoComponent {

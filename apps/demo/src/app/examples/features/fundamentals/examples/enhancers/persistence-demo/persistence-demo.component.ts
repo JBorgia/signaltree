@@ -25,7 +25,7 @@ type Themes = 'light' | 'dark' | 'system';
   standalone: true,
   imports: [FormsModule, ExampleComponent],
   templateUrl: './persistence-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './persistence-demo.component.scss',
 })
 export class PersistenceDemoComponent implements OnDestroy {

@@ -52,7 +52,7 @@ interface UserProfile {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, ExampleComponent],
   templateUrl: './signal-forms-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './signal-forms-demo.component.scss',
 })
 export class SignalFormsDemoComponent {

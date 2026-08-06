@@ -57,7 +57,7 @@ interface ExtremeDepthStructure {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './extreme-depth.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './extreme-depth.component.scss',
 })
 export class ExtremeDepthComponent implements OnInit {

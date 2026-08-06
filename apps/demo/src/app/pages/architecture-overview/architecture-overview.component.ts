@@ -22,7 +22,7 @@ interface SavingsMetric {
   standalone: true,
   imports: [CodeTabsComponent],
   templateUrl: './architecture-overview.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './architecture-overview.component.scss',
 })
 export class ArchitectureOverviewComponent {

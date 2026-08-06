@@ -47,7 +47,7 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
       </main>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       /* ── App Shell Grid ─────────────────────────────────────────────────── */

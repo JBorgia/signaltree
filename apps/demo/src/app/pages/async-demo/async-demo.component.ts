@@ -27,7 +27,7 @@ const ALL_USERS: User[] = [
   standalone: true,
   imports: [FormsModule, CodeTabsComponent],
   templateUrl: './async-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './async-demo.component.scss',
 })
 export class AsyncDemoComponent {

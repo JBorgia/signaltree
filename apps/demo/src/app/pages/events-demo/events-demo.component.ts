@@ -113,7 +113,7 @@ const INITIAL_ORDERS: Order[] = [
   standalone: true,
   imports: [FormsModule, CodeTabsComponent, StateInspectorComponent],
   templateUrl: './events-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './events-demo.component.scss',
 })
 export class EventsDemoComponent {

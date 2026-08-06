@@ -20,7 +20,7 @@ interface TodoState {
 
 @Component({
   template: '',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
 class SignalTreeTestComponent {

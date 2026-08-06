@@ -230,7 +230,7 @@ interface BenchmarkService {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './benchmark-orchestrator.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './benchmark-orchestrator.component.scss',
 })
 export class BenchmarkOrchestratorComponent

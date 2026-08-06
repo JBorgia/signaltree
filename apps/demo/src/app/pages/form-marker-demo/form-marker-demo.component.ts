@@ -77,7 +77,7 @@ interface AuditProfile {
     StateInspectorComponent,
   ],
   templateUrl: './form-marker-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './form-marker-demo.component.scss',
 })
 export class FormMarkerDemoComponent implements OnDestroy {

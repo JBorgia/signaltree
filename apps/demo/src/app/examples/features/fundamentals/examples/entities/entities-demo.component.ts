@@ -33,7 +33,7 @@ interface EntitiesState {
   standalone: true,
   imports: [FormsModule],
   templateUrl: './entities-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './entities-demo.component.scss',
 })
 export class EntitiesDemoComponent {

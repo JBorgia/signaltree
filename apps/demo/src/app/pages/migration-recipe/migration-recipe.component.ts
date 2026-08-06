@@ -23,7 +23,7 @@ interface CompareOption {
   standalone: true,
   imports: [RouterLink],
   templateUrl: './migration-recipe.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './migration-recipe.component.scss',
 })
 export class MigrationRecipeComponent {

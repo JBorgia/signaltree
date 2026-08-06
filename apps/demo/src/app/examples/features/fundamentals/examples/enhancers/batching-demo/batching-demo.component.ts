@@ -86,7 +86,7 @@ class BatchProcessor {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './batching-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './batching-demo.component.scss',
 })
 export class BatchingDemoComponent {

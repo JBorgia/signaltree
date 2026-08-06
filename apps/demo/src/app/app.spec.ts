@@ -7,7 +7,7 @@ import { NavigationComponent } from './components/navigation/navigation.componen
 // Simple home component for testing routing
 @Component({
   selector: 'app-test-home',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: '<div>Test Home</div>',
 })
 class TestHomeComponent {}

@@ -89,7 +89,7 @@ function migrateV2toV3(v2: UserSettingsV2): UserSettingsV3 {
   standalone: true,
   imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './stored-versioning-demo.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './stored-versioning-demo.component.scss',
 })
 export class StoredVersioningDemoComponent {
