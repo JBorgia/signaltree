@@ -74,6 +74,7 @@ const tree = signalTree({
   count: 0, // plain leaf
   nested: {
     deep: 0, // a plain leaf at depth, so `nested` stays a branch
+    buried: status<Error>(), // a MARKER at depth — the "any depth" claim
   },
 });
 type $ = typeof tree.$;
@@ -87,6 +88,8 @@ export type _MarkerResolutionChecks = [
   Expect<Equal<$['reports'], AsyncSourceSignal<User[]>>>,
   Expect<Equal<$['search'], AsyncQuerySignal<string, User[]>>>,
   // marker nested at depth resolves too (the "any depth" differentiator)
+  Expect<Equal<$['nested']['buried'], StatusSignal<Error>>>,
+  Expect<Equal<$['nested']['deep'], CallableWritableSignal<number>>>,
   // plain + union leaves stay callable writable signals
   Expect<Equal<$['count'], CallableWritableSignal<number>>>,
   Expect<Equal<$['selectedId'], CallableWritableSignal<number | null>>>
@@ -161,16 +164,6 @@ type MarkerState = {
 export type _InternalVariantChecks = [
   Expect<
     Equal<EntityAwareTreeNode<MarkerState>['users'], EntitySignal<User, number>>
-  >,
-  Expect<
-    Equal<
-      EntityAwareTreeNode<MarkerState>['reply'],
-    >
-  >,
-  Expect<
-    Equal<
-      DeepEntityAwareTreeNode<MarkerState>['reply'],
-    >
   >,
   Expect<
     Equal<

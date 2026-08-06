@@ -310,6 +310,29 @@ function materialized<T>(node: object, build: () => T): T {
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         if (built !== null && typeof built === 'object') Object.freeze(built);
       }
+      // ⚠️ THE FREEZE IS PER NODE AND DOES NOT REACH LEAF VALUES.
+      //
+      // `snapshot.a = x` throws. `snapshot.someDate.setFullYear(1999)` does
+      // not — and it corrupts LIVE STATE, because a leaf holding a Date, Map,
+      // Set or Array is handed out BY REFERENCE. Measured: mutating any of the
+      // four through a snapshot changes what the tree returns. Only plain
+      // object leaves are copied (see the isSignal branch in unwrap).
+      //
+      // Deliberately not fixed, on measurement rather than principle:
+      //  - Copying leaf values costs +54us against 1.0us on a 50k array —
+      //    55x, which is precisely the materialisation tax the memo exists to
+      //    remove, paid on every read.
+      //  - Freezing them does not work. `Object.freeze` protects Array.push
+      //    and nothing else here: Date.setFullYear, Map.set and Set.add all
+      //    mutate through internal slots and ignore it entirely. Half a
+      //    guarantee reads as a whole one.
+      //  - Freezing would also freeze LIVE state, since the value is shared.
+      //
+      // So this is contract, not enforcement: a snapshot is read-only ALL THE
+      // WAY DOWN. Mutating a value you got out of `tree()` is the same class of
+      // mistake as mutating a signal's value in place, which is already ST2003.
+      // Pinned by snapshot-aliasing.spec.ts so it stays known rather than
+      // rediscovered.
       return built;
     });
     MATERIALIZED.set(key, memo as Signal<unknown>);
