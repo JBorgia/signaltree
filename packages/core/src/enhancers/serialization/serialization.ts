@@ -36,6 +36,40 @@ interface EnhancedSignalTree<T = unknown> extends SerializableSignalTree<T> {
 }
 
 /**
+ * The SNAPSHOT FORMAT version — the shape of `data`, not the application.
+ *
+ * Bumped 1.0.0 → 2.0.0 for the marker snapshot/hydrate work, which changed the
+ * payload twice: markers gained their own `snapshot()` (so `form()`,
+ * `asyncSource` and friends now APPEAR where they used to be silently absent),
+ * and `serialize()` stopped using its private walker (so `status()` no longer
+ * emits six computeds and nine setter methods, and `entityMap` no longer emits
+ * a `map` that JSON renders as `{}`).
+ *
+ * ONE bump for two changes, deliberately: nothing published between them, so
+ * they reach users as a single transition and a second bump would invent a
+ * version nobody ever ran.
+ *
+ * ⚠️ WRITTEN, NOT YET ENFORCED. The two halves have opposite reversibility.
+ * Writing the tag is IRREVERSIBLE — payloads already sitting in a user's
+ * localStorage can never be given one retroactively, so it has a deadline and
+ * that deadline is "before another payload-shape change ships". Enforcing a
+ * policy is fully reversible: it is code, changeable in any later release, by
+ * which time every payload carries a tag.
+ *
+ * ⚠️ WHEN A POLICY LANDS, `1.0.0` MEANS LEGACY/UNKNOWN, NOT "format 1". Every
+ * payload ever written says `1.0.0`, including all of them written while this
+ * field was decorative — emitted at two sites and read only into a `debugMode`
+ * console.log. A "reject unknown versions" policy would therefore reject the
+ * entire installed base. Treat it as "written before versioning meant
+ * anything" and migrate on a best-effort basis.
+ *
+ * Distinct from `timestamp`, which answers "when" and can never answer "what
+ * shape": during a rolling deploy old and new clients write concurrently, so a
+ * NEWER timestamp can carry an OLDER shape.
+ */
+const SNAPSHOT_FORMAT_VERSION = '2.0.0';
+
+/**
  * Serialization configuration options
  */
 export interface SerializationConfig {
@@ -756,7 +790,7 @@ export function serialization(
           // metadata type. Both fields are currently read only into a
           // debugMode console.log.
           timestamp: Date.now(),
-          version: '1.0.0',
+          version: SNAPSHOT_FORMAT_VERSION,
           ...(circularPaths.length > 0 && { circularRefs: circularPaths }),
           ...(Object.keys(nodeMap).length > 0 && { nodeMap }),
         };
@@ -842,7 +876,7 @@ export function serialization(
           // metadata type. Both fields are currently read only into a
           // debugMode console.log.
           timestamp: Date.now(),
-          version: '1.0.0',
+          version: SNAPSHOT_FORMAT_VERSION,
           ...(circularPaths.length > 0 && { circularRefs: circularPaths }),
         },
       };

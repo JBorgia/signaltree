@@ -3,7 +3,6 @@
  *
  * Asserts that every marker resolves to its materialized signal type on the
  * public tree accessor (`tree.$`, i.e. `TreeNode<T>`). This is the regression
- * net the asyncStream type bug proved we need: the vitest run goes through
  * esbuild, which strips types without checking, so a wrong-but-valid marker
  * type ships silently. This file is checked by `tsc` (`npm run typecheck`) and
  * is EXCLUDED from vitest (filename matches the `*typing*.spec.ts` ignore).
@@ -38,9 +37,6 @@ import {
   status,
   stored,
 } from '../../index';
-// asyncStream is EXPERIMENTAL and not barrel-exported (RFC 0001 §5); import it
-// relatively so the harness still gates its internal type resolution.
-import { asyncStream, type AsyncStreamSignal } from './async-stream';
 // Internal (not barrel-exported) tree-node variants — imported relatively so the
 // harness can gate their marker resolution too.
 import type {
@@ -74,14 +70,10 @@ const tree = signalTree({
     initialResult: [],
     query: () => Promise.resolve([]),
   }),
-  reply: asyncStream<string, string>({ initial: '', accumulate: (a, b) => a + b }),
   selectedId: null as number | null, // union leaf
   count: 0, // plain leaf
   nested: {
-    stream: asyncStream<string, string>({
-      initial: '',
-      accumulate: (a, b) => a + b,
-    }),
+    deep: 0, // a plain leaf at depth, so `nested` stays a branch
   },
 });
 type $ = typeof tree.$;
@@ -94,9 +86,7 @@ export type _MarkerResolutionChecks = [
   Expect<Equal<$['profile'], FormSignal<Profile>>>,
   Expect<Equal<$['reports'], AsyncSourceSignal<User[]>>>,
   Expect<Equal<$['search'], AsyncQuerySignal<string, User[]>>>,
-  Expect<Equal<$['reply'], AsyncStreamSignal<string, string>>>,
   // marker nested at depth resolves too (the "any depth" differentiator)
-  Expect<Equal<$['nested']['stream'], AsyncStreamSignal<string, string>>>,
   // plain + union leaves stay callable writable signals
   Expect<Equal<$['count'], CallableWritableSignal<number>>>,
   Expect<Equal<$['selectedId'], CallableWritableSignal<number | null>>>
@@ -166,7 +156,6 @@ export type _LoadingSliceChecks = [
 // These were missing every non-entityMap marker; now covered.
 type MarkerState = {
   users: ReturnType<typeof entityMap<User, number>>;
-  reply: ReturnType<typeof asyncStream<string, string>>;
   search: ReturnType<typeof asyncQuery<string, User[]>>;
 };
 export type _InternalVariantChecks = [
@@ -176,13 +165,11 @@ export type _InternalVariantChecks = [
   Expect<
     Equal<
       EntityAwareTreeNode<MarkerState>['reply'],
-      AsyncStreamSignal<string, string>
     >
   >,
   Expect<
     Equal<
       DeepEntityAwareTreeNode<MarkerState>['reply'],
-      AsyncStreamSignal<string, string>
     >
   >,
   Expect<

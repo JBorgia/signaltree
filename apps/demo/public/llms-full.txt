@@ -55,7 +55,7 @@ All `@signaltree/*` packages — including `@signaltree/shared` (internal-only, 
 | `status` Promise-vocab aliases (`start`, `setSuccess`, `succeed`, `fail`) | 10.2.0 |
 | Bare predicate names (`.loading`, `.loaded`, `.empty`, …) as canonical; `is`-prefixed names become deprecated aliases | 10.3.0 |
 | `form().data()` value alias | 10.4.0 |
-| `asyncStream` / `createAsyncStreamSignal` (chunk-accumulating streaming) | **never shipped** — exists in-repo but is experimental and NOT exported from the barrel as of 11.x (RFC 0001 §5). Do not emit either symbol. |
+| `asyncStream` / `createAsyncStreamSignal` (chunk-accumulating streaming) | **REMOVED in 13.6.0** — it existed in-repo unexported for several releases and never shipped, because the API question (a distinct marker vs an `accumulate` option on `asyncSource`) was never settled. Use a plain leaf and `update()` as the accumulator: `for await (const chunk of llm.stream(p)) store.$.reply.update(t => t + chunk)`. See `docs/guides/streaming-accumulation.md`. |
 | `defineStore()` — injectable-service wrapper | 11.0.0 |
 | `linked()` — derived-but-writable signal (in `.derived()`) | 11.0.0 |
 | `security` config requires the `security()` wrapper from `@signaltree/core/security` (**breaking**) | 11.0.0 |

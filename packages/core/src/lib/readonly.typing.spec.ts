@@ -38,11 +38,7 @@ import {
   type LoadingState,
 } from '../index';
 import { loader } from './markers/loader';
-// asyncStream is EXPERIMENTAL and not barrel-exported (RFC 0001 §5); import it
-// relatively so the parity fixture still gates its readonly dispatch row.
-import { asyncStream } from './markers/async-stream';
 import type {
-  ReadonlyAsyncStreamSignal,
   ReadonlyEntityNode,
   ReadonlyEntitySignal,
   ReadonlyFormWizard,
@@ -87,7 +83,6 @@ const tree = signalTree({
     initialResult: [],
     query: () => Promise.resolve([]),
   }),
-  reply: asyncStream<string, string>({ initial: '', accumulate: (a, b) => a + b }),
 }).derived(($) => ({
   doubled: computed(() => $.count() * 2),
   draft: linked(() => $.count()),
@@ -110,7 +105,6 @@ type ROForm = RO$['profile'];
 type ROStored = RO$['theme'];
 type ROSource = RO$['reports'];
 type ROQuery = RO$['search'];
-type ROStream = RO$['reply'];
 type ROEntityNode = NonNullable<ReturnType<ROUsers['byId']>>;
 
 export type _ReadonlyViewChecks = [
@@ -238,14 +232,6 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROQuery, 'rerun'>>,
   Expect<NotOffered<ROQuery, 'reset'>>,
 
-  Expect<Equal<ROStream, ReadonlyAsyncStreamSignal<string, string>>>,
-  Expect<Equal<ROStream['data'], Signal<string>>>,
-  Expect<Equal<ROStream['done'], Signal<boolean>>>,
-  Expect<NotOffered<ROStream, 'start'>>,
-  Expect<NotOffered<ROStream, 'cancel'>>,
-  Expect<NotOffered<ROStream, 'refresh'>>,
-  Expect<NotOffered<ROStream, 'regenerate'>>,
-  Expect<NotOffered<ROStream, 'reset'>>
 ];
 
 // `asReadonly` also accepts the minimal `ISignalTree`/`SignalTree` shape

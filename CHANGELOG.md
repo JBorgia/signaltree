@@ -1,5 +1,42 @@
 ## Unreleased (13.6.0)
 
+### Changed
+
+- **Snapshot format version bumped `1.0.0` → `2.0.0`,** written but not yet
+  enforced. One bump for two payload changes — markers gained snapshots, and
+  `serialize()` stopped using its private walker — because nothing published
+  between them, so they reach users as a single transition.
+
+  The two halves have opposite reversibility, which is why the tag ships now and
+  the policy does not: **writing the tag is irreversible** (payloads already in a
+  user's localStorage can never be given one retroactively), while enforcing is
+  fully reversible. ⚠️ When a policy lands, `1.0.0` means **legacy/unknown**, not
+  "format 1" — every payload ever written says it, including all of them written
+  while the field was decorative, so "reject unknown versions" would reject the
+  entire installed base.
+
+### Removed
+
+- **`asyncStream` deleted.** It existed in-repo, unexported, for several
+  releases and never shipped, because the API question — a distinct marker
+  versus an `accumulate` option on `asyncSource` — was never settled. Leaving
+  372 lines of one candidate in the tree biased that decision toward itself
+  without anyone choosing.
+
+  What it did is composition:
+
+  ```ts
+  for await (const chunk of llm.stream(prompt)) {
+    chat.$.reply.update((text) => text + chunk);
+  }
+  ```
+
+  A plain leaf is captured by `timeTravel()`, appears in `tree()` and persists
+  with no marker contract to satisfy — which a marker has to earn individually.
+  New guide: [streaming-accumulation.md](docs/guides/streaming-accumulation.md),
+  covering cancellation, conversation state and SSE. Nothing was exported, so
+  no public API changed.
+
 ### Fixed
 
 - **`asyncSource` / `asyncQuery` / `asyncStream` lost their values entirely.**

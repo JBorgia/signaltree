@@ -3,7 +3,6 @@ import type { Signal, WritableSignal } from '@angular/core';
 import type { SignalTreeBuilder } from './internals/builder-types';
 import type { AsyncQuerySignal } from './markers/async-query';
 import type { AsyncSourceSignal } from './markers/async-source';
-import type { AsyncStreamSignal } from './markers/async-stream';
 import type { EntityLoaderSurface } from './markers/entity-loader';
 import type { FormSignal, FormWizard } from './markers/form';
 import type { StatusSignal } from './markers/status';
@@ -41,11 +40,6 @@ import type {
 // =============================================================================
 // PER-MARKER READER ALLOWLISTS (const — importable by parity fixtures)
 // =============================================================================
-// NOTE: ASYNC_STREAM_READERS / ReadonlyAsyncStreamSignal are deliberately NOT
-// re-exported from the barrel — `asyncStream` itself is non-barrel-exported
-// (RFC 0001 §5), and its readonly view follows it. Parity fixtures import them
-// from './readonly' directly.
-
 /**
  * Readers on {@link EntitySignal}. Mutators (`addOne`, `upsertOne`,
  * `removeWhere`, `setAll`, …) and the hook registrars (`tap`, `intercept` —
@@ -146,8 +140,6 @@ export const ASYNC_QUERY_READERS = [
   'error',
 ] as const;
 
-/** Readers on {@link AsyncStreamSignal}. `start`/`refresh`/`regenerate`/`cancel`/`reset` are absent. */
-export const ASYNC_STREAM_READERS = ['data', 'loading', 'error', 'done'] as const;
 
 // =============================================================================
 // HELPERS
@@ -274,11 +266,6 @@ export type ReadonlyAsyncQuerySignal<In, Out> = {
   (): Out | undefined;
 } & PickReaders<AsyncQuerySignal<In, Out>, (typeof ASYNC_QUERY_READERS)[number]>;
 
-/** Read-only view of {@link AsyncStreamSignal}: callable read + data/loading/error/done. */
-export type ReadonlyAsyncStreamSignal<C, S> = {
-  (): S;
-} & PickReaders<AsyncStreamSignal<C, S>, (typeof ASYNC_STREAM_READERS)[number]>;
-
 // =============================================================================
 // THE VIEW
 // =============================================================================
@@ -333,9 +320,6 @@ type ReadonlyViewOf<T> = T extends EntitySignal<
   : T extends AsyncQuerySignal<infer In, infer Out>
   ? ReadonlyAsyncQuerySignal<In, Out> &
       ReadonlyExtras<T, AsyncQuerySignal<In, Out>>
-  : T extends AsyncStreamSignal<infer C, infer S>
-  ? ReadonlyAsyncStreamSignal<C, S> &
-      ReadonlyExtras<T, AsyncStreamSignal<C, S>>
   : T extends AsyncSourceSignal<infer V>
   ? ReadonlyAsyncSourceSignal<V> & ReadonlyExtras<T, AsyncSourceSignal<V>>
   : T extends CallableWritableSignal<infer V>
