@@ -83,9 +83,16 @@ REFERENCE.
 Implemented with Angular's `computed` rather than the hand-rolled dirty flags
 this document originally proposed, and that turned out to be strictly better:
 the invalidation already happens on the write path, so **incremental
-materialisation costs the write path nothing at all** — not the +3.7 ns of
-early-exit marking, and certainly not the +68.5 ns of eager version stamping at
-depth 50. It is also how `entityMap` already works, so the codebase gained no
+materialisation is far cheaper than the alternatives** — the +3.7 ns of
+early-exit marking, or the +68.5 ns of eager version stamping at depth 50.
+
+It is not free, though, and an earlier revision of this document said it was.
+Leaf writes are unaffected, but a partial update at the ROOT measures **~17 ns
+slower** (0.065 → 0.082 µs), because the root's cached materialisation is now a
+consumer of every leaf beneath it and invalidating it costs something. First
+measured with the two versions in a fixed order — which would let any drift in
+machine load fall entirely on the second — so it was re-run with the order
+alternated across 23 samples. The ranges still do not overlap, so it is real. It is also how `entityMap` already works, so the codebase gained no
 new mechanism.
 
 Measured in the real library — cost of reading the whole state, by how much

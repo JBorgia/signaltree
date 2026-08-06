@@ -34,6 +34,9 @@ import { SecurityValidator, SecurityPresets } from '@signaltree/core';
 import { createEditSession } from '@signaltree/core';
 import { TREE_PRESETS } from '@signaltree/core';
 
+// @skip-lint — historical v9 import surface. `@signaltree/core/presets` was
+// later removed (see MIGRATION.md); this block documents what v9 looked like,
+// so it must not be resolved against today's d.ts files.
 // After (v9)
 import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
 import { createEditSession } from '@signaltree/core/edit-session';

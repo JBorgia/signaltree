@@ -1,3 +1,59 @@
+## Unreleased (13.6.0)
+
+### Security
+
+- **`stored()` could leak its storage into any snapshot.** The marker held the
+  caller's `options` — including their `storage` object — as an ENUMERABLE
+  property, and `unwrap` deep-copies a raw marker by enumerating own keys. So
+  wherever a raw marker reached a snapshot it carried the CONTENTS of that
+  storage into `tree()`, and from there into `serialization()`,
+  `persistence()`, devtools payloads and audit logs:
+
+  ```json
+  { "list": [{ "key": "k", "options": { "storage": { "auth-token": "SECRET-JWT" } } }] }
+  ```
+
+  13.4.0 closed the top-level and nested-object routes; a marker inside an
+  **array** still escaped, because array elements are never traversed.
+  `options` is now non-enumerable, so the payload is invisible to enumeration on
+  every path — including any not yet found. `createStoredSignal` reads it
+  directly and is unaffected. Verified on all five paths plus a plain object
+  spread. (RFC 0008 item 1.)
+
+### Added
+
+- **[ST2021] — a marker inside an array.** Array elements are never traversed,
+  so a marker in one is never materialized: `tree.$.list()[0]` stays a raw
+  object, is not a signal, and writes to it are lost. Silent until now.
+- **[ST2020] — duplicate `stored()` keys.** Two markers on one key each make
+  their own signal; neither observes the other, so one holds a stale value and
+  they race on write. Warned rather than interned — two calls may carry
+  conflicting `defaultValue`/`version`/`migrate` with no correct merge, and a
+  per-key generation counter would put a map lookup on `sig()`, the hottest path
+  in the library, and make a signal read perform I/O. (RFC 0008 item 2.)
+
+### Documentation
+
+- **Recovering from corrupt stored data.** `reload()` already returns
+  `'ok' | 'default' | 'error'`; the `onError` recovery recipe was the missing
+  half. Added to the persistence guide, including why SignalTree does NOT write
+  the default back to make signal and storage agree — that makes the invariant
+  true and permanently destroys recoverable user data on boot. (RFC 0008 item 3.)
+- **Corrected: incremental materialization does not cost writes "nothing".**
+  Leaf writes are unaffected, but a partial update at the ROOT is ~17ns slower,
+  because the root's cached materialization is now a consumer of every leaf
+  beneath it. Confirmed with the versions in alternating order across 23 runs —
+  non-overlapping ranges, so not machine noise.
+
+### Internal
+
+- `lint-skills` no longer warns on every run about `@signaltree/core/presets`,
+  a subpath removed back in v9. The only doc that still names it is the v8→v9
+  migration guide showing what to migrate FROM, now marked `@skip-lint`.
+- Bundle budgets raised 0.1KB for the two new diagnostics. Entirely dev-only
+  text: production is unchanged, and the foldability gate confirms consumers
+  reclaim ~1.67KB per tree.
+
 ## 13.5.0 (2026-08-05)
 
 Retires `@signaltree/enterprise` and moves the two capabilities worth keeping
@@ -121,8 +177,12 @@ true`, so on a changing number it measures **6.5ns against `Object.is`'s
 
   The "all leaves" column includes the memo's own overhead, so it understates
   the gain. Built on `computed()` rather than hand-rolled dirty flags, so the
-  invalidation rides on Angular's existing write path and **costs writes
-  nothing**. No gain on deep-narrow shapes — this is a WIDTH optimisation.
+  invalidation rides on Angular's existing write path. **Leaf writes are
+  unaffected**; a partial update at the ROOT measures ~17ns slower (0.065 →
+  0.082 µs), because the root's cached materialisation is now a consumer of
+  every leaf beneath it and invalidating it is not free. Verified with the two
+  versions in alternating order across 23 runs — non-overlapping ranges, so it
+  is a real effect and not machine noise. No gain on deep-narrow shapes — this is a WIDTH optimisation.
 
   ⚠️ **BREAKING for anyone who mutates a snapshot.** `tree()` no longer returns
   a freshly allocated object, so mutating the result would corrupt the cache and

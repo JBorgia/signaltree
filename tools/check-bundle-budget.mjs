@@ -41,8 +41,13 @@ const TARGETS = {
     // What it bought (measured, docs/architecture/optimisation-options.md):
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
-    // diagnostic for an idiom mistake worth ~30x.
-    budgetKB: 6.9,
+    // diagnostic for an idiom mistake worth ~30x.    //
+    // Bumped 6.9 → 7.1 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // ST2021 (marker inside an array) diagnostic messages. Measured 6.99KB.
+    // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
+    // by these two beyond the O(1) non-enumerable defineProperty that closes
+    // the stored() storage leak. check-devmode-foldable confirms it folds.
+    budgetKB: 7.1,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -92,8 +97,13 @@ const TARGETS = {
     // What it bought (measured, docs/architecture/optimisation-options.md):
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
-    // diagnostic for an idiom mistake worth ~30x.
-    budgetKB: 9.8,
+    // diagnostic for an idiom mistake worth ~30x.    //
+    // Bumped 9.8 → 10.0 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // ST2021 (marker inside an array) diagnostic messages. Measured 9.89KB.
+    // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
+    // by these two beyond the O(1) non-enumerable defineProperty that closes
+    // the stored() storage leak. check-devmode-foldable confirms it folds.
+    budgetKB: 10.0,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -132,8 +142,13 @@ const TARGETS = {
     // What it bought (measured, docs/architecture/optimisation-options.md):
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
-    // diagnostic for an idiom mistake worth ~30x.
-    budgetKB: 9.0,
+    // diagnostic for an idiom mistake worth ~30x.    //
+    // Bumped 9.0 → 9.2 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // ST2021 (marker inside an array) diagnostic messages. Measured 9.08KB.
+    // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
+    // by these two beyond the O(1) non-enumerable defineProperty that closes
+    // the stored() storage leak. check-devmode-foldable confirms it folds.
+    budgetKB: 9.2,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });

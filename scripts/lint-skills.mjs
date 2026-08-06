@@ -67,7 +67,11 @@ const DIST_ROOT = path.join(REPO_ROOT, 'dist', 'packages');
 // subpath the package does not ship.
 const SIGNALTREE_PATH_MAP = {
   '@signaltree/core': ['dist/packages/core/src/index.d.ts'],
-  '@signaltree/core/presets': ['dist/packages/core/src/presets.d.ts'],
+  // '@signaltree/core/presets' was REMOVED in v9 (see docs/guides/MIGRATION.md).
+  // Kept out of this map deliberately: leaving it here made the linter warn on
+  // every run about a subpath that is supposed to be gone, and the only doc that
+  // still names it is the v8->v9 migration guide showing what to migrate FROM
+  // (that block carries @skip-lint).
   '@signaltree/core/security': ['dist/packages/core/src/security.d.ts'],
   '@signaltree/core/edit-session': ['dist/packages/core/src/edit-session.d.ts'],
   '@signaltree/core/storage': ['dist/packages/core/src/storage.d.ts'],

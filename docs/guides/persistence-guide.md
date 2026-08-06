@@ -8,12 +8,12 @@ For the threat model and what should never go in browser storage, see
 
 ## The routing table
 
-| I want…                                                                            | Use                                       | Import from                          |
-| ---------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------ |
-| One field to survive refresh (theme, locale, dismissed-banner flag)                 | `stored(key, default)` marker             | `@signaltree/core`                   |
-| The whole tree (or a whole feature tree) snapshotted + autosaved                    | `persistence({ key, … })` enhancer        | `@signaltree/core`                   |
-| A storage backend other than localStorage (IndexedDB, custom/remote)               | `/storage` adapters, plugged into either  | `@signaltree/core/storage`           |
-| A server-backed collection that shows cached rows instantly, then revalidates      | `entityMap({ load: loader(fn, { persist }) })` | `@signaltree/core`               |
+| I want…                                                                       | Use                                            | Import from                |
+| ----------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------- |
+| One field to survive refresh (theme, locale, dismissed-banner flag)           | `stored(key, default)` marker                  | `@signaltree/core`         |
+| The whole tree (or a whole feature tree) snapshotted + autosaved              | `persistence({ key, … })` enhancer             | `@signaltree/core`         |
+| A storage backend other than localStorage (IndexedDB, custom/remote)          | `/storage` adapters, plugged into either       | `@signaltree/core/storage` |
+| A server-backed collection that shows cached rows instantly, then revalidates | `entityMap({ load: loader(fn, { persist }) })` | `@signaltree/core`         |
 
 Rules of thumb:
 
@@ -57,6 +57,48 @@ writes synchronously in the caller's stack. `maxWaitMs` bounds how long
 continuous updates can delay a write, and `onError` surfaces storage
 failures (quota, serialization) that would otherwise only warn in dev.
 
+## Recovering from corrupt stored data (`onError`)
+
+When `stored()` cannot read or migrate what is in storage, the signal falls back
+to its default **and the bad data is left in place**. That is deliberate: the
+obvious alternative — write the default back so signal and storage agree — makes
+the invariant true and permanently destroys recoverable user data on boot.
+
+So signal and storage disagree until the next write, and it is your call how to
+resolve it. `reload()` tells you which happened, and `onError` gives you the
+failure:
+
+```ts
+import { signalTree, stored } from '@signaltree/core';
+
+const tree = signalTree({
+  draft: stored('editor.draft', '', {
+    onError: ({ key, operation, error }) => {
+      // operation: 'read' | 'write' | 'migrate'
+      if (operation === 'read' || operation === 'migrate') {
+        // Keep the unreadable payload for support, then clear the slot so the
+        // next boot starts clean.
+        const raw = localStorage.getItem(key);
+        if (raw) localStorage.setItem(`${key}.corrupt`, raw);
+        localStorage.removeItem(key);
+      }
+      reportToSentry(error);
+    },
+  }),
+});
+
+// Explicit re-read, with the outcome reported rather than inferred.
+const result = tree.$.draft.reload(); // 'ok' | 'default' | 'error'
+if (result === 'error') {
+  showBanner('Your saved draft could not be read and has been reset.');
+}
+```
+
+`reload()` returns `'ok'` when the stored value was read, `'default'` when
+nothing was stored, and `'error'` when something was there and could not be read
+or migrated. Distinguishing the last two is the point: "nothing saved yet" and
+"your work is unreadable" deserve different messages.
+
 ## 2. `persistence({ key, … })` — whole-tree snapshot / autosave
 
 An enhancer (it composes `serialization()` internally, so the tree also gains
@@ -93,9 +135,7 @@ The subpath import keeps IndexedDB code out of your bundle unless used.
 import { signalTree, persistence } from '@signaltree/core';
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
-const tree = signalTree({ document: { blocks: [] as Block[] } }).with(
-  persistence({ key: 'editor', storage: createIndexedDBAdapter() })
-);
+const tree = signalTree({ document: { blocks: [] as Block[] } }).with(persistence({ key: 'editor', storage: createIndexedDBAdapter() }));
 ```
 
 The same adapters plug into `entityMap`'s `loader({ persist })` option below.
