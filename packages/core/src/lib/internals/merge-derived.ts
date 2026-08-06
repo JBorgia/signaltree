@@ -1,6 +1,7 @@
 import { computed, isSignal, Signal } from '@angular/core';
 
 import { isDerivedMarker } from '../markers/derived';
+import { stampDerived } from '../utils';
 
 /**
  * Merge Derived State into SignalTree
@@ -95,6 +96,8 @@ function ensurePathAndGetTarget($: AnyRecord, path: string): AnyRecord {
 // MAIN MERGE FUNCTION
 // =============================================================================
 
+
+
 /**
  * Merges derived state definitions into the processed source state.
  *
@@ -167,7 +170,7 @@ export function mergeDerivedState(
       }
 
       // Create computed signal - factory is lazy (won't execute until read)
-      target[key] = computed(value.factory);
+      target[key] = stampDerived(computed(value.factory));
     } else if (isSignalLike(value)) {
       // Already a signal (computed, signal, etc.) - add directly
       const target = ensurePathAndGetTarget($, path);
@@ -182,7 +185,7 @@ export function mergeDerivedState(
         }
       }
 
-      target[key] = value;
+      target[key] = stampDerived(value);
     } else if (typeof value === 'object' && value !== null) {
       // =========================================================================
       // DEEP MERGE: Nested derived object - merge into existing structure

@@ -61,6 +61,34 @@
 
 ### Fixed
 
+- **`.derived()` values were reaching snapshots, and whether they did depended
+  on TOUCH ORDER.** `finalize()` (the `$` getter) runs `applyDerivedFactories`
+  while the `tree()` call path runs only `materializeOnly()`, so:
+
+      tree() first, never touch `$`  ->  absent   (correct, by accident)
+      touch `$` at all, then tree()  ->  PRESENT  (wrong)
+
+  Every real application is the second case — you write state through `$`, then
+  persist — so derived values were being written to localStorage, devtools and
+  audit, and going STALE there: a snapshot taken at `a=2` kept `sum: 5` while
+  the live value became `103`. Not absent data, wrong data.
+
+  This is the exact rule 14.0.0 is about — a snapshot carries state, and
+  anything recomputable is structure — and a derived value is the canonical
+  recomputable thing. Derived signals are now stamped and skipped by `unwrap`,
+  so `tree()` is **order-independent**. Only NON-writable signals are stamped: a
+  writable signal placed in `.derived()` is real state and is still captured.
+
+  Confirmed PRE-EXISTING against the `v13.5.0` tag (identical output), so this
+  is inherited, not introduced by the marker work. Fixed here because 14.0.0
+  already changes the payload shape — deferring it would make it a SECOND
+  breaking payload change, which is what the deadline on
+  `SNAPSHOT_FORMAT_VERSION` exists to prevent.
+
+  The existing test covered only the passing order (`signalTree(...).derived(...)`
+  then immediately `expect(tree())`, never touching `$`), which is why this
+  survived.
+
 - **`ST2022` was being emitted from three unrelated conditions.** Besides its
   documented meaning (a marker registered without declaring what of it is
   state), it also fired when `entityMap.hydrate` got a payload with no `all`

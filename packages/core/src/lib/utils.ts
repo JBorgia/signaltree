@@ -350,6 +350,50 @@ export function materializeNode<T>(store: object): T {
 }
 
 /**
+ * Marks a signal as DERIVED, so `unwrap()` leaves it out of every snapshot.
+ *
+ * A snapshot carries state. A derived value is by definition recomputable from
+ * state, so freezing one into a payload produces a number that was true once —
+ * the `map: {}` failure in a different costume: not absent data, WRONG data.
+ *
+ * Before this stamp, whether a derived appeared in `tree()` depended on TOUCH
+ * ORDER, which nothing documented and no test covered:
+ *
+ *   tree() first, never touch `$`  → absent   (correct, by accident)
+ *   touch `$` at all, then tree()  → PRESENT  (wrong)
+ *
+ * because `finalize()` (the `$` getter) runs `applyDerivedFactories`, while the
+ * `tree()` call path runs only `materializeOnly()`. Every real application is
+ * the second case — you write state through `$`, then persist. So in practice
+ * derived values were being persisted, and going stale in storage.
+ *
+ * The `SignalTree:` prefix is load-bearing for the same reason it is on
+ * `PROCESSOR_STAMP`: `unwrap`'s symbol loop skips that prefix by identity, so
+ * the stamp itself can never leak into a payload.
+ *
+ * Only NON-WRITABLE signals are stamped. `.derived()` is for derived state, but
+ * a writable signal placed there is real state and must still be captured —
+ * excluding it would trade one silent data loss for another.
+ */
+export const DERIVED_STAMP = Symbol.for('SignalTree:Derived');
+
+/** @internal Stamp a derived signal so snapshots skip it. Returns it. */
+export function stampDerived<T>(sig: T): T {
+  if (
+    isTraversableNode(sig) &&
+    typeof (sig as { set?: unknown }).set !== 'function'
+  ) {
+    Object.defineProperty(sig, DERIVED_STAMP, {
+      value: true,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+  return sig;
+}
+
+/**
  * Unwraps a signal or signal tree into a plain JS value shaped as T.
  * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
  */
@@ -456,6 +500,17 @@ function buildFromStore<T>(node: object): T {
     // neither signal nor accessor, so the function-skip below would drop it and
     // its value with it. Ask the registry first — that is the whole reason
     // `snapshot()` exists.
+    // A DERIVED value is recomputable from state, so it is not state. Freezing
+    // one into a payload yields a number that was true once. Skipped silently:
+    // this is the documented rule, not a mistake worth reporting.
+    if (
+      value &&
+      (typeof value === 'function' || typeof value === 'object') &&
+      (value as Record<symbol, unknown>)[DERIVED_STAMP] === true
+    ) {
+      continue;
+    }
+
     const markerSnapshot = snapshotMarkerNode(value);
     if (markerSnapshot) {
       result[key] = markerSnapshot.value;
@@ -537,6 +592,17 @@ function buildFromStore<T>(node: object): T {
     }
 
     const value = (node as Record<symbol, unknown>)[sym];
+
+    // A DERIVED value is recomputable from state, so it is not state. Freezing
+    // one into a payload yields a number that was true once. Skipped silently:
+    // this is the documented rule, not a mistake worth reporting.
+    if (
+      value &&
+      (typeof value === 'function' || typeof value === 'object') &&
+      (value as Record<symbol, unknown>)[DERIVED_STAMP] === true
+    ) {
+      continue;
+    }
 
     // Same as the string-key loop: ask the registry before skipping a callable.
     const markerSnapshotSym = snapshotMarkerNode(value);
