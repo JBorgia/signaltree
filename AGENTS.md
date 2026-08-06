@@ -156,13 +156,34 @@ either. The one arguable exception is `@signaltree/events`, which ships a NestJS
 subpath — but the same package also ships an Angular subpath, so a package-level
 `engines` would constrain browser consumers for a server-only reason.
 
-**`--strict-libs` on the consumer gate is RED and not gated.** Rollup's
-declaration emitter drops several exported types while still referencing them
-(`DefaultKey`, `EntityMapComputedSlices`, `EntityMapMarkerWithSlices`,
-`PathNotifierHandler`, `HydrateMode`), and `index.d.ts` re-exports `isDev` from
-`lib/constants`, which does not export it. Consumers running
-`skipLibCheck: true` — the Angular CLI default, and effectively universal — are
-unaffected, which is why the gate enforces that configuration. Re-exporting the
-missing names from the barrel does NOT fix it and makes it worse: the barrel
-then points at declarations that still are not emitted. The real fix is in the
-declaration build, and it is tracked debt rather than a hidden failure.
+**`--strict-libs` on the consumer gate is RED and not gated.** Run
+`node tools/verify-consumer-typecheck.mjs --strict-libs` to see it.
+
+*Effect (measured):* the emitted per-file `.d.ts` reference several names they
+never declare — `DefaultKey`, `EntityMapComputedSlices`,
+`EntityMapMarkerWithSlices`, `PathNotifierHandler`, `HydrateMode` — and
+`index.d.ts` re-exports `isDev` from `lib/constants`, whose emitted declaration
+does not contain it. A consumer compiling with `skipLibCheck: false` sees
+`TS2304`/`TS2305`.
+
+*Cause:* `@nx/rollup:rollup` bundles declarations per ENTRY POINT (there are six:
+the barrel plus `security`, `lazy`, `edit-session`, `storage`, `authoring`) and
+omits declarations it judges unreachable from those exports — while the per-file
+`.d.ts` it also emits still reference them.
+
+*Impact:* none for `skipLibCheck: true`, which is the Angular CLI default and
+effectively universal. That is the configuration the gate enforces.
+
+*Two fixes that DO NOT work — both tried, both reverted, recorded so the next
+person does not spend the afternoon I did:*
+
+1. **Re-exporting the missing names from the barrel makes it WORSE.** The barrel
+   then points at declarations that still are not emitted, turning five `TS2304`s
+   into those plus four `TS2305`s.
+2. **`stripInternal` is not the cause.** Three of the five names carry
+   `@internal`, which makes it a compelling theory. Removing every one of those
+   tags and rebuilding clean changed the error list by exactly nothing.
+
+The real fix is in the declaration build — most likely emitting declarations from
+`tsc` rather than from the rollup dts bundler. Tracked debt, not a hidden
+failure.

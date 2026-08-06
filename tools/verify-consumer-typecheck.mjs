@@ -217,7 +217,7 @@ for (const r of RESOLUTIONS) {
     out
       .split('\n')
       .filter((l) => l.includes('error TS'))
-      .slice(0, 15)
+      .slice(0, 60)
       .forEach((l) => console.log(`       ${l.trim()}`));
   }
 }
