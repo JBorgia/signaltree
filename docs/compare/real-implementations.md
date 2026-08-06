@@ -139,6 +139,58 @@ entity objects themselves shared. The comment in `time-travel.ts` claiming
 objects and false of collections, and the undo/redo column above is exactly
 where that shows up.
 
+## Reactive granularity — the half the timings above do NOT measure
+
+Everything above is **store time with no change detection and no DOM**. That
+matters, because a store's job is only half the work: the other half is how many
+components have to re-render as a result, and the two can point in opposite
+directions. elf's undo is a pointer swap, which is cheap in the store — the
+question is what it costs downstream.
+
+Measured: 1,000 rows, one per-row reactive consumer each, change **one** entity,
+count how many consumers are invalidated.
+
+| arm | consumers invalidated by a 1-entity change |
+| --- | --- |
+| **signaltree** (`byId(i)`) | **1 / 1000** |
+| **elf** (`selectEntity(i)`) | **1 / 1000** |
+| `@ngrx/signals` (`entityMap()[i]`) | **1000 / 1000** |
+
+**elf does NOT lose granularity to its pointer swap** — `selectEntity` filters
+per entity, so a whole-state reference swap still notifies only the row that
+changed. The intuition that an immutable swap must invalidate everything is
+wrong for elf, and it is worth stating because it would be an easy and
+flattering thing to assume.
+
+**`@ngrx/signals` does lose it, and by the widest margin here.** Reading
+`entityMap()` takes a dependency on the whole collection, so every consumer
+recomputes on every change. That is a property of the idiomatic usage, not a bug
+— but at 1,000 rows it is 1,000 component invalidations where the other two have
+one.
+
+### What this is worth, as arithmetic rather than measurement
+
+A signal read is tens of nanoseconds; an Angular component re-render is
+microseconds to milliseconds. At 1,000 rows and a conservative 10 µs per render,
+one change costs ~10 µs of rendering with granular invalidation and ~10 ms
+without — three orders of magnitude, and it lands on the main thread. That is
+arithmetic from the invalidation counts above, **not** something this harness
+measured.
+
+### An attempt to price it in time, and why it failed
+
+Timing 200 writes with 1,000 live consumers attached gave signaltree 29.6 ms,
+elf 31.3 ms and `@ngrx/signals` 13.0 ms — i.e. the arm with the WORST
+granularity looked fastest. The harness read every consumer after every write,
+which is not what a framework does: it renders only what is invalidated. So the
+loop priced 200,000 signal reads and erased the very property it was meant to
+measure.
+
+Recorded rather than deleted because the shape is seductive: a benchmark that
+forces all consumers to re-read will always flatter the least granular store.
+Measuring this properly needs a real Angular render loop, which is not something
+a Node harness can stand in for.
+
 ## Reading these honestly
 
 **What this does not show.** `@ngrx/store`, `@ngxs/store` and Akita are absent —
