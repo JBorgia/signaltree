@@ -37,33 +37,82 @@ library should be sold on.
 
 ## Undo/redo — 50 recorded writes, then 50 undos, over 10,000 entities
 
+> ⚠️ **An earlier revision of this file published the opposite result.** It
+> claimed SignalTree was 20× faster than elf. It was not measuring undo/redo at
+> all — see "The retraction" below. These numbers are the corrected ones, and
+> they are verified by postconditions every arm must satisfy.
+
 | arm | median | retained | history |
 | --- | --- | --- | --- |
-| **signaltree** | **0.06 ms** | 1.28 MB | built-in `timeTravel()` |
-| elf | 1.21 ms | 4.77 MB | built-in `elf-state-history` |
-| ngrx-signals | 202.73 ms | 0.94 MB | hand-rolled |
-| raw-signals | 280.27 ms | 6.16 MB | hand-rolled |
+| **elf** | **1.27 ms** | 4.77 MB | built-in `elf-state-history` |
+| signaltree | 190.11 ms | 5.18 MB | built-in `timeTravel()` |
+| ngrx-signals | 196.63 ms | 0.94 MB | hand-rolled |
+| raw-signals | 311.67 ms | 6.16 MB | hand-rolled |
 
-**This is the gain, and it is large.**
+**SignalTree loses undo/redo at this scale, by ~150× to elf**, and is level with
+the hand-rolled `@ngrx/signals` implementation it was supposed to beat.
 
-- **20× faster than elf's own history primitive**, and with **3.7× less retained
-  memory** — 1.28 MB against 4.77 MB for the same 50 entries over the same 10k
-  collection.
-- **~3,400× faster than a hand-rolled snapshot history**, which is what
-  `@ngrx/signals` users have to write because SignalStore ships no history
-  primitive.
+The reason is the same structural fact measured below: recording a history entry
+materialises `tree()`, and for a collection that rebuilds the `all` array —
+O(collection) per entry, not O(depth). Fifty entries over ten thousand rows is
+half a million pointer copies before any undo happens, and each undo restores
+via `setAll`, which is O(collection) again.
 
-The reason is structural, not micro-optimisation. A SignalTree history entry is
-the **snapshot reference** produced by the memoised `tree()` — O(1) to record,
-and `===` to compare. Every other approach copies state per entry, which is
-O(state). At 10,000 entities that is the difference between storing a pointer
-and cloning ten thousand objects, fifty times.
+### The retraction
 
-It is also why the memory figure is the *low* one here while SignalTree is the
-*high* one on per-entity cost: the same structural sharing that makes a snapshot
-nearly free is what makes 50 history entries nearly free.
+The first version of this harness measured SignalTree **doing nothing**:
 
----
+```
+SYNC (as the harness was written)   history=1    reverted=false     0.51 ms
+AWAITED                             history=52   reverted=TRUE    215.12 ms
+```
+
+`timeTravel()` records on a notifier FLUSH, which is scheduled with
+`queueMicrotask`. The workload was `async` but had no `await` between the writes
+and the undos, so the flush never ran: SignalTree recorded **one** entry, called
+`undo()` fifty times with nothing to undo, and restored nothing — while every
+other arm performed fifty `structuredClone`s of ten thousand entities. Published,
+that table showed SignalTree winning by orders of magnitude **on the strength of
+being idle**.
+
+The fix is not just an `await`. The workload now asserts its own postconditions,
+for **every** arm:
+
+- the writes actually landed (`value === 900_049`);
+- the undos actually reverted it (`value !== afterWrites`);
+- history held ≥ 50 entries **after the writes** — captured there, because
+  stack-based arms drain their history as they undo while SignalTree keeps
+  entries and moves a pointer, and checking afterwards failed three arms for a
+  difference in semantics rather than for doing no work.
+
+A benchmark that cannot detect it did nothing is the same defect class it exists
+to expose. This is the fifth instance of that pattern in this repo, after
+`grep "Failed tasks"` exiting 0, pre-publish passing on 5 of 7 packages,
+typecheck reading only typing specs, and a property test passing while data was
+dropped.
+
+One further correction during the fix: yielding with `setTimeout(0)` added
+~100 ms of pure timer granularity to every arm (100 yields × ~1 ms), which
+swamped the differences. A microtask yield is enough to flush the notifier and
+costs nothing.
+
+### Structural sharing does not extend to collection contents
+
+Measured on a 500-row collection, changing ONE entity:
+
+```
+unrelated branch shared : true      <- O(depth) holds here
+rows node shared        : false
+all ARRAY shared        : false
+entity objects shared   : 499 / 500
+```
+
+So the accurate statement is **O(depth) for plain nested state, but
+O(collection-length in pointers) per history entry for a collection**, with the
+entity objects themselves shared. The comment in `time-travel.ts` claiming
+"only the nodes that actually changed — O(depth) per entry" is true of nested
+objects and false of collections, and the undo/redo column above is exactly
+where that shows up.
 
 ## Reading these honestly
 
@@ -80,8 +129,9 @@ costs a typical user", not "the best achievable".
 **Testing elf without `elf-state-history` would have been a strawman**, and the
 first run of this harness did exactly that — it reported elf at 177 ms, in the
 same band as the hand-rolled arms, because it was hand-rolled. Installing the
-package it actually ships moved it to 1.21 ms and cut SignalTree's lead from
-~3,000× to 20×. The 20× is the number that means something.
+package it actually ships moved it to 1.27 ms. Combined with fixing our own
+idle arm, that is the difference between "SignalTree wins by 3,000×" and
+"SignalTree loses by 150×" — from the same harness, two bugs apart.
 
 **History was on for everyone in the first run**, including during the
 collection workload, which charged signaltree and elf for recording while
@@ -92,12 +142,12 @@ Separating the workloads changed the collection ordering.
 
 ## What to claim
 
-- ✅ **Undo/redo at scale.** 20× faster and 3.7× lighter than the nearest library
-  with a real history primitive; three orders of magnitude faster than what a
-  user without one has to write.
+- ❌ **NOT undo/redo at scale.** ~150× slower than elf over a 10k collection, and
+  level with a hand-rolled implementation. The earlier claim of a 20× win was an
+  artefact of measuring an idle arm.
 - ✅ **Snapshots are nearly free.** A held `tree()` of 10k entities costs 0.01 MB
   ([memory-profile.md](../architecture/memory-profile.md)).
-- ❌ **Not raw collection throughput.** Third of four.
+- ❌ **Not raw collection throughput.** Second-to-third of four, run to run.
 - ❌ **Not per-entity memory.** Highest of four
   ([memory-profile.md](../architecture/memory-profile.md)).
 - ❌ **Not bundle size.** Recorded elsewhere and unchanged.

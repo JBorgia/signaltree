@@ -73,11 +73,27 @@ class TimeTravelManager<T> {
     // and 340.60ms with it, at 10k rows.
     //
     // Materialisation is now memoised and structurally shared, so an unchanged
-    // subtree is the SAME object across snapshots. Holding the reference
-    // retains only the nodes that actually changed — O(depth) per entry instead
-    // of O(state) — and needs no copy to stay correct, because the library never
-    // mutates a materialised node: a write builds new objects along the changed
-    // path and leaves the rest alone.
+    // subtree is the SAME object across snapshots, and needs no copy to stay
+    // correct because the library never mutates a materialised node: a write
+    // builds new objects along the changed path and leaves the rest alone.
+    //
+    // ⚠️ WHAT THAT COSTS PER ENTRY, precisely — an earlier version of this
+    // comment claimed "O(depth) per entry" flatly, and that is only true of
+    // plain nested state. Measured on a 500-row collection, changing ONE entity:
+    //
+    //     unrelated branch shared : true      <- O(depth) holds here
+    //     rows node shared        : false
+    //     all ARRAY shared        : false
+    //     entity objects shared   : 499 / 500
+    //
+    // So a collection costs O(collection-length IN POINTERS) per entry — the
+    // `all` array is rebuilt — while the entity objects themselves are shared.
+    // Far cheaper than the structuredClone it replaced, and far from free: 50
+    // entries over 10k rows is ~500k pointer copies.
+    //
+    // This is why undo/redo over a large collection is NOT a strength — measured
+    // at ~150x slower than elf's state-history for that shape. See
+    // docs/compare/real-implementations.md.
     //
     // This is what makes the snapshot read-only contract load-bearing rather
     // than advisory (nodes are frozen in dev). A caller that mutates a snapshot

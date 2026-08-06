@@ -60,6 +60,11 @@ const N = Number(arg('--n', 10_000));
 const UPDATES = 200;
 const HISTORY_WRITES = 50;
 const MB = 1024 * 1024;
+// A MICROTASK, not a timer. The notifier flushes via queueMicrotask, so this
+// is enough to make history record — and 100 setTimeout(0) calls add ~100ms of
+// pure timer granularity to EVERY arm, which swamped the differences being
+// measured. Verified below that history still reaches 52 entries.
+const tick = () => Promise.resolve();
 const settle = () => {
   for (let i = 0; i < 4; i++) globalThis.gc();
 };
@@ -84,6 +89,8 @@ const IMPLS = {
       setAll: (d) => tree.$.rows.setAll(d),
       updateOne: (id, changes) => tree.$.rows.updateOne(id, changes),
       readAll: () => tree.$.rows.all(),
+      readOne: (id) => tree.$.rows.byId(id)?.(),
+      historyLength: () => tree.getHistory().length,
       // Built-in. History entries are snapshot REFERENCES, not clones.
       hasBuiltInHistory: true,
       undo: () => tree.undo(),
@@ -100,6 +107,8 @@ const IMPLS = {
       setAll: (d) => patchState(store, setAllEntities(d)),
       updateOne: (id, changes) => patchState(store, updateEntity({ id, changes })),
       readAll: () => store.ids().map((i) => store.entityMap()[i]),
+      readOne: (id) => store.entityMap()[id],
+      historyLength: () => history.length + 1,
       hasBuiltInHistory: false,
       // No history primitive exists for a SignalStore; this is the hand-rolled
       // equivalent a user has to write.
@@ -114,7 +123,7 @@ const IMPLS = {
 
   elf: async (withHistory) => {
     const { createStore, withProps } = await import('@ngneat/elf');
-    const { withEntities, setEntities, updateEntities, getAllEntities } =
+    const { withEntities, setEntities, updateEntities, getAllEntities, getEntity } =
       await import('@ngneat/elf-entities');
     // elf's OWN history primitive — the fair comparison for this library.
     const { stateHistory } = await import('@ngneat/elf-state-history');
@@ -129,6 +138,8 @@ const IMPLS = {
       setAll: (d) => store.update(setEntities(d)),
       updateOne: (id, changes) => store.update(updateEntities(id, changes)),
       readAll: () => store.query(getAllEntities()),
+      readOne: (id) => store.query(getEntity(id)),
+      historyLength: () => (history ? history.history.past.length + 1 : 0),
       hasBuiltInHistory: true,
       undo: () => history?.undo(),
     };
@@ -155,6 +166,8 @@ const IMPLS = {
         if (s) s.set({ ...s(), ...changes });
       },
       readAll: snapshot,
+      readOne: (id) => byId.get(id)?.(),
+      historyLength: () => history.length + 1,
       hasBuiltInHistory: false,
       record: () => history.push(structuredClone(snapshot())),
       undo: () => {
@@ -188,13 +201,50 @@ const WORKLOADS = {
 
   'undo-redo': async (impl, n) => {
     impl.setAll(seed(n));
+    // SignalTree records history on a FLUSH, not on a write — the notifier
+    // schedules via queueMicrotask. Let the initial setAll settle before timing.
+    await tick();
+
+    const probeId = 0;
     const t0 = performance.now();
     for (let i = 0; i < HISTORY_WRITES; i++) {
       if (!impl.hasBuiltInHistory) impl.record();
-      impl.updateOne(i % n, { value: i });
+      impl.updateOne(probeId, { value: 900_000 + i });
+      // One turn per write. 50 undoable USER ACTIONS are 50 separate turns in a
+      // real app, and without a turn between them SignalTree coalesces the lot
+      // into a single history entry — which is exactly how the first version of
+      // this harness measured SignalTree doing nothing at all.
+      await tick();
     }
-    for (let i = 0; i < HISTORY_WRITES; i++) impl.undo();
+    const afterWrites = impl.readOne(probeId);
+    // Capture history HERE, not after the undos. Stack-based arms (ngrx, elf,
+    // raw) DRAIN their history as they undo, while SignalTree keeps entries and
+    // moves a pointer — checking afterwards failed three arms for a difference
+    // in semantics rather than for doing no work.
+    const historyAfterWrites = impl.historyLength ? impl.historyLength() : null;
+    for (let i = 0; i < HISTORY_WRITES; i++) {
+      impl.undo();
+      await tick();
+    }
     const t1 = performance.now();
+
+    // POSTCONDITIONS — every arm, not just ours. A benchmark that cannot detect
+    // it did nothing is the same defect class it exists to expose.
+    const afterUndos = impl.readOne(probeId);
+    if (afterWrites?.value !== 900_000 + HISTORY_WRITES - 1) {
+      throw new Error(
+        `writes did not land: expected ${900_000 + HISTORY_WRITES - 1}, got ${afterWrites?.value}`
+      );
+    }
+    if (afterUndos?.value === afterWrites?.value) {
+      throw new Error('undo restored NOTHING — value unchanged after 50 undos');
+    }
+    if (historyAfterWrites !== null && historyAfterWrites < HISTORY_WRITES) {
+      throw new Error(
+        `history held ${historyAfterWrites} entries after ${HISTORY_WRITES} writes — ` +
+          `nothing was recorded, so the undos below measured idling`
+      );
+    }
     return t1 - t0;
   },
 };
