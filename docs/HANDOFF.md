@@ -13,7 +13,7 @@ wrong, including some of its own.
 ## 1. Where things stand in one paragraph
 
 **13.5.0 is published to npm** (8 packages, tag `v13.5.0`). It is a large
-performance release with one breaking change. **13.6.0 is committed but
+performance release with one breaking change. **14.0.0 is committed but
 unreleased**, containing a security fix and two new diagnostics. There is a
 **live investigation** into a class of defect around snapshots and rehydration
 where three consumer paths are still broken — that is the most valuable thread
@@ -56,7 +56,7 @@ CLI is authenticated as `jborgia_ttrax`, which has read-only access to
 
 ---
 
-## 3. Committed, unreleased — 13.6.0
+## 3. Committed, unreleased — 14.0.0
 
 | Area         | Change                                                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -298,7 +298,7 @@ Recorded because each cost real time and several shipped before being caught.
 | `docs/architecture/design-thesis-and-benchmarking-rules.md` | The architecture's thesis, the benchmarking rules, the full-state anti-pattern, and 14 realisations |
 | `docs/architecture/optimisation-options.md`                 | 41 optimisation options across 9 families, each MEASURED / REASONED / REJECTED                      |
 | `docs/architecture/snapshot-rehydration.md`                 | The open investigation in §5                                                                        |
-| `docs/rfcs/0011-13.6.0-questionable-changes.md`             | 12–13 options for each judgement call in 13.6.0, each with a recommendation and a "⚠️ Trap"         |
+| `docs/rfcs/0011-14.0.0-questionable-changes.md`             | 12–13 options for each judgement call in 14.0.0, each with a recommendation and a "⚠️ Trap"         |
 | `docs/rfcs/0008-post-13.3-open-items.md`                    | Older open items; items 1–3 are now closed                                                          |
 | `docs/errors/README.md`                                     | Every `ST####` code → cause → fix                                                                   |
 

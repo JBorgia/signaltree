@@ -11,11 +11,11 @@ and found that both diagnostics built to detect this exact class are inert. See
 §4 for the honest count.
 
 **Scope.** This covers ONE class of defect — the snapshot/rehydration path. It
-does **not** cover the rest of the 13.6.0 work. For the options analysis behind
+does **not** cover the rest of the 14.0.0 work. For the options analysis behind
 the changes already made (13 options for the entityMap snapshot shape, 12 for
 where to fix the `stored()` storage leak, 12 for markers inside arrays, 12 for
 the bundle budget), see
-[RFC 0011](../rfcs/0011-13.6.0-questionable-changes.md). For the older open
+[RFC 0011](../rfcs/0011-14.0.0-questionable-changes.md). For the older open
 items — duplicate `stored()` keys, `reload()` on corrupt data,
 `callable-syntax` — see [RFC 0008](../rfcs/0008-post-13.3-open-items.md).
 
@@ -119,7 +119,7 @@ sometimes comes back anyway, from a different mechanism. Intermittent-looking
 data loss is the worst possible shape for a bug.
 
 **MEASURED against the published 13.5.0 tarball: identical** (`{"grp":{},"n":1}`
-with the same live values). Pre-existing, and not caused by any 13.6.0 change.
+with the same live values). Pre-existing, and not caused by any 14.0.0 change.
 
 **ST2008 was built for exactly this and was inert until step 1.** `eac09db6`
 added it in 13.4.0 — commit message: _"Materialized markers that are plain
@@ -148,7 +148,7 @@ builder, and `snapshot-builder.spec.ts` pins the order-independence.
 
 ### 3.1 `serialization()` cannot round-trip `status()` or `entityMap` — it THROWS
 
-**MEASURED, and it predates the 13.5.0/13.6.0 work** (identical against the
+**MEASURED, and it predates the 13.5.0/14.0.0 work** (identical against the
 published 13.5.0 tarball, so not caused by any recent change).
 
 | tree contains     | `serialize()` → `deserialize()`         |
@@ -164,7 +164,7 @@ published 13.5.0 tarball, so not caused by any recent change).
 **The mechanism is more specific than the §1 thesis.** `serialize()` does not
 use `tree()` at all — it has a **private second materialiser**,
 `unwrapObjectSafely` (`serialization.ts:197`, reached from `serialization.ts:765`),
-which never learned the marker rule. That is why 13.6.0's `tree()` fix did not
+which never learned the marker rule. That is why 14.0.0's `tree()` fix did not
 reach it. Three hundred lines away in the same file, `toJSON()` already
 delegates to `tree()` (`serialization.ts:494`) — so the enhancer disagrees with
 itself, and the correct implementation is already sitting next to the broken one.
@@ -219,7 +219,7 @@ time-travel undo _into_ a loading moment.
 
 ### 3.3 `entityMap` snapshots claimed the collection was empty
 
-**MEASURED, FIXED in 13.6.0 (uncommitted → committed `9fe9f6a1`).** `tree()`
+**MEASURED, FIXED in 14.0.0 (uncommitted → committed `9fe9f6a1`).** `tree()`
 emitted `all`, `ids`, `count`, `map`, `empty`. `map` is a JS `Map`, which JSON
 cannot represent, so it serialised as `{}` — a persisted snapshot claiming the
 collection was **empty** while holding 10,000 entities. `ids` duplicated every
@@ -227,7 +227,7 @@ key (48,891 of 486,733 bytes at 10k rows). Now emits `{ all }` only.
 
 The 13 alternatives weighed before choosing that — including the one that nearly
 won, non-enumerable derived views, rejected on a measured +12.2 µs against
-14.7 µs — are in [RFC 0011 §1](../rfcs/0011-13.6.0-questionable-changes.md).
+14.7 µs — are in [RFC 0011 §1](../rfcs/0011-14.0.0-questionable-changes.md).
 
 **Option 10 of that list is worth re-reading.** It proposed tagging the snapshot
 (`{ all, __entityMap: true }`) so restore could detect the shape "without
@@ -322,7 +322,7 @@ the machinery is read properly; §8 is the answer.
 
 1. **What does `tree()` promise? Is `tree(tree())` an identity?** — **Answered.**
    It should be an identity **for state**, and deliberately not for derived
-   views. That is already what the 13.6.0 read-side change did; the write side
+   views. That is already what the 14.0.0 read-side change did; the write side
    has not caught up. `signal-tree.ts:597-603` already assumes it ("the ordinary
    snapshot-restore pattern") while silently breaking it. Pin it as the property
    test in §8.

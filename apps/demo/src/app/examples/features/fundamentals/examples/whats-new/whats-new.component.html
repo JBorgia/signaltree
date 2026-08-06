@@ -2,6 +2,171 @@
   <h2>🚀 What's New</h2>
 
   <h3>
+    🧩 v14.0.0 — a snapshot carries values, not machinery (August 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      One question turned out to be behind four separate bugs, and nothing in
+      the codebase had ever forced anyone to answer it:
+      <strong>what part of a marker is state?</strong>
+      A snapshot exists to
+      <em>rehydrate</em>
+      a tree that already knows how to derive things — not to reconstruct one
+      from scratch. Anything recomputable is structure, and structure does not
+      belong in a payload.
+    </p>
+
+    <h4>💥 Breaking</h4>
+    <ul>
+      <li>
+        <strong>Calling a leaf is no longer a setter.</strong>
+        <code>tree.$.count(5)</code>
+        is a compile error. A leaf
+        <em>is</em>
+        a real Angular signal, so calling it is a READ that discards the
+        argument — it never wrote anything, at any version. It type-checked and
+        then silently did nothing, which is the worst pair of failure modes
+        available. Use
+        <code>.set()</code>
+        /
+        <code>.update()</code>
+        ; branches and the root stay callable, unchanged.
+      </li>
+      <li>
+        <strong><code>&#64;signaltree/callable-syntax</code> is deleted.</strong>
+        The build transform that was meant to make the line above real could not
+        run inside an Angular app at all —
+        <code>&#64;angular/build:application</code>
+        exposes no plugin hook, and by the time the experimental one runs, the
+        Angular compiler has already claimed every
+        <code>.ts</code>
+        file. It also could not tell a leaf from a branch, so it rewrote branch
+        calls into
+        <code>.set()</code>
+        on an accessor that has no such method. Its
+        <code>/augmentation</code>
+        entry re-introduced the exact
+        <code>&#64;ngrx/signals</code>
+        conflict core had deliberately removed.
+      </li>
+      <li>
+        <strong>Snapshot payloads changed shape</strong>
+        (format
+        <code>2.0.0</code>
+        , now written into the payload). Markers emit values instead of their
+        API surface —
+        <code>status()</code>
+        no longer ships six computeds and nine setter
+        <em>methods</em>
+        into a payload that then threw on restore, and
+        <code>entityMap</code>
+        no longer emits a <code>map</code> that
+        <code>JSON.stringify</code>
+        renders as <code>{{ '{}' }}</code> while holding 10,000 entities.
+      </li>
+      <li>
+        The unexported <code>asyncStream</code> marker is removed. Accumulation
+        is three lines of composition over a plain leaf, and a leaf is captured
+        by <code>timeTravel()</code>, appears in <code>tree()</code> and persists
+        with no marker contract to satisfy.
+      </li>
+    </ul>
+
+    <h4>🐛 Fixed — data that was silently disappearing</h4>
+    <ul>
+      <li>
+        <strong>Undo/redo actually works on markers.</strong>
+        Previously an undo left a marker at its post-change value and
+        <em>reported success</em>, landing you in a state that never existed.
+        Measured before the fix: <code>n=3 rows=3</code> → undo →
+        <code>n=2 rows=3</code>.
+      </li>
+      <li>
+        <strong>Form state survives a round trip.</strong>
+        <code>form()</code>
+        and the three async markers vanished from every snapshot entirely.
+        <code>touched</code>
+        is now restored on undo and deliberately dropped on rehydrate;
+        <code>submitting</code>
+        is never restored, because nothing is in flight after a process
+        boundary.
+      </li>
+      <li>
+        <strong>A loader-backed collection is no longer clobbered by
+        rehydration.</strong>
+        The marker that knows least about freshness used to be last to write.
+        Now a marker that owns a source declines a tree-level rehydrate — and
+        the knob for offline-first already existed
+        (<code>persist: {{ '{' }} hydrateThenRevalidate {{ '}' }}</code>).
+      </li>
+      <li>
+        <strong>Scrubbing a devtools timeline no longer rewrites your
+        localStorage.</strong>
+        Undo and devtools replay were indistinguishable because both tagged
+        writes <code>'time-travel'</code>. Undoing
+        <em>should</em>
+        write through to storage; dragging a devtools slider should not.
+      </li>
+      <li>
+        <strong><code>stored()</code> can no longer leak its storage adapter
+        into a snapshot</strong>
+        — a security fix, not a tidy-up.
+      </li>
+    </ul>
+
+    <h4>🔊 New diagnostics — making the silence loud</h4>
+    <ul>
+      <li>
+        <strong>ST2022</strong>
+        — a custom marker registered without saying what of it is state. Checked
+        at registration, because the materializer swallows throws and a guard
+        there fails open.
+      </li>
+      <li>
+        <strong>ST2023</strong>
+        — a marker that can be snapshotted but never restored. It serialises
+        perfectly and discards every write, and ST2022 cannot see it because a
+        <code>snapshot</code>
+        hook is a valid answer to the question ST2022 asks.
+      </li>
+      <li>
+        <strong>ST2020</strong>
+        (two <code>stored()</code> markers racing on one key) and
+        <strong>ST2021</strong>
+        (a marker inside an array, which is never traversed and so never
+        materialises).
+      </li>
+    </ul>
+
+    <h4>📐 Marker authoring</h4>
+    <ul>
+      <li>
+        The marker registry now has both halves. A processor declares
+        <code>snapshot</code>
+        and
+        <code>hydrate</code>
+        alongside
+        <code>check</code>
+        and
+        <code>create</code>
+        , and
+        <code>hydrate</code>
+        receives the
+        <strong>mode</strong>
+        —
+        <code>merge</code>
+        (a partial write),
+        <code>restore</code>
+        (undo/redo, same process), or
+        <code>rehydrate</code>
+        (a process boundary was crossed). Mode is a property of the
+        <em>call site</em>, the only place that knows. The rule that falls out:
+        <strong>restore is exact, rehydrate is opinionated.</strong>
+      </li>
+    </ul>
+  </div>
+
+  <h3>
     ⚡ v13.5.0 — <code>tree()</code> rebuilds only what changed (August 2026)
   </h3>
   <div class="release-highlights">

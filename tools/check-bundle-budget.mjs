@@ -1,15 +1,31 @@
 #!/usr/bin/env node
 /**
- * Bundle-budget gate. Re-measures SignalTree's own gzip cost (via
- * tools/measure-bundle-sizes.mjs' methodology) and fails if it regresses past
- * the budgets below. Exists because the floor previously inflated silently:
- * statically-reachable optional modules (SecurityValidator, memory-manager)
- * leaked into every bundle. After the v11 security + lazy injections the bare
- * floor is ~5.3KB / with-entityMap ~8.1KB gzip; these budgets lock that in with
- * headroom.
+ * Bundle-budget gate. Re-measures SignalTree's own gzip cost and fails on a
+ * regression.
+ *
+ * TWO BUDGETS PER TARGET, and the split is the point.
+ *
+ *   - `prodKB`  — built with `ngDevMode: false`, which is what a production
+ *     Angular app actually ships. THIS is the number that guards users.
+ *   - `devKB`   — the default build, dev diagnostics and all. A loose ceiling
+ *     that catches a genuinely leaked module, not a tightrope.
+ *
+ * Before 14.0.0 there was one budget, measured on the DEV build. It moved five
+ * times in two releases — 5.8 → 6.9 → 7.1 → 7.2 → 7.3 for the bare tree — and
+ * every single bump comment says some version of "entirely dev-only text,
+ * production is unchanged". The gate was fighting the project's own policy of
+ * making silent failures loud: every new ST-code diagnostic is a string, every
+ * string costs gzip, and the ritual response was to raise the number and write
+ * a paragraph explaining why it did not matter.
+ *
+ * A number that gets raised whenever it fires is not a budget. Splitting it
+ * puts the tight constraint where the cost is real (production) and lets dev
+ * text grow, which is the trade this codebase deliberately makes.
  *
  * Budgets are gzip KB, own-code only (@angular/rxjs/tslib external). Bump them
- * deliberately in a commit if a real feature justifies it — never silently.
+ * deliberately in a commit if a real feature justifies it — never silently. A
+ * PROD bump needs a genuine justification; a DEV bump usually means a new
+ * diagnostic and can just say so.
  */
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
@@ -42,7 +58,7 @@ const TARGETS = {
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
     // diagnostic for an idiom mistake worth ~30x.    //
-    // Bumped 6.9 → 7.1 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // Bumped 6.9 → 7.1 for 14.0.0: the ST2020 (duplicate stored() key) and
     // ST2021 (marker inside an array) diagnostic messages. Measured 6.99KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
@@ -65,7 +81,11 @@ const TARGETS = {
     // without declaring what of it is state. That diagnostic is the guard
     // against a SEVENTH instance of this defect class, so its bytes are the
     // cheapest on this list.
-    budgetKB: 7.3,
+    // 14.0.0: split into dev/prod. Measured dev 7.35KB, prod 5.59KB. The dev
+    // figure grew ~50 bytes for ST2023's message; prod is unchanged, because
+    // the guard is inline at the call site and folds.
+    devKB: 8.0,
+    prodKB: 5.7,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -116,7 +136,7 @@ const TARGETS = {
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
     // diagnostic for an idiom mistake worth ~30x.    //
-    // Bumped 9.8 → 10.0 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // Bumped 9.8 → 10.0 for 14.0.0: the ST2020 (duplicate stored() key) and
     // ST2021 (marker inside an array) diagnostic messages. Measured 9.89KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
@@ -139,7 +159,9 @@ const TARGETS = {
     // without declaring what of it is state. That diagnostic is the guard
     // against a SEVENTH instance of this defect class, so its bytes are the
     // cheapest on this list.
-    budgetKB: 10.4,
+    // 14.0.0: split into dev/prod. Measured dev 10.50KB, prod 8.25KB.
+    devKB: 11.2,
+    prodKB: 8.4,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -179,7 +201,7 @@ const TARGETS = {
     // reading the whole state with nothing changed 1400us → 0.044us, time
     // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
     // diagnostic for an idiom mistake worth ~30x.    //
-    // Bumped 9.0 → 9.2 for 13.6.0: the ST2020 (duplicate stored() key) and
+    // Bumped 9.0 → 9.2 for 14.0.0: the ST2020 (duplicate stored() key) and
     // ST2021 (marker inside an array) diagnostic messages. Measured 9.08KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
@@ -202,7 +224,9 @@ const TARGETS = {
     // without declaring what of it is state. That diagnostic is the guard
     // against a SEVENTH instance of this defect class, so its bytes are the
     // cheapest on this list.
-    budgetKB: 9.7,
+    // 14.0.0: split into dev/prod. Measured dev 9.71KB, prod 7.70KB.
+    devKB: 10.4,
+    prodKB: 7.9,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });
@@ -216,9 +240,7 @@ const EXTERNAL = ['@angular/*', 'rxjs', 'rxjs/*', 'tslib'];
 const dir = mkdtempSync(join(tmpdir(), 'st-budget-'));
 let failed = false;
 
-for (const [id, { code, budgetKB }] of Object.entries(TARGETS)) {
-  const entry = join(dir, `${id}.js`);
-  writeFileSync(entry, code, 'utf8');
+async function measure(entry, define) {
   const out = await build({
     entryPoints: [entry],
     bundle: true,
@@ -231,22 +253,44 @@ for (const [id, { code, budgetKB }] of Object.entries(TARGETS)) {
     write: false,
     legalComments: 'none',
     logLevel: 'silent',
+    define,
   });
-  const gz = gzipSync(Buffer.from(out.outputFiles[0].contents), { level: 9 });
-  const kb = gz.length / 1024;
-  const ok = kb <= budgetKB;
-  if (!ok) failed = true;
+  return gzipSync(Buffer.from(out.outputFiles[0].contents), { level: 9 }).length / 1024;
+}
+
+console.log('target                   prod (ships)      dev (diagnostics)');
+console.log('─'.repeat(66));
+
+for (const [id, { code, devKB, prodKB }] of Object.entries(TARGETS)) {
+  const entry = join(dir, `${id}.js`);
+  writeFileSync(entry, code, 'utf8');
+
+  const prod = await measure(entry, { ngDevMode: 'false' });
+  const dev = await measure(entry, {});
+
+  const prodOk = prod <= prodKB;
+  const devOk = dev <= devKB;
+  if (!prodOk || !devOk) failed = true;
+
   console.log(
-    `${ok ? '✅' : '❌'} ${id.padEnd(22)} ${kb.toFixed(2)}KB gzip (budget ${budgetKB}KB)`
+    `${id.padEnd(22)} ` +
+      `${prodOk ? '✅' : '❌'} ${prod.toFixed(2)}/${prodKB}KB   ` +
+      `${devOk ? '✅' : '❌'} ${dev.toFixed(2)}/${devKB}KB`
   );
 }
 
 if (failed) {
   console.error(
-    '\n❌ Bundle budget exceeded. A regression inflated the floor — find the ' +
-      'statically-reachable optional module and make it tree-shakeable (subpath ' +
-      'or injected feature), or bump the budget deliberately with justification.'
+    '\n❌ Bundle budget exceeded.\n\n' +
+      '  PROD over  — this is what users ship, so treat it as a real regression.\n' +
+      '               Find the statically-reachable optional module and make it\n' +
+      '               tree-shakeable (subpath or injected feature).\n\n' +
+      '  DEV over   — usually a new diagnostic string. Check it FOLDS first\n' +
+      '               (`node tools/check-devmode-foldable.mjs`): the ngDevMode\n' +
+      '               guard must be inline at the call site, not inside the\n' +
+      '               callee, or the message ships to production. If prod is\n' +
+      '               flat, raising the dev budget is the right call.\n'
   );
   process.exit(1);
 }
-console.log('\n✅ Bundle within budget.');
+console.log('\n✅ Bundle within budget (prod and dev).');

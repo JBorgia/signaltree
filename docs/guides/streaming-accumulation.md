@@ -2,7 +2,7 @@
 
 There is **no streaming marker**, and that is a decision rather than a gap. An
 `asyncStream` marker existed in-repo, unexported, for several releases; it was
-removed in 13.6.0. What it did is three lines of composition, and the
+removed in 14.0.0. What it did is three lines of composition, and the
 composition is easier to reason about than the marker was.
 
 The reason it never shipped is worth stating: the API question — _a distinct

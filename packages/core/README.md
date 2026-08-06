@@ -275,6 +275,67 @@ tree.$.count.update((n) => n + 1); // transform
 **Function-valued leaves:** when a leaf stores a function as its value, use
 `.set(fn)` to assign it and `.update(prev => next)` to transform it.
 
+### Snapshots: undo, devtools and rehydrate are not the same thing
+
+Three features all "restore a snapshot", and they want different things. Getting
+them confused is how a devtools slider ends up rewriting a user's saved
+settings, so the distinction is built into the API rather than left to
+convention.
+
+**`mode` is a property of the CALL SITE** — the only place that knows whether a
+process boundary was crossed:
+
+| | `merge` | `restore` | `rehydrate` |
+| --- | --- | --- | --- |
+| **Triggered by** | `tree(partial)` | `undo()` / `redo()` / `jumpTo()` | `deserialize()`, SSR transfer, `localStorage` |
+| **Process boundary crossed?** | no | no | **yes** |
+| **In-flight request possible?** | yes | yes | **no** — nothing survived |
+| **Rule** | write what was given | **exact** | **opinionated** |
+
+The rule in one line: **restore is exact, rehydrate is opinionated.**
+
+An undo is a step backwards inside a running app, so transient state is restored
+verbatim — a request really may still be in flight. A rehydrate happens after
+everything died, so believing the payload's `LOADING` would strand a spinner
+that nothing will ever resolve.
+
+What that means per marker:
+
+| | `restore` (undo/redo) | `rehydrate` (deserialize/SSR) |
+| --- | --- | --- |
+| `status()` in `LOADING` | stays `LOADING` | normalised to `NotLoaded` |
+| `form()` `touched` | restored | dropped — the user hasn't touched anything yet |
+| `form()` `submitting` | **never** restored | never restored |
+| loader-backed `entityMap` | accepts the write | **declines** — the loader owns this data |
+| `asyncSource` with a loader | accepts the write | **declines** |
+| `stored()` write-through | **yes** — you are undoing the persisted change too | n/a |
+
+**Devtools replay is not undo.** Both rewind state, but only one should have
+side effects. Scrubbing a timeline is *inspection*; it must not rewrite
+`localStorage`, because the user is dragging a slider, not making a decision.
+Undo must, because the user is undoing the persisted change as well. Core
+distinguishes them by the write's `source` (`'time-travel'` vs `'devtools'`) —
+no extra mode, no option, no new vocabulary.
+
+**Source ownership.** On `rehydrate`, a marker that owns a source declines and
+lets its own loader decide; a marker with no source accepts the payload. The
+per-instance policy knob for offline-first already exists and is the right place
+for it:
+
+```typescript
+entityMap<Plant, string>({
+  selectId: (p) => p.url,
+  load: loader(() => api.list$(), {
+    persist: { adapter: createIndexedDBAdapter(), key: 'plants', hydrateThenRevalidate: true },
+  }),
+});
+```
+
+That seeds rows from the loader's own store, marks them stale and revalidates in
+the background. A tree-level rehydrate writing over that would not be a second
+opinion — it would be a clobber by the mechanism that knows least about
+freshness.
+
 ### Measuring performance and size
 
 Performance and bundle size vary by app shape, build tooling, device, and runtime. To get meaningful results for your environment:
