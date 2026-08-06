@@ -89,3 +89,37 @@ Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, 
 ## For Agents Consuming SignalTree
 
 If you are helping a user build on top of `@signaltree/*` packages, read [`docs/skills/using-signaltree/SKILL.md`](docs/skills/using-signaltree/SKILL.md) first — that is the canonical vendor-neutral skill with the mental model, quick-start, enhancer decision tree, and pointers into `reference/*.md`. Per-package sub-skills are nested one level deep (`docs/skills/using-signaltree/{ng-forms,enterprise,guardrails,events,realtime}/SKILL.md`); harnesses that scan recursively will discover them automatically, and the primary skill tells agents when to load each one. Cursor and Claude Code shims at `.cursor/skills/using-signaltree/SKILL.md` and `.claude/skills/using-signaltree/SKILL.md` are pointer files that redirect to the canonical location.
+
+## Type-checking gates
+
+`npm run typecheck` runs two passes, and the split is deliberate:
+
+- **`typecheck:typing`** — `packages/core/tsconfig.typecheck.json`, which
+  includes ONLY `src/**/*.typing.spec.ts`. Those files are excluded from vitest
+  (esbuild strips types without checking them), so `tsc` is the only thing that
+  reads them. They carry the `@ts-expect-error` assertions that pin what must
+  NOT compile.
+- **`typecheck:source`** — `tsconfig.typecheck-all.json`, every package's `src`
+  plus `apps/demo/src`, excluding specs.
+
+The second pass was added in 14.0.0 after `npm run typecheck` reported **zero
+errors** for a breaking type change that broke 22 call sites — because it had
+never covered anything but core's typing specs. The demo build was the only
+thing that caught them, and nothing required it to run.
+
+Three things this config has to get right, each of which produced a wave of
+false positives while it was being written:
+
+1. **`strict: true` explicitly.** `tsconfig.base.json` sets `strict: false` and
+   every package turns it back on individually. Inheriting the loose setting
+   broke discriminated-union narrowing and invented an error in
+   `async-query.ts` that does not exist.
+2. **Include `.d.ts`.** Excluding them dropped `apps/demo/src/benchmarks.d.ts`
+   and made three declared `window` globals look undeclared.
+3. **`types: ['node', 'vitest/globals']`**, or every spec-adjacent file reports
+   `Cannot find name 'describe'`.
+
+**Known debt:** spec files carry ~409 type errors and are excluded from
+`typecheck:source` for now. They pass at runtime because vitest never
+type-checks them. Narrowing that exclusion is worth doing; do it a directory at
+a time rather than in one sweep.

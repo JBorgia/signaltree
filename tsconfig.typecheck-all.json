@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "allowJs": false,
+    "strict": true
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "apps/demo/src/**/*.ts",
+    "apps/demo/src/**/*.d.ts"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/testing/**",
+    "**/test-setup.ts"
+  ]
+}
