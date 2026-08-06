@@ -1,6 +1,6 @@
 {
   "counts": {
-    "packages/core": 541,
+    "packages/core": 540,
     "packages/enterprise": 0,
     "packages/ng-forms": 32,
     "packages/shared": 0,
@@ -10,6 +10,6 @@
     "packages/realtime": 6,
     "apps/demo": 15
   },
-  "total": 684,
+  "total": 683,
   "filesLinted": 482
 }
