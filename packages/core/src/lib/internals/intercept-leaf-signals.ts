@@ -1,4 +1,6 @@
 import type { UpdateMetadata } from '../types';
+import { isTraversableNode } from '../utils';
+import { getNodeProcessor } from './materialize-markers';
 import { getActiveWriteContext } from '../write-context';
 
 import { visitTree } from './visit-tree';
@@ -95,6 +97,73 @@ export function interceptLeafSignals(
               onWrite(path, next, prev, getActiveWriteContext());
           };
           return false; // leaf — don't recurse into it
+        }
+
+        // A MATERIALISED MARKER whose node is not a writable signal.
+        //
+        // `isWritableSignal` above requires BOTH `set` and `update`. A `form()`
+        // node has `set` and `patch` — no `update` — so it failed that test and
+        // was never wrapped, which meant its writes were invisible here. The
+        // consequence was not subtle: `timeTravel` sets its self-dirty flag from
+        // THIS callback, so a form edit never marked the tree dirty and was
+        // never recorded. Measured: three writes (form, leaf, form) produced two
+        // history entries, the last form edit simply absent — so undo could not
+        // restore what was never captured.
+        //
+        // Collections are excluded on purpose above: `entityMap` notifies for
+        // itself, which is exactly why its undo worked while the form's did not.
+        const proc = getNodeProcessor(node);
+        // NOT `typeof node === 'function'`: markers materialise to different
+        // shapes — `form` is a callable, `entityMap` and `status` are plain
+        // objects — and requiring callability silently skipped the two that are
+        // not. The registry stamp is the reliable test.
+        if (proc && isTraversableNode(node)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const marker = node as any;
+          // Every mutator a built-in marker exposes. A marker that notifies the
+          // global PathNotifier itself is NOT enough: `timeTravel` sets its
+          // self-dirty flag from THIS callback, and the notifier is global so a
+          // notification carries no ownership. An entityMap-only edit was
+          // therefore never recorded — verified, history stayed at ["INIT"].
+          //
+          // That defect hid behind a test that also wrote a scalar: the scalar
+          // marked the tree dirty and the collection rode along in the
+          // snapshot, so undo appeared to work. Collection-only edits did not.
+          const MUTATORS = [
+            'set',
+            'patch',
+            'setAll',
+            'addOne',
+            'addMany',
+            'updateOne',
+            'updateMany',
+            'upsertOne',
+            'upsertMany',
+            'removeOne',
+            'removeMany',
+            'clear',
+            'setLoading',
+            'setLoaded',
+            'setError',
+            'setNotLoaded',
+            'reset',
+          ] as const;
+          for (const method of MUTATORS) {
+            if (typeof marker[method] !== 'function') continue;
+            const originalMethod = marker[method].bind(marker);
+            restorers.push(() => (marker[method] = originalMethod));
+            marker[method] = (...args: unknown[]) => {
+              const result = originalMethod(...args);
+              // A marker's value is not always readable through the node
+              // itself (entityMap and status are not callable), so the write is
+              // announced by PATH rather than by value. Time travel snapshots
+              // the whole tree on flush, so the payload is what matters, not
+              // these operands.
+              onWrite(path, undefined, undefined, getActiveWriteContext());
+              return result;
+            };
+          }
+          return false; // leaf — do not recurse into a marker node
         }
 
         // Built-ins/arrays are stored as single signals, not nested trees.

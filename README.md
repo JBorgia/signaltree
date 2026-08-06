@@ -43,7 +43,7 @@ State is modeled as the shape of your data, and the capabilities you'd otherwise
 
 For anything beyond a prototype, wrap the tree in a service and expose **`$` reads + Ops methods**: keep `computed()` / `.derived()` for reads and `@Injectable` Ops services for writes and async. This keeps agent-generated code architecturally sound, not just API-correct. See [Recommended Architecture](docs/architecture/signaltree-architecture-guide.md#recommended-architecture-tldr).
 
-For components that should only ever read the store, `asReadonly(tree)` narrows the tree to a `ReadonlyStore` — read-only `$` over the tree's full accumulated type (leaf `Signal` reads, `.derived()` computeds preserved, `linked()` narrowed to `Signal`) plus `destroy()`/`destroyed`. Marker surfaces are genuinely narrowed to per-marker reader allowlists: entity mutators (`upsertOne`, `removeWhere`, …), loader triggers (`load`/`refresh`/`invalidate`), `status` setters, and `form` writes are not offered on the readonly type, and `byId()` is re-signed to a read-only entity node (deep `Signal` leaves, no `.set`). `defineStore(factory, { expose: 'readonly' })` is sugar over the same view for injected stores. This is a compile-time narrowing only — the same runtime object, no runtime guard — so it stops the type system from *offering* a write, not a determined `as any`; pair it with a separate Ops service for the write path.
+For components that should only ever read the store, `asReadonly(tree)` narrows the tree to a `ReadonlyStore` — read-only `$` over the tree's full accumulated type (leaf `Signal` reads, `.derived()` computeds preserved, `linked()` narrowed to `Signal`) plus `destroy()`/`destroyed`. Marker surfaces are genuinely narrowed to per-marker reader allowlists: entity mutators (`upsertOne`, `removeWhere`, …), loader triggers (`load`/`refresh`/`invalidate`), `status` setters, and `form` writes are not offered on the readonly type, and `byId()` is re-signed to a read-only entity node (deep `Signal` leaves, no `.set`). `defineStore(factory, { expose: 'readonly' })` is sugar over the same view for injected stores. This is a compile-time narrowing only — the same runtime object, no runtime guard — so it stops the type system from _offering_ a write, not a determined `as any`; pair it with a separate Ops service for the write path.
 
 ## When to Use SignalTree
 
@@ -68,7 +68,7 @@ writing an app with real domain state — not a demo — you're likely in scope.
   input-driven queries, with `status()` predicates for the lifecycle.
 - **Undo/redo, persistence, DevTools** — `timeTravel()`, `stored()` with migrations, `history()` /
   `trackHistory()`, Redux DevTools integration. All included, none hand-wired.
-- **State that will grow.** Starting simple is fine — the shape *is* the API, so adding a domain or
+- **State that will grow.** Starting simple is fine — the shape _is_ the API, so adding a domain or
   attaching a marker at a new node doesn't restructure anything you already wrote. You don't need to
   predict your final shape to start.
 - **Multiple stores / feature domains** — one tree per feature with an Ops service in front is the
@@ -194,12 +194,12 @@ Wrapping a load function with the `loader()` helper and passing it as `entityMap
 
 A SignalTree store is composed from four distinct, type-safe mechanisms — each handles one concern, rather than funneling everything through a single primitive:
 
-| Concern            | Mechanism                                                                                                            | Example                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`)     | `signalTree({ users: entityMap<User>() })`               |
-| **Derived state**  | `.derived()` / `derivedFrom()` — computed signals deep-merged at any path                                            | `.derived($ => ({ activeCount: computed(...) }))`        |
-| **Capabilities**   | `.with()` enhancers — opt-in, tree-shakeable, and reusable (author your own custom enhancers)                        | `.with(batching()).with(devTools())`                     |
-| **Actions**        | a plain `@Injectable` Ops service that writes to tree paths — reads (`tree.$`) stay decoupled from writes            | `ops.users.select(id)`                                   |
+| Concern           | Mechanism                                                                                                        | Example                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **State shape**   | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`) | `signalTree({ users: entityMap<User>() })`        |
+| **Derived state** | `.derived()` / `derivedFrom()` — computed signals deep-merged at any path                                        | `.derived($ => ({ activeCount: computed(...) }))` |
+| **Capabilities**  | `.with()` enhancers — opt-in, tree-shakeable, and reusable (author your own custom enhancers)                    | `.with(batching()).with(devTools())`              |
+| **Actions**       | a plain `@Injectable` Ops service that writes to tree paths — reads (`tree.$`) stay decoupled from writes        | `ops.users.select(id)`                            |
 
 This deliberately splits across four purpose-built tools what NgRx SignalStore unifies under one `with*` composition primitive (`withState` / `withComputed` / `withMethods` / `signalStoreFeature`). The closest analog to NgRx's reusable-feature primitive (`signalStoreFeature` / `withFeature`) is `.with()` enhancers; state, derived state, and actions live in the other three mechanisms. For an honest, axis-by-axis comparison — including where NgRx wins — see [docs/compare/ngrx-signalstore.md](docs/compare/ngrx-signalstore.md).
 
@@ -218,14 +218,14 @@ const store = signalTree({ count: 0, items: [] })
   .with(devTools()); // Redux DevTools integration
 ```
 
-| Enhancer          | Purpose                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| `batching()`      | Coalesce change-detection notifications into microtask batches |
+| Enhancer          | Purpose                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `batching()`      | Coalesce change-detection notifications into microtask batches                                 |
 | `effects()`       | **Deprecated (11.6.0)** — use native Angular `effect(() => tree.$.path())`; removal next major |
-| `timeTravel()`    | Undo/redo with configurable history depth                      |
-| `devTools()`      | Redux DevTools integration with path-based actions             |
-| `serialization()` | JSON serialize/deserialize with type preservation              |
-| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters  |
+| `timeTravel()`    | Undo/redo with configurable history depth                                                      |
+| `devTools()`      | Redux DevTools integration with path-based actions                                             |
+| `serialization()` | JSON serialize/deserialize with type preservation                                              |
+| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters                                  |
 
 > **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` — it memoizes its result and only re-runs when a tracked signal changes, with no extra cost over what Angular already provides.
 
@@ -255,14 +255,14 @@ store.$.activeUserCount(); // reactive, type-safe
 
 ```typescript
 // Branches — always callable both directions:
-store.$.user();                    // read subtree
-store.$.user({ name: 'Bob' });     // partial-update subtree
+store.$.user(); // read subtree
+store.$.user({ name: 'Bob' }); // partial-update subtree
 
 // Leaves — read works without the plugin; with @signaltree/callable-syntax,
 // writes use the same shape:
-store.$.user.name();               // read leaf (no plugin needed)
-store.$.user.name('Bob');          // compiles to .set('Bob')
-store.$.count((n) => n + 1);       // compiles to .update(n => n + 1)
+store.$.user.name(); // read leaf (no plugin needed)
+store.$.user.name('Bob'); // compiles to .set('Bob')
+store.$.count((n) => n + 1); // compiles to .update(n => n + 1)
 ```
 
 It's a Vite/Webpack plugin (dev dependency only) — the transform expands these forms back into `.set()` / `.update()` calls at build time, so production bundles have zero runtime overhead and the underlying signal API is unchanged.
@@ -366,7 +366,7 @@ store.registerCleanup(() => ws.close());
 | Package                       | Purpose                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------- |
 | `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms          |
-| `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core |
+| `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core               |
 | `@signaltree/callable-syntax` | Compile-time callable syntax transform (Vite/Webpack plugin, dev dependency) |
 | `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
 | `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |
@@ -435,8 +435,8 @@ const tree = signalTree({
     query: (q) => api.search$(q),
   }),
 });
-tree.$.users.refresh();         // reload (cancels in-flight)
-tree.$.search.input.set('q');   // drives the debounced pipeline
+tree.$.users.refresh(); // reload (cancels in-flight)
+tree.$.search.input.set('q'); // drives the debounced pipeline
 
 // Lifecycle
 tree.destroy(); // Clean up all resources
@@ -444,9 +444,32 @@ tree.destroyed(); // Check if destroyed
 tree.registerCleanup(fn); // Register custom cleanup
 ```
 
+## Undo/redo vs devtools replay — different features
+
+`timeTravel()` serves two audiences that want opposite things. Undo/redo is a
+**product** feature: the user presses Ctrl+Z and expects _their edit_ undone.
+Devtools replay is **forensic**: the point is to see what the app was actually
+doing, spinners and errors included.
+
+|                             | undo/redo (`restore`)                                        | cross-process (`rehydrate`)                          |
+| --------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
+| form values                 | restored                                                     | restored                                             |
+| form `touched`              | **restored** — you go back to where you were, errors and all | **dropped** — Angular's own `form.value` omits it    |
+| form `submitting`           | never                                                        | never — a submit in flight then is not in flight now |
+| collection entries          | restored                                                     | restored                                             |
+| `status()` `LOADING`        | **kept** — the fetch may still be running                    | **→ `NotLoaded`** — nothing survived the boundary    |
+| `status()` `LOADED`/`ERROR` | restored                                                     | restored                                             |
+
+The rule: **`restore` is exact, `rehydrate` is opinionated.** A cleaned-up undo
+is a lie about what the user did; a cleaned-up rehydrate is good manners.
+
+Undo/redo needs no configuration — it captures what a user edited (form values,
+collection entries, plain leaves) and skips in-flight state. Full reasoning in
+[undo-redo-vs-devtools.md](docs/architecture/undo-redo-vs-devtools.md).
+
 ## Debugging — `devTools()` enhancer
 
-`.with(devTools())` wires SignalTree into the standard Redux DevTools browser extension. Every state change appears in the timeline with a **path-based action name** (e.g., `[users.profile.name]/set`) so you can scrub backward and forward through state history and see *which path* caused each render — not just *that something changed*. `devTools()` alone delivers the in-browser time-travel scrubber (controlled by its own `enableTimeTravel` config flag, default `true`); the separate `timeTravel()` enhancer is an independent API-level surface for programmatic undo/redo/jumpTo from code, useful when you want history control without depending on the browser extension. See [Architecture Guide](docs/architecture/signaltree-architecture-guide.md#devtools-integration) for screenshots and the full action-naming scheme.
+`.with(devTools())` wires SignalTree into the standard Redux DevTools browser extension. Every state change appears in the timeline with a **path-based action name** (e.g., `[users.profile.name]/set`) so you can scrub backward and forward through state history and see _which path_ caused each render — not just _that something changed_. `devTools()` alone delivers the in-browser time-travel scrubber (controlled by its own `enableTimeTravel` config flag, default `true`); the separate `timeTravel()` enhancer is an independent API-level surface for programmatic undo/redo/jumpTo from code, useful when you want history control without depending on the browser extension. See [Architecture Guide](docs/architecture/signaltree-architecture-guide.md#devtools-integration) for screenshots and the full action-naming scheme.
 
 ## Documentation
 

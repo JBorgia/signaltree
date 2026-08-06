@@ -11,6 +11,8 @@ import {
 } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isComparedMarker } from './markers/compared';
+import { hydrateMarkerNode } from './internals/materialize-markers';
+import { getActiveWriteContext } from './write-context';
 import { getPathNotifier } from './path-notifier';
 import {
   equal,
@@ -439,6 +441,26 @@ function warnMissingForward(method: string): void {
   }
 }
 
+/**
+ * @internal Which hydrate mode a write through `recursiveUpdate` represents.
+ *
+ * `recursiveUpdate` serves BOTH `tree(partial)` and `timeTravel` undo/redo —
+ * `restoreState` falls through to `this.tree(state)` — so the two cannot be
+ * told apart by call shape. They are told apart by the write context that
+ * time travel already tags every replay with (`source: 'time-travel'`), which
+ * exists for exactly this kind of question and needed no new plumbing.
+ *
+ * The distinction is not cosmetic. An UNDO must land the user in the state they
+ * were in, exactly; a REHYDRATE crosses a process boundary where nothing is in
+ * flight and some state must be normalised rather than believed. See
+ * docs/architecture/undo-redo-vs-devtools.md.
+ */
+function currentHydrateMode(): 'merge' | 'restore' {
+  return getActiveWriteContext()?.source === 'time-travel'
+    ? 'restore'
+    : 'merge';
+}
+
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
 
@@ -475,6 +497,18 @@ function recursiveUpdate(
             `tree's initial shape. [ST2010]`
         );
       }
+      continue;
+    }
+
+    // A materialised marker hydrates ITSELF. Without this, a marker whose node
+    // is an unbranded callable (`form`) or a plain object with its own API
+    // (`entityMap`, `status`) falls through to the branch/leaf logic below,
+    // which has no idea how to write it — so `tree(partial)` silently no-ops,
+    // and `timeTravel` undo silently leaves the marker at its post-change
+    // value, landing the user in a state that never existed and reporting
+    // success. Measured before this: `n=3 rows=3` → undo → `n=2 rows=3`.
+    if (hydrateMarkerNode(prop, value, currentHydrateMode())) {
+      if (out) out.push(childPath);
       continue;
     }
 

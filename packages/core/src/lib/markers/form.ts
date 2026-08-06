@@ -1,6 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import { PathNotifier } from '../path-notifier';
 // Type-only: keeps the history engine (snapshot buffer, undo/redo) out of every
 // bundle that doesn't call `history()`. The branded feature's closure is the
 // sole runtime reference to it — the `security()`/`loader()` precedent.
@@ -348,7 +349,7 @@ export function form<T extends Record<string, unknown>>(
       //    validators, which the live tree already has.
       snapshot: (node) => ({ values: node(), touched: node.touched() }),
 
-      hydrate: (node, value) => {
+      hydrate: (node, value, mode) => {
         if (value === null || typeof value !== 'object') return;
         const { values, touched } = value as {
           values?: unknown;
@@ -357,7 +358,19 @@ export function form<T extends Record<string, unknown>>(
         if (values !== null && typeof values === 'object') {
           node.set(values as never);
         }
-        if (touched !== null && typeof touched === 'object') {
+
+        // `touched` is restored for UNDO/REDO and a merge, dropped on
+        // REHYDRATE. Undo must land the user exactly where they were, errors
+        // and all — a cleaned-up undo is a lie about what they did. Across a
+        // process boundary the calculus flips: Angular's own `form.value` does
+        // not carry `touched`, so a form reopened tomorrow showing yesterday's
+        // red is surprising, and restoring `touched` without focus, scroll or
+        // cursor is a half-restoration that can read worse than none.
+        if (
+          mode !== 'rehydrate' &&
+          touched !== null &&
+          typeof touched === 'object'
+        ) {
           for (const [field, was] of Object.entries(
             touched as Record<string, unknown>
           )) {
@@ -405,7 +418,9 @@ export function isFormMarker(
  * @internal
  */
 export function createFormSignal<T extends Record<string, unknown>>(
-  marker: FormMarker<T>
+  marker: FormMarker<T>,
+  notifier?: PathNotifier,
+  path?: string
 ): FormSignal<T> {
   const config = marker.config;
   const initial = config.initial;
@@ -835,14 +850,37 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // residual marker-method confusion class.
   formSignalFn.data = (): T => valuesSignal();
 
+  /**
+   * Announce a value change on the PathNotifier.
+   *
+   * Without this a form's writes were INVISIBLE to every notifier consumer.
+   * `interceptLeafSignals` wraps plain writable signals, and a form node is an
+   * unbranded callable, so nothing wrapped it — which meant `timeTravel` never
+   * marked the tree dirty for a form edit and never recorded one. Measured:
+   * three writes (form, leaf, form) produced TWO history entries, and the last
+   * form edit was simply absent. Undo could not restore what was never
+   * recorded.
+   *
+   * `entityMap` has always notified for itself (see entity-signal.ts) which is
+   * why its undo worked and the form's did not. This brings the form to the
+   * same contract.
+   */
+  const announce = (next: T, prev: T): void => {
+    if (notifier && path) notifier.notify(path, next, prev);
+  };
+
   formSignalFn.set = (values: Partial<T>): void => {
+    const prev = valuesSignal();
     valuesSignal.update((curr) => ({ ...curr, ...values }));
+    announce(valuesSignal(), prev);
     schedulePersist();
     recordHistory();
   };
 
   formSignalFn.patch = (values: Partial<T>): void => {
+    const prev = valuesSignal();
     valuesSignal.update((curr) => ({ ...curr, ...values }));
+    announce(valuesSignal(), prev);
     schedulePersist();
     recordHistory();
   };

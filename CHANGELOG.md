@@ -1,5 +1,33 @@
 ## Unreleased (13.6.0)
 
+### Added
+
+- **Undo/redo actually works.** `timeTravel()` undo/redo now restores form
+  values, collection entries and status alongside plain leaves. Two silent
+  defects made it not:
+
+  1. **Restore dropped markers.** `recursiveUpdate` had no idea how to write a
+     marker node, so undo moved the scalars and left the collection behind:
+     `n=3 rows=3` → undo → `n=2 rows=3`. The user landed in a state the app was
+     never in, and it reported success.
+  2. **Capture missed marker writes entirely.** `interceptLeafSignals` requires
+     both `set` and `update`; a `form()` has `set`/`patch`, an `entityMap` has
+     `addOne`/`setAll`, a `status()` has `setLoading`. None qualified, so none
+     marked the tree dirty and none were recorded. **Undo cannot restore what
+     was never captured.**
+
+- **`hydrate(node, value, mode)` — mode is a property of the CALL SITE**, the
+  only place that knows whether a process boundary was crossed. `merge` is
+  `tree(partial)`; `restore` is undo/redo (same process, a request may still be
+  running); `rehydrate` is deserialize/SSR/storage (new process, nothing is in
+  flight).
+
+  **`restore` is exact, `rehydrate` is opinionated.** Form `touched` is restored
+  on undo and dropped on rehydrate; `status()` `LOADING` is kept on undo and
+  normalised to `NotLoaded` on rehydrate; `submitting` is never restored in any
+  mode. See
+  [undo-redo-vs-devtools.md](docs/architecture/undo-redo-vs-devtools.md).
+
 ### Security
 
 - **`stored()` could leak its storage into any snapshot.** The marker held the
