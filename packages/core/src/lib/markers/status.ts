@@ -1,6 +1,8 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
-import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor ,
+  reportHydrateDecision,
+} from '../internals/materialize-markers';
 
 // =============================================================================
 // SYMBOL & ENUM
@@ -199,6 +201,18 @@ export function status<E = Error>(
         // kept verbatim — that is the whole reason `mode` exists.
         if (mode === 'rehydrate' && state === LoadingState.Loading) {
           node.setNotLoaded();
+          reportHydrateDecision({
+            marker: 'status',
+            decision: 'normalised',
+            mode,
+            reason: 'no-request-survives-boundary',
+            detail:
+              typeof ngDevMode === 'undefined' || ngDevMode
+                ? 'LOADING became NotLoaded — no request survives a process ' +
+                  'boundary, and restoring it verbatim deadlocks every guard ' +
+                  'that waits on loading()/idle()/settled().'
+                : undefined,
+          });
           return;
         }
 

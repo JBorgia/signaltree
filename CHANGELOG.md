@@ -50,6 +50,25 @@
   materialisation (where the node's shape is knowable), once per processor, off
   the write path.
 
+- **`onHydrateDecision`** (from `@signaltree/core/authoring`) — observe when a
+  marker DECLINES a rehydrate payload because its loader owns that data, or
+  NORMALISES one because no request survives a process boundary.
+
+  Deliberately not a warning: both decisions are correct, and warning on correct
+  behaviour trains people to ignore the channel. It is an observation seam, the
+  same shape as `getPathNotifier`.
+
+  It ships in this release rather than after it because every other silence
+  14.0.0 fixes was pre-existing, while the loader-declines rule is silence this
+  release INTRODUCES — a brand-new silent decision inside the release whose
+  thesis is "make the silence loud".
+
+  The event carries a stable machine-readable `reason` that reaches production
+  listeners, plus a `detail` prose string that folds away under
+  `ngDevMode: false` — *advisory prose is removable, identity is not*. Listeners
+  fire in production: an API that silently does nothing in a production build is
+  the defect class this release removed `tree.$.count(5)` for.
+
 - A dev/prod split in the bundle-budget gate. The single budget was measured on
   the dev build and had moved five times in two releases, each bump noting that
   production was unchanged. Prod (`ngDevMode: false`) is now the tight

@@ -9,7 +9,9 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
-import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor ,
+  reportHydrateDecision,
+} from '../internals/materialize-markers';
 
 // =============================================================================
 // SYMBOL
@@ -159,7 +161,21 @@ export function asyncSource<T>(
       snapshot: (node) => ({ value: node() }),
 
       hydrate: (node, value, mode) => {
-        if (mode === 'rehydrate') return; // the loader has already re-run
+        if (mode === 'rehydrate') {
+          // The loader has already re-run; its result is newer than any payload.
+          reportHydrateDecision({
+            marker: 'asyncSource',
+            decision: 'declined',
+            mode,
+            reason: 'loader-owns-source',
+            detail:
+              typeof ngDevMode === 'undefined' || ngDevMode
+                ? 'it owns a loader, which has already re-run — its result ' +
+                  'is newer than anything a snapshot can carry.'
+                : undefined,
+          });
+          return;
+        }
         if (value === null || typeof value !== 'object') return;
         node.set((value as { value?: unknown }).value as never);
       },

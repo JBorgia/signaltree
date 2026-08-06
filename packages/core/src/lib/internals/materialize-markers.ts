@@ -116,6 +116,96 @@ export function hydrateMarkerNode(
   return true;
 }
 
+
+// =============================================================================
+// HYDRATION DECISIONS — §5.5
+// =============================================================================
+
+/**
+ * What a marker DID with a payload, when it did not simply accept it.
+ *
+ * - `declined`   — the marker owns a source and refused a `rehydrate` payload.
+ *                  Its own loader is the authority on that data.
+ * - `normalised` — the payload was accepted but adjusted, because a value that
+ *                  described this process cannot describe a new one (a
+ *                  `LOADING` status after a process boundary).
+ *
+ * Accepting is the default and is NOT reported: a report on every restored leaf
+ * is noise, and noise is how the interesting lines get missed.
+ */
+export type HydrateDecision = 'declined' | 'normalised';
+
+/**
+ * WHY a marker decided what it did — stable, machine-readable, and it SHIPS.
+ *
+ * Split from the prose deliberately, following the rule in
+ * docs/performance/dropping-dev-code.md: *advisory prose is removable, identity
+ * is not.* A listener in production needs to know a rehydrate was declined and
+ * why; it does not need the paragraph explaining it to a human. So `reason` is
+ * a stable union that survives a production build, and `detail` is prose that
+ * folds away with `ngDevMode`.
+ */
+export type HydrateReason =
+  /** A loader owns this data and is the authority on its freshness. */
+  | 'loader-owns-source'
+  /** No in-flight request survives a process boundary. */
+  | 'no-request-survives-boundary';
+
+export interface HydrateDecisionEvent {
+  /** Which marker decided, e.g. `entityMap`, `status`. */
+  marker: string;
+  decision: HydrateDecision;
+  mode: HydrateMode;
+  /** Stable and greppable. Present in production. */
+  reason: HydrateReason;
+  /** Human prose. DEV ONLY — folds away under `ngDevMode: false`. */
+  detail?: string;
+}
+
+const hydrateListeners = new Set<(e: HydrateDecisionEvent) => void>();
+
+/**
+ * Observe hydration decisions. Returns an unsubscribe function.
+ *
+ * `hydrate` makes real choices now — it declines a payload when a loader owns
+ * the source, and normalises `LOADING` to `NotLoaded` across a process
+ * boundary — and until 14.0.0 it reported NONE of them. A developer whose
+ * payload was silently declined had no way to see it.
+ *
+ * This is deliberately NOT a warning. Declining is CORRECT, and warning on
+ * correct behaviour trains people to ignore the channel — which is how the four
+ * bugs behind this release stayed invisible. It is an observation seam, the
+ * same shape as `getPathNotifier`.
+ *
+ * **Listeners fire in production too.** An earlier revision guarded the call
+ * sites with `ngDevMode` to keep the prose out of the bundle, which made this a
+ * public API that silently did nothing in a production build — the exact defect
+ * class 14.0.0 removed `tree.$.count(5)` for. A declined rehydrate is a real
+ * operational event ("my offline-first cache was ignored"), and telemetry is a
+ * legitimate reason to want it. Only `detail` folds; `reason` is stable and
+ * always present.
+ *
+ * Every other silence 14.0.0 fixed was inherited. The loader-declines rule is
+ * silence this release INTRODUCES, so it ships with its own way to be seen.
+ */
+export function onHydrateDecision(
+  fn: (e: HydrateDecisionEvent) => void
+): () => void {
+  hydrateListeners.add(fn);
+  return () => hydrateListeners.delete(fn);
+}
+
+/** @internal Markers call this instead of returning silently. */
+export function reportHydrateDecision(e: HydrateDecisionEvent): void {
+  for (const fn of hydrateListeners) fn(e);
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.info(
+      `SignalTree: ${e.marker} ${e.decision} a ${e.mode} payload ` +
+        `[${e.reason}]${e.detail ? ` — ${e.detail}` : ''}`
+    );
+  }
+}
+
 /**
  * Registry of marker processors.
  * Order matters: first match wins.

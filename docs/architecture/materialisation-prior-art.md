@@ -241,23 +241,53 @@ it. Snapshot frequency is a tunable, not a design commitment.
 This directly reframes [`optimisation-options.md`](./optimisation-options.md)
 §B1 vs §B2 — see §5.2.
 
-### 3.6 Datomic — the idea nobody here had raised
+### 3.6 Datomic — the idea nobody here had raised, and why it was DROPPED
 
-Two mechanisms, both a natural fit for an architecture that already has immutable
-snapshots and structural sharing:
+Two mechanisms, both apparently a natural fit for an architecture that already
+has immutable snapshots and structural sharing:
 
 - **`as-of`** — time travel as a **query over an immutable value**, not a
-  mutation of live state. Our undo/redo writes back into the tree; Datomic hands
-  you a value to read.
+  mutation of live state.
 - **`with`** — apply facts **speculatively**, in memory, producing a queryable
   value that was never committed.
 
-For SignalTree, `with` answers _"what would the tree look like if I applied this
-patch?"_ — which is what optimistic updates, form drafts, preview modes and
-time-travel scrubbing all actually want, and none of which we support today.
+An earlier revision called `with()` "the only item in this document that would
+be a NEW capability" and recommended it for 14.0.0. **That recommendation is
+withdrawn.** Enumerating the use cases collapses it:
 
-This is the only item in this document that would be a **new capability** rather
-than a correction, and 14.0.0 being breaking is when it lands most cleanly.
+| use case                    | already served?                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Optimistic update + rollback | **Yes — MEASURED.** `const before = tree()` → mutate → `tree(before)` restores exactly, across `entityMap`, `status`, `form`, plain leaves and derived. And it works *because of* this release |
+| Form drafts                 | Yes — that is what `form()` is                                                                               |
+| Time-travel scrub           | Mostly — `jumpTo` exists; preview-without-commit is a devtools nicety                                        |
+| Preview modes               | No — but a component usually computes the previewed value locally rather than forking global state           |
+
+**The decisive argument is structural, not a cost estimate.** Datomic's `with()`
+is valuable *because Datomic has a query language*: you speculate, then run
+arbitrary queries against the result. SignalTree has no query surface — you read
+fields. "What would `$.a.b` be if I set `$.a.b`?" is the value you were about to
+set. **Speculation only pays where it propagates**, and the propagation surface
+here is `.derived()`, which is a much smaller thing than a query engine.
+
+⚠️ **One argument used to reach this conclusion does NOT hold, and is recorded so
+it is not reused:** "46 `.derived()` call sites repo-wide, 18 in the demo" was
+offered as evidence that the propagation surface is small. It is not evidence.
+That counts *our own* usage of *our own* feature — a demo under-uses derived
+precisely because demos showcase primitives. Measuring demand for a library
+feature by grepping the library's own repo is close to circular. The structural
+argument above stands on its own and needs no volume estimate.
+
+There was also a real implementation hazard, now moot: `memoKey()` resolves an
+accessor to its backing store, so a speculative tree sharing stores would write
+into the same `MATERIALIZED` cells as the real tree — the shared-cell bug step 1
+deleted, reintroduced deliberately. Copy-on-write shadow stores would have
+solved it (new store objects along the patched path only; `MATERIALIZED` is
+keyed on object identity, so unchanged subtrees correctly reuse their cells).
+Tractable — but tractability was never the question.
+
+**`as-of` is not dropped, merely unbuilt.** `getHistory()` already returns entry
+states by reference, so reading a past value without mutating live state is
+close to free. Nobody has asked for it.
 
 ---
 
@@ -400,10 +430,18 @@ and time travel's callback uses those only to set a dirty flag, then materialise
 the whole tree. Path, new value, old value and write metadata — in hand, at the
 moment of recording, thrown away.
 
-### 5.3 Datomic-style `with()` — a speculative snapshot
+### 5.3 ~~Datomic-style `with()`~~ — DROPPED, with reasons (§3.6)
 
-The one genuinely new capability (§3.6). Prerequisites already exist. Wants
-14.0.0.
+Not deferred. **Dropped**, so it is not re-proposed on the same grounds.
+
+Optimistic rollback — the strongest use case — is already served by
+`tree()` / `tree(before)`, measured across every marker type. And `with()` earns
+its keep in Datomic because Datomic has a query language to run against the
+speculative value; SignalTree has no query surface, so speculation only pays
+where it propagates.
+
+If preview demand appears later, reconsider it **with evidence from users**, not
+from a grep of this repo (§3.6 records why that metric is invalid).
 
 ### 5.4 ~~Measure the eviction analysis~~ — DONE, do not build eviction
 
@@ -412,17 +450,40 @@ leaves shared by reference. Not worth bounding. Recorded so it is not
 rediscovered as a leak — and so the un-GC'd 25.71 MB figure, which pointed the
 other way, is on record as an artefact rather than a measurement.
 
-### 5.5 Make `hydrate`'s decisions observable
+### 5.5 Make `hydrate`'s decisions observable — **DONE (14.0.0)**
 
 Kafka Streams exposes restore progress because "did my state come back, and how
-much of it" is a real question. Our `hydrate` now makes real decisions — accepted,
-**declined because a loader owns the source**, normalised `LOADING → NOT_LOADED` —
-and reports none of them. A developer whose payload was silently declined has no
-way to see it.
+much of it" is a real question. Our `hydrate` makes real decisions — accepted,
+**declined because a loader owns the source**, normalised `LOADING → NotLoaded` —
+and reported none of them.
 
-Not a warning (declining is correct), but something a devtools panel or a
-dev-mode summary can surface. Cheapest high-value item on the list, and squarely
-in this project's stated failure mode.
+The argument that settled it was not "cheapest item on the list":
+
+> Every other silence 14.0.0 fixed was PRE-EXISTING. The loader-declines rule is
+> silence this release INTRODUCES.
+
+Shipping a brand-new silent decision inside the release whose thesis is "make
+the silence loud" is the one internal inconsistency a careful reader would find,
+and it would be ours by construction rather than inherited.
+
+Shipped as `onHydrateDecision` from `@signaltree/core/authoring` — an
+observation seam, the same shape as `getPathNotifier`. Deliberately **not** a
+warning: declining is correct, and warning on correct behaviour trains people to
+ignore the channel, which is how the four bugs behind this release stayed
+invisible.
+
+**The design detail worth keeping:** the event carries a stable, machine-readable
+`reason` (`'loader-owns-source'` | `'no-request-survives-boundary'`) that ships
+to production, and a `detail` prose string that folds away with `ngDevMode`.
+That follows the existing rule in
+[`dropping-dev-code.md`](../performance/dropping-dev-code.md) — *advisory prose
+is removable, identity is not.*
+
+An earlier revision guarded the whole call site to keep the prose out of the
+bundle (0.19 KB gzip on the entities scenario). That made `onHydrateDecision` a
+public API that **silently did nothing in a production build** — the exact defect
+class 14.0.0 removed `tree.$.count(5)` for. Reverted, and pinned by a test whose
+name says so.
 
 ---
 

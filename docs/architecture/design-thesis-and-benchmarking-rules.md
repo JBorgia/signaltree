@@ -184,8 +184,12 @@ materialises the whole tree can instead consume `{ path, before, after }`:
 Each of these was learned the expensive way.
 
 1. **Only leaves are signals.** Branches are plain callable functions with no
-   `.set`/`.update`. Calling a leaf with an argument is a silent no-op — that is
-   why `@signaltree/callable-syntax` exists as a build-time transform.
+   `.set`/`.update`. Calling a LEAF with an argument was a silent no-op — a
+   signal call is a read and discards its argument. `@signaltree/callable-syntax`
+   existed to rewrite `leaf(v)` into `leaf.set(v)` at build time; it could not
+   run inside an Angular app at all, so in 14.0.0 both it and the type overloads
+   that permitted the call were removed, and `tree.$.count(5)` is a compile
+   error. Branches and the root stay callable.
 2. **Materialisation is the tax for O(1) writes.** Don't try to make `tree()`
    fast; make fewer things call it.
 3. **Deep equality on leaves costs O(index of first difference), not O(size).**
@@ -265,6 +269,22 @@ Each of these was learned the expensive way.
     orphan forever. Holding a nested reference is the capability this library has
     and immutable stores do not, so it has to survive churn. Now resolved through
     the map per read.
+15. **A GATE MUST REPORT WHAT IT COVERED, NOT JUST THAT IT PASSED.** Three
+    separate instances of one pattern, each of which cost real time:
+
+    - `grep "Failed tasks"` exited 0 when it FOUND that string, so a commit
+      landed on a red suite;
+    - `npm run typecheck` included only `**/*.typing.spec.ts` and reported zero
+      errors for a breaking type change that broke 22 call sites;
+    - `verify-package-hygiene.js` skipped any package with no `dist/`, then
+      printed "All packages ship clean tarballs" — `events` and `realtime` went
+      out unverified through a green release run.
+
+    All three are the same shape: **the gate did not fail, so it looked like it
+    had passed.** The fix each time has been to print the count — "All 7
+    packages", "854 passed / 15 skipped (79 files)" — because a number is
+    falsifiable at a glance and "✅" is not. Verify by EXIT CODE, and make the
+    gate name its own coverage.
 
 ---
 

@@ -1,7 +1,9 @@
 import { computed, Signal } from '@angular/core';
 
 import { createEntitySignal } from '../entity-signal';
-import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor ,
+  reportHydrateDecision,
+} from '../internals/materialize-markers';
 import { isEntityMapMarker, isLoaderFeature } from '../utils';
 
 // Re-export isEntityMapMarker for convenience
@@ -324,6 +326,21 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
             mode === 'rehydrate' &&
             typeof (node as { load?: unknown }).load === 'function'
           ) {
+            reportHydrateDecision({
+              marker: 'entityMap',
+              decision: 'declined',
+              mode,
+              reason: 'loader-owns-source',
+              // Prose only — folds under `ngDevMode: false`. The inline guard
+              // is what lets esbuild drop the string; `reason` above still
+              // reaches production listeners.
+              detail:
+                typeof ngDevMode === 'undefined' || ngDevMode
+                  ? 'a loader owns this collection, so it is the authority ' +
+                    'on freshness. For offline-first seeding use ' +
+                    'loader({ persist: { hydrateThenRevalidate: true } }).'
+                  : undefined,
+            });
             return;
           }
 

@@ -24,6 +24,17 @@ export { getPathNotifier } from './lib/path-notifier';
 // BEFORE any signalTree() is constructed.
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';
 
+// Hydration decisions — observe when a marker DECLINES a rehydrate payload
+// (its loader owns that data) or NORMALISES one (a LOADING status cannot
+// survive a process boundary). Not warnings: both are correct. This is the seam
+// a devtools panel or a dev-mode summary reads. DEV-ONLY — the call sites are
+// ngDevMode-guarded inline, so nothing fires in a production build.
+export { onHydrateDecision } from './lib/internals/materialize-markers';
+export type {
+  HydrateDecision,
+  HydrateDecisionEvent,
+} from './lib/internals/materialize-markers';
+
 // Enhancer authoring — create enhancers with metadata, resolve dependency
 // order, and compose several enhancers into one.
 export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
