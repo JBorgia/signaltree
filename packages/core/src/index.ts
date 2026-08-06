@@ -124,6 +124,10 @@ export type {
 // Entity helpers (runtime)
 export { entityMap } from './lib/types';
 
+// Per-leaf equality (13.5.0)
+export { compared, byKeys } from './lib/markers/compared';
+export type { ComparedMarker } from './lib/markers/compared';
+
 // Derived state types (v7)
 export type {
   ProcessDerived,

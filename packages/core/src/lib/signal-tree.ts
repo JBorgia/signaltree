@@ -10,6 +10,7 @@ import {
   materializeMarkers,
 } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
+import { isComparedMarker } from './markers/compared';
 import { getPathNotifier } from './path-notifier';
 import { equal, isBuiltInObject, isTraversableNode, unwrap } from './utils';
 
@@ -27,6 +28,11 @@ import { ENHANCER_META } from './types';
 // INTERNAL SYMBOLS
 // =============================================================================
 const NODE_ACCESSOR_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
+
+/** ST2018 tuning — see warnEntityArrayLeaf(). */
+const ENTITY_ARRAY_MIN_LENGTH = 32;
+const ENTITY_ARRAY_SAMPLE = 64;
+const ENTITY_ID_KEYS = ['id', '_id', 'uuid', 'key'] as const;
 /**
  * @internal Back-reference from an accessor to the TreeNode its call path
  * closes over. `makeNodeAccessor` COPIES the store's properties onto the
@@ -258,6 +264,75 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
  * used to vanish in silence, including the forgotten-`await` case where the
  * updater returns a Promise.
  */
+/**
+ * ST2018 — an array of entities is being stored as a plain array leaf.
+ *
+ * This is the most expensive idiom mistake available in SignalTree, and it does
+ * not look like a mistake. Measured on the same task (1000 updates to a
+ * 50,000-row collection, with a dependent read):
+ *
+ *   entityMap                1.63 ms
+ *   plain array leaf        49.80 ms      <- this
+ *   NgRx SignalStore        46.56 ms
+ *
+ * An array leaf lands at PARITY with the immutable store SignalTree beats 28x
+ * with the right container, because every update rebuilds the array (`slice()`
+ * alone is ~41 ms of that 49.80 ms) and every equality check walks it.
+ * `entityMap` writes one entity in O(1) and reads it back through a per-entity
+ * signal.
+ *
+ * Documentation did not prevent this: SignalTree's OWN demo benchmark shipped
+ * the array-leaf idiom while `docs/guides/entity-collection-cookbook.md` sat in
+ * the repo. Hence a diagnostic rather than another guide.
+ *
+ * Deliberately conservative, because a false positive on every small array
+ * would train developers to ignore it:
+ *   - at least ENTITY_ARRAY_MIN_LENGTH elements (below that, O(N) is noise)
+ *   - every sampled element is a non-null, non-array object
+ *   - every sampled element carries the SAME identity key with a primitive
+ *     value, and no duplicates within the sample
+ * The scan is bounded and runs once per array at construction, in dev only.
+ */
+function warnEntityArrayLeaf(key: string, value: readonly unknown[]): void {
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) return;
+  if (value.length < ENTITY_ARRAY_MIN_LENGTH) return;
+
+  const first = value[0];
+  if (first === null || typeof first !== 'object' || Array.isArray(first)) {
+    return;
+  }
+
+  const idKey = ENTITY_ID_KEYS.find((candidate) => {
+    const v = (first as Record<string, unknown>)[candidate];
+    return typeof v === 'string' || typeof v === 'number';
+  });
+  if (!idKey) return;
+
+  const sampleSize = Math.min(value.length, ENTITY_ARRAY_SAMPLE);
+  const seen = new Set<unknown>();
+  for (let i = 0; i < sampleSize; i++) {
+    const item = value[i];
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+      return;
+    }
+    const id = (item as Record<string, unknown>)[idKey];
+    if (typeof id !== 'string' && typeof id !== 'number') return;
+    if (seen.has(id)) return; // not a stable identity — say nothing
+    seen.add(id);
+  }
+
+  console.warn(
+    `SignalTree: "${key}" holds ${value.length} objects with a stable ` +
+      `"${idKey}" — consider entityMap({ selectId: (e) => e.${idKey} }).\n` +
+      `  As a plain array leaf, every update rebuilds the whole array and every ` +
+      `equality check walks it. Measured on 1000 updates to a 50k collection: ` +
+      `array leaf 49.80ms vs entityMap 1.63ms (~30x).\n` +
+      `  If this array is read-only or always replaced wholesale, that is fine — ` +
+      `wrap it in compared() with your own comparator to silence this. See ` +
+      `docs/guides/entity-collection-cookbook.md [ST2018]`
+  );
+}
+
 function warnDiscardedBranchWrite(path: string, value: unknown): void {
   if (typeof ngDevMode === 'undefined' || ngDevMode) {
     console.error(
@@ -515,6 +590,18 @@ function createSignalStore<T>(
       continue;
     }
 
+    // compared() — this position supplies its own equality function. Checked
+    // before the registered-marker lookup and before the Symbol-key warning
+    // below, because it needs no processor: it only swaps the `equal` option.
+    // Note this makes the position a LEAF even when the value is an object,
+    // which is the intent (the object is compared as a unit).
+    if (isComparedMarker(value)) {
+      store[key] = signal(value.value, {
+        equal: value.equal as (a: unknown, b: unknown) => boolean,
+      });
+      continue;
+    }
+
     // All markers (built-in status/stored/form/asyncSource + user-registered)
     // are caught here via the dynamic processor registry. Built-in markers
     // self-register when their factory runs — and the factory always runs
@@ -559,6 +646,7 @@ function createSignalStore<T>(
 
     // Arrays, built-ins
     if (Array.isArray(value) || isBuiltInObject(value)) {
+      if (Array.isArray(value)) warnEntityArrayLeaf(key, value);
       store[key] = signal(value, { equal: equalityFn });
       continue;
     }

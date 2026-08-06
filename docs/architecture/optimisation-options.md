@@ -209,21 +209,44 @@ signal.
 
 ## Family D — Equality
 
-**D1. Type-directed equality chosen per leaf at construction. REJECTED —
-MEASURED.** The appealing version of the typing idea: at construction we see
-each leaf's initial value, so give a `number` leaf `Object.is`, a `Date` leaf a
-`getTime` compare, and so on, with zero per-write dispatch.
+**D1. Type-directed equality chosen per leaf at construction. SPLIT VERDICT —
+MEASURED. Shipped as `compared()` in 13.5.0.**
 
-It does not pay, because **`deepEqual`'s first line is already the fast path**.
-`if (a === b) return true` handles every unchanged primitive in one comparison,
-and for a _changed_ number `deepEqual` measured **6.5 ns against `Object.is`'s
-8.1 ns** — the general function is _faster_ than the specialised one. The only
-real gap is strings (24.9 → 10.3 ns) and small objects, and 14 ns per write is
-noise against the 4.1 ns baseline write plus everything else an application
-does.
+Originally rejected outright here on primitive measurements. That was too broad,
+and an outside review caught it. The verdict divides on leaf type:
 
-Recording this because it is the kind of idea that sounds obviously right and
-gets re-proposed every few months.
+**Rejected for primitives.** `deepEqual`'s first line is `if (a === b) return
+true`, which is already the whole fast path. On a changing number it measures
+**6.5 ns against `Object.is`'s 8.1 ns** — the general function is _faster_ than
+the specialised one. There is nothing to specialise.
+
+**Accepted for object leaves**, where generic recursion is real work (2M writes):
+
+| leaf                             | `deepEqual` | comparator |           |
+| -------------------------------- | ----------- | ---------- | --------- |
+| object `{id,name,email,version}` | 53.8 ns     | 8.9 ns     | 6.0×      |
+| same, re-fetched (equivalent)    | 110.3 ns    | 9.0 ns     | **12.2×** |
+| nested, 3 levels / 6 fields      | 60.5 ns     | 9.5 ns     | 6.4×      |
+| — `Object.is` reference floor    | —           | 8.6 ns     | —         |
+
+The decisive property is not the speed: **a comparator reaches the
+reference-equality floor while KEEPING re-fetch correctness.** That is what
+rules out D3 (defaulting to `Object.is`) and rules in an opt-in comparator —
+they are not the same trade. `byKeys('id', 'version')` goes further and is O(1)
+in the size of the value, so a version field makes equality constant-time no
+matter how large the object grows.
+
+What it does **not** do, and the reason this sits below A1 and E1: a comparator
+over a 50k array is still O(N), and it cannot touch the `slice()` that produced
+the new array — measured, that copy alone is ~41 ms of a ~49 ms workload. It is
+a correctness and constant-factor tool, not an answer for large collections.
+
+The general lesson survives intact: nearly everything the _types_ could tell the
+runtime, the initial _value_ already tells it at construction. What the value
+cannot supply is **semantics** — which fields matter, whether order counts,
+whether a `version` already answers the question. That is what `compared()` asks
+the developer for, and it is why F2 (diagnostics) rather than F1 (runtime
+specialisation) is where the recursive typing pays.
 
 **D2. Size-adaptive equality. REJECTED — MEASURED.** Cost per element is flat,
 so a size threshold picks an arbitrary point on a straight line and silently
