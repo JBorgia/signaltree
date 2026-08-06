@@ -44,19 +44,44 @@ library should be sold on.
 
 | arm | median | retained | history |
 | --- | --- | --- | --- |
-| **elf** | **1.27 ms** | 4.77 MB | built-in `elf-state-history` |
-| signaltree | 190.11 ms | 5.18 MB | built-in `timeTravel()` |
-| ngrx-signals | 196.63 ms | 0.94 MB | hand-rolled |
-| raw-signals | 311.67 ms | 6.16 MB | hand-rolled |
+| **elf** | **1.34 ms** | 4.77 MB | built-in `elf-state-history` |
+| signaltree | **4.13 ms** | 5.24 MB | built-in `timeTravel()` |
+| ngrx-signals | 210.29 ms | 0.94 MB | hand-rolled |
+| raw-signals | 298.73 ms | 6.17 MB | hand-rolled |
 
-**SignalTree loses undo/redo at this scale, by ~150× to elf**, and is level with
-the hand-rolled `@ngrx/signals` implementation it was supposed to beat.
+**SignalTree is ~3× behind elf and ~50× ahead of a hand-rolled history.** That
+is after fixing a real defect the retraction exposed — see "What the correction
+found" below. The first honest measurement had SignalTree at 190 ms, level with
+hand-rolled; it is now 4.13 ms.
 
-The reason is the same structural fact measured below: recording a history entry
-materialises `tree()`, and for a collection that rebuilds the `all` array —
-O(collection) per entry, not O(depth). Fifty entries over ten thousand rows is
-half a million pointer copies before any undo happens, and each undo restores
-via `setAll`, which is O(collection) again.
+elf remains ahead for a structural reason worth naming: it is an immutable
+store, so an undo swaps ONE state reference — 3 µs, independent of collection
+size. SignalTree holds per-entity signals, so restoring means writing values
+back into them. That cost is now proportional to what CHANGED rather than to
+the collection, but it is not a pointer swap and will not become one without
+giving up the granular signals that are the point of the design.
+
+### What the correction found
+
+Splitting the workload showed the gap was never in recording:
+
+| | per write | per undo (before) | per undo (after) |
+| --- | --- | --- | --- |
+| elf | 38 µs | 3 µs | 3 µs |
+| signaltree | 44 µs | **4,368 µs** | **237 µs** |
+
+Writes were always at parity. Every bit of the 150× was `undo`, because
+`entityMap`'s restore called `setAll` **unconditionally** — rebuilding the
+storage map, the id index and all 10,000 per-entity signals to apply a
+one-entity change. 3.62 ms per undo, at any collection size.
+
+Since a snapshot shares its entity objects with the live tree (499/500 identical
+after a single edit), a reference walk finds exactly the rows that moved.
+Restore now diffs and writes only those, with `setAll` as the fallback for any
+add, removal, reorder or id change — **18× faster per undo**, correctness pinned
+by `entity-restore-diff.spec.ts`, which tests the FALLBACK shapes rather than the
+happy path, because a shortcut that is wrong about when it applies would
+silently corrupt a restore.
 
 ### The retraction
 
@@ -142,9 +167,10 @@ Separating the workloads changed the collection ordering.
 
 ## What to claim
 
-- ❌ **NOT undo/redo at scale.** ~150× slower than elf over a 10k collection, and
-  level with a hand-rolled implementation. The earlier claim of a 20× win was an
-  artefact of measuring an idle arm.
+- ⚖️ **Undo/redo: ~50× faster than hand-rolled, ~3× behind elf.** Defensible
+  against "you would have to write this yourself", not against elf. The original
+  "20× faster than elf" was an artefact of measuring an idle arm; the corrected
+  measurement then exposed a real O(collection) defect in restore, now fixed.
 - ✅ **Snapshots are nearly free.** A held `tree()` of 10k entities costs 0.01 MB
   ([memory-profile.md](../architecture/memory-profile.md)).
 - ❌ **Not raw collection throughput.** Second-to-third of four, run to run.
