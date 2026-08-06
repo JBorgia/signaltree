@@ -175,3 +175,44 @@ performanceTree.$.analytics.events.update((current) => [
   { type: 'user_action', timestamp: new Date() },
 ]);
 performanceTree.$.analytics.sessions.update((current) => current + 1);
+
+// ==============================================
+// Example 7: What IS callable — branches and the root
+// ==============================================
+//
+// Every write above goes through `.set()` / `.update()` because those targets
+// are LEAVES, and a leaf is a real Angular signal: calling one is a read.
+//
+// A BRANCH is not a signal — it is SignalTree's own accessor — so it is
+// callable in both directions, and so is the root. This is the whole of the
+// callable surface. (Through 13.x the types also permitted `leaf(value)`, via
+// the `@signaltree/callable-syntax` build transform. It silently did nothing in
+// Angular apps, where that transform cannot run at all, and the overloads were
+// removed in 14.0.0. See docs/guides/callable-syntax.md.)
+
+const callableTree = signalTree({
+  user: {
+    name: 'John' as string,
+    age: 30 as number,
+  },
+  ui: {
+    loading: false as boolean,
+    error: null as string | null,
+  },
+});
+
+// Branch — read the whole subtree
+callableTree.$.user(); // → { name: 'John', age: 30 }
+
+// Branch — PARTIAL write; unlisted keys are left alone
+callableTree.$.user({ name: 'Bob' }); // age stays 30
+
+// Branch — updater form
+callableTree.$.ui((current) => ({ ...current, loading: !current.loading }));
+
+// Root — callable too, and merges the same way
+callableTree({ ui: { loading: false, error: null } });
+
+// The leaves underneath are still written the normal way:
+callableTree.$.ui.error.set('Request failed');
+callableTree.$.user.age.update((current) => current + 1);

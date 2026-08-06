@@ -6,27 +6,28 @@ This directory contains comprehensive examples demonstrating SignalTree usage pa
 
 ### 📁 **Core Examples**
 
-#### `callable-syntax-examples.ts`
-
-Demonstrates the **callable syntax** that requires the `@signaltree/callable-syntax` build-time transform:
-
-- `tree.$.prop('value')` → `tree.$.prop.set('value')` (direct updates)
-- `tree.$.prop(fn)` → `tree.$.prop.update(fn)` (functional updates)
-- Zero runtime overhead - pure build-time transformation
-- ⚠️ TypeScript errors expected without transform
-
 #### `standard-syntax-examples.ts`
 
-Shows the **same examples** using standard SignalTree syntax:
+The one syntax reference. Every write goes through the API that actually works:
 
-- `tree.$.prop.set('value')` (direct updates)
-- `tree.$.prop.update(fn)` (functional updates)
-- No transforms required - works immediately
-- Zero runtime overhead - pure Angular signals
+- `tree.$.prop.set('value')` — write a leaf
+- `tree.$.prop.update(fn)` — transform a leaf
+- `tree.$.branch({ ... })` — partial-write a branch (callable, natively)
+- `tree({ ... })` — the root, same shape
+
+Nothing to install; nothing to configure.
+
+> **`callable-syntax-examples.ts` was deleted in 14.0.0.** It demonstrated
+> `tree.$.leaf('value')`, which never worked at runtime: a leaf IS an Angular
+> signal, so calling it is a READ that discards the argument. The file had no
+> assertions, so roughly 90% of it had been silently doing nothing. The build
+> transform meant to make it real cannot run in an Angular app at all, and the
+> type overloads that permitted it are gone. The contract is now pinned by
+> tests in core (`callable-contract.spec.ts` and its `.typing` sibling).
 
 ## Example Categories
 
-Both files demonstrate the same patterns across these categories:
+The file covers these patterns:
 
 ### 1. **Basic Operations**
 
@@ -72,51 +73,29 @@ Both files demonstrate the same patterns across these categories:
 
 ## Usage
 
-### Run Callable Syntax Examples
-
 ```bash
-# Requires @signaltree/callable-syntax transform
-npm run callable:demo
+npx ts-node apps/demo/src/app/sanity-checks/standard-syntax-examples.ts
 ```
 
-### Run Standard Syntax Examples
+## What is callable, and what is not
 
-```bash
-# Works without any transforms
-npx ts-node apps/demo/src/app/standard-syntax-examples.ts
-```
+This is the whole rule, and it follows from one fact: **only leaves are Angular
+signals.**
 
-## Key Differences
+| Target     | Is it a signal?          | Read              | Write                          |
+| ---------- | ------------------------ | ----------------- | ------------------------------ |
+| **Root**   | no — SignalTree accessor | `tree()`          | `tree({ ... })` — merges       |
+| **Branch** | no — SignalTree accessor | `tree.$.user()`   | `tree.$.user({ ... })` — merges |
+| **Leaf**   | **yes** — real `WritableSignal` | `tree.$.count()` | `tree.$.count.set(5)`     |
 
-| Aspect          | Callable Syntax          | Standard Syntax            |
-| --------------- | ------------------------ | -------------------------- |
-| **Setup**       | Requires build transform | No setup needed            |
-| **Syntax**      | `tree.$.prop('value')`   | `tree.$.prop.set('value')` |
-| **TypeScript**  | Errors without transform | Always type-safe           |
-| **Performance** | Zero runtime overhead    | Zero runtime overhead      |
-| **DX**          | More concise             | More explicit              |
+We own a branch's call semantics, so calling one can mean "merge this". We do
+not own a signal's: calling an Angular signal is a read, and it ignores
+arguments. That is why `tree.$.count(5)` cannot work, and why in 14.0.0 it no
+longer type-checks instead of silently doing nothing.
 
-## When to Use Each
-
-### Use **Callable Syntax** when:
-
-- ✅ You can set up the build-time transform
-- ✅ You prefer more concise syntax
-- ✅ Your team values DX over explicitness
-- ✅ You're building a new project
-
-### Use **Standard Syntax** when:
-
-- ✅ You want immediate functionality without setup
-- ✅ You prefer explicit method calls
-- ✅ You're integrating into existing projects
-- ✅ You want maximum compatibility
-
-## Performance
-
-Both syntaxes deliver **identical runtime performance**:
-
-- Zero overhead abstractions
-- Pure Angular signals under the hood
-- No runtime transformation cost
-- Optimal change detection
+Leaves stay real signals on purpose. Wrapping them to make the sugar work was
+measured — the speed cost was negligible (~4%, inside noise), but a wrapper is
+not a signal: `isSignal()` returns `false` and `Symbol(SIGNAL)` disappears,
+which would break `toObservable`, `model()`/`input()` interop, and every
+third-party tool that guards on `isSignal`. The interop guarantee is worth more
+than the shorter call.

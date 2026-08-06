@@ -1095,8 +1095,38 @@ export type PathInterceptor = (
 // self-contained.
 export interface CallableWritableSignal<T> extends WritableSignal<T> {
   (): T;
-  (value: NotFn<T>): void;
-  (updater: (current: T) => T): void;
+  // ⚠️ 14.0.0 — THE SETTER OVERLOADS ARE GONE. They typed a call that did
+  // nothing.
+  //
+  //   (value: NotFn<T>): void;
+  //   (updater: (current: T) => T): void;
+  //
+  // A LEAF IS A REAL ANGULAR SIGNAL. Calling one is a READ; it returns the
+  // value and discards the argument. Measured: `tree.$.count(5)` on a leaf
+  // holding 0 left it at 0, silently. The same expression one level up —
+  // `tree.$.user({ name: 'Bob' })` — DOES work, because a branch is our own
+  // accessor and we own its call semantics. So the type promised a uniformity
+  // the runtime never had, and the failure was invisible at both compile time
+  // and run time.
+  //
+  // `@signaltree/callable-syntax` existed to close that gap by rewriting
+  // `leaf(v)` to `leaf.set(v)` at build time. It cannot be delivered to an
+  // Angular app at all (RFC 0008 §4, verified against a real build:
+  // `@angular/build:application` exposes no `plugins`; `codePlugins` runs after
+  // ngtsc has claimed every `.ts` — a probe received ZERO files; ngtsc's
+  // transformer list is hardcoded; ts-patch goes inert under `isolatedModules`).
+  // Angular is this library's primary audience, so for most users these
+  // overloads could never have become true.
+  //
+  // The alternative — wrap every leaf so the call really sets — was measured
+  // and rejected. Cost was not the problem (~4% on a set+get, inside noise);
+  // IDENTITY was: a wrapper is not a signal. `isSignal(wrapper)` is `false` and
+  // `Symbol(SIGNAL)` is absent, so `toObservable`, `model()`/`input()` interop
+  // and every third-party tool that guards on `isSignal` would break. Trading
+  // that for call-site sugar is a bad trade, and "leaves are real Angular
+  // signals" is the interop guarantee the whole design rests on.
+  //
+  // Write a leaf with `.set()` / `.update()`. Branches stay callable.
 }
 
 export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
