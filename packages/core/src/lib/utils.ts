@@ -412,75 +412,6 @@ export function materializeNode<T>(store: object): T {
   return materialized(store, () => unwrap<T>(store));
 }
 
-/** @internal The uncached build for one NodeAccessor. See {@link materialized}. */
-function buildFromAccessor<T>(node: NodeAccessor<unknown>): T {
-    if (isEntityNode(node)) {
-      return {
-        all: (node as unknown as { all: () => unknown }).all(),
-      } as unknown as T;
-    }
-    if (isStatusNode(node)) {
-      const s = node as unknown as { state: () => unknown; error: () => unknown };
-      return { state: s.state(), error: s.error() } as unknown as T;
-    }
-    const result = {} as Record<string, unknown>;
-
-    for (const key in node as unknown as Record<string, unknown>) {
-      if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
-
-      const value = (node as unknown as Record<string, unknown>)[key];
-
-      // A node IS a function, so `length`, `name` and `prototype` may be the
-      // function's own intrinsics rather than state. Distinguish by VALUE, not
-      // by name: state always arrives as a leaf signal or a child accessor, so
-      // anything else under these keys is the intrinsic and is skipped.
-      // Name-only skipping silently deleted real state — `{ cfg: { length: 3 } }`
-      // unwrapped to `{ cfg: {} }`.
-      if (
-        (key === 'length' || key === 'prototype' || key === 'name') &&
-        !isSignal(value) &&
-        !isNodeAccessor(value)
-      ) {
-        continue;
-      }
-
-      if (isNodeAccessor(value)) {
-        result[key] = unwrap(value);
-      } else if (isSignal(value)) {
-        const unwrappedValue = (value as Signal<unknown>)();
-        if (
-          typeof unwrappedValue === 'object' &&
-          unwrappedValue !== null &&
-          !Array.isArray(unwrappedValue) &&
-          !isBuiltInObject(unwrappedValue)
-        ) {
-          result[key] = unwrap(unwrappedValue);
-        } else {
-          result[key] = unwrappedValue;
-        }
-      } else if (typeof value === 'function') {
-        // Skip functions so snapshots stay plain-data. A materialized marker
-        // that is a plain callable lands here too, so its VALUE silently
-        // vanishes from the snapshot rather than being unwrapped.
-        if (typeof ngDevMode === 'undefined' || ngDevMode) {
-          warnUnwrapSkipped(key);
-        }
-        continue;
-      } else if (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value) &&
-        !isBuiltInObject(value)
-      ) {
-        result[key] = unwrap(value);
-      } else {
-        result[key] = value;
-      }
-    }
-
-  return result as T;
-}
-
 /**
  * Unwraps a signal or signal tree into a plain JS value shaped as T.
  * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
@@ -494,15 +425,36 @@ export function unwrap<T>(node: unknown): T {
     return node as T;
   }
 
-  // Handle callable signals first
+  // Handle callable signals first.
+  //
+  // ONE BUILDER. An accessor is materialised by walking its BACKING STORE, not
+  // the accessor itself. There used to be a second builder (buildFromAccessor)
+  // that walked the accessor, and because memoKey() resolves an accessor to its
+  // store, both wrote to the SAME memo cell — so whichever entry point read a
+  // node first decided its snapshot, permanently. That made ST2008 fire or not
+  // depending on read order, and made the two builders disagree on symbol keys.
+  //
+  // The store direction is the correct one to keep, for three reasons:
+  //   - a store carries NO own symbols, while an accessor carries its
+  //     `SignalTree:NodeAccessor` and `SignalTree:NodeStore` brands, which a
+  //     symbol-copying walk would stamp into every snapshot;
+  //   - a store is a plain object, so the `length`/`name`/`prototype` intrinsic
+  //     skip that only existed because an accessor IS a function is no longer
+  //     needed;
+  //   - the store walk takes a child accessor's materialisation BY REFERENCE
+  //     (`value()`), where the accessor walk re-copied it via `unwrap()` and
+  //     destroyed the structural sharing the memo exists to produce.
   if (isNodeAccessor(node)) {
     // Memoised per node — see materialized(). Clean subtrees are returned by
     // reference, so a one-leaf write does not rebuild the whole tree.
+    // memoKey() IS the accessor->store resolution, so reusing it here is not a
+    // convenience: it guarantees the object we BUILD FROM is the same object the
+    // memo is KEYED ON. Two different answers to that question is what produced
+    // the shared-cell bug in the first place.
+    const target = memoKey(node as object);
     return isMemoisable(node)
-      ? materialized(node, () =>
-          buildFromAccessor<T>(node as NodeAccessor<unknown>)
-        )
-      : buildFromAccessor<T>(node as NodeAccessor<unknown>);
+      ? materialized(node, () => buildFromStore<T>(target))
+      : buildFromStore<T>(target);
   }
   if (isSignal(node)) {
     const value = (node as Signal<unknown>)();
@@ -529,6 +481,21 @@ export function unwrap<T>(node: unknown): T {
     return node as T;
   }
 
+  return buildFromStore<T>(node as object);
+}
+
+/**
+ * @internal THE builder. Every snapshot of a tree node is produced here —
+ * `tree()`, `snapshotState()`, `unwrap()` of an accessor, and every nested
+ * child — so there is exactly one place that decides what a property
+ * contributes to a snapshot.
+ *
+ * This used to be two near-duplicate loops (this one, plus `buildFromAccessor`
+ * for the accessor side) that shared a single memo cell and had already drifted:
+ * only one of them carried the ST2008 diagnostic, and only one of them copied
+ * symbol keys. See the comment on the accessor branch of `unwrap()`.
+ */
+function buildFromStore<T>(node: object): T {
   // An entityMap reached through the store path rather than an accessor. Same
   // rule — see isEntityNode(): entities only, no derived views.
   if (isEntityNode(node)) {
@@ -561,7 +528,16 @@ export function unwrap<T>(node: unknown): T {
       !isNodeAccessor(value) &&
       !isSignal(value)
     ) {
-      // Skip plain functions so snapshots stay plain-data.
+      // Skip plain functions so snapshots stay plain-data — but SAY SO. A
+      // materialized marker that is an unbranded callable (`form`,
+      // `asyncSource`) lands here, so its value vanishes from the snapshot and
+      // from everything built on one: serialize, persistence, devtools, audit,
+      // time travel. ST2008 previously existed only on the accessor builder,
+      // which is not the one that runs for a marker behind a store, so this
+      // was silent in practice for the whole class it was written for.
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        warnUnwrapSkipped(key);
+      }
       continue;
     }
 
@@ -601,6 +577,26 @@ export function unwrap<T>(node: unknown): T {
 
   const symbols = Object.getOwnPropertySymbols(node as object);
   for (const sym of symbols) {
+    // Never copy SignalTree's own brands into a snapshot.
+    //
+    // A store carries no own symbols, so this cannot fire on the normal path —
+    // it is defence-in-depth for the fallback where an accessor is walked
+    // directly. An accessor owns `SignalTree:NodeAccessor` and
+    // `SignalTree:NodeStore`, and the second one's VALUE IS THE BACKING STORE,
+    // so copying it would drag a full walk of the store into the payload under
+    // a symbol key.
+    //
+    // Descriptors are NOT a defence here: `Object.getOwnPropertySymbols`
+    // returns non-enumerable symbols too, so marking a brand
+    // `enumerable: false` does nothing. It has to be skipped by identity.
+    // (Same hazard TREE_STORES is a WeakSet to avoid — see its comment.)
+    if (
+      typeof sym.description === 'string' &&
+      sym.description.startsWith('SignalTree:')
+    ) {
+      continue;
+    }
+
     const value = (node as Record<symbol, unknown>)[sym];
 
     if (
@@ -608,7 +604,11 @@ export function unwrap<T>(node: unknown): T {
       !isNodeAccessor(value) &&
       !isSignal(value)
     ) {
-      // Skip plain functions so snapshots stay plain-data.
+      // Skip plain functions so snapshots stay plain-data. See the string-key
+      // loop above for why this reports rather than vanishing.
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        warnUnwrapSkipped(String(sym));
+      }
       continue;
     }
 

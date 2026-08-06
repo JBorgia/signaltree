@@ -195,10 +195,18 @@ than inventing a protocol. Add `owns`/`snapshot`/`hydrate`, and make `mode`
 that knows whether a process boundary was crossed. Full plan with sequencing in
 §8 of the architecture doc.
 
-**Start with step 1 — merge `unwrap`'s duplicate loops, make ST2008 fire from
-all three skip sites, and test it.** It makes the data loss visible without
-changing behaviour, which is the right first move for a class where every fix so
-far has been aimed at a symptom.
+**Step 1 is DONE** (collapse to one builder, ST2008 from every skip site,
+6 tests, 2 of them mutation-verified). `buildFromAccessor` is gone; `unwrap()`'s
+accessor branch builds from `memoKey(node)`, so one memo cell now has exactly
+one builder. Measured perf-neutral across 3 alternating pairs; structural
+sharing pinned as a deterministic test. Details and numbers in §8 of the
+architecture doc.
+
+**Next is step 2, and it is BLOCKED on one decision:** does `snapshot()` output
+carry a version tag? See §8 — the blocker is the rolling-deploy / SSR-skew case,
+where two payload shapes coexist against one storage with no ordering to
+exploit. Cheap to add now, impossible to retrofit onto payloads already in a
+user's `localStorage`.
 
 **Also resolved:** `tree(partial)` not restoring an entityMap is documented as
 INTENTIONAL at `signal-tree.ts:597-603` — markers "do not accept merge writes BY

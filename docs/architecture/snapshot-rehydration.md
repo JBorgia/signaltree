@@ -86,6 +86,11 @@ revision.
 
 ### 3.0 `form()` and `asyncSource()` are ABSENT from `tree()` entirely
 
+> **Status after step 1 (done):** the **silence** is fixed — ST2008 now fires
+> for these, at any depth, from one builder, identically regardless of read
+> order. The **absence** is not fixed and is what step 2 addresses. Everything
+> described below still happens; it is now loud instead of silent.
+
 **MEASURED** — the most severe item here, and it was missed by this document's
 first revision. A materialised `form()` is an unbranded callable: neither
 `isSignal` nor `isNodeAccessor`, so every walker skips it.
@@ -116,27 +121,30 @@ data loss is the worst possible shape for a bug.
 **MEASURED against the published 13.5.0 tarball: identical** (`{"grp":{},"n":1}`
 with the same live values). Pre-existing, and not caused by any 13.6.0 change.
 
-**ST2008 was built for exactly this and is inert.** `eac09db6` added it in
-13.4.0 — commit message: _"Materialized markers that are plain callables land
-here... omitted from the snapshot entirely, so serialize/persistence/devtools/
-audit silently lose the key."_
+**ST2008 was built for exactly this and was inert until step 1.** `eac09db6`
+added it in 13.4.0 — commit message: _"Materialized markers that are plain
+callables land here... omitted from the snapshot entirely, so
+serialize/persistence/devtools/audit silently lose the key."_
 
 **It was added to one of three skip sites.** At `eac09db6^`, `unwrap` already
 had three places that skip a plain function: the accessor branch, the generic
 string-key loop, and the generic symbol-key loop. The commit put the warning on
-the **accessor branch only** and left the other two silent. Today those are
-`utils.ts:459` (warns) versus `utils.ts:551` and `utils.ts:599` (silent) — and
-the silent pair is what runs for a marker reached through a backing store.
+the **accessor branch only** and left the other two silent — and the silent pair
+was what ran for a marker reached through a backing store, which is the ordinary
+case. Step 1 removed the accessor branch entirely and put the diagnostic on both
+surviving sites, so there is now one builder and no site that can drop a value
+quietly.
 
 **An earlier revision of this section blamed 13.5.0's memoisation refactor
 (`6e70dd7e`) for splitting the loop and losing the warning. That is wrong** —
 verified against `6e70dd7e^`: the two loops and the asymmetry both predate it,
 and the refactor only extracted the accessor branch into `buildFromAccessor`.
 The real story is simpler and worse: **the diagnostic never covered the path
-that matters, from the day it was written.** There is no test for ST2008
-anywhere in the repo, which is why nothing caught it — and because the accessor
-and store builders share a single memo cell, whether it fires at all depends on
-which entry point reads a node first (MEASURED; see §8).
+that matters, from the day it was written.** It had no test anywhere in the
+repo, which is why nothing caught it — and because the accessor and store
+builders shared a single memo cell, whether it fired at all depended on which
+entry point read a node first (MEASURED; see §8). Both are fixed in step 1: one
+builder, and `snapshot-builder.spec.ts` pins the order-independence.
 
 ### 3.1 `serialization()` cannot round-trip `status()` or `entityMap` — it THROWS
 
@@ -588,6 +596,37 @@ actually happens.
    benchmarks before/after; confirm no snapshot gains an own symbol; confirm
    state stored under the keys `length`, `name` and `prototype` still round-trips
    (there is prior art here — a name-based skip once deleted real state).
+
+   ✅ **DONE.** `buildFromAccessor` deleted; `unwrap()`'s accessor branch builds
+   from `memoKey(node)`, so the object built from and the object keyed on are the
+   same by construction. ST2008 now fires from both remaining skip sites, and the
+   symbol loop skips `SignalTree:*` by identity (not by descriptor — see above).
+   Net −53 lines of duplicated builder.
+
+   Pinned by `snapshot-builder.spec.ts` (6 tests). Mutation-verified against the
+   pre-change code: **2 of the 6 go red** — order-independence and
+   ST2008-at-depth, the two that pin the fix. The other four are invariant
+   guards (brand leak, `length`/`name`/`prototype` round-trip, structural
+   sharing); they held before and must keep holding.
+
+   **MEASURED, alternating order, 3 pairs** — no difference in any metric, in
+   either direction:
+
+   | metric       |         before |          after |
+   | ------------ | -------------: | -------------: |
+   | memo-hit     | 0.150–0.162 µs | 0.150–0.178 µs |
+   | write + read | 158.9–176.7 µs | 146.7–175.1 µs |
+   | time travel  |   0.53–0.57 ms |   0.49–0.61 ms |
+
+   Ranges overlap throughout, so the change is perf-neutral; an earlier
+   single-shot reading suggested ~10% faster on write+read and was **retracted**
+   as noise. Structural sharing is exact and unchanged (49/50 subtrees shared),
+   which is the property the 13.5.0 win actually rests on — and it is now pinned
+   as a deterministic test rather than inferred from a timing.
+
+   Gates: all packages test/lint/build exit 0; bundle 7.01 KB against a 7.1 KB
+   budget (+0.02 KB net — the two ST2008 sites cost slightly more than the
+   deleted duplicate saved); dev code still fully foldable (−1.68 KB per tree).
 
 2. **Add `snapshot`/`hydrate`; implement for the four built-ins.** `tree()`
    then includes `form`.
