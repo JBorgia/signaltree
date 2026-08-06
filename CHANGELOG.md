@@ -4,7 +4,102 @@ Retires `@signaltree/enterprise` and moves the two capabilities worth keeping
 into core. See [RFC 0010](docs/rfcs/0010-retiring-enterprise.md) for the full
 decision record.
 
+### Added
+
+- **`compared()` / `byKeys()` — per-leaf equality.** A tree has ONE equality
+  function for every leaf, which is the right default and the wrong answer for a
+  handful of positions: the default cannot know which fields matter, or that a
+  `version` field already answers the question.
+
+  ```ts
+  user: compared(initialUser, byKeys<User>('id', 'version'));
+  ```
+
+  Measured, 2M writes to one leaf — `deepEqual` vs a comparator: object
+  `{id,name,email,version}` **53.8ns → 8.9ns (6.0x)**; the same object
+  re-fetched over HTTP (equivalent value, new identity) **110.3ns → 9.0ns
+  (12.2x)**; nested 3 levels **60.5ns → 9.5ns (6.4x)**.
+
+  The point is not the speed. A comparator reaches the reference-equality floor
+  (`Object.is`, 8.6ns) while KEEPING re-fetch correctness — which is exactly why
+  defaulting leaves to `Object.is` is still rejected and an opt-in comparator is
+  not the same trade. `byKeys()` is O(keys), so a version counter makes equality
+  constant-time however large the value grows.
+
+  Not useful on primitives: `deepEqual`'s first line is `if (a === b) return
+true`, so on a changing number it measures **6.5ns against `Object.is`'s
+  8.1ns** — the general function is faster and there is nothing to specialise.
+  `compared()` makes its position a LEAF even for an object value (a bare object
+  would have become a branch).
+
+- **ST2018 — a dev warning when a collection is modelled as a plain array
+  leaf.** The most expensive idiom mistake available, and it does not look like
+  one. Same task, 1000 updates to a 50k collection: `entityMap` **1.63ms**,
+  plain array leaf **49.80ms**, NgRx SignalStore **46.56ms** — the array leaf
+  lands at parity with the store SignalTree otherwise beats ~28x.
+
+  Documentation demonstrably did not prevent this: SignalTree's own demo
+  benchmark shipped the array-leaf idiom while the entity cookbook sat in the
+  repo. Deliberately conservative — silent below 32 elements, and for
+  primitives, objects with no identity key, non-unique ids, non-primitive ids,
+  nested arrays, nulls, and anything wrapped in `compared()`. Bounded 64-element
+  sample, once per array at construction, dev only.
+
+### Performance
+
+- **`tree()` is incremental — it rebuilds only what changed.** Materialising is
+  O(state), and doing that on every read when a write touched ONE leaf is the
+  full-state-work-per-change anti-pattern this library exists to avoid. Each
+  node now memoises its materialisation in a `computed`, so a node rebuilds only
+  when a signal beneath it actually changed and clean subtrees are returned BY
+  REFERENCE.
+
+  Cost of reading the whole state, by how much actually changed:
+
+  | shape                     | all leaves | one leaf        | nothing changed        |
+  | ------------------------- | ---------- | --------------- | ---------------------- |
+  | grid 100x100 (10k leaves) | 1807.8us   | 149.2us (12.1x) | 0.044us (**40,740x**)  |
+  | grid 1000x20 (20k leaves) | 3665.8us   | 389.8us (9.4x)  | 0.051us (72,412x)      |
+  | grid 20x1000 (20k leaves) | 5066.4us   | 311.6us (16.3x) | 0.045us (**111,558x**) |
+
+  The "all leaves" column includes the memo's own overhead, so it understates
+  the gain. Built on `computed()` rather than hand-rolled dirty flags, so the
+  invalidation rides on Angular's existing write path and **costs writes
+  nothing**. No gain on deep-narrow shapes — this is a WIDTH optimisation.
+
+  ⚠️ **BREAKING for anyone who mutates a snapshot.** `tree()` no longer returns
+  a freshly allocated object, so mutating the result would corrupt the cache and
+  survive into every later read. Snapshots were always meant to be read-only;
+  that is now load-bearing, so each node is `Object.freeze`d in dev — mutation
+  becomes an immediate `TypeError` instead of a corrupted tree found much later.
+  If you mutate a snapshot, copy it first. Nothing in this repo did: all 751
+  pre-existing core tests pass with the freeze active.
+
+- **A wasted deep copy on every read of every branch.** After a child accessor
+  returned its already-materialised object, `unwrap` called `unwrap()` on it
+  again, deep-copying a plain object that was already plain. Every parent read
+  minted a fresh copy of every child, so no subtree was ever reference-stable
+  and the memo above shared 0 of 100 subtrees. Removing it took sharing to 99 of 100. The identical-looking recursion in the `isSignal` branch is load-bearing
+  and was kept — a leaf's VALUE is user data, and copying it is what stops a
+  snapshot aliasing live state.
+
 ### Fixed
+
+- **A held `byId()` reference died permanently across remove → re-add.**
+  `createEntityNode` captured the per-entity signal once; removing the entity
+  deleted it and a re-add created a new one, leaving the held node reading an
+  orphan forever while a fresh `byId()` worked. Holding a reference to a nested
+  position is the capability this library has and immutable stores do not, so it
+  has to survive the collection churning underneath it. Node reads now resolve
+  through the map.
+
+- **`timeTravel()` charged you for other trees.** It subscribes to the GLOBAL
+  PathNotifier flush, so every time-travelled tree materialised and
+  `structuredClone`d ITSELF whenever ANY tree in the process flushed, then threw
+  the result away. Measured on one small tree's write: 0.008ms with no other
+  trees alive, then 3.749 / 7.165 / 9.701ms as one, two and three unrelated
+  10k-leaf trees were kept alive. Now gated on a self-dirty flag; flat at
+  ~0.003ms regardless.
 
 - **Enhancers silently dropped every tree method, losing writes.**
   `.with(timeTravel())` made `updateAndReport({count:1})` return `[]` and never
@@ -27,7 +122,7 @@ decision record.
   nothing and a leaf holding an error never reported a change. Same for
   primitive wrappers: `new Number(1)` equalled `new Number(2)`. And a built-in
   against a keyless plain object (`new Date(0)` vs `{}`) compared equal, so a
-  malformed payload was swallowed *and* honestly reported as no change.
+  malformed payload was swallowed _and_ honestly reported as no change.
 
   Measured after the fix, interleaved against the previous implementation:
   arrays **−7.1%** (they now short-circuit before the built-in checks), plain
@@ -41,7 +136,6 @@ decision record.
   or an updater function; the batching override accepted only a function, so
   `.with(batching())` turned `batchUpdate({ count: 1 })` — the shape the docs
   use — into `TypeError: updater is not a function`. Restored to parity.
-
 
 - **`updateAndReport()` reported writes that never happened.** Leaves are
   `signal(value, { equal })`, so a new-reference-but-deep-equal value is
@@ -64,7 +158,7 @@ decision record.
   for state keys is now empty.
 
 - **`unwrap()` silently deleted state stored under `set` or `update`.** A leaf
-  signal *is* a function, and the guard skipped those keys by name whenever
+  signal _is_ a function, and the guard skipped those keys by name whenever
   their value was a function — so a permission `set` or an `update` timestamp
   vanished from every snapshot, every persisted payload and every
   `structuredClone`. The general plain-function skip already covered the case
@@ -176,7 +270,7 @@ earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
   nested under OBJECT parents.** Such a marker used to surface as its RAW
   MARKER from `tree()`, carrying `options.storage` with it, and `unwrap`
   deep-copied that storage object, enumerating unrelated keys into the
-  snapshot. Anyone passing `storage:` explicitly *and* using `serialization()`,
+  snapshot. Anyone passing `storage:` explicitly _and_ using `serialization()`,
   `persistence()`, devtools or `createAuditTracker` was emitting that storage's
   contents into those payloads. The default path was never affected (the
   marker's `options` stays empty because `createStoredSignal` resolves storage
@@ -205,7 +299,7 @@ earlier. See [RFC 0009](docs/rfcs/0009-13.4.0-implementation-plan.md).
   `tree()`/`unwrap()`, a deep-merge write through a parent was silently
   dropped, and `applyState()` (the devtools replay path) REPLACED the live
   signal with a raw value, after which reading it threw. The stored signal now
-  *is* the Angular signal.
+  _is_ the Angular signal.
 - **Nested markers no longer emit their raw marker object.** `makeNodeAccessor`
   copies a store's properties onto the accessor while its call path closes over
   the original store; materialization wrote only to the accessor, so the store
@@ -274,7 +368,7 @@ take this patch.**
 - **`stored()`: `clear()` and `reload()` are no longer undone by a migration
   re-persist** (`@signaltree/core`). When a stored value is migrated on load,
   the migrated data is written back in a queued microtask. `clear()` and
-  `reload()` cancelled the debounce/maxWait *timers*, but a microtask cannot be
+  `reload()` cancelled the debounce/maxWait _timers_, but a microtask cannot be
   cancelled and its guards still passed — so calling `clear()` in the same tick
   that a tree materialized with a version migration removed the key, and one
   microtask later the migrated value was written straight back. `reload()` had
@@ -307,6 +401,7 @@ take this patch.**
   Page-hide is precisely when a mobile WebView both collects and stops firing
   timers, making that the common case rather than a corner one. Weakness must
   not be able to outrace durability.)
+
 - **`stored()`: one failing signal no longer abandons the rest of a drain**
   (`@signaltree/core`). `flushAllStoredSignals()` had no isolation between
   signals, so an exception escaping one commit — e.g. an instrumented
@@ -506,14 +601,13 @@ gives durability-critical keys explicit levers.
   an opaque integer is useless in a production stack trace. Advisory prose is
   removable; error identity is not.
 
-
 - **New guide: `docs/guides/composition-recipes.md`** — the resolved forms of three
-  capabilities that get requested as features and are deliberately *not* API: a
+  capabilities that get requested as features and are deliberately _not_ API: a
   standard enhancer policy, a reusable entity-CRUD Ops base, and a selection
   read-model. Each composes primitives that already ship. Includes the two traps
   the audit surfaced: gating `timeTravel()` on a runtime boolean defeats
   tree-shaking (it's the RFC 0005 §0 mistake — gate structurally instead), and
-  optimistic rollback must snapshot *prior values* and restore the whole of what
+  optimistic rollback must snapshot _prior values_ and restore the whole of what
   an operation touched.
 
 - **Corrected an inaccurate `updateAndReport()` claim** in the root README. It was
@@ -521,7 +615,6 @@ gives durability-critical keys explicit levers.
   **paths**, not previous values, so it cannot restore state on its own. Rollback
   is snapshot → write → restore. The paths report is for partial server-payload
   sync, audit trails, and targeted persistence — which is what its own JSDoc says.
-
 
 - **`[ST2007]` dev-mode guardrail: `.derived()` no longer drops values silently**
   (`@signaltree/core`). The merge walked each derived value and ignored anything
@@ -569,7 +662,6 @@ gives durability-critical keys explicit levers.
   its emitted `.d.ts` now names the types through `import("@signaltree/core")`
   rather than failing. Purely additive — two type exports, no runtime change.
 
-
 - **`entityMap().computed()` slice names are now typed on `tree.$`**
   (`@signaltree/core`). Reading a slice used to require throwing away type
   safety — `(tree.$.users as any).active()` — which the docs taught as the
@@ -601,8 +693,8 @@ gives durability-critical keys explicit levers.
 
 ### Changed (dev-mode notice)
 
-- The one-time dev-mode `console.info` about the *upcoming* `nativeErrors` flip is
-  replaced by one about the *completed* flip: an unset caller is now told once that
+- The one-time dev-mode `console.info` about the _upcoming_ `nativeErrors` flip is
+  replaced by one about the _completed_ flip: an unset caller is now told once that
   the default is `true` and how to opt out. Kept precisely because the flip lands
   in a **minor** — a caller who upgrades without reading this file would otherwise
   get different objects out of `field().errors()` with no signal at all. Setting
@@ -635,7 +727,7 @@ gives durability-critical keys explicit levers.
   counterpart to `history()`: attaches the same signal-native undo/redo
   engine to ANY `WritableSignal`, not just a `form()` marker's values signal.
   Point it at the model behind a plain Angular Signal Forms `form(model,
-  schema)` (or any writable signal) and get `undo()`/`redo()`/
+schema)` (or any writable signal) and get `undo()`/`redo()`/
   `clearHistory()`/`canUndo: Signal<boolean>`/`canRedo: Signal<boolean>`/
   `history: Signal<{ past, present, future }>` — the identical
   `FormHistoryApi<T>`/`FormHistoryOptions<T>` shapes `history()` uses. Runs
@@ -682,9 +774,9 @@ gives durability-critical keys explicit levers.
 
 ## 13.0.0 (2026-07-24)
 
-> RFC 0007's packaging principle — *independent dependency/runtime → its own
+> RFC 0007's packaging principle — _independent dependency/runtime → its own
 > package; a within-tree mechanic (needs only `@signaltree/core` +
-> `@signaltree/shared`) → core* — applied to two capabilities that were filed
+> `@signaltree/shared`) → core_ — applied to two capabilities that were filed
 > under the wrong tree, plus a new signal-native undo/redo feature for
 > `form()` and an events↔`entityMap` bridge. Breaking because the
 > core↔ng-forms moves change canonical import paths.
@@ -694,11 +786,11 @@ gives durability-critical keys explicit levers.
 - **`history()` (`@signaltree/core`) — signal-native undo/redo for `form()`
   markers.** `form({ history: history({ capacity?: 10, exclude?: (keyof T)[] }) })`.
   Materializes as `tree.$.myForm.history?` → `{ undo(), redo(), clearHistory(),
-  canUndo: Signal<boolean>, canRedo: Signal<boolean>, history: Signal<{ past,
-  present, future }> }`. Attaches to the marker's values signal — the same
+canUndo: Signal<boolean>, canRedo: Signal<boolean>, history: Signal<{ past,
+present, future }> }`. Attaches to the marker's values signal — the same
   signal `signalForm()` uses as its Angular Signal Forms `FieldTree` model —
   so undo/redo drive BOTH the marker API and any bound Signal Forms field
-  tree from one engine, including edits made *through* the field tree.
+  tree from one engine, including edits made _through_ the field tree.
   `exclude` is a security feature: excluded fields never enter the snapshot
   buffer and keep their live value across an undo (a stripped secret can
   never be resurrected). A raw object passed as `history` (instead of
@@ -708,7 +800,7 @@ gives durability-critical keys explicit levers.
   `history()` doesn't pay for the snapshot/undo engine (measured Δ ≈ 0.69KB
   gzip for `form()` + `history()` vs `form()` alone).
 - **`entityEventHandler(entities, mapping)` (`@signaltree/events/angular`)** —
-  maps a *batch* of domain events onto `entityMap`'s batch mutation ops
+  maps a _batch_ of domain events onto `entityMap`'s batch mutation ops
   (`upsertMany`/`updateMany`/`removeMany`), collapsing what used to be one
   signal notification + one O(size) Map clone per event into a handful of
   calls per batch. `mapping = { match?, upsert?, update?, remove?, selectId? }`.
@@ -745,7 +837,7 @@ gives durability-critical keys explicit levers.
 - **`withFormHistory` (`@signaltree/ng-forms`)** — scoped to the legacy
   `createFormTree` (`FormGroup`) substrate; structurally cannot attach to a
   `signalForm()` `FieldTree`. Use `form({ history: history({ capacity,
-  exclude }) })` from `@signaltree/core` instead. Retained (not removed) for
+exclude }) })` from `@signaltree/core` instead. Retained (not removed) for
   `createFormTree` users; will be removed with the legacy `FormGroup` bridge.
 - **`createWizardForm` (`@signaltree/ng-forms`)** — built on `createFormTree`,
   with no `signalForm()` bridge. Use the `form()` marker's built-in `wizard`
@@ -849,10 +941,10 @@ confirmed (RFC 0004, v12 audit intake):
 
   ```ts
   // before (11.x)
-  entityMap<Plant, string>({ selectId, load: () => api.list$(), staleTime: '30m', tags: ['plants'] })
+  entityMap<Plant, string>({ selectId, load: () => api.list$(), staleTime: '30m', tags: ['plants'] });
   // after (12.0)
   import { entityMap, loader } from '@signaltree/core';
-  entityMap<Plant, string>({ selectId, load: loader(() => api.list$(), { staleTime: '30m', tags: ['plants'] }) })
+  entityMap<Plant, string>({ selectId, load: loader(() => api.list$(), { staleTime: '30m', tags: ['plants'] }) });
   ```
 
   `selectId`/`sortComparer` stay on the `entityMap` config; `staleTime`/`swr`/
@@ -873,7 +965,7 @@ confirmed (RFC 0004, v12 audit intake):
 
 - **`loader(fn, options?)` (`@signaltree/core`)** — the tree-shakeable way to
   make an `entityMap` cache-aware. Exact `security()` precedent: the returned
-  branded `LoaderFeature` is the *only* module-level reference to the loader
+  branded `LoaderFeature` is the _only_ module-level reference to the loader
   machinery (`attachLoader`), so importing `entityMap` without `loader` shakes
   the loader/cache/SWR/persist code out entirely. `LoaderFeature`/`LoaderOptions`
   are the public types.
@@ -907,7 +999,7 @@ Migration guide: [`docs/guides/migration-v11-v12.md`](docs/guides/migration-v11-
 - **Canonical `visitTree` traversal skeleton.** The two walkers that wrap leaf
   `.set`/`.update` — `interceptLeafSignals` (devtools/time-travel/schema) and
   batching's `wrapSignalSetters` — now share one `visitTree(root, visitor,
-  { maxDepth, skipKey })` helper instead of each re-implementing the
+{ maxDepth, skipKey })` helper instead of each re-implementing the
   `isTraversableNode` guard + `Object.keys` + cycle-guard + depth-cap + recurse
   boilerplate. No behavior change (walker-conformance suite + the
   `[ST2002]`-asserting entity-method-guard spec both green; `skipKey` preserves
@@ -940,7 +1032,7 @@ Migration guide: [`docs/guides/migration-v11-v12.md`](docs/guides/migration-v11-
 
 - **`signalForm()` (`@signaltree/ng-forms/signals`)** — one name for the
   Angular Signal Forms bridge, with two overloads: `signalForm(marker,
-  options?)` for `form()` markers and `signalForm(tree, rootPath, subtree)`
+options?)` for `form()` markers and `signalForm(tree, rootPath, subtree)`
   for schema-registry trees. `markerSignalForm`/`signalFormBridge` remain as
   deprecated warned aliases (removal next major); `SignalFormOptions` is the
   canonical options type.
@@ -954,7 +1046,7 @@ Migration guide: [`docs/guides/migration-v11-v12.md`](docs/guides/migration-v11-
   (`upsertOne`, `setLoading`, loader triggers, …) are genuinely absent from
   the type; derived computeds survive, including derived state deep-merged
   into marker nodes; `byId` re-signed as deep-readonly. `defineStore(factory,
-  { expose: 'readonly' })` is honest sugar over the same type — misuse on a
+{ expose: 'readonly' })` is honest sugar over the same type — misuse on a
   non-builder factory is a compile error, never a silent no-op.
 - **`withKind()`** — tag custom validators with a semantic kind for the
   Signal Forms bridge (wraps, never mutates); `validators.when()` now
@@ -1053,7 +1145,7 @@ Migration guide: [`docs/guides/migration-v11-v12.md`](docs/guides/migration-v11-
   writes when devtools' interceptor is attached) — now surfaced honestly:
   a one-time dev warning when the strategy is selected, plus README/JSDoc
   guidance to force polling via `changeDetection: { disablePathNotifier:
-  true }`. Automatic fallback was rejected: entity nodes hide behind the
+true }`. Automatic fallback was rejected: entity nodes hide behind the
   lazy proxy tree and devtools may attach after guardrails, so attach-time
   detection is unreliable in both directions.
 
@@ -1174,12 +1266,13 @@ Swept all packages for both classes: `materialize-markers`, `intercept-leaf-sign
 ## 11.4.0 (2026-07-20)
 
 > `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`)
-> + NG0600-safe deferred auto-load; the short-lived 11.3.0 `entityCollection` marker is
-> folded into `entityMap` (removed as a separate marker, not renamed). Its keyed design also
-> supersedes the 11.3.0 `key`/`currentKey`/`clearOnKeyChange` shape, corrected same day —
-> there is no separately-published 11.3.0 to preserve compatibility with. See RFC 0003 §0 in
-> [docs/rfcs/0003-keyed-entity-collection.md](docs/rfcs/0003-keyed-entity-collection.md)
-> for the full rationale.
+>
+> - NG0600-safe deferred auto-load; the short-lived 11.3.0 `entityCollection` marker is
+>   folded into `entityMap` (removed as a separate marker, not renamed). Its keyed design also
+>   supersedes the 11.3.0 `key`/`currentKey`/`clearOnKeyChange` shape, corrected same day —
+>   there is no separately-published 11.3.0 to preserve compatibility with. See RFC 0003 §0 in
+>   [docs/rfcs/0003-keyed-entity-collection.md](docs/rfcs/0003-keyed-entity-collection.md)
+>   for the full rationale.
 
 ### Added
 
@@ -1261,8 +1354,8 @@ Swept all packages for both classes: `materialize-markers`, `intercept-leaf-sign
 ### 🧪 Experimental (not exported): `asyncStream` — chunk-accumulating streaming
 
 Implementation + tests are on `main` but **not public API**. It fills the gap
-`asyncSource`/`asyncQuery` can't (those *replace* the value per emission;
-`asyncStream` *accumulates*). Whether it ships as a distinct marker or as an
+`asyncSource`/`asyncQuery` can't (those _replace_ the value per emission;
+`asyncStream` _accumulates_). Whether it ships as a distinct marker or as an
 `accumulate` option on `asyncSource` is deferred (RFC 0001 §5) until there's
 demand. Shape under evaluation:
 
@@ -1274,10 +1367,16 @@ const store = signalTree({
   reply: asyncStream<string, string>({ initial: '', accumulate: (s, c) => s + c }),
 });
 
-store.$.reply.start(anthropic.messages.stream({ /* … */ })); // AsyncIterable | ReadableStream
-store.$.reply();          // accumulated text, updates per token
-store.$.reply.loading();  store.$.reply.done();  store.$.reply.error();
-store.$.reply.cancel();   // abort; .refresh() (alias .regenerate()) re-runs the stream factory; .reset()
+store.$.reply.start(
+  anthropic.messages.stream({
+    /* … */
+  })
+); // AsyncIterable | ReadableStream
+store.$.reply(); // accumulated text, updates per token
+store.$.reply.loading();
+store.$.reply.done();
+store.$.reply.error();
+store.$.reply.cancel(); // abort; .refresh() (alias .regenerate()) re-runs the stream factory; .reset()
 ```
 
 - Consumes all four AI-SDK transports: **`AsyncIterable | ReadableStream | Observable | Promise`**.
@@ -1340,11 +1439,11 @@ const tree = signalTree({
 });
 
 // Both forms work and return identical values:
-tree.$.profile();           // canonical — call the marker
-tree.$.profile.data();      // v10.4 alias — returns the same T
+tree.$.profile(); // canonical — call the marker
+tree.$.profile.data(); // v10.4 alias — returns the same T
 
 // Field-level signals still recommended for templates / computed:
-tree.$.profile.$.name();    // string
+tree.$.profile.$.name(); // string
 ```
 
 No new state. The alias delegates to the same internal `valuesSignal()`. JSDoc on the alias documents the canonical preference. No deprecation pressure on existing code calling the marker directly.
@@ -1379,6 +1478,7 @@ Documentation-only patch — fixes the SignalTree agent skill files (`docs/skill
 **`byId()` mislabeled as `Signal<E | undefined>`** in core.md, patterns.md, migration-from-ngrx-signals.md. Actually returns `EntityNode<E> | undefined` — a callable cursor with per-field signals. Canonical idiom is `.byId(id)?.()`. Fixed in all 3.
 
 **Wrong / missing API in SKILL.md root file:**
+
 - `form(fields)` placeholder → `form<T>({ initial: T })` config shape
 - Branch writes called "replace" → corrected to "deep-merge partial" (both arg forms)
 - `asyncQuery .results history, .rerun()` → corrected to current-result + driven via `.input.set()`, no `.refresh()` (that's on `asyncSource`)
@@ -1386,6 +1486,7 @@ Documentation-only patch — fixes the SignalTree agent skill files (`docs/skill
 - Tagline reverted to v10.3 canonical "State as shape. Signals at every path."
 
 **reference/core.md gaps:**
+
 - `idKey` config field → real name is `selectId`
 - Fabricated `@signaltree/core/presets` subpath → removed
 - entityMap surface incomplete (`updateMany` shape, `.empty()`, full read/mutation list added)
@@ -1393,23 +1494,28 @@ Documentation-only patch — fixes the SignalTree agent skill files (`docs/skill
 - Deprecated `is`-prefix forms replaced
 
 **reference/migration-from-ngrx-signals.md:**
+
 - `.update()` on branches → branches are callable, no `.update()` method
 - `byId` corrected
 - is-prefix predicates corrected (SignalTree side); NgRx side preserved
 
 **reference/patterns.md:**
+
 - Templates and code examples migrated to bare-name predicates
 - Legacy facade adapter sources from canonical `.loading` (re-exports as legacy `isLoading`)
 - `byId` type comment corrected
 
 **reference/testing.md:**
+
 - Hand-seeding `entityMap` via internal `entities` field → use public API (`setAll` / `upsertOne`)
 - Primitive-leaf example `isLoading: true` → `loading: true`
 
 **reference/install.md:**
+
 - `@signaltree/guardrails` peer range `^9.0.0` → `^9.0.1`
 
 **Per-package sub-skills:**
+
 - `guardrails/SKILL.md`: `autoSuppress` union conflated with intent/source enums — separated correctly (`autoSuppress` is `'hydrate' | 'reset' | 'bulk' | 'migration' | 'time-travel' | 'serialization'`).
 - `schema/SKILL.md`: install command was missing `@standard-schema/spec` required peer.
 - `callable-syntax/SKILL.md`: `rootIdentifiers` default was unstated — added explicit "default `['tree']` only" warning so `store`/`state` consumers don't silently get no rewrite.
@@ -1417,11 +1523,12 @@ Documentation-only patch — fixes the SignalTree agent skill files (`docs/skill
 These skill files are exactly what Cursor / Claude Code load when configured for SignalTree work. Every bug here directly produces residual hallucinations in the benchmark's primed-run column.
 
 Doc-patch quadrilogy across 5 days (10.3.0 → 10.3.3):
+
 - Root README: 22 fixes
 - Tarball README: 22 fixes
 - Priming files (llms.txt + llms-full.txt): 24 fixes
 - Agent skill files: ~30 fixes
-= **~98 documented inaccuracies eliminated** across every AI-discoverability surface that ships in the tarball or serves from signaltree.io.
+  = **~98 documented inaccuracies eliminated** across every AI-discoverability surface that ships in the tarball or serves from signaltree.io.
 
 ---
 
@@ -1432,6 +1539,7 @@ Documentation-only patch — fixes the dedicated AI priming files (`llms.txt`, `
 Reproducible 4-auditor workflow (2 per file × signature + logic) ran against both files. 41 raw findings, ~24 actionable after synthesis. All fixed:
 
 **Shared bugs (existed in both files):**
+
 - `form` accessor row listed phantom `.pristine` — replaced with the real `.submitting`.
 - `tree.destroy()` documented as "reverse enhancer order" — fixed to "registration order" (matches `signal-tree.ts:565-578`).
 - Object-arg root calls described as "replace" — they're deep-merge partial updates; sibling keys are preserved.
@@ -1439,6 +1547,7 @@ Reproducible 4-auditor workflow (2 per file × signature + logic) ran against bo
 - Tagline drift from v10.3 canonical — restored to "Reactive JSON for Angular. State as shape. Signals at every path."
 
 **`llms.txt` specific:**
+
 - `form<Profile>({ name: '', email: '' })` — missing `{ initial: ... }` wrapper; fixed to canonical config shape.
 - "auto-loaded from localStorage" `stored()` comment misleading on fresh load.
 - Edit-session paragraph conflated `createEditSession` (value-level) with `createTreeEditSession` (path-bound, v10.1+); split them.
@@ -1446,6 +1555,7 @@ Reproducible 4-auditor workflow (2 per file × signature + logic) ran against bo
 - `asyncQuery` does NOT have `.refresh()` — input-driven via `.input.set()`. Disambiguated from `asyncSource`'s `.refresh()`.
 
 **`llms-full.txt` specific:**
+
 - Fabricated `@signaltree/core/presets` subpath import (`TREE_PRESETS`, `createDevTree`, `createProdTree` — none exist). Removed.
 - `signalTree(state, { equalityFn: Object.is })` — `equalityFn` isn't a `TreeConfig` field. Replaced with the real `useShallowComparison: boolean`.
 - `updateMany([{ id, changes }, ...])` — NgRx shape. SignalTree's real signature is `(ids: K[], changes: Partial<E>)`.
@@ -1460,6 +1570,7 @@ Reproducible 4-auditor workflow (2 per file × signature + logic) ran against bo
 Why this matters: these are the priming files the v10.2 benchmark uses as input. The README and llms files together form the AI's view of SignalTree's API surface. Every bug in this surface was a residual hallucination in the benchmark's primed-run column. Fixing them is the most direct path to the next quarterly run's accuracy lift.
 
 Three consecutive docs patches (10.3.0 → 10.3.1 → 10.3.2) closed:
+
 - Root README: 22 fixes (signatures + logic + tagline)
 - Tarball README: 22 fixes (signatures + logic + tagline + package description)
 - Priming files: 24 fixes (signatures + logic + tagline)
@@ -1478,6 +1589,7 @@ serves as the AI priming surface). 37 raw findings, 22 actionable after
 synthesis. Fixed:
 
 **Wrong API in canonical examples (would not compile or would crash):**
+
 - `import { ..., entities } from '@signaltree/core'` — `entities` is not exported. Replaced all 4 sites with `entityMap`.
 - `form({ firstName: '', lastName: '' })` — `form<T>(config)` requires `{ initial: T }`. Fixed the canonical pattern.
 - `tree.set((state) => ({...}))` — `tree.set` doesn't exist. The root accessor itself is callable: `tree(updater)`.
@@ -1488,6 +1600,7 @@ synthesis. Fixed:
 - `import { batching } from '@signaltree/core/enhancers/batching'` — subpath not in `package.json` exports. Tree-shaking from the main barrel is what we ship.
 
 **Stale tagline / deprecated APIs as primary:**
+
 - Tagline reverted to v10.2-era "JSON branches, reactive leaves. No actions. No reducers. No selectors." — restored to v10.3 canonical "Reactive JSON for Angular. State as shape. Signals at every path." (also fixed the `package.json` description that mirrored it).
 - Status section taught deprecated `.isLoading()` / `.isLoaded()` / `.isError()` as primary. Replaced with v10.3 bare-name canonical (`.loading()`, `.loaded()`, `.hasError()`) plus the v10.2 Promise-vocab aliases (`.start()`, `.setSuccess()`, `.succeed()`, `.fail()`).
 - Status method-names table miscategorized `.loading` and `.error` as "v10.2 aliases" — they're canonical accessors, not aliases. Cleaned up.
@@ -1496,9 +1609,11 @@ synthesis. Fixed:
 - `rxMethod` row now notes the v9.6.0 removal so AI agents see the full history.
 
 **Documented but not exported:**
+
 - `createAsyncOperation` / `trackAsync` — re-routed to `asyncSource` / `asyncQuery` markers (the canonical async story in v10.x).
 
 **Logic / framing:**
+
 - Callable-syntax section reframed: branches are natively callable for reads AND writes; the plugin only aligns LEAF writes with that shape.
 - Benchmark arithmetic clarified: "720 cells (6 agents × 8 prompts × 5 libraries × 3 priming modes)".
 - "All predicates are Signal<boolean>" softened to distinguish boolean predicates from value accessors like `.error` and `.data`.
@@ -1519,12 +1634,12 @@ Humans had to remember which marker used which shape. AI agents trained on `stat
 
 **v10.3 fixes this** by making bare-named predicates canonical everywhere — matching `FormControl.dirty` / `.valid` and Angular signals conventions. The `is`-prefix names become deprecated aliases that return the **same Signal instance** as the canonical bare versions.
 
-| Marker | v10.3 canonical (preferred) | Deprecated alias (v10.x only, removed v11) |
-|---|---|---|
-| `status` | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
-| `entityMap` | `.empty` | `.isEmpty` |
-| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
-| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+| Marker                       | v10.3 canonical (preferred)                      | Deprecated alias (v10.x only, removed v11)            |
+| ---------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
+| `status`                     | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
+| `entityMap`                  | `.empty`                                         | `.isEmpty`                                            |
+| `form`                       | `.dirty`, `.valid`, `.touched`, `.pristine`      | (already bare — unchanged)                            |
+| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data`                    | (already bare — unchanged)                            |
 
 All predicates are callable `Signal<boolean>` — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`.
 
@@ -1580,10 +1695,10 @@ tree.$.load.setLoaded();
 tree.$.load.setError(err);
 
 // Now equivalent (AI-friendly):
-tree.$.load.start();        // === setLoading()
-tree.$.load.setSuccess();   // === setLoaded()
-tree.$.load.succeed();      // === setLoaded()
-tree.$.load.fail(err);      // === setError(err)
+tree.$.load.start(); // === setLoading()
+tree.$.load.setSuccess(); // === setLoaded()
+tree.$.load.succeed(); // === setLoaded()
+tree.$.load.fail(err); // === setError(err)
 ```
 
 Identical semantics, identical observable behavior, identical performance. Zero deprecation pressure on existing `setLoading()`/`setLoaded()` code. **No second source of truth — these are aliases, not new state.**
@@ -1594,13 +1709,13 @@ Every wrong pattern AI agents generate, mapped to its real origin library and th
 
 Examples:
 
-| Wrong (NOT SignalTree) | Real origin | Correct |
-|---|---|---|
-| `new SignalTree({...})` | invented | `signalTree({...})` |
-| `signalStore(withState(...))` | `@ngrx/signals` | `signalTree({...})` |
-| `collection<T>({ idKey })` | Akita / Elf | `entityMap<T, K>({ selectId })` |
-| `.value` accessors | MobX | call the signal: `tree.$.path()` |
-| `from 'signal-tree'` | invented | `from '@signaltree/core'` |
+| Wrong (NOT SignalTree)        | Real origin     | Correct                          |
+| ----------------------------- | --------------- | -------------------------------- |
+| `new SignalTree({...})`       | invented        | `signalTree({...})`              |
+| `signalStore(withState(...))` | `@ngrx/signals` | `signalTree({...})`              |
+| `collection<T>({ idKey })`    | Akita / Elf     | `entityMap<T, K>({ selectId })`  |
+| `.value` accessors            | MobX            | call the signal: `tree.$.path()` |
+| `from 'signal-tree'`          | invented        | `from '@signaltree/core'`        |
 
 ### 🔬 Benchmark infrastructure improvements
 
@@ -1632,12 +1747,12 @@ import { createTreeEditSession } from '@signaltree/core/edit-session';
 const session = createTreeEditSession(tree.$.user.profile);
 
 session.applyChanges((p) => ({ ...p, name: 'V2' }));
-session.modified();   // current draft
-session.isDirty();    // true
+session.modified(); // current draft
+session.isDirty(); // true
 session.undo();
-session.commit();     // tree.$.user.profile === draft
+session.commit(); // tree.$.user.profile === draft
 // or:
-session.cancel();     // discard draft, re-sync from source
+session.cancel(); // discard draft, re-sync from source
 ```
 
 Accepts any "callable accessor with `.set()`" — `WritableSignal<T>`, SignalTree branch accessors (`tree.$.user.profile`), or leaf signals (`tree.$.user.profile.name`).
@@ -1800,7 +1915,7 @@ const store = signalTree({
 });
 
 store.$.search.input.set('alice'); // triggers debounced pipeline
-store.$.search();                   // results
+store.$.search(); // results
 store.$.search.loading();
 ```
 

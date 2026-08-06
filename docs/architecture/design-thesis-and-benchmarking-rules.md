@@ -134,8 +134,13 @@ Writes are O(1) until you turn on time travel, at which point they become
 O(state) and scale with data you did not touch. ~17 KB retained per entry at
 5,000 rows.
 
-It also **does not record direct leaf writes at all** (`tree.$.a.b.set(x)`
-leaves history untouched), so undo silently cannot restore them.
+~~It also does not record direct leaf writes at all.~~ **This claim was STALE
+and is retracted (verified 13.5.0).** `interceptLeafSignals` already routes
+`tree.$.a.b.set(x)` through the PathNotifier so the flush hook records it, and
+undo restores it correctly. It is now pinned by tests
+(`leaf-write-history.spec.ts`) covering `.set()`, `.update()`, depth, redo, and
+"restoring must not grow history" — because the property is invisible from the
+outside until it breaks, which is how the wrong claim survived being repeated.
 
 **`serialization()` change detection** polls with `JSON.stringify(tree())` —
 materialise plus stringify the entire tree, on a timer, to discover whether
@@ -362,8 +367,8 @@ Forty-one options across nine families are surveyed and measured in
 2. **Steer collections to `entityMap`, in diagnostics** — 28.5× vs 0.9× between
    two idioms that look equally reasonable to write. No engine work; a dev-mode
    warning and documentation. Highest value per hour available.
-3. **Record direct leaf writes in time travel** — correctness. Undo cannot
-   restore a `tree.$.a.b.set(x)` today.
+3. ~~Record direct leaf writes in time travel.~~ **Already worked** — the claim
+   was stale. Verified and pinned by tests in 13.5.0.
 
 **Diff-based time travel is displaced.** It was the standing #1; structural
 sharing gets a better result with less code — no diff format, no patch

@@ -180,10 +180,17 @@ B2 subsumes B1 and is less code, because it needs no diff format, no diff
 application logic, and no inverse-patch correctness proof. B1 remains useful
 only if entries must be _transmitted_ (see C4).
 
-**B3. Record direct leaf writes. CORRECTNESS, not speed.** `tree.$.a.b.set(x)`
-currently leaves history untouched, so undo silently cannot restore it. Must be
-fixed regardless of which of B1/B2 lands, and A1's dirty-marking gives the hook
-for free — the marking already runs on every leaf write.
+**B3. Record direct leaf writes. ALREADY WORKED — claim retracted.** This
+document asserted that `tree.$.a.b.set(x)` left history untouched so undo could
+not restore it. That was stale: `interceptLeafSignals` already routes leaf
+writes through the PathNotifier and the flush hook records them. Verified and
+pinned in 13.5.0 by `leaf-write-history.spec.ts` (`.set()`, `.update()`, depth,
+redo, and "restoring must not grow history").
+
+The lesson is about the claim, not the code: an undo feature that silently drops
+writes looks exactly like one that works, so "is it recorded?" must be a test,
+never a reading of the source. The unverified assertion was repeated across two
+documents and a shortlist before anyone ran it.
 
 **B4. Ring buffer with a hard entry cap. REASONED.** Bounds memory but does not
 reduce per-entry cost. Worth having anyway as a safety valve; it is what stops
@@ -501,9 +508,8 @@ it is a dev-mode warning plus documentation. Highest value per hour in this
 document, and **F2** is how the typing makes it enforceable rather than
 advisory.
 
-**3. B3 — record direct leaf writes in time travel.** Correctness, not speed:
-undo cannot currently restore a `tree.$.a.b.set(x)`. A1's marking walk runs on
-exactly those writes, so it comes nearly free once A1 exists.
+**3. ~~B3~~ — done, and it was never broken.** The claim that undo could not
+restore a direct leaf write was stale. Verified and pinned by tests.
 
 **4. B5 — coalesce history by transaction.** The granularity setting the thesis
 document already identified as missing. Independent of everything else.
