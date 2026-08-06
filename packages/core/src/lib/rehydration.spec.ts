@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { entityMap } from './types';
 import { status, LoadingState } from './markers/status';
 import { signalTree } from './signal-tree';
-import { applyState } from './utils';
+import { applyState, unwrap } from './utils';
 
 /**
  * A snapshot exists to REHYDRATE a tree, not to reconstruct one.
@@ -134,5 +134,59 @@ describe('a rehydrated tree has no request in flight', () => {
     const source = signalTree({ job: status() });
     source.$.job.setLoading();
     expect((source() as { job: { state: string } }).job.state).toBe('LOADING');
+  });
+});
+
+/**
+ * `isStatusNode` is a three-clause duck-type: `setLoading` + `state` + `error`.
+ * All three are load-bearing, and the third is the one that looks redundant and
+ * is not.
+ *
+ * It has already been weakened once. The original third clause probed `.settled`
+ * — a LAZY GETTER, so using it as a type test allocated a `computed` on every
+ * node materialisation: asking the question had a side effect. Removing it fixed
+ * the side effect and quietly created a worse problem, because both call sites
+ * immediately deref `s.error()`. Two clauses classify any `{setLoading, state}`
+ * object as a status node, and building its snapshot then dies with
+ * "s.error is not a function".
+ *
+ * `.error` is the correct third clause precisely because it is not decoration:
+ * it is a plain property (`error: errorSignal`), so reading it allocates
+ * nothing, AND it guards the exact deref that a false positive would fail on.
+ * The type test now checks for what the builder is about to use.
+ *
+ * These tests exist so the next person to look at a three-clause duck-type and
+ * think "surely two is enough" gets a red suite instead of a production
+ * TypeError.
+ */
+describe('isStatusNode: all three clauses are load-bearing', () => {
+  it('does not misclassify a {setLoading, state} object that has no error', () => {
+    // The two-clause version classifies this as a status node and throws
+    // `s.error is not a function` while building the snapshot.
+    const lookalike = {
+      setLoading: () => undefined,
+      state: () => 'LOADING',
+    };
+
+    expect(() => unwrap(lookalike)).not.toThrow();
+    // Not a status node, so it is not rendered as {state, error}. Both members
+    // are plain functions, which snapshots omit.
+    expect(unwrap(lookalike)).toEqual({});
+  });
+
+  it('still classifies a real status() node', () => {
+    const tree = signalTree({ job: status() });
+    tree.$.job.setLoaded();
+    expect(Object.keys((tree() as { job: object }).job).sort()).toEqual([
+      'error',
+      'state',
+    ]);
+  });
+
+  it('does not misclassify an object missing setLoading or state', () => {
+    expect(() => unwrap({ state: () => 'X', error: () => null })).not.toThrow();
+    expect(() =>
+      unwrap({ setLoading: () => undefined, error: () => null })
+    ).not.toThrow();
   });
 });

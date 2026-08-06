@@ -22,6 +22,18 @@ to pick up, and it is documented in
 One uncommitted change is **suspected to be at the wrong layer** and is flagged
 in §4.
 
+> ### ⛔ DO NOT PUBLISH TO npm UNTIL THE SNAPSHOT WORK IS COMPLETE
+>
+> Owner directive, 2026-08-06. The snapshot/rehydration sequence (§8 of the
+> architecture doc) lands across six steps, and **step 2 changes the shape of
+> `tree()` output and therefore of already-written persisted payloads**.
+> Publishing a partial sequence would ship one payload shape and then another,
+> which is the one failure mode the version-tag decision exists to prevent.
+>
+> Commit and push freely. Do **not** run `./scripts/release.sh`, do not publish
+> to npm, and do not tag a release until every step in §8 is done and the
+> version-tag question is answered. Delete this block when that is true.
+
 ---
 
 ## 2. Published — 13.5.0 (live on npm)
@@ -68,7 +80,10 @@ Two files, both in this commit if you take the handoff commit as-is:
      does not go through it. So the fix landed on the one path where exact
      restoration is arguably correct, and left every path that matters
      untouched. The _problem_ it addresses is real (§5.2); the _placement_ is
-     probably not.
+     probably not. The second review's answer: the rule is right and belongs in
+     `status.hydrate` with a `mode` parameter, so `restore` (in-process undo)
+     keeps `LOADING` while `rehydrate` (crossed a process boundary) normalises
+     it — not in `applyState` at all.
 2. **`packages/core/src/lib/rehydration.spec.ts`** — 10 tests pinning the
    rehydrate contract. These pass and are worth keeping regardless of what
    happens to the `applyState` change; several will need updating if the
@@ -99,14 +114,40 @@ working tree):
 | **`serialization()`**      | ❌ THROWS     | ❌ THROWS    |
 | **`timeTravel` undo**      | ❌ silent     | ❌ silent    |
 | **`tree(partial)`**        | ❌ silent     | ❌ silent    |
+| **`tree()` — `form()`**    | ❌ absent     | ❌ absent    |
 | `applyState()` (devtools)  | ✅            | ✅           |
+
+**5.0 `form()` and `asyncSource()` are absent from `tree()` entirely.**
+MEASURED, pre-existing, and the most severe item — missed by this document's
+first pass. A materialised `form()` is an unbranded callable, so every walker
+skips it: a tree holding two forms snapshots to `{"grp":{},"n":1}` while the
+live values are `{a:42}` and `{b:99}` — the nested object comes back EMPTY.
+`tree()` feeds time travel, devtools, audit **and `persistence()`**, so form
+state is missing from all four — `persistence()` writes `{}` and reports success.
+**Confirmed identical against the published 13.5.0 tarball**, so pre-existing.
+
+ST2008 was built for exactly this and is **inert** — but not for the reason a
+first pass assumed. It was added (13.4.0, `eac09db6`) to **one of `unwrap`'s
+three function-skip sites**: the accessor branch. The generic string-key and
+symbol-key loops were already silent and stayed silent, and those are what run
+for a marker behind a backing store. Verified against `eac09db6^`. An earlier
+draft blamed the 13.5.0 memoisation refactor (`6e70dd7e`) for splitting the loop
+and losing the warning — **that is wrong**; both loops and the asymmetry predate
+it, and the refactor only extracted the accessor branch into
+`buildFromAccessor`. There is no test for ST2008 anywhere in the repo.
 
 **5.1 `serialization()` throws on `status()` and `entityMap`.** MEASURED,
 pre-existing (identical in published 13.5.0). It emits **17 keys** for a
 `status()` node — 2 state, 6 computeds, **9 setter methods** — then
 `deserialize` tries to `.set()` each one back and a computed has no setter.
-`stored()` and `form()` survive only because their nodes happen to materialise
-to a scalar or a values object. Luck of shape.
+The cause is narrower than "the thesis": `serialize()` has a **private second
+materialiser** (`unwrapObjectSafely`) that never learned the marker rule, while
+`toJSON()` in the same file already delegates to `tree()`.
+
+**"Luck of shape" was wrong** — an earlier framing said `stored()` and `form()`
+survive by luck. That holds for `serialize()` only. `tree()` and `serialize()`
+see **disjoint subsets** of the tree: one handles `status`/`entityMap` and drops
+`form`, the other handles `form` and dies on `status`/`entityMap`.
 
 **5.2 A persisted `LOADING` deadlocks on rehydrate.** MEASURED. `loading()`
 true blocks a "don't fetch while loading" guard, `idle()` false blocks an
@@ -115,16 +156,56 @@ nothing is in flight to change any of them.
 
 **5.3 `timeTravel` undo silently does not restore marker state.** MEASURED,
 pre-existing. Undo appears to succeed and leaves `status()`/`entityMap` at their
-post-change values. Arguably ranks with 5.1.
+post-change values. Arguably ranks with 5.1. **Not an independent defect** —
+`restoreState` falls through to `this.tree(state)` (`time-travel.ts:218`), so
+undo and `tree(partial)` are the same code path and one fix closes both.
+Measured: undo walks `n` back 3→2→1 while `rows` stays at 3 and `status` stays
+`LOADING`. Capture is correct; only restore drops markers.
 
 **5.4 Three restore paths disagree.** `applyState` (devtools only) restores an
-entityMap; `serialization()`'s private `updateSignals` throws; `tree(partial)`
-silently no-ops.
+entityMap; `serialization()`'s private `updateSignals` throws; `recursiveUpdate`
+(serving both `tree(partial)` and undo) silently no-ops. That no-op is
+**documented as intentional** at `signal-tree.ts:597-603`, which also declines to
+warn because a diagnostic "would fire on `tree(tree())`, the ordinary
+snapshot-restore pattern" — i.e. the code calls `tree(tree())` ordinary usage
+while silently discarding a 10,000-entity collection out of it.
 
 **The generalisable lesson**, and the reason this is worth a fresh pair of eyes:
-three of these were fixed at three different layers before anyone noticed they
-were one defect. When the read path emits structure and the write path expects
-values, every consumer breaks differently, so the bugs never look related.
+four distinct defects, three fixes, and not one of them aimed at the cause.
+(Counted honestly, the three fixes span **two** layers — `unwrap` twice and
+`applyState` once — and the fourth defect was never fixed because it was never
+found. "Three fixes, three layers" in an earlier draft overstated the spread.)
+When the read path emits structure and the write path expects values, every
+consumer breaks differently, so the bugs never look related.
+
+**And both detectors for this class are inert.** ST2008 (read side) was written
+to cover one of three function-skip sites and never given a test; ST2005 (write
+side) was deliberately removed on grounds that expire once `tree(tree())` works.
+So the corollary is: **make the silence loud before changing any behaviour, and
+test the diagnostic** — an untested warning covering two of three code paths
+reads exactly like one that works. That is why the sequencing below starts with
+diagnostics rather than a fix.
+
+**The design answer, established by a second review and verified here:** a
+public marker registry ALREADY EXISTS — `materialize-markers.ts`, with
+`registerMarkerProcessor` exported from `@signaltree/core/authoring` — and is
+half-built: construction only, no snapshot or hydrate half. Complete it rather
+than inventing a protocol. Add `owns`/`snapshot`/`hydrate`, and make `mode`
+(`merge` / `restore` / `rehydrate`) a property of the CALL SITE, the only place
+that knows whether a process boundary was crossed. Full plan with sequencing in
+§8 of the architecture doc.
+
+**Start with step 1 — merge `unwrap`'s duplicate loops, make ST2008 fire from
+all three skip sites, and test it.** It makes the data loss visible without
+changing behaviour, which is the right first move for a class where every fix so
+far has been aimed at a symptom.
+
+**Also resolved:** `tree(partial)` not restoring an entityMap is documented as
+INTENTIONAL at `signal-tree.ts:597-603` — markers "do not accept merge writes BY
+DESIGN". The same comment calls `tree(tree())` "the ordinary snapshot-restore
+pattern" while that path silently discards a 10,000-entity collection. That
+contradiction is the sharpest finding available, and it is why the retired
+ST2005 should return once `tree(tree())` actually works.
 
 ---
 

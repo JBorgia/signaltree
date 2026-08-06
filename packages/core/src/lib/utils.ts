@@ -252,12 +252,27 @@ export function composeEnhancers<T>(
  * snapshot is stale the moment anything changes.
  */
 function isStatusNode(node: unknown): boolean {
+  // Deliberately does NOT probe `.settled`. That is a lazy getter which
+  // allocates its computed on first read, so using it as a type test gave the
+  // test itself a side effect on every status node, on every materialisation.
+  //
+  // `.error` replaces it rather than dropping to two probes. It is a plain
+  // property (`error: errorSignal`), so reading it allocates nothing; it keeps
+  // the arity at three, so discrimination is not weakened; and it guards the
+  // exact deref a false positive would die on — both call sites go straight to
+  // `s.error()`, which throws on any `{setLoading, state}` object that has
+  // nothing else. The type test checks for what the builder is about to use.
+  // Pinned by rehydration.spec.ts, mutation-verified.
+  //
+  // This whole function is duck-typing that no user-registered marker can ever
+  // join; the marker registry in materialize-markers.ts is where an `owns()`
+  // hook belongs. See docs/architecture/snapshot-rehydration.md.
   return (
     node !== null &&
     typeof node === 'object' &&
     typeof (node as { setLoading?: unknown }).setLoading === 'function' &&
     typeof (node as { state?: unknown }).state === 'function' &&
-    typeof (node as { settled?: unknown }).settled === 'function'
+    typeof (node as { error?: unknown }).error === 'function'
   );
 }
 
