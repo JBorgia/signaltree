@@ -143,7 +143,7 @@ function ensurePathAndGetTarget($: AnyRecord, path: string): AnyRecord {
  * // Result: $.tickets now has entities, activeId, AND active
  * ```
  */
-export function mergeDerivedState(
+function mergeDerivedState(
   $: AnyRecord,
   derivedDef: unknown,
   path = ''

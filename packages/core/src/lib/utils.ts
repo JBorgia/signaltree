@@ -375,7 +375,7 @@ export function materializeNode<T>(store: object): T {
  * a writable signal placed there is real state and must still be captured —
  * excluding it would trade one silent data loss for another.
  */
-export const DERIVED_STAMP = Symbol.for('SignalTree:Derived');
+const DERIVED_STAMP = Symbol.for('SignalTree:Derived');
 
 /** @internal Stamp a derived signal so snapshots skip it. Returns it. */
 export function stampDerived<T>(sig: T): T {
@@ -822,6 +822,3 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   }
 }
 
-export function deepCloneJSON<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}

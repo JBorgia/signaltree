@@ -30,9 +30,16 @@ export { registerMarkerProcessor } from './lib/internals/materialize-markers';
 // a devtools panel or a dev-mode summary reads. DEV-ONLY — the call sites are
 // ngDevMode-guarded inline, so nothing fires in a production build.
 export { onHydrateDecision } from './lib/internals/materialize-markers';
+// HydrateMode and HydrateReason ARE part of this surface, not internals:
+// HydrateDecisionEvent.mode and .reason are typed with them, and a marker
+// processor's `hydrate` hook receives a HydrateMode. Without these a listener
+// could receive an event it cannot write a typed handler for, and a marker
+// author could not name their own hook's third parameter.
 export type {
   HydrateDecision,
   HydrateDecisionEvent,
+  HydrateMode,
+  HydrateReason,
 } from './lib/internals/materialize-markers';
 
 // Enhancer authoring — create enhancers with metadata, resolve dependency

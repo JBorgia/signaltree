@@ -911,18 +911,6 @@ export function serialization(
 
 // v12: removed the deprecated `withSerialization` alias — use `serialization()`.
 
-/**
- * Convenience function to enable serialization with defaults
- */
-export function enableSerialization(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & SerializationMethods {
-  return serialization({
-    includeMetadata: true,
-    preserveTypes: true,
-    handleCircular: true,
-  });
-}
 
 // Storage adapters live in ./storage-adapters (so '@signaltree/core/storage'
 // doesn't enter through this enhancer module); re-exported here to keep this
@@ -1211,8 +1199,13 @@ export function persistence(
 // are exported (and annotated `@deprecated`) for backwards compatibility.
 
 /**
- * Helpers to apply enhancers with explicit typing to avoid depending on
- * complex `.with()` overload inference in tests and tooling.
+ * Applies the enhancer with explicit typing, to avoid depending on `.with()`
+ * overload inference in tests.
+ *
+ * The `applyPersistence` sibling and `enableSerialization` were removed in
+ * 14.0.0: neither had an importer or a path to any package entry point, so no
+ * consumer could reach them and no test used them. This one is kept because
+ * serialization.roundtrip.spec.ts does import it.
  */
 export function applySerialization<T extends Record<string, unknown>>(
   tree: ISignalTree<T>
@@ -1220,11 +1213,3 @@ export function applySerialization<T extends Record<string, unknown>>(
   return serialization()(tree as any) as ISignalTree<T> & SerializationMethods;
 }
 
-export function applyPersistence<T extends Record<string, unknown>>(
-  tree: ISignalTree<T>,
-  cfg: PersistenceConfig
-): ISignalTree<T> & SerializationMethods & PersistenceMethods {
-  return persistence(cfg)(tree as any) as ISignalTree<T> &
-    SerializationMethods &
-    PersistenceMethods;
-}

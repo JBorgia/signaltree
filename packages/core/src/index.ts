@@ -368,6 +368,16 @@ export {
   serialization,
   persistence,
 } from './enhancers/serialization/serialization';
+// `persistence(config)` REQUIRES a config and `serialization(config?)` accepts
+// one, but neither type was exported — a consumer could call them and not
+// declare the object they pass, nor name the methods they gain.
+export type {
+  SerializationConfig,
+  SerializationMethods,
+  PersistenceConfig,
+  PersistenceMethods,
+  SerializedState,
+} from './enhancers/serialization/serialization';
 
 /**
  * DevTools enhancer for development and debugging

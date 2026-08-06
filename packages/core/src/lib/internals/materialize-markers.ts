@@ -642,7 +642,7 @@ export function materializeMarkers(
  * Check if a tree has any markers that need processing.
  * Used for optimization - skip materialization if no markers present.
  */
-export function hasMarkers(
+function hasMarkers(
   node: unknown,
   visited = new WeakSet<object>()
 ): boolean {
@@ -680,10 +680,3 @@ export function hasMarkers(
 // TESTING UTILITIES
 // =============================================================================
 
-/**
- * Exposed for testing tree-shaking behavior.
- * DO NOT USE IN PRODUCTION CODE.
- *
- * @internal
- */
-export const MARKER_PROCESSORS_FOR_TESTING = MARKER_PROCESSORS;

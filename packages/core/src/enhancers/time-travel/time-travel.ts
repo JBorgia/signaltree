@@ -563,9 +563,12 @@ export function enableTimeTravel(): <T>(
 }
 
 /**
- * Time travel with custom history size (v6 pattern)
+ * Time travel with custom history size (v6 pattern).
+ *
+ * Not exported: reachable only as `withTimeTravel.history`, which is the
+ * documented surface. Nothing imports the bare name.
  */
-export function timeTravelHistory(
+function timeTravelHistory(
   maxHistorySize: number
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
   return timeTravel({ maxHistorySize });
