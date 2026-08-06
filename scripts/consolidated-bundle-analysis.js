@@ -105,10 +105,17 @@ const packages = [
   },
 ];
 
+// MUST list every publishable package. `cleanAndBuild()` does `rm -rf dist`
+// and then rebuilds only what is named here, so anything missing is absent
+// from dist for every gate that runs after this script — which is most of
+// pre-publish-validation.sh. `events` and `realtime` were never in this list,
+// so they were wiped and never rebuilt, and package-hygiene's skip-and-pass
+// meant a green release run had verified neither of them.
 const nxProjects = [
   'core',
   'enterprise',
-  
+  'events',
+  'realtime',
   'shared',
   'guardrails',
   'ng-forms',
