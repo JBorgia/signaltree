@@ -224,10 +224,20 @@ const GATES = [
     covers: 'built package sizes stay inside their budgets',
     cmd: ['node', 'tools/check-bundle-budget.mjs'],
     needsBuild: true,
-    knownFailing:
-      'budgets are stale for 14.0.0 by explicit decision — re-tune once the ' +
-      'implementation is settled. Reported, never silently skipped.',
-    unproven: 'cannot self-test a gate that is already red',
+    // Appends statically-reachable, incompressible code to the built barrel.
+    // Reachable, because a tree-shaken bundle drops anything else; incompressible,
+    // because gzip flattens a repeated string to nothing and the budget would
+    // not move. Assigning through globalThis is what defeats the shaker.
+    mutation: {
+      file: 'dist/packages/core/dist/index.js',
+      generate: (original) => {
+        const parts = [];
+        for (let i = 0; i < 900; i++) {
+          parts.push(`gateBloat_${i.toString(36)}_${(i * 2654435761) % 1e9}`);
+        }
+        return `${original}\nglobalThis.__gateBloat = ${JSON.stringify(parts)};\n`;
+      },
+    },
   },
 ];
 
@@ -271,7 +281,13 @@ function withMutation(mutation, fn) {
   const before = hash(original);
 
   let mutated;
-  if (mutation.append) {
+  if (mutation.generate) {
+    // For mutations that cannot be written as a literal — the bundle-budget one
+    // needs INCOMPRESSIBLE bytes, since a repeated string gzips to nothing and
+    // would leave the budget unmoved, i.e. an inert mutation masquerading as a
+    // blind gate.
+    mutated = mutation.generate(original);
+  } else if (mutation.append) {
     mutated = original + mutation.append;
   } else {
     if (!original.includes(mutation.find)) {

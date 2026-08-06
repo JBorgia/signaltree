@@ -84,8 +84,15 @@ const TARGETS = {
     // 14.0.0: split into dev/prod. Measured dev 7.35KB, prod 5.59KB. The dev
     // figure grew ~50 bytes for ST2023's message; prod is unchanged, because
     // the guard is inline at the call site and folds.
+    //
+    // Bumped 5.7 → 5.8 at the 14.0.0 RC. Measured prod 5.70KB — EXACTLY the
+    // budget, which passes and is the least useful state a budget can be in:
+    // the next byte fails it, and the failure would be attributed to whatever
+    // change happened to be next rather than to the 0.05KB the marker snapshot
+    // memo added here. Raised deliberately so the number reflects a measurement
+    // with headroom, not a coincidence.
     devKB: 8.0,
-    prodKB: 5.7,
+    prodKB: 5.8,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -160,8 +167,24 @@ const TARGETS = {
     // against a SEVENTH instance of this defect class, so its bytes are the
     // cheapest on this list.
     // 14.0.0: split into dev/prod. Measured dev 10.50KB, prod 8.25KB.
+    //
+    // Bumped 8.4 → 8.7 at the 14.0.0 RC. Measured prod 8.57KB, and the overage
+    // was ATTRIBUTED before raising rather than after: rebuilding at 1b79fd26
+    // (before the two 14.0.0 perf fixes) gives 8.48KB, so 0.08KB of it predates
+    // them and the budget had been quietly red for earlier RC work. The
+    // remaining 0.09KB is the weak `byId()` node cache (WeakRef +
+    // FinalizationRegistry) and the marker snapshot memo.
+    //
+    // What those 90 bytes bought, both measured: reading `byId()` across a 10k
+    // collection went from 4,149 to 844 B/entity, 39.6MB to 8.05MB
+    // (docs/architecture/memory-profile.md), and a marker's snapshot wrapper
+    // stopped being re-allocated on every UNRELATED write, which is what makes
+    // `computed(() => tree().rows)` stable for an OnPush consumer. On the axis
+    // that matters for a phone this is 90 bytes of download against 31MB of
+    // heap — see docs/architecture/size-structure-review.md for why retained
+    // heap is weighted above gzip here.
     devKB: 11.2,
-    prodKB: 8.4,
+    prodKB: 8.7,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
