@@ -329,7 +329,47 @@ export function form<T extends Record<string, unknown>>(
   // Self-register on first use (tree-shakeable)
   if (!formRegistered) {
     formRegistered = true;
-    registerBuiltinMarkerProcessor(isFormMarker, createFormSignal);
+    registerBuiltinMarkerProcessor(isFormMarker, createFormSignal, {
+      // STATE: the values, plus `touched`.
+      //
+      // `touched` is a third category that neither status() nor entityMap has:
+      // INTERACTION state. It is not derived — you cannot recompute "the user
+      // focused this field" — and it is not in-flight either. Dropping it means
+      // a restored half-filled form shows "email is required" in red on fields
+      // the user never visited; keeping it shows them the errors they had
+      // already seen. Keeping it is the one that matches what they left.
+      //
+      // EXCLUDED, and why:
+      //  - `submitting` is in-flight, the exact category as status()'s
+      //    `Loading`. Persist mid-submit, restore, and the form is permanently
+      //    submitting with nothing running to finish it.
+      //  - `dirty` is a `computed` over values vs initial — derived.
+      //  - `valid` / `errors` / `errorList` are derived from values plus the
+      //    validators, which the live tree already has.
+      snapshot: (node) => ({ values: node(), touched: node.touched() }),
+
+      hydrate: (node, value) => {
+        if (value === null || typeof value !== 'object') return;
+        const { values, touched } = value as {
+          values?: unknown;
+          touched?: unknown;
+        };
+        if (values !== null && typeof values === 'object') {
+          node.set(values as never);
+        }
+        if (touched !== null && typeof touched === 'object') {
+          for (const [field, was] of Object.entries(
+            touched as Record<string, unknown>
+          )) {
+            if (was === true) node.touch(field as never);
+          }
+        }
+        // `submitting` is deliberately NOT restored in any mode: a submit that
+        // was in flight when the snapshot was taken is not in flight now, and
+        // in-process undo into a mid-submit moment should not re-assert a
+        // promise nobody is awaiting.
+      },
+    });
   }
 
   return {

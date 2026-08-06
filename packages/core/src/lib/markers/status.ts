@@ -171,7 +171,72 @@ export function status<E = Error>(
   // Self-register on first use (tree-shakeable)
   if (!statusRegistered) {
     statusRegistered = true;
-    registerBuiltinMarkerProcessor(isStatusMarker, createStatusSignal);
+    registerBuiltinMarkerProcessor(isStatusMarker, createStatusSignal, {
+      // STATE: `state` and `error`. The six predicates (notLoaded, loading,
+      // loaded, hasError, idle, settled) are pure functions of these two and
+      // are recomputed on read — a derived value frozen into a snapshot is
+      // stale the moment anything changes.
+      snapshot: (node) => ({ state: node.state(), error: node.error() }),
+
+      hydrate: (node, value, mode) => {
+        if (value === null || typeof value !== 'object') return;
+        const { state, error } = value as {
+          state?: unknown;
+          error?: unknown;
+        };
+
+        // A rehydrated tree has NO REQUEST IN FLIGHT.
+        //
+        // `Loading` describes an in-flight operation, and an operation cannot
+        // survive a process boundary — the process that owned it is gone.
+        // Restoring it verbatim deadlocks the node: `loading()` true blocks a
+        // "don't fetch while loading" guard, `idle()` false blocks an
+        // idle-gated fetch, `settled()` false blocks anything awaiting
+        // settlement, and nothing is running to change any of them.
+        //
+        // Normalised only under `rehydrate`. Under `restore` (an in-process
+        // undo) the request may genuinely still be running, so `Loading` is
+        // kept verbatim — that is the whole reason `mode` exists.
+        if (mode === 'rehydrate' && state === LoadingState.Loading) {
+          node.setNotLoaded();
+          return;
+        }
+
+        // `Loaded` and `Error` both survive every mode. `Loaded` is a statement
+        // about DATA, not about an operation — if the data was persisted
+        // alongside it, "the data is loaded" is true on arrival, and dropping
+        // it would make an offline-first app refetch what it already holds.
+        // (TanStack Query's `dehydrate` keeps successful queries by default for
+        // exactly this reason.) `Error` survives so a retry guard can report
+        // that the last attempt failed; both `Error` and `NotLoaded` leave
+        // `idle()` true, so the retry fires either way.
+        switch (state) {
+          case LoadingState.Loading:
+            node.setLoading();
+            break;
+          case LoadingState.Loaded:
+            node.setLoaded();
+            break;
+          case LoadingState.Error:
+            node.setError(error as never);
+            break;
+          case LoadingState.NotLoaded:
+            node.setNotLoaded();
+            break;
+          default:
+            // Unrecognised payload: leave the node alone and say so. Throwing
+            // turns one bad key into a dead app; falling back to the initial
+            // value silently discards state. Both are the failure mode this
+            // whole contract exists to prevent.
+            if (typeof ngDevMode === 'undefined' || ngDevMode) {
+              console.warn(
+                `SignalTree: status() hydrate ignored an unrecognised state ` +
+                  `"${String(state)}". The node was left unchanged. [ST2022]`
+              );
+            }
+        }
+      },
+    });
   }
 
   return {

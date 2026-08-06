@@ -287,6 +287,28 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
         }
 
         return entitySignal;
+      },
+      {
+        // STATE: the entities. `ids`, `count`, `empty` and `map` are all
+        // derived from `all` — and `map` is a JS `Map`, which JSON cannot
+        // represent, so it used to serialise as `{}`: a snapshot claiming the
+        // collection was EMPTY while holding 10,000 entities.
+        snapshot: (node) => ({ all: node.all() }),
+
+        hydrate: (node, value) => {
+          if (value === null || typeof value !== 'object') return;
+          const all = (value as { all?: unknown }).all;
+          if (Array.isArray(all)) {
+            // setAll rather than field writes, so the internal id index and the
+            // per-entity signals stay consistent with the storage map.
+            node.setAll(all as never[]);
+          } else if (typeof ngDevMode === 'undefined' || ngDevMode) {
+            console.warn(
+              `SignalTree: entityMap hydrate ignored a payload with no ` +
+                `\`all\` array. The collection was left unchanged. [ST2022]`
+            );
+          }
+        },
       }
     );
   }

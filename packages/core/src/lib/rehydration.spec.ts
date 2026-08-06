@@ -87,11 +87,17 @@ describe('snapshots carry state, not derived views', () => {
 });
 
 describe('a rehydrated tree has no request in flight', () => {
-  it('does NOT restore a LOADING status — that would deadlock the node', () => {
-    // Persisted mid-flight; the page closed. Restoring `LOADING` verbatim makes
-    // loading() true (so a "don't fetch while loading" guard blocks forever),
-    // idle() false (so an idle-gated fetch never fires) and settled() false —
-    // with nothing running to ever change any of them.
+  it('applyState KEEPS a LOADING status — it is in-process replay', () => {
+    // CHANGED in the registry work, deliberately. This used to assert that
+    // `applyState` normalised LOADING → NotLoaded, which was the right rule in
+    // the wrong place: `applyState` is the devtools REPLAY path, same process,
+    // where a request may genuinely still be in flight. Normalising there fixed
+    // nothing that mattered — persistence does not go through applyState at all
+    // — and it discarded information devtools should show.
+    //
+    // The rule now lives in `status.hydrate` keyed on `mode`: `restore` (this
+    // path) keeps LOADING verbatim; `rehydrate` (deserialize / SSR / storage,
+    // where a process boundary WAS crossed) normalises it. See the test below.
     const source = signalTree({ job: status() });
     source.$.job.setLoading();
     const snapshot = source();
@@ -99,6 +105,24 @@ describe('a rehydrated tree has no request in flight', () => {
 
     const fresh = signalTree({ job: status() });
     applyState(fresh.$, snapshot);
+
+    expect(fresh.$.job.state()).toBe(LoadingState.Loading);
+  });
+
+  it('rehydrate normalises LOADING — no request survives a process boundary', async () => {
+    // The deadlock this prevents: loading() true blocks a "don't fetch while
+    // loading" guard, idle() false blocks an idle-gated fetch, settled() false
+    // blocks anything awaiting settlement — with nothing running to change any
+    // of them. Permanent spinner, no retry.
+    const { hydrateMarkerNode } = await import(
+      './internals/materialize-markers'
+    );
+    const source = signalTree({ job: status() });
+    source.$.job.setLoading();
+    const payload = (source() as { job: unknown }).job;
+
+    const fresh = signalTree({ job: status() });
+    expect(hydrateMarkerNode(fresh.$.job, payload, 'rehydrate')).toBe(true);
 
     expect(fresh.$.job.state()).toBe(LoadingState.NotLoaded);
     expect(fresh.$.job.loading()).toBe(false);

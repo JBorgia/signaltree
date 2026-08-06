@@ -46,8 +46,17 @@ const TARGETS = {
     // ST2021 (marker inside an array) diagnostic messages. Measured 6.99KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
-    // the stored() storage leak. check-devmode-foldable confirms it folds.
-    budgetKB: 7.1,
+    // the stored() storage leak. check-devmode-foldable confirms it folds.    //
+    // Bumped 7.1 → 7.2 for the marker snapshot/hydrate registry. Measured 7.04KB;
+    // production 5.53KB (dev code still folds fully — check-devmode-foldable
+    // confirms ~1.5-1.9KB reclaimed per tree).
+    //
+    // What it bought: `form()` and `asyncSource()` values reach snapshots at
+    // all — before this, `persistence()` wrote `{}` for a form and reported
+    // success. The cost is the snapshot/hydrate hooks on status, form and
+    // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
+    // duck-type tests, so part of the growth is offset.
+    budgetKB: 7.2,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -102,8 +111,17 @@ const TARGETS = {
     // ST2021 (marker inside an array) diagnostic messages. Measured 9.89KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
-    // the stored() storage leak. check-devmode-foldable confirms it folds.
-    budgetKB: 10.0,
+    // the stored() storage leak. check-devmode-foldable confirms it folds.    //
+    // Bumped 10.0 → 10.2 for the marker snapshot/hydrate registry. Measured 10.05KB;
+    // production 8.16KB (dev code still folds fully — check-devmode-foldable
+    // confirms ~1.5-1.9KB reclaimed per tree).
+    //
+    // What it bought: `form()` and `asyncSource()` values reach snapshots at
+    // all — before this, `persistence()` wrote `{}` for a form and reported
+    // success. The cost is the snapshot/hydrate hooks on status, form and
+    // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
+    // duck-type tests, so part of the growth is offset.
+    budgetKB: 10.2,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -147,8 +165,17 @@ const TARGETS = {
     // ST2021 (marker inside an array) diagnostic messages. Measured 9.08KB.
     // Entirely dev-only text — production is 5.46 / 8.04 / 7.42KB, unchanged
     // by these two beyond the O(1) non-enumerable defineProperty that closes
-    // the stored() storage leak. check-devmode-foldable confirms it folds.
-    budgetKB: 9.2,
+    // the stored() storage leak. check-devmode-foldable confirms it folds.    //
+    // Bumped 9.2 → 9.4 for the marker snapshot/hydrate registry. Measured 9.22KB;
+    // production 7.57KB (dev code still folds fully — check-devmode-foldable
+    // confirms ~1.5-1.9KB reclaimed per tree).
+    //
+    // What it bought: `form()` and `asyncSource()` values reach snapshots at
+    // all — before this, `persistence()` wrote `{}` for a form and reported
+    // success. The cost is the snapshot/hydrate hooks on status, form and
+    // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
+    // duck-type tests, so part of the growth is offset.
+    budgetKB: 9.4,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });

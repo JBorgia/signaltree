@@ -29,9 +29,83 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
 // MARKER PROCESSOR REGISTRY
 // =============================================================================
 
+/**
+ * How a snapshot is being applied. A property of the CALL SITE, not of the
+ * data — the call site is the only place that knows whether a process boundary
+ * was crossed.
+ *
+ * - `merge`     — `tree(partial)`. A partial write from application code.
+ * - `restore`   — `timeTravel` undo/redo/jumpTo. Same process; an in-flight
+ *                 request may genuinely still be running, so transient state is
+ *                 restored VERBATIM.
+ * - `rehydrate` — `deserialize`, SSR transfer, localStorage. A process boundary
+ *                 was crossed, so nothing is in flight and transient state must
+ *                 be normalised rather than believed.
+ */
+export type HydrateMode = 'merge' | 'restore' | 'rehydrate';
+
 interface MarkerProcessor {
   check: (value: unknown) => boolean;
   create: (marker: unknown, notifier: PathNotifier, path: string) => unknown;
+  /**
+   * Live node → the payload that represents its STATE. Anything the node can
+   * recompute must be omitted: a derived value frozen into a snapshot is stale
+   * the moment anything changes, and a snapshot exists to rehydrate a tree that
+   * already knows how to derive.
+   *
+   * Omitting this means "my node is already a plain signal, the normal walk
+   * handles me" — which is true of `stored()` and nothing else today.
+   */
+  snapshot?: (node: unknown) => unknown;
+  /** Payload → live node. See {@link HydrateMode}. */
+  hydrate?: (node: unknown, value: unknown, mode: HydrateMode) => void;
+}
+
+/**
+ * Stamped on every materialised node so `owns()` is O(1).
+ *
+ * A linear scan over the registry would put every marker author's `owns()` on
+ * the hot path of every node materialisation, letting one slow third-party
+ * predicate degrade trees that do not contain that marker. A stamp makes a
+ * marker's cost payable only by trees that use it — the same boundary lazy
+ * self-registration already draws for bundle size. Isolation is the point;
+ * speed is incidental.
+ *
+ * The `SignalTree:` prefix is load-bearing: `unwrap`'s symbol loop skips that
+ * prefix by identity, so a correctly-named stamp cannot leak into a snapshot.
+ * Name it anything else and it lands in every persisted payload.
+ */
+const PROCESSOR_STAMP = Symbol.for('SignalTree:MarkerProcessor');
+
+/** @internal Returns the processor that materialised this node, if any. */
+export function getNodeProcessor(node: unknown): MarkerProcessor | undefined {
+  if (!isTraversableNode(node)) return undefined;
+  return (node as Record<symbol, MarkerProcessor | undefined>)[
+    PROCESSOR_STAMP
+  ];
+}
+
+/**
+ * @internal Snapshot a materialised marker node, or `undefined` if the node is
+ * not a marker or its processor declines to define a snapshot.
+ */
+export function snapshotMarkerNode(
+  node: unknown
+): { value: unknown } | undefined {
+  const proc = getNodeProcessor(node);
+  return proc?.snapshot ? { value: proc.snapshot(node) } : undefined;
+}
+
+/** @internal Hydrate a materialised marker node. Returns false if unhandled. */
+export function hydrateMarkerNode(
+  node: unknown,
+  value: unknown,
+  mode: HydrateMode
+): boolean {
+  const proc = getNodeProcessor(node);
+  if (!proc?.hydrate) return false;
+  proc.hydrate(node, value, mode);
+  return true;
 }
 
 /**
@@ -107,12 +181,16 @@ export function hasUnregisteredSymbolKeys(value: unknown): boolean {
  */
 export function registerMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
-  create: (marker: T, notifier: PathNotifier, path: string) => R
+  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  hooks?: {
+    snapshot?: (node: R) => unknown;
+    hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+  }
 ): void {
   // Public entry point — used for custom markers. Emits the post-construction
   // timing warning, because an imperative custom-marker registration that lands
   // after trees already exist is a genuine footgun.
-  registerProcessor(check, create, /* suppressTimingWarning */ false);
+  registerProcessor(check, create, /* suppressTimingWarning */ false, hooks);
 }
 
 /**
@@ -131,15 +209,23 @@ export function registerMarkerProcessor<T, R>(
  */
 export function registerBuiltinMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
-  create: (marker: T, notifier: PathNotifier, path: string) => R
+  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  hooks?: {
+    snapshot?: (node: R) => unknown;
+    hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+  }
 ): void {
-  registerProcessor(check, create, /* suppressTimingWarning */ true);
+  registerProcessor(check, create, /* suppressTimingWarning */ true, hooks);
 }
 
 function registerProcessor<T, R>(
   check: (value: unknown) => value is T,
   create: (marker: T, notifier: PathNotifier, path: string) => R,
-  suppressTimingWarning: boolean
+  suppressTimingWarning: boolean,
+  hooks?: {
+    snapshot?: (node: R) => unknown;
+    hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+  }
 ): void {
   // Dev-mode validation: prevent invalid argument types with a clear error.
   if (typeof check !== 'function' || typeof create !== 'function') {
@@ -187,6 +273,10 @@ function registerProcessor<T, R>(
       notifier: PathNotifier,
       path: string
     ) => unknown,
+    snapshot: hooks?.snapshot as ((node: unknown) => unknown) | undefined,
+    hydrate: hooks?.hydrate as
+      | ((node: unknown, value: unknown, mode: HydrateMode) => void)
+      | undefined,
   });
 }
 
@@ -255,6 +345,18 @@ export function materializeMarkers(
             getNotifier(),
             pathString
           );
+          // Stamp the owning processor so `owns()` is an O(1) property read
+          // rather than a scan over every registered marker. Non-enumerable so
+          // it cannot reach a string-key walk; the `SignalTree:` prefix keeps
+          // it out of the symbol walk too.
+          if (isTraversableNode(materialized)) {
+            Object.defineProperty(materialized, PROCESSOR_STAMP, {
+              value: processor,
+              enumerable: false,
+              writable: false,
+              configurable: true,
+            });
+          }
           (node as Record<string, unknown>)[key] = materialized;
           // A node accessor copies its store's properties, but its CALL path
           // closes over the original store. Writing only to the accessor

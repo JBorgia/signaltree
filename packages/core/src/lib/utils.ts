@@ -9,6 +9,10 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
+import {
+  hydrateMarkerNode,
+  snapshotMarkerNode,
+} from './internals/materialize-markers';
 
 declare const ngDevMode: boolean | undefined;
 
@@ -223,113 +227,23 @@ export function composeEnhancers<T>(
 }
 
 /**
- * @internal Markers materialise to their STATE, never their derived views.
+ * @internal A materialised marker snapshots ITSELF.
  *
- * A snapshot exists to REHYDRATE a tree, not to reconstruct one. By the time a
- * snapshot is applied, `signalTree(initialState)` has already built the shape,
- * the markers and every signal — so the snapshot only has to carry the values
- * that go into the leaves. Anything the live node can recompute is structure,
- * and structure does not belong in a value payload.
+ * This replaces two hardcoded duck-type tests (`isStatusNode`, `isEntityNode`)
+ * that no user-registered marker could ever join, and that had to guess at what
+ * each marker considered state. The marker registry already knew — it just had
+ * no way to say so until `snapshot()` existed.
  *
- * The library already followed this rule for `.derived()`: a `computed()` merged
- * into the tree is correctly ABSENT from `tree()`, because it recomputes on
- * rehydrate. Markers did not follow it, and each one that broke the rule caused
- * a distinct bug:
+ * The lookup is an O(1) read of a symbol stamped at `create()` time, not a scan
+ * over registered processors: `owns()` runs on every node of every
+ * materialisation, and a scan would let one slow third-party predicate degrade
+ * trees that do not contain that marker.
  *
- *  - `entityMap` emitted `ids` (~11% of a collection snapshot) and `map`, which
- *    is a `Map` and therefore serialised as `{}` — a snapshot claiming the
- *    collection was EMPTY while holding 10,000 entities.
- *  - `status()` emitted six predicates (`notLoaded`, `loading`, `loaded`,
- *    `hasError`, `idle`, `settled`) that are pure functions of `state` and
- *    `error`.
- *
- * `form()` was already correct. The rule is now applied uniformly.
- *
- * Restore already reads only `.all` for a collection (see applyState), so the
- * round trip is unaffected. A consumer wanting `ids`, `count` or a predicate
- * should read it off the LIVE node (`tree.$.x.ids()`, `tree.$.job.loading()`),
- * which is where it is correct and current — a derived value frozen into a
- * snapshot is stale the moment anything changes.
+ * Returns `undefined` for anything that is not a marker, or whose processor
+ * declines a snapshot — `stored()` is already a real signal, so the ordinary
+ * walk handles it.
  */
-function isStatusNode(node: unknown): boolean {
-  // Deliberately does NOT probe `.settled`. That is a lazy getter which
-  // allocates its computed on first read, so using it as a type test gave the
-  // test itself a side effect on every status node, on every materialisation.
-  //
-  // `.error` replaces it rather than dropping to two probes. It is a plain
-  // property (`error: errorSignal`), so reading it allocates nothing; it keeps
-  // the arity at three, so discrimination is not weakened; and it guards the
-  // exact deref a false positive would die on — both call sites go straight to
-  // `s.error()`, which throws on any `{setLoading, state}` object that has
-  // nothing else. The type test checks for what the builder is about to use.
-  // Pinned by rehydration.spec.ts, mutation-verified.
-  //
-  // This whole function is duck-typing that no user-registered marker can ever
-  // join; the marker registry in materialize-markers.ts is where an `owns()`
-  // hook belongs. See docs/architecture/snapshot-rehydration.md.
-  return (
-    node !== null &&
-    typeof node === 'object' &&
-    typeof (node as { setLoading?: unknown }).setLoading === 'function' &&
-    typeof (node as { state?: unknown }).state === 'function' &&
-    typeof (node as { error?: unknown }).error === 'function'
-  );
-}
 
-function isEntityNode(node: unknown): boolean {
-  return (
-    node !== null &&
-    typeof node === 'object' &&
-    typeof (node as { setAll?: unknown }).setAll === 'function' &&
-    typeof (node as { all?: unknown }).all === 'function'
-  );
-}
-
-/**
- * @internal Per-node materialisation cache — the incremental half of `tree()`.
- *
- * Materialising is O(state): there is no plain object anywhere until one is
- * built. But a write touches ONE leaf, so rebuilding the whole tree to observe
- * it is the full-state-work-per-change anti-pattern this library exists to
- * avoid — the video-frame principle, applied to state.
- *
- * Each node's materialisation is memoised in a `computed`, so Angular's own
- * dependency graph does the work: a node rebuilds only when a signal BENEATH IT
- * actually changed, and every clean subtree is returned BY REFERENCE. That is
- * why this is a `computed` rather than a hand-rolled dirty flag — the
- * invalidation already happens on the write path, so incremental
- * materialisation costs the write path nothing at all. (Measured alternative:
- * manual version stamping costs +7.6ns to +68.5ns per write depending on depth;
- * early-exit dirty flags +3.7ns. This costs zero.)
- *
- * Measured, write one leaf then read the whole state, 200x:
- *
- *   grid 100x100 (10k leaves)   489.1us -> 8.6us   56.7x   99/100 shared
- *   grid 1000x20 (20k leaves)  1127.0us -> 47.8us  23.6x   999/1000 shared
- *   deep nest 50                   2.2us -> 2.2us   1.0x   (nothing wide)
- *
- * No win on deep-narrow shapes, and that is expected: this is a WIDTH
- * optimisation. Depth is cheap to rebuild (measured elsewhere at 0.4% of the
- * allocation bill for a 15-deep, 50k-wide immutable update); width is the
- * entire cost.
- *
- * TWO CONSEQUENCES, both real:
- *
- * 1. `tree()` no longer returns a freshly-allocated object. MUTATING THE RESULT
- *    CORRUPTS THE CACHE and the mutation is visible to later reads. Snapshots
- *    were always meant to be read-only; now it is load-bearing. Callers that
- *    need to mutate must copy first (`structuredClone`, or spread what they
- *    need). timeTravel already structuredClones, so it is unaffected.
- *
- * 2. Reading `tree()` inside a `computed`/`effect` now takes a dependency on
- *    per-node computeds rather than on every leaf individually. Same
- *    reactivity, finer granularity — a write to an unrelated subtree no longer
- *    forces the consumer to rebuild anything it did not read.
- *
- * The cache is a WeakMap keyed on the node, so it is collected with the tree,
- * and each entry is created lazily on first materialisation: a tree that never
- * calls `tree()` allocates nothing here.
- */
 const MATERIALIZED = new WeakMap<object, Signal<unknown>>();
 
 /**
@@ -496,17 +410,9 @@ export function unwrap<T>(node: unknown): T {
  * symbol keys. See the comment on the accessor branch of `unwrap()`.
  */
 function buildFromStore<T>(node: object): T {
-  // An entityMap reached through the store path rather than an accessor. Same
-  // rule — see isEntityNode(): entities only, no derived views.
-  if (isEntityNode(node)) {
-    return {
-      all: (node as unknown as { all: () => unknown }).all(),
-    } as unknown as T;
-  }
-  if (isStatusNode(node)) {
-    const s = node as unknown as { state: () => unknown; error: () => unknown };
-    return { state: s.state(), error: s.error() } as unknown as T;
-  }
+  // A materialised marker snapshots itself — see snapshotMarkerNode().
+  const own = snapshotMarkerNode(node);
+  if (own) return own.value as T;
 
   const result = {} as Record<string, unknown>;
 
@@ -522,6 +428,16 @@ function buildFromStore<T>(node: object): T {
     // structuredClone, silently. The general plain-function skip below already
     // covers the case it was written for, and covers it by value rather than
     // by name.
+
+    // A materialised marker may be an unbranded CALLABLE (form, asyncSource):
+    // neither signal nor accessor, so the function-skip below would drop it and
+    // its value with it. Ask the registry first — that is the whole reason
+    // `snapshot()` exists.
+    const markerSnapshot = snapshotMarkerNode(value);
+    if (markerSnapshot) {
+      result[key] = markerSnapshot.value;
+      continue;
+    }
 
     if (
       typeof value === 'function' &&
@@ -598,6 +514,13 @@ function buildFromStore<T>(node: object): T {
     }
 
     const value = (node as Record<symbol, unknown>)[sym];
+
+    // Same as the string-key loop: ask the registry before skipping a callable.
+    const markerSnapshotSym = snapshotMarkerNode(value);
+    if (markerSnapshotSym) {
+      (result as Record<symbol, unknown>)[sym] = markerSnapshotSym.value;
+      continue;
+    }
 
     if (
       typeof value === 'function' &&
@@ -689,15 +612,12 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   //
   // `Loaded` and `Error` both survive: they describe a finished operation, and
   // `Error` is what lets a retry guard know the last attempt failed.
-  if (
-    isStatusNode(stateNode) &&
-    snapshot &&
-    typeof snapshot === 'object' &&
-    (snapshot as { state?: unknown }).state === 'LOADING'
-  ) {
-    (stateNode as unknown as { setNotLoaded: () => void }).setNotLoaded();
-    return;
-  }
+  // A materialised marker hydrates itself, and decides for itself what a
+  // process boundary means for its transient state. `applyState` is the
+  // devtools REPLAY path — same process — so it passes `restore`, under which
+  // an in-flight `Loading` is kept verbatim because the request may genuinely
+  // still be running. `deserialize` and SSR pass `rehydrate` instead.
+  if (hydrateMarkerNode(stateNode, snapshot, 'restore')) return;
 
   // Special-case EntitySignal-like nodes: restore via setAll() when possible
   // so internal storage stays consistent.
@@ -737,6 +657,13 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
 
     const val = (snapshot as Record<string, unknown>)[key];
     const target = (stateNode as Record<string, unknown>)[key];
+
+    // A materialised marker hydrates ITSELF, before any of the shape-guessing
+    // below. Without this, a marker whose node is an unbranded callable (form,
+    // asyncSource) falls through to the raw assignment at the bottom and its
+    // live signal is REPLACED by a plain object — which is exactly what ST2009
+    // was built to catch, and did.
+    if (hydrateMarkerNode(target, val, 'restore')) continue;
 
     if (isNodeAccessor(target)) {
       if (val && typeof val === 'object') {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { form } from './markers';
+import { asyncSource } from './markers/async-source';
 import { signalTree } from './signal-tree';
 import { unwrap } from './utils';
 
@@ -35,7 +36,20 @@ describe('one builder: snapshots do not depend on how a node is reached', () => 
   afterEach(() => err.mockRestore());
 
   const treeWithNestedForm = () =>
-    signalTree({ grp: { g: form({ initial: { b: 2 } }), n: 1 } });
+  // `asyncSource()` — a REGISTERED marker that has not declared a `snapshot`
+  // hook, so its value genuinely cannot be materialised and its key vanishes.
+  //
+  // This fixture used to use `form()`. Once markers gained snapshot/hydrate,
+  // `form()` is handled and correctly stopped tripping ST2008, so it was no
+  // longer a valid subject. A plain function is not one either: a function in
+  // the state literal becomes a leaf signal HOLDING a function, which the
+  // signal branch happily emits. What ST2008 now means, precisely, is "a marker
+  // that never said what of it is state" — which is the condition worth having
+  // a diagnostic for.
+  signalTree({
+    grp: { s: asyncSource({ loader: async () => 1 }) },
+    n: 1,
+  });
 
   it('ST2008 fires the same whether the store or the accessor is read first', () => {
     // The regression test for the shared memo cell. Before the merge this was
@@ -73,12 +87,11 @@ describe('one builder: snapshots do not depend on how a node is reached', () => 
   });
 
   it('reports a marker that is an unbranded callable, at any depth [ST2008]', () => {
-    // `form()` materialises to a callable carrying neither Angular's SIGNAL
-    // brand nor SignalTree:NodeAccessor, so every walker skips its VALUE. That
-    // is still true — this pins that it is no longer SILENT.
+    // A marker with no `snapshot` hook cannot be materialised, so its key
+    // vanishes. This pins that it is no longer SILENT when it does.
     signalTree({
-      top: form({ initial: { a: 1 } }),
-      grp: { nested: form({ initial: { b: 2 } }) },
+      top: asyncSource({ loader: async () => 1 }),
+      grp: { nested: asyncSource({ loader: async () => 2 }) },
     })();
 
     const msg = err.mock.calls.map((c) => String(c[0])).join('\n');
