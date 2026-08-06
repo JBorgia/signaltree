@@ -348,10 +348,49 @@ if (process.argv.includes('--json')) {
     for (const r of rows.filter((r) => r.error)) {
       console.log('  ' + r.arm.padEnd(18) + '  — ' + r.error);
     }
+    // Say what was covered, not just what was measured. A table with a missing
+    // row looks exactly like a table, and the reader has no way to tell that an
+    // arm crashed unless it is counted out loud.
+    console.log(
+      `  ${ok.length}/${rows.length} arms completed` +
+        (ok.length < rows.length
+          ? ` — ${rows.length - ok.length} FAILED and are absent from the ranking above`
+          : '')
+    );
   }
   console.log(
     '\n  Every arm implements the same capability using that library\'s own entity\n' +
       '  API. Undo/redo has no primitive outside SignalTree for this store shape,\n' +
       '  so those arms snapshot state per change — which is what its absence forces.'
   );
+}
+
+/**
+ * A crashed arm must fail the process, not just print a line.
+ *
+ * The per-arm postconditions catch an arm that did no work, but they run in the
+ * CHILD; the parent caught the failure, dropped the arm from the ranking, and
+ * exited 0. A benchmark that measured 1 of 4 arms was therefore indistinguishable
+ * — to a shell `&&`, to CI, to `verify-gates` — from one that measured all four.
+ * That is the same defect as the idle-arm bug this harness was rewritten to fix,
+ * one level up: there the arm did nothing, here the arm is missing entirely.
+ *
+ * `--allow-missing` exists for the legitimate case of a comparison library not
+ * being installed, and it says so rather than passing quietly.
+ */
+const failedArms = Object.entries(out.workloads).flatMap(([workload, rows]) =>
+  rows.filter((r) => r.error).map((r) => `${workload}/${r.arm}: ${r.error}`)
+);
+if (failedArms.length) {
+  console.error(`\n${failedArms.length} arm run(s) FAILED:`);
+  for (const f of failedArms) console.error(`  ✗ ${f}`);
+  if (process.argv.includes('--allow-missing')) {
+    console.error('  (--allow-missing: continuing anyway)');
+  } else {
+    console.error(
+      '\nExiting non-zero. Pass --allow-missing if a comparison library is ' +
+        'genuinely absent; do NOT publish a table with arms silently missing.'
+    );
+    process.exit(1);
+  }
 }

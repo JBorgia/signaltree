@@ -123,7 +123,13 @@
     "workspace:info": "nx report",
     "check:devmode-foldable": "node tools/check-devmode-foldable.mjs",
     "typecheck:typing": "tsc --noEmit -p packages/core/tsconfig.typecheck.json",
-    "typecheck:source": "tsc --noEmit -p tsconfig.typecheck-all.json"
+    "typecheck:source": "tsc --noEmit -p tsconfig.typecheck-all.json",
+    "gates": "node tools/verify-gates.mjs",
+    "gates:fast": "node tools/verify-gates.mjs --fast",
+    "gates:self-test": "node tools/verify-gates.mjs --self-test",
+    "gates:list": "node tools/verify-gates.mjs --list",
+    "lint:budget": "node tools/check-lint-budget.mjs",
+    "dead-exports": "node tools/find-dead-exports.mjs"
   },
   "private": true,
   "dependencies": {

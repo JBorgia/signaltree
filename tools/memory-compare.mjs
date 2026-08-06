@@ -189,6 +189,13 @@ if (process.argv.includes('--json')) {
         `  ${r.collectable ? '✅' : '❌'}`
     );
   }
+  const done = results.filter((r) => !r.error).length;
+  console.log(
+    `\n  ${done}/${results.length} arms completed` +
+      (done < results.length
+        ? ` — ${results.length - done} FAILED and are absent from the ranking above`
+        : '')
+  );
   console.log(
     '\n  MARGINAL is the slope between ' + SMALL.toLocaleString() + ' and ' +
       N.toLocaleString() + ' entities, so every FIXED cost\n' +
@@ -196,4 +203,25 @@ if (process.argv.includes('--json')) {
       '  that answers "what does one more row cost". The entity objects\n' +
       '  themselves are ~89 B of it, and no library controls that part.'
   );
+}
+
+/**
+ * A crashed arm fails the process.
+ *
+ * Same reasoning as bench-compare: the error was printed, but the exit code
+ * stayed 0, so a comparison that measured one arm of four was indistinguishable
+ * from a complete one to anything automated — a shell `&&`, CI, verify-gates.
+ * `--allow-missing` covers a comparison library genuinely not being installed,
+ * and says so rather than passing quietly.
+ */
+const crashed = results.filter((r) => r.error);
+if (crashed.length) {
+  console.error(`\n${crashed.length} arm(s) FAILED:`);
+  for (const c of crashed) console.error(`  ✗ ${c.arm}: ${c.error}`);
+  if (process.argv.includes('--allow-missing')) {
+    console.error('  (--allow-missing: continuing anyway)');
+  } else {
+    console.error('\nExiting non-zero. Pass --allow-missing if a library is genuinely absent.');
+    process.exit(1);
+  }
 }

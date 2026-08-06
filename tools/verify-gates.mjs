@@ -143,6 +143,83 @@ const GATES = [
     },
   },
   {
+    name: 'dead-exports',
+    covers: 'no NEW export is unreachable from every entry point and every import',
+    cmd: ['node', 'tools/find-dead-exports.mjs', '--max=42'],
+    mutation: {
+      file: 'packages/core/src/lib/utils.ts',
+      append: '\nexport const __gateUnreachableExport = 1;\n',
+    },
+  },
+  {
+    name: 'dead-exports:self',
+    covers: 'the reachability scan itself is neither too narrow nor too broad',
+    cmd: ['node', 'tools/find-dead-exports.mjs', '--self-test'],
+    // Narrowing reachability makes a PUBLIC symbol look dead, which is the
+    // failure that shipped once (five published guardrails factories).
+    mutation: {
+      file: 'tools/find-dead-exports.mjs',
+      find: "  for (const [subpath, value] of Object.entries(manifest.exports ?? { '.': {} })) {",
+      replace:
+        "  for (const [subpath, value] of Object.entries(manifest.exports ?? { '.': {} })) {\n    if (subpath !== '.') continue;",
+    },
+  },
+  // ── Measurement harnesses ────────────────────────────────────────────────
+  // These gate on the HARNESS still working, not on its numbers. Timings move
+  // with the machine, so asserting them would make the suite flaky and teach
+  // people to ignore it; what rots silently is the harness itself — an arm that
+  // stops constructing, a postcondition whose API moved. Run at smoke sizes
+  // (1.5s rather than minutes); the published numbers come from a full run.
+  {
+    name: 'bench-harness',
+    covers: 'all 4 benchmark arms construct, run, and satisfy their postconditions',
+    cmd: ['node', '--expose-gc', 'tools/bench-compare.mjs', '--n', '200'],
+    needsBuild: true,
+    // The postconditions live in the child. Breaking the undo call makes the
+    // signaltree arm restore nothing — exactly the idle-arm bug that was
+    // published once as "20x faster than elf".
+    mutation: {
+      file: 'tools/bench-compare.mjs',
+      find: '      impl.undo();',
+      replace: '      void impl;',
+    },
+  },
+  {
+    name: 'memory-harness',
+    covers: 'every memory scenario runs under forced GC and reports collectability',
+    cmd: ['node', '--expose-gc', 'tools/memory-report.mjs'],
+    needsBuild: true,
+    // Removing --expose-gc from the child would measure allocation instead of
+    // retention — the error already on record at 8x.
+    mutation: {
+      file: 'tools/memory-report.mjs',
+      find: "    ['--expose-gc', new URL(import.meta.url).pathname, '--scenario', name],",
+      replace: "    [new URL(import.meta.url).pathname, '--scenario', name],",
+    },
+  },
+  {
+    name: 'memory-compare',
+    covers: 'all 4 cross-library memory arms construct and measure a marginal slope',
+    cmd: ['node', '--expose-gc', 'tools/memory-compare.mjs', '--n', '1000'],
+    needsBuild: true,
+    // Anchored on the child's dispatch, NOT on its unknown-arm branch: the
+    // first attempt injected a throw into `if (!build)`, which never executes
+    // for a valid arm, so the mutation ran nothing and the gate looked blind
+    // when it was the mutation that was inert.
+    mutation: {
+      file: 'tools/memory-compare.mjs',
+      find: '  const build = ARMS[name];',
+      replace: "  const build = name === 'elf' ? null : ARMS[name];",
+    },
+  },
+  {
+    name: 'size-report',
+    covers: 'every published package builds and its tree-shaken size is measurable',
+    cmd: ['node', 'tools/size-report.mjs'],
+    needsBuild: true,
+    unproven: 'reports sizes; the budget assertion lives in bundle-budget below',
+  },
+  {
     name: 'bundle-budget',
     covers: 'built package sizes stay inside their budgets',
     cmd: ['node', 'tools/check-bundle-budget.mjs'],

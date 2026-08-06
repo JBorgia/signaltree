@@ -373,3 +373,23 @@ console.log(
   `\nLeads, not verdicts — static reachability cannot see dynamic import or ` +
     `template-string access. Confirm each before deleting.`
 );
+
+// A ratchet, for the same reason the lint budget is one: 42 remain after the
+// 14.0.0 triage, they are leads rather than defects, and a permanently red gate
+// teaches people to ignore gates. The count may not GROW.
+const maxArg = process.argv.find((a) => a.startsWith('--max='));
+if (maxArg) {
+  const max = Number(maxArg.slice(6));
+  if (dead.length > max) {
+    console.error(
+      `\n✗ ${dead.length} unreachable exports, budget ${max}. New code may not ` +
+        `add exports that nothing can reach — either wire it to an entry point ` +
+        `or do not export it.`
+    );
+    process.exit(1);
+  }
+  console.log(`\n✓ within budget (${dead.length}/${max}).`);
+  if (dead.length < max) {
+    console.log(`  Lower the --max in tools/verify-gates.mjs to ${dead.length} to lock this in.`);
+  }
+}
