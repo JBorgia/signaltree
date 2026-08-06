@@ -33,7 +33,9 @@ const ROUTES = [
   '/guardrails', // guardrails monitoring panels (see content assertion below)
   '/realtime', // realtime enhancer teaching tabs
   '/form-marker', // form() marker: validation, wizard, history
-  '/time-travel', // undo/redo history
+  '/time-travel', // undo/redo history — incl. the 14.0.0 marker section
+  '/callable-syntax', // what is callable and what is not (repurposed in 14.0.0)
+  '/serialization', // snapshot payload shape (changed in 14.0.0)
   '/persistence', // persistence() enhancer
   '/enterprise-enhancer', // deprecated package (see content assertion below)
 ];

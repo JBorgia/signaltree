@@ -164,4 +164,96 @@
     </div>
   </div>
   </st-example>
+
+  <st-example heading="Undo/redo across MARKERS (new in 14.0.0)">
+    <div intro>
+      <p class="intro-text">
+        Everything above is plain leaves, and undo has always worked for those.
+        <strong>Markers were a different story.</strong>
+        Until 14.0.0 a snapshot captured a marker&#39;s API surface instead of its
+        state, so an undo left the marker at its
+        <em>post-change</em>
+        value and reported success — landing you in a state that never existed.
+      </p>
+      <p class="intro-text">
+        Measured before the fix:
+        <code>n=3 rows=3</code>
+        → undo →
+        <code>n=2 rows=3</code>
+        . The counter rolled back; the collection did not; nothing said so.
+        Add people, change the job status, edit the profile, then undo — all
+        three roll back together now.
+      </p>
+    </div>
+
+    <div class="demo-grid">
+      <div class="card actions-card">
+        <h2>Change marker state</h2>
+        <div class="button-group">
+          <button class="btn btn-primary" (click)="addPerson()">
+            Add person
+          </button>
+          <button class="btn" (click)="removeLastPerson()">Remove last</button>
+        </div>
+        <div class="button-group">
+          <button class="btn" (click)="markJobLoaded()">job → LOADED</button>
+          <button class="btn" (click)="markJobFailed()">job → ERROR</button>
+          <button class="btn" (click)="editProfile()">Edit profile</button>
+        </div>
+        <div class="button-group">
+          <button
+            class="btn btn-primary"
+            [disabled]="!markerCanUndo()"
+            (click)="undoMarkers()"
+          >
+            ↶ Undo
+          </button>
+          <button
+            class="btn btn-primary"
+            [disabled]="!markerCanRedo()"
+            (click)="redoMarkers()"
+          >
+            ↷ Redo
+          </button>
+          <button class="btn" (click)="resetMarkers()">Reset history</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Live marker state</h2>
+        <ul>
+          <li>
+            <strong>entityMap</strong>
+            — {{ peopleCount() }} people:
+            <code>{{ people().length ? people() : '(empty)' }}</code>
+          </li>
+          <li>
+            <strong>status</strong>
+            — <code>{{ jobState() }}</code>
+          </li>
+          <li>
+            <strong>form</strong>
+            — <code>{{ profileValues() }}</code>
+          </li>
+        </ul>
+        <p class="intro-text">
+          Every one of these is a marker. Before 14.0.0 none of them moved when
+          you pressed Undo.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What each action did</h2>
+        @if (markerLog().length === 0) {
+        <p class="intro-text">Press a button to start.</p>
+        } @else {
+        <ol>
+          @for (line of markerLog(); track $index) {
+          <li><code>{{ line }}</code></li>
+          }
+        </ol>
+        }
+      </div>
+    </div>
+  </st-example>
 </div>
