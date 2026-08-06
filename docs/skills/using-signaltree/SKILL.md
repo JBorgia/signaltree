@@ -14,27 +14,27 @@ Mental model:
 - Read: `tree.$.count()` — subscribes reactive context.
 - Write leaf: `.set(value)` / `.update(fn)`. Write branch (both forms are **deep-merge partial writes** — keys absent from the payload are preserved): `tree.$.user({ name, email })` (partial-merge object) or `tree.$.user((u) => ({ ...u, name }))` (updater function). No dispatch. There is no `tree.set(...)` — the root is callable: `tree(partial)` or `tree(updater)`.
 - Enhancers: `tree.with(batching()).with(devTools())` — order-sensitive.
-- Markers: `entityMap<User>()`, `entityMap<Plant>({ load: loader(fn) })` (cache-aware (single-scope) form), `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })` — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); the `@signaltree/callable-syntax` build-time transform extends call-syntax to **leaf writes** only. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
+- Markers: `entityMap<User>()`, `entityMap<Plant>({ load: loader(fn) })` (cache-aware (single-scope) form), `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })`, `compared(value, equal)` (v13.5+, per-leaf equality) — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); the `@signaltree/callable-syntax` build-time transform extends call-syntax to **leaf writes** only. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
 
 > **The one fact everything else follows from: only LEAVES are Angular signals.**
 > A branch is not a signal — it's a plain accessor function. This asymmetry is the
 > single most common thing agents get wrong about this codebase, so before changing
 > anything that touches nodes, check your reasoning against this table:
 >
-> | | leaf (`WritableSignal<T>`) | branch / node (`NodeAccessor<T>`) |
-> |---|---|---|
-> | read | `leaf()` | `node()` — unwraps the whole subtree |
-> | write a value | `leaf.set(v)` | `node({ partial })` — deep merge, absent keys preserved |
-> | write from current | `leaf.update(fn)` | `node(fn)` — fn receives the unwrapped value |
-> | has `.set` / `.update` | yes | **no — by design, and it needs none** |
-> | called with an argument, untransformed | **silent no-op** (Angular ignores extra args) | writes (this is native core behavior) |
+> |                                        | leaf (`WritableSignal<T>`)                    | branch / node (`NodeAccessor<T>`)                       |
+> | -------------------------------------- | --------------------------------------------- | ------------------------------------------------------- |
+> | read                                   | `leaf()`                                      | `node()` — unwraps the whole subtree                    |
+> | write a value                          | `leaf.set(v)`                                 | `node({ partial })` — deep merge, absent keys preserved |
+> | write from current                     | `leaf.update(fn)`                             | `node(fn)` — fn receives the unwrapped value            |
+> | has `.set` / `.update`                 | yes                                           | **no — by design, and it needs none**                   |
+> | called with an argument, untransformed | **silent no-op** (Angular ignores extra args) | writes (this is native core behavior)                   |
 >
 > Consequences worth stating outright, because each has been "fixed" wrongly before:
 > **(1)** Never add `.set()`/`.update()` to a node — the call signatures already do
 > both writes, and the names would collide with state keys called `set`/`update`.
 > **(2)** Node call-syntax is core behavior, not a feature of
 > `@signaltree/callable-syntax`, and not something to warn users away from.
-> **(3)** That transform exists solely to give *leaves* the same call syntax; it is
+> **(3)** That transform exists solely to give _leaves_ the same call syntax; it is
 > build-time and zero-runtime, emitting exactly the `.set()`/`.update()` you would
 > have hand-written.
 
@@ -142,6 +142,10 @@ Deep dives:
 - [`reference/install.md`](reference/install.md) — Angular version requirement, install commands.
 - [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md) — mechanical mapping guide when porting an existing `@ngrx/signals` codebase. Only relevant for `@ngrx/signals` (`signalStore`, `withState`, `rxMethod`) — not classic `@ngrx/store`.
 - [`reference/migration-from-ngrx-store.md`](reference/migration-from-ngrx-store.md) — mechanical mapping guide when porting a **classic `@ngrx/store`** codebase (`createAction`/`createReducer`/`createSelector`/`createEffect`, `@ngrx/entity`, `StoreModule`/`provideStore`). Actions → `Ops` methods, reducers → signal writes, selectors → `computed()`/derived tiers, effects → `asyncSource`/`Ops` observables. Shares the target architecture with the `@ngrx/signals` guide.
+- `compared<T>(value, equal)` / `byKeys(...keys)` (v13.5+) — give ONE leaf its own equality function. Returns `T`, not a wrapper, so the tree type is unchanged: `user: compared(initialUser, byKeys<User>('id','version'))`. Measured, 2M writes to one leaf: an object `{id,name,email,version}` 53.8ns → 8.9ns (6.0x); the SAME object re-fetched over HTTP (equivalent value, new identity) 110.3ns → 9.0ns (12.2x). The decisive property is not speed — a comparator reaches the reference-equality floor (`Object.is`, 8.6ns) WHILE KEEPING re-fetch correctness, which is why defaulting leaves to `Object.is` stays wrong. `byKeys()` is O(keys), so a `version` counter makes equality constant-time however large the value grows (trade: a change outside the listed keys is a no-op and does not notify). **Do NOT emit it for primitives** — `deepEqual` short-circuits on its first line and measures 6.5ns against `Object.is`'s 8.1ns on a changing number; there is nothing to specialise. **It does not fix large collections** — still O(N), and it cannot touch the `slice()` that built the array. `compared()` makes its position a LEAF even for an object value (no `tree.$.user.name` accessor).
+- **`tree()` is memoised and structurally shared (v13.5+)** — it rebuilds only nodes beneath a signal that actually changed and returns clean subtrees BY REFERENCE. Two consequences: (1) **`tree()` no longer returns a fresh object; mutating a snapshot corrupts the cache**, and snapshots are frozen in dev so it throws — copy first if you must mutate. Do NOT emit code that mutates the result of `tree()`/`unwrap()`. (2) `prev !== next` at any node is a meaningful change check now. This makes `timeTravel()` flat in state size (50 writes at 10k rows: 340.60ms → 0.04ms) and `getHistory()` returns entry states by reference.
+- **[ST2018]** dev warning when a leaf holds 32+ objects with a stable `id`/`_id`/`uuid`/`key` → emit `entityMap({ selectId })` instead. As a plain array leaf, 1000 updates to a 50k collection measure 49.80ms vs 1.63ms via `entityMap` (~30x), which is parity with the immutable stores SignalTree otherwise beats. If the array is read-only or always replaced wholesale, that is fine — `compared()` silences it.
+
 - [`reference/optimal-implementation.md`](reference/optimal-implementation.md) — prescribed file/folder layout, pattern defaults (`entityMap`, multi-tier derived, enhancer baseline), and the migration definition-of-done checklist. **Read this before beginning any non-trivial migration.**
 - [`reference/orchestrating-a-migration.md`](reference/orchestrating-a-migration.md) — process playbook for an orchestrator agent driving one or more implementer subagents through a phased SignalTree adoption. Applies to NgRx Signal Store migration (default), classic NgRx / `BehaviorSubject` / `@Injectable` state migration (with adapted Phase 1 greps), and greenfield adoption (Phase 1 is a no-op). Load when the work spans more than ~5 consumer files, when a single implementer is likely to exhaust its context window, or when the user asks for a phased / supervised rollout.
 

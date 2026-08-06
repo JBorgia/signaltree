@@ -12,14 +12,14 @@ real-time push — so you don't reinvent the interplay.
 
 ## Division of responsibility
 
-| Concern | Owned by | Why |
-|---|---|---|
-| Conditional GET, `ETag` / `If-None-Match`, `304 Not Modified`, `Cache-Control` | The **browser HTTP cache** + Angular `HttpClient` | The platform already does this correctly; core stays HTTP-agnostic |
-| "Is this collection fresh enough to skip a call?" | `entityMap`'s `staleTime` | Application-level freshness, not transport-level |
-| "N subsystems asked to load — send one request" | `entityMap`'s `.load()` guard | Single-flight coalescing |
-| "The server says this data changed — refetch" | `invalidate()` / `invalidateTag()` + your SSE/SignalR wiring | Push freshness |
+| Concern                                                                        | Owned by                                                     | Why                                                                |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Conditional GET, `ETag` / `If-None-Match`, `304 Not Modified`, `Cache-Control` | The **browser HTTP cache** + Angular `HttpClient`            | The platform already does this correctly; core stays HTTP-agnostic |
+| "Is this collection fresh enough to skip a call?"                              | `entityMap`'s `staleTime`                                    | Application-level freshness, not transport-level                   |
+| "N subsystems asked to load — send one request"                                | `entityMap`'s `.load()` guard                                | Single-flight coalescing                                           |
+| "The server says this data changed — refetch"                                  | `invalidate()` / `invalidateTag()` + your SSE/SignalR wiring | Push freshness                                                     |
 
-The rule of thumb: **`staleTime` decides whether to *ask*; the ETag decides whether the answer
+The rule of thumb: **`staleTime` decides whether to _ask_; the ETag decides whether the answer
 costs bytes.** They stack — a re-fetch that the browser satisfies with a `304` is nearly free.
 
 ## 1. Baseline: a self-loading collection
@@ -35,8 +35,8 @@ export class PlantStore {
     plants: entityMap<PlantDto, string>({
       selectId: (p) => p.url,
       load: loader(() => this.http.get<PlantDto[]>('/api/plants'), {
-        staleTime: '30m',      // skip refetch while fresh
-        tags: ['plants'],      // for invalidateTag()
+        staleTime: '30m', // skip refetch while fresh
+        tags: ['plants'], // for invalidateTag()
       }),
     }),
   });
@@ -74,7 +74,7 @@ plants: entityMap<PlantDto, string>({
 Read them straight off the tree — **fully typed since v13.2, no cast**:
 
 ```typescript
-this.store.tree.$.plants.byUrl();       // Signal<Record<string, PlantDto>>
+this.store.tree.$.plants.byUrl(); // Signal<Record<string, PlantDto>>
 this.store.tree.$.plants.activeCount(); // Signal<number>
 ```
 
@@ -88,7 +88,7 @@ them.
 ### `find` / `where` — reactive lookups without a wrapper
 
 ```typescript
-const active = store.tree.$.plants.find((p) => p.active);          // Signal<PlantDto | undefined>
+const active = store.tree.$.plants.find((p) => p.active); // Signal<PlantDto | undefined>
 const inRegion = store.tree.$.plants.where((p) => p.regionUrl === url); // Signal<PlantDto[]>
 ```
 
@@ -153,8 +153,8 @@ export class PlantStore {
   constructor() {
     const es = new EventSource('/api/events');
     es.addEventListener('plants.changed', () => {
-      invalidateTag(this.tree, 'plants');   // mark stale; next load() refetches
-      this.tree.$.plants.refresh();         // …or refetch immediately
+      invalidateTag(this.tree, 'plants'); // mark stale; next load() refetches
+      this.tree.$.plants.refresh(); // …or refetch immediately
     });
     inject(DestroyRef).onDestroy(() => es.close());
   }
@@ -269,11 +269,50 @@ if (this.tree.$.plants.error()) {
 
 There is no `refreshOrThrow()`: a failed load never becomes fresh (`lastLoadedAt` only advances on
 success), so retrying after an error is already what `loadOrThrow()` does — `refresh()`'s only
-distinct job is forcing a reload of *already-fresh* data, which has nothing to do with retrying a
+distinct job is forcing a reload of _already-fresh_ data, which has nothing to do with retrying a
 failure (see [RFC 0004](../rfcs/0004-v12-optimal-iteration.md) §3 V-P4).
+
+## Why not just use an array? (ST2018)
+
+This is the most expensive mistake available here, and it does not look like a
+mistake — `rows: Row[]` is the obvious thing to write. Same task, 1000 updates
+to a 50,000-row collection with a dependent read, measured in isolated
+processes:
+
+|                               | time        |
+| ----------------------------- | ----------- |
+| `entityMap`                   | **1.63 ms** |
+| plain array leaf              | 49.80 ms    |
+| NgRx SignalStore `patchState` | 46.56 ms    |
+
+An array leaf lands at **parity with the immutable store** SignalTree otherwise
+beats by ~28x, because every update rebuilds the array (`slice()` alone is
+~41 ms of that 49.80 ms) and every equality check walks it. `entityMap` owns
+each entity separately: the write is O(1) and `byId(id)` is a per-entity signal
+with a fan-out of exactly 1.
+
+Since 13.5.0 core warns about this at construction (**ST2018**) when a leaf
+holds 32+ objects with a stable `id`. It is deliberately quiet otherwise — small
+arrays, primitives, objects with no identity key, non-unique ids, nested arrays.
+
+**When an array leaf is the right answer:** the collection is read-only, or it
+is always replaced wholesale (a search result set, a static lookup table). Then
+the rebuild you are being warned about is the operation you actually want.
+Silence the warning by taking explicit control of equality:
+
+```ts
+import { compared } from '@signaltree/core';
+
+const tree = signalTree({
+  // Replaced wholesale on every search; per-entity writes never happen.
+  results: compared(initialResults, (a, b) => a === b),
+});
+```
 
 ## Anti-patterns
 
+- **Don't** model a per-entity-updated collection as a plain array leaf — see
+  ST2018 above. This is the one that costs 30x.
 - **Don't** stack TanStack Query / a second document cache alongside `entityMap` — you'd get the
   triple-cache duplication `entityMap`'s cache-aware loading exists to remove.
 - **Don't** put conditional-GET logic in the loader (see §3).

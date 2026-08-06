@@ -8,11 +8,11 @@ This page is the canonical comparison. Claims are stated **as of `@ngrx/signals`
 
 ## TL;DR
 
-| You should pick... | When... |
-|---|---|
-| **SignalTree** | You want state that reads and writes like the typed JSON object it represents; you value zero boilerplate; you want to attach behaviors (entity CRUD, async status, persistence, forms) at specific nodes anywhere in the tree; you're migrating away from classic NgRx pain. |
-| **NgRx SignalStore** | Your team strongly prefers Redux-style action ergonomics; you have heavy RxJS investment and want first-class `rxMethod` everywhere; you want read-only-by-default exports without writing any service facade. |
-| **Either is fine** | You're building anything in between. Both are well-engineered, native-Angular signal libraries. The choice is taste and architectural fit. |
+| You should pick...   | When...                                                                                                                                                                                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SignalTree**       | You want state that reads and writes like the typed JSON object it represents; you value zero boilerplate; you want to attach behaviors (entity CRUD, async status, persistence, forms) at specific nodes anywhere in the tree; you're migrating away from classic NgRx pain. |
+| **NgRx SignalStore** | Your team strongly prefers Redux-style action ergonomics; you have heavy RxJS investment and want first-class `rxMethod` everywhere; you want read-only-by-default exports without writing any service facade.                                                                |
+| **Either is fine**   | You're building anything in between. Both are well-engineered, native-Angular signal libraries. The choice is taste and architectural fit.                                                                                                                                    |
 
 ---
 
@@ -26,19 +26,27 @@ This page is the canonical comparison. Claims are stated **as of `@ngrx/signals`
 import { signalStore, withState, withComputed, withMethods } from '@ngrx/signals';
 
 export const TicketStore = signalStore(
-  withState({                       // ← state slice at store root
+  withState({
+    // ← state slice at store root
     entities: [] as Ticket[],
     activeId: null as number | null,
   }),
-  withComputed(({ entities, activeId }) => ({   // ← computed at store root
+  withComputed(({ entities, activeId }) => ({
+    // ← computed at store root
     active: computed(() => entities().find((t) => t.id === activeId())),
   })),
-  withMethods((store) => ({          // ← methods at store root
-    setActive(id: number) { patchState(store, { activeId: id }); },
+  withMethods((store) => ({
+    // ← methods at store root
+    setActive(id: number) {
+      patchState(store, { activeId: id });
+    },
   })),
-  withHooks({                        // ← lifecycle at store root
-    onInit(store) { /* ... */ },
-  }),
+  withHooks({
+    // ← lifecycle at store root
+    onInit(store) {
+      /* ... */
+    },
+  })
 );
 ```
 
@@ -52,26 +60,29 @@ import { computed } from '@angular/core';
 
 const store = signalTree({
   tickets: {
-    entities: entityMap<Ticket, number>(),    // ← marker at depth 1
+    entities: entityMap<Ticket, number>(), // ← marker at depth 1
     activeId: null as number | null,
-    submission: status<ApiError>(),            // ← marker at depth 1
+    submission: status<ApiError>(), // ← marker at depth 1
   },
   users: {
     byOrg: {
       [orgId]: {
-        members: entityMap<User, number>(),    // ← marker at depth 3
+        members: entityMap<User, number>(), // ← marker at depth 3
         profile: {
-          contactForm: form<Contact>({ /* ... */ }), // ← marker at depth 4
+          contactForm: form<Contact>({
+            /* ... */
+          }), // ← marker at depth 4
         },
       },
     },
   },
   settings: {
-    theme: stored('app-theme', 'light'),       // ← marker at depth 2
+    theme: stored('app-theme', 'light'), // ← marker at depth 2
   },
 }).derived(($) => ({
   tickets: {
-    active: computed(() => {                   // ← derived merged INTO $.tickets
+    active: computed(() => {
+      // ← derived merged INTO $.tickets
       const id = $.tickets.activeId();
       return id != null ? $.tickets.entities.byId(id)?.() ?? null : null;
     }),
@@ -93,55 +104,57 @@ The walker (`materializeMarkers`) tracks the path during tree construction and s
 
 ### 1. Implementation model
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Mental model** | Functional composition of `with*` features | Reactive JSON — the literal shape *is* the API surface |
-| **Feature attachment** | Store root only | Any node, any depth |
-| **State definition** | `withState({...})` | First argument to `signalTree({...})` |
-| **Computed state** | `withComputed(({ keys }) => ({ ... }))` | `.derived($ => ({ ... }))` — deep-merged into the tree |
-| **Methods/mutations** | `withMethods((store) => ({ ... }))` | Direct on leaf, or in an Ops service class (recommended) |
-| **Async/streaming** | `rxMethod(pipeline)` — callable factory inside `withMethods` | `asyncSource` / `asyncQuery` markers — path-attached, auto-derived status signals, no manual wiring |
+|                        | NgRx SignalStore                                             | SignalTree                                                                                          |
+| ---------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| **Mental model**       | Functional composition of `with*` features                   | Reactive JSON — the literal shape _is_ the API surface                                              |
+| **Feature attachment** | Store root only                                              | Any node, any depth                                                                                 |
+| **State definition**   | `withState({...})`                                           | First argument to `signalTree({...})`                                                               |
+| **Computed state**     | `withComputed(({ keys }) => ({ ... }))`                      | `.derived($ => ({ ... }))` — deep-merged into the tree                                              |
+| **Methods/mutations**  | `withMethods((store) => ({ ... }))`                          | Direct on leaf, or in an Ops service class (recommended)                                            |
+| **Async/streaming**    | `rxMethod(pipeline)` — callable factory inside `withMethods` | `asyncSource` / `asyncQuery` markers — path-attached, auto-derived status signals, no manual wiring |
 
 ### 2. Read syntax
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Read leaf** | `store.user.name()` (via DeepSignal) | `store.$.user.name()` |
-| **Read derived** | `store.fullName()` | `store.$.fullName()` or wherever you nested it |
-| **Read full snapshot** | Iterate via `entries()` or compose | `store()` returns full snapshot |
+|                        | NgRx SignalStore                     | SignalTree                                     |
+| ---------------------- | ------------------------------------ | ---------------------------------------------- |
+| **Read leaf**          | `store.user.name()` (via DeepSignal) | `store.$.user.name()`                          |
+| **Read derived**       | `store.fullName()`                   | `store.$.fullName()` or wherever you nested it |
+| **Read full snapshot** | Iterate via `entries()` or compose   | `store()` returns full snapshot                |
 
 ### 3. Write syntax
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Set single field (default)** | `patchState(store, { count: 5 })` (from inside a method) | `store.$.count.set(5)` |
-| **Nested update (default)** | `patchState(store, (s) => ({ user: { ...s.user, name: 'Bob' } }))` or nested updater functions | `store.$.user.name.set('Bob')` |
-| **Whole object update** | `patchState(store, { user: { name: 'Bob', age: 30 } })` | `store.$.user({ name: 'Bob', age: 30 })` |
-| **From a component (no unlock)** | Must call exposed method | Direct (`.set()` available on every leaf) |
-| **Component access with `protectedState: false`** | `patchState(injectedStore, ...)` works | (No flag needed — direct access is default) |
+|                                                   | NgRx SignalStore                                                                               | SignalTree                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **Set single field (default)**                    | `patchState(store, { count: 5 })` (from inside a method)                                       | `store.$.count.set(5)`                      |
+| **Nested update (default)**                       | `patchState(store, (s) => ({ user: { ...s.user, name: 'Bob' } }))` or nested updater functions | `store.$.user.name.set('Bob')`              |
+| **Whole object update**                           | `patchState(store, { user: { name: 'Bob', age: 30 } })`                                        | `store.$.user({ name: 'Bob', age: 30 })`    |
+| **From a component (no unlock)**                  | Must call exposed method                                                                       | Direct (`.set()` available on every leaf)   |
+| **Component access with `protectedState: false`** | `patchState(injectedStore, ...)` works                                                         | (No flag needed — direct access is default) |
 
 > **Honest take on encapsulation:** NgRx defaults to read-only consumer signals via `protectedState: true`. SignalTree defaults to writable consumer signals. Both can be flipped: NgRx via `protectedState: false`, SignalTree via wrapping in an `@Injectable()` service that exposes only methods or `derived()` projections. Neither is an iron-clad fortress; both push for the right defaults given their philosophy. See ["Encapsulation"](#5-mutation-encapsulation) below.
 
 ### 4. Entity collections
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Package** | `@ngrx/signals/entities` (separate sub-entry) | `entityMap()` marker in `@signaltree/core` |
-| **Where it attaches** | Store root via `withEntities<E>()` | Any node via `entityMap<E, K>()` marker |
-| **CRUD methods** | `setAllEntities`, `addEntity`, `updateEntity`, `removeEntity`, etc. — called via `patchState(store, addEntity(...))` | `store.$.users.addOne`, `.updateOne`, `.upsertOne`, `.removeWhere`, `.setAll`, etc. — called directly |
-| **Queries** | `store.entities()`, `store.ids()` — computed signals | `store.$.users.all()`, `.byId()`, `.where()`, `.count()` — signals |
-| **Multiple collections per store** | Requires named collections via config | Just place multiple `entityMap()` markers at different paths |
+|                                    | NgRx SignalStore                                                                                                     | SignalTree                                                                                            |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Package**                        | `@ngrx/signals/entities` (separate sub-entry)                                                                        | `entityMap()` marker in `@signaltree/core`                                                            |
+| **Where it attaches**              | Store root via `withEntities<E>()`                                                                                   | Any node via `entityMap<E, K>()` marker                                                               |
+| **CRUD methods**                   | `setAllEntities`, `addEntity`, `updateEntity`, `removeEntity`, etc. — called via `patchState(store, addEntity(...))` | `store.$.users.addOne`, `.updateOne`, `.upsertOne`, `.removeWhere`, `.setAll`, etc. — called directly |
+| **Queries**                        | `store.entities()`, `store.ids()` — computed signals                                                                 | `store.$.users.all()`, `.byId()`, `.where()`, `.count()` — signals                                    |
+| **Multiple collections per store** | Requires named collections via config                                                                                | Just place multiple `entityMap()` markers at different paths                                          |
 
 ### 5. Mutation encapsulation
 
 The "any component can mutate" concern is overstated on both sides:
 
 **In NgRx SignalStore:**
+
 - ✅ By default (`protectedState: true`), consumers see read-only signals and cannot call `.set()`.
 - ⚠️ A method in `withMethods` that returns `store` itself (or accepts arbitrary patches as parameters) reintroduces unconstrained mutation.
 - ⚠️ Setting `protectedState: false` opens `patchState(store, ...)` to any component that injects the store.
 
 **In SignalTree:**
+
 - ⚠️ By default, any component with a tree reference can mutate any leaf.
 - ✅ Wrap the tree in an `@Injectable()` service and expose only `$` reads and `ops.domain.method()` writes — this is the documented production pattern.
 - ✅ Opt into `@signaltree/events` for typed unidirectional command flow (analogous to NgRx actions).
@@ -151,15 +164,15 @@ The "any component can mutate" concern is overstated on both sides:
 
 ### 6. Async and RxJS interop
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Canonical async primitive** | `rxMethod(pipeline)` — callable factory living inside `withMethods` | `asyncSource(config)` / `asyncQuery(config)` markers — **at the tree path** |
-| **Status wiring** | Manual `tap(() => setLoading())` / `setLoaded()` inside pipeline | **Automatic** — materializer derives `loading` / `error` signals |
-| **Race conditions / cancellation** | `switchMap` in pipeline | Built into `asyncQuery`; standard RxJS in `asyncSource.load` |
-| **Input flexibility** | Raw value, Signal, or Observable | Signal-driven via `input` (asyncQuery) or explicit `refresh()` (asyncSource) |
-| **Auto-cleanup** | `DestroyRef` | `DestroyRef` (same) |
-| **Event-bus pattern** | `@ngrx/store` (classic) or community packages | `@signaltree/events` provides typed events |
-| **WebSocket/SSE sync** | Manual wiring | `@signaltree/realtime` |
+|                                    | NgRx SignalStore                                                    | SignalTree                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Canonical async primitive**      | `rxMethod(pipeline)` — callable factory living inside `withMethods` | `asyncSource(config)` / `asyncQuery(config)` markers — **at the tree path**  |
+| **Status wiring**                  | Manual `tap(() => setLoading())` / `setLoaded()` inside pipeline    | **Automatic** — materializer derives `loading` / `error` signals             |
+| **Race conditions / cancellation** | `switchMap` in pipeline                                             | Built into `asyncQuery`; standard RxJS in `asyncSource.load`                 |
+| **Input flexibility**              | Raw value, Signal, or Observable                                    | Signal-driven via `input` (asyncQuery) or explicit `refresh()` (asyncSource) |
+| **Auto-cleanup**                   | `DestroyRef`                                                        | `DestroyRef` (same)                                                          |
+| **Event-bus pattern**              | `@ngrx/store` (classic) or community packages                       | `@signaltree/events` provides typed events                                   |
+| **WebSocket/SSE sync**             | Manual wiring                                                       | `@signaltree/realtime`                                                       |
 
 **Honest take:** The async story is where SignalTree's marker philosophy shines compared to NgRx's `withMethods` composition. The marker pattern eliminates the entire `tap(() => setLoading())` / `setLoaded()` ceremony and co-locates the async behavior with the data:
 
@@ -175,14 +188,18 @@ const store = signalTree({
 
 // NgRx SignalStore:
 withMethods((store) => ({
-  loadUsers: rxMethod<void>((input$) => input$.pipe(
-    tap(() => patchState(store, { loading: true })),
-    switchMap(() => this.api.list$().pipe(
-      tap(users => patchState(store, { users, loading: false })),
-      catchError(/* ... */)
-    ))
-  )),
-}))
+  loadUsers: rxMethod<void>((input$) =>
+    input$.pipe(
+      tap(() => patchState(store, { loading: true })),
+      switchMap(() =>
+        this.api.list$().pipe(
+          tap((users) => patchState(store, { users, loading: false })),
+          catchError(/* ... */)
+        )
+      )
+    )
+  ),
+}));
 // Same expressiveness, but you write the status wiring manually every time.
 ```
 
@@ -190,29 +207,29 @@ For teams migrating NgRx `rxMethod` code: the SignalTree-native mapping is `asyn
 
 ### 7. Devtools and time-travel
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Devtools integration** | `withDevTools` from `@angular-architects/ngrx-toolkit` (community) | `.with(devTools())` from `@signaltree/core` |
-| **Action labels** | Action name from method or explicit `withDevTools` config | Path-based actions (e.g., `[users.profile.name]/set`) |
-| **Time-travel undo/redo** | Via Redux DevTools timeline | `.with(timeTravel({ maxHistorySize: 50 }))` adds `tree.undo()` / `tree.redo()` |
-| **Scoped time-travel** | Not built-in | `createEditSession(initial)` provides value-level undo/redo for draft-and-cancel flows (form wizards, multi-step editors). Independent of the tree; sync via effect when ready to commit. |
+|                           | NgRx SignalStore                                                   | SignalTree                                                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Devtools integration**  | `withDevTools` from `@angular-architects/ngrx-toolkit` (community) | `.with(devTools())` from `@signaltree/core`                                                                                                                                               |
+| **Action labels**         | Action name from method or explicit `withDevTools` config          | Path-based actions (e.g., `[users.profile.name]/set`)                                                                                                                                     |
+| **Time-travel undo/redo** | Via Redux DevTools timeline                                        | `.with(timeTravel({ maxHistorySize: 50 }))` adds `tree.undo()` / `tree.redo()`                                                                                                            |
+| **Scoped time-travel**    | Not built-in                                                       | `createEditSession(initial)` provides value-level undo/redo for draft-and-cancel flows (form wizards, multi-step editors). Independent of the tree; sync via effect when ready to commit. |
 
 ### 8. Persistence
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **localStorage** | Community plugins or hand-roll in `withHooks` | `stored('key', default)` marker per-leaf, or `.with(persistence())` enhancer for tree-wide |
-| **IndexedDB / custom adapters** | Hand-roll | `createIndexedDBAdapter()` or `createStorageAdapter()` from `@signaltree/core/storage` |
-| **Versioning + migrations** | Hand-roll | `stored(key, default, { version, migrate })` |
-| **Durability on background/kill** | Hand-roll | Debounced writes drain automatically on `visibilitychange`/`pagehide`; `.flush()` / `flushAllStoredSignals()` for native lifecycle hooks; `debounceMs: 0` for synchronous writes (13.3+) |
+|                                   | NgRx SignalStore                              | SignalTree                                                                                                                                                                               |
+| --------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **localStorage**                  | Community plugins or hand-roll in `withHooks` | `stored('key', default)` marker per-leaf, or `.with(persistence())` enhancer for tree-wide                                                                                               |
+| **IndexedDB / custom adapters**   | Hand-roll                                     | `createIndexedDBAdapter()` or `createStorageAdapter()` from `@signaltree/core/storage`                                                                                                   |
+| **Versioning + migrations**       | Hand-roll                                     | `stored(key, default, { version, migrate })`                                                                                                                                             |
+| **Durability on background/kill** | Hand-roll                                     | Debounced writes drain automatically on `visibilitychange`/`pagehide`; `.flush()` / `flushAllStoredSignals()` for native lifecycle hooks; `debounceMs: 0` for synchronous writes (13.3+) |
 
 ### 9. Forms
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Forms integration** | Manual binding or community packages | `@signaltree/ng-forms` — Angular Forms bridge |
-| **Schema validation** | Manual | `@signaltree/schema` — Standard Schema (Zod, Valibot, ArkType) |
-| **Form-state marker** | n/a | `form<T>(config)` marker — validation, wizard, persistence at the form's data location |
+|                       | NgRx SignalStore                     | SignalTree                                                                             |
+| --------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| **Forms integration** | Manual binding or community packages | `@signaltree/ng-forms` — Angular Forms bridge                                          |
+| **Schema validation** | Manual                               | `@signaltree/schema` — Standard Schema (Zod, Valibot, ArkType)                         |
+| **Form-state marker** | n/a                                  | `form<T>(config)` marker — validation, wizard, persistence at the form's data location |
 
 ### 10. Type safety and IDE performance
 
@@ -224,20 +241,56 @@ Both libraries use deep TypeScript inference. Both can hit compiler recursion li
 
 Both ship small. Exact numbers depend on tree-shaking and which features you import. `@signaltree/core` is competitive with `@ngrx/signals` core. SignalTree's optional packages (`callable-syntax`, `ng-forms`, `events`, etc.) are individually small and tree-shakeable.
 
-For published numbers, see [`docs/performance/`](../performance/) — and treat any "X is N% smaller than Y" claim from any state library with skepticism unless it's measured on *your* app.
+For published numbers, see [`docs/performance/`](../performance/) — and treat any "X is N% smaller than Y" claim from any state library with skepticism unless it's measured on _your_ app.
 
 ### 12. Ecosystem and maturity
 
-| | NgRx SignalStore | SignalTree |
-|---|---|---|
-| **Org backing** | NgRx organization, large community | Independent project |
+|                      | NgRx SignalStore                                                         | SignalTree                                               |
+| -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------- |
+| **Org backing**      | NgRx organization, large community                                       | Independent project                                      |
 | **Plugin ecosystem** | Larger (community plugins for sync-to-forms, pagination, DevTools, etc.) | Smaller but feature-complete in-house family of packages |
-| **Adoption** | Higher | Growing |
-| **Stability** | Stable (21.1 as of this writing) | Stable (v11 as of this writing) |
+| **Adoption**         | Higher                                                                   | Growing                                                  |
+| **Stability**        | Stable (21.1 as of this writing)                                         | Stable (v11 as of this writing)                          |
 
 If "Vibe-Of-Battle-Tested" matters to you more than capability, NgRx wins on adoption. If a smaller cohesive in-house family of packages designed around the same tree model appeals to you more than a sprawling community plugin set, SignalTree wins on design coherence.
 
 ---
+
+### 13. Runtime performance
+
+Task-based, isolated processes (one arm per process — an in-process race
+measured a 7.5x phantom that moved when an _unrelated_ arm was added). Each
+library uses its own best idiom for the same user-facing outcome, `@ngrx/signals`
+21.1, Node 24.3:
+
+| Task                                   | SignalTree | SignalStore |                  |
+| -------------------------------------- | ---------- | ----------- | ---------------- |
+| Write one field 10 levels deep         | 0.02 µs    | 1.22 µs     | **65.9x faster** |
+| Update 1 row of 50k + dependent read   | 1.97 µs    | 44.81 µs    | **22.8x faster** |
+| Write, then read whole state 10x       | 1.68 µs    | 0.71 µs     | **2.4x slower**  |
+| 50 writes with undo history (50k rows) | 1.34 µs    | —           | no equivalent    |
+
+The shape of this is the architecture, not tuning. SignalTree writes one leaf
+and rebuilds nothing above it; SignalStore rebuilds the object graph along the
+path to the change and hands you a whole new state value. That trade wins the
+write and loses the whole-state read — a POJO store returns its state **by
+reference**, which SignalTree cannot, because no plain object exists until one
+is built.
+
+Two honest caveats:
+
+- **The collection number depends entirely on using `entityMap`.** Modelling the
+  same collection as a plain array leaf measures 49.80 ms against SignalStore's
+  46.56 ms — parity, not 22.8x. Core warns about that shape at construction
+  (ST2018), because it is not obvious from the code that it is a 30x decision.
+- **The whole-state read is a real loss**, and it used to be far worse. `tree()`
+  is memoised and structurally shared since 13.5.0, so repeated reads between
+  writes are free and only the root rebuild remains.
+
+Do not quote a benchmark that forces SignalTree to perform an immutable array
+rebuild "for fairness" — that measures SignalTree impersonating SignalStore,
+which is a thing no application does, and it is how a real O(n) defect in
+`entityMap` stayed hidden for weeks.
 
 ## Side-by-side: a representative feature
 
@@ -275,22 +328,28 @@ export const UserStore = signalStore(
     }),
   })),
   withMethods((store, api = inject(UserService)) => ({
-    setSelected(id: number) { patchState(store, { selectedId: id }); },
+    setSelected(id: number) {
+      patchState(store, { selectedId: id });
+    },
     setSearchFilter(filter: string) {
       patchState(store, { lastSearchFilter: filter });
       localStorage.setItem('users-last-filter', filter);
     },
-    loadUsers: rxMethod<void>(pipe(
-      tap(() => patchState(store, { loading: 'loading', error: null })),
-      switchMap(() => api.list$().pipe(
-        tap((users) => patchState(store, setAllEntities(users), { loading: 'loaded' })),
-        catchError((err) => {
-          patchState(store, { loading: 'error', error: err });
-          return of(void 0);
-        }),
-      )),
-    )),
-  })),
+    loadUsers: rxMethod<void>(
+      pipe(
+        tap(() => patchState(store, { loading: 'loading', error: null })),
+        switchMap(() =>
+          api.list$().pipe(
+            tap((users) => patchState(store, setAllEntities(users), { loading: 'loaded' })),
+            catchError((err) => {
+              patchState(store, { loading: 'error', error: err });
+              return of(void 0);
+            })
+          )
+        )
+      )
+    ),
+  }))
 );
 ```
 
@@ -314,15 +373,14 @@ import { computed } from '@angular/core';
 import { usersState } from './state/users.state';
 
 export const APP_TREE_FACTORY = () =>
-  signalTree({ users: usersState() })
-    .derived(($) => ({
-      users: {
-        current: computed(() => {
-          const id = $.users.selectedId();
-          return id != null ? $.users.entities.byId(id)?.() ?? null : null;
-        }),
-      },
-    }));
+  signalTree({ users: usersState() }).derived(($) => ({
+    users: {
+      current: computed(() => {
+        const id = $.users.selectedId();
+        return id != null ? $.users.entities.byId(id)?.() ?? null : null;
+      }),
+    },
+  }));
 
 // ops/user.ops.ts
 import { inject, Injectable } from '@angular/core';
@@ -334,8 +392,12 @@ export class UserOps {
   private readonly _$ = inject(APP_TREE).$;
   private readonly _api = inject(UserService);
 
-  setSelected(id: number): void { this._$.users.selectedId.set(id); }
-  setSearchFilter(filter: string): void { this._$.users.lastSearchFilter.set(filter); }
+  setSelected(id: number): void {
+    this._$.users.selectedId.set(id);
+  }
+  setSearchFilter(filter: string): void {
+    this._$.users.lastSearchFilter.set(filter);
+  }
 
   loadUsers$(): Observable<void> {
     this._$.users.loading.setLoading();
@@ -343,7 +405,10 @@ export class UserOps {
       tap((users) => this._$.users.entities.setAll(users)),
       tap(() => this._$.users.loading.setLoaded()),
       map(() => void 0),
-      catchError((err) => { this._$.users.loading.setError(err); return of(void 0); }),
+      catchError((err) => {
+        this._$.users.loading.setError(err);
+        return of(void 0);
+      })
     );
   }
 }
@@ -406,13 +471,13 @@ See [`docs/myths-and-misconceptions.md`](../myths-and-misconceptions.md) for the
 
 In v10.2 (2026-05-29), we ran a reproducible benchmark across 6 agents (4 frontier + 2 cost-tier models) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. A v10.3.3 re-run (2026-06-01), after ~98 documented doc-accuracy fixes, raised the ceiling further. With `llms.txt` (+ `myths.md`) injected as priming context:
 
-| Library | Cold (no priming) | Primed (best mode) | Lift |
-|---|---|---|---|
-| **SignalTree** | **54%** | **98%** | **+44pp** |
-| @ngrx/signals | 87% | 76% | −11pp* |
-| @ngrx/store | 93% | 95% | +2pp |
-| Akita | 94% | 92% | −2pp |
-| Elf | 99% | 94% | −5pp |
+| Library        | Cold (no priming) | Primed (best mode) | Lift      |
+| -------------- | ----------------- | ------------------ | --------- |
+| **SignalTree** | **54%**           | **98%**            | **+44pp** |
+| @ngrx/signals  | 87%               | 76%                | −11pp\*   |
+| @ngrx/store    | 93%               | 95%                | +2pp      |
+| Akita          | 94%               | 92%                | −2pp      |
+| Elf            | 99%               | 94%                | −5pp      |
 
 \* SignalTree priming context still costs cross-library accuracy for most competitors because models try to cross-pollinate when in "SignalTree mindset" — though @ngrx/store actually improved this run. Acceptable trade since priming users are SignalTree users.
 
@@ -425,7 +490,7 @@ In v10.2 (2026-05-29), we ran a reproducible benchmark across 6 agents (4 fronti
 ## Migration paths
 
 - **From `@ngrx/signals` (SignalStore):** see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](../skills/using-signaltree/reference/migration-from-ngrx-signals.md). Includes mechanical concept map, three migration strategies (big-bang / incremental-per-domain / hybrid-legacy-facade), and a verification script. NgRx `rxMethod` does not have a 1:1 SignalTree primitive — map it to `asyncSource` / `asyncQuery` markers (most cases) or a plain Observable method in an Ops class (complex orchestration).
-- **From classic NgRx (`@ngrx/store` + `@ngrx/effects`):** **honest recommendation — consider `@ngrx/signals` first, not SignalTree.** A team with heavy classic-NgRx + RxJS muscle memory will transfer to NgRx SignalStore with much less cognitive cost. SignalTree is worth the larger rewrite if your team is *also* trying to escape the Redux mental model entirely (actions / reducers / effects / selectors → JSON tree + Ops). Treat it as a domain-by-domain rewrite, not a mechanical migration. If your goal is "less boilerplate, same patterns," NgRx SignalStore is the better destination.
+- **From classic NgRx (`@ngrx/store` + `@ngrx/effects`):** **honest recommendation — consider `@ngrx/signals` first, not SignalTree.** A team with heavy classic-NgRx + RxJS muscle memory will transfer to NgRx SignalStore with much less cognitive cost. SignalTree is worth the larger rewrite if your team is _also_ trying to escape the Redux mental model entirely (actions / reducers / effects / selectors → JSON tree + Ops). Treat it as a domain-by-domain rewrite, not a mechanical migration. If your goal is "less boilerplate, same patterns," NgRx SignalStore is the better destination.
 - **From plain signals:** trivial — wrap your state object in `signalTree()` and you're done.
 
 ---
