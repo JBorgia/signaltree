@@ -646,10 +646,24 @@ function recursiveUpdate(
     // absent optional key. This is the tail of the outer dispatch, not the
     // "matched neither guard" branch the note described.
     //
-    // A correct ST2005 needs a narrower site that ordinary writes cannot reach.
-    // Finding it is real work, and the read-side half is already covered:
-    // ST2008 reports a marker that cannot be snapshotted, and ST2022 now
-    // catches one registered without declaring its state at all.
+    // RESOLVED — the narrow site is not on this path at all, and the code is
+    // not ST2005. That number is taken: `@signaltree/ng-forms` throws [ST2005]
+    // for a bridged `form()` marker carrying its own `asyncValidators`. It has
+    // shipped since v12 and is documented; reusing it in core would have
+    // collided.
+    //
+    // The real remaining gap was narrower than this note assumed. A marker that
+    // declares `snapshot` but no `hydrate`, whose node is not a writable
+    // signal, snapshots perfectly and silently discards every write — measured:
+    // `tree()` gave `{"p":1}`, `tree({p: 99})` left it at `1`, nothing reported
+    // at either end. [ST2022] stays quiet because `snapshot` IS declared.
+    //
+    // That is now [ST2023], reported at MATERIALISATION (materialize-markers.ts),
+    // where the node exists so its shape is knowable, once per processor, off
+    // the write path entirely. Its predicate is the exact mirror of this
+    // function's fall-through, which is what keeps it from crying wolf the way
+    // a diagnostic at THIS site did. If the fall-through widens, widen ST2023
+    // with it.
   }
 }
 

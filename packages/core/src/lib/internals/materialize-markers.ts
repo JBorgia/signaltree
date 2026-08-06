@@ -259,6 +259,65 @@ function warnUndeclaredMarker(): void {
   );
 }
 
+/**
+ * ST2023 — a marker that can be SNAPSHOTTED but never restored.
+ *
+ * This is the half of the marker-drop class that [ST2022] cannot see. ST2022
+ * asks "what of you is state?" and a `snapshot` hook answers it, so a processor
+ * with `snapshot` and no `hydrate` passes registration cleanly — then serializes
+ * perfectly and silently discards every write. Measured on a probe marker:
+ * `tree()` emitted `{"p":1}`, `tree({p: 99})` left the node at `1`, and NOTHING
+ * was reported. `tree(tree())` on such a marker loses data with no diagnostic
+ * at either end.
+ *
+ * Why HERE and not at registration, and not on the write path:
+ *
+ *  - **Not at registration.** `snapshot` without `hydrate` is perfectly correct
+ *    when the node is a writable signal — `recursiveUpdate`'s leaf branch writes
+ *    it, no hook needed. Registration cannot know the node's shape, so a guard
+ *    there would fire on correct code. That is precisely how the previous
+ *    attempt at a write-shape diagnostic (the retired core ST2005) failed: it
+ *    sat where ordinary writes reached it and cried wolf on `tree({known: 2})`
+ *    and on type-legal `{ user: undefined }`.
+ *  - **Not on the write path.** The write path is the thing this design
+ *    protects; it should not grow a registry lookup to serve a third-party
+ *    authoring mistake.
+ *  - **Here**, at materialisation, the node EXISTS, so its shape is knowable,
+ *    and the check is one property read per marker node, once — off the write
+ *    path entirely. It also fires before the user ever attempts a restore,
+ *    which matters because the bug is latent until then.
+ *
+ * The predicate is deliberately the exact MIRROR of `recursiveUpdate`'s
+ * fall-through (`isSignal(node) && 'set' in node`). Anything that branch can
+ * write is not dropped and is not reported; anything it cannot write, and that
+ * has no `hydrate`, is. Keeping the two in one shape is what makes this
+ * incapable of crying wolf — if the fall-through ever widens, this must widen
+ * with it.
+ *
+ * Reachable only by a marker registered through the public
+ * `registerMarkerProcessor`; no built-in marker trips it (all declare `hydrate`
+ * or are signal-shaped), which is why it costs existing users nothing.
+ */
+const warnedWriteOnly = new WeakSet<object>();
+
+function warnWriteOnlyMarker(processor: MarkerProcessor, node: unknown): void {
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) return;
+  if (!processor.snapshot || processor.hydrate) return;
+  // Exactly what `recursiveUpdate` falls through to. If that can write the
+  // node, no hook is needed and there is nothing to report.
+  if (isSignal(node) && 'set' in (node as object)) return;
+  if (warnedWriteOnly.has(processor as object)) return;
+  warnedWriteOnly.add(processor as object);
+  console.warn(
+    'SignalTree: a marker declares `snapshot` but no `hydrate`, and its node ' +
+      'is not a writable signal. It will be captured by tree(), persistence(), ' +
+      'devtools, audit and undo/redo — and every attempt to write it back is ' +
+      'SILENTLY DISCARDED, so tree(tree()) loses its value. Add a `hydrate` ' +
+      'hook, or mark it `transient: true` if it is genuinely not restorable. ' +
+      '[ST2023]'
+  );
+}
+
 function registerProcessor<T, R>(
   check: (value: unknown) => value is T,
   create: (marker: T, notifier: PathNotifier, path: string) => R,
@@ -400,6 +459,13 @@ export function materializeMarkers(
               writable: false,
               configurable: true,
             });
+          }
+          // Inline guard, not one inside the callee: esbuild folds the full
+          // expression at the CALL SITE and nothing else (docs/performance/
+          // dropping-dev-code.md), so a guard hidden in the function body
+          // ships its message string to production.
+          if (typeof ngDevMode === 'undefined' || ngDevMode) {
+            warnWriteOnlyMarker(processor, materialized);
           }
           (node as Record<string, unknown>)[key] = materialized;
           // A node accessor copies its store's properties, but its CALL path
