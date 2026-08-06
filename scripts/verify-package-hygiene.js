@@ -104,11 +104,19 @@ function main() {
 
   console.log('🧼 Package-hygiene verification (real packed contents)\n');
   let failed = false;
+  const skipped = [];
 
   for (const name of PACKAGES) {
     const distDir = path.join(process.cwd(), 'dist/packages', name);
     if (!fs.existsSync(path.join(distDir, 'package.json'))) {
-      console.log(`⚠️  ${name}: no dist output (build first) — skipping`);
+      // NOT a skip-and-pass. A missing dist means this package was NEVER
+      // CHECKED, and the summary below used to say "All packages ship clean
+      // tarballs" anyway — a vacuous pass that let `events` and `realtime` go
+      // unverified through a green pre-publish run. If it is publishable, it
+      // gets checked or the gate fails.
+      console.log(`❌ ${name}: no dist output — cannot verify (build first)`);
+      skipped.push(name);
+      failed = true;
       continue;
     }
     let files;
@@ -131,11 +139,20 @@ function main() {
 
   if (failed) {
     console.log('\n❌ PACKAGE-HYGIENE VERIFICATION FAILED');
+    if (skipped.length) {
+      console.log(
+        `Never checked (no dist): ${skipped.join(', ')} — run ` +
+          '`nx run-many -t build --all` first. An unchecked package is not a ' +
+          'passing package.'
+      );
+    }
     console.log('A publishable tarball ships junk or is missing an entry.');
     console.log('Fix the package `files`/exports (or the build) — not this gate.');
     process.exit(1);
   }
-  console.log('\n✅ All packages ship clean tarballs with their declared entries');
+  console.log(
+    `\n✅ All ${PACKAGES.length} packages ship clean tarballs with their declared entries`
+  );
   process.exit(0);
 }
 
