@@ -370,7 +370,8 @@ function createReplacer(config: InternalSerializationConfig) {
       circularPaths.set(value, currentPath);
     }
 
-    // All special type handling is now done in unwrapObjectSafely
+    // Special-type handling happens in `tree()`'s walk, not here. (It used to
+    // live in a private `unwrapObjectSafely`, deleted in 14.0.0.)
     return value;
   };
 }

@@ -31,19 +31,28 @@ export function createIndexedDBAdapter(
   dbName = 'SignalTreeDB',
   storeName = 'states'
 ): StorageAdapter {
-  let db: IDBDatabase | null = null;
+  // Cache the PROMISE, not the resolved connection.
+  //
+  // Caching the resolved `db` left a window: `openDB` is async, so two calls
+  // arriving before the first `onsuccess` both saw `db === null` and both
+  // called `indexedDB.open()`. Every concurrent caller opened its own
+  // connection, and the last one to resolve won the cache slot while the others
+  // leaked. That is the ordinary case, not an edge case — `persist` fires
+  // `getItem` for several collections during the same hydration tick.
+  //
+  // Caching the in-flight promise makes concurrent callers await the SAME open.
+  // On failure the slot is cleared so a later call can retry rather than
+  // re-await a permanently rejected promise.
+  let dbPromise: Promise<IDBDatabase> | null = null;
 
-  const openDB = async (): Promise<IDBDatabase> => {
-    if (db) return db;
+  const openDB = (): Promise<IDBDatabase> => {
+    if (dbPromise) return dbPromise;
 
-    return new Promise((resolve, reject) => {
+    dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(dbName, 1);
 
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        db = request.result;
-        resolve(db);
-      };
+      request.onsuccess = () => resolve(request.result);
 
       request.onupgradeneeded = (event) => {
         const database = (event.target as IDBOpenDBRequest).result;
@@ -51,7 +60,12 @@ export function createIndexedDBAdapter(
           database.createObjectStore(storeName);
         }
       };
+    }).catch((err) => {
+      dbPromise = null;
+      throw err;
     });
+
+    return dbPromise;
   };
 
   return {

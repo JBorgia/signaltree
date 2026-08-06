@@ -273,12 +273,17 @@ export type {
   LoadingEntitySignal,
 } from './lib/types';
 
-// Async-stream marker — EXPERIMENTAL, intentionally NOT exported from the public
-// barrel. Per RFC 0001 (docs/rfcs/0001-ai-embedded-boundary.md §5) streaming
-// stays experimental until there's a real demand signal, and the eventual public
-// shape (a distinct `asyncStream` marker vs an `accumulate` option on
-// `asyncSource`) is deferred. The implementation + tests live in
-// ./lib/markers/async-stream.ts; re-export here to promote it when warranted.
+// Async-stream marker — DELETED in 14.0.0, along with its implementation and
+// tests. It sat here unexported for several releases while the API question (a
+// distinct `asyncStream` marker vs an `accumulate` option on `asyncSource`) went
+// unanswered, and leaving 372 lines of one candidate in the tree biased that
+// decision toward itself without anyone choosing.
+//
+// Accumulation is three lines of composition over a plain leaf — and a leaf is
+// captured by timeTravel(), appears in tree(), and persists with no marker
+// contract to satisfy, which a marker has to earn individually. See
+// docs/guides/streaming-accumulation.md. Git has the implementation if the
+// answer ever turns out to be "marker".
 
 // Marker processing (v7): `registerMarkerProcessor` was removed from the root
 // barrel in v12 — import it from '@signaltree/core/authoring'.

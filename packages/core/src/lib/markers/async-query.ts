@@ -176,9 +176,9 @@ export function asyncQuery<TInput, TResult>(
       // wrote nothing, and a reader could not tell "no data" from "we dropped
       // it". Being visible and explicitly not-restorable beats being absent.
       //
-      // Restoring would need the source re-driven (an input for `asyncQuery`,
-      // a subscription for `asyncStream`), which is a different operation from
-      // hydrating a value and belongs to whoever owns that source.
+      // Restoring would need the source re-driven (an input, for `asyncQuery`),
+      // which is a different operation from hydrating a value and belongs to
+      // whoever owns that source.
       snapshot: (node) => ({ value: node() }),
     });
   }

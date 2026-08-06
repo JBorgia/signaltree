@@ -190,7 +190,9 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
  * reads *and* both write forms is the whole point, and adding those methods
  * would both duplicate the call signatures and collide with any state key
  * named `set` or `update`. See the `NodeAccessor` docs in ./types.ts for the
- * leaf-vs-node table and why `@signaltree/callable-syntax` targets leaves only.
+ * leaf-vs-node table — and note that a LEAF takes no such call: calling an
+ * Angular signal is a read, and since 14.0.0 that is a compile error rather
+ * than a silent no-op.
  *
  * ## Auto-Batching for Partial Updates
  *

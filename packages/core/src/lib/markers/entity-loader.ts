@@ -122,7 +122,7 @@ export interface EntityLoadOptions<E, P = void> {
   /** The fetch — resolves to the full array of rows for the given scope. */
   load: EntityLoader<E, P>;
   /**
-   * Equality for scope params (mirrors `asyncQuery`/`asyncStream`). When the new
+   * Equality for scope params (mirrors `asyncQuery`). When the new
    * `load(params)` scope is not equal to the loaded one, the collection is stale
    * and refetches. Default: a structural value comparison (object literals compare
    * by value). A loader that declares a parameter (`load: (p) => …`) is *scoped*.
