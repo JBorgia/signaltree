@@ -125,14 +125,30 @@ describe('incremental materialisation', () => {
   });
 
   it('reads the whole state in constant time while nothing changes', () => {
+    // Asserted as a RATIO against this machine's own full-rebuild cost, not as
+    // a wall-clock budget. An absolute threshold here made the suite flaky:
+    // it passed alone and failed when all 11 projects ran in parallel, which
+    // is a property of the CI box rather than of the code.
     const tree = signalTree(grid(60, 60));
     tree();
-    const t0 = performance.now();
+
+    const dirtyAll = () => {
+      for (let r = 0; r < 60; r++) tree.$['r' + r]['c0'].set(Math.random());
+    };
+
+    dirtyAll();
+    const r0 = performance.now();
+    tree();
+    const oneRebuild = performance.now() - r0;
+
+    const c0 = performance.now();
     for (let i = 0; i < 2000; i++) tree();
-    const elapsed = performance.now() - t0;
-    // A full rebuild of 3,600 leaves is milliseconds; 2,000 of them would be
-    // seconds. Memoised reads are ~0.04us each.
-    expect(elapsed).toBeLessThan(100);
+    const memoised = performance.now() - c0;
+
+    // 2,000 memoised reads must cost less than 5 full rebuilds. Measured ratio
+    // is ~0.04us vs ~1,800us, so this has four orders of magnitude of headroom
+    // and only fails if memoisation stops working entirely.
+    expect(memoised).toBeLessThan(oneRebuild * 5);
   });
 
   it('rebuilds only the touched row of a wide grid', () => {

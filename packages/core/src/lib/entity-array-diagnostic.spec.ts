@@ -109,14 +109,27 @@ describe('ST2018 — entity array stored as a plain leaf', () => {
   });
 
   it('scans a bounded sample, so a huge array costs the same as a small one', () => {
-    // Distinct key: the ST2018 dedupe set is module-level and persists across
+    // Distinct keys: the ST2018 dedupe set is module-level and persists across
     // tests, so reusing "rows" here would silently assert nothing.
+    //
+    // Compared against a SMALL array rather than a wall-clock budget — an
+    // absolute threshold made this flaky under parallel CI load, and the
+    // property under test is "bounded", which is inherently a comparison.
     const huge = entities(200_000);
-    const t0 = performance.now();
+    const small = entities(200);
+
+    const s0 = performance.now();
+    signalTree({ smallRows: small });
+    const smallCost = performance.now() - s0;
+
+    const h0 = performance.now();
     signalTree({ hugeRows: huge });
-    const elapsed = performance.now() - t0;
+    const hugeCost = performance.now() - h0;
+
     expect(fired()).toBe(true);
-    // Bounded sample: this must not be a 200k-element walk.
-    expect(elapsed).toBeLessThan(150);
+    // A 1000x larger array must not cost 1000x more to inspect. Generous
+    // bound plus a floor, so timer granularity on a fast machine cannot make
+    // the ratio meaningless.
+    expect(hugeCost).toBeLessThan(Math.max(smallCost * 20, 5));
   });
 });
