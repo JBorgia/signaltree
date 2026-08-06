@@ -40,6 +40,16 @@ const ENTITY_ARRAY_MIN_LENGTH = 32;
 const ENTITY_ARRAY_SAMPLE = 64;
 const ENTITY_ID_KEYS = ['id', '_id', 'uuid', 'key'] as const;
 /**
+ * ST2018 fires at CONSTRUCTION, and a tree is commonly constructed once per
+ * component instance — so a list rendering 500 rows would print 500 identical
+ * warnings and the console becomes unusable. Deduped by key+identity so the
+ * advice is given once and stays readable. Capped so a pathological app cannot
+ * grow this without bound; past the cap the diagnostic simply goes quiet, which
+ * is the right failure direction for a dev hint.
+ */
+const ENTITY_ARRAY_WARNED = new Set<string>();
+const ENTITY_ARRAY_WARN_CAP = 256;
+/**
  * @internal Back-reference from an accessor to the TreeNode its call path
  * closes over. `makeNodeAccessor` COPIES the store's properties onto the
  * accessor, so the two drift the moment anything replaces a property on one of
@@ -328,6 +338,11 @@ function warnEntityArrayLeaf(key: string, value: readonly unknown[]): void {
     if (seen.has(id)) return; // not a stable identity — say nothing
     seen.add(id);
   }
+
+  const seenKey = `${key}:${idKey}`;
+  if (ENTITY_ARRAY_WARNED.has(seenKey)) return;
+  if (ENTITY_ARRAY_WARNED.size >= ENTITY_ARRAY_WARN_CAP) return;
+  ENTITY_ARRAY_WARNED.add(seenKey);
 
   console.warn(
     `SignalTree: "${key}" holds ${value.length} objects with a stable ` +

@@ -26,6 +26,13 @@ describe('ST2018 — entity array stored as a plain leaf', () => {
   const messages = () => warn.mock.calls.map((c) => String(c[0]));
   const fired = () => messages().some((m) => m.includes('ST2018'));
 
+  it('warns only ONCE per key+identity, however many trees are built', () => {
+    // A tree is commonly constructed per component instance; 500 rows must not
+    // print 500 identical warnings.
+    for (let i = 0; i < 50; i++) signalTree({ dedupeRows: entities(100) });
+    expect(messages().filter((m) => m.includes('ST2018'))).toHaveLength(1);
+  });
+
   it('warns for a large array of objects with a stable id', () => {
     signalTree({ rows: entities(100) });
     expect(fired()).toBe(true);
@@ -102,9 +109,11 @@ describe('ST2018 — entity array stored as a plain leaf', () => {
   });
 
   it('scans a bounded sample, so a huge array costs the same as a small one', () => {
+    // Distinct key: the ST2018 dedupe set is module-level and persists across
+    // tests, so reusing "rows" here would silently assert nothing.
     const huge = entities(200_000);
     const t0 = performance.now();
-    signalTree({ rows: huge });
+    signalTree({ hugeRows: huge });
     const elapsed = performance.now() - t0;
     expect(fired()).toBe(true);
     // Bounded sample: this must not be a 200k-element walk.
