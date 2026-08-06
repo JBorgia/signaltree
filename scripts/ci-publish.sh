@@ -89,36 +89,20 @@ print_step "Verifying package hygiene (no junk in tarballs)..."
 node scripts/verify-package-hygiene.js || exit 1
 
 # Preflight 2: resolve pnpm `workspace:` protocol / bare `*` specs in the
-# published dist manifests (npm publish does NOT rewrite them; shipping a
-# literal `workspace:*` breaks installs). Same rewrite as scripts/release.sh.
+# published dist manifests. npm publish does NOT rewrite them, and a literal
+# `workspace:*` in peerDependencies is not a valid semver range — it breaks
+# every install of the six non-core packages.
+#
+# One shared script, called identically from ci-publish.sh, publish-all.sh and
+# release.sh. It used to be copy-pasted here and in release.sh, and MISSING from
+# publish-all.sh, which is the manual path a human reaches for.
 print_step "Resolving workspace:* / * specs in dist manifests to ^$VERSION..."
-for package in "${PACKAGES[@]}"; do
-    DIST_PKG="./dist/packages/$package/package.json"
-    node -e "
-        const fs = require('fs');
-        const p = '$DIST_PKG';
-        const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-        const ver = '^' + '$VERSION';
-        let changed = false;
-        const fix = (deps) => {
-            if (!deps) return;
-            for (const k of Object.keys(deps)) {
-                if (!k.startsWith('@signaltree/')) continue;
-                const v = deps[k];
-                if (v === '*' || (typeof v === 'string' && v.startsWith('workspace:'))) {
-                    deps[k] = ver;
-                    changed = true;
-                }
-            }
-        };
-        fix(j.dependencies); fix(j.peerDependencies); fix(j.optionalDependencies);
-        if (changed) {
-            fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-            console.log('  resolved @signaltree/* specs in ' + p + ' -> ' + ver);
-        }
-    "
-done
+node scripts/resolve-workspace-specs.mjs "$VERSION" "${PACKAGES[@]}" || exit 1
 print_success "Workspace specs resolved in dist manifests"
+
+# Every glob declared in `files` must resolve to a real file in dist. npm
+# ships a tarball missing an unmatched glob without a word.
+node scripts/verify-publish-artifacts.mjs "${PACKAGES[@]}" || exit 1
 
 # Auth: token-scoped userconfig so we never touch the runner's global .npmrc.
 NPMRC_TEMP="$(mktemp)"

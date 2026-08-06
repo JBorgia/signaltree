@@ -83,6 +83,29 @@ case "$VERSION" in
         ;;
 esac
 
+# Ship the AI priming surfaces with @signaltree/core. ci-publish.sh and
+# release.sh both do this; this path did not, so publishing through it shipped
+# core WITHOUT the llms.txt that primes retrieval-aware agents on a plain
+# `npm install` — silently, because npm does not warn when a `files` glob
+# matches nothing.
+if [ -f "apps/demo/public/llms.txt" ] && [ -d "dist/packages/core" ]; then
+    echo "Copying llms.txt + llms-full.txt into @signaltree/core tarball..."
+    cp apps/demo/public/llms.txt dist/packages/core/llms.txt
+    cp apps/demo/public/llms-full.txt dist/packages/core/llms-full.txt
+fi
+
+# Resolve pnpm `workspace:` / bare `*` specs before publishing. This path had
+# NO rewrite at all, so publishing through it shipped
+# `peerDependencies: { "@signaltree/core": "workspace:*" }` on every non-core
+# package — an invalid semver range that fails on install. ci-publish.sh and
+# release.sh each carried their own copy; this one was simply missed.
+echo "Resolving workspace specs in dist manifests..."
+node scripts/resolve-workspace-specs.mjs "$VERSION" "${PACKAGES[@]}" || exit 1
+
+# Every glob declared in `files` must resolve to a real file in dist. npm
+# ships a tarball missing an unmatched glob without a word.
+node scripts/verify-publish-artifacts.mjs "${PACKAGES[@]}" || exit 1
+
 # Check if dry-run flag is passed
 DRY_RUN=""
 if [ "$1" = "--dry-run" ]; then

@@ -467,41 +467,23 @@ for package in "${PACKAGES[@]}"; do
 done
 print_success "All dist outputs present"
 
-# Preflight 2: resolve the pnpm `workspace:` protocol in published dist manifests.
-# We publish with `npm publish` (below), which — unlike `pnpm publish` — does NOT
-# rewrite `workspace:*` specs. Shipping a literal `workspace:*` breaks installs
-# (hard-fail in `dependencies`, warn + tooling breakage in `peerDependencies`).
-# Rewrite any @signaltree/* spec that is `workspace:*`/`workspace:^`/`workspace:~`
-# or a bare `*` to `^NEW_VERSION` in the dist package.json before publishing.
+# Preflight 2: resolve pnpm `workspace:` / bare `*` specs in the published dist
+# manifests. `npm publish` — unlike `pnpm publish` — does NOT rewrite them, and
+# a literal `workspace:*` breaks installs (hard-fail in `dependencies`, invalid
+# range in `peerDependencies`).
+#
+# One shared script, called identically from all three publish paths. The copy
+# that used to live here also did `[ -f "$DIST_PKG" ] || continue`, silently
+# skipping an unbuilt package and then publishing it unrewritten; the shared
+# script treats a missing manifest as a failure, because a package it cannot
+# check is not a package it can clear.
 print_step "Resolving workspace:* / * specs in dist manifests to ^$NEW_VERSION..."
-for package in "${PACKAGES[@]}"; do
-    DIST_PKG="./dist/packages/$package/package.json"
-    [ -f "$DIST_PKG" ] || continue
-    node -e "
-        const fs = require('fs');
-        const p = '$DIST_PKG';
-        const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-        const ver = '^' + '$NEW_VERSION';
-        let changed = false;
-        const fix = (deps) => {
-            if (!deps) return;
-            for (const k of Object.keys(deps)) {
-                if (!k.startsWith('@signaltree/')) continue;
-                const v = deps[k];
-                if (v === '*' || (typeof v === 'string' && v.startsWith('workspace:'))) {
-                    deps[k] = ver;
-                    changed = true;
-                }
-            }
-        };
-        fix(j.dependencies); fix(j.peerDependencies); fix(j.optionalDependencies);
-        if (changed) {
-            fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-            console.log('  resolved @signaltree/* specs in ' + p + ' -> ' + ver);
-        }
-    "
-done
+node scripts/resolve-workspace-specs.mjs "$NEW_VERSION" "${PACKAGES[@]}" || exit 1
 print_success "Workspace specs resolved in dist manifests"
+
+# Every glob declared in `files` must resolve to a real file in dist. npm
+# ships a tarball missing an unmatched glob without a word.
+node scripts/verify-publish-artifacts.mjs "${PACKAGES[@]}" || exit 1
 
 # Step 4: Commit changes
 print_step "Committing version changes (if any)..."
