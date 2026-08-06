@@ -151,6 +151,20 @@ describe('incremental materialisation', () => {
     expect(memoised).toBeLessThan(oneRebuild * 5);
   });
 
+  it('never memoises a non-reactive object — it would be stale forever', async () => {
+    // `snapshotState()` is public and takes anything. Memoising a plain object
+    // would wrap it in a computed with NO dependencies, so it could never
+    // invalidate: the first read would be returned for the life of the process.
+    // Caught by devtools' mock-tree tests, which hand it a plain object and
+    // mutate it in place — but it would have hit real callers just as hard.
+    const { snapshotState } = await import('./utils');
+    const plain = { a: 1 } as Record<string, unknown>;
+
+    expect(snapshotState(plain as never)).toEqual({ a: 1 });
+    plain['a'] = 2;
+    expect(snapshotState(plain as never)).toEqual({ a: 2 });
+  });
+
   it('rebuilds only the touched row of a wide grid', () => {
     const tree = signalTree(grid(50, 50));
     const before = tree();

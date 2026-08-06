@@ -16,6 +16,7 @@ import {
   equal,
   isBuiltInObject,
   isTraversableNode,
+  markTreeStore,
   materializeNode,
   unwrap,
 } from './utils';
@@ -678,6 +679,11 @@ function createSignalStore<T>(
     const nested = createSignalStore(value, equalityFn);
     store[key] = makeNodeAccessor(nested);
   }
+
+  // Register as memoisable. Only stores built here are reactive all the way
+  // down, which is the precondition for caching their materialisation in a
+  // computed — see isMemoisable() in utils.ts.
+  markTreeStore(store as object);
 
   return store as TreeNode<T>;
 }

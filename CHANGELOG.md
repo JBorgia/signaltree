@@ -47,6 +47,46 @@ true`, so on a changing number it measures **6.5ns against `Object.is`'s
 
 ### Performance
 
+- **Time travel no longer scales with state size.** Recording a write cost
+  O(state) four times over: materialise the tree, `structuredClone` it,
+  `deepEqual` it against the previous entry, and — on every root write — a
+  further full-state `deepEqual` just to decide whether to record at all. On top
+  of that, `getHistory()` deep-cloned every entry on every call.
+
+  With materialisation memoised and structurally shared, an unchanged subtree is
+  the SAME object across snapshots, so an entry can hold the reference and every
+  comparison collapses to `===`. 50 writes each changing ONE number:
+
+  | rows   | before    | after                       |
+  | ------ | --------- | --------------------------- |
+  | 100    | 2.85 ms   | 0.13 ms (95.4% faster)      |
+  | 1,000  | 29.51 ms  | 0.08 ms (99.7% faster)      |
+  | 10,000 | 340.60 ms | **0.04 ms (99.99% faster)** |
+
+  It is now **flat in state size** — the qualitative change, not the percentage.
+  Memory per entry drops from a full copy of state to only the nodes that
+  changed.
+
+  ⚠️ Consequences: `getHistory()` returns entry states BY REFERENCE (the entry
+  objects are still copied, so history metadata cannot be rewritten), and two
+  snapshots that are structurally equal but referentially distinct are no longer
+  collapsed into one entry — that needs a write that changed something and a
+  later write that changed it back, in separate flushes, which is arguably two
+  user actions.
+
+- **Serialisation change detection no longer stringifies the tree.** `autoSave`
+  polled `JSON.stringify(tree())` — materialise AND serialise everything, every
+  100ms, to answer a yes/no question. `tree()` now returns the identical object
+  when nothing changed, so an identity check is exact and O(1). Slightly more
+  sensitive in the right direction: a write that JSON collapses
+  (`{a: undefined}` vs `{}`) now triggers a save where it was previously
+  dropped; it can never be less sensitive.
+
+- **Every snapshot consumer was bypassing the cache.** `snapshotState()` called
+  `unwrap` on the raw store, missing the memo entirely — so time travel,
+  devtools and serialisation each rebuilt the whole tree on every call while
+  `tree()` next door returned a memoised result.
+
 - **`tree()` is incremental — it rebuilds only what changed.** Materialising is
   O(state), and doing that on every read when a write touched ONE leaf is the
   full-state-work-per-change anti-pattern this library exists to avoid. Each
@@ -84,6 +124,14 @@ true`, so on a changing number it measures **6.5ns against `Object.is`'s
   snapshot aliasing live state.
 
 ### Fixed
+
+- **A memoised snapshot of a non-reactive object would have been stale forever.**
+  `snapshotState()` is public and accepts anything; memoising a plain object
+  wraps it in a `computed` with NO dependencies, which can never invalidate, so
+  the first read would be returned for the life of the process. Memoisation is
+  now restricted to registered tree stores and node accessors, and everything
+  else takes the plain walk. Caught by devtools' mock-tree tests, which hand it
+  a plain object and mutate it in place.
 
 - **A held `byId()` reference died permanently across remove → re-add.**
   `createEntityNode` captured the per-entity signal once; removing the entity

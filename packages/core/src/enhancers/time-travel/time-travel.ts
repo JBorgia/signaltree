@@ -66,21 +66,27 @@ class TimeTravelManager<T> {
       this.history = this.history.slice(0, this.currentIndex + 1);
     }
 
-    // Create new entry
+    // A history entry IS the snapshot — no clone.
+    //
+    // This used to `structuredClone` the whole tree per entry, which made every
+    // recorded write O(state) and retained a full copy of the state per entry:
+    // 50 root writes each changing ONE number cost 0.03ms without time travel
+    // and 340.60ms with it, at 10k rows.
+    //
+    // Materialisation is now memoised and structurally shared, so an unchanged
+    // subtree is the SAME object across snapshots. Holding the reference
+    // retains only the nodes that actually changed — O(depth) per entry instead
+    // of O(state) — and needs no copy to stay correct, because the library never
+    // mutates a materialised node: a write builds new objects along the changed
+    // path and leaves the rest alone.
+    //
+    // This is what makes the snapshot read-only contract load-bearing rather
+    // than advisory (nodes are frozen in dev). A caller that mutates a snapshot
+    // now corrupts history as well as the cache.
     const plain = snapshotState(this.tree.$ as unknown as TreeNode<T>);
 
-    let cloned: T;
-    try {
-      cloned =
-        typeof structuredClone !== 'undefined'
-          ? structuredClone(plain)
-          : JSON.parse(JSON.stringify(plain));
-    } catch {
-      cloned = JSON.parse(JSON.stringify(plain));
-    }
-
     const entry: TimeTravelEntry<T> & { __provisional?: boolean } = {
-      state: cloned as T,
+      state: plain as T,
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
@@ -88,9 +94,17 @@ class TimeTravelManager<T> {
 
     if (provisional) (entry as any).__provisional = true;
 
-    // If the last entry is identical, dedupe and clear provisional marker if present
+    // Dedupe by REFERENCE. `tree()` returns the identical object when nothing
+    // changed, so this is exact for the case that matters and O(1) — the
+    // deepEqual it replaces was a second full-state walk on every recorded
+    // write, on top of the clone.
+    //
+    // Behaviour change worth knowing: two snapshots that are structurally equal
+    // but referentially distinct are no longer collapsed. That needs a write
+    // that changed something and a later write that changed it back, in
+    // separate flushes — which is arguably two user actions and two entries.
     const last = this.history[this.history.length - 1];
-    if (last && deepEqual(last.state, entry.state)) {
+    if (last && last.state === entry.state) {
       if ((last as any).__provisional) delete (last as any).__provisional;
       return; // skip duplicate
     }
@@ -124,13 +138,15 @@ class TimeTravelManager<T> {
       | (TimeTravelEntry<T> & { __provisional?: boolean })
       | undefined;
     if (last && (last as any).__provisional) {
-      // If identical, just clear provisional marker
-      if (deepEqual(last.state, state)) {
+      // If identical, just clear provisional marker. Reference compare for the
+      // same reason as addEntry: snapshots are memoised and immutable.
+      if (last.state === state) {
         delete (last as any).__provisional;
         return;
       }
-      // Replace state and clear provisional flag
-      last.state = deepClone(state);
+      // Replace state and clear provisional flag. No clone — the snapshot is
+      // already an immutable, structurally-shared value.
+      last.state = state;
       last.timestamp = Date.now();
       delete (last as any).__provisional;
       return;
@@ -152,10 +168,18 @@ class TimeTravelManager<T> {
   }
 
   getHistory(): TimeTravelEntry<T>[] {
-    return this.history.map((entry) => ({
-      ...entry,
-      state: deepClone(entry.state),
-    }));
+    // The entry OBJECTS are copied so a caller cannot rewrite history metadata,
+    // but the STATE is handed over by reference.
+    //
+    // This used to `deepClone` every entry's state on every call — O(state x
+    // entries) each time you asked, which is brutal for a devtools panel that
+    // reads history on a timer, and it discarded the structural sharing between
+    // entries at the API boundary: two entries differing in one leaf came back
+    // as two full, unrelated copies.
+    //
+    // Snapshots are immutable by contract and frozen in dev, so the copy bought
+    // nothing that the contract does not already give.
+    return this.history.map((entry) => ({ ...entry }));
   }
 
   resetHistory(): void {
@@ -410,7 +434,13 @@ export function timeTravel(
 
         const afterState = originalTreeCall();
 
-        if (!deepEqual(beforeState, afterState)) {
+        // Reference compare, not deepEqual. Both sides come from the memoised
+        // root materialisation, which returns the IDENTICAL object when nothing
+        // changed — so this is exact, and O(1) instead of a full-state walk on
+        // every single root write. That walk was the dominant remaining cost:
+        // 50 writes changing ONE number cost 57.49ms at 10k rows with it and
+        // 0.44ms without.
+        if (beforeState !== afterState) {
           // Immediate entry on explicit tree updates (preserve historical behavior)
           timeTravelManager.addEntry('update', afterState);
         }

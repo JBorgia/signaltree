@@ -284,6 +284,29 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
  * `unwrap(tree.$.a)` hand back the SAME object rather than two equal copies.
  * Without this the structural sharing silently splits in half.
  */
+/**
+ * Only GENUINE tree nodes may be memoised.
+ *
+ * A `computed` over a non-reactive plain object has no dependencies, so it never
+ * invalidates and the snapshot is stale forever. `snapshotState()` is public and
+ * takes `unknown`, so without this guard any caller handing it a plain object —
+ * a mock in a test, a detached sub-object, a hand-built state bag — would get a
+ * value frozen at first read, silently and permanently.
+ *
+ * A WeakSet rather than a stamped symbol: `unwrap` copies own symbol keys into
+ * the snapshot, so a marker property would leak into every materialised result.
+ */
+const TREE_STORES = new WeakSet<object>();
+
+/** @internal Registers a store created by `createSignalStore` as memoisable. */
+export function markTreeStore(store: object): void {
+  TREE_STORES.add(store);
+}
+
+function isMemoisable(node: object): boolean {
+  return TREE_STORES.has(node) || isNodeAccessor(node);
+}
+
 function memoKey(node: object): object {
   const store = (node as Record<symbol, unknown>)[NODE_STORE_SYMBOL];
   return store !== undefined && store !== null ? (store as object) : node;
@@ -322,6 +345,7 @@ function materialized<T>(node: object, build: () => T): T {
  * tree callables use — see {@link materialized} for why it is a `computed`.
  */
 export function materializeNode<T>(store: object): T {
+  if (!isMemoisable(store)) return unwrap<T>(store);
   return materialized(store, () => unwrap<T>(store));
 }
 
@@ -402,9 +426,11 @@ export function unwrap<T>(node: unknown): T {
   if (isNodeAccessor(node)) {
     // Memoised per node — see materialized(). Clean subtrees are returned by
     // reference, so a one-leaf write does not rebuild the whole tree.
-    return materialized(node, () =>
-      buildFromAccessor<T>(node as NodeAccessor<unknown>)
-    );
+    return isMemoisable(node)
+      ? materialized(node, () =>
+          buildFromAccessor<T>(node as NodeAccessor<unknown>)
+        )
+      : buildFromAccessor<T>(node as NodeAccessor<unknown>);
   }
   if (isSignal(node)) {
     const value = (node as Signal<unknown>)();
@@ -543,7 +569,15 @@ export function unwrap<T>(node: unknown): T {
  * Snapshot the current tree state into a plain JS object by unwrapping signals.
  */
 export function snapshotState<T>(state: TreeNode<T>): T {
-  return unwrap(state as unknown) as T;
+  // Routed through the memo, not bare `unwrap`. Every snapshot consumer —
+  // time travel, devtools, serialisation — was rebuilding the entire tree on
+  // every call while `tree()` next door returned a memoised result, because
+  // this took the raw store and `unwrap`'s uncached path.
+  return state !== null && typeof state === 'object'
+    ? materializeNode<T>(state as unknown as object)
+    : (unwrap(state as unknown) as T);
+  // materializeNode falls back to a plain walk for anything that is not a
+  // registered tree store or a node accessor — see isMemoisable().
 }
 
 /**

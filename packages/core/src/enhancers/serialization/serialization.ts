@@ -1126,7 +1126,19 @@ export function persistence(
     // Auto-save on updates if enabled
     if (autoSave) {
       let saveTimeout: ReturnType<typeof setTimeout> | undefined;
-      let previousState = JSON.stringify(tree());
+      // Change detection by REFERENCE, not by stringifying the whole tree.
+      //
+      // This polled `JSON.stringify(tree())` — materialise the entire tree AND
+      // serialise it, every 100ms, to answer a yes/no question the write path
+      // already knew the answer to. Materialisation is now memoised and
+      // `tree()` returns the IDENTICAL object when nothing changed, so an
+      // identity check is exact and O(1).
+      //
+      // It is slightly MORE sensitive than the string compare, in the right
+      // direction: a write that JSON collapses (`{a: undefined}` vs `{}`) now
+      // triggers a save, where before it was silently dropped. It can never be
+      // less sensitive — a changed signal always produces a new object.
+      let previousState: unknown = tree();
       let pollingActive = true;
 
       // Hook into state changes to trigger auto-save
@@ -1150,7 +1162,7 @@ export function persistence(
         unsubscribeAutoSave = (
           tree as unknown as { subscribe: (fn: () => void) => () => void }
         ).subscribe(() => {
-          const currentState = JSON.stringify(tree());
+          const currentState: unknown = tree();
           if (currentState !== previousState) {
             previousState = currentState;
             triggerAutoSave();
@@ -1161,7 +1173,7 @@ export function persistence(
         // Fall back to setTimeout-based polling for non-Angular environments or tests
         const checkForChanges = () => {
           if (!pollingActive) return;
-          const currentState = JSON.stringify(tree());
+          const currentState: unknown = tree();
           if (currentState !== previousState) {
             previousState = currentState;
             triggerAutoSave();
