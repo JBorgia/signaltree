@@ -170,6 +170,7 @@
     "@babel/types": "^7.28.5",
     "@eslint/js": "^9.39.1",
     "@microsoft/api-extractor": "^7.55.0",
+    "@ngneat/elf-state-history": "^1.4.0",
     "@nx/angular": "23.1.0",
     "@nx/devkit": "23.1.0",
     "@nx/eslint": "23.1.0",
