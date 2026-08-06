@@ -295,7 +295,38 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
         // collection was EMPTY while holding 10,000 entities.
         snapshot: (node) => ({ all: node.all() }),
 
-        hydrate: (node, value) => {
+        hydrate: (node, value, mode) => {
+          // A LOADER-BACKED collection declines tree-level rehydration.
+          //
+          // The loader already owns this collection's persistence, and owns it
+          // better: `loader({ persist: { adapter, key, hydrateThenRevalidate } })`
+          // seeds rows from its own store, marks them stale, and revalidates in
+          // the background — per-scope storage keys, touch-ordered GC and all.
+          // That IS offline-first rehydration, shipped and documented.
+          //
+          // Writing the tree snapshot over it does not add a second opinion, it
+          // WINS PERMANENTLY. Measured: a collection seeded by its loader, then
+          // hydrated from a tree snapshot, still held the tree's rows after
+          // revalidation. Two mechanisms writing one collection, and the one
+          // that knows least about freshness was last.
+          //
+          // So the answer to "payload or source on rehydrate" is not a new
+          // config knob — it is `hydrateThenRevalidate`, which already exists,
+          // is already per-instance, and is already the right granularity. This
+          // also settles an inconsistency: `asyncSource` already declined here
+          // while `entityMap` did not, for the identical situation.
+          //
+          // `restore` and `merge` still write: undo/redo and `tree(partial)` are
+          // not competing with the loader's persistence.
+          // `load` is attached by the loader feature, so it is absent from the
+          // base EntitySignal type — presence at runtime IS the discriminator.
+          if (
+            mode === 'rehydrate' &&
+            typeof (node as { load?: unknown }).load === 'function'
+          ) {
+            return;
+          }
+
           if (value === null || typeof value !== 'object') return;
           const all = (value as { all?: unknown }).all;
           if (Array.isArray(all)) {

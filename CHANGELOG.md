@@ -2,6 +2,28 @@
 
 ### Changed
 
+- **A loader-backed `entityMap` now declines tree-level rehydration.** The
+  loader already owns that collection's persistence, and owns it better:
+  `loader({ persist: { adapter, key, hydrateThenRevalidate } })` seeds rows from
+  its own store, marks them stale and revalidates in the background, with
+  per-scope keys and touch-ordered GC.
+
+  Writing a tree snapshot over that was not a second opinion, it was a
+  **clobber** — measured, a collection seeded by its loader and then hydrated
+  from a tree snapshot still held the tree's rows after revalidation. The
+  mechanism that knows least about freshness was simply last.
+
+  This also settles an inconsistency nobody had noticed: `asyncSource` already
+  declined here while `entityMap` accepted, for the identical situation. The
+  rule is now one sentence — **on `rehydrate`, a marker that owns a source
+  declines; one that does not, accepts. `restore` always writes**, because
+  undo/redo is not competing with a loader.
+
+  No new configuration: "payload or source wins" is `hydrateThenRevalidate`,
+  which already exists, is already per-instance, and is already documented.
+
+### Changed
+
 - **Snapshot format version bumped `1.0.0` → `2.0.0`,** written but not yet
   enforced. One bump for two payload changes — markers gained snapshots, and
   `serialize()` stopped using its private walker — because nothing published
