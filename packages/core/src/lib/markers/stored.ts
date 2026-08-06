@@ -1,5 +1,7 @@
 import { signal, untracked } from '@angular/core';
 
+import { getActiveWriteContext } from '../write-context';
+
 declare const ngDevMode: boolean | undefined;
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
@@ -635,6 +637,20 @@ export function createStoredSignal<T>(
   // Synchronous versioned write - the single point where storage is touched
   const writeNow = (value: T): void => {
     if (!storage) return;
+
+    // A devtools replay must not touch the user's storage.
+    //
+    // Rewinding writes through — measured: set 'dark', rewind to 'light', and
+    // localStorage holds 'light'. That is CORRECT for an undo (the user is
+    // undoing the persisted change as well) and wrong for a devtools scrub,
+    // where the user is inspecting history and would be astonished to find
+    // their settings rewritten by dragging a slider.
+    //
+    // The two were indistinguishable because devtools tagged its replays
+    // `source: 'time-travel'`, the same as undo. It now sends `'devtools'` —
+    // a value that was already in the union and simply unused — so this needs
+    // no new mode and no new option.
+    if (getActiveWriteContext()?.source === 'devtools') return;
     writeGeneration++;
     try {
       const versionedData: VersionedStorageData<T> = {

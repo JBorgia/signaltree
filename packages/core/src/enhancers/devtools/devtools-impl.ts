@@ -1417,11 +1417,20 @@ export function createDevToolsEnhancer(
       isApplyingExternalState = true;
       try {
         // Tag every leaf write performed during this replay with
-        // `source: 'time-travel'`. Enhancers (validation, guardrails) read
-        // this via `getActiveWriteContext()` and can suppress side effects
-        // for replays. The context is synchronous; applyState's recursive
-        // calls inherit it through the synchronous call stack.
-        withWriteContext({ intent: 'system', source: 'time-travel' }, () => {
+        // `source: 'devtools'` — NOT `'time-travel'`, which is what this used
+        // to send and is what made devtools scrubbing indistinguishable from a
+        // user pressing Ctrl+Z.
+        //
+        // The two are not the same act. An undo is the user changing their
+        // mind, and its side effects are wanted: a `stored()` value should
+        // write the old value back, because the user is undoing the persisted
+        // change too. Scrubbing a devtools timeline is INSPECTION — nobody
+        // expects dragging a slider to rewrite their localStorage.
+        //
+        // `'devtools'` was already in the `UpdateMetadata['source']` union and
+        // simply unused. Enhancers read this via `getActiveWriteContext()`; the
+        // context is synchronous, so applyState's recursive calls inherit it.
+        withWriteContext({ intent: 'system', source: 'devtools' }, () => {
           if ('$' in tree) {
             applyState((tree as ISignalTree<T>).$ as any, state as T);
           } else {

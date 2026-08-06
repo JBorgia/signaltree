@@ -2,6 +2,21 @@
 
 ### Changed
 
+- **Devtools replay no longer has side effects on the user's storage.** A
+  `stored()` value persists on every write, so rewinding one rewrote the user's
+  localStorage. That is CORRECT for an undo — the user is undoing the persisted
+  change too — and wrong for a devtools scrub, where they are inspecting history
+  and would be astonished to find their settings rewritten by dragging a slider.
+
+  The two were indistinguishable because devtools tagged its replays
+  `source: 'time-travel'`, exactly as undo does. It now sends `'devtools'` — a
+  value that was already in the `UpdateMetadata['source']` union and simply
+  unused. So this needed **no new mode and no new option**; `stored()` skips its
+  write-through for devtools-sourced writes, and the live signal still shows the
+  scrubbed-to state, so the timeline displays correctly.
+
+### Changed
+
 - **A loader-backed `entityMap` now declines tree-level rehydration.** The
   loader already owns that collection's persistence, and owns it better:
   `loader({ persist: { adapter, key, hydrateThenRevalidate } })` seeds rows from
