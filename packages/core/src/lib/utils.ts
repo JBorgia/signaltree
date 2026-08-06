@@ -223,24 +223,44 @@ export function composeEnhancers<T>(
 }
 
 /**
- * @internal An entityMap node materialises to its ENTITIES, nothing else.
+ * @internal Markers materialise to their STATE, never their derived views.
  *
- * The node exposes `all`, `ids`, `count`, `map` and `empty`. Only `all` is
- * state; the rest are derived views of it, and emitting them into a snapshot
- * was both redundant and wrong:
+ * A snapshot exists to REHYDRATE a tree, not to reconstruct one. By the time a
+ * snapshot is applied, `signalTree(initialState)` has already built the shape,
+ * the markers and every signal — so the snapshot only has to carry the values
+ * that go into the leaves. Anything the live node can recompute is structure,
+ * and structure does not belong in a value payload.
  *
- *  - `ids` duplicated every key — ~11% of a collection snapshot (48,891 bytes
- *    of a 486,733-byte snapshot at 10k rows).
- *  - `map` is a `Map`, which JSON cannot represent, so it serialised as `{}` —
- *    a snapshot that claims the collection is EMPTY while holding N entries.
- *    Anything reading a persisted snapshot saw that lie.
- *  - `count` and `empty` are one deref of `all`.
+ * The library already followed this rule for `.derived()`: a `computed()` merged
+ * into the tree is correctly ABSENT from `tree()`, because it recomputes on
+ * rehydrate. Markers did not follow it, and each one that broke the rule caused
+ * a distinct bug:
  *
- * Restore already only reads `.all` (see applyState), so dropping the rest
- * costs nothing on the round trip and keeps `snapshot.x.all` working. A
- * consumer reading `snapshot.x.ids` or `.count` should read them off the live
- * node (`tree.$.x.ids()`), which is where they are correct and current.
+ *  - `entityMap` emitted `ids` (~11% of a collection snapshot) and `map`, which
+ *    is a `Map` and therefore serialised as `{}` — a snapshot claiming the
+ *    collection was EMPTY while holding 10,000 entities.
+ *  - `status()` emitted six predicates (`notLoaded`, `loading`, `loaded`,
+ *    `hasError`, `idle`, `settled`) that are pure functions of `state` and
+ *    `error`.
+ *
+ * `form()` was already correct. The rule is now applied uniformly.
+ *
+ * Restore already reads only `.all` for a collection (see applyState), so the
+ * round trip is unaffected. A consumer wanting `ids`, `count` or a predicate
+ * should read it off the LIVE node (`tree.$.x.ids()`, `tree.$.job.loading()`),
+ * which is where it is correct and current — a derived value frozen into a
+ * snapshot is stale the moment anything changes.
  */
+function isStatusNode(node: unknown): boolean {
+  return (
+    node !== null &&
+    typeof node === 'object' &&
+    typeof (node as { setLoading?: unknown }).setLoading === 'function' &&
+    typeof (node as { state?: unknown }).state === 'function' &&
+    typeof (node as { settled?: unknown }).settled === 'function'
+  );
+}
+
 function isEntityNode(node: unknown): boolean {
   return (
     node !== null &&
@@ -384,6 +404,10 @@ function buildFromAccessor<T>(node: NodeAccessor<unknown>): T {
         all: (node as unknown as { all: () => unknown }).all(),
       } as unknown as T;
     }
+    if (isStatusNode(node)) {
+      const s = node as unknown as { state: () => unknown; error: () => unknown };
+      return { state: s.state(), error: s.error() } as unknown as T;
+    }
     const result = {} as Record<string, unknown>;
 
     for (const key in node as unknown as Record<string, unknown>) {
@@ -496,6 +520,10 @@ export function unwrap<T>(node: unknown): T {
     return {
       all: (node as unknown as { all: () => unknown }).all(),
     } as unknown as T;
+  }
+  if (isStatusNode(node)) {
+    const s = node as unknown as { state: () => unknown; error: () => unknown };
+    return { state: s.state(), error: s.error() } as unknown as T;
   }
 
   const result = {} as Record<string, unknown>;
@@ -628,6 +656,33 @@ export function snapshotState<T>(state: TreeNode<T>): T {
 export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   if (snapshot === null || snapshot === undefined) return;
   if (typeof snapshot !== 'object') return;
+
+  // A rehydrated tree has NO REQUEST IN FLIGHT.
+  //
+  // `LOADING` describes an in-flight operation, and an operation cannot survive
+  // serialisation — the process that owned it is gone. Restoring it verbatim
+  // deadlocks the node: `loading()` is true so a "don't fetch while loading"
+  // guard blocks forever, `idle()` is false so an idle-gated fetch never fires,
+  // and `settled()` is false so anything awaiting settlement waits forever.
+  // Nothing is running to ever change it. Permanent spinner, no retry.
+  //
+  // Normalised HERE rather than at capture, so the snapshot stays faithful to
+  // the moment it was taken (devtools can still show that the node WAS loading)
+  // while every restore path lands somewhere a tree can actually operate from.
+  // This is equally true of a time-travel undo INTO a loading moment: there is
+  // no request there either.
+  //
+  // `Loaded` and `Error` both survive: they describe a finished operation, and
+  // `Error` is what lets a retry guard know the last attempt failed.
+  if (
+    isStatusNode(stateNode) &&
+    snapshot &&
+    typeof snapshot === 'object' &&
+    (snapshot as { state?: unknown }).state === 'LOADING'
+  ) {
+    (stateNode as unknown as { setNotLoaded: () => void }).setNotLoaded();
+    return;
+  }
 
   // Special-case EntitySignal-like nodes: restore via setAll() when possible
   // so internal storage stays consistent.
