@@ -23,15 +23,20 @@ each workload isolates one thing.
 
 | arm | median | retained |
 | --- | --- | --- |
-| elf | **1.69 ms** | 0.92 MB |
-| raw-signals | 4.17 ms | 6.16 MB |
-| **signaltree** | 5.97 ms | 1.29 MB |
-| ngrx-signals | 11.06 ms | 0.93 MB |
+| elf | **1.43 ms** | 0.92 MB |
+| **signaltree** | 3.24 ms | 1.29 MB |
+| raw-signals | 4.60 ms | 6.16 MB |
+| ngrx-signals | 10.98 ms | 0.93 MB |
 
-**SignalTree is third of four on raw collection throughput.** It beats
-`@ngrx/signals` by 1.9×, loses to elf by 3.5× and to a hand-rolled map of
-signals by 1.4×. That is the honest picture and it is not the story this
-library should be sold on.
+**SignalTree is second of four on raw collection throughput.** It beats
+`@ngrx/signals` by 3.4× and a hand-rolled map of signals by 1.4×, and loses to
+elf by 2.3×.
+
+This moved: it was 5.97 ms and third, behind the hand-rolled arm. Two fixes
+account for it — the `byId()` node cache became weak (so the read path stopped
+allocating permanently) and a marker's snapshot wrapper became memoised (so an
+unrelated write stopped re-allocating it). Neither was aimed at this benchmark;
+both were correctness or memory fixes that happened to be on the hot path.
 
 ---
 
@@ -44,12 +49,12 @@ library should be sold on.
 
 | arm | median | retained | history |
 | --- | --- | --- | --- |
-| **elf** | **1.34 ms** | 4.77 MB | built-in `elf-state-history` |
-| signaltree | **4.13 ms** | 5.24 MB | built-in `timeTravel()` |
-| ngrx-signals | 210.29 ms | 0.94 MB | hand-rolled |
-| raw-signals | 298.73 ms | 6.17 MB | hand-rolled |
+| **elf** | **1.76 ms** | 4.72 MB | built-in `elf-state-history` |
+| signaltree | **4.32 ms** | 5.24 MB | built-in `timeTravel()` |
+| ngrx-signals | 216.96 ms | 0.94 MB | hand-rolled |
+| raw-signals | 329.25 ms | 6.16 MB | hand-rolled |
 
-**SignalTree is ~3× behind elf and ~50× ahead of a hand-rolled history.** That
+**SignalTree is ~2.5× behind elf and ~50× ahead of a hand-rolled history.** That
 is after fixing a real defect the retraction exposed — see "What the correction
 found" below. The first honest measurement had SignalTree at 190 ms, level with
 hand-rolled; it is now 4.13 ms.
@@ -244,15 +249,61 @@ Separating the workloads changed the collection ordering.
 
 ---
 
+## The comparison that should be made: `@ngrx/signals`
+
+Everything above ranks four libraries on every axis, which is the honest way to
+measure and the wrong way to decide. Almost nobody is choosing between SignalTree
+and elf: elf is a general-purpose store with an Angular adapter, and a team that
+picked it did so for reasons this table does not contain. **The library an
+Angular team is actually choosing between SignalTree and is `@ngrx/signals`** —
+same framework, same signals-first premise, same problem.
+
+Against that one comparison, measured here:
+
+| | SignalTree | `@ngrx/signals` | |
+| --- | --- | --- | --- |
+| consumers invalidated by a 1-entity change (1,000 rows) | **1** | 1,000 | **1000×** |
+| collection: build 10k + 200 updates + read all | **3.24 ms** | 10.98 ms | **3.4×** |
+| undo/redo: 50 writes + 50 undos over 10k | **4.32 ms** | 216.96 ms | **50×** |
+| retained per entity (marginal) | 136 B | 91 B | 0.67× |
+| history primitive | built in | hand-rolled | |
+
+Three wins of 3.4× to 1000×, one loss of 1.5× on per-entity memory, and the loss
+is the price of the biggest win: the id index and per-entity storage are what
+make `byId()` O(1) and per-entity writes not touch the array.
+
+**The granularity row is the one that matters and it is not a benchmark result.**
+Reading `entityMap()` in `@ngrx/signals` takes a dependency on the whole
+collection, so every consumer recomputes on every change. At 1,000 rows that is
+1,000 component invalidations against one. A signal read is tens of nanoseconds
+and a component re-render is microseconds to milliseconds, so at a conservative
+10 µs per render one change costs ~10 µs of rendering here and ~10 ms there —
+on the main thread. That is arithmetic from the invalidation counts, not
+something this harness timed, and the attempt to time it is recorded above as a
+failure.
+
+**Where elf belongs in the story.** elf matches the granularity (`selectEntity`
+filters per entity, so a pointer swap still notifies one row) and beats us on
+undo and collection throughput. The difference worth stating is not a number:
+granularity is SignalTree's default and elf's opt-in, per selector. If you write
+`store.pipe(selectAllEntities())` — the obvious call — you get the coarse
+behaviour, and the fine behaviour is available to whoever remembers to ask for
+it. That is a real distinction and it is smaller than a benchmark table makes it
+look.
+
 ## What to claim
 
-- ⚖️ **Undo/redo: ~50× faster than hand-rolled, ~3× behind elf.** Defensible
+- ✅ **Against `@ngrx/signals`: granular by default, 1 invalidation vs 1,000.**
+  The clearest and most defensible claim in this document, and the comparison
+  most readers are actually making.
+- ⚖️ **Undo/redo: ~50× faster than hand-rolled, ~2.5× behind elf.** Defensible
   against "you would have to write this yourself", not against elf. The original
   "20× faster than elf" was an artefact of measuring an idle arm; the corrected
   measurement then exposed a real O(collection) defect in restore, now fixed.
 - ✅ **Snapshots are nearly free.** A held `tree()` of 10k entities costs 0.01 MB
   ([memory-profile.md](../architecture/memory-profile.md)).
-- ❌ **Not raw collection throughput.** Second-to-third of four, run to run.
+- ⚖️ **Collection throughput: second of four.** Ahead of `@ngrx/signals` by 3.4×
+  and of hand-rolled signals, behind elf by 2.3×.
 - ❌ **Not per-entity memory.** Highest of four
   ([memory-profile.md](../architecture/memory-profile.md)).
 - ❌ **Not bundle size.** Recorded elsewhere and unchanged.

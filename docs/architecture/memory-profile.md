@@ -24,6 +24,8 @@ Node 24.3 / V8 13.6, forced GC, one process per scenario.
 | `entityMap`, 1k entities | 0.31 MB | 330 B/entity | ✅ |
 | `entityMap`, 10k entities | 2.85 MB | 299 B/entity | ✅ |
 | `entityMap` 10k **+ a held `tree()` snapshot** | 2.86 MB | 300 B/entity | ✅ |
+| `entityMap` 10k **+ `byId()` on every row, HELD** | 34.08 MB | **3,573 B/entity** | ✅ |
+| `entityMap` 10k + `byId()` on every row, not held | 8.05 MB | **844 B/entity** | ✅ |
 
 2,000 repeated `tree()` reads grew the heap by **0.039 MB**.
 
@@ -118,17 +120,37 @@ array", not "we use less memory".
 | entity objects alone (the floor) | 89 B |
 | plain array leaf | 113 B |
 | `entityMap`, collection read via `.all()` | 315 B |
-| **`entityMap` after `byId()` on every row** | **4,149 B** |
+| `byId()` on every row, nodes **not retained** | **844 B** |
+| **`byId()` on every row, nodes HELD** | **3,573 B** |
 
-Calling `byId()` for all 10,000 rows takes retained heap from 3.0 MB to
-**39.6 MB** — 46× the data. `byId()` materialises a per-entity node so that row
-can be bound and written independently, which is the whole point of the feature,
-but the cost is per row and it is large.
+`byId()` materialises a per-entity node so that row can be bound and written
+independently — the whole point of the feature — and it is by a wide margin the
+most expensive thing in this document.
 
-**This is the memory guidance that matters on a phone:** use `byId()` for the
-rows a user can actually interact with, not for every row you render. A 10,000
-row list that calls `byId()` per row is the shape that will run a low-end device
-out of memory, and nothing else in this document comes close to it.
+**Reading is now cheap; holding is not, and that distinction is the finding.**
+The node cache used to be a strong `Map`, so merely CALLING `byId()` allocated
+permanently: 4,149 B/entity, 39.6 MB at 10k, whether or not anything kept the
+node. It is now a `WeakRef` cache with a `FinalizationRegistry`, so a walk that
+reads every row and keeps nothing costs 844 B/entity — 4.9× less, and the
+documented pattern for granular updates stopped being the expensive one.
+
+Holding them still costs 3,573 B/entity. That is not the cache failing; a
+materialised per-entity node is real state, and no cache policy makes retained
+state free. The weak cache removed an accidental cost, not the intrinsic one,
+and saying otherwise would be quoting the flattering half of the measurement.
+
+**This is the memory guidance that matters on a phone:** call `byId()` freely,
+but *keep* a node only for rows a user can actually interact with. A 10,000-row
+list holding a node per row retains 34 MB, and nothing else in this document
+comes close to it.
+
+> Both rows are produced by the harness now, not by hand. The 4,149 B figure sat
+> in this file as prose while the cache underneath it was changed from strong to
+> weak — prose does not re-run. The transient row also needs a macrotask yield
+> before its heap is read: a `WeakRef` is not cleared in the same synchronous
+> turn however many times you call `gc()`, and without the yield it measured
+> 3,565 B/entity, indistinguishable from held, which would have read as "the
+> weak cache does nothing".
 
 ## What is still NOT measured
 

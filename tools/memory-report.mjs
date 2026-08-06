@@ -64,11 +64,22 @@ function settle() {
  * lagged. A WeakRef that no longer derefs is proof; a heap number that has not
  * come down yet is not evidence of anything.
  */
-async function retained(build) {
+async function retained(build, { yieldBeforeMeasure = false } = {}) {
   settle();
   const before = process.memoryUsage().heapUsed;
   let held = build();
   settle();
+  // Scenarios whose POINT is that something was dropped during the build need a
+  // turn boundary before the figure is taken. `settle()` alone cannot collect a
+  // weakly-held object in the same synchronous turn no matter how many times it
+  // calls gc() — the same rule the collectability check below already obeys.
+  // Without this, `byId() on every row, NOT held` measured 3,565 B/entity
+  // against 3,573 held: identical, and it would have read as "the weak cache
+  // does nothing" when what it actually showed was GC not having had a turn.
+  if (yieldBeforeMeasure) {
+    await new Promise((r) => setTimeout(r, 50));
+    settle();
+  }
   const withHeld = process.memoryUsage().heapUsed;
   if (held === undefined) throw new Error('build() returned nothing');
   const ref = new WeakRef(typeof held === 'object' ? held : { held });
@@ -160,6 +171,59 @@ const SCENARIOS = {
       return { t, snap: t() };
     },
   },
+  /**
+   * The shape that decides whether a large list survives on a phone.
+   *
+   * `byId()` materialises a per-entity node so one row can be bound and written
+   * independently — the documented pattern for granular updates, and by far the
+   * most expensive thing in this document. It was measured ONCE, by hand, at
+   * 4,149 B/entity, and that number then sat in memory-profile.md while the
+   * underlying cache was changed from strong to weak underneath it. A figure
+   * that only exists in prose goes stale silently; this is here so it is
+   * re-measured on every run.
+   */
+  'entitymap-10k-byid-all': {
+    label: 'entityMap 10k + byId() on EVERY row',
+    n: 10_000,
+    unit: 'entity',
+    build: (n) => {
+      const t = signalTree({ rows: entityMap({ selectId: (r) => r.id }) });
+      const data = [];
+      for (let i = 0; i < n; i++) data.push({ id: i, name: 'n' + i, v: i });
+      t.$.rows.setAll(data);
+      // Held, so this measures RETENTION of the materialised nodes. Dropping
+      // them would measure the weak cache collecting, which is a different
+      // question and the one entity-node-cache.spec.ts covers.
+      const nodes = [];
+      for (let i = 0; i < n; i++) nodes.push(t.$.rows.byId(i));
+      return { t, nodes };
+    },
+  },
+  /**
+   * The same walk, with the nodes DROPPED — and the honest counterpart to the
+   * scenario above.
+   *
+   * The node cache became weak so that READING every row stops costing
+   * permanently. It is easy to quote that as "byId got 4.9x cheaper", and it is
+   * only true here, where nothing holds the nodes. Held, they still cost what
+   * they cost: a materialised per-entity node is real state, and no cache
+   * policy makes retained state free. Measuring both is the difference between
+   * a fix and a claim.
+   */
+  'entitymap-10k-byid-transient': {
+    label: 'entityMap 10k + byId() on every row, NOT held',
+    n: 10_000,
+    unit: 'entity',
+    build: (n) => {
+      const t = signalTree({ rows: entityMap({ selectId: (r) => r.id }) });
+      const data = [];
+      for (let i = 0; i < n; i++) data.push({ id: i, name: 'n' + i, v: i });
+      t.$.rows.setAll(data);
+      for (let i = 0; i < n; i++) void t.$.rows.byId(i);
+      return t;
+    },
+    yieldBeforeMeasure: true,
+  },
 };
 
 // --- child mode: run exactly one scenario, print JSON, exit ----------------
@@ -171,7 +235,9 @@ if (scenarioFlag !== -1) {
     console.error(`unknown scenario: ${name}`);
     process.exit(1);
   }
-  const r = await retained(() => s.build(s.n));
+  const r = await retained(() => s.build(s.n), {
+    yieldBeforeMeasure: s.yieldBeforeMeasure,
+  });
   console.log(
     JSON.stringify({
       scenario: s.label,
