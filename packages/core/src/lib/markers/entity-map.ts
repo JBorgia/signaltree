@@ -336,7 +336,10 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           } else if (typeof ngDevMode === 'undefined' || ngDevMode) {
             console.warn(
               `SignalTree: entityMap hydrate ignored a payload with no ` +
-                `\`all\` array. The collection was left unchanged. [ST2022]`
+                `\`all\` array. The collection was left unchanged. This is a ` +
+                `PAYLOAD problem, not a registration one — a pre-2.0.0 ` +
+                `snapshot emitted \`map\`, which JSON renders as \`{}\`, so the ` +
+                `entities were never in it. [ST2024]`
             );
           }
         },

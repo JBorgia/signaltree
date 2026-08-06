@@ -231,7 +231,9 @@ export function status<E = Error>(
             if (typeof ngDevMode === 'undefined' || ngDevMode) {
               console.warn(
                 `SignalTree: status() hydrate ignored an unrecognised state ` +
-                  `"${String(state)}". The node was left unchanged. [ST2022]`
+                  `"${String(state)}". The node was left unchanged. This is a ` +
+                  `PAYLOAD problem, not a registration one — the snapshot was ` +
+                  `written by an incompatible version, or hand-built. [ST2024]`
               );
             }
         }

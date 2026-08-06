@@ -62,14 +62,22 @@ interface MarkerProcessor {
 }
 
 /**
- * Stamped on every materialised node so `owns()` is O(1).
+ * Stamped on every materialised node so finding its processor is O(1).
  *
- * A linear scan over the registry would put every marker author's `owns()` on
- * the hot path of every node materialisation, letting one slow third-party
- * predicate degrade trees that do not contain that marker. A stamp makes a
- * marker's cost payable only by trees that use it — the same boundary lazy
- * self-registration already draws for bundle size. Isolation is the point;
- * speed is incidental.
+ * ⚠️ There is NO `owns()` hook. Earlier revisions of this comment referred to
+ * one as though it existed, and a research doc then repeated it as fact — the
+ * exact stale-comment-becomes-canon failure this codebase keeps hitting.
+ * Source ownership is decided INSIDE each marker's `hydrate`, which already
+ * receives the mode: `entityMap` declines when `typeof node.load === 'function'`,
+ * `asyncSource` declines on `rehydrate` outright. A separate hook would add
+ * surface for a decision the existing one can already express.
+ *
+ * The stamp matters for isolation, not just speed. A linear scan over the
+ * registry would put every marker author's predicate on the hot path of every
+ * node materialisation, letting one slow third-party check degrade trees that
+ * do not contain that marker. A stamp makes a marker's cost payable only by
+ * trees that use it — the same boundary lazy self-registration already draws
+ * for bundle size.
  *
  * The `SignalTree:` prefix is load-bearing: `unwrap`'s symbol loop skips that
  * prefix by identity, so a correctly-named stamp cannot leak into a snapshot.
@@ -448,7 +456,7 @@ export function materializeMarkers(
             getNotifier(),
             pathString
           );
-          // Stamp the owning processor so `owns()` is an O(1) property read
+          // Stamp the owning processor so lookup is an O(1) property read
           // rather than a scan over every registered marker. Non-enumerable so
           // it cannot reach a string-key walk; the `SignalTree:` prefix keeps
           // it out of the symbol walk too.

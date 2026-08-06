@@ -4,6 +4,24 @@
 materialisation architecture we arrived at the right one, or should we pivot
 before 14.0.0 ships?_
 
+> **AUDIT, 14.0.0.** Two claims this document made about SignalTree's own code
+> were checked and are **wrong**; both corrections are inline.
+>
+> 1. **§1 said markers declare `owns` on the registry. There is no `owns` hook**
+>    — the contract is `check` / `create` / `snapshot` / `hydrate` / `transient`.
+>    Source ownership is decided inside each marker's `hydrate`, which already
+>    receives the mode. The error came from three stale comments in
+>    `materialize-markers.ts` that described `owns()` as though it shipped; those
+>    comments are now fixed, since a research doc repeating a stale comment as
+>    fact is exactly how one becomes canon.
+> 2. **§4.2 reported that `hydrate` fires no `tap` handlers. It fires them
+>    normally.** Only `onChange` was registered, for what is an `onAdd` event.
+>
+> Also from the audit, and not this document's error: `ST2022` was being emitted
+> from three unrelated conditions. The two hydrate-payload cases are now
+> **ST2024**, and the legacy-payload upgrade path is pinned by
+> `legacy-payload.spec.ts`.
+
 **Headline: no pivot is warranted, and that is the finding.** Where we converged
 with these systems we converged independently on the shape they landed on; where
 we differ, it is because SignalTree has a property none of them have. The one
@@ -45,7 +63,7 @@ Concretely, as of 14.0.0:
 | Incremental refresh | one `computed` per node in a `WeakMap`, invalidated by Angular's dependency graph |
 | Structural sharing  | a clean subtree is returned BY REFERENCE; a one-leaf write rebuilds O(depth)      |
 | Demand-driven       | the `computed` is created lazily; a node never read allocates nothing             |
-| Per-node contract   | markers declare `snapshot` / `hydrate` / `owns` on the marker registry            |
+| Per-node contract   | markers declare `snapshot` / `hydrate` / `transient` on the marker registry       |
 | Restore semantics   | `HydrateMode` = `merge` \| `restore` \| `rehydrate`, chosen by the call site      |
 
 ## 2. The property that makes us different
@@ -289,22 +307,37 @@ only via a root write, not called directly by applications.
 runtime with no deferred writes, the only "inconsistent" read is one taken from
 inside a write, by code that chose to run there.
 
-### 4.2 Side finding — hydrate does not fire `tap`
+### 4.2 Side finding — ~~hydrate does not fire `tap`~~ — REFUTED
 
-**MEASURED, and NOT chased down.** A root write that hydrates a marker
-(`tree({ rows: {all: [...]}, n: 99 })`) updates the collection but fires **no
-tap handlers at all**:
+**This section was WRONG, and the error is instructive.** An earlier revision
+reported that a hydrating root write "fires **no tap handlers at all**", based on
+this measurement:
 
 ```
 tap onChange during a hydrating root write:  []      (rows did change: 0 -> 1)
 ```
 
-Defensible either way — a rehydrate is arguably not a user mutation, and firing
-`onAdd` for every row of a restored 10k collection would be hostile. But it is
-undocumented, and a `tap` used to mirror a collection into a non-SignalTree
-store would silently miss every restore. Flagged, not filed: deciding it needs
-the same `HydrateMode` reasoning as everything else in
-[`snapshot-rehydration.md`](./snapshot-rehydration.md) §8.
+The observation is correct and the conclusion does not follow. Only `onChange`
+was registered. `entityMap.hydrate` calls `setAll`, and a collection going
+0 → 1 rows is an **add**, so `onAdd` fires and `onChange` correctly does not.
+Re-run with all three handlers registered:
+
+```
+after addOne     : ["add:1"]
+after hydrate    : ["add:2","add:3"]   count=2
+after root write : ["add:9"]           count=1
+```
+
+**`hydrate` fires `tap` handlers normally**, through `setAll`, at both the
+`hydrateMarkerNode` and root-write entry points. A `tap` used to mirror a
+collection into a non-SignalTree store does **not** miss restores.
+
+Kept rather than deleted because the failure mode generalises: a negative
+result from a single observation channel says nothing about the other channels.
+"No handler fired" needed every handler registered before it could be claimed —
+the same shape as the `console.warn` vs `console.error` mistake recorded in
+HANDOFF §7, where the wrong channel was captured and a correct claim was falsely
+refuted. Here it ran the other way and produced a false defect report.
 
 ---
 
@@ -315,20 +348,30 @@ the same `HydrateMode` reasoning as everything else in
 The torn-read hypothesis was the only possible **bug** in this document and it
 does not reproduce (§4). Everything remaining is a design choice.
 
-One item did fall out of running it: **`hydrate` fires no `tap` handlers**
-(§4.2). Undecided rather than broken, and it wants the same `HydrateMode`
-reasoning as the rest of the restore work.
+One item appeared to fall out of running it — "hydrate fires no `tap`
+handlers" — and that has since been **refuted** (§4.2). It was an artefact of
+registering only `onChange` for what is an `onAdd` event. Nothing outstanding.
 
 ### 5.1b Adopt Automerge's asymmetric compatibility rule, explicitly
 
 We wrote format version `2.0.0` in `98b7dbe1` and deliberately deferred the
 enforcement policy. §3.4b supplies the policy worth adopting: **a new reader
-tolerates old payloads; an old reader is not expected to read new ones.** Write
-it down at the version constant next to the existing `1.0.0`-means-legacy note,
-because the tempting symmetric alternative ("refuse anything we do not
-recognise") rejects the entire installed base.
+tolerates old payloads; an old reader is not expected to read new ones.**
 
-Cheap, and it converts a deferred decision into a recorded one.
+**Mostly already done, and the gap was elsewhere.** The note at
+`SNAPSHOT_FORMAT_VERSION` already records the asymmetric rule in substance —
+`1.0.0` means LEGACY/UNKNOWN rather than "format 1", and "reject unknown
+versions" would reject the entire installed base. Automerge's contribution is
+the naming, not the decision.
+
+What was actually missing was any **test** that a legacy payload survives the
+upgrade — the one thing a breaking format release has to get right. Now pinned
+by `legacy-payload.spec.ts`: a `1.0.0` payload does not throw, plain leaves
+restore, an unreadable marker is left unchanged and says so via ST2024, and a
+marker absent from the payload keeps its initial value. Nothing is silently
+corrupted. Note also what is NOT recoverable: a legacy `entityMap` payload
+emitted `map`, which JSON renders as `{}`, so those entities were never in the
+file — there is nothing to migrate, which is why the shape had to change.
 
 ### 5.2 Reframe the time-travel question as changelog + keyframes
 
@@ -411,8 +454,6 @@ RisingWave and the CRDT family added. What remains:
 - **The +1.54 MB after a single-leaf write and re-read** (§3.2) is larger than an
   O(depth) rebuild should cost and is unexplained. Small, but it is the one
   number here nobody can account for.
-- **`hydrate` firing no `tap` handlers** (§4.2) is measured but undecided —
-  neither confirmed as intended nor filed as a defect.
 - **Nothing outside `@signaltree/core` was examined.** `realtime` in particular
   transmits state, which is where the Yjs state-vector idea (§3.4b) would
   actually earn its keep, and it was not looked at.

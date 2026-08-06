@@ -61,6 +61,29 @@
 
 ### Fixed
 
+- **`ST2022` was being emitted from three unrelated conditions.** Besides its
+  documented meaning (a marker registered without declaring what of it is
+  state), it also fired when `entityMap.hydrate` got a payload with no `all`
+  array and when `status().hydrate` got an unrecognised state string. Both of
+  those are PAYLOAD problems at restore time, not registration problems, so a
+  user grepping the code was told to fix a `registerMarkerProcessor` call they
+  may never have written. Codes are append-only and never reused; the two
+  hydrate cases are now **ST2024**.
+
+- **The legacy-payload upgrade path is pinned** (`legacy-payload.spec.ts`).
+  14.0.0 changes the snapshot shape, so every payload already in a user's
+  localStorage is now the wrong shape, and nothing tested what happens. It
+  degrades best-effort and loudly: no throw, plain leaves restore, an unreadable
+  marker is left unchanged (not reset) and reports ST2024, and a marker absent
+  from the payload keeps its initial value. A legacy `entityMap` payload is not
+  recoverable — it emitted `map`, which JSON renders as `{}`, so the entities
+  were never in the file.
+
+- Three comments in `materialize-markers.ts` described an `owns()` hook that
+  does not exist. Source ownership is decided inside each marker's `hydrate`,
+  which already receives the mode. A research doc had picked the phantom API up
+  and restated it as fact.
+
 - Snapshot aliasing of `Date`/`Map`/`Set`/`Array` is documented and pinned. A
   snapshot is read-only **all the way down**: the dev-mode freeze is per node
   and does not reach leaf values. Not "fixed" by copying (55x on a 50k array) or

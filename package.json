@@ -68,7 +68,7 @@
     "lint:all": "nx run-many -t lint --projects=core,enterprise,ng-forms,shared,guardrails,schema,demo,events,realtime",
     "lint:core": "nx lint core",
     "lint:fix:all": "nx run-many -t lint --fix --projects=core,enterprise,ng-forms,shared,guardrails,schema,demo",
-    "typecheck": "npm run typecheck:typing && npm run typecheck:source",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.typecheck.json && tsc --noEmit -p tsconfig.typecheck-all.json",
     "quality:check": "npm run lint:all && npm run typecheck && npm run test:all && npm run build:all",
     "quality:simple": "npm run test:core && npm run build:core",
     "quality:fix": "npm run lint:fix:all && npm run test:all",
