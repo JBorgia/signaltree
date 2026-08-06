@@ -1,4 +1,76 @@
-## Unreleased (13.6.0)
+## 14.0.0 (unreleased)
+
+### BREAKING
+
+- **Calling a leaf is no longer a setter.** `tree.$.count(5)` is a compile
+  error; the `(value: NotFn<T>): void` and updater overloads are gone from
+  `CallableWritableSignal<T>`. Use `.set()` / `.update()`. Branches and the root
+  remain callable, unchanged.
+
+  It never worked. A leaf **is** a real Angular signal, and calling a signal is
+  a READ that discards its argument — measured, `tree.$.count(5)` on a leaf
+  holding `0` returned `0` and left it at `0`. The same expression one level up
+  (`tree.$.user({ name: 'Bob' })`) does work, because a branch is SignalTree's
+  own accessor and we own its call semantics. So the type promised a uniformity
+  the runtime never had, and the failure was invisible at compile time AND at
+  run time — which is why this is a removal rather than a deprecation.
+
+  Making it true at runtime was measured and rejected on IDENTITY, not speed: a
+  callable wrapper costs ~4% on a set+get (inside noise), but `isSignal()`
+  returns `false` for it and `Symbol(SIGNAL)` is absent, so `toObservable`,
+  `model()`/`input()` interop and everything else guarding on `isSignal` would
+  break.
+
+  Migration is mechanical: `tree.$.x.y(value)` → `.set(value)`,
+  `tree.$.x.y(fn)` → `.update(fn)`. The compiler finds every site.
+
+- **`@signaltree/callable-syntax` is deleted.** The build transform that would
+  have made the above real cannot run inside an Angular app at all (RFC 0008 §4,
+  verified against a real build): `@angular/build:application` exposes no
+  `plugins`; `codePlugins` runs after ngtsc has claimed every `.ts` — a probe
+  received ZERO files; ngtsc's transformer list is hardcoded; ts-patch goes
+  inert under `isolatedModules`. It also could not distinguish a leaf from a
+  branch, so it rewrote branch calls into `.set()` on an accessor that has none,
+  throwing at runtime. Its `/augmentation` entry globally augmented Angular's
+  `WritableSignal`, re-introducing the `@ngrx/signals` invariance conflict core
+  had deliberately removed.
+
+- **Snapshot payload shape changed**, and the format version (`2.0.0`) is now
+  written into the payload. Markers emit values rather than their API surface.
+
+- The unexported `asyncStream` marker is removed; accumulate into a plain leaf
+  with `update()` (see `docs/guides/streaming-accumulation.md`).
+
+### Added
+
+- **ST2023** — a marker that declares `snapshot` but no `hydrate`, whose node is
+  not a writable signal. It serialises perfectly and silently discards every
+  write, so `tree(tree())` loses its value. ST2022 cannot see this, because a
+  `snapshot` hook is a valid answer to the question ST2022 asks. Reported at
+  materialisation (where the node's shape is knowable), once per processor, off
+  the write path.
+
+- A dev/prod split in the bundle-budget gate. The single budget was measured on
+  the dev build and had moved five times in two releases, each bump noting that
+  production was unchanged. Prod (`ngDevMode: false`) is now the tight
+  constraint; dev is a loose ceiling for diagnostics.
+
+- `npm run typecheck` now covers every package's source plus the demo. It
+  previously checked only core's `*.typing.spec.ts` files — which is why it
+  reported zero errors for a breaking type change that broke 22 call sites.
+
+### Fixed
+
+- Snapshot aliasing of `Date`/`Map`/`Set`/`Array` is documented and pinned. A
+  snapshot is read-only **all the way down**: the dev-mode freeze is per node
+  and does not reach leaf values. Not "fixed" by copying (55x on a 50k array) or
+  freezing (`Object.freeze` protects `Array.push` and nothing else — `Date`,
+  `Map` and `Set` mutate through internal slots), both measured.
+
+- The core typing harness did not compile. Deleting `asyncStream` cut two rows
+  out of the middle of a type-level tuple, so `npm run typecheck` was red on
+  main; the nested-marker assertion it also removed is restored.
+
 
 ### Changed
 
