@@ -1,5 +1,30 @@
 ## Unreleased (13.6.0)
 
+### Fixed
+
+- **`serialization()` could not round-trip a tree containing `status()` or
+  `entityMap` — it THREW** (`targetSignal.set is not a function`), and had since
+  those markers existed. Persisting a collection has never worked.
+
+  Three writers, one key. `serialize()` had a PRIVATE second materialiser,
+  `unwrapObjectSafely`, three hundred lines from `toJSON()` which already
+  delegated to `tree()` — so the enhancer disagreed with itself about what a
+  snapshot is, and the private copy never learned the marker rule. It emitted
+  **17 keys** for a `status()` node: 2 state, 6 computeds and 9 setter METHODS.
+  `deserialize()` then tried to `.set()` each one back, and a computed has no
+  setter.
+
+  `serialize()` now calls `tree()`; `deserialize()` routes markers through
+  `hydrate` in `rehydrate` mode; and the nodeMap pass no longer blind-`.set()`s
+  a marker's raw payload through whatever `set()` method it happens to expose.
+  The private walker is deleted — **133 lines**, and the bundle got smaller
+  despite the new code path.
+
+  The reason it was kept — "serialize() needs type-preserving markers" — was
+  never true: `tree()` returns live `Date`/`Map`/`Set`/`RegExp`/`bigint`
+  instances and `encodeSpecials` does the marking. Verified for all six,
+  nested included, before and after.
+
 ### Added
 
 - **Undo/redo actually works.** `timeTravel()` undo/redo now restores form

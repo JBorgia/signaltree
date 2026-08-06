@@ -1,6 +1,7 @@
 declare const ngDevMode: boolean | undefined;
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
+import { hydrateMarkerNode } from '../../lib/internals/materialize-markers';
 import { isTraversableNode } from '../../lib/utils';
 import { ISignalTree } from '../../lib/types';
 import type { EnhancerMeta } from '../../lib/types';
@@ -191,138 +192,6 @@ const DEFAULT_CONFIG: Required<
   handleCircular: true,
 };
 
-/**
- * Safely unwrap object with circular reference detection
- */
-function unwrapObjectSafely(
-  obj: unknown,
-  visited = new WeakSet<object>(),
-  depth = 0,
-  maxDepth = 50,
-  preserveTypes = true
-): unknown {
-  // Prevent infinite recursion
-  if (depth > maxDepth) return '[Max Depth Exceeded]';
-
-  // Primitives and non-objects
-  if (obj === null || typeof obj !== 'object') {
-    if (!preserveTypes) return obj;
-
-    if (obj === undefined) return { [TYPE_MARKERS.UNDEFINED]: true };
-    if (typeof obj === 'number') {
-      if (Number.isNaN(obj)) return { [TYPE_MARKERS.NAN]: true };
-      if (obj === Infinity) return { [TYPE_MARKERS.INFINITY]: true };
-      if (obj === -Infinity) return { [TYPE_MARKERS.NEG_INFINITY]: true };
-      return obj;
-    }
-    if (typeof obj === 'bigint') return { [TYPE_MARKERS.BIGINT]: String(obj) };
-    if (typeof obj === 'symbol') return { [TYPE_MARKERS.SYMBOL]: String(obj) };
-    return obj;
-  }
-
-  // Handle callable signals (no longer need complex branch wrapper detection)
-  if (typeof obj === 'function') {
-    try {
-      // Check if it's a callable signal by trying to invoke it
-      const result = (obj as () => unknown)();
-      return unwrapObjectSafely(
-        result,
-        visited,
-        depth + 1,
-        maxDepth,
-        preserveTypes
-      );
-    } catch {
-      // Not a callable signal, treat as regular function (non-serializable)
-      return '[Function]';
-    }
-  }
-
-  // If object already visited, mark as circular
-  if (visited.has(obj as object)) return '[Circular Reference]';
-
-  // Unwrap signals
-  if (isSignal(obj)) return (obj as Signal<unknown>)();
-
-  // Preserve special types
-  if (preserveTypes) {
-    if (obj instanceof Date) return { [TYPE_MARKERS.DATE]: obj.toISOString() };
-    if (obj instanceof RegExp)
-      return {
-        [TYPE_MARKERS.REGEXP]: { source: obj.source, flags: obj.flags },
-      };
-    if (obj instanceof Map) {
-      return { [TYPE_MARKERS.MAP]: Array.from(obj.entries()) };
-    }
-    if (obj instanceof Set) {
-      return { [TYPE_MARKERS.SET]: Array.from(obj.values()) };
-    }
-  } else {
-    if (obj instanceof Date || obj instanceof RegExp) return obj;
-  }
-
-  visited.add(obj as object);
-
-  try {
-    if (Array.isArray(obj)) {
-      const arr = (obj as unknown[]).map((item) =>
-        unwrapObjectSafely(item, visited, depth + 1, maxDepth, preserveTypes)
-      );
-      visited.delete(obj as object);
-      return arr;
-    }
-
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      // Skip runtime helpers when they are plain functions (not signals)
-      if (
-        (k === 'set' || k === 'update') &&
-        typeof v === 'function' &&
-        !isSignal(v)
-      )
-        continue;
-
-      if (isSignal(v)) {
-        out[k] = unwrapObjectSafely(
-          (v as Signal<unknown>)(),
-          visited,
-          depth + 1,
-          maxDepth,
-          preserveTypes
-        );
-      } else if (typeof v === 'function' && k !== 'set' && k !== 'update') {
-        // Handle callable signals - these are functions but not helper methods
-        try {
-          const callResult = (v as () => unknown)();
-          out[k] = unwrapObjectSafely(
-            callResult,
-            visited,
-            depth + 1,
-            maxDepth,
-            preserveTypes
-          );
-        } catch {
-          // If calling fails, skip this property
-          continue;
-        }
-      } else {
-        out[k] = unwrapObjectSafely(
-          v,
-          visited,
-          depth + 1,
-          maxDepth,
-          preserveTypes
-        );
-      }
-    }
-
-    visited.delete(obj as object);
-    return out;
-  } catch {
-    visited.delete(obj as object);
-    return '[Serialization Error]';
-  }
-}
 
 /**
  * Detects circular references in an object
@@ -488,9 +357,9 @@ export function serialization(
      * Get plain object representation
      */
     enhanced.toJSON = (): T => {
-      // Delegate to the tree's public unwrap() which already strips helper
-      // methods like `set`/`update`. Keep unwrapObjectSafely for
-      // serialize() where we need type-preserving markers.
+      // Delegate to the tree's public unwrap(), which strips helper methods
+      // like `set`/`update`. `serialize()` now does the same — there is one
+      // materialiser again.
       return tree();
     };
 
@@ -598,6 +467,18 @@ export function serialization(
           const sourceValue = source[key];
           const direct = target[key];
 
+          // A materialised marker hydrates ITSELF, before any of the signal
+          // resolution below. Without this, `deserialize` walked a marker's
+          // payload key by key and tried to `.set()` each one back — including
+          // the derived ones — and a computed has no setter, so the whole
+          // restore threw. That is what made persisting a tree containing an
+          // `entityMap` impossible.
+          //
+          // `rehydrate`, not `restore`: deserialize crosses a process boundary,
+          // so nothing is in flight and transient state must be normalised
+          // rather than believed. See docs/architecture/undo-redo-vs-devtools.md.
+          if (hydrateMarkerNode(direct, sourceValue, 'rehydrate')) continue;
+
           // Prefer the real signal if present; otherwise resolve from root alias
           const targetSignal = isSignal(direct)
             ? (direct as WritableSignal<unknown>)
@@ -694,7 +575,16 @@ export function serialization(
               }
             }
             try {
-              (node as unknown as WritableSignal<unknown>).set(current);
+              // A marker hydrates itself. Without this the nodeMap pass writes
+              // the marker's raw PAYLOAD through its `set()` — a `form()` has
+              // one, so `set({values, touched})` merged those two keys into the
+              // form's values as if they were fields. `updateSignals` then
+              // hydrated it properly, leaving BOTH: `{name:'Ada', values:{…},
+              // touched:{…}}`. Two writers, same key, and the wrong one ran
+              // first.
+              if (!hydrateMarkerNode(node, current, 'rehydrate')) {
+                (node as unknown as WritableSignal<unknown>).set(current);
+              }
             } catch {
               /* ignore per-path failures */
             }
@@ -759,16 +649,20 @@ export function serialization(
         ...config,
       };
 
-      // Use a safe local unwrap to avoid accidental dropping of keys like
-      // 'set' which may collide with branch helpers; let encodeSpecials
-      // handle special type markers.
-      const raw = unwrapObjectSafely(
-        tree.$,
-        new WeakSet<object>(),
-        0,
-        fullConfig.maxDepth,
-        fullConfig.preserveTypes
-      );
+      // ONE materialiser. `serialize()` used to walk the tree itself with a
+      // private `unwrapObjectSafely`, three hundred lines from `toJSON()` which
+      // already delegated to `tree()` — so the enhancer disagreed with itself
+      // about what a snapshot is, and the private copy never learned the marker
+      // rule. That is why it emitted 17 keys for a `status()` node (2 state, 6
+      // computeds, 9 SETTER METHODS) and then threw on restore when it tried to
+      // `.set()` a computed back.
+      //
+      // The stated reason for keeping it — "we need type-preserving markers" —
+      // does not hold: `tree()` returns LIVE Date/Map/Set/RegExp/bigint
+      // instances (verified for all six, nested included) and `encodeSpecials`
+      // below does the marking. It was never `unwrapObjectSafely` that
+      // preserved the types.
+      const raw = tree();
       const state = encodeSpecials(raw, fullConfig.preserveTypes) as T;
 
       // Detect circular references if needed
