@@ -1,5 +1,7 @@
 import { signal, untracked } from '@angular/core';
 
+declare const ngDevMode: boolean | undefined;
+
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 /**
@@ -320,6 +322,44 @@ export interface StoredSignal<T> {
 let storedRegistered = false;
 
 /**
+ * ST2020 — two `stored()` markers on the same storage key.
+ *
+ * Each `stored()` creates its OWN signal. Two markers sharing a key both read
+ * the same slot at construction and both write to it, but neither observes the
+ * other: set one and the other keeps its stale value until something forces it
+ * to re-read. The two then race on write, and last-writer-wins silently.
+ *
+ * Warned rather than merged, deliberately. Interning the signal per key looks
+ * like the fix and is wrong: two calls may carry conflicting `defaultValue`,
+ * `version` or `migrate`, and there is no correct way to merge those. A
+ * per-key generation counter is worse — it puts a map lookup on `sig()`, the
+ * hottest path in the library, and makes a signal read perform I/O.
+ *
+ * Dev-only, and the registry is dev-only too so production allocates nothing.
+ * Capped so a key generated in a loop cannot grow it without bound.
+ */
+const STORED_KEYS_SEEN = new Set<string>();
+const STORED_KEYS_WARNED = new Set<string>();
+const STORED_KEY_CAP = 512;
+
+function warnDuplicateStoredKey(key: string): void {
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) return;
+  if (STORED_KEYS_SEEN.has(key)) {
+    if (STORED_KEYS_WARNED.has(key)) return;
+    STORED_KEYS_WARNED.add(key);
+    console.warn(
+      `SignalTree: stored("${key}") was created more than once. Each call makes ` +
+        `its OWN signal — they do not observe each other, so one will hold a ` +
+        `stale value and they will race on write. Create the marker once and ` +
+        `share the tree node, or use distinct keys. [ST2020]`
+    );
+    return;
+  }
+  if (STORED_KEYS_SEEN.size >= STORED_KEY_CAP) return;
+  STORED_KEYS_SEEN.add(key);
+}
+
+/**
  * Creates a stored marker for localStorage persistence.
  *
  * Automatically registers its processor on first use - no manual
@@ -388,12 +428,39 @@ export function stored<T>(
     registerBuiltinMarkerProcessor(isStoredMarker, createStoredSignal);
   }
 
-  return {
+  warnDuplicateStoredKey(key);
+
+  const marker = {
     [STORED_MARKER]: true,
     key,
     defaultValue,
-    options,
-  };
+  } as StoredMarker<T>;
+
+  // `options` is NON-ENUMERABLE, and that is a security property rather than a
+  // style choice.
+  //
+  // It holds the caller's `storage` object. A raw marker that reaches a
+  // snapshot gets deep-copied by `unwrap`, which enumerates own keys — so an
+  // enumerable `options` carried the CONTENTS of that storage into `tree()`,
+  // and from there into serialization(), persistence(), devtools payloads and
+  // audit logs:
+  //
+  //   {"list":[{"key":"k","options":{"storage":{"auth-token":"SECRET-JWT"}}}]}
+  //
+  // 13.4.0 closed the paths where a raw marker could escape at the top level or
+  // nested in an object, but a marker inside an ARRAY is never materialised, so
+  // it still escaped. Rather than chase each traversal, the payload itself is
+  // now invisible to enumeration: `Object.keys`, spread, `JSON.stringify` and
+  // `unwrap` all skip it, while `createStoredSignal` reads `marker.options`
+  // directly and is unaffected.
+  Object.defineProperty(marker, 'options', {
+    value: options,
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
+
+  return marker;
 }
 
 // =============================================================================

@@ -284,6 +284,52 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
  * updater returns a Promise.
  */
 /**
+ * ST2021 — a marker inside an array.
+ *
+ * Array elements are never traversed, so a marker in one is never materialised:
+ * it stays a raw marker object for the life of the tree. `tree.$.list()[0]` is
+ * a plain `{ key, defaultValue }`, not a signal, and every write to it is lost.
+ * Silent, and it looks like it should work.
+ *
+ * "Store the array as a Map so elements CAN be traversed" is the natural fix and
+ * is already built — it is what `entityMap` is, and it measures 28.5x faster
+ * than an immutable store on the keyed-collection task. Applying it to EVERY
+ * array is what does not survive measurement: a per-node Map index cost +12.1%
+ * on subtree reads and 310B/node in this repo (built, measured, reverted), an
+ * index-keyed structure pays O(n) to reindex on any insert or reorder, and
+ * `tree()` has to hand back a real Array regardless. Most arrays in a tree are
+ * ordered lists of primitives and would pay that for nothing.
+ *
+ * So: a keyed collection is an `entityMap`; an ordered list is an array leaf;
+ * and a marker in an array is the first case wearing the second's clothes.
+ *
+ * Bounded scan, dev only, deduped per key.
+ */
+const MARKER_IN_ARRAY_WARNED = new Set<string>();
+
+function warnMarkerInArray(key: string, value: readonly unknown[]): void {
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) return;
+  if (MARKER_IN_ARRAY_WARNED.has(key)) return;
+
+  const limit = Math.min(value.length, ENTITY_ARRAY_SAMPLE);
+  for (let i = 0; i < limit; i++) {
+    const item = value[i];
+    if (item === null || typeof item !== 'object') continue;
+    if (!isEntityMapMarker(item) && !isRegisteredMarker(item)) continue;
+
+    MARKER_IN_ARRAY_WARNED.add(key);
+    console.warn(
+      `SignalTree: "${key}[${i}]" holds a MARKER inside an array. Array ` +
+        `elements are never traversed, so the marker is never materialised — ` +
+        `it stays a raw object, it is not a signal, and writes to it are lost. ` +
+        `Markers belong at object positions; for a keyed collection use ` +
+        `entityMap({ selectId }). [ST2021]`
+    );
+    return;
+  }
+}
+
+/**
  * ST2018 — an array of entities is being stored as a plain array leaf.
  *
  * This is the most expensive idiom mistake available in SignalTree, and it does
@@ -672,7 +718,10 @@ function createSignalStore<T>(
 
     // Arrays, built-ins
     if (Array.isArray(value) || isBuiltInObject(value)) {
-      if (Array.isArray(value)) warnEntityArrayLeaf(key, value);
+      if (Array.isArray(value)) {
+        warnMarkerInArray(key, value);
+        warnEntityArrayLeaf(key, value);
+      }
       store[key] = signal(value, { equal: equalityFn });
       continue;
     }
