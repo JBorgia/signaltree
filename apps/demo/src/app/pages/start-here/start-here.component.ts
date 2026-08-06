@@ -93,7 +93,7 @@ export class CartView {
       audience: "I'm ready to build",
       title: 'Run the fundamentals',
       description:
-        'Open a working playground with the core APIs in one page — entityMap, status, stored, callable syntax, and forms.',
+        'Open a working playground with the core APIs in one page — entityMap, status, stored, callable branches, and forms.',
       route: '/examples/fundamentals',
       cta: 'Open fundamentals →',
     },
@@ -109,7 +109,7 @@ export class CartView {
       audience: 'I want the full reference',
       title: 'Browse package docs',
       description:
-        'Core API surface, plus optional packages: ng-forms, realtime, enterprise, callable-syntax, schema. Every type, every signature.',
+        'Core API surface, plus optional packages: ng-forms, realtime, enterprise, schema. Every type, every signature.',
       route: '/docs',
       cta: 'Open docs →',
     },

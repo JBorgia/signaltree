@@ -136,15 +136,15 @@ export const callableSyntaxExampleMeta: ExampleMeta = {
   id: 'callable-syntax',
   title: 'Callable Syntax',
   description:
-    'Master the unified callable API for setting and updating signal values.',
+    'What is callable and what is not: branches and the root merge on call; a leaf is an Angular signal, so it takes .set()/.update().',
   category: 'API',
   focusAreas: ['api', 'syntax', 'usability'],
   functionalUse: ['state-updates', 'api-usage'],
-  enhancers: ['callable-syntax'],
+  enhancers: [],
   route: '/callable-syntax',
   component: CallableSyntaxDemoComponent,
   difficulty: 'beginner',
-  tags: ['callable-syntax', 'api', 'fluent-api', 'usability'],
+  tags: ['callable-syntax', 'api', 'fluent-api', 'usability', 'core'],
 };
 
 /**

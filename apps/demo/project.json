@@ -49,11 +49,6 @@
           },
           {
             "glob": "README.md",
-            "input": "packages/callable-syntax",
-            "output": "assets/docs/callable-syntax"
-          },
-          {
-            "glob": "README.md",
             "input": "packages/guardrails",
             "output": "assets/docs/guardrails"
           },

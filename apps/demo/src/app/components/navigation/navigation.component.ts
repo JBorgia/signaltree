@@ -113,10 +113,9 @@ export class NavigationComponent {
     {
       id: 'callable-syntax',
       title: 'Callable Syntax',
-      description: 'Optional DX layer for callable node syntax',
-      route: '/docs',
-      queryParams: { package: 'callable-syntax' },
-      category: 'packages',
+      description: 'Branches merge on call; leaves take .set()/.update()',
+      route: '/callable-syntax',
+      category: 'learn',
     },
     {
       id: 'form-marker',

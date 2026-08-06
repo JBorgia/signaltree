@@ -130,7 +130,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Fundamentals',
       description:
-        'Working playground for the SignalTree core API: signalTree initialization, entityMap, status, stored, callable syntax, forms.',
+        'Working playground for the SignalTree core API: signalTree initialization, entityMap, status, stored, callable branches, forms.',
     },
   },
 
@@ -382,7 +382,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Documentation',
       description:
-        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, enterprise, and callable-syntax packages.',
+        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, enterprise, and schema packages.',
     },
   },
 

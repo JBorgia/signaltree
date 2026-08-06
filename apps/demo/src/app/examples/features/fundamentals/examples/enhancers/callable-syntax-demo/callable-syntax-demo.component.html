@@ -1,40 +1,55 @@
 <div class="container">
-  <st-example heading="🚀 SignalTree Callable Syntax" [headingLevel]="1" [code]="codeFiles">
+  <st-example
+    heading="🚀 Callable Syntax: what is, what isn&#39;t, and why"
+    [headingLevel]="1"
+    [code]="codeFiles"
+  >
     <!-- Info Banner (rich markup → intro slot) -->
     <div intro class="info-banner">
-      <h3>
-        ✨ Comprehensive Callable Syntax with &#64;signaltree/callable-syntax
-      </h3>
+      <h3>Branches are callable. Leaves are not.</h3>
       <p>
-        This demo showcases the complete callable syntax that transforms at
-        build time:
+        One fact explains the whole rule:
+        <strong>only leaves are Angular signals.</strong>
+        A branch is SignalTree&#39;s own accessor, so we own its call semantics
+        and a call can mean &ldquo;merge this&rdquo;. We do not own a
+        signal&#39;s: calling an Angular signal is a
+        <em>read</em>
+        , and it ignores arguments.
       </p>
       <ul>
         <li>
-          <code>tree.$.name('value')</code>
-          →
-          <code>tree.$.name.set('value')</code>
+          <code>tree.$.user({{ '{' }} name: 'Bob' {{ '}' }})</code>
+          — branch, partial merge ✅
         </li>
         <li>
-          <code>tree.$.age(n => n + 1)</code>
-          →
-          <code>tree.$.age.update(n => n + 1)</code>
+          <code>tree.$.user(u => ...)</code>
+          — branch, updater ✅
         </li>
         <li>
-          <code>tree.$.profile.email('new&#64;email.com')</code>
-          →
-          <code>tree.$.profile.email.set('new&#64;email.com')</code>
+          <code>tree({{ '{' }} ... {{ '}' }})</code>
+          — the root, same shape ✅
         </li>
         <li>
-          <code>tree.$.items(arr => [...arr, item])</code>
-          →
-          <code>tree.$.items.update(arr => [...arr, item])</code>
+          <code>tree.$.name.set('Jane')</code>
+          — leaf write ✅
+        </li>
+        <li>
+          <code>tree.$.name('Jane')</code>
+          — leaf call ❌ compile error since 14.0.0
         </li>
       </ul>
       <p>
-        <strong>Note:</strong> TypeScript may show errors in the IDE - that's
-        expected! The &#64;signaltree/callable-syntax transform fixes them at
-        build time.
+        <strong>What changed in 14.0.0:</strong>
+        that last line used to type-check and then silently do nothing. The
+        build transform meant to make it real
+        (<code>&#64;signaltree/callable-syntax</code>) could not run inside an
+        Angular app at all, and could not tell a leaf from a branch — so it also
+        broke branch calls it rewrote. The package and the type overloads are
+        both gone. Every button below writes leaves with
+        <code>.set()</code>
+        /
+        <code>.update()</code>
+        , which has always been the working form.
       </p>
     </div>
 

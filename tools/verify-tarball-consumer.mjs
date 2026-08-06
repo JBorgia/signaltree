@@ -41,7 +41,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist', 'packages');
 const PACKAGES = [
   'core',
-  'callable-syntax',
   'enterprise',
   'guardrails',
   'ng-forms',

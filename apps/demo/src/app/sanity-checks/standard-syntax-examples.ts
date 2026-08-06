@@ -188,7 +188,7 @@ performanceTree.$.analytics.sessions.update((current) => current + 1);
 // callable surface. (Through 13.x the types also permitted `leaf(value)`, via
 // the `@signaltree/callable-syntax` build transform. It silently did nothing in
 // Angular apps, where that transform cannot run at all, and the overloads were
-// removed in 14.0.0. See docs/guides/callable-syntax.md.)
+// removed in 14.0.0.)
 
 const callableTree = signalTree({
   user: {

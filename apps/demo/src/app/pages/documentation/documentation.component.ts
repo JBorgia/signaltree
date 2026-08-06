@@ -72,12 +72,6 @@ export class DocumentationComponent implements OnInit {
       readmePath: 'assets/docs/guardrails/README.md',
     },
     {
-      id: 'callable-syntax',
-      name: '@signaltree/callable-syntax',
-      description: 'Build-time transform for optional callable node syntax',
-      readmePath: 'assets/docs/callable-syntax/README.md',
-    },
-    {
       id: 'schema',
       name: '@signaltree/schema',
       description: 'Schema-based validation enhancer with path-level error reporting',

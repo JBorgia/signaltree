@@ -15,74 +15,68 @@ interface User {
 }
 
 // Code shown in the st-example source panel (was two hand-rolled code tabs).
-const CALLABLE_SOURCE = `// ✨ New Callable Syntax (transforms at build time)
-// The @signaltree/callable-syntax build transform rewrites LEAF calls like
-// tree.$.name('Jane') into tree.$.name.set('Jane'). Without the transform,
-// calling a leaf is a SILENT NO-OP: a leaf is a plain Angular signal(), and
-// calling a signal with an argument just ignores it and returns the current
-// value — nothing is written.
+const CALLABLE_SOURCE = `// ✅ WHAT IS CALLABLE — branches and the root
+//
+// One fact explains the whole rule: ONLY LEAVES ARE ANGULAR SIGNALS.
+// A branch is SignalTree's own accessor, so we own its call semantics and a
+// call can mean "merge this". Nothing to install; this is native.
 
-// Basic value setting
-tree.$.name('Jane');                           // → .set('Jane')
-tree.$.age(25);                               // → .set(25)
-tree.$.active(true);                          // → .set(true)
+// Branch — read the whole subtree
+tree.$.user.profile();                        // → { email, settings }
 
-// Functional updates
-tree.$.age(current => current + 1);          // → .update(fn)
-tree.$.tags(tags => [...tags, 'new']);       // → .update(fn)
+// Branch — PARTIAL write. Unlisted keys are left alone.
+tree.$.user.profile({ email: 'new@email.com' });
 
-// Deep nested leaf
-tree.$.user.profile.email('new@email.com');  // → .set('new@email.com')
+// Branch — updater form
+tree.$.user.profile(p => ({ ...p, email: normalise(p.email) }));
 
-// Array operations
-tree.$.numbers([10, 20, 30]);                // → .set([10, 20, 30])
-tree.$.users(users => users.filter(u => u.active)); // → .update(fn)
+// Root — callable too, and merges the same way
+tree({ name: 'Jane' });
 
-// Reading values (unchanged)
-const name = tree.$.name();                  // Always works
-const age = tree.$.user.profile.age();      // Deep access
+// ❌ WHAT IS NOT — leaves
+//
+// A leaf IS a real Angular signal. Calling a signal is a READ: it returns the
+// value and IGNORES any argument. So this never wrote anything...
+tree.$.name('Jane');     // 14.0.0: compile error. Before: silent no-op.
 
-// ── Already native — no transform needed ────────────────────────────────
-// Calling a BRANCH (an object node, not a leaf) with a function or a
-// partial object is built into NodeAccessor itself (see makeNodeAccessor
-// in @signaltree/core) — it works with zero build tooling.
-tree.$.user.profile(profile => updateProfile(profile));  // native update(fn)
-tree.$.user.profile({ email: 'new@email.com' });          // native partial merge
-
-// ⚠️ CAVEAT: don't mix the two styles in a file the transform processes.
-// The transform rewrites ANY tree.$.path(args) call to .set()/.update() —
-// it can't tell a leaf from a branch. Branch NodeAccessors have NO
-// .set()/.update() method, so a branch call like the ones above would be
-// rewritten into a call to a method that doesn't exist and THROW at
-// runtime. Keep branch-call syntax out of transformed files, or stick to
-// tree.$.branch.leaf(...) leaf calls there instead.`;
-
-const CURRENT_SOURCE = `// 🔧 Current Explicit Syntax (always works, no transform needed)
-
-// Basic value setting
+// ...and this is how you write a leaf:
 tree.$.name.set('Jane');
-tree.$.age.set(25);
-tree.$.active.set(true);
+tree.$.age.update(current => current + 1);`;
 
-// Functional updates
-tree.$.age.update(current => current + 1);
-tree.$.tags.update(tags => [...tags, 'new']);
-
-// Deep nested leaf
-tree.$.user.profile.email.set('new@email.com');
-
-// Array operations
-tree.$.numbers.set([10, 20, 30]);
-tree.$.users.update(users => users.filter(u => u.active));
-
-// Reading values
-const name = tree.$.name();
-const age = tree.$.user.profile.age();
-
-// Branches (object nodes) have NO .set()/.update() method — the callable
-// form IS the explicit syntax for branches, and it's native already:
-tree.$.user.profile(profile => updateProfile(profile));  // update via fn
-tree.$.user.profile({ email: 'new@email.com' });          // partial merge`;
+const CURRENT_SOURCE = `// 🔧 WHY THE LEAF FORM WAS REMOVED IN 14.0.0
+//
+// Through 13.x the TYPE said \`tree.$.name('Jane')\` was valid. The runtime
+// ignored it. Wrong at compile time AND silent at run time — the worst pair,
+// and why this became a type removal rather than a deprecation.
+//
+// @signaltree/callable-syntax was meant to make it true by rewriting
+// leaf(v) → leaf.set(v) at build time. Three independent problems:
+//
+//   1. It cannot run in an Angular app AT ALL. @angular/build:application
+//      exposes no plugins option; the experimental codePlugins passthrough
+//      runs after ngtsc has already claimed every .ts file (a probe plugin
+//      received ZERO of them); ngtsc's transformer list is hardcoded; and
+//      ts-patch goes inert in production because program.emit() is bypassed
+//      under isolatedModules. Angular is this library's primary audience.
+//
+//   2. It could not tell a leaf from a branch. It rewrote ANY tree.$.path(x)
+//      to .set()/.update() — but a branch accessor HAS no .set(), so a branch
+//      call in a transformed file became a call to a missing method and threw
+//      at runtime. Mixing the two styles in one file was unsafe by design.
+//
+//   3. Its /augmentation entry globally augmented Angular's WritableSignal,
+//      re-introducing the exact @ngrx/signals conflict core had deliberately
+//      removed.
+//
+// Making leaves callable FOR REAL was measured and rejected — on identity, not
+// speed. A wrapper costs ~4% on a set+get, inside noise. But a wrapper is not
+// a signal: isSignal() returns false and Symbol(SIGNAL) disappears, breaking
+// toObservable, model()/input() interop, and everything that guards on
+// isSignal. "Leaves are real Angular signals" is the interop guarantee the
+// whole design rests on. Sugar does not outrank it.
+//
+// The package was deleted in 14.0.0. Pinned by callable-contract.spec.ts and
+// its .typing sibling in @signaltree/core.`;
 
 @Component({
   selector: 'app-callable-syntax-demo',
@@ -97,8 +91,8 @@ export class CallableSyntaxDemoComponent {
 
   // Source tabs for the st-example code viewer.
   readonly codeFiles: CodeFile[] = [
-    { label: 'New Callable Syntax', language: 'typescript', source: CALLABLE_SOURCE },
-    { label: 'Current Explicit Syntax', language: 'typescript', source: CURRENT_SOURCE },
+    { label: 'What is callable', language: 'typescript', source: CALLABLE_SOURCE },
+    { label: 'Why leaves are not', language: 'typescript', source: CURRENT_SOURCE },
   ];
 
   // Basic patterns - from test-cases_transformed.ts
@@ -199,13 +193,12 @@ export class CallableSyntaxDemoComponent {
     largeArray: [] as number[],
   });
 
-  // Basic Pattern Methods (using callable syntax - shows TS errors until transformed)
+  // Basic pattern methods — leaves are written with .set()/.update()
   updateBasicProfile() {
     const names = ['John', 'Jane', 'Alex', 'Sam'];
     const currentName = this.basicProfile.$.name();
     const nextName = names[(names.indexOf(currentName) + 1) % names.length];
 
-    // Using regular syntax for now since transform isn't active
     this.basicProfile.$.name.set(nextName);
   }
 

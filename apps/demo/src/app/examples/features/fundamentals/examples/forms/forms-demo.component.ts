@@ -137,7 +137,7 @@ export class FormsDemoComponent {
   }
 
   resetForm() {
-    // Reset each section of the form state using callable syntax
+    // Reset each section of the form state — these are BRANCHES, which are callable
     this.formStore.$.fields({
       username: '',
       email: '',
