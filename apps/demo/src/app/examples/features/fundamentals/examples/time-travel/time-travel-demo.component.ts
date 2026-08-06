@@ -43,17 +43,6 @@ interface TimeTravelEntry {
   payload?: unknown;
 }
 
-interface TimeTravelInterface {
-  undo(): boolean;
-  redo(): boolean;
-  getHistory(): TimeTravelEntry[];
-  resetHistory(): void;
-  jumpTo(index: number): boolean;
-  getCurrentIndex(): number;
-  canUndo(): boolean;
-  canRedo(): boolean;
-}
-
 @Component({
   selector: 'app-time-travel-demo',
   standalone: true,

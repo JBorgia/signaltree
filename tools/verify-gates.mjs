@@ -86,13 +86,17 @@ const GATES = [
     },
   },
   {
-    name: 'lint:all',
-    covers: 'eslint across all 9 published + demo projects',
-    cmd: ['npm', 'run', 'lint:all'],
+    name: 'lint:budget',
+    covers: 'eslint errors across all 9 projects, AND warnings never grow',
+    // Replaces a bare `npm run lint:all`, which this harness caught passing
+    // while an unused `any`-typed function sat in core: lint reported it as a
+    // warning and exited 0, because nothing passes --max-warnings. 577 warnings
+    // exist, so --max-warnings 0 is not available; the budget ratchets instead.
+    cmd: ['node', 'tools/check-lint-budget.mjs'],
     slow: true,
     mutation: {
       file: 'packages/core/src/lib/utils.ts',
-      append: '\nfunction __gateUnused(x: any) { return x; }\n',
+      append: '\nexport function __gateMutation(x: any) { return x; }\n',
     },
   },
   {

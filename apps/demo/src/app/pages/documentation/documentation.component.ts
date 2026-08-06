@@ -154,7 +154,7 @@ export class DocumentationComponent implements OnInit {
 
       const html = await marked.parse(markdown);
       this.markdownContent.set(this.highlightCodeBlocks(html));
-    } catch (err) {
+    } catch {
       this.error.set(`Failed to load documentation for ${pkg.name}`);
       this.markdownContent.set('');
     } finally {
@@ -185,7 +185,7 @@ export class DocumentationComponent implements OnInit {
           codeElement.innerHTML = result.value;
         }
         codeElement.classList.add('hljs');
-      } catch (error) {
+      } catch {
         // Leave unhighlighted on failure.
       }
     }
