@@ -58,18 +58,18 @@
 
 ## 3. Locked architectural decisions
 
-| # | Decision | Rationale |
-|---|---|---|
-| D1 | **Async-first surface.** All schema runs route through a promise (sync schemas use a fast-path branch — see §6.1). `pending`, `pendingPaths`, `isPendingAt(path)` are first-class signals. | `StandardSchemaV1.validate` returns `Result \| Promise<Result>`. A sync-only surface fails the moment a user registers a Valibot async schema. |
-| D2 | **Observe-only, never reject.** Modes are `'accept'` (default) and `'warn'`. No `'reject'`. | Async writes have already notified subscribers before the schema settles. Rollback is unsafe and surprising. The enhancer is a reporter, not a gatekeeper. |
-| D3 | **Write-sequence guard with per-path version counters.** Each leaf has a monotonic `version`; each schema dispatch captures `version`; on settle, stale verdicts (captured ≠ current) are discarded. Generalized to **ancestor-run records** for one-run→N-leaves cases (see §6.3). | Without the guard, a slow schema run for write A can clobber the verdict for a newer write B. |
-| D4 | **Fixed precedence for ancestor vs specific schemas.** Specific schema owns its leaf; ancestor schema only writes/clears errors for leaves no specific schema claims. Determined at attach time via a `leafOwner` map. | Two unsynchronized clocks (ancestor version, leaf version) cannot last-write-wins coherently. Fixed precedence collapses to one clock per leaf. |
-| D5 | **Ambient write-context channel** (`withWriteContext`) in core. Enhancers consume via `getActiveWriteContext()`. Synchronous capture only — does **not** survive `await` boundaries. | Angular's `WritableSignal.set(value)` signature cannot be widened to carry metadata. An ambient channel is the only seam that doesn't fork the signal API. |
-| D6 | **Single registration site by type-shape.** `signalForm` (planned as `signalFormBridge`) requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schemas.schemaFor(path)`. There is no `schemas` argument on the bridge. | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline. |
-| D7 | **Lazy wildcard match-on-write.** Patterns compile to a matcher at attach. On every leaf write, the matcher is consulted; first match (longest-specific) lazily instantiates `PathState`. No upfront entity enumeration, no add/remove event subscription. | Verification confirmed `entityMap` exposes no add/remove notifications. Lazy match avoids both that gap and the O(n) enumeration cost on 1000-item lists. Eviction is deferred — small leak, ship `tree.schemas.compact()` as the manual control. |
-| D8 | **Per-path signal memoization in a path-keyed `Map`,** with optional eviction via `tree.schemas.compact()`. `errorsAt`, `isValidAt`, `isPendingAt` return the same `Signal` for the same path across calls. | Without memoization, `errorsAt(userId)` inside a list renderer creates a new `computed` per render — classic leak. |
-| D9 | **PR3 default is per-field binding, not whole-object.** Whole-object Signal Forms binding is the optimization branch, attempted only if measured. | H1/H2/H3 of the v2 hypotheses share a root cause: whole-object replacement. Per-field binding makes three of four pass trivially. The actual unknown is whether Signal Forms permits external per-field writables — that's the PR3 API-capability spike, not the perf benchmark. |
-| D10 | **Bundle budget ≤ 6 KB gzipped** for `@signaltree/schema`. Optional `@signaltree/schema/collections` subpath if wildcard expansion proves too heavy to fit. | Re-derived from runtime weight per §11. Types compile to zero; the bulk is the version-guard machinery, path mapping, and matcher. |
+| #   | Decision                                                                                                                                                                                                                                                                            | Rationale                                                                                                                                                                                                                                                                        |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | **Async-first surface.** All schema runs route through a promise (sync schemas use a fast-path branch — see §6.1). `pending`, `pendingPaths`, `isPendingAt(path)` are first-class signals.                                                                                          | `StandardSchemaV1.validate` returns `Result \| Promise<Result>`. A sync-only surface fails the moment a user registers a Valibot async schema.                                                                                                                                   |
+| D2  | **Observe-only, never reject.** Modes are `'accept'` (default) and `'warn'`. No `'reject'`.                                                                                                                                                                                         | Async writes have already notified subscribers before the schema settles. Rollback is unsafe and surprising. The enhancer is a reporter, not a gatekeeper.                                                                                                                       |
+| D3  | **Write-sequence guard with per-path version counters.** Each leaf has a monotonic `version`; each schema dispatch captures `version`; on settle, stale verdicts (captured ≠ current) are discarded. Generalized to **ancestor-run records** for one-run→N-leaves cases (see §6.3). | Without the guard, a slow schema run for write A can clobber the verdict for a newer write B.                                                                                                                                                                                    |
+| D4  | **Fixed precedence for ancestor vs specific schemas.** Specific schema owns its leaf; ancestor schema only writes/clears errors for leaves no specific schema claims. Determined at attach time via a `leafOwner` map.                                                              | Two unsynchronized clocks (ancestor version, leaf version) cannot last-write-wins coherently. Fixed precedence collapses to one clock per leaf.                                                                                                                                  |
+| D5  | **Ambient write-context channel** (`withWriteContext`) in core. Enhancers consume via `getActiveWriteContext()`. Synchronous capture only — does **not** survive `await` boundaries.                                                                                                | Angular's `WritableSignal.set(value)` signature cannot be widened to carry metadata. An ambient channel is the only seam that doesn't fork the signal API.                                                                                                                       |
+| D6  | **Single registration site by type-shape.** `signalForm` (planned as `signalFormBridge`) requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schemas.schemaFor(path)`. There is no `schemas` argument on the bridge.                                   | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline.                                                                                                                  |
+| D7  | **Lazy wildcard match-on-write.** Patterns compile to a matcher at attach. On every leaf write, the matcher is consulted; first match (longest-specific) lazily instantiates `PathState`. No upfront entity enumeration, no add/remove event subscription.                          | Verification confirmed `entityMap` exposes no add/remove notifications. Lazy match avoids both that gap and the O(n) enumeration cost on 1000-item lists. Eviction is deferred — small leak, ship `tree.schemas.compact()` as the manual control.                                |
+| D8  | **Per-path signal memoization in a path-keyed `Map`,** with optional eviction via `tree.schemas.compact()`. `errorsAt`, `isValidAt`, `isPendingAt` return the same `Signal` for the same path across calls.                                                                         | Without memoization, `errorsAt(userId)` inside a list renderer creates a new `computed` per render — classic leak.                                                                                                                                                               |
+| D9  | **PR3 default is per-field binding, not whole-object.** Whole-object Signal Forms binding is the optimization branch, attempted only if measured.                                                                                                                                   | H1/H2/H3 of the v2 hypotheses share a root cause: whole-object replacement. Per-field binding makes three of four pass trivially. The actual unknown is whether Signal Forms permits external per-field writables — that's the PR3 API-capability spike, not the perf benchmark. |
+| D10 | **Bundle budget ≤ 6 KB gzipped** for `@signaltree/schema`. Optional `@signaltree/schema/collections` subpath if wildcard expansion proves too heavy to fit.                                                                                                                         | Re-derived from runtime weight per §11. Types compile to zero; the bulk is the version-guard machinery, path mapping, and matcher.                                                                                                                                               |
 
 ---
 
@@ -81,10 +81,7 @@
 // packages/schema/src/index.ts
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Signal } from '@angular/core';
-import type {
-  ISignalTree,
-  UpdateMetadata,
-} from '@signaltree/core';
+import type { ISignalTree, UpdateMetadata } from '@signaltree/core';
 
 /** Dotted path with optional `*` segments. Examples: `user.email`, `users.*.email`, `orders.*.items.*.qty`. */
 export type SchemaPath = string;
@@ -160,9 +157,7 @@ export interface SchemaMethods<T> {
   };
 }
 
-export function schema(
-  config: SchemaConfig
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SchemaMethods<T>;
+export function schema(config: SchemaConfig): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SchemaMethods<T>;
 ```
 
 ### 4.2 `@signaltree/core` additions
@@ -208,16 +203,7 @@ export interface InterceptLeafSignalsOptions {
   maxDepth?: number;
 }
 
-export function interceptLeafSignals(
-  root: unknown,
-  onWrite: (
-    path: string,
-    next: unknown,
-    prev: unknown,
-    meta?: UpdateMetadata,
-  ) => void,
-  options?: InterceptLeafSignalsOptions,
-): () => void;
+export function interceptLeafSignals(root: unknown, onWrite: (path: string, next: unknown, prev: unknown, meta?: UpdateMetadata) => void, options?: InterceptLeafSignalsOptions): () => void;
 ```
 
 The wrapped `.set` / `.update` captures `getActiveWriteContext()` synchronously immediately before calling `onWrite`. The captured value is passed through as `meta`.
@@ -241,11 +227,7 @@ export interface SignalFormMethods {
   };
 }
 
-export function signalFormBridge(
-  config?: SignalFormBridgeConfig,
-): <T>(
-  tree: ISignalTree<T> & SchemaMethods<T>,
-) => ISignalTree<T> & SchemaMethods<T> & SignalFormMethods;
+export function signalFormBridge(config?: SignalFormBridgeConfig): <T>(tree: ISignalTree<T> & SchemaMethods<T>) => ISignalTree<T> & SchemaMethods<T> & SignalFormMethods;
 ```
 
 The `& SchemaMethods<T>` constraint on the input tree is load-bearing — it forces the user to apply `schemas()` before the bridge (shipped as `signalForm()`), which is what makes single-registration enforceable at the type level (D6).
@@ -281,10 +263,10 @@ interface AncestorRunRecord {
 }
 
 interface SchemaEntry {
-  pattern: string;             // original key from config.schemas
+  pattern: string; // original key from config.schemas
   schema: StandardSchemaV1;
   isWildcard: boolean;
-  isAncestor: boolean;         // true if schema covers a subtree (not a single leaf)
+  isAncestor: boolean; // true if schema covers a subtree (not a single leaf)
   /** Compiled matcher segments for wildcard expansion. */
   segments: ReadonlyArray<string | typeof WILDCARD>;
 }
@@ -319,12 +301,7 @@ interface Registry {
 A single leaf write at path `P` can match **both** a specific schema (which owns `P`) and one or more ancestor schemas (which own sibling leaves under a common prefix). The top-level `routeWrite` is the dispatcher; it fans out to `dispatchLeafRun` (this section) and `dispatchAncestorRun` (§6.3). Suppression is checked once at the router, not per dispatched run.
 
 ```ts
-function routeWrite(
-  path: string,
-  next: unknown,
-  prev: unknown,
-  meta?: UpdateMetadata,
-): void {
+function routeWrite(path: string, next: unknown, prev: unknown, meta?: UpdateMetadata): void {
   // Suppression: applied once at the router, not per dispatched run.
   if (meta?.intent && config.suppressIntents?.includes(meta.intent)) return;
   if (meta?.source && config.suppressSources?.includes(meta.source)) return;
@@ -348,11 +325,7 @@ function routeWrite(
   }
 }
 
-function dispatchLeafRun(
-  entry: SchemaEntry,
-  path: string,
-  next: unknown,
-): void {
+function dispatchLeafRun(entry: SchemaEntry, path: string, next: unknown): void {
   const state = ensurePathState(path);
   const myVersion = ++state.version;
 
@@ -382,15 +355,11 @@ function dispatchLeafRun(
       applyLeafVerdict(state, path, `validation runtime error: ${String(err)}`);
       state.pendingSignal.set(false);
       removePendingPath(path);
-    },
+    }
   );
 }
 
-function applyLeafVerdict(
-  state: PathState,
-  path: string,
-  msg: string | null,
-): void {
+function applyLeafVerdict(state: PathState, path: string, msg: string | null): void {
   // Maintain the O(1) invalid-count for `isValid` (see §6.6). Both leaf and
   // ancestor dispatches funnel through applyLeafVerdict, so the counter stays
   // consistent across both paths.
@@ -456,12 +425,7 @@ function matchSpecificity(pattern: readonly (string | typeof WILDCARD)[], segs: 
 When a write at path `P` is matched by an ancestor schema at `A` (where `A` is a strict prefix of `P`), dispatch the ancestor run against `A`'s current value — not just the changed leaf:
 
 ```ts
-function onAncestorWrite(
-  ancestorEntry: SchemaEntry,
-  ancestorPath: string,
-  changedLeaf: string,
-  meta?: UpdateMetadata,
-): void {
+function onAncestorWrite(ancestorEntry: SchemaEntry, ancestorPath: string, changedLeaf: string, meta?: UpdateMetadata): void {
   // Suppression check identical to onLeafWrite.
 
   const runId = ++ancestorRunCounter;
@@ -480,12 +444,7 @@ function onAncestorWrite(
   registry.activeAncestorRuns.set(ancestorPath, record);
 }
 
-async function dispatchAncestor(
-  entry: SchemaEntry,
-  ancestorPath: string,
-  capturedVersions: ReadonlyMap<string, number>,
-  ownedLeaves: ReadonlySet<string>,
-): Promise<void> {
+async function dispatchAncestor(entry: SchemaEntry, ancestorPath: string, capturedVersions: ReadonlyMap<string, number>, ownedLeaves: ReadonlySet<string>): Promise<void> {
   const ancestorValue = readTreeAtPath(ancestorPath);
   const result = await Promise.resolve(entry.schema['~standard'].validate(ancestorValue));
 
@@ -527,11 +486,7 @@ async function dispatchAncestor(
 
 ```ts
 function issueToLeafPath(rootPath: string, issue: StandardSchemaV1.Issue): string {
-  const segs = (issue.path ?? []).map((p) =>
-    typeof p === 'object' && p !== null && 'key' in p
-      ? String((p as { key: PropertyKey }).key)
-      : String(p),
-  );
+  const segs = (issue.path ?? []).map((p) => (typeof p === 'object' && p !== null && 'key' in p ? String((p as { key: PropertyKey }).key) : String(p)));
   return segs.length ? `${rootPath}.${segs.join('.')}` : rootPath;
 }
 ```
@@ -575,9 +530,7 @@ const errors = computed(() => {
   return out;
 }); // O(paths) — evaluated only when read
 
-const errorList = computed(() =>
-  Object.values(errors()).filter((v): v is string => v !== null),
-); // O(paths) — evaluated only when read
+const errorList = computed(() => Object.values(errors()).filter((v): v is string => v !== null)); // O(paths) — evaluated only when read
 
 const pending = computed(() => registry.pendingPathsSignal().length > 0);
 ```
@@ -616,7 +569,7 @@ When `true` (default), the enhancer enumerates all currently-resolvable leaves u
 
 ### 7.2 Risks / open items
 
-- **`ng-forms` history.** Verified that `formTree.setValues()` propagates through `FormGroup.valueChanges`, not leaf signal writes ([packages/ng-forms/src/history/history.ts:110](../../packages/ng-forms/src/history/history.ts#L110)). Form history undo *does* eventually reach the tree via the existing `formBridge` writing back per-leaf — which now goes through `interceptLeafSignals`, which means validation *will* fire on history undo. This is the desired UX (restored state shows errors). No wrapping needed for ng-forms history in PR1.
+- **`ng-forms` history.** Verified that `formTree.setValues()` propagates through `FormGroup.valueChanges`, not leaf signal writes ([packages/ng-forms/src/history/history.ts:110](../../packages/ng-forms/src/history/history.ts#L110)). Form history undo _does_ eventually reach the tree via the existing `formBridge` writing back per-leaf — which now goes through `interceptLeafSignals`, which means validation _will_ fire on history undo. This is the desired UX (restored state shows errors). No wrapping needed for ng-forms history in PR1.
 - **Multi-tree SSR.** `activeWriteContext` is a module-level singleton. In a JavaScript runtime, single-threaded execution makes this safe for the synchronous-capture pattern. SSR with concurrent requests sharing a tree across requests is an antipattern; document the limitation in the `withWriteContext` JSDoc.
 
 ### 7.3 Acceptance criteria
@@ -720,6 +673,7 @@ packages/schema/
 ### 8.4 Bundle measurement
 
 After PR2 lands, run `pnpm bundle-size` (or equivalent) on `@signaltree/schema`. Assert:
+
 - ≤ 6 KB gzipped (D10).
 - If over, split entity-collection support into `@signaltree/schema/collections` subpath — non-wildcard validation must fit ≤ 3.5 KB.
 
@@ -736,7 +690,7 @@ After PR2 lands, run `pnpm bundle-size` (or equivalent) on `@signaltree/schema`.
 
 ### 9.1 First deliverable: API capability spike
 
-Before any plan ink dries on the bridge shape, confirm the *actual* unknown: **does Angular Signal Forms permit binding a `FieldTree` leaf to an externally-owned `WritableSignal`** (or supplying one as the node's source), rather than owning the whole model object?
+Before any plan ink dries on the bridge shape, confirm the _actual_ unknown: **does Angular Signal Forms permit binding a `FieldTree` leaf to an externally-owned `WritableSignal`** (or supplying one as the node's source), rather than owning the whole model object?
 
 **Spike artifact:** [packages/ng-forms/spike/signal-form-per-field.spec.ts](../../packages/ng-forms/spike/signal-form-per-field.spec.ts) (new file, deleted after the spike concludes). Repro:
 
@@ -818,26 +772,26 @@ If per-field bridge ships:
 
 ### 11.1 Re-derivation
 
-| Concern | LOC est. | KB gz est. |
-|---|---|---|
-| StandardSchema runner (sync/async, formatIssue, runtime-error catch) | 40 | 0.4 |
-| Issue-path → leaf-path mapping (PropertyKey + `{key}` shapes) | 50 | 0.5 |
-| Wildcard pattern compilation + matcher + specificity scoring | 110 | 1.0 |
-| Lazy match-on-write + `leafOwner` cache | 60 | 0.6 |
-| `PathState` registry + per-path signal memo + GC via `compact()` | 110 | 1.0 |
-| Async sequence guard (leaf-side) | 50 | 0.5 |
-| Ancestor-run version capture + per-leaf staleness check | 80 | 0.8 |
-| Tree-wide aggregates (`errors`, `errorList`, `isValid`, `pending`, `pendingPaths`) | 60 | 0.6 |
-| Public API surface, factory, config normalization | 60 | 0.6 |
-| **Total estimate** | **~620** | **~6.0 KB gz** |
+| Concern                                                                            | LOC est. | KB gz est.     |
+| ---------------------------------------------------------------------------------- | -------- | -------------- |
+| StandardSchema runner (sync/async, formatIssue, runtime-error catch)               | 40       | 0.4            |
+| Issue-path → leaf-path mapping (PropertyKey + `{key}` shapes)                      | 50       | 0.5            |
+| Wildcard pattern compilation + matcher + specificity scoring                       | 110      | 1.0            |
+| Lazy match-on-write + `leafOwner` cache                                            | 60       | 0.6            |
+| `PathState` registry + per-path signal memo + GC via `compact()`                   | 110      | 1.0            |
+| Async sequence guard (leaf-side)                                                   | 50       | 0.5            |
+| Ancestor-run version capture + per-leaf staleness check                            | 80       | 0.8            |
+| Tree-wide aggregates (`errors`, `errorList`, `isValid`, `pending`, `pendingPaths`) | 60       | 0.6            |
+| Public API surface, factory, config normalization                                  | 60       | 0.6            |
+| **Total estimate**                                                                 | **~620** | **~6.0 KB gz** |
 
 ### 11.2 Budget enforcement
 
 - AGENTS.md bundle-size table gets a new row:
 
-  | Package | Max size | Max gzipped |
-  |---|---|---|
-  | `validation` | 16 KB | 6 KB |
+  | Package      | Max size | Max gzipped |
+  | ------------ | -------- | ----------- |
+  | `validation` | 16 KB    | 6 KB        |
 
 - CI gate fails if gzipped size exceeds 6 KB.
 - Overshoot mitigation: split into `@signaltree/schema` (core) + `@signaltree/schema/collections` subpath import for wildcard machinery. Bare validation (no wildcards) fits in ≤ 3.5 KB.
@@ -846,15 +800,15 @@ If per-field bridge ships:
 
 ## 12. Test matrix
 
-| Surface | Test file(s) | Notes |
-|---|---|---|
-| `withWriteContext` | `packages/core/src/lib/__tests__/write-context.spec.ts` | Nesting, throw-safety, async-boundary loss, multi-tree isolation note |
-| `interceptLeafSignals` widening | `packages/core/src/lib/internals/__tests__/intercept-leaf-signals.spec.ts` | Backwards compat with 3-arg callbacks, metadata passthrough |
-| Guardrails metadata source | `packages/guardrails/src/lib/__tests__/metadata.spec.ts` | Context wins over payload sniff; payload sniff still works |
-| Devtools time-travel intent | `packages/core/src/enhancers/devtools/__tests__/time-travel-metadata.spec.ts` | Replays carry `source: 'time-travel'` |
-| Validation core | `packages/schema/src/__tests__/*` | Per §8.3 |
-| Signal Forms bridge | `packages/ng-forms/src/enhancer/__tests__/signal-form-bridge.spec.ts` | Contingent on §9 spike |
-| End-to-end (examples app) | `apps/demo/src/app/validation/*` | One worked example: form → tree → validation → UI |
+| Surface                         | Test file(s)                                                                  | Notes                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `withWriteContext`              | `packages/core/src/lib/__tests__/write-context.spec.ts`                       | Nesting, throw-safety, async-boundary loss, multi-tree isolation note |
+| `interceptLeafSignals` widening | `packages/core/src/lib/internals/__tests__/intercept-leaf-signals.spec.ts`    | Backwards compat with 3-arg callbacks, metadata passthrough           |
+| Guardrails metadata source      | `packages/guardrails/src/lib/__tests__/metadata.spec.ts`                      | Context wins over payload sniff; payload sniff still works            |
+| Devtools time-travel intent     | `packages/core/src/enhancers/devtools/__tests__/time-travel-metadata.spec.ts` | Replays carry `source: 'time-travel'`                                 |
+| Validation core                 | `packages/schema/src/__tests__/*`                                             | Per §8.3                                                              |
+| Signal Forms bridge             | `packages/ng-forms/src/enhancer/__tests__/signal-form-bridge.spec.ts`         | Contingent on §9 spike                                                |
+| End-to-end (examples app)       | `apps/demo/src/app/validation/*`                                              | One worked example: form → tree → validation → UI                     |
 
 ---
 
@@ -862,14 +816,14 @@ If per-field bridge ships:
 
 ### 13.1 Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Signal Forms API doesn't permit external per-field writables | Medium | High — collapses PR3 to no-ship | §9.1 spike runs **first**, before any bridge code. Outcome gates the rest of PR3. |
-| Ancestor-run version capture has an edge case missed in §6.3 | Low | Medium | Comprehensive tests in `ancestor.spec.ts`; review the algorithm with a second reader before PR2 merge. |
-| Wildcard match performance under huge entity collections (>10k items) | Low | Medium | Lazy match is O(N) over patterns per write, not O(items). Patterns are typically ≤ 10. Profile if a user reports it. |
-| `compact()` is forgotten, memory leaks | High | **Medium for collection-heavy apps** (Low otherwise) | Leak is bounded by *distinct leaf paths ever written that matched a wildcard*, not by current entity count. A long-lived `users.*.email` over a session that churns 10k user rows retains 10k `PathState` + their memoized signals across the session. README characterizes this explicitly. Expose a guardrails rule "validation registry has > N stale paths" in a future minor; consider auto-compact on entity-removal notification when that API exists. |
-| Module-level write context fails under SSR with shared trees | Low (antipattern anyway) | Medium | Documented limitation in `withWriteContext` JSDoc. Users sharing trees across SSR requests should use per-request trees. |
-| StandardSchema spec evolution breaks `issueToLeafPath` | Low | Low | The mapper is one function; rev-bump and ship a patch. |
+| Risk                                                                  | Likelihood               | Impact                                               | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Signal Forms API doesn't permit external per-field writables          | Medium                   | High — collapses PR3 to no-ship                      | §9.1 spike runs **first**, before any bridge code. Outcome gates the rest of PR3.                                                                                                                                                                                                                                                                                                                                                                             |
+| Ancestor-run version capture has an edge case missed in §6.3          | Low                      | Medium                                               | Comprehensive tests in `ancestor.spec.ts`; review the algorithm with a second reader before PR2 merge.                                                                                                                                                                                                                                                                                                                                                        |
+| Wildcard match performance under huge entity collections (>10k items) | Low                      | Medium                                               | Lazy match is O(N) over patterns per write, not O(items). Patterns are typically ≤ 10. Profile if a user reports it.                                                                                                                                                                                                                                                                                                                                          |
+| `compact()` is forgotten, memory leaks                                | High                     | **Medium for collection-heavy apps** (Low otherwise) | Leak is bounded by _distinct leaf paths ever written that matched a wildcard_, not by current entity count. A long-lived `users.*.email` over a session that churns 10k user rows retains 10k `PathState` + their memoized signals across the session. README characterizes this explicitly. Expose a guardrails rule "validation registry has > N stale paths" in a future minor; consider auto-compact on entity-removal notification when that API exists. |
+| Module-level write context fails under SSR with shared trees          | Low (antipattern anyway) | Medium                                               | Documented limitation in `withWriteContext` JSDoc. Users sharing trees across SSR requests should use per-request trees.                                                                                                                                                                                                                                                                                                                                      |
+| StandardSchema spec evolution breaks `issueToLeafPath`                | Low                      | Low                                                  | The mapper is one function; rev-bump and ship a patch.                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ### 13.2 Open items — resolved
 
@@ -910,10 +864,11 @@ PR1: lift UpdateMetadata + write-context channel
 Some readers will reach for a synchronous "reject the write if invalid" mode. Three reasons it cannot work:
 
 1. **Async schemas.** `StandardSchemaV1.validate` may return a Promise. By the time the Promise resolves, the write has long since notified subscribers. Rolling back at that point means UI flicker and observer confusion — they saw value B, you silently restore value A.
-2. **Sync schemas don't save it.** Even with sync schemas, the enhancer observes writes via `interceptLeafSignals` — *after* the underlying `WritableSignal.set` has already updated. The signal API doesn't expose a pre-write hook. We cannot block.
+2. **Sync schemas don't save it.** Even with sync schemas, the enhancer observes writes via `interceptLeafSignals` — _after_ the underlying `WritableSignal.set` has already updated. The signal API doesn't expose a pre-write hook. We cannot block.
 3. **It's not a validation problem.** The right place to gate writes is the form input — Signal Forms already rejects bad input at the field level via `validateStandardSchema`. The store edge is a reporter, not a gate. v1 commits to that role.
 
 If a user genuinely wants to refuse writes at the store edge, they can:
+
 - Use guardrails (already a gating layer for performance rules — extend it for validation if needed).
 - Wrap their write sites in a `try/catch` that calls `validate()` first.
 - Treat validation errors as a UI concern: render the error, but don't change the model.

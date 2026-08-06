@@ -347,23 +347,32 @@ array leaf is the mistake; the equality function is a rounding error on it.
 
 ---
 
-## 7. Open optimisation candidates, ranked
+## 7. What to do about it
 
-1. **Diff-based time travel.** Biggest win available; turns the flagship feature
-   from O(state)-per-write into O(changes)-per-write and makes deep histories
-   viable. Needs a granularity setting (per-leaf vs per-transaction).
-2. **Record leaf writes in time travel** — correctness, not speed: undo currently
-   cannot restore a direct leaf write.
-3. **Push-based serialisation change detection**, replacing the
-   `JSON.stringify(tree())` poll.
-4. **Bounded fanout for large leaf collections** (chunking at C ≈ √N). Track D's
-   result says this is the single change that would buy fast partial updates,
-   cheap time travel and cheap change-detection _together_, because they share
-   one cause. It is also the only candidate here that is a data-structure
-   change rather than a bookkeeping change. Cost: `tree()` can no longer return
-   a reference. `entityMap` already achieves the same effect for the case that
-   matters, so this is only worth it if plain large array leaves must be fast.
-   (Size-adaptive leaf equality was previously listed here and is **rejected** —
-   see realisation 3.)
-5. **Lazy/cached `tree()`** — a version-stamped materialisation so repeated reads
-   between writes are free, mirroring what `entityMap` now does for `all()`.
+Forty-one options across nine families are surveyed and measured in
+[optimisation-options.md](./optimisation-options.md). The short version:
+
+1. **Incremental materialisation with structural sharing** — give every branch a
+   dirty flag and a cached POJO, rebuild only along dirty paths. **56.7×** on a
+   10k-leaf grid (489.1 → 8.6 µs), for **+3.7 ns per write** with early-exit
+   marking. The point is not the speed: 99/100 subtrees come back
+   reference-identical, which collapses time travel (an entry becomes the root
+   pointer), serialisation change detection (one pointer compare) and snapshot
+   cloning into the same fix.
+2. **Steer collections to `entityMap`, in diagnostics** — 28.5× vs 0.9× between
+   two idioms that look equally reasonable to write. No engine work; a dev-mode
+   warning and documentation. Highest value per hour available.
+3. **Record direct leaf writes in time travel** — correctness. Undo cannot
+   restore a `tree.$.a.b.set(x)` today.
+
+**Diff-based time travel is displaced.** It was the standing #1; structural
+sharing gets a better result with less code — no diff format, no patch
+application, no inverse-patch proof, and O(1) restore. It survives only as the
+_transmittable_ form, which belongs in `@signaltree/realtime`.
+
+**Type-directed per-leaf equality is rejected, measured.** `deepEqual` is
+_faster_ than `Object.is` on a changed number (6.5 ns vs 8.1 ns) because its
+first line is already the fast path. The general lesson: nearly everything the
+type system could tell the runtime, the initial value already tells it at
+construction — so the recursive typing pays in **diagnostics**, not in runtime
+specialisation.

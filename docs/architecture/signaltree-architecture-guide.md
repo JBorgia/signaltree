@@ -200,11 +200,11 @@ Any architectural decision should preserve these principles.
 
 Every SignalTree application follows one rule. Once you know it, every structural decision becomes obvious:
 
-| Pillar | Where | Rule |
-| ------ | ----- | ---- |
-| **READ** | `.derived()` on the tree | All computed/derived state lives on `$` — never inside Ops services or components |
-| **WRITE** | Ops `@Injectable` services | Mutations + async only. Zero `computed()` properties. |
-| **REACT** | `.with(effects()) → tree.effect()` | State changes are the events — no actions, no dispatch |
+| Pillar    | Where                              | Rule                                                                              |
+| --------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| **READ**  | `.derived()` on the tree           | All computed/derived state lives on `$` — never inside Ops services or components |
+| **WRITE** | Ops `@Injectable` services         | Mutations + async only. Zero `computed()` properties.                             |
+| **REACT** | `.with(effects()) → tree.effect()` | State changes are the events — no actions, no dispatch                            |
 
 ```typescript
 import { signalTree, entityMap, effects } from '@signaltree/core';
@@ -213,24 +213,24 @@ import { signalTree, entityMap, effects } from '@signaltree/core';
 // REACT — .with(effects()) adds tree.effect() and tree.subscribe()
 const tree = signalTree({ tickets: entityMap<Ticket>(), filter: '' })
   .with(effects())
-  .derived($ => ({
+  .derived(($) => ({
     tickets: {
-      visible: computed(() => $.tickets.all().filter(t => t.title.includes($.filter())))
-    }
+      visible: computed(() => $.tickets.all().filter((t) => t.title.includes($.filter()))),
+    },
   }));
 
 // WRITE — Ops: mutations + async only
 @Injectable({ providedIn: 'root' })
 export class TicketOps {
   private tree = inject(APP_TREE);
-  private api  = inject(TicketApi);
+  private api = inject(TicketApi);
   async load() {
     this.tree.$.tickets.setAll(await firstValueFrom(this.api.list()));
   }
 }
 
 // REACT — state changes drive side effects (requires .with(effects()) above)
-tree.effect(state => {
+tree.effect((state) => {
   const filter = state.tickets.filter;
   untracked(() => ticketOps.load(filter));
 });
@@ -324,7 +324,7 @@ Cross-domain computed values used app-wide belong on the tree via `.derived()` �
 
 ```typescript
 // store/tree/derived/tier-1-resolution.derived.ts
-export const resolutionDerived = derivedFrom<AppTreeBase>()(($ ) => ({
+export const resolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
   selected: {
     truck: computed(() => {
       const id = $.selected.truckId();
@@ -338,21 +338,20 @@ export const resolutionDerived = derivedFrom<AppTreeBase>()(($ ) => ({
 }));
 
 // app.tree.ts
-const tree = signalTree(baseState)
-  .derived(resolutionDerived);  // now on tree.$
+const tree = signalTree(baseState).derived(resolutionDerived); // now on tree.$
 
 // component.ts — inject one thing, read everything
 export class TruckListComponent {
   private tree = inject(APP_TREE);
-  readonly trucks = this.tree.$.selected.selectableTrucks;  // Signal<Truck[]>
+  readonly trucks = this.tree.$.selected.selectableTrucks; // Signal<Truck[]>
 }
 ```
 
-| Pros                              | Cons                                     |
-| --------------------------------- | ---------------------------------------- |
+| Pros                              | Cons                                      |
+| --------------------------------- | ----------------------------------------- |
 | One inject, all reads on `$`      | Derived factory pattern requires learning |
-| Tiered: D2 can read D1 output    | Cross-file types need `WithDerived<>`    |
-| Visible in DevTools + time travel |                                          |
+| Tiered: D2 can read D1 output     | Cross-file types need `WithDerived<>`     |
+| Visible in DevTools + time travel |                                           |
 
 **Best for:** All cross-domain computed state. This is the canonical READ pillar.
 
@@ -2560,12 +2559,12 @@ readonly trucks = inject(APP_TREE).$.selected.selectableTrucks;
 
 ### Decision Guide
 
-| Selector Usage         | Location              | Example                                    |
-| ---------------------- | --------------------- | ------------------------------------------ |
-| 1 component, UI-only   | Component-local       | `readonly filtered = computed(...)`        |
-| Parameterized (takes args) | Factory function  | `createPlantSelectors(tree)` (for `byId`-style) |
-| 2+ components, static  | `.derived()` on tree  | `tree.$.selected.truck()`                  |
-| Cross-domain, app-wide | `.derived()` tiers    | `tree.$.ui.totals()`, `tree.$.selected.selectableTrucks()` |
+| Selector Usage             | Location             | Example                                                    |
+| -------------------------- | -------------------- | ---------------------------------------------------------- |
+| 1 component, UI-only       | Component-local      | `readonly filtered = computed(...)`                        |
+| Parameterized (takes args) | Factory function     | `createPlantSelectors(tree)` (for `byId`-style)            |
+| 2+ components, static      | `.derived()` on tree | `tree.$.selected.truck()`                                  |
+| Cross-domain, app-wide     | `.derived()` tiers   | `tree.$.ui.totals()`, `tree.$.selected.selectableTrucks()` |
 
 ---
 
@@ -3679,11 +3678,11 @@ const tree = signalTree({ myForm: form({ name: '', email: '' }) });
 
 ## Scaling from Feature to Enterprise
 
-| Stage          | Team Size | Recommended Pattern                                    | Enhancers                  |
-| -------------- | --------- | ------------------------------------------------------ | -------------------------- |
-| **Prototype**  | 1-2       | Single tree, direct access (A1)                        | None                       |
-| **Feature**    | 2-5       | Service-wrapped (B1) or Feature-scoped (C1)            | `batching()` if needed     |
-| **Product**    | 5-15      | Domain-scoped trees (D1) with shared selectors         | `batching()`, `devTools()` |
+| Stage          | Team Size | Recommended Pattern                                   | Enhancers                  |
+| -------------- | --------- | ----------------------------------------------------- | -------------------------- |
+| **Prototype**  | 1-2       | Single tree, direct access (A1)                       | None                       |
+| **Feature**    | 2-5       | Service-wrapped (B1) or Feature-scoped (C1)           | `batching()` if needed     |
+| **Product**    | 5-15      | Domain-scoped trees (D1) with shared selectors        | `batching()`, `devTools()` |
 | **Enterprise** | 15+       | Domain-scoped + `tree.updateAndReport()` on hot paths | Full stack as needed       |
 
 The key insight: **start simple and add complexity only when you feel pain.** SignalTree's enhancer model means you can add capabilities without restructuring your state.
