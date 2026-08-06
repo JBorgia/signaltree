@@ -87,14 +87,55 @@ is how that bug announced itself.
 
 ---
 
-## What is NOT measured here
+## Cross-library — measured, and it does NOT favour us
 
-- **No cross-library comparison.** These are SignalTree's own numbers. Claiming
-  an advantage over NgRx/Akka/Elf on memory would need those measured under the
-  identical harness, one process per arm, and that has not been done. The
-  architecture reasons for expecting an advantage — O(1) writes, structural
-  sharing, only leaves being signals — are stated in the design thesis, not
-  demonstrated here.
+`node --expose-gc tools/memory-compare.mjs`. Same 10,000 entity objects in each
+library's idiomatic collection, one process per arm.
+
+| arm | @10k | **marginal** | fixed |
+| --- | --- | --- | --- |
+| elf | 3.15 MB | **96 B/entity** | 2.23 MB |
+| raw Angular signals | 6.59 MB | **89 B/entity** | 5.74 MB |
+| `@ngrx/signals` | 6.68 MB | **91 B/entity** | 5.81 MB |
+| **SignalTree `entityMap`** | 7.89 MB | **134 B/entity** | 6.61 MB |
+
+**MARGINAL is the slope between 1k and 10k**, so every fixed cost — module load,
+Angular init, the harness — cancels. It is the only column that answers "what
+does one more row cost". The entity objects are ~89 B of it and no library
+controls that part.
+
+**SignalTree is the most expensive per entity of the four**: ~45 B/row over a
+raw signal, ~43 B over `@ngrx/signals`. That is the id index and the entity
+storage map, and it is the price of `byId()` being O(1) and per-entity writes
+not touching the array. It buys something; it is not free; and the honest
+statement is "granular reactivity costs ~50 % more per row than holding an
+array", not "we use less memory".
+
+### The number that actually matters for a large list
+
+| SignalTree usage at 10k | per entity |
+| --- | --- |
+| entity objects alone (the floor) | 89 B |
+| plain array leaf | 113 B |
+| `entityMap`, collection read via `.all()` | 315 B |
+| **`entityMap` after `byId()` on every row** | **4,149 B** |
+
+Calling `byId()` for all 10,000 rows takes retained heap from 3.0 MB to
+**39.6 MB** — 46× the data. `byId()` materialises a per-entity node so that row
+can be bound and written independently, which is the whole point of the feature,
+but the cost is per row and it is large.
+
+**This is the memory guidance that matters on a phone:** use `byId()` for the
+rows a user can actually interact with, not for every row you render. A 10,000
+row list that calls `byId()` per row is the shape that will run a low-end device
+out of memory, and nothing else in this document comes close to it.
+
+## What is still NOT measured
+
+- **`@ngrx/store`, `@ngxs/store` and Akita are absent.** They need an Angular JIT
+  bootstrap to construct, and standing up a full Angular environment per arm
+  would introduce a bigger confound than the comparison is worth. Their absence
+  is not evidence either way.
 - **No browser numbers.** Node/V8 only. A phone's constraint is the same shape
   but the absolute figures will differ.
 - **No DOM.** This measures the store, not the rendering that consumes it.
