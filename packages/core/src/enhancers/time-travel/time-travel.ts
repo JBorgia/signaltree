@@ -3,7 +3,6 @@ import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { withWriteContext } from '../../lib/write-context';
-import { deepClone, deepEqual } from './utils';
 
 import type {
   ISignalTree,

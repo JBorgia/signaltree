@@ -24,7 +24,7 @@ type Base = object; // placeholder for ISignalTree<T> fields we don't model here
 
 // Single enhancer expectations
 type _batch_single = Assert<
-  Equals<BatchingMethods<Tree> & Base, Base & BatchingMethods<Tree>>
+  Equals<BatchingMethods & Base, Base & BatchingMethods>
 >;
 type _tt_single = Assert<
   Equals<TimeTravelMethods<Tree> & Base, Base & TimeTravelMethods<Tree>>
@@ -37,19 +37,19 @@ type _entities_single = Assert<
 >;
 
 // Pair combinations
-type BT = BatchingMethods<Tree> & TimeTravelMethods<Tree> & Base;
+type BT = BatchingMethods & TimeTravelMethods<Tree> & Base;
 type _pair_batch_tt = Assert<
-  Equals<BT, Base & BatchingMethods<Tree> & TimeTravelMethods<Tree>>
+  Equals<BT, Base & BatchingMethods & TimeTravelMethods<Tree>>
 >;
 
-type BTD = BatchingMethods<Tree> &
+type BTD = BatchingMethods &
   TimeTravelMethods<Tree> &
   DevToolsMethods &
   Base;
 type _triple_btd = Assert<
   Equals<
     BTD,
-    Base & BatchingMethods<Tree> & TimeTravelMethods<Tree> & DevToolsMethods
+    Base & BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods
   >
 >;
 
@@ -61,7 +61,7 @@ type _pair_entities_opt = Assert<
 
 // Affirm composition assignability (structural)
 type Composite = Base &
-  BatchingMethods<Tree> &
+  BatchingMethods &
   DevToolsMethods &
   TimeTravelMethods<Tree> &
   EntitiesEnabled &

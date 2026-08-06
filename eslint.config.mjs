@@ -131,6 +131,31 @@ export default [
     },
   },
   {
+    // Dead code in SHIPPED library source. This rule was never enabled anywhere
+    // — the only mention in this file was an `off` scoped to docs/guardrails —
+    // so nothing flagged an unused import or a write-only variable, and several
+    // survived: `deepClone`/`deepEqual` still imported by time-travel.ts after
+    // the snapshot-by-reference change removed every call, three orphaned
+    // guardrails functions left behind when their caller was cut, and a
+    // `devToolsExtension` assigned in four places and read in none.
+    //
+    // `^_` is the deliberate-escape convention: `_signatureTest` in
+    // batching.types.ts is a compile-time assertion, unused BY DESIGN.
+    files: ['packages/*/src/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
+  {
     files: ['docs/guardrails/**/*.ts'],
     rules: {
       '@typescript-eslint/ban-ts-comment': 'off',

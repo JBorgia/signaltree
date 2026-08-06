@@ -8,7 +8,7 @@ import {
     ValidationErrors,
     ValidatorFn,
 } from '@angular/forms';
-import { FORM_MARKER, FormSignal, isFormMarker, ISignalTree, isTraversableNode } from '@signaltree/core';
+import { FormSignal, ISignalTree, isTraversableNode } from '@signaltree/core';
 
 // =============================================================================
 // TYPES
@@ -57,9 +57,20 @@ export interface AngularFormsConfig<T = unknown> {
 }
 
 /**
- * Angular form bridge added to each form() marker
+ * Angular form bridge added to each form() marker.
+ *
+ * ⚠️ NOT generic, deliberately. This interface carried
+ * `<T extends Record<string, unknown>>` and used it nowhere, which made
+ * `AngularFormBridge<User>` and `AngularFormBridge<Invoice>` the SAME TYPE —
+ * false safety, since nothing could ever be assigned wrongly. Removed in
+ * 14.0.0 rather than papered over.
+ *
+ * Threading a real `T` through is worth doing (Angular's `FormGroup` is
+ * generic, so `formGroup` and `formControl(path)` could both carry the model
+ * type), but that is an API design change, not a dead-code fix, and it is not
+ * what this pass is for.
  */
-export interface AngularFormBridge<T extends Record<string, unknown>> {
+export interface AngularFormBridge {
   /** Angular FormGroup synced with the form signals */
   formGroup: FormGroup;
   /** Get FormControl for a specific field path */
@@ -75,11 +86,9 @@ export interface AngularFormBridge<T extends Record<string, unknown>> {
  */
 export interface AngularFormsMethods {
   /** Access the Angular forms bridge for a form at a given path */
-  getAngularForm<T extends Record<string, unknown>>(
-    path: string
-  ): AngularFormBridge<T> | null;
+  getAngularForm(path: string): AngularFormBridge | null;
   /** All Angular form bridges in the tree, keyed by path */
-  formBridge: Map<string, AngularFormBridge<Record<string, unknown>>>;
+  formBridge: Map<string, AngularFormBridge>;
 }
 
 // =============================================================================
@@ -146,7 +155,7 @@ function createFormGroupBridge<T extends Record<string, unknown>>(
   config: AngularFormsConfig<T>,
   cleanupCallbacks: Array<() => void>,
   injector?: Injector
-): AngularFormBridge<T> {
+): AngularFormBridge {
   const values = formSignal();
   const formGroup = createFormGroupFromValues(
     values,
@@ -493,10 +502,7 @@ export function formBridge<TConfig = unknown>(
   // Return a properly generic enhancer function
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & AngularFormsMethods => {
     const cleanupCallbacks: Array<() => void> = [];
-    const formBridgeMap = new Map<
-      string,
-      AngularFormBridge<Record<string, unknown>>
-    >();
+    const formBridgeMap = new Map<string, AngularFormBridge>();
 
     // Find all form() markers in the tree
     const formLocations: FormLocation[] = [];
@@ -536,10 +542,10 @@ export function formBridge<TConfig = unknown>(
     // Return enhanced tree with proper typing
     const enhanced = tree as ISignalTree<T> & AngularFormsMethods;
     enhanced.formBridge = formBridgeMap;
-    enhanced.getAngularForm = function <TForm extends Record<string, unknown>>(
+    enhanced.getAngularForm = function (
       path: string
-    ): AngularFormBridge<TForm> | null {
-      return (formBridgeMap.get(path) as AngularFormBridge<TForm>) ?? null;
+    ): AngularFormBridge | null {
+      return (formBridgeMap.get(path) as AngularFormBridge) ?? null;
     };
 
     return enhanced;

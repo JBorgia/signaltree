@@ -9,8 +9,6 @@ import type {
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
-declare const ngDevMode: boolean | undefined;
-
 /**
  * Batching enhancer for SignalTree.
  *
@@ -38,16 +36,16 @@ declare const ngDevMode: boolean | undefined;
  */
 export function batching(
   config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods {
   const enabled = config.enabled ?? true;
   const notificationDelayMs = config.notificationDelayMs ?? 0;
 
-  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods => {
     // ========================================
     // DISABLED PATH - passthrough
     // ========================================
     if (!enabled) {
-      const passthrough: BatchingMethods<T> = {
+      const passthrough: BatchingMethods = {
         batch: (fn) => fn(),
         coalesce: (fn) => fn(),
         hasPendingNotifications: () => false,
@@ -56,7 +54,7 @@ export function batching(
         },
       };
 
-      const enhanced = tree as ISignalTree<T> & BatchingMethods<T>;
+      const enhanced = tree as ISignalTree<T> & BatchingMethods;
       Object.assign(enhanced, passthrough);
 
       // Backwards compat: batchUpdate delegates to immediate execution
@@ -218,7 +216,7 @@ export function batching(
     // BATCHING METHODS
     // ========================================
 
-    const batchingMethods: BatchingMethods<T> = {
+    const batchingMethods: BatchingMethods = {
       /**
        * batch() - Group CD notifications
        * Signal values update immediately inside the callback.
@@ -399,7 +397,7 @@ export function batching(
       });
     }
 
-    return enhancedTree as unknown as ISignalTree<T> & BatchingMethods<T>;
+    return enhancedTree as unknown as ISignalTree<T> & BatchingMethods;
   };
 
   const meta: EnhancerMeta = { name: 'batching', provides: ['batching'] };
@@ -414,7 +412,7 @@ export function batching(
  */
 export function highPerformanceBatching(): <T>(
   tree: ISignalTree<T>
-) => ISignalTree<T> & BatchingMethods<T> {
+) => ISignalTree<T> & BatchingMethods {
   return batching({
     enabled: true,
     notificationDelayMs: 0,
@@ -428,7 +426,7 @@ export function highPerformanceBatching(): <T>(
 /** @deprecated Use batching() instead */
 export function batchingWithConfig(
   config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods {
   return batching(config);
 }
 

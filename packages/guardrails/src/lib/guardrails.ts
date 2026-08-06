@@ -1,6 +1,5 @@
 import {
   getPathNotifier,
-  getActiveWriteContext,
 } from '@signaltree/core/authoring';
 import { deepEqual } from '@signaltree/shared';
 
@@ -39,10 +38,6 @@ function isFunction<T extends (...args: never[]) => unknown>(
   value: unknown
 ): value is T {
   return typeof value === 'function';
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === 'string';
 }
 
 function isObjectLike(value: unknown): value is Record<string, unknown> {
@@ -762,30 +757,6 @@ function addIssue<T>(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function shouldSuppressUpdate<T>(
-  context: GuardrailsContext<T>,
-  metadata?: UpdateMetadata
-): boolean {
-  if (context.suppressed) return true;
-  if (!metadata) return false;
-
-  if (
-    metadata.suppressGuardrails &&
-    context.config.suppression?.respectMetadata !== false
-  ) {
-    return true;
-  }
-
-  const autoSuppress = new Set<string>(
-    context.config.suppression?.autoSuppress ?? []
-  );
-
-  return [metadata.intent, metadata.source].some(
-    (value) => isString(value) && autoSuppress.has(value)
-  );
-}
-
 function startMonitoring<T>(context: GuardrailsContext<T>): () => void {
   const interval = setInterval(() => {
     if (context.disposed) {
@@ -999,78 +970,6 @@ function createAPI<T>(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function extractMetadata(payload: unknown): UpdateMetadata | undefined {
-  // Prefer ambient context set via `withWriteContext()` from @signaltree/core.
-  // This is the forward path: enhancers and replay sites (devtools time-travel,
-  // core time-travel) tag writes through the context channel rather than
-  // shoving metadata into the payload.
-  const context = getActiveWriteContext();
-  if (context) return context;
-
-  // Legacy fallback: payload-shape sniff for callers that haven't migrated
-  // to withWriteContext. Looks for a `metadata` property on the payload.
-  if (!isObjectLike(payload)) return undefined;
-  const candidate = (payload as Record<string, unknown>)['metadata'];
-  return isObjectLike(candidate) ? (candidate as UpdateMetadata) : undefined;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function collectUpdateDetails(
-  payload: unknown,
-  stateSnapshot: unknown
-): UpdateDetail[] {
-  const details: UpdateDetail[] = [];
-
-  const visit = (value: unknown, segments: string[], currentState: unknown) => {
-    const path = segments.length ? segments.join('.') : 'root';
-    const oldValue = captureValue(currentState);
-
-    if (isObjectLike(value)) {
-      details.push({
-        path,
-        segments: [...segments],
-        newValue: value,
-        oldValue,
-      });
-      for (const [key, child] of Object.entries(value)) {
-        visit(
-          child,
-          [...segments, key],
-          isObjectLike(currentState)
-            ? (currentState as Record<string, unknown>)[key]
-            : undefined
-        );
-      }
-      return;
-    }
-
-    details.push({ path, segments: [...segments], newValue: value, oldValue });
-  };
-
-  if (isObjectLike(payload)) {
-    visit(payload, [], stateSnapshot);
-  } else {
-    details.push({
-      path: 'root',
-      segments: [],
-      newValue: payload,
-      oldValue: captureValue(stateSnapshot),
-    });
-  }
-
-  if (details.length === 0) {
-    details.push({
-      path: 'root',
-      segments: [],
-      newValue: payload,
-      oldValue: captureValue(stateSnapshot),
-    });
-  }
-
-  return details;
-}
-
 function getValueAtPath(source: unknown, segments: string[]): unknown {
   let current = source;
   for (const segment of segments) {
@@ -1080,10 +979,6 @@ function getValueAtPath(source: unknown, segments: string[]): unknown {
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
-}
-
-function captureValue<T>(value: T): T {
-  return tryStructuredClone(value);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

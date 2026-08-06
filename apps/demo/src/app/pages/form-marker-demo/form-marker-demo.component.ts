@@ -340,12 +340,10 @@ export class FormMarkerDemoComponent implements OnDestroy {
   // Get the Angular FormGroup bridge
   get feedbackFormGroup(): FormGroup | null {
     return (
-      this.bridgeStore.getAngularForm<{
-        rating: number;
-        title: string;
-        comment: string;
-        recommend: boolean;
-      }>('feedback')?.formGroup ?? null
+      // No type argument: `AngularFormBridge` is not generic. It used to
+      // accept one and ignore it, so spelling the model out here bought
+      // nothing — see the note on the interface in @signaltree/ng-forms.
+      this.bridgeStore.getAngularForm('feedback')?.formGroup ?? null
     );
   }
 

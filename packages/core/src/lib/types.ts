@@ -82,11 +82,11 @@ export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
 // libraries that depend on the original invariant `WritableSignal<T>`
 // signature (notably `@ngrx/signals`' `WritableStateSource<T>`, which became
 // invariance-incompatible — surfacing as ~30 TS2345 errors in mixed
-// `@ngrx/signals` + SignalTree codebases). The callable-syntax augmentation
-// is intentionally opt-in via `@signaltree/callable-syntax`. Apps that want
-// `signal(value)` ergonomics on raw Angular signals should `import
-// '@signaltree/callable-syntax'` (side-effect import) or include the
-// package in their tsconfig `types`.
+// `@ngrx/signals` + SignalTree codebases). There is no opt-in replacement:
+// `@signaltree/callable-syntax`, which owned that augmentation, was DELETED in
+// 14.0.0 because it re-introduced this same conflict and because the build
+// transform behind it could never run inside an Angular app. There is no
+// supported way to make a raw Angular signal callable-as-setter.
 
 /**
  * A branch (non-leaf) node in the tree.
@@ -111,20 +111,21 @@ export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
  * write surface, and `node({ a: 1 })` merges — keys you don't pass are left
  * untouched, at every depth. Leaves are the opposite: calling a leaf with an
  * argument does **nothing at all**, because an Angular signal getter ignores
- * extra arguments. That asymmetry is the whole reason
- * `@signaltree/callable-syntax` exists — it is a build-time transform that
- * rewrites *leaf* calls into `.set()`/`.update()` so one call syntax works at
- * every depth. It emits exactly what you would have typed by hand; nothing
- * ships at runtime.
+ * extra arguments.
+ *
+ * As of 14.0.0 that is a COMPILE ERROR rather than a silent no-op:
+ * `CallableWritableSignal` no longer declares setter overloads.
+ * `@signaltree/callable-syntax` used to promise the leaf form via a build
+ * transform and was deleted — it could not run inside an Angular app at all.
  *
  * Two mistakes this comment exists to prevent:
  *
  * 1. **Do not add `.set()`/`.update()` to `NodeAccessor`.** It is not a
  *    missing feature. The call signatures already do both writes, and adding
  *    methods would collide with any state key literally named `set`/`update`.
- * 2. **Do not describe node call-syntax as depending on the transform,** or as
- *    something to avoid. It is core behaviour, works with zero build tooling,
- *    and predates the transform.
+ * 2. **Do not describe node call-syntax as depending on a build transform,** or
+ *    as something to avoid. It is core behaviour and needs zero build tooling.
+ *    (A transform once existed for LEAF calls only; it is gone.)
  *
  * Runtime, if you want to confirm rather than trust this comment:
  * `typeof node === 'function'`, `node.set === undefined`,
@@ -339,7 +340,13 @@ export interface BatchingConfig {
  * IMPORTANT: Signal writes are ALWAYS synchronous.
  * Batching only affects change detection notification timing.
  */
-export interface BatchingMethods<T = unknown> {
+/**
+ * ⚠️ NOT generic. None of these members reference the tree's state type, and
+ * carrying a phantom `<T = unknown>` made `BatchingMethods<A>` and
+ * `BatchingMethods<B>` the same type — safety that reads real and is not.
+ * Removed in 14.0.0.
+ */
+export interface BatchingMethods {
   /**
    * Group multiple updates into a single change detection cycle.
    * Signal values update immediately; CD notification is batched.
@@ -968,10 +975,7 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<
-  infer E,
-  infer K extends string | number
->
+export type EntityType<T> = T extends EntitySignal<infer E, string | number>
   ? E
   : never;
 export type EntityKeyType<T> = T extends EntitySignal<
@@ -980,10 +984,7 @@ export type EntityKeyType<T> = T extends EntitySignal<
 >
   ? K
   : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<
-  unknown,
-  infer K extends string | number
->
+export type IsEntityMap<T> = T extends EntityMapMarker<unknown, string | number>
   ? true
   : false;
 

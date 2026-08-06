@@ -589,7 +589,6 @@ function getOrCreateDevToolsGroup(
 
   let browserDevToolsConnection: any = null;
   let browserDevTools: any = null;
-  let devToolsExtension: any = null;
   let unsubscribeDevTools: (() => void) | null = null;
   let isConnected = false;
   let isApplyingExternalState = false;
@@ -773,7 +772,6 @@ function getOrCreateDevToolsGroup(
 
     try {
       const devToolsExt = (window as any)['__REDUX_DEVTOOLS_EXTENSION__'];
-      devToolsExtension = devToolsExt;
       const connection = devToolsExt.connect({
         name: displayName,
         instanceId: groupId,
@@ -1023,7 +1021,6 @@ function getOrCreateDevToolsGroup(
         unsubscribeDevTools = null;
         browserDevToolsConnection = null;
         browserDevTools = null;
-        devToolsExtension = null;
         isConnected = false;
 
         devToolsConnections.delete(groupId);
@@ -1159,7 +1156,6 @@ export function createDevToolsEnhancer(
         listener: (message: unknown) => void
       ) => void | (() => void);
     } | null = null;
-    let devToolsExtension: any = null;
     let isConnected = false;
     let isApplyingExternalState = false;
     let unsubscribeDevTools: (() => void) | null = null;
@@ -1582,7 +1578,6 @@ export function createDevToolsEnhancer(
             unsubscribe?: () => void;
           };
         };
-        devToolsExtension = devToolsExt;
         const connection = devToolsExt.connect({
           name: displayName,
           instanceId: groupId,
@@ -1923,7 +1918,6 @@ export function createDevToolsEnhancer(
           try { browserDevToolsConnection?.disconnect?.(); } catch { /* ignore */ }
           browserDevToolsConnection = null;
           browserDevTools = null;
-          devToolsExtension = null;
           isConnected = false;
           unsubscribeDevTools = null;
           devToolsConnections.delete(groupId);

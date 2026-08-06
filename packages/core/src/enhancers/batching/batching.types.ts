@@ -8,7 +8,7 @@ type BatchingEnhancer = ReturnType<typeof batching>;
 // Test: enhancer signature is correct (simple pattern)
 type _TestSignature = BatchingEnhancer extends <T>(
   tree: ISignalTree<T>
-) => ISignalTree<T> & BatchingMethods<T>
+) => ISignalTree<T> & BatchingMethods
   ? true
   : false;
 const _signatureTest: _TestSignature = true;

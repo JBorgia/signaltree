@@ -3,7 +3,13 @@
   "compilerOptions": {
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node",
+      "vitest/globals"
+    ]
   },
-  "include": ["src/**/*.typing.spec.ts"]
+  "include": [
+    "src/**/*.typing.spec.ts",
+    "src/enhancers/typing/**/*.ts"
+  ]
 }
