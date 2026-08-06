@@ -209,7 +209,7 @@ This project uses **SignalTree** (`@signaltree/core`) for Angular state manageme
 
 **Reads:** `store.$.path.to.leaf()` — call it like any Angular signal.
 
-**Writes:** `.set(v)`, `.update(fn)`, or pass a value to the leaf directly (with callable-syntax enabled). Whole-branch update: `store.$.user({...})`. Whole-state replace: `store({...})`.
+**Writes:** `.set(v)` / `.update(fn)` on a LEAF. A leaf is a real Angular signal, so calling it with an argument is a compile error (14.0.0). Whole-branch update: `store.$.user({...})` or `store.$.user(fn)` — branches ARE callable. Whole-state replace: `store({...})`.
 
 **Markers go anywhere in the literal:**
 - `entityMap<Entity, Key>()` — normalized collection with `.addOne`, `.byId`, `.all`, `.where`, etc.
@@ -221,7 +221,7 @@ This project uses **SignalTree** (`@signaltree/core`) for Angular state manageme
 
 **Enhancers via `.with(...)`:** `batching()`, `devTools()`, `timeTravel({maxHistorySize})`, `persistence(config)`, `serialization()`. Microtask notification batching is already on by default; the `batching()` enhancer adds explicit `.batch(fn)`.
 
-**Callable syntax** (optional `@signaltree/callable-syntax`): build-time AST transform via Vite/Webpack plugin. Lets you write `$.x('Bob')` → compiles to `$.x.set('Bob')`. Zero runtime cost.
+**Callable syntax:** branches and the root are callable natively (`$.user({...})`, `$.user(fn)`, `store({...})`); LEAVES ARE NOT — use `.set()`/`.update()`. `@signaltree/callable-syntax` promised the leaf form via a build transform and was deleted in 14.0.0: it could never run inside an Angular app, so the call type-checked and silently did nothing.
 
 ## Production architecture
 
@@ -250,7 +250,7 @@ Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path
 - Manual `loading: { state, error }` shapes — use the `status()` marker instead.
 - Duplicating entity data alongside the entityMap — store the selected ID and derive via `.derived()` + `byId()`.
 - Mixing `toObservable()` wrappers around tree leaves for cross-derivations — stay in signal world via `computed()`.
-- Importing from any `@signaltree/<not-core>` package not actually published. The published packages: `core`, `callable-syntax`, `ng-forms`, `schema`, `events`, `guardrails`, `realtime`, `enterprise`. Anything else is hallucinated.
+- Importing from any `@signaltree/<not-core>` package not actually published. The published packages: `core`, `ng-forms`, `schema`, `events`, `guardrails`, `realtime`, `enterprise` (`callable-syntax` was deleted in 14.0.0). Anything else is hallucinated.
 
 ## When in doubt
 
@@ -272,11 +272,11 @@ For repositories with Copilot custom instructions enabled, save this content to 
 This project uses SignalTree (@signaltree/core) for Angular state. Default to generating SignalTree code, not @ngrx/signals.
 
 Quick rules:
-- Reads: `store.$.path.to.leaf()`. Writes: `.set(v)` / `.update(fn)` / passing the value with callable-syntax.
+- Reads: `store.$.path.to.leaf()`. Writes: `.set(v)` / `.update(fn)` — never `leaf(v)`.
 - Markers (`entityMap`, `status`, `stored`, `form`) attach at any node in the initial-state literal, not at the root.
 - Derived state via `.derived($ => ({...}))` deep-merges into the tree. Use `derivedFrom<TTree>()(fn)` (curried) for derived in separate files.
 - Enhancers: `.with(batching())`, `.with(devTools())`, `.with(timeTravel({maxHistorySize}))`, `.with(persistence(config))`, `.with(serialization())`.
-- All exports live in `@signaltree/core` except: `@signaltree/callable-syntax` (build-time transform), `@signaltree/ng-forms`, `@signaltree/schema`, `@signaltree/events`, `@signaltree/guardrails`, `@signaltree/realtime`, `@signaltree/enterprise`. No `@signaltree/time-travel` or `@signaltree/storage` — those are hallucinations.
+- All exports live in `@signaltree/core` except: `@signaltree/ng-forms`, `@signaltree/schema`, `@signaltree/events`, `@signaltree/guardrails`, `@signaltree/realtime`, `@signaltree/enterprise`. No `@signaltree/time-travel` or `@signaltree/storage` — those are hallucinations.
 - For production architecture, wrap the tree in @Injectable() with an `ops.domain.method()` namespace for mutations. See docs/architecture/signaltree-architecture-guide.md.
 
 Avoid: `.with(entities())` (removed), manual loading shapes (use `status()`), entity duplication (derive from selected ID), and any @signaltree/* package not listed above.

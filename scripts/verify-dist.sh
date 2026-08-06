@@ -13,7 +13,6 @@ NC='\033[0m'
 # Verify the packages that scripts/release.sh publishes.
 NX_PACKAGES=(
     "core"
-    "callable-syntax"
     "shared"
     "guardrails"
     "events"

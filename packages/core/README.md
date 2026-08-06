@@ -230,36 +230,50 @@ const tree = signalTree({ count: 0 });
 
 This repo's ESLint rule is **disabled by default** since testing confirms effective tree-shaking with barrel imports.
 
-### Callable shape — branches natively, leaves with the build transform
+### Callable shape — branches yes, leaves no
 
-**Branches are natively callable** for reads AND writes at runtime — no transform required:
+One fact explains the whole rule: **only leaves are Angular signals.**
+
+A **branch** is SignalTree's own accessor, so we own its call semantics and a
+call can mean "merge this". It is callable in both directions, natively, with
+nothing to install:
 
 ```typescript
 tree.$.user(); // Read the user subtree
-tree.$.user({ name: 'Jane' }); // Deep-merge partial update at runtime
+tree.$.user({ name: 'Jane' }); // Deep-merge partial update
+tree.$.user((u) => ({ ...u, age: u.age + 1 })); // Updater form
+tree({ ui: { loading: false } }); // The root, same shape
 ```
 
-**Leaves are Angular signals** — callable as getters, but writes go through `.set()` / `.update()`. The `@signaltree/callable-syntax` build-time transform extends the branch's call-with-arg shape down to leaf writes, so call-sites read uniformly from root to leaf:
+A **leaf** is a real `WritableSignal`. Calling an Angular signal is a **read** —
+it returns the value and ignores any argument — so a leaf is written with
+`.set()` / `.update()`:
 
 ```typescript
-// With @signaltree/callable-syntax transform installed:
-tree.$.name('Jane'); // compiles to tree.$.name.set('Jane')
-tree.$.count((n) => n + 1); // compiles to tree.$.count.update((n) => n + 1)
-
-// Without the transform — leaf reads work, leaf writes use .set() / .update():
-const name = tree.$.name();
-tree.$.name.set('Jane');
-tree.$.count.update((n) => n + 1);
+const name = tree.$.name(); // read
+tree.$.name.set('Jane'); // write
+tree.$.count.update((n) => n + 1); // transform
 ```
 
-**Key Points:**
+> **Changed in 14.0.0.** Through 13.x the types also permitted
+> `tree.$.name('Jane')`, and the `@signaltree/callable-syntax` build transform
+> was meant to rewrite it to `.set()`. In an Angular app that transform could
+> not run at all, so the call type-checked and then **silently did nothing**.
+> The overloads and the package are both gone; that line is now a compile
+> error. See [the migration note](../../docs/guides/MIGRATION.md).
 
-- **Zero runtime overhead**: branch callables are a native part of the proxy; the leaf-write transform compiles away before production
-- **Optional**: `@signaltree/callable-syntax` is only needed for leaf-write sugar — `.set()` / `.update()` always work
-- **Type-safe**: full TypeScript support via module augmentation
-- **Configure `rootIdentifiers`**: the transform's default is `['tree']`; if your variable is named `store`/`state`, add it to the plugin options or the rewrite is skipped
+**Key points:**
 
-**Function-valued leaves:** when a leaf stores a function as its value, use direct `.set(fn)` to assign. Callable `sig(fn)` is treated as an updater.
+- **Zero runtime overhead**: branch callables are a native part of the accessor
+- **Leaves stay real Angular signals** — `isSignal()` is `true` and
+  `Symbol(SIGNAL)` is present, which is what `toObservable`, `model()`/`input()`
+  interop and every third-party tool guarding on `isSignal` depend on. Wrapping
+  leaves to make `leaf(value)` work would have cost that, which is why it was
+  refused; the ~4% speed difference was inside noise and never the deciding
+  factor.
+
+**Function-valued leaves:** when a leaf stores a function as its value, use
+`.set(fn)` to assign it and `.update(prev => next)` to transform it.
 
 ### Measuring performance and size
 
@@ -451,16 +465,10 @@ const tree = signalTree({
 console.log(tree.$.count()); // 0
 console.log(tree.$.message()); // 'Hello World'
 
-// ⚠️ CALLABLE SYNTAX REQUIRES BUILD TRANSFORM
-// Lines below use tree.$.count(5) setter syntax. This requires the
-// @signaltree/callable-syntax build-time transform (separate dev dependency).
-// WITHOUT the transform, use .set()/.update() instead — these always work:
-//   tree.$.count.set(5);
-//   tree.$.message.set('Updated!');
-//   tree.$.count.update((n) => n + 1);
-// See: https://github.com/JBorgia/signaltree/blob/main/packages/callable-syntax/README.md
-tree.$.count(5); // requires @signaltree/callable-syntax transform
-tree.$.message('Updated!'); // requires @signaltree/callable-syntax transform
+// Write leaves with .set() / .update()
+tree.$.count.set(5);
+tree.$.message.set('Updated!');
+tree.$.count.update((n) => n + 1);
 
 // Use in an Angular component
 @Component({
@@ -472,7 +480,7 @@ class SimpleComponent {
   tree = tree;
 
   increment() {
-    this.tree.$.count((n) => n + 1);
+    this.tree.$.count.update((n) => n + 1);
   }
 }
 ```
@@ -497,12 +505,8 @@ const tree = signalTree({
 });
 
 // Access nested signals with full type safety
-// Requires @signaltree/callable-syntax. Without the transform, use:
-// tree.$.user.name.set('Jane Doe');
-// tree.$.user.preferences.theme.set('light');
-// tree.$.ui.loading.set(true);
-tree.$.user.name('Jane Doe');
-tree.$.user.preferences.theme('light');
+tree.$.user.name.set('Jane Doe');
+tree.$.user.preferences.theme.set('light');
 tree.$.ui.loading(true);
 
 // Computed values from nested state
@@ -658,7 +662,7 @@ const tree = signalTree<AppState>({
 });
 
 // Complex updates with type safety — the root accessor itself is callable
-// (no @signaltree/callable-syntax transform required for the root). Pass a
+// (branches and the root are callable natively; leaves are not). Pass a
 // partial object or an updater function. For leaf writes, use .set() / .update().
 tree((state) => ({
   auth: {
@@ -857,7 +861,6 @@ These are the **only** separate packages in the SignalTree ecosystem:
 
 - **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
 - **`@signaltree/enterprise`** - _deprecated in 13.5.0;_ use `tree.updateAndReport()` in core
-- **`@signaltree/callable-syntax`** - Build-time transform for callable syntax (dev dependency, separate package)
 
 #### Composition Patterns
 
@@ -2632,7 +2635,6 @@ Consider separate packages when you need:
 
 - 📝 Angular forms integration (@signaltree/ng-forms)
 - 🏢 ~~Enterprise-scale optimizations (@signaltree/enterprise)~~ — deprecated in 13.5.0, now core
-- 🎯 Callable syntax transform (@signaltree/callable-syntax)
 
 ## Migration from NgRx
 
@@ -3033,78 +3035,6 @@ In production builds, all guardrails functions become no-ops with zero runtime c
 
 ---
 
-### 🎯 @signaltree/callable-syntax
-
-**Build-time transform for callable signal syntax**
-
-A TypeScript transformer that enables callable syntax sugar for setting signal values. This is **purely a developer experience enhancement** with zero runtime overhead.
-
-```bash
-npm install --save-dev @signaltree/callable-syntax
-```
-
-**Features:**
-
-- 🍬 Syntactic sugar for signal updates
-- ⚡ Zero runtime overhead (build-time transform)
-- ✅ Full TypeScript type safety
-- 🔧 Works with any build tool (Rollup, Webpack, esbuild, etc.)
-- 📝 Optional - use direct `.set/.update` if preferred
-
-**Syntax Transformation:**
-
-```typescript
-// With callable-syntax transform
-tree.$.name('Jane'); // Transformed to: tree.$.name.set('Jane')
-tree.$.count((n) => n + 1); // Transformed to: tree.$.count.update((n) => n + 1)
-
-// Reading always works directly (no transform needed)
-const name = tree.$.name(); // Direct Angular signal API
-```
-
-**Setup (tsconfig.json):**
-
-```json
-{
-  "compilerOptions": {
-    "plugins": [{ "transform": "@signaltree/callable-syntax" }]
-  }
-}
-```
-
-**Setup (Rollup):**
-
-```javascript
-import { callableSyntaxTransform } from '@signaltree/callable-syntax/rollup';
-
-export default {
-  plugins: [callableSyntaxTransform()],
-};
-```
-
-**Important Notes:**
-
-- **Optional:** You can always use direct `.set(value)` or `.update(fn)` syntax
-- **Build-time only:** No runtime code is added to your bundle
-- **Function-valued leaves:** When storing functions, use `.set(fn)` directly
-- **Type-safe:** Full TypeScript support via module augmentation
-
-**When to use:**
-
-- Prefer shorter, more concise syntax
-- Team convention favors callable style
-- Migrating from other signal libraries with similar syntax
-- Want familiar DX without runtime overhead
-
-**When to skip:**
-
-- Team prefers explicit `.set/.update` syntax
-- Build pipeline doesn't support transformers
-- Storing functions as signal values (use direct `.set`)
-
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/callable-syntax)
-
----
 
 ## Package Selection Guide
 
@@ -3122,7 +3052,6 @@ export default {
 | `@signaltree/ng-forms`        | Angular Reactive Forms integration | ~10KB gzipped    |
 | `@signaltree/enterprise`      | 500+ signals, large-scale apps     | ~8KB gzipped     |
 | `@signaltree/guardrails`      | Development performance monitoring | 0KB (dev-only)   |
-| `@signaltree/callable-syntax` | Prefer callable syntax sugar       | 0KB (build-time) |
 
 **Typical Installation Patterns:**
 
@@ -3138,7 +3067,7 @@ npm install @signaltree/core @signaltree/enterprise
 
 # Development with all tools
 npm install @signaltree/core @signaltree/enterprise @signaltree/ng-forms
-npm install --save-dev @signaltree/guardrails @signaltree/callable-syntax
+npm install --save-dev @signaltree/guardrails
 ```
 
 ## Links

@@ -5,7 +5,7 @@ Consolidated guidance and reports for bundle size analysis and optimization acro
 ## Current status
 
 - Tree-shake entry points (sum of facade files) measure **30.99KB gzipped**; the consolidated architecture saves **4.28KB** (~15.9%) versus the legacy separate-package layout (26.87KB total) when all enhancers are consumed.
-- Full publishable output (`core` + `enterprise` + `callable-syntax` + `shared` + `types` + `utils`) sums to **36.31KB gzipped**; the core package alone compresses to **25.63KB gzipped**.
+- Full publishable output (`core` + `enterprise` + `shared` + `types` + `utils`) sums to **36.31KB gzipped**; the core package alone compresses to **25.63KB gzipped**.
 - Guardrails main bundle is **5.08KB gzipped** (baseline 6.57KB, −21.5%), and every package remains under its max budget with updated size claims.
 
 ## Canonical tools

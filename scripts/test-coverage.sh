@@ -42,7 +42,6 @@ PACKAGES=(
     "core"
     "ng-forms"
     "enterprise"
-    "callable-syntax"
     "guardrails"
     "schema"
 )

@@ -931,19 +931,43 @@ store.redo();
 
 ---
 
-## Callable syntax (build-time transform)
+## Callable syntax — branches yes, leaves no
 
-Optional package `@signaltree/callable-syntax` provides a **build-time AST transform** (Babel-based, with Vite/Webpack plugins) that lets you write:
+One fact explains the whole rule: **only leaves are Angular signals.** A branch
+is SignalTree's own accessor, so a call on it can mean "merge this". A leaf is a
+real `WritableSignal`, and calling an Angular signal is a READ that ignores its
+arguments.
 
 ```typescript
-// Source (what you write):
-store.$.user.name('Bob');               // → store.$.user.name.set('Bob')
-store.$.count((n) => n + 1);            // → store.$.count.update((n) => n + 1)
+// Branches and the root are callable, natively — nothing to install:
+store.$.user();                          // read the subtree
+store.$.user({ name: 'Bob' });           // deep-merge partial write
+store.$.user((u) => ({ ...u, age: 1 })); // updater form
+store({ ui: { loading: false } });       // the root, same shape
+
+// Leaves are written with .set() / .update():
+store.$.user.name.set('Bob');
+store.$.count.update((n) => n + 1);
+
+// ❌ store.$.user.name('Bob')  — compile error in 14.0.0
 ```
 
-**This is not a runtime proxy.** The transform runs at build time and disappears in production — there is no wrapper function, no `Proxy` object, no runtime overhead. Install as a dev dependency, register the Vite or Webpack plugin, and the transform compiles away.
-
-> **Configure `rootIdentifiers`**: the plugin's default is `['tree']`. If your tree variable is named `store` or `state` (common in service facades), pass `{ rootIdentifiers: ['tree', 'store', 'state'] }` to the plugin options — variables not in this list are silently skipped.
+> **`@signaltree/callable-syntax` was DELETED in 14.0.0.** It was a build-time
+> AST transform meant to rewrite `leaf(v)` into `leaf.set(v)`. It could not run
+> inside an Angular app at all — `@angular/build:application` exposes no
+> `plugins`, the experimental `codePlugins` passthrough runs after ngtsc has
+> claimed every `.ts` file, ngtsc's transformer list is hardcoded, and ts-patch
+> goes inert under `isolatedModules`. So for Angular users the call type-checked
+> and then silently did nothing. It also could not distinguish a leaf from a
+> branch, so it rewrote branch calls into `.set()` on an accessor that has no
+> such method, throwing at runtime. Core removed the type overloads at the same
+> time, making the leaf form a compile error rather than a silent no-op.
+>
+> Leaves stay real Angular signals deliberately: `isSignal()` must keep
+> returning `true` for `toObservable`, `model()`/`input()` interop and every
+> third-party tool that guards on it. Wrapping them to make the sugar work would
+> have cost that guarantee — the ~4% speed difference was inside noise and was
+> never the deciding factor.
 
 ---
 
@@ -1066,7 +1090,6 @@ session.pullFromSource();
 
 | Package | Purpose | Key API |
 |---|---|---|
-| `@signaltree/callable-syntax` | Build-time `(value)` → `.set(value)` transform | Vite/Webpack plugin |
 | `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup`, with Standard Schema validation | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
 | `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
 | `@signaltree/events` | Primarily a standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — the bus itself does NOT integrate with the signal tree. Exception (v13+): `@signaltree/events/angular`'s `entityEventHandler`/`applyOptimisticEntityChange` bridge event batches onto `@signaltree/core`'s `entityMap` batch ops | `createEventSchema()`, `EventBusModule`, `entityEventHandler()` |

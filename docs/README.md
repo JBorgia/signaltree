@@ -62,7 +62,6 @@ Use this index to navigate the documentation.
 | [Core](../packages/core/README.md)                       | @signaltree/core package            |
 | [Enterprise](../packages/enterprise/README.md)           | @signaltree/enterprise — DEPRECATED, migration guide |
 | [Angular Forms](../packages/ng-forms/README.md)          | @signaltree/ng-forms package        |
-| [Callable Syntax](../packages/callable-syntax/README.md) | @signaltree/callable-syntax package |
 
 ---
 

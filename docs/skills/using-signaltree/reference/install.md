@@ -43,30 +43,25 @@ Adds `@angular/forms ^20.0.0 || ^21.0.0 || ^22.0.0` and `rxjs ^7.0.0` as peers. 
 
 Deprecated in 13.5.0 and superseded by `tree.updateAndReport()`, built into `@signaltree/core` (there is NO `onPathChange` in core). It is measurably slower than the core methods that replaced it and has an unfixed array data-loss defect. Read [`../enterprise/SKILL.md`](../enterprise/SKILL.md) only to migrate an existing dependency off it.
 
-### `@signaltree/callable-syntax`
+### `@signaltree/callable-syntax` — DELETED in 14.0.0, do not install
 
-```bash
-npm install --save-dev @signaltree/callable-syntax
-```
+The package is gone and there is no replacement, because there was nothing to
+replace: it existed to rewrite `tree.$.leaf(value)` into `tree.$.leaf.set(value)`
+at build time, and **it could not run inside an Angular app at all**
+(`@angular/build:application` exposes no `plugins`; `codePlugins` runs after
+ngtsc has claimed every `.ts`; ngtsc's transformer list is hardcoded; ts-patch
+goes inert under `isolatedModules`). So for Angular users that call
+type-checked and then silently did nothing.
 
-Build-time-only transform — **install as a dev dependency**. Zero bytes at runtime. Wire into your build via the Vite plugin (`@signaltree/callable-syntax/vite`) or the Webpack plugin (`@signaltree/callable-syntax/webpack`). Detailed setup lives in [`../callable-syntax/SKILL.md`](../callable-syntax/SKILL.md).
+`@signaltree/core@14` removes the type overloads too, making it a compile error.
+Write leaves with `.set()` / `.update()`; branches and the root remain callable
+natively.
 
-**TypeScript augmentation (≥ 9.2.0):** `@signaltree/callable-syntax` owns the `declare module '@angular/core'` augmentation that adds callable overloads to `WritableSignal<T>`. Prior to `@signaltree/core@9.2.0` the same augmentation also lived in `core` and activated globally on any import from core; that was removed because it broke type-checking in projects coexisting with `@ngrx/signals`. If you want the callable form on raw Angular signals, opt in explicitly via either:
-
-```ts
-// side-effect import in a file that's part of your app's compilation
-import '@signaltree/callable-syntax/augmentation';
-```
-
-or in `tsconfig.json`:
-
-```jsonc
-{
-  "compilerOptions": {
-    "types": ["@signaltree/callable-syntax"]
-  }
-}
-```
+Its `/augmentation` entry is also gone. It globally augmented Angular's
+`WritableSignal<T>`, which re-introduced the `@ngrx/signals` invariance conflict
+core had deliberately removed (~30 `TS2345` errors in mixed codebases). There is
+no supported way to make a raw Angular signal callable-as-setter, and asking for
+one is a sign the leaf/branch distinction has been missed.
 
 ### `@signaltree/guardrails`
 

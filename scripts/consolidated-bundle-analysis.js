@@ -50,12 +50,6 @@ const packages = [
     claimed: 7300,
   },
   {
-    name: 'callable-syntax',
-    path: 'dist/packages/callable-syntax/dist/index.js',
-    maxSize: 3000,
-    claimed: 1494,
-  },
-  {
     name: 'shared',
     path: 'dist/packages/shared/dist/index.js',
     maxSize: 4200,
@@ -114,7 +108,7 @@ const packages = [
 const nxProjects = [
   'core',
   'enterprise',
-  'callable-syntax',
+  
   'shared',
   'guardrails',
   'ng-forms',
@@ -392,7 +386,7 @@ class BundleAnalyzer {
     this.log('\n📊 Full Package Analysis (All Files)');
     console.log('==========================================\n');
 
-    const packageDirs = ['core', 'enterprise', 'callable-syntax', 'shared'];
+    const packageDirs = ['core', 'enterprise',  'shared'];
 
     const fullSizes = [];
 

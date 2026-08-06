@@ -239,7 +239,7 @@ Both libraries use deep TypeScript inference. Both can hit compiler recursion li
 
 ### 11. Bundle size
 
-Both ship small. Exact numbers depend on tree-shaking and which features you import. `@signaltree/core` is competitive with `@ngrx/signals` core. SignalTree's optional packages (`callable-syntax`, `ng-forms`, `events`, etc.) are individually small and tree-shakeable.
+Both ship small. Exact numbers depend on tree-shaking and which features you import. `@signaltree/core` is competitive with `@ngrx/signals` core. SignalTree's optional packages (`ng-forms`, `events`, etc.) are individually small and tree-shakeable.
 
 For published numbers, see [`docs/performance/`](../performance/) — and treat any "X is N% smaller than Y" claim from any state library with skepticism unless it's measured on _your_ app.
 

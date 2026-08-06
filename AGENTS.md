@@ -46,7 +46,6 @@ pnpm nx build demo --configuration=production
 | ----------------- | -------- | ----------- |
 | `core`            | 15 KB    | 5.8 KB      |
 | `ng-forms`        | 10 KB    | 4 KB        |
-| `callable-syntax` | 5 KB     | 2 KB        |
 | `enterprise`      | 8 KB     | 3 KB        |
 | `guardrails`      | 12 KB    | 4 KB        |
 | `schema`          | 16 KB    | 6 KB        |
@@ -89,4 +88,4 @@ Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, 
 
 ## For Agents Consuming SignalTree
 
-If you are helping a user build on top of `@signaltree/*` packages, read [`docs/skills/using-signaltree/SKILL.md`](docs/skills/using-signaltree/SKILL.md) first — that is the canonical vendor-neutral skill with the mental model, quick-start, enhancer decision tree, and pointers into `reference/*.md`. Per-package sub-skills are nested one level deep (`docs/skills/using-signaltree/{ng-forms,enterprise,callable-syntax,guardrails,events,realtime}/SKILL.md`); harnesses that scan recursively will discover them automatically, and the primary skill tells agents when to load each one. Cursor and Claude Code shims at `.cursor/skills/using-signaltree/SKILL.md` and `.claude/skills/using-signaltree/SKILL.md` are pointer files that redirect to the canonical location.
+If you are helping a user build on top of `@signaltree/*` packages, read [`docs/skills/using-signaltree/SKILL.md`](docs/skills/using-signaltree/SKILL.md) first — that is the canonical vendor-neutral skill with the mental model, quick-start, enhancer decision tree, and pointers into `reference/*.md`. Per-package sub-skills are nested one level deep (`docs/skills/using-signaltree/{ng-forms,enterprise,guardrails,events,realtime}/SKILL.md`); harnesses that scan recursively will discover them automatically, and the primary skill tells agents when to load each one. Cursor and Claude Code shims at `.cursor/skills/using-signaltree/SKILL.md` and `.claude/skills/using-signaltree/SKILL.md` are pointer files that redirect to the canonical location.

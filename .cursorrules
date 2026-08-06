@@ -33,7 +33,6 @@ signaltree/
 ├── packages/              # All npm packages
 │   ├── core/             # Main package with recursive typing
 │   ├── ng-forms/         # Angular forms integration
-│   ├── callable-syntax/  # Build-time transform for callable DX
 │   ├── enterprise/       # Enterprise optimizations
 │   ├── guardrails/       # Dev-only performance monitoring (Rollup build)
 │   ├── shared/           # Internal shared utilities (PRIVATE - not published)
@@ -52,7 +51,6 @@ signaltree/
 
 - `@signaltree/core` - Main package, no external deps
 - `@signaltree/ng-forms` - Depends on `@signaltree/core` (peerDep)
-- `@signaltree/callable-syntax` - Independent build transform
 - `@signaltree/enterprise` - Depends on `@signaltree/core` (peerDep)
 - `@signaltree/guardrails` - Dev-only, conditional exports (noop.js for prod)
 
@@ -68,7 +66,7 @@ signaltree/
 
 ### Package Build Systems
 
-1. **Core, ng-forms, callable-syntax, enterprise**: Nx + Rollup
+1. **Core, ng-forms, enterprise**: Nx + Rollup
 
    - Entry: `src/index.ts`
   - Output: `dist/` with preserved-module ESM and type definitions
@@ -177,7 +175,6 @@ If validation fails, the release script **automatically**:
 | --------------- | -------- | ----------- |
 | core            | 15KB     | 5KB         |
 | ng-forms        | 10KB     | 4KB         |
-| callable-syntax | 5KB      | 2KB         |
 | enterprise      | 8KB      | 3KB         |
 | guardrails      | 12KB     | 4KB         |
 

@@ -14,7 +14,7 @@ try {
 // Note: batching, middleware, entities, devtools, time-travel, serialization
 // were consolidated into @signaltree/core in v4.0.0.
 // Memoization & presets were removed in v10.0.0.
-const packages = ['core', 'ng-forms', 'enterprise', 'callable-syntax'];
+const packages = ['core', 'ng-forms', 'enterprise'];
 
 console.log('🔍 Verifying JSDoc Stripping and Bundle Sizes\n');
 

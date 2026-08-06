@@ -52,7 +52,6 @@ PACKAGES=(
     "events"
     "ng-forms"
     "realtime"
-    "callable-syntax"
     "enterprise"
     "guardrails"
     "schema"

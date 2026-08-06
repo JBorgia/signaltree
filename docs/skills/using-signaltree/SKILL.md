@@ -1,6 +1,6 @@
 ---
 name: using-signaltree
-description: Guides AI agents integrating SignalTree (@signaltree/core and related packages) into Angular 20+ applications. Use when the user mentions SignalTree, @signaltree/core, @signaltree/ng-forms, @signaltree/enterprise, @signaltree/callable-syntax, @signaltree/guardrails, @signaltree/events, @signaltree/realtime, signal tree, reactive state, Angular signals store, or Angular state management; when the user wants to create, read, or update a signalTree() state tree; when the user is choosing enhancers (batching, persistence, time travel, devTools) or markers (entityMap, status, stored, form); or when the user is building reactive forms, syncing realtime data, or wiring event-driven flows on top of Angular signals.
+description: Guides AI agents integrating SignalTree (@signaltree/core and related packages) into Angular 20+ applications. Use when the user mentions SignalTree, @signaltree/core, @signaltree/ng-forms, @signaltree/enterprise, @signaltree/guardrails, @signaltree/events, @signaltree/realtime, signal tree, reactive state, Angular signals store, or Angular state management; when the user wants to create, read, or update a signalTree() state tree; when the user is choosing enhancers (batching, persistence, time travel, devTools) or markers (entityMap, status, stored, form); or when the user is building reactive forms, syncing realtime data, or wiring event-driven flows on top of Angular signals.
 ---
 
 # Using SignalTree
@@ -14,7 +14,7 @@ Mental model:
 - Read: `tree.$.count()` — subscribes reactive context.
 - Write leaf: `.set(value)` / `.update(fn)`. Write branch (both forms are **deep-merge partial writes** — keys absent from the payload are preserved): `tree.$.user({ name, email })` (partial-merge object) or `tree.$.user((u) => ({ ...u, name }))` (updater function). No dispatch. There is no `tree.set(...)` — the root is callable: `tree(partial)` or `tree(updater)`.
 - Enhancers: `tree.with(batching()).with(devTools())` — order-sensitive.
-- Markers: `entityMap<User>()`, `entityMap<Plant>({ load: loader(fn) })` (cache-aware (single-scope) form), `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })`, `compared(value, equal)` (v13.5+, per-leaf equality) — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); the `@signaltree/callable-syntax` build-time transform extends call-syntax to **leaf writes** only. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
+- Markers: `entityMap<User>()`, `entityMap<Plant>({ load: loader(fn) })` (cache-aware (single-scope) form), `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })`, `compared(value, equal)` (v13.5+, per-leaf equality) — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); leaves are NOT callable for writes — use `.set()` / `.update()`. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
 
 > **The one fact everything else follows from: only LEAVES are Angular signals.**
 > A branch is not a signal — it's a plain accessor function. This asymmetry is the
@@ -27,16 +27,19 @@ Mental model:
 > | write a value                          | `leaf.set(v)`                                 | `node({ partial })` — deep merge, absent keys preserved |
 > | write from current                     | `leaf.update(fn)`                             | `node(fn)` — fn receives the unwrapped value            |
 > | has `.set` / `.update`                 | yes                                           | **no — by design, and it needs none**                   |
-> | called with an argument, untransformed | **silent no-op** (Angular ignores extra args) | writes (this is native core behavior)                   |
+> | called with an argument               | **compile error** (14.0.0; was a silent no-op) | writes (this is native core behavior)                   |
 >
 > Consequences worth stating outright, because each has been "fixed" wrongly before:
 > **(1)** Never add `.set()`/`.update()` to a node — the call signatures already do
 > both writes, and the names would collide with state keys called `set`/`update`.
-> **(2)** Node call-syntax is core behavior, not a feature of
-> `@signaltree/callable-syntax`, and not something to warn users away from.
-> **(3)** That transform exists solely to give _leaves_ the same call syntax; it is
-> build-time and zero-runtime, emitting exactly the `.set()`/`.update()` you would
-> have hand-written.
+> **(2)** Node call-syntax is core behavior, not a plugin, and not something to
+> warn users away from.
+> **(3)** A LEAF never takes that syntax. `@signaltree/callable-syntax` used to
+> promise it via a build transform and was **deleted in 14.0.0**: the transform
+> could not run inside an Angular app at all, so `tree.$.leaf(v)` type-checked
+> and then silently did nothing. Leaves stay real Angular signals (`isSignal()`
+> is `true`), which is what `toObservable` and `model()`/`input()` interop
+> require — that is why the sugar was refused rather than implemented.
 
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
 
@@ -79,7 +82,6 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 - Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`.
 - Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)`, built into `@signaltree/core`. There is NO `onPathChange`/subscription API in core — do not emit one. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and measurably slower than core. Read [`enterprise/SKILL.md`](enterprise/SKILL.md) only to migrate an existing dependency off it.
 - Reactive forms (validation, dirty/touched, wizards, FormGroup interop) → add `@signaltree/ng-forms`; on Angular 22+ the same package bridges to **Signal Forms** via `signalForm` from `@signaltree/ng-forms/signals`. Read [`ng-forms/SKILL.md`](ng-forms/SKILL.md).
-- `tree.$.field('value')` sugar over `.set()` → add `@signaltree/callable-syntax` (build-time transform, zero runtime cost). Read [`callable-syntax/SKILL.md`](callable-syntax/SKILL.md).
 - Dev-time perf budgets, memory-leak detection, anti-pattern warnings → add `@signaltree/guardrails` (dev-only; noop in production). Read [`guardrails/SKILL.md`](guardrails/SKILL.md).
 - Event-driven with Zod schemas, idempotency, retries → add `@signaltree/events` (ESM-only, requires Zod). Read [`events/SKILL.md`](events/SKILL.md).
 - Sync tree to Supabase / Firebase / WebSocket → add `@signaltree/realtime`, compose `supabaseRealtime()` or `realtime()`. Read [`realtime/SKILL.md`](realtime/SKILL.md).
@@ -153,7 +155,6 @@ Sub-skills:
 
 - [`ng-forms/SKILL.md`](ng-forms/SKILL.md)
 - [`enterprise/SKILL.md`](enterprise/SKILL.md) — deprecated package; migration only
-- [`callable-syntax/SKILL.md`](callable-syntax/SKILL.md)
 - [`guardrails/SKILL.md`](guardrails/SKILL.md)
 - [`events/SKILL.md`](events/SKILL.md)
 - [`realtime/SKILL.md`](realtime/SKILL.md)

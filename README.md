@@ -251,23 +251,35 @@ store.$.activeUserCount(); // reactive, type-safe
 
 ## Callable Syntax
 
-**Branch nodes are callable for reads AND writes natively** — `store.$.user()` reads the user subtree, `store.$.user({ name: 'Bob' })` partial-updates it. **Leaves are Angular signals**: callable as getters, but writes go through `.set()` / `.update()`. `@signaltree/callable-syntax` is a compile-time transform that brings **leaf writes** into the same call-with-arg shape that branches already support, so a single call expression covers reads and writes at every depth:
+One fact explains the whole rule: **only leaves are Angular signals.**
+
+A **branch** is SignalTree's own accessor, so we own its call semantics and a
+call can mean "merge this". It is callable in both directions, natively:
 
 ```typescript
-// Branches — always callable both directions:
-store.$.user(); // read subtree
-store.$.user({ name: 'Bob' }); // partial-update subtree
-
-// Leaves — read works without the plugin; with @signaltree/callable-syntax,
-// writes use the same shape:
-store.$.user.name(); // read leaf (no plugin needed)
-store.$.user.name('Bob'); // compiles to .set('Bob')
-store.$.count((n) => n + 1); // compiles to .update(n => n + 1)
+store.$.user(); // read the subtree
+store.$.user({ name: 'Bob' }); // partial-update it
+store.$.user((u) => ({ ...u, age: u.age + 1 })); // updater form
+store({ ui: { loading: false } }); // the root, same shape
 ```
 
-It's a Vite/Webpack plugin (dev dependency only) — the transform expands these forms back into `.set()` / `.update()` calls at build time, so production bundles have zero runtime overhead and the underlying signal API is unchanged.
+A **leaf** is a real `WritableSignal`. Calling an Angular signal is a **read** —
+it returns the value and ignores any argument — so leaves are written the
+ordinary way:
 
-> **Configure `rootIdentifiers`** in the plugin options to match your store variable names. Default is `['tree']`; if you use `store`, `state`, or other names, list them — variables not in the list are left alone.
+```typescript
+store.$.user.name(); // read
+store.$.user.name.set('Bob'); // write
+store.$.count.update((n) => n + 1); // transform
+```
+
+> **Changed in 14.0.0.** Through 13.x the types also permitted
+> `store.$.user.name('Bob')`, and the `@signaltree/callable-syntax` transform
+> was meant to rewrite it to `.set()`. It could not run inside an Angular app at
+> all, so that call type-checked and then **silently did nothing**. Both the
+> overloads and the package are gone; it is now a compile error. Leaves stay
+> real Angular signals on purpose — `isSignal()` must keep returning `true` for
+> `toObservable`, `model()`/`input()` and everything else that guards on it.
 
 ## Subpath Imports
 
@@ -367,7 +379,6 @@ store.registerCleanup(() => ws.close());
 | ----------------------------- | ---------------------------------------------------------------------------- |
 | `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms          |
 | `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core               |
-| `@signaltree/callable-syntax` | Compile-time callable syntax transform (Vite/Webpack plugin, dev dependency) |
 | `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
 | `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |
 | `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement     |
@@ -489,7 +500,7 @@ collection entries, plain leaves) and skips in-flight state. Full reasoning in
 
 ## Using SignalTree with AI Agents
 
-SignalTree ships a vendor-neutral Agent Skill so AI coding assistants can help you consume `@signaltree/*` packages correctly **and migrate existing `@ngrx/signals` codebases**. The canonical skill lives at [`docs/skills/using-signaltree/`](docs/skills/using-signaltree/) and covers the mental model, quick-start, enhancer decision tree, the full `@ngrx/signals` migration playbook (see [Migrating from `@ngrx/signals`?](#migrating-from-ngrxsignals) above), and per-package sub-skills (one level deep for `ng-forms`, `enterprise`, `callable-syntax`, `guardrails`, `events`, `realtime`).
+SignalTree ships a vendor-neutral Agent Skill so AI coding assistants can help you consume `@signaltree/*` packages correctly **and migrate existing `@ngrx/signals` codebases**. The canonical skill lives at [`docs/skills/using-signaltree/`](docs/skills/using-signaltree/) and covers the mental model, quick-start, enhancer decision tree, the full `@ngrx/signals` migration playbook (see [Migrating from `@ngrx/signals`?](#migrating-from-ngrxsignals) above), and per-package sub-skills (one level deep for `ng-forms`, `enterprise`, `guardrails`, `events`, `realtime`).
 
 **Cursor** — copy the folder into your project:
 

@@ -140,7 +140,7 @@
   "packages": [
     "core",
     "ng-forms",
-    "callable-syntax",
+    
     "enterprise",
     "guardrails"
   ],
@@ -159,10 +159,6 @@
       "ng-forms": {
         "maxSize": "10KB",
         "maxGzip": "4KB"
-      },
-      "callable-syntax": {
-        "maxSize": "5KB",
-        "maxGzip": "2KB"
       },
       "enterprise": {
         "maxSize": "8KB",

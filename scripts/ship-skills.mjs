@@ -38,7 +38,6 @@ const PACKAGES = [
   { name: 'core', nested: null },
   { name: 'ng-forms', nested: 'ng-forms' },
   { name: 'enterprise', nested: 'enterprise' },
-  { name: 'callable-syntax', nested: 'callable-syntax' },
   { name: 'guardrails', nested: 'guardrails' },
   { name: 'events', nested: 'events' },
   { name: 'realtime', nested: 'realtime' },

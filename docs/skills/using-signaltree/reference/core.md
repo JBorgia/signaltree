@@ -40,7 +40,7 @@ Both overloads return a **builder** whose `.with(enhancer)` chain composes enhan
   - Read the whole subtree as an object: `tree.$.user()`.
   - Replace the subtree: `tree.$.user({ name, email })` (call the branch accessor).
   - Patch the subtree with an updater: `tree.$.user((u) => ({ ...u, name }))`.
-  - `@signaltree/callable-syntax` adds the same callable shorthand for leaves (`tree.$.counter(5)` → `.set(5)`).
+  - Leaves are NOT callable for writes — `tree.$.counter.set(5)`. (`@signaltree/callable-syntax` promised that shorthand and was deleted in 14.0.0; it never worked in Angular apps.)
 
 **What's a leaf vs a branch?** It's a property of the *value's type*, not its position in the tree:
 

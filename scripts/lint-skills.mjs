@@ -62,7 +62,7 @@ const DIST_ROOT = path.join(REPO_ROOT, 'dist', 'packages');
 
 // Map of @signaltree/* import specifier → absolute d.ts path in dist.
 // Paths mirror each package.json `exports` field; leaves missing subpaths
-// (events/testing, callable-syntax/augmentation, etc.) will surface as
+// (events/testing, core/security, etc.) will surface as
 // lint errors, which is the desired behaviour if a skill points at a
 // subpath the package does not ship.
 const SIGNALTREE_PATH_MAP = {
@@ -80,18 +80,6 @@ const SIGNALTREE_PATH_MAP = {
   '@signaltree/ng-forms': ['dist/packages/ng-forms/src/index.d.ts'],
   '@signaltree/ng-forms/audit': ['dist/packages/ng-forms/src/audit/index.d.ts'],
   '@signaltree/ng-forms/signals': ['dist/packages/ng-forms/src/signals/index.d.ts'],
-  '@signaltree/callable-syntax': [
-    'dist/packages/callable-syntax/src/index.d.ts',
-  ],
-  '@signaltree/callable-syntax/vite': [
-    'dist/packages/callable-syntax/src/lib/vite-plugin.d.ts',
-  ],
-  '@signaltree/callable-syntax/webpack': [
-    'dist/packages/callable-syntax/src/lib/webpack-plugin.d.ts',
-  ],
-  '@signaltree/callable-syntax/augmentation': [
-    'dist/packages/callable-syntax/src/augmentation.d.ts',
-  ],
   '@signaltree/guardrails': ['dist/packages/guardrails/src/index.d.ts'],
   '@signaltree/guardrails/factories': [
     'dist/packages/guardrails/src/factories.d.ts',

@@ -22,7 +22,6 @@ const VALID_PACKAGES = new Set([
   '@signaltree/events',
   '@signaltree/ng-forms',
   '@signaltree/realtime',
-  '@signaltree/callable-syntax',
   '@signaltree/enterprise',
   '@signaltree/guardrails',
   '@signaltree/schema',

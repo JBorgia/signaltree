@@ -176,9 +176,9 @@ To **disable** automatic batching: `signalTree(state, { batchUpdates: false })`.
 
 **Where this comes from:** Plausible-sounding default assumption — "syntactic sugar" usually means a runtime wrapper.
 
-**The truth:** `@signaltree/callable-syntax` is a **build-time AST transform** (Babel-based) shipped with Vite and Webpack plugins. The transform converts `tree.$.x.name('Bob')` into `tree.$.x.name.set('Bob')` at compile time. The transform disappears in production builds. Zero runtime overhead, no `Proxy` object, no wrapper function.
+**The truth (updated for 14.0.0):** there is no runtime proxy — and there is no longer a transform either. Branches are callable because a branch is SignalTree's own accessor function, not a signal; that is plain JavaScript, no tooling involved. **Leaves were never callable for writes.** `@signaltree/callable-syntax` was a build-time Babel transform meant to rewrite `tree.$.x.name('Bob')` into `.set('Bob')`, and it could not run inside an Angular app at all, so that call type-checked and then silently did nothing. Both the package and the type overloads were removed in 14.0.0; the leaf form is now a compile error. Leaves remain real Angular signals (`isSignal()` is `true`), which is exactly why wrapping them to make the sugar work was refused.
 
-**Source:** [`packages/callable-syntax/src/lib/ast-transform.ts`](../packages/callable-syntax/src/lib/ast-transform.ts), [`packages/callable-syntax/src/lib/vite-plugin.ts`](../packages/callable-syntax/src/lib/vite-plugin.ts), [`packages/callable-syntax/README.md`](../packages/callable-syntax/README.md): _"Zero-runtime callable syntax transform... In production builds, only direct Angular signal calls remain — no runtime overhead, no wrapper functions, no Proxy objects."_
+**Source:** [`packages/core/src/lib/callable-contract.spec.ts`](../packages/core/src/lib/callable-contract.spec.ts) and its `.typing` sibling pin the contract in both directions; [RFC 0008 §4](rfcs/0008-post-13.3-open-items.md) records why the transform could not be delivered.
 
 **Doc-side action:** None — already clearly documented in the package README and root README.
 

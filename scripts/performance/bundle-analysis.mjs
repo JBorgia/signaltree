@@ -35,11 +35,6 @@ const packages = [
     features: ['Signal Forms', 'Async Validators', 'Wizard API'],
   },
   {
-    name: 'callable-syntax',
-    path: 'packages/callable-syntax',
-    features: ['Callable Signals', 'DX Transform'],
-  },
-  {
     name: 'shared',
     path: 'packages/shared',
     features: ['Deep Utilities', 'LRU Cache', 'Path Parsing'],
@@ -173,7 +168,6 @@ class RecursiveBundleAnalyzer {
       core: 5120, // 5KB - Recursive typing core
       enterprise: 2450, // 2.4KB - Diff/update engine add-on
       'ng-forms': 4198, // 4.1KB - Deep form validation
-      'callable-syntax': 1024, // 1KB - DX transform
       shared: 1536, // 1.5KB - Shared utilities
     };
 

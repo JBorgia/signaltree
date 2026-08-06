@@ -112,4 +112,3 @@ Business Source License 1.1 (BSL-1.1) — see [LICENSE](../../LICENSE). Converts
 
 - [@signaltree/core](../core) — where `updateAndReport()` and `onPathChange()` now live
 - [@signaltree/ng-forms](../ng-forms) — Angular forms integration
-- [@signaltree/callable-syntax](../callable-syntax) — callable syntax transform
