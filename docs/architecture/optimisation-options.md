@@ -75,23 +75,53 @@ materialisation — O(dirty nodes), paid on read.
 
 ## Family A — Materialisation (`tree()`)
 
-**A1. Incremental materialisation with structural sharing. MEASURED. ★ the
-recommendation.** Give every branch a dirty flag and a cached POJO. `tree()`
-returns the cache for any subtree that is clean, and rebuilds only along dirty
-paths. **56.7× on a 10k-leaf grid** (489.1 → 8.6 µs), and 99/100 top-level
-subtrees come back reference-identical between writes.
+**A1. Incremental materialisation with structural sharing. SHIPPED in 13.5.0.**
+Every node memoises its materialisation in a `computed`, so a node rebuilds only
+when a signal beneath it actually changed and clean subtrees are returned BY
+REFERENCE.
 
-The reference-identity is worth more than the speed, because it makes four other
-problems collapse into this one — see the shortlist.
+Implemented with Angular's `computed` rather than the hand-rolled dirty flags
+this document originally proposed, and that turned out to be strictly better:
+the invalidation already happens on the write path, so **incremental
+materialisation costs the write path nothing at all** — not the +3.7 ns of
+early-exit marking, and certainly not the +68.5 ns of eager version stamping at
+depth 50. It is also how `entityMap` already works, so the codebase gained no
+new mechanism.
 
-Costs, honestly: +3.7 ns per write (1.9×) with early-exit marking; one retained
-POJO per branch; and `tree()` no longer returns a freshly-allocated object, so
-anything that mutates the result now corrupts the cache. That last one is a real
-API change and needs either a freeze in dev or a documented contract.
+Measured in the real library — cost of reading the whole state, by how much
+actually changed:
 
-No win on deep-narrow shapes (1.0× at depth 50) — there is nothing wide to
-share. It is a _width_ optimisation, which matches Track D's finding that width
-is the entire bill.
+| shape                       | all leaves changed | one leaf changed | nothing changed         |
+| --------------------------- | ------------------ | ---------------- | ----------------------- |
+| grid 100 × 100 (10k leaves) | 1807.8 µs          | 149.2 µs (12.1×) | 0.044 µs (**40,740×**)  |
+| grid 1000 × 20 (20k leaves) | 3665.8 µs          | 389.8 µs (9.4×)  | 0.051 µs (72,412×)      |
+| grid 20 × 1000 (20k leaves) | 5066.4 µs          | 311.6 µs (16.3×) | 0.045 µs (**111,558×**) |
+
+The "all leaves" column is the honest baseline: it includes the memo's own
+overhead, so it slightly _overstates_ what the old code cost. The
+nothing-changed column is the one that matters most in practice — any code that
+reads state more than once between writes used to pay a full rebuild every time.
+
+**The bug this surfaced.** The win did not appear until a second defect was
+fixed. After a child accessor returned its already-materialised object, `unwrap`
+called `unwrap()` on it _again_, deep-copying a plain object that was already
+plain. That made every parent read mint a fresh copy of every child, so no
+subtree was ever reference-stable — the memo was in place and shared 0 of 100
+subtrees. Removing the re-copy took it to 99 of 100. (The identical-looking
+recursion in the `isSignal` branch is load-bearing and was kept: a leaf's VALUE
+is user data, and copying it is what stops a snapshot aliasing live state.)
+
+**The cost, and it is a real API change.** `tree()` no longer returns a freshly
+allocated object, so mutating the result would corrupt the cache and the change
+would survive into every later read. Snapshots were always meant to be
+read-only; now it is load-bearing, so each node is `Object.freeze`d in dev mode —
+mutation becomes an immediate `TypeError` instead of a corrupted tree found much
+later. The freeze is shallow per node (each child is frozen by its own memo); a
+deep freeze would have to walk leaf values, which is the O(state) cost this
+exists to avoid.
+
+No win on deep-narrow shapes, as predicted: this is a WIDTH optimisation, and
+Track D measured depth at 0.4% of the allocation bill.
 
 **A2. Shape-compiled materialiser. MEASURED.** Walk the shape once at
 construction; emit a closure chain that knows its own keys and needs no type

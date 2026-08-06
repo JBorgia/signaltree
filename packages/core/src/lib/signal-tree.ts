@@ -12,7 +12,13 @@ import {
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isComparedMarker } from './markers/compared';
 import { getPathNotifier } from './path-notifier';
-import { equal, isBuiltInObject, isTraversableNode, unwrap } from './utils';
+import {
+  equal,
+  isBuiltInObject,
+  isTraversableNode,
+  materializeNode,
+  unwrap,
+} from './utils';
 
 import type {
   TreeNode,
@@ -208,9 +214,11 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   // `caller` and `arguments` are all configurable and were already fine.
   const accessor = {
     node(arg?: unknown): T | void {
-      // GET - no argument
+      // GET - no argument. Memoised per node: a clean subtree comes back BY
+      // REFERENCE instead of being rebuilt, so one leaf write no longer costs
+      // O(state) to observe. See materialized() in utils.ts.
       if (arguments.length === 0) {
-        return unwrap(store) as unknown as T;
+        return materializeNode(store as object) as unknown as T;
       }
 
       // UPDATE with function - auto-batch
@@ -726,7 +734,7 @@ function create<T extends object>(
   // Create root callable function
   const tree = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
-      return unwrap(signalState) as unknown as T;
+      return materializeNode(signalState as object) as unknown as T;
     }
 
     if (typeof arg === 'function') {
