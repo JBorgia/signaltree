@@ -345,15 +345,17 @@ function warnEntityArrayLeaf(key: string, value: readonly unknown[]): void {
   if (ENTITY_ARRAY_WARNED.size >= ENTITY_ARRAY_WARN_CAP) return;
   ENTITY_ARRAY_WARNED.add(seenKey);
 
+  // Kept SHORT deliberately: this string sits in the dev-mode floor that
+  // tools/check-bundle-budget.mjs measures, and an earlier draft inlining the
+  // full benchmark table cost ~0.8KB gzip across every bundle. The numbers and
+  // the "when an array leaf is right" case live in docs/errors/README.md and
+  // the entity cookbook, which the code points at.
   console.warn(
     `SignalTree: "${key}" holds ${value.length} objects with a stable ` +
-      `"${idKey}" — consider entityMap({ selectId: (e) => e.${idKey} }).\n` +
-      `  As a plain array leaf, every update rebuilds the whole array and every ` +
-      `equality check walks it. Measured on 1000 updates to a 50k collection: ` +
-      `array leaf 49.80ms vs entityMap 1.63ms (~30x).\n` +
-      `  If this array is read-only or always replaced wholesale, that is fine — ` +
-      `wrap it in compared() with your own comparator to silence this. See ` +
-      `docs/guides/entity-collection-cookbook.md [ST2018]`
+      `"${idKey}" — use entityMap({ selectId: (e) => e.${idKey} }). An array ` +
+      `leaf rebuilds and re-compares the whole array on every update (~30x ` +
+      `slower at 50k). Read-only or replaced wholesale? compared() silences ` +
+      `this. [ST2018]`
   );
 }
 

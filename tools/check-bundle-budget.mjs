@@ -24,7 +24,25 @@ const REPO_NODE_MODULES = new URL('../node_modules', import.meta.url).pathname;
 // id -> { code, budgetKB }
 const TARGETS = {
   'signaltree-bare': {
-    budgetKB: 5.8,
+    // Bumped 5.8 → 6.9 for 13.5.0. Measured 6.81KB. Attributed, minified bytes in
+    // the bare bundle: signal-tree.js +2137 (the ST2018 entity-array
+    // diagnostic, the compared() marker interception, and the materializeNode
+    // wiring), shared/deep-equal.js +538 (the Error / primitive-wrapper /
+    // prototype-gate correctness fixes — a leaf holding an Error used to
+    // compare equal to any other Error), utils.js +241 (the per-node
+    // materialisation memo), markers/compared.js +113.
+    //
+    // NOT a tree-shaking regression: compared.js contributes 113 bytes because
+    // only its type guard survives, and the rest tree-shakes. Roughly 0.7KB of
+    // the gzip growth is dev-only text that folds — the same bundles built with
+    // `define: { ngDevMode: false }` grow only +0.37KB, which is the real cost a
+    // production app pays for materialisation memoisation.
+    //
+    // What it bought (measured, docs/architecture/optimisation-options.md):
+    // reading the whole state with nothing changed 1400us → 0.044us, time
+    // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
+    // diagnostic for an idiom mistake worth ~30x.
+    budgetKB: 6.9,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -56,7 +74,26 @@ const TARGETS = {
     // a leaked optional module. Defining `ngDevMode: false` removes them
     // entirely (see docs/performance/dropping-dev-code.md, which measures
     // ~1.15KB reclaimed for this scenario). Deliberate, not a regression.
-    budgetKB: 8.7,
+    //
+    // Bumped 8.7 → 9.8 for 13.5.0. Measured 9.71KB. Attributed, minified bytes in
+    // the bare bundle: signal-tree.js +2137 (the ST2018 entity-array
+    // diagnostic, the compared() marker interception, and the materializeNode
+    // wiring), shared/deep-equal.js +538 (the Error / primitive-wrapper /
+    // prototype-gate correctness fixes — a leaf holding an Error used to
+    // compare equal to any other Error), utils.js +241 (the per-node
+    // materialisation memo), markers/compared.js +113.
+    //
+    // NOT a tree-shaking regression: compared.js contributes 113 bytes because
+    // only its type guard survives, and the rest tree-shakes. Roughly 0.7KB of
+    // the gzip growth is dev-only text that folds — the same bundles built with
+    // `define: { ngDevMode: false }` grow only +0.37KB, which is the real cost a
+    // production app pays for materialisation memoisation.
+    //
+    // What it bought (measured, docs/architecture/optimisation-options.md):
+    // reading the whole state with nothing changed 1400us → 0.044us, time
+    // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
+    // diagnostic for an idiom mistake worth ~30x.
+    budgetKB: 9.8,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -77,7 +114,26 @@ const TARGETS = {
     // ST2008-ST2011 traversal diagnostics sit on paths every tree reaches.
     // Measured 7.86KB. Not a history-engine leak; the forbidden-identifier
     // check in scripts/verify-tree-shaking.js still guards that.
-    budgetKB: 7.9,
+    //
+    // Bumped 7.9 → 9.0 for 13.5.0. Measured 8.90KB. Attributed, minified bytes in
+    // the bare bundle: signal-tree.js +2137 (the ST2018 entity-array
+    // diagnostic, the compared() marker interception, and the materializeNode
+    // wiring), shared/deep-equal.js +538 (the Error / primitive-wrapper /
+    // prototype-gate correctness fixes — a leaf holding an Error used to
+    // compare equal to any other Error), utils.js +241 (the per-node
+    // materialisation memo), markers/compared.js +113.
+    //
+    // NOT a tree-shaking regression: compared.js contributes 113 bytes because
+    // only its type guard survives, and the rest tree-shakes. Roughly 0.7KB of
+    // the gzip growth is dev-only text that folds — the same bundles built with
+    // `define: { ngDevMode: false }` grow only +0.37KB, which is the real cost a
+    // production app pays for materialisation memoisation.
+    //
+    // What it bought (measured, docs/architecture/optimisation-options.md):
+    // reading the whole state with nothing changed 1400us → 0.044us, time
+    // travel flat in state size (340.60ms → 0.04ms at 10k rows), and a
+    // diagnostic for an idiom mistake worth ~30x.
+    budgetKB: 9.0,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });

@@ -45,6 +45,23 @@ true`, so on a changing number it measures **6.5ns against `Object.is`'s
   nested arrays, nulls, and anything wrapped in `compared()`. Bounded 64-element
   sample, once per array at construction, dev only.
 
+### Bundle size
+
+- **The dev-mode floor grew ~1.0KB gzip; a production build grows 0.37KB.**
+  Budgets raised deliberately (bare 5.8 → 6.9, entities 8.7 → 9.8, form
+  7.9 → 9.0) with the attribution recorded in `tools/check-bundle-budget.mjs`.
+
+  Minified bytes in the bare bundle: `signal-tree.js` +2137 (the ST2018
+  diagnostic, the `compared()` marker interception, the materialisation
+  wiring), `shared/deep-equal.js` +538 (the Error / primitive-wrapper /
+  prototype-gate correctness fixes), `utils.js` +241 (the memo),
+  `markers/compared.js` +113.
+
+  It is **not** a tree-shaking regression — `compared.js` contributes 113 bytes
+  because only its type guard survives. Roughly 0.7KB of the growth is dev-only
+  text that folds: the same bundles built with `ngDevMode: false` grow only
+  0.37KB, and the foldability gate confirms consumers reclaim ~1.49KB per tree.
+
 ### Performance
 
 - **Time travel no longer scales with state size.** Recording a write cost
