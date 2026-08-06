@@ -23,9 +23,20 @@ const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 
-/** Parse the first `## X.Y.Z (label)` heading. */
+/**
+ * Parse the first `## X.Y.Z[-prerelease] (label)` heading.
+ *
+ * The prerelease suffix is NOT optional decoration. Without it the pattern
+ * captured `14.0.0` out of `## 14.0.0-rc.1` and then reported drift against a
+ * package.json that said `14.0.0-rc.1` — a gate failing on a correct release.
+ * Worse in the other direction: a heading of `## 14.0.0` against a package
+ * version of `14.0.0-rc.1` would have compared equal and passed, which is
+ * exactly the drift this gate exists to catch.
+ */
 function topChangelog(text) {
-  const m = text.match(/^##\s+(\d+\.\d+\.\d+)\s*(?:\(([^)]*)\))?/m);
+  const m = text.match(
+    /^##\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*(?:\(([^)]*)\))?/m
+  );
   return m ? { version: m[1], label: (m[2] || '').trim() } : null;
 }
 
@@ -71,6 +82,13 @@ if (process.argv.includes('--self-test')) {
     { cl: '## 1.2.3 (unreleased)\n', pkg: '1.2.3', tag: () => false, expectFail: false, name: 'unreleased + untagged → passes (pre-release)' },
     { cl: '## 1.2.4 (unreleased)\n', pkg: '1.2.3', tag: () => false, expectFail: true, name: 'version drift → fires' },
     { cl: 'no heading here\n', pkg: '1.2.3', tag: () => false, expectFail: true, name: 'missing heading → fires' },
+    // Prerelease handling. The middle case is the one that matters: before the
+    // suffix was captured, `## 1.2.3` vs pkg `1.2.3-rc.1` compared EQUAL and
+    // the gate waved real drift through.
+    { cl: '## 1.2.3-rc.1 (unreleased)\n', pkg: '1.2.3-rc.1', tag: () => false, expectFail: false, name: 'prerelease matching → passes' },
+    { cl: '## 1.2.3 (unreleased)\n', pkg: '1.2.3-rc.1', tag: () => false, expectFail: true, name: 'final heading vs prerelease pkg → fires' },
+    { cl: '## 1.2.3-rc.1 (unreleased)\n', pkg: '1.2.3-rc.2', tag: () => false, expectFail: true, name: 'prerelease drift (rc.1 vs rc.2) → fires' },
+    { cl: '## 1.2.3-rc.1 (unreleased)\n', pkg: '1.2.3-rc.1', tag: () => true, expectFail: true, name: 'prerelease unreleased + tagged → fires' },
   ];
   let ok = true;
   for (const c of cases) {

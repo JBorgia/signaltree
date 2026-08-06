@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/enterprise",
-  "version": "14.0.0",
+  "version": "14.0.0-rc.1",
   "description": "DEPRECATED \u2014 use tree.updateAndReport() in @signaltree/core instead. The diff engine is measurably slower than the core API that replaced it.",
   "license": "BUSL-1.1",
   "type": "module",

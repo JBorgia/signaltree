@@ -126,6 +126,32 @@ cleanup() { rm -f "$NPMRC_TEMP"; }
 trap cleanup EXIT
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > "$NPMRC_TEMP"
 
+
+# ---------------------------------------------------------------------------
+# DIST-TAG — derived from the version, never assumed.
+#
+# `npm publish` sets the `latest` tag BY DEFAULT, including for prerelease
+# versions. Publishing 14.0.0-rc.1 without an explicit --tag would therefore
+# make the release candidate what every `npm install @signaltree/core` resolves
+# to. npm does not protect you from this; the version string looking like a
+# prerelease changes nothing.
+#
+# So: any version containing a hyphen is a prerelease, and its dist-tag is the
+# prerelease identifier (14.0.0-rc.1 -> "rc", 14.0.0-next.2 -> "next"). Only a
+# clean X.Y.Z goes to `latest`.
+# ---------------------------------------------------------------------------
+case "$VERSION" in
+    *-*)
+        NPM_TAG="$(printf '%s' "$VERSION" | sed -E 's/^[^-]*-([A-Za-z]+).*/\1/')"
+        [ -n "$NPM_TAG" ] || NPM_TAG="next"
+        ;;
+    *)
+        NPM_TAG="latest"
+        ;;
+esac
+
+print_step "Publishing with dist-tag: $NPM_TAG (version $VERSION)"
+
 PUBLISHED_PACKAGES=()
 FAILED_PACKAGES=()
 
@@ -133,7 +159,7 @@ for package in "${PACKAGES[@]}"; do
     DIST_PATH="./dist/packages/$package"
     print_step "Publishing @signaltree/$package@$VERSION..."
 
-    PUBLISH_CMD=(npm publish --access public --userconfig "$NPMRC_TEMP")
+    PUBLISH_CMD=(npm publish --access public --tag "$NPM_TAG" --userconfig "$NPMRC_TEMP")
     # Provenance is supported on trusted CI providers (GitHub Actions).
     if [ -n "${GITHUB_ACTIONS:-}" ] || [ "${NPM_CONFIG_PROVENANCE:-}" = "true" ]; then
         PUBLISH_CMD+=(--provenance)
@@ -146,7 +172,7 @@ for package in "${PACKAGES[@]}"; do
     set -e
 
     if [ "$PUBLISH_EXIT_CODE" -eq 0 ]; then
-        print_success "Published @signaltree/$package@$VERSION"
+        print_success "Published @signaltree/$package@$VERSION (tag: $NPM_TAG)"
         PUBLISHED_PACKAGES+=("$package")
     elif grep -q "cannot publish over the previously published versions" "$LOG_FILE" 2>/dev/null; then
         print_warning "@signaltree/$package@$VERSION already published, skipping"

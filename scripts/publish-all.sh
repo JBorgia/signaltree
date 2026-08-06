@@ -47,6 +47,8 @@ print_status "Verified npm authentication"
 
 # Define packages in dependency order (core first, then others)
 # Keep this list aligned with scripts/release.sh PACKAGES.
+VERSION=$(node -p "require('./package.json').version")
+
 PACKAGES=(
     "core"
     "events"
@@ -56,6 +58,30 @@ PACKAGES=(
     "guardrails"
     "schema"
 )
+
+
+# ---------------------------------------------------------------------------
+# DIST-TAG — derived from the version, never assumed.
+#
+# `npm publish` sets the `latest` tag BY DEFAULT, including for prerelease
+# versions. Publishing 14.0.0-rc.1 without an explicit --tag would therefore
+# make the release candidate what every `npm install @signaltree/core` resolves
+# to. npm does not protect you from this; the version string looking like a
+# prerelease changes nothing.
+#
+# So: any version containing a hyphen is a prerelease, and its dist-tag is the
+# prerelease identifier (14.0.0-rc.1 -> "rc", 14.0.0-next.2 -> "next"). Only a
+# clean X.Y.Z goes to `latest`.
+# ---------------------------------------------------------------------------
+case "$VERSION" in
+    *-*)
+        NPM_TAG="$(printf '%s' "$VERSION" | sed -E 's/^[^-]*-([A-Za-z]+).*/\1/')"
+        [ -n "$NPM_TAG" ] || NPM_TAG="next"
+        ;;
+    *)
+        NPM_TAG="latest"
+        ;;
+esac
 
 # Check if dry-run flag is passed
 DRY_RUN=""
@@ -91,9 +117,9 @@ publish_package() {
 
     if [ -n "$DRY_RUN" ]; then
         print_warning "DRY RUN: Would publish @signaltree/$package_name"
-        npm publish $DRY_RUN
+        npm publish --tag "$NPM_TAG" $DRY_RUN
     else
-        if npm publish; then
+        if npm publish --tag "$NPM_TAG"; then
             print_success "Successfully published @signaltree/$package_name"
         else
             print_error "Failed to publish @signaltree/$package_name"
