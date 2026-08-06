@@ -43,10 +43,28 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
   readonly $: TAccum;
   readonly state: TAccum;
 
-  // Enhancer chaining
+  /**
+   * Enhancer chaining. Returns `this & TAdded` so each enhancer's surface
+   * ACCUMULATES across the chain.
+   *
+   * This used to return `SignalTreeBuilder<TSource, TAccum> & TAdded`, which
+   * discarded everything added before it — so
+   *
+   *     signalTree({}).with(timeTravel()).with(serialization()).with(batching())
+   *
+   * typed as `SignalTreeBuilder<…> & BatchingMethods` and lost `canUndo` and
+   * `serialize` entirely. Every method existed at RUNTIME; only the type forgot
+   * them, so the workaround was a cast, and the demo's time-travel page carries
+   * exactly that cast.
+   *
+   * `batching.types.ts` has asserted "`.with()` preserves accumulated types via
+   * the `this & TAdded` pattern" the whole time. The comment described the
+   * intent; the signature did not implement it. Fixed in 14.0.0 — polymorphic
+   * `this` is what makes the intersection survive the next link.
+   */
   with<TAdded>(
     enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TAdded
-  ): SignalTreeBuilder<TSource, TAccum> & TAdded;
+  ): this & TAdded;
 
   // From ISignalTree
   bind(thisArg?: unknown): (value?: TSource) => TSource | void;

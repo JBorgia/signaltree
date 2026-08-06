@@ -48,7 +48,7 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 - Angular 20, 21, or 22 (see `peerDependencies`), TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external): a bare tree ~5.6KB; with `entityMap` ~8.5KB; with `form()` ~7.7KB. Enforced by `tools/check-bundle-budget.mjs`. Defining `ngDevMode: false` in a production build reclaims a further ~0.5–0.9KB — see [dropping dev code](performance/dropping-dev-code.md)
+- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.65KB**; with `entityMap` **8.39KB**; with `form()` **7.75KB**. **Development** (default build, diagnostics included): **7.40 / 10.84 / 9.77KB** — defining `ngDevMode: false` reclaims **~2.07KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)

@@ -195,10 +195,18 @@ Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`
 - `@signaltree/core/lazy` — the `lazy()` helper for deferring marker/enhancer materialization.
 - `@signaltree/core/authoring` — enhancer- and marker-author plumbing (`getPathNotifier`, `registerMarkerProcessor`, `withWriteContext`, `createEnhancer`, …). This is also the migration target for the deprecated root-barrel re-exports of `getPathNotifier` and `registerMarkerProcessor` (see below).
 
-**Measured impact** (with modern bundlers, per `tools/check-bundle-budget.mjs`):
+**Measured impact.** All figures are a **production build** (`ngDevMode: false`),
+own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
+`node tools/check-bundle-budget.mjs`.
 
-- Bare `signalTree` (no markers/enhancers): ~5.5 KB gzipped
-- A tree using a plain `entityMap()`: ~8.4 KB gzipped
+- Bare `signalTree` (no markers/enhancers): **5.6 KB**
+- A tree using a plain `entityMap()`: **8.4 KB**
+
+⚠️ The condition matters. The same code in a **development** build is ~1.8 KB
+larger per tree, because the dev diagnostics are guarded strings that fold away
+under `ngDevMode: false` — so a bare tree measures ~7.4 KB in dev. Neither number
+is wrong; quoting one without saying which invites someone to measure the other
+and conclude the docs lie.
 - Core + `batching()`: bare `signalTree` plus `batching()`'s own delta (see per-enhancer deltas under "Available extension packages")
 - Unused enhancers: **automatically excluded** by tree-shaking
 
@@ -2851,18 +2859,29 @@ class UsersComponent {
 
 All enhancers are now consolidated in the core package. The following features are available directly from `@signaltree/core`:
 
+> **Per-enhancer deltas below are measured**, not estimated — run
+> `node tools/measure-enhancer-deltas.mjs` to reproduce. Each figure is the
+> increase over a bare `signalTree` in a production build, with the enhancer
+> **exercised**, not merely applied (measuring `.with(x())` alone understates
+> anything reachable only through a method call).
+>
+> Three of these four numbers were wrong before 14.0.0, in both directions:
+> `serialization` was published as +0.84 KB and is +1.86 KB, and `devTools` was
+> published as +2.49 KB — which is neither its main-bundle cost nor its lazy
+> chunk.
+
 ### Performance & Optimization
 
-- **batching()** (+1.27KB gzipped) - Batch multiple updates for better performance
+- **batching()** (**+0.99 KB** gzipped, prod) - Batch multiple updates for better performance
 
 ### Development Tools
 
-- **devTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
-- **timeTravel()** (+1.75KB gzipped) - Undo/redo functionality & state history
+- **devTools()** (**+0.09 KB** gzipped in the main bundle, prod) - Development tools & Redux DevTools integration. The implementation is behind a **dynamic import**: an 8.25 KB chunk fetched only when `connectDevTools()` actually connects, so an app that ships the enhancer without opening devtools pays a tenth of a kilobyte
+- **timeTravel()** (**+1.69 KB** gzipped, prod) - Undo/redo functionality & state history
 
 ### Integration & Convenience
 
-- **serialization()** (+0.84KB gzipped) - State persistence & SSR support
+- **serialization()** (**+1.86 KB** gzipped, prod) - State persistence & SSR support
 - **persistence()** - Auto-save/load to localStorage, IndexedDB, or custom adapters
 
 ### Reactive Side Effects

@@ -160,7 +160,15 @@ type InternalMarker = EntityMapMarker<
  * Default key type: inferred from the entity's `id` field if present.
  * @internal
  */
-type DefaultKey<E> = E extends { id: infer I extends string | number }
+/**
+ * Exported because it appears in a PUBLIC signature default —
+ * `entityMap<E, K = DefaultKey<E>>`. As a module-local type it was referenced by
+ * the emitted `.d.ts` and declared nowhere in it, so a consumer compiling with
+ * `skipLibCheck: false` got `TS2304: Cannot find name 'DefaultKey'`. A type that
+ * is reachable from a public signature is public whether or not it is exported;
+ * the only choice is whether the declaration ships with it.
+ */
+export type DefaultKey<E> = E extends { id: infer I extends string | number }
   ? I
   : string;
 

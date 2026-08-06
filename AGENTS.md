@@ -123,3 +123,46 @@ false positives while it was being written:
 `typecheck:source` for now. They pass at runtime because vitest never
 type-checks them. Narrowing that exclusion is worth doing; do it a directory at
 a time rather than in one sweep.
+
+
+## Publishing to npm
+
+Gates that run immediately before `npm publish`, in this order — all three
+publish paths (`ci-publish.sh`, `publish-all.sh`, `release.sh`) call the same
+scripts, because two copies and one hole is what caused the drift they exist to
+prevent:
+
+1. `scripts/resolve-workspace-specs.mjs` — rewrites `workspace:*` to a real
+   range and proves none survive. A published `workspace:*` is not valid semver
+   and fails every install.
+2. `scripts/verify-publish-artifacts.mjs` — every glob in `files` must resolve
+   to a real file in dist. npm ships a tarball missing an unmatched glob without
+   a word.
+3. `tools/verify-consumer-typecheck.mjs` — packs the tarball, installs it into a
+   throwaway project and TYPE-CHECKS consumer code under both `bundler` and
+   `node16` resolution. `verify-tarball-consumer.mjs` only proves the resolver
+   finds the files; this proves the shipped types compile.
+
+### Two decisions recorded so they are not re-litigated
+
+**No `engines` field, deliberately.** These are browser libraries; nothing in
+them depends on a Node version at runtime (core only reads
+`globalThis.process?.env.NODE_ENV` behind a guard). The real constraint belongs
+to the Angular version the consumer already chose, and our supported range spans
+Angular 20–22, whose own Node requirements differ. Declaring a range would
+either duplicate Angular's or contradict it, and being wrong here produces
+spurious install warnings for a valid setup. `@ngrx/signals` declares none
+either. The one arguable exception is `@signaltree/events`, which ships a NestJS
+subpath — but the same package also ships an Angular subpath, so a package-level
+`engines` would constrain browser consumers for a server-only reason.
+
+**`--strict-libs` on the consumer gate is RED and not gated.** Rollup's
+declaration emitter drops several exported types while still referencing them
+(`DefaultKey`, `EntityMapComputedSlices`, `EntityMapMarkerWithSlices`,
+`PathNotifierHandler`, `HydrateMode`), and `index.d.ts` re-exports `isDev` from
+`lib/constants`, which does not export it. Consumers running
+`skipLibCheck: true` — the Angular CLI default, and effectively universal — are
+unaffected, which is why the gate enforces that configuration. Re-exporting the
+missing names from the barrel does NOT fix it and makes it worse: the barrel
+then points at declarations that still are not emitted. The real fix is in the
+declaration build, and it is tracked debt rather than a hidden failure.
