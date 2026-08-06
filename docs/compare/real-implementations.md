@@ -83,6 +83,33 @@ by `entity-restore-diff.spec.ts`, which tests the FALLBACK shapes rather than th
 happy path, because a shortcut that is wrong about when it applies would
 silently corrupt a restore.
 
+### Where the remaining undo cost actually is, and what is NOT worth optimising
+
+The obvious next optimisation was to have restore write the snapshot's entity
+objects in DIRECTLY, since it already holds them — `upsertOne` routes to
+`updateOne`, which does `{ ...entity, ...changes }` and allocates a new object
+rather than reusing the one the snapshot is holding. Decomposing a 10,000 entity
+undo first:
+
+| component of one undo | cost |
+| --- | --- |
+| `tree()` snapshot capture, cold (O(N) pointer array) | 38 µs |
+| the reference diff walk over 10,000 rows | 15 µs |
+| `updateOne` for the one changed entity | **< 1 µs** |
+| total per undo | ~110 µs |
+
+**The spread is under 1 % of the cost**, so removing it would buy nothing
+measurable while adding an internal replace-without-merge path that bypasses the
+interceptor and tap handlers `updateOne` runs. Declined on the numbers rather
+than on taste.
+
+What remains is the O(N) pointer array, and it is inherent: a history entry has
+to hold a snapshot, and a snapshot of a changed collection is a new array of N
+pointers. A warm `tree()` costs 0 µs — the memo already covers the unchanged
+case — so the cost only appears where the collection genuinely moved. For scale:
+the `structuredClone` a hand-rolled history performs on the same data is
+2,869 µs, ~75× more.
+
 ### The retraction
 
 The first version of this harness measured SignalTree **doing nothing**:

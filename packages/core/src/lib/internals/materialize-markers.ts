@@ -1,4 +1,4 @@
-import { isSignal } from '@angular/core';
+import { computed, isSignal, type Signal } from '@angular/core';
 
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor, isTraversableNode } from '../utils';
@@ -97,11 +97,41 @@ export function getNodeProcessor(node: unknown): MarkerProcessor | undefined {
  * @internal Snapshot a materialised marker node, or `undefined` if the node is
  * not a marker or its processor declines to define a snapshot.
  */
+/**
+ * Memoised per node, because the wrapper churned on UNRELATED writes.
+ *
+ * `unwrap` calls this on every parent rebuild, and `isMemoisable` cannot accept
+ * a marker node (it recognises tree stores and node accessors only), so each
+ * call re-ran `proc.snapshot(node)` and allocated a fresh `{ value }`. Measured:
+ * after changing an unrelated leaf, `tree().rows !== previous.rows` even though
+ * the collection had not changed — while the `all` array INSIDE it was
+ * correctly stable. Only the wrapper churned, and that is enough to make a
+ * `computed(() => tree().rows)` recompute and an OnPush component bound to the
+ * whole marker re-render on every unrelated write.
+ *
+ * A `computed` is the right memo here rather than a hand-rolled cache: the
+ * marker's snapshot reads the marker's own signals, so Angular's graph already
+ * knows exactly when it is stale. Cost is O(1) per marker, not per entity —
+ * this is a REFERENCE-STABILITY fix, and it does not touch the per-entity
+ * figures in docs/architecture/memory-profile.md, which are the entityMap's id
+ * index and storage.
+ */
+const SNAPSHOT_MEMO = new WeakMap<object, Signal<{ value: unknown }>>();
+
 export function snapshotMarkerNode(
   node: unknown
 ): { value: unknown } | undefined {
   const proc = getNodeProcessor(node);
-  return proc?.snapshot ? { value: proc.snapshot(node) } : undefined;
+  if (!proc?.snapshot) return undefined;
+  if (!isTraversableNode(node)) return { value: proc.snapshot(node) };
+
+  let memo = SNAPSHOT_MEMO.get(node as object);
+  if (!memo) {
+    const snapshot = proc.snapshot;
+    memo = computed(() => ({ value: snapshot(node) }));
+    SNAPSHOT_MEMO.set(node as object, memo);
+  }
+  return memo();
 }
 
 /** @internal Hydrate a materialised marker node. Returns false if unhandled. */
