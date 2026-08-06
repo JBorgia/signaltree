@@ -2,6 +2,122 @@
   <h2>🚀 What's New</h2>
 
   <h3>
+    ⚡ v13.5.0 — <code>tree()</code> rebuilds only what changed (August 2026)
+  </h3>
+  <div class="release-highlights">
+    <p>
+      Reading the whole state used to cost O(state) every single time, even when
+      one leaf had changed and even when nothing had. That is the
+      full-state-work-per-change pattern this library exists to avoid — the
+      video-frame principle, applied to state: you don't re-encode every pixel
+      because one moved.
+    </p>
+
+    <h4>⚡ Performance</h4>
+    <ul>
+      <li>
+        <strong><code>tree()</code> is memoised and structurally shared.</strong>
+        A node rebuilds only when a signal beneath it actually changed; clean
+        subtrees come back <em>by reference</em>. Reading the whole state after a
+        one-leaf write went <strong>1807.8µs → 149.2µs</strong> on a 10,000-leaf
+        tree, and reading it with nothing changed returns the identical object in
+        <strong>0.044µs</strong>. Built on Angular's own <code>computed()</code>,
+        so the invalidation rides the existing write path and
+        <strong>costs writes nothing</strong>.
+      </li>
+      <li>
+        <strong><code>timeTravel()</code> no longer scales with state
+        size.</strong> A history entry is now the snapshot reference rather than
+        a <code>structuredClone</code>, and every comparison collapses to
+        <code>===</code>. 50 writes each changing ONE number, at 10,000 rows:
+        <strong>340.60ms → 0.04ms</strong>. Flat in state size — that is the
+        qualitative change, not the percentage. Memory per entry drops from a
+        full copy of state to only the nodes that changed.
+      </li>
+      <li>
+        <strong>Serialisation stopped stringifying the tree to ask "did anything
+        change?"</strong> <code>autoSave</code> polled
+        <code>JSON.stringify(tree())</code> every 100ms to answer a yes/no
+        question the write path already knew. It is now an O(1) identity check.
+      </li>
+    </ul>
+
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>compared()</code> / <code>byKeys()</code> — per-leaf
+        equality.</strong> A tree has one equality function for every leaf, which
+        is the right default and the wrong answer for a few positions: it cannot
+        know which fields matter, or that a <code>version</code> field already
+        answers the question.
+        <br />
+        <code
+          >user: compared(initialUser, byKeys&lt;User&gt;('id',
+          'version'))</code
+        >
+        <br />
+        On an object leaf that is <strong>53.8ns → 8.9ns</strong>, and on the same
+        object re-fetched over HTTP (equivalent value, new identity)
+        <strong>110.3ns → 9.0ns</strong>. The point is not the speed: a
+        comparator reaches the reference-equality floor
+        <em>while keeping re-fetch correctness</em>, which is exactly why
+        defaulting leaves to <code>Object.is</code> stays wrong.
+        <br />
+        <strong>Not for primitives.</strong> <code>deepEqual</code>'s first line
+        is already the fast path — on a changing number it beats
+        <code>Object.is</code> 6.5ns to 8.1ns. There is nothing to specialise.
+      </li>
+      <li>
+        <strong>[ST2018] — a warning when a collection is stored as a plain array
+        leaf.</strong> The most expensive idiom mistake available here, and it
+        does not look like a mistake. 1000 updates to a 50,000-row collection:
+        <strong>49.80ms</strong> as an array leaf versus
+        <strong>1.63ms</strong> via <code>entityMap</code> — the array leaf lands
+        at parity with the immutable stores SignalTree otherwise beats ~28x.
+        Documentation did not prevent this: <em>our own demo benchmark</em>
+        shipped the array-leaf idiom while the entity cookbook sat in the repo.
+        Hence a diagnostic instead of another guide.
+      </li>
+    </ul>
+
+    <h4>🐛 Fixed</h4>
+    <ul>
+      <li>
+        <strong>A held <code>byId()</code> reference died permanently across
+        remove → re-add.</strong> The node captured the per-entity signal once, so
+        a re-added entity left the held reference reading an orphan forever.
+        Holding a reference to a nested position is the capability this library
+        has and immutable stores do not — it has to survive the collection
+        churning underneath it.
+      </li>
+      <li>
+        <strong><code>timeTravel()</code> charged you for other people's
+        trees.</strong> It subscribes to the global flush, so every time-travelled
+        tree materialised and deep-cloned <em>itself</em> whenever
+        <em>any</em> tree in the process flushed: 0.008ms → 9.7ms as three
+        unrelated 10,000-leaf trees were kept alive.
+      </li>
+    </ul>
+
+    <h4>⚠️ Breaking</h4>
+    <ul>
+      <li>
+        <strong><code>tree()</code> no longer returns a freshly allocated
+        object.</strong> Mutating a snapshot would corrupt the cache and survive
+        into every later read. Snapshots were always meant to be read-only; that
+        is now load-bearing, so each node is frozen in dev and a mutation throws
+        immediately. If you mutate a snapshot, copy it first. Nothing in this repo
+        did — all 751 pre-existing core tests passed with the freeze active.
+      </li>
+      <li>
+        <strong><code>getHistory()</code> returns entry states by
+        reference.</strong> The entry objects are still copied, so history
+        metadata cannot be rewritten.
+      </li>
+    </ul>
+  </div>
+
+  <h3>
     🔍 v13.4.0 — markers are visible to the tree's own snapshot and write paths
     (August 2026)
   </h3>

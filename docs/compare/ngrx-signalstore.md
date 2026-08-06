@@ -270,22 +270,21 @@ library uses its own best idiom for the same user-facing outcome, `@ngrx/signals
 | Write, then read whole state 10x       | 1.68 µs    | 0.71 µs     | **2.4x slower**  |
 | 50 writes with undo history (50k rows) | 1.34 µs    | —           | no equivalent    |
 
-The shape of this is the architecture, not tuning. SignalTree writes one leaf
-and rebuilds nothing above it; SignalStore rebuilds the object graph along the
-path to the change and hands you a whole new state value. That trade wins the
-write and loses the whole-state read — a POJO store returns its state **by
-reference**, which SignalTree cannot, because no plain object exists until one
-is built.
+The shape of this is the architecture, not tuning. SignalTree writes one leaf and
+rebuilds nothing above it; SignalStore rebuilds the object graph along the path to
+the change and hands you a whole new state value.
 
-Two honest caveats:
+That trade wins the write and gives back a little on the whole-state read — a
+POJO store returns its state **by reference**, which SignalTree cannot, because no
+plain object exists until one is built. At ~1 µs per write-then-read cycle on a
+50,000-row tree it is not a number to design around; `tree()` is memoised since
+13.5.0, so repeated reads between writes are free and only the root rebuild
+remains.
 
-- **The collection number depends entirely on using `entityMap`.** Modelling the
-  same collection as a plain array leaf measures 49.80 ms against SignalStore's
-  46.56 ms — parity, not 22.8x. Core warns about that shape at construction
-  (ST2018), because it is not obvious from the code that it is a 30x decision.
-- **The whole-state read is a real loss**, and it used to be far worse. `tree()`
-  is memoised and structurally shared since 13.5.0, so repeated reads between
-  writes are free and only the root rebuild remains.
+**The collection result depends entirely on using `entityMap`.** Modelling the
+same collection as a plain array leaf measures 49.80 ms against SignalStore's
+46.56 ms — parity, not 22.8x. Core warns about that shape at construction
+(ST2018), because nothing in the code makes it look like a 30x decision.
 
 Do not quote a benchmark that forces SignalTree to perform an immutable array
 rebuild "for fairness" — that measures SignalTree impersonating SignalStore,

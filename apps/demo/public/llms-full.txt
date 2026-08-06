@@ -1386,11 +1386,15 @@ measured a 7.5x phantom that moved when an unrelated arm was added), `@ngrx/sign
 | Write, then read whole state 10x | 1.68 µs | 0.71 µs | **2.4x SLOWER** |
 | 50 writes with undo history (50k rows) | 1.34 µs | — | no equivalent |
 
-The whole-state read is a genuine, structural loss: a POJO store returns state by
-reference, and SignalTree has no plain object until one is built. The collection
-number depends ENTIRELY on using `entityMap` — the same collection as a plain
-array leaf measures 49.80ms against SignalStore's 46.56ms, i.e. parity (ST2018
-warns about that shape). Never quote a benchmark that forces SignalTree to do an
+The whole-state read is the one task SignalStore wins, and it is structural: a
+POJO store returns state by reference, and SignalTree has no plain object until
+one is built. It is ~1us per write-then-read cycle on a 50k-row tree — real, but
+not a number to design around, and `tree()` is memoised since 13.5.0 so repeated
+reads between writes are free.
+
+The collection number depends ENTIRELY on using `entityMap` — the same collection
+as a plain array leaf measures 49.80ms against SignalStore's 46.56ms, i.e. parity
+(ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
 immutable array rebuild "for fairness"; that measures SignalTree impersonating
 SignalStore.
 
