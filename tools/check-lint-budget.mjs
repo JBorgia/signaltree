@@ -55,6 +55,16 @@ const PROJECTS = [
   'packages/events',
   'packages/realtime',
   'apps/demo',
+  // tools/ and scripts/ are NOT nx projects, so `nx run-many -t lint` never
+  // reaches them and this list did not either — it was written from the nx
+  // project list, which is a definition of "the workspace" that quietly excludes
+  // every gate, harness and build script in the repo. An irregular-whitespace
+  // ERROR sat in find-dead-exports.mjs while this gate reported "0 errors":
+  // the gate that exists to prove other gates can fail was itself not linted.
+  // Caught by an external hook, not by anything here, which is the whole reason
+  // the coverage counts below are printed rather than assumed.
+  'tools',
+  'scripts',
 ];
 
 /** Per-project warning counts and total errors, from eslint's own JSON. */

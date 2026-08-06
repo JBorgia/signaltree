@@ -11,7 +11,7 @@
  * rewrite left orphaned exports behind, because that is not a question it asks.
  *
  * A symbol is DEAD here when all three hold:
- *   1. it is exported from a file under `packages/*​/src/`;
+ *   1. it is exported from a file inside a package's `src/`;
  *   2. it is not reachable from that package's public barrel (`src/index.ts`),
  *      directly or through a chain of re-exports — the public API is *supposed*
  *      to look unused from inside;
@@ -170,7 +170,7 @@ for (const file of files) {
 }
 
 // Also treat any `export { x } from './y'` as importing x from y.
-for (const [file, res] of reExports) {
+for (const res of reExports.values()) {
   for (const r of res) {
     if (r.names !== '*') for (const n of r.names) importedNames.add(n);
   }
