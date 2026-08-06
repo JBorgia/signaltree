@@ -1,4 +1,4 @@
-## Unreleased (13.5.0)
+## 13.5.0 (2026-08-05)
 
 Retires `@signaltree/enterprise` and moves the two capabilities worth keeping
 into core. See [RFC 0010](docs/rfcs/0010-retiring-enterprise.md) for the full
