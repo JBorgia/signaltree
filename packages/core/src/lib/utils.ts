@@ -223,6 +223,34 @@ export function composeEnhancers<T>(
 }
 
 /**
+ * @internal An entityMap node materialises to its ENTITIES, nothing else.
+ *
+ * The node exposes `all`, `ids`, `count`, `map` and `empty`. Only `all` is
+ * state; the rest are derived views of it, and emitting them into a snapshot
+ * was both redundant and wrong:
+ *
+ *  - `ids` duplicated every key — ~11% of a collection snapshot (48,891 bytes
+ *    of a 486,733-byte snapshot at 10k rows).
+ *  - `map` is a `Map`, which JSON cannot represent, so it serialised as `{}` —
+ *    a snapshot that claims the collection is EMPTY while holding N entries.
+ *    Anything reading a persisted snapshot saw that lie.
+ *  - `count` and `empty` are one deref of `all`.
+ *
+ * Restore already only reads `.all` (see applyState), so dropping the rest
+ * costs nothing on the round trip and keeps `snapshot.x.all` working. A
+ * consumer reading `snapshot.x.ids` or `.count` should read them off the live
+ * node (`tree.$.x.ids()`), which is where they are correct and current.
+ */
+function isEntityNode(node: unknown): boolean {
+  return (
+    node !== null &&
+    typeof node === 'object' &&
+    typeof (node as { setAll?: unknown }).setAll === 'function' &&
+    typeof (node as { all?: unknown }).all === 'function'
+  );
+}
+
+/**
  * @internal Per-node materialisation cache — the incremental half of `tree()`.
  *
  * Materialising is O(state): there is no plain object anywhere until one is
@@ -351,6 +379,11 @@ export function materializeNode<T>(store: object): T {
 
 /** @internal The uncached build for one NodeAccessor. See {@link materialized}. */
 function buildFromAccessor<T>(node: NodeAccessor<unknown>): T {
+    if (isEntityNode(node)) {
+      return {
+        all: (node as unknown as { all: () => unknown }).all(),
+      } as unknown as T;
+    }
     const result = {} as Record<string, unknown>;
 
     for (const key in node as unknown as Record<string, unknown>) {
@@ -455,6 +488,14 @@ export function unwrap<T>(node: unknown): T {
 
   if (isBuiltInObject(node)) {
     return node as T;
+  }
+
+  // An entityMap reached through the store path rather than an accessor. Same
+  // rule — see isEntityNode(): entities only, no derived views.
+  if (isEntityNode(node)) {
+    return {
+      all: (node as unknown as { all: () => unknown }).all(),
+    } as unknown as T;
   }
 
   const result = {} as Record<string, unknown>;

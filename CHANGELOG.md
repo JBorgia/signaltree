@@ -20,6 +20,24 @@
   directly and is unaffected. Verified on all five paths plus a plain object
   spread. (RFC 0008 item 1.)
 
+### Changed
+
+- **`entityMap` snapshots contain entities only.** `tree()` emitted `all`,
+  `ids`, `count`, `map` and `empty`; only `all` is state. `ids` duplicated every
+  key (48,891 of 486,733 bytes at 10k rows), and `map` — a `Map`, which JSON
+  cannot represent — serialised as `{}`, so a persisted snapshot claimed the
+  collection was EMPTY while holding 10,000 entities. That is wrong data, not
+  just waste.
+
+  Restore reads only `snapshot.all` (verified identical before and after), so
+  round-trips are unaffected. Read `ids`/`count` off the live node
+  (`tree.$.rows.ids()`), where they are correct and current.
+
+  ⚠️ Breaking for anything reading `snapshot.rows.ids` / `.count` / `.map`.
+  Keeping them as non-enumerable properties was measured and rejected: they must
+  be computed eagerly to exist, costing **+12.2µs against 14.7µs** per
+  materialisation at 10k rows. See RFC 0011 §1 for all 13 options.
+
 ### Added
 
 - **[ST2021] — a marker inside an array.** Array elements are never traversed,
