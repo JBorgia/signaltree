@@ -166,7 +166,21 @@ export function asyncQuery<TInput, TResult>(
 ): AsyncQueryMarker<TInput, TResult> {
   if (!asyncQueryRegistered) {
     asyncQueryRegistered = true;
-    registerBuiltinMarkerProcessor(isAsyncQueryMarker, createAsyncQuerySignal);
+    registerBuiltinMarkerProcessor(isAsyncQueryMarker, createAsyncQuerySignal, {
+      // A marker whose value comes ONLY from its source. There is no write
+      // path — the node exposes `reset()` and nothing that sets a value — so
+      // this CAPTURES but deliberately does not restore.
+      //
+      // Capturing still matters: without it the key vanished from every
+      // snapshot entirely (ST2008), so devtools showed nothing, persistence
+      // wrote nothing, and a reader could not tell "no data" from "we dropped
+      // it". Being visible and explicitly not-restorable beats being absent.
+      //
+      // Restoring would need the source re-driven (an input for `asyncQuery`,
+      // a subscription for `asyncStream`), which is a different operation from
+      // hydrating a value and belongs to whoever owns that source.
+      snapshot: (node) => ({ value: node() }),
+    });
   }
   return {
     [ASYNC_QUERY_MARKER]: true,

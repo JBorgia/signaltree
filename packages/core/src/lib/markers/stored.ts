@@ -425,7 +425,21 @@ export function stored<T>(
   // Self-register on first use (tree-shakeable)
   if (!storedRegistered) {
     storedRegistered = true;
-    registerBuiltinMarkerProcessor(isStoredMarker, createStoredSignal);
+    registerBuiltinMarkerProcessor(isStoredMarker, createStoredSignal, {
+      // `transient` here means "I need no snapshot hook", not "I have no
+      // state". A materialised `stored()` IS a real Angular `WritableSignal`,
+      // so the ordinary leaf walk already reads it, writes it, and records it
+      // for undo/redo — verified: undo of a stored() value works.
+      //
+      // It is also the one marker that OWNS ITS SOURCE. On a fresh tree it
+      // re-reads its own storage during construction, before any snapshot
+      // arrives — verified: a new tree with no snapshot applied still returns
+      // the persisted value. So a cross-process rehydrate has nothing to do.
+      //
+      // Declared explicitly rather than left blank so it does not read as an
+      // oversight, and so ST2022 stays meaningful.
+      transient: true,
+    });
   }
 
   warnDuplicateStoredKey(key);

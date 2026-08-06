@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { form } from './markers';
-import { asyncSource } from './markers/async-source';
+import { signal } from '@angular/core';
+
+import { registerMarkerProcessor } from './internals/materialize-markers';
 import { signalTree } from './signal-tree';
 import { unwrap } from './utils';
 
@@ -35,19 +37,35 @@ describe('one builder: snapshots do not depend on how a node is reached', () => 
   });
   afterEach(() => err.mockRestore());
 
-  const treeWithNestedForm = () =>
-  // `asyncSource()` — a REGISTERED marker that has not declared a `snapshot`
-  // hook, so its value genuinely cannot be materialised and its key vanishes.
-  //
-  // This fixture used to use `form()`. Once markers gained snapshot/hydrate,
-  // `form()` is handled and correctly stopped tripping ST2008, so it was no
-  // longer a valid subject. A plain function is not one either: a function in
-  // the state literal becomes a leaf signal HOLDING a function, which the
-  // signal branch happily emits. What ST2008 now means, precisely, is "a marker
-  // that never said what of it is state" — which is the condition worth having
-  // a diagnostic for.
+  // A THIRD-PARTY marker registered WITHOUT a `snapshot` hook.
+//
+// This fixture has now been through three subjects, and the trail is the
+// finding: it started as `form()`, which stopped tripping ST2008 once markers
+// gained snapshot/hydrate; then a plain function, which is not a valid subject
+// at all (a function in the state literal becomes a leaf signal HOLDING a
+// function, which the signal branch happily emits); then `asyncSource()`, which
+// stopped tripping it once the async markers declared their own.
+//
+// Every built-in now declares. So the only way to reach ST2008 is a marker
+// whose author never said what of it is state — which is exactly the condition
+// worth a diagnostic, and exactly what making the contract MANDATORY at
+// registration would eliminate.
+const HOOKLESS = Symbol.for('signaltree:test-hookless');
+const hooklessMarker = () => ({ [HOOKLESS]: true, seed: 1 });
+registerMarkerProcessor(
+  (v): v is { seed: number } =>
+    v !== null && typeof v === 'object' && HOOKLESS in v,
+  (marker) => {
+    const s = signal((marker as { seed: number }).seed);
+    // A callable with no `set`/`update`: neither signal nor accessor, and no
+    // processor hook — the shape every walker must skip.
+    return Object.assign(() => s(), { bump: () => s.update((n) => n + 1) });
+  }
+);
+
+const treeWithNestedForm = () =>
   signalTree({
-    grp: { s: asyncSource({ loader: async () => 1 }) },
+    grp: { s: hooklessMarker() as unknown as number },
     n: 1,
   });
 
@@ -90,8 +108,8 @@ describe('one builder: snapshots do not depend on how a node is reached', () => 
     // A marker with no `snapshot` hook cannot be materialised, so its key
     // vanishes. This pins that it is no longer SILENT when it does.
     signalTree({
-      top: asyncSource({ loader: async () => 1 }),
-      grp: { nested: asyncSource({ loader: async () => 2 }) },
+      top: hooklessMarker() as unknown as number,
+      grp: { nested: hooklessMarker() as unknown as number },
     })();
 
     const msg = err.mock.calls.map((c) => String(c[0])).join('\n');

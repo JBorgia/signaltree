@@ -185,6 +185,7 @@ export function registerMarkerProcessor<T, R>(
   hooks?: {
     snapshot?: (node: R) => unknown;
     hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+    transient?: true;
   }
 ): void {
   // Public entry point — used for custom markers. Emits the post-construction
@@ -213,9 +214,49 @@ export function registerBuiltinMarkerProcessor<T, R>(
   hooks?: {
     snapshot?: (node: R) => unknown;
     hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+    transient?: true;
   }
 ): void {
   registerProcessor(check, create, /* suppressTimingWarning */ true, hooks);
+}
+
+/**
+ * ST2022 — a marker registered without saying what of it is state.
+ *
+ * This is the guard against the defect class that produced FOUR separate bugs:
+ * `form()` and the three async markers vanishing from every snapshot,
+ * `entityMap` emitting a `map` that JSON rendered as `{}` while holding 10,000
+ * entities, and `status()` shipping six computeds plus nine setter METHODS into
+ * a payload that then threw on restore. All four share one cause — nothing ever
+ * forced a marker author to answer *"what of me is state?"*
+ *
+ * Enforced at REGISTRATION rather than at materialisation, because
+ * `materializeMarkers` swallows `create()` throws (RFC 0005 §7), so a
+ * materialiser-level guard fails open — the lesson `entityMap({ load })` already
+ * learned with [ST2004].
+ *
+ * Three answers are valid, and silence is not one of them:
+ *   - `snapshot` (+ optional `hydrate`) — here is my state
+ *   - `transient: true` — I deliberately have none; omit me, and do not warn
+ *   - a node that is already a real Angular signal — the ordinary walk handles
+ *     it, and this check does not apply
+ *
+ * Warns rather than throws, for now: `registerMarkerProcessor` is public and
+ * throwing would break every existing third-party marker at runtime rather than
+ * at author time. The type signature makes it a compile error for anyone using
+ * the types; this catches the ones who cast past them. It should become a throw
+ * in the next major.
+ */
+function warnUndeclaredMarker(): void {
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) return;
+  console.warn(
+    'SignalTree: a marker was registered without `snapshot` or ' +
+      '`transient: true`. Its value will be DROPPED from every snapshot — ' +
+      'tree(), persistence(), devtools, audit and undo/redo — silently, ' +
+      'except for an ST2008 report at read time. Declare what of your marker ' +
+      'is state: pass `{ snapshot, hydrate }`, or `{ transient: true }` if it ' +
+      'deliberately has none. [ST2022]'
+  );
 }
 
 function registerProcessor<T, R>(
@@ -225,6 +266,7 @@ function registerProcessor<T, R>(
   hooks?: {
     snapshot?: (node: R) => unknown;
     hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
+    transient?: true;
   }
 ): void {
   // Dev-mode validation: prevent invalid argument types with a clear error.
@@ -265,6 +307,8 @@ function registerProcessor<T, R>(
         'or rebuild the tree after registration.'
     );
   }
+
+  if (!hooks?.snapshot && !hooks?.transient) warnUndeclaredMarker();
 
   MARKER_PROCESSORS.push({
     check,

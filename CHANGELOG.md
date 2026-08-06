@@ -2,6 +2,53 @@
 
 ### Fixed
 
+- **`asyncSource` / `asyncQuery` / `asyncStream` lost their values entirely.**
+  Same defect `form()` had, in three more markers: `tree()` returned
+  `{"n":1}` with the marker simply gone, ST2008 reporting it at read time.
+  All three now declare a snapshot.
+
+  `asyncSource` can also be written directly, so it restores on undo/redo and
+  declines on `rehydrate` — a new process has already re-run the loader, so the
+  recorded value is stale by definition. `asyncQuery` and `asyncStream` expose
+  no value setter, so they CAPTURE but explicitly do not restore: being visible
+  and documented as not-restorable beats vanishing.
+
+### Added
+
+- **ST2022 — a marker registered without declaring what of it is state.** This
+  is the guard against the defect class that produced four separate bugs, all
+  sharing one cause: nothing ever forced a marker author to answer the question.
+
+  Three answers are valid and silence is not one: `snapshot` (+ optional
+  `hydrate`), `transient: true` for a marker that deliberately has none, or a
+  node that is already a real Angular signal. Enforced at REGISTRATION, because
+  `materializeMarkers` swallows `create()` throws (RFC 0005 §7) so a
+  materialiser-level guard fails open — the lesson `entityMap({ load })` learned
+  with ST2004. Warns rather than throws for now, since `registerMarkerProcessor`
+  is public; it should become a throw in the next major.
+
+- **`stored()` declares `transient: true` explicitly.** It needs no snapshot
+  hook — it materialises to a real `WritableSignal`, so the ordinary walk
+  already handles it, and it re-reads its own storage at construction before any
+  snapshot arrives. Declared rather than left blank so it does not read as an
+  oversight.
+
+### Documentation
+
+- **Four dead mechanisms documented in place** rather than left to be
+  rediscovered: the serialization envelope's `version` (hardcoded `'1.0.0'` at
+  two sites, read only into a debug log), its `timestamp` (same, and explicitly
+  excluded from the change-detection key), and `appVersion` (declared in the
+  type and never written or read by anything — it exists only as a type).
+
+  The `version` note records the two things that will matter when a policy
+  lands: writing the tag is IRREVERSIBLE (payloads already in a user's
+  localStorage can never be given one retroactively) while enforcing it is
+  fully reversible; and `'1.0.0'` is NOT a clean baseline, so a
+  "reject unknown versions" policy would reject the entire installed base.
+
+### Fixed
+
 - **`serialization()` could not round-trip a tree containing `status()` or
   `entityMap` — it THREW** (`targetSignal.set is not a function`), and had since
   those markers existed. Persisting a collection has never worked.

@@ -93,12 +93,40 @@ export interface SerializedState<T = unknown> {
     timestamp: number;
 
     /**
-     * Version of the serialization format
+     * Version of the SNAPSHOT FORMAT — the shape of `data`, not the app.
+     *
+     * ⚠️ NOT YET ENFORCED, and that is deliberate. Writing the tag is
+     * irreversible: payloads already sitting in a user's localStorage can never
+     * be given one retroactively. Enforcing a policy is fully reversible —
+     * it is code, changeable in any later release, by which time every payload
+     * carries a tag. So the tag is written now and the policy is left open.
+     *
+     * ⚠️ `'1.0.0'` IS NOT A CLEAN BASELINE. Every payload ever written says
+     * `1.0.0`, including all of them written while this field was decorative
+     * (emitted at two sites, read only into a `debugMode` console.log). When a
+     * policy does land it must treat `1.0.0` as LEGACY/UNKNOWN, not as a known
+     * shape — "reject unknown versions" would reject the entire installed base.
+     *
+     * The first real bump belongs to the marker snapshot/hydrate work, which
+     * changed the payload twice (markers gained snapshots; `serialize()` stopped
+     * using its private walker). Nothing published between those, so they reach
+     * users as ONE transition and deserve ONE bump.
+     *
+     * Distinct from `timestamp`, which answers "when" and cannot answer "what
+     * shape": during a rolling deploy old and new clients write concurrently,
+     * so a NEWER timestamp can carry an OLDER shape, and client clocks are not
+     * trustworthy anyway. A version bumps only when the shape changes, which is
+     * the one thing a timestamp can never express.
      */
     version: string;
 
     /**
-     * Custom application version
+     * Custom application version.
+     *
+     * ⚠️ DECLARED BUT NEVER WRITTEN OR READ — anywhere, by anything. It exists
+     * only as a type. Kept rather than deleted because removing a public
+     * optional field is a breaking change for anyone who sets it in a config
+     * object, but nothing consumes it: setting it has no effect today.
      */
     appVersion?: string;
 
@@ -718,6 +746,15 @@ export function serialization(
       // Add metadata if requested
       if (fullConfig.includeMetadata) {
         data.metadata = {
+          // `timestamp` answers "when was this written" — useful for
+          // staleness ("this draft is three weeks old, discard it"), which is
+          // the job `loader({ staleTime })` already does via `lastLoadedAt`.
+          // It is deliberately excluded from the change-detection cache key so
+          // it cannot cause false positives.
+          //
+          // It is NOT a compatibility signal: see the note on `version` in the
+          // metadata type. Both fields are currently read only into a
+          // debugMode console.log.
           timestamp: Date.now(),
           version: '1.0.0',
           ...(circularPaths.length > 0 && { circularRefs: circularPaths }),
@@ -795,6 +832,15 @@ export function serialization(
       return {
         data: JSON.parse(JSON.stringify(state)) as T, // Deep clone
         metadata: {
+          // `timestamp` answers "when was this written" — useful for
+          // staleness ("this draft is three weeks old, discard it"), which is
+          // the job `loader({ staleTime })` already does via `lastLoadedAt`.
+          // It is deliberately excluded from the change-detection cache key so
+          // it cannot cause false positives.
+          //
+          // It is NOT a compatibility signal: see the note on `version` in the
+          // metadata type. Both fields are currently read only into a
+          // debugMode console.log.
           timestamp: Date.now(),
           version: '1.0.0',
           ...(circularPaths.length > 0 && { circularRefs: circularPaths }),

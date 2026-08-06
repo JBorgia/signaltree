@@ -144,7 +144,26 @@ export function asyncSource<T>(
 ): AsyncSourceMarker<T> {
   if (!asyncSourceRegistered) {
     asyncSourceRegistered = true;
-    registerBuiltinMarkerProcessor(isAsyncSourceMarker, createAsyncSourceSignal);
+    registerBuiltinMarkerProcessor(isAsyncSourceMarker, createAsyncSourceSignal, {
+      // A marker that OWNS A SOURCE, and can also be written directly.
+      //
+      // The value is CAPTURED always. Stripping it at snapshot time would make
+      // undo/redo and devtools replay show whatever the loader decides now
+      // rather than what was on screen then, which is not a rewind. Capture
+      // always; decide on the way back in.
+      //
+      // On `rehydrate` the payload is stale by definition — the tree was
+      // rebuilt in a new process and the loader has already re-run, so the
+      // fresh result wins. On `restore`/`merge` the recorded value is written
+      // back, because that is what undo means.
+      snapshot: (node) => ({ value: node() }),
+
+      hydrate: (node, value, mode) => {
+        if (mode === 'rehydrate') return; // the loader has already re-run
+        if (value === null || typeof value !== 'object') return;
+        node.set((value as { value?: unknown }).value as never);
+      },
+    });
   }
   return {
     [ASYNC_SOURCE_MARKER]: true,

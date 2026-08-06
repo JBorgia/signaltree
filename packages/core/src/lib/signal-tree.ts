@@ -628,13 +628,28 @@ function recursiveUpdate(
         warnDiscardedBranchWrite(childPath, value);
       }
     }
-    // NOTE: no diagnostic for "matched neither guard". Since stored() became a
-    // real signal, the only values reaching here are materialized markers
-    // (entityMap/status/form), which do not accept merge writes BY DESIGN —
-    // each has its own API. Warning would fire on `tree(tree())`, the ordinary
-    // snapshot-restore pattern, and the obvious remediation (`.set()`) does not
-    // exist on those markers. A diagnostic that cries wolf on documented usage
-    // is worse than none — the same bar that rejected the duplicate-key warning.
+    // ST2005 — attempted and REVERTED, deliberately. Recorded here so the
+    // next person does not re-derive it.
+    //
+    // Its 13.x removal note said a diagnostic here "would fire on
+    // `tree(tree())`, the ordinary snapshot-restore pattern", and that markers
+    // "do not accept merge writes BY DESIGN". Both were true then. Neither is
+    // now: every marker declares `hydrate`, the branch above routes to it, and
+    // `tree(tree())` is pinned by a round-trip test that reads LIVE node values
+    // (the naive snapshot-vs-snapshot form passes vacuously when both sides
+    // drop the same key).
+    //
+    // So the reasoning did expire — but restoring the diagnostic at THIS site
+    // still cries wolf, measured: it fired on an ordinary leaf write
+    // (`tree({known: 2})`) and on `{ user: undefined }`, which is type-legal
+    // `Partial<T>` and exactly what `{ ...defaults, ...patch }` produces for an
+    // absent optional key. This is the tail of the outer dispatch, not the
+    // "matched neither guard" branch the note described.
+    //
+    // A correct ST2005 needs a narrower site that ordinary writes cannot reach.
+    // Finding it is real work, and the read-side half is already covered:
+    // ST2008 reports a marker that cannot be snapshotted, and ST2022 now
+    // catches one registered without declaring its state at all.
   }
 }
 

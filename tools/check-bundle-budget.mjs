@@ -55,8 +55,17 @@ const TARGETS = {
     // all — before this, `persistence()` wrote `{}` for a form and reported
     // success. The cost is the snapshot/hydrate hooks on status, form and
     // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
-    // duck-type tests, so part of the growth is offset.
-    budgetKB: 7.2,
+    // duck-type tests, so part of the growth is offset.    //
+    // Bumped 7.2 → 7.3 for the async-marker snapshot hooks and ST2022.
+    // Measured 7.12KB; production 5.59KB.
+    //
+    // What it bought: `asyncSource`/`asyncQuery`/`asyncStream` values reach
+    // snapshots at all — before this `tree()` dropped them entirely, the same
+    // defect `form()` had — plus ST2022, which fires when a marker registers
+    // without declaring what of it is state. That diagnostic is the guard
+    // against a SEVENTH instance of this defect class, so its bytes are the
+    // cheapest on this list.
+    budgetKB: 7.3,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -120,8 +129,17 @@ const TARGETS = {
     // all — before this, `persistence()` wrote `{}` for a form and reported
     // success. The cost is the snapshot/hydrate hooks on status, form and
     // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
-    // duck-type tests, so part of the growth is offset.
-    budgetKB: 10.2,
+    // duck-type tests, so part of the growth is offset.    //
+    // Bumped 10.2 → 10.4 for the async-marker snapshot hooks and ST2022.
+    // Measured 10.30KB; production 8.24KB.
+    //
+    // What it bought: `asyncSource`/`asyncQuery`/`asyncStream` values reach
+    // snapshots at all — before this `tree()` dropped them entirely, the same
+    // defect `form()` had — plus ST2022, which fires when a marker registers
+    // without declaring what of it is state. That diagnostic is the guard
+    // against a SEVENTH instance of this defect class, so its bytes are the
+    // cheapest on this list.
+    budgetKB: 10.4,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -174,8 +192,17 @@ const TARGETS = {
     // all — before this, `persistence()` wrote `{}` for a form and reported
     // success. The cost is the snapshot/hydrate hooks on status, form and
     // entityMap plus the O(1) processor stamp; it REPLACED two hardcoded
-    // duck-type tests, so part of the growth is offset.
-    budgetKB: 9.4,
+    // duck-type tests, so part of the growth is offset.    //
+    // Bumped 9.4 → 9.7 for the async-marker snapshot hooks and ST2022.
+    // Measured 9.53KB; production 7.70KB.
+    //
+    // What it bought: `asyncSource`/`asyncQuery`/`asyncStream` values reach
+    // snapshots at all — before this `tree()` dropped them entirely, the same
+    // defect `form()` had — plus ST2022, which fires when a marker registers
+    // without declaring what of it is state. That diagnostic is the guard
+    // against a SEVENTH instance of this defect class, so its bytes are the
+    // cheapest on this list.
+    budgetKB: 9.7,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });
