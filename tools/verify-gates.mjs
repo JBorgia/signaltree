@@ -73,14 +73,18 @@ const GATES = [
   },
   {
     name: 'test:all',
-    covers: 'behaviour across ALL 8 published packages, not just core',
+    covers: 'behaviour across all 8 published packages AND the demo app',
     // Was `nx test core`. The gate's own name said "core" and its summary line
     // said "core behaviour", so it was honest about what it covered — and what
     // it covered was one package of eight. The other seven have real suites
     // (ng-forms alone has 44) and nothing in the gate suite ran them.
     cmd: [
       'npx', 'nx', 'run-many', '-t', 'test',
-      '--projects=core,enterprise,ng-forms,shared,guardrails,schema,events,realtime',
+      // The demo has 27 suites and 191 tests that ran only if someone typed
+      // `nx test demo` by hand. It is also the app the demo-coverage gate holds
+      // up as proof every export is demonstrated — so it breaking silently would
+      // undermine that gate too.
+      '--projects=core,enterprise,ng-forms,shared,guardrails,schema,events,realtime,demo',
       '--skip-nx-cache',
     ],
     slow: true,

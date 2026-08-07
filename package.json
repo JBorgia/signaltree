@@ -59,7 +59,7 @@
     "build:packages": "nx run-many -t build --projects=enterprise,ng-forms,shared,guardrails",
     "build:production": "nx run-many -t build --configuration=production --projects=core,enterprise,ng-forms,shared,guardrails,events,realtime,schema && npm run ship-skills",
     "// Testing Scripts": "Comprehensive testing workflows",
-    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,guardrails,schema,realtime --parallel=1",
+    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,guardrails,schema,events,realtime,demo --parallel=1",
     "test:core": "nx test core",
     "test:performance": "nx test core --testNamePattern=\"performance\"",
     "test:recursive": "nx test core --testNamePattern=\"recursive\"",
