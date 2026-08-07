@@ -87,32 +87,16 @@ jobs:
             exit 1
           fi
 
-      - name: Lint
-        run: pnpm run lint:all
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Test
-        run: pnpm run test:all
-
-      - name: Build
+      # The gates read dist/ — barrels, bundle budgets, foldability, tarball
+      # contents. `gates` verifies a build; it does not produce one.
+      - name: Build all packages
         run: pnpm run build:all
 
-      - name: Verify built barrels resolve (all 8 packages)
-        run: node tools/verify-built-barrels.mjs
+      - name: All gates (lint budget, typecheck, tests, barrels, exports, docs, budgets, harnesses)
+        run: pnpm run gates
 
-      - name: Verify guardrails conditional exports (default → real build)
-        run: node scripts/verify-guardrails-default-condition.mjs
-
-      - name: Bundle-budget gate (own-code gzip floor)
-        run: node tools/check-bundle-budget.mjs
-
-      - name: Dev-code foldability gate (ngDevMode advisory code must fold)
-        run: node tools/check-devmode-foldable.mjs
-
-      - name: Verify taught symbols
-        run: node scripts/verify-taught-symbols.js
+      - name: Prove every gate can still fail
+        run: pnpm run gates:self-test
 
       - name: Verify version claims
         run: node scripts/verify-version-claims.js

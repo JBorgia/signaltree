@@ -151,6 +151,35 @@ const GATES = [
     },
   },
   {
+    name: 'taught-symbols',
+    covers: 'llms-full.txt teaches no removed API, and every golden symbol is taught',
+    cmd: ['node', 'scripts/verify-taught-symbols.js'],
+    needsBuild: true,
+    // Was run by CI and by nothing else. A dead API in the AI-facing doc is the
+    // hallucination vector this repo cares most about.
+    mutation: {
+      file: 'apps/demo/public/llms-full.txt',
+      append: '\n```ts\nimport { thisApiWasNeverReal } from "@signaltree/core";\n```\n',
+    },
+  },
+  {
+    name: 'version-claims',
+    covers: 'every documented Angular-version claim matches peerDependencies',
+    cmd: ['node', 'scripts/verify-version-claims.js'],
+    mutation: {
+      file: 'packages/core/package.json',
+      find: '"@angular/core": "^20.0.0 || ^21.0.0 || ^22.0.0"',
+      replace: '"@angular/core": "^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0"',
+    },
+  },
+  {
+    name: 'package-hygiene',
+    covers: 'no junk in any tarball, and every declared entry is present',
+    cmd: ['node', 'scripts/verify-package-hygiene.js'],
+    needsBuild: true,
+    unproven: 'inspects packed tarballs; a mutation would need a fixture package',
+  },
+  {
     name: 'readme-apis',
     covers: 'every @signaltree symbol named in a shipped README exists',
     cmd: ['node', 'scripts/lint-readme-apis.mjs'],
