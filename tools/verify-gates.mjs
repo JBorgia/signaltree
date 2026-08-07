@@ -213,6 +213,27 @@ const GATES = [
     },
   },
   {
+    name: 'state-scale',
+    covers: 'the O(1)-write thesis, measured against elf on both axes',
+    cmd: ['node', 'tools/bench-state-scale.mjs', '--quick'],
+    needsBuild: true,
+    // Every arm asserts its write landed. Breaking the signaltree write makes
+    // the postcondition fire — the check that the benchmark is not measuring an
+    // idle arm, which this repo has published once already.
+    mutation: {
+      file: 'tools/bench-state-scale.mjs',
+      find: '    for (let w = 0; w < WRITES; w++) tree.$.k0.v.set(w);\n  });\n\n  const store = createStore({ name: `flat${size}` }',
+      replace: '    for (let w = 0; w < WRITES; w++) void w;\n  });\n\n  const store = createStore({ name: `flat${size}` }',
+    },
+  },
+  {
+    name: 'size-compare',
+    covers: 'cross-library gzip cost is measurable for both libraries',
+    cmd: ['node', 'tools/size-compare.mjs'],
+    needsBuild: true,
+    unproven: 'reports sizes; no threshold to breach — the budget gate owns ours',
+  },
+  {
     name: 'size-report',
     covers: 'every published package builds and its tree-shaken size is measurable',
     cmd: ['node', 'tools/size-report.mjs'],

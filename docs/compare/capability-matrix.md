@@ -10,20 +10,33 @@ a README or from memory of a library's marketing. Reproduce it with
 
 | library | version | unique exports | entry points |
 | --- | --- | --- | --- |
-| `@signaltree/core` | 14.0.0-rc.1 | 248 | 6 |
+| `@signaltree/core` | 14.0.0-rc.1 | 191 (root: 154) | 6 |
 | `@ngrx/signals` | 21.1.1 | 73 | 5 |
 | `@ngrx/store` | 21.1.1 | 79 | 2 |
-| `@ngneat/elf` | 2.5.1 | 56 | 1 |
-| `@ngneat/elf-entities` | 5.0.2 | 69 | 1 |
-| `@ngneat/elf-state-history` | 1.4.0 | 7 | 1 |
+| `@ngneat/elf` | 2.5.1 | 40 | 1 |
+| `@ngneat/elf-entities` | 5.0.2 | 61 | 1 |
+| `@ngneat/elf-state-history` | 1.4.0 | 2 | 1 |
 | `@ngxs/store` | 20.1.0 | 131 | 6 |
-| `@datorama/akita` | 8.0.1 | 199 | 1 (unmaintained upstream) |
+| `@datorama/akita` | 8.0.1 | 186 | 1 (unmaintained upstream) |
 
 Counts are the UNION across every subpath in each package's exports map, types
-included. They are a measure of surface area, not of features — see the limits
-section. Ours is read from the built declaration bundle rather than the source
-barrel, because reading source follows re-export chains into internal modules
-and produced a number that was not comparable to anyone else's.
+included — surface area, not features.
+
+> **An earlier revision of this table said 248 for us and 56 for elf.** Both were
+> wrong, and unevenly so, which is worse than being wrong. The scan followed
+> NAMED re-exports into the modules behind them, so `export { signalTree } from
+> './lib/signal-tree'` — one public symbol — pulled in everything that module
+> exports. `@ngrx` and `@ngxs` ship single-file rolled-up declaration bundles
+> with nothing to recurse into, so they were counted honestly while we and elf
+> were inflated. The headline was comparing our internals against their public
+> API. A named re-export publishes exactly the names it lists; only `export *`
+> is followed now.
+
+**Our root entry point is still 154 symbols against elf's 40**, and that
+deserves an answer rather than a footnote. Most of it is types — the readonly
+projections, the marker types, the per-marker config and signal interfaces — but
+"most of it is types" is a reason, not an excuse, for a library whose pitch is
+that state is just JSON.
 
 This matters because a comparison written from docs measures documentation, not
 capability, and it flatters whoever writes the better README. It also protects
@@ -245,6 +258,96 @@ O(collection) and rebuilds the id index; a prepend is neither.
 
 **Verdict: adopt.** Trivial, and being alone in lacking it is the strongest
 signal in the grid.
+
+---
+
+## "elf is small, fast, and ticks every box — so why would anyone pick us?"
+
+The right question, and the grid above does not answer it. Three measurements do.
+
+### 1. On bundle size, elf wins. Straightforwardly.
+
+`node tools/size-compare.mjs` — same capability, same esbuild + gzip method.
+
+| capability | SignalTree | elf | |
+| --- | --- | --- | --- |
+| store + a few fields | 5.69 KB | **1.01 KB** | 5.6x |
+| entity collection, CRUD + read | 8.59 KB | **2.38 KB** | 3.6x |
+| entity collection + undo/redo | 10.33 KB | **2.84 KB** | 3.6x |
+
+With RxJS bundled — a signals-first app that would otherwise not carry it — elf's
+numbers become 4.24 / 5.54 / 5.94 KB, so the gap narrows to 1.3x–1.7x. It never
+closes. **elf is smaller and this project should stop being surprised by that**;
+it is already on record that bundle size is not our advantage.
+
+### 2. On entity collections, elf wins too — and that is all we ever measured
+
+`bench-compare.mjs` measures entity collections, and elf leads on throughput and
+undo. That is elf's optimised path — a `Map` plus one array — and until now it
+was the ONLY cross-library benchmark in this repo. **Every published comparison
+was fought on the competitor's best ground, and on the one shape where this
+library's design gives it no advantage.**
+
+### 3. On general state, the result inverts — by orders of magnitude
+
+The thesis is that only leaves are signals, branches are plain accessors, and a
+write is O(1) *regardless of state size*. Nothing had ever tested that against
+anyone. `node tools/bench-state-scale.mjs`, 200 writes, warmed, postconditioned,
+elf using its own `setProp`:
+
+**Write cost vs state size, no consumers attached** — nested shape, which is how
+an app is actually written and is much kinder to elf than flat root props:
+
+| state | SignalTree | elf | |
+| --- | --- | --- | --- |
+| 100 fields | 0.008 ms | 0.041 ms | 5x |
+| 1,000 fields | 0.006 ms | 0.366 ms | 60x |
+| 5,000 fields | 0.008 ms | 1.313 ms | 162x |
+| 10,000 fields | 0.006 ms | 1.079 ms | **~185x** |
+
+*(Ranges are the spread across two full runs, which reproduce to within a few
+percent. An earlier draft quoted 253x at 10,000 fields from a single run; the
+reproducible figure is ~176–196x. Same conclusion, smaller number, and the
+smaller number is the one that is true.)*
+
+**SignalTree is flat.** 0.006 ms at 10,000 fields is the same as at 100. elf's
+cost is proportional to the slice it immutably copies, because that is what an
+immutable store does. On a flat shape — every field a root property — elf goes
+from 0.042 ms at 64 props to 20.9 ms at 1,024, a **2,832x** ratio, with a sharp
+inflection between 64 and 128 that looks like V8 leaving its fast path for object
+spread.
+
+**Write cost vs live consumers**, 100 fields fixed:
+
+| consumers | SignalTree | elf | |
+| --- | --- | --- | --- |
+| 100 | 0.020 ms | 2.372 ms | 116x |
+| 1,000 | 0.046 ms | 21.328 ms | 464x |
+| 5,000 | 0.195 ms | 109.462 ms | **562x** |
+
+The mechanism, counted directly: with 1,000 selectors on nested state and one
+field changed, **elf executes 1,000 of 1,000 projection functions** and notifies
+1. SignalTree executes **1**. elf's `distinctUntilChanged` correctly suppresses
+the notification — nobody re-renders who shouldn't — but every selector still
+runs on every write.
+
+### So the honest positioning
+
+**Pick elf** if state is mostly entity collections, bundle size is the binding
+constraint, and you are comfortable with RxJS. It is smaller, it is faster at
+collections, and its feature surface is broader than ours.
+
+**Pick SignalTree** when state is large and deeply nested rather than
+collection-shaped, when writes are frequent, when many components observe
+different parts of it, or when you want signals rather than observables in a
+zoneless app. The advantage is not a constant factor — it is that our cost does
+not grow with the size of your state and elf's does. At 100 fields the difference
+is 5x and irrelevant. At 10,000 it is ~185x and decides whether the app is usable.
+
+**And elf makes you manage that.** Its cost is proportional to the copied slice,
+so an elf app stays fast by being carefully partitioned into small stores and
+shallow sections. That is real architectural work, and it is work SignalTree does
+not ask for. Ours is O(1) by construction, not by discipline.
 
 ---
 

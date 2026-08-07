@@ -173,10 +173,28 @@ function collect(file, seen = new Set(), out = new Set()) {
       }
     }
     if (ts.isExportDeclaration(s)) {
-      if (s.exportClause && ts.isNamedExports(s.exportClause)) {
-        for (const e of s.exportClause.elements) out.add(e.name.text);
-      }
       const spec = s.moduleSpecifier?.text;
+
+      if (s.exportClause && ts.isNamedExports(s.exportClause)) {
+        // A NAMED re-export publishes exactly these names. Do NOT follow it.
+        //
+        // Following it was the bug that made this whole comparison invalid.
+        // `export { signalTree } from './lib/signal-tree'` publishes ONE symbol,
+        // but recursing into that module added every symbol it exports —
+        // including everything internal. Our count came out at 214 where the
+        // barrel names 154, and the inflation was uneven across libraries:
+        // @ngrx and @ngxs ship single-file rolled-up bundles with nothing to
+        // recurse into, so they were counted honestly while we and elf were not.
+        //
+        // The headline number was therefore comparing our internals against
+        // their public API. Reported as "248 vs 56", which is exactly the kind
+        // of flattering-then-damning nonsense this tool exists to prevent.
+        for (const e of s.exportClause.elements) out.add(e.name.text);
+        continue;
+      }
+
+      // `export * from './x'` genuinely republishes everything in x, so that IS
+      // followed — the only case where recursion is correct.
       if (spec?.startsWith('.')) {
         const base = resolve(dirname(file), spec);
         for (const c of [`${base}.d.ts`, join(base, 'index.d.ts'), `${base}.ts`, join(base, 'index.ts')]) {
