@@ -196,7 +196,6 @@
     "@rollup/plugin-typescript": "^12.3.0",
     "@schematics/angular": "22.0.7",
     "@signaltree/core": "workspace:*",
-    "@signaltree/enterprise": "workspace:*",
     "@signaltree/ng-forms": "workspace:*",
     "@signaltree/shared": "workspace:*",
     "@standard-schema/spec": "^1.1.0",

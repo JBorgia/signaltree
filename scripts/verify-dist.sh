@@ -17,7 +17,6 @@ NX_PACKAGES=(
     "guardrails"
     "events"
     "realtime"
-    "enterprise"
     "ng-forms"
     "schema"
 )

@@ -42,7 +42,7 @@ if [ -f "CHANGELOG.md" ]; then
 fi
 
 # Check for package-specific READMEs
-PACKAGES=("core" "ng-forms" "enterprise" "guardrails" "schema")
+PACKAGES=("core" "ng-forms" "guardrails" "schema")
 
 for package in "${PACKAGES[@]}"; do
     README_PATH="./packages/$package/README.md"

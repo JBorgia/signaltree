@@ -21,8 +21,6 @@ import { join } from 'node:path';
 
 const CORE = new URL('../dist/packages/core/dist/index.js', import.meta.url)
   .pathname;
-const ENT = new URL('../dist/packages/enterprise/dist/index.js', import.meta.url)
-  .pathname;
 
 const ENTRIES = {
   'raw-signals': `
@@ -42,13 +40,6 @@ const ENTRIES = {
     const c = computed(() => tree.$.count() * 2);
     tree.$.count.set(1);
     globalThis.__sink = [c(), tree.$.users.all()];
-  `,
-  'signaltree-enterprise': `
-    import { signalTree, entityMap } from ${JSON.stringify(CORE)};
-    import { enterprise } from ${JSON.stringify(ENT)};
-    const tree = signalTree({ count: 0, users: entityMap() }).with(enterprise());
-    tree.$.users.addOne({ id: 1, name: 'a' });
-    globalThis.__sink = tree.$.users.all();
   `,
   'ngrx-store': `
     import { createAction, createReducer, on, props, createSelector, createFeatureSelector, provideStore, Store } from '@ngrx/store';

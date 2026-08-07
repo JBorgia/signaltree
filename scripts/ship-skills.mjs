@@ -37,7 +37,6 @@ const DIST_ROOT = path.join(REPO_ROOT, 'dist', 'packages');
 const PACKAGES = [
   { name: 'core', nested: null },
   { name: 'ng-forms', nested: 'ng-forms' },
-  { name: 'enterprise', nested: 'enterprise' },
   { name: 'guardrails', nested: 'guardrails' },
   { name: 'events', nested: 'events' },
   { name: 'realtime', nested: 'realtime' },

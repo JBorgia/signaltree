@@ -109,7 +109,7 @@ export class CartView {
       audience: 'I want the full reference',
       title: 'Browse package docs',
       description:
-        'Core API surface, plus optional packages: ng-forms, realtime, enterprise, schema. Every type, every signature.',
+        'Core API surface, plus optional packages: ng-forms, realtime, events, schema. Every type, every signature.',
       route: '/docs',
       cta: 'Open docs →',
     },

@@ -274,7 +274,7 @@ export class BenchmarkOrchestratorComponent
   // so smoke tests and CI runs complete in seconds.
   quickRun = signal<boolean>(this._readQuickRunFromUrl());
 
-  // Enterprise enhancer is now a separate library option: signaltree-enterprise
+  // The signaltree-enterprise arm was removed in 14.0.0 with the package.
 
   private _memoModeEffect = effect(() => {
     // Keep a global for other modules that may read it directly
@@ -443,17 +443,6 @@ export class BenchmarkOrchestratorComponent
       selected: true,
       stats: {
         bundleSize: '8.1KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs
-        githubStars: 2800,
-      },
-    },
-    {
-      id: 'signaltree-enterprise',
-      name: 'SignalTree (Enterprise)',
-      description: 'SignalTree with enterprise enhancer for advanced features',
-      color: '#1e40af',
-      selected: false,
-      stats: {
-        bundleSize: '11.2KB', // gzip, core + enterprise — measured
         githubStars: 2800,
       },
     },

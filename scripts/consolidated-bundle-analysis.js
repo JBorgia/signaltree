@@ -35,12 +35,6 @@ const packages = [
     claimed: 44677,
   },
   {
-    name: 'enterprise',
-    path: 'dist/packages/enterprise/dist/index.js',
-    maxSize: 8000,
-    claimed: 6026,
-  },
-  {
     name: 'ng-forms',
     path: [
       'dist/packages/ng-forms/dist/index.js',
@@ -113,7 +107,6 @@ const packages = [
 // meant a green release run had verified neither of them.
 const nxProjects = [
   'core',
-  'enterprise',
   'events',
   'realtime',
   'shared',

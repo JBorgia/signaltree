@@ -20,26 +20,14 @@ test('smoke: run realistic comparison and capture extended results', async ({
   const artifactsDir = path.dirname(OUT_PATH);
   fs.mkdirSync(artifactsDir, { recursive: true });
 
-  // Wait for the library selection section to be visible, then ensure enterprise is unchecked
+  // The library-selection section must render before scenarios can be chosen.
+  //
+  // This used to also uncheck a `signaltree-enterprise` card, defensively
+  // guarded with `if (count > 0)`. The package was removed in 14.0.0, so that
+  // branch could only ever be false — dead code that read like a live check.
   await expect(
     page.getByRole('heading', { name: 'Select Libraries to Compare' })
   ).toBeVisible({ timeout: 15000 });
-  // Locate the enterprise library card, then find the checkbox inside it (if present)
-  const enterpriseCard = page.getByTestId('lib-signaltree-enterprise-card');
-  const enterpriseCardCount = await enterpriseCard.count();
-  if (enterpriseCardCount > 0) {
-    const enterprise = enterpriseCard.locator(
-      'input[data-test-id="lib-signaltree-enterprise-checkbox"]'
-    );
-    const enterpriseCount = await enterprise.count();
-    if (enterpriseCount > 0) {
-      await enterprise.uncheck();
-    } else {
-      console.log('Enterprise checkbox not found inside card; continuing');
-    }
-  } else {
-    console.log('Enterprise card not present; continuing');
-  }
 
   // Clear any previous globals
   await page.evaluate(() => {

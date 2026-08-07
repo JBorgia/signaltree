@@ -4,8 +4,7 @@ import { RouterModule } from '@angular/router';
 
 import {
   SIGNALTREE_CORE_VERSION,
-  SIGNALTREE_ENTERPRISE_VERSION,
-  SIGNALTREE_VERSION_SUMMARY,
+    SIGNALTREE_VERSION_SUMMARY,
 } from '../../version';
 
 export interface DemoExample {
@@ -39,13 +38,11 @@ export interface ExternalLink {
 })
 export class NavigationComponent {
   readonly coreVersion: string;
-  readonly enterpriseVersion: string;
   readonly versionSummary: string;
   readonly mobileMenuOpen = signal(false);
 
   constructor() {
     this.coreVersion = SIGNALTREE_CORE_VERSION;
-    this.enterpriseVersion = SIGNALTREE_ENTERPRISE_VERSION;
     this.versionSummary = SIGNALTREE_VERSION_SUMMARY;
   }
 
@@ -230,13 +227,6 @@ export class NavigationComponent {
       category: 'advanced',
     },
 
-    {
-      id: 'enterprise-enhancer',
-      title: 'Enterprise Enhancer',
-      description: 'Audit, diagnostics, and enterprise-oriented capabilities',
-      route: '/enterprise-enhancer',
-      category: 'advanced',
-    },
     {
       id: 'extreme-depth',
       title: 'Extreme Depth',

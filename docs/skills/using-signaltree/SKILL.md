@@ -82,7 +82,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 - Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`. **v14:** `canUndo()`/`canRedo()`/`getHistory()` are REACTIVE — bind them directly (`@if (tree.canUndo())`); before 14.0.0 they read plain values, so a zoneless app's undo button never enabled. `pauseRecording()`/`resumeRecording()` make a bulk import ONE undo step instead of a hundred (writes still apply while paused), and `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on every recorded write, so compare only the fields you mean.
 - Report every error the library catches to Sentry/telemetry → `onTreeError` from **`@signaltree/core/authoring`**. Additive: markers still handle their own errors; this cannot swallow or retry.
 - **⚠️ Two entry points since 14.0.0.** `@signaltree/core` is the APP surface. `@signaltree/core/authoring` holds enhancer/marker/tooling plumbing, and 25 symbols MOVED there: the `*_READERS` allowlists, `FORM_MARKER`/`ASYNC_SOURCE_MARKER`/`ASYNC_QUERY_MARKER`, the `is*Marker` guards, `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`, `parsePath`, `SIGNAL_TREE_CONSTANTS`/`_MESSAGES`. Emitting any of them from `@signaltree/core` is a compile error. `isDev` and `withKind` stayed on the root.
-- Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)`, built into `@signaltree/core`. There is NO `onPathChange`/subscription API in core — do not emit one. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and measurably slower than core. Read [`enterprise/SKILL.md`](enterprise/SKILL.md) only to migrate an existing dependency off it.
+- Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)`, built into `@signaltree/core`. There is NO `onPathChange`/subscription API in core — do not emit one. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and **removed in 14.0.0** (no longer published). It was measurably slower than the core method that replaced it. To migrate an existing dependency off it, see [`docs/guides/migration-v13-v14.md`](../../guides/migration-v13-v14.md) §6.
 - Reactive forms (validation, dirty/touched, wizards, FormGroup interop) → add `@signaltree/ng-forms`; on Angular 22+ the same package bridges to **Signal Forms** via `signalForm` from `@signaltree/ng-forms/signals`. Read [`ng-forms/SKILL.md`](ng-forms/SKILL.md).
 - Dev-time perf budgets, memory-leak detection, anti-pattern warnings → add `@signaltree/guardrails` (dev-only; noop in production). Read [`guardrails/SKILL.md`](guardrails/SKILL.md).
 - Event-driven with Zod schemas, idempotency, retries → add `@signaltree/events` (ESM-only, requires Zod). Read [`events/SKILL.md`](events/SKILL.md).
@@ -156,7 +156,6 @@ Deep dives:
 Sub-skills:
 
 - [`ng-forms/SKILL.md`](ng-forms/SKILL.md)
-- [`enterprise/SKILL.md`](enterprise/SKILL.md) — deprecated package; migration only
 - [`guardrails/SKILL.md`](guardrails/SKILL.md)
 - [`events/SKILL.md`](events/SKILL.md)
 - [`realtime/SKILL.md`](realtime/SKILL.md)

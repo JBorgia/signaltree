@@ -207,7 +207,7 @@ export class HomeComponent {
     {
       name: 'Optional power, not required ceremony',
       description:
-        'Add DevTools, time travel, persistence, forms, realtime, or enterprise features only when you need them.',
+        'Add DevTools, time travel, persistence, forms, realtime, or events only when you need them.',
       highlight: true,
     },
     {

@@ -22,7 +22,7 @@ import { StartHereComponent } from './start-here/start-here.component';
  * path that actually exists in app.routes.ts.
  *
  * One shared spec instead of duplicating the same loop in every page spec —
- * architecture-overview and enterprise-enhancer carry no routerLinks at all
+ * architecture-overview carries no routerLinks at all
  * (verified by inspection) so they're not listed here. realistic-benchmark-history
  * has exactly one routerLink but it only renders in the zero-results empty
  * state, so that one is asserted inline in its own spec instead.
