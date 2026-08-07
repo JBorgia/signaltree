@@ -16,7 +16,6 @@
   `enterprise@13.x` cannot work against `core@14`. The demo page, the benchmark
   arm that ran `updateOptimized()`, and every pipeline entry are removed with it.
 
-
 - **25 symbols moved from `@signaltree/core` to `@signaltree/core/authoring`.**
   Nothing was deleted and nothing changed shape — the import path moves.
 
@@ -32,8 +31,8 @@
   `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`,
   `parsePath`, `SIGNAL_TREE_CONSTANTS` and `SIGNAL_TREE_MESSAGES`.
 
-  Found by an invariant worth stating: *if everything usable is demoed, then
-  everything exported appears in the demo app.* It did not — 26 of 59 root
+  Found by an invariant worth stating: _if everything usable is demoed, then
+  everything exported appears in the demo app._ It did not — 26 of 59 root
   runtime exports were absent, and the absentees were not a scattering of
   overlooked features. They were all one kind: the READER allowlists exist to
   TYPE `asReadonly`, the marker symbols are brands for writing a marker
@@ -48,7 +47,6 @@
   `isDev` and `withKind` deliberately stayed: an app legitimately branches on
   the first, and the second is how you tag a custom `form()` validator. `withKind`
   was the one root export the demo genuinely lacked, and the demo now uses it.
-
 
 - **Calling a leaf is no longer a setter.** `tree.$.count(5)` is a compile
   error; the `(value: NotFn<T>): void` and updater overloads are gone from
@@ -153,7 +151,7 @@
 
   The event carries a stable machine-readable `reason` that reaches production
   listeners, plus a `detail` prose string that folds away under
-  `ngDevMode: false` — *advisory prose is removable, identity is not*. Listeners
+  `ngDevMode: false` — _advisory prose is removable, identity is not_. Listeners
   fire in production: an API that silently does nothing in a production build is
   the defect class this release removed `tree.$.count(5)` for.
 
@@ -197,8 +195,10 @@
 
 - **`entityMap` restore diffs instead of calling `setAll`.** Restore rebuilt the
   storage map, the id index and every per-entity signal to apply a one-entity
-  change: 4,368 µs per undo at 10k entities, now 78 µs.
-
+  change: 4,368 µs per undo at 10k entities, now tens of µs. Reproduce the
+  whole-workload figure with
+  `node --expose-gc tools/bench-compare.mjs --n 10000`; the per-undo breakdown
+  and its provenance are in `docs/compare/real-implementations.md`.
 
 - **`.derived()` values were reaching snapshots, and whether they did depended
   on TOUCH ORDER.** `finalize()` (the `$` getter) runs `applyDerivedFactories`
@@ -260,7 +260,6 @@
 - The core typing harness did not compile. Deleting `asyncStream` cut two rows
   out of the middle of a type-level tuple, so `npm run typecheck` was red on
   main; the nested-marker assertion it also removed is restored.
-
 
 ### Changed
 

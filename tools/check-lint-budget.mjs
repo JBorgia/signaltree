@@ -2,12 +2,12 @@
 /**
  * Lint gate with teeth: errors fail, and warnings may not GROW.
  *
- * `npm run lint:all` exits 0 with 684 warnings, because nothing passes
+ * `npm run lint:all` exits 0 despite hundreds of warnings, because nothing passes
  * `--max-warnings`. That makes the lint gate unable to fail on anything short of
  * a hard error — `tools/verify-gates.mjs --self-test` proved it, by adding an
  * unused `any`-typed function to core and watching lint report it and exit 0.
  *
- * `--max-warnings 0` is not available: 684 warnings exist today, 541 of them in
+ * `--max-warnings 0` is not available: warnings exist in the hundreds, most of them in
  * core, overwhelmingly `no-explicit-any` in generic plumbing where the `any` is
  * frequently load-bearing. Failing the build on all of them would mean either a
  * mass suppression sweep or a red gate, and a red gate teaches people to ignore

@@ -6,12 +6,12 @@
 Every arm implements the **same capability** using that library's own entity
 API, not a simplified stand-in:
 
-| arm | implementation |
-| --- | --- |
-| `signaltree` | `entityMap({ selectId })`, `timeTravel()` |
+| arm            | implementation                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
+| `signaltree`   | `entityMap({ selectId })`, `timeTravel()`                                                             |
 | `ngrx-signals` | `signalState` + `@ngrx/signals/entities` (`setAllEntities`, `updateEntity`) — the official entity API |
-| `elf` | `createStore` + `withEntities`, and **`@ngneat/elf-state-history`** for undo |
-| `raw-signals` | a hand-rolled `Map` of per-entity signals + an id list — what you write with no library |
+| `elf`          | `createStore` + `withEntities`, and **`@ngneat/elf-state-history`** for undo                          |
+| `raw-signals`  | a hand-rolled `Map` of per-entity signals + an id list — what you write with no library               |
 
 One process per arm; timing is the median of 5 runs; memory is retained heap
 after forced GC. History is enabled **only** for the undo/redo workload, so
@@ -21,12 +21,12 @@ each workload isolates one thing.
 
 ## Collection — build 10,000, 200 single-entity updates, read all
 
-| arm | median | retained |
-| --- | --- | --- |
-| elf | **1.43 ms** | 0.92 MB |
-| **signaltree** | 3.24 ms | 1.29 MB |
-| raw-signals | 4.60 ms | 6.16 MB |
-| ngrx-signals | 10.98 ms | 0.93 MB |
+| arm            | median      | retained |
+| -------------- | ----------- | -------- |
+| elf            | **1.43 ms** | 0.92 MB  |
+| **signaltree** | 3.24 ms     | 1.29 MB  |
+| raw-signals    | 4.60 ms     | 6.16 MB  |
+| ngrx-signals   | 10.98 ms    | 0.93 MB  |
 
 **SignalTree is second of four on raw collection throughput.** It beats
 `@ngrx/signals` by 3.4× and a hand-rolled map of signals by 1.4×, and loses to
@@ -47,12 +47,12 @@ both were correctness or memory fixes that happened to be on the hot path.
 > all — see "The retraction" below. These numbers are the corrected ones, and
 > they are verified by postconditions every arm must satisfy.
 
-| arm | median | retained | history |
-| --- | --- | --- | --- |
-| **elf** | **1.76 ms** | 4.72 MB | built-in `elf-state-history` |
-| signaltree | **4.32 ms** | 5.24 MB | built-in `timeTravel()` |
-| ngrx-signals | 216.96 ms | 0.94 MB | hand-rolled |
-| raw-signals | 329.25 ms | 6.16 MB | hand-rolled |
+| arm          | median      | retained | history                      |
+| ------------ | ----------- | -------- | ---------------------------- |
+| **elf**      | **1.76 ms** | 4.72 MB  | built-in `elf-state-history` |
+| signaltree   | **4.32 ms** | 5.24 MB  | built-in `timeTravel()`      |
+| ngrx-signals | 216.96 ms   | 0.94 MB  | hand-rolled                  |
+| raw-signals  | 329.25 ms   | 6.16 MB  | hand-rolled                  |
 
 **SignalTree is ~2.5× behind elf and ~50× ahead of a hand-rolled history.** That
 is after fixing a real defect the retraction exposed — see "What the correction
@@ -70,10 +70,10 @@ giving up the granular signals that are the point of the design.
 
 Splitting the workload showed the gap was never in recording:
 
-| | per write | per undo (before) | per undo (after) |
-| --- | --- | --- | --- |
-| elf | 38 µs | 3 µs | 3 µs |
-| signaltree | 44 µs | **4,368 µs** | **237 µs** |
+|            | per write | per undo (before) | per undo (after) |
+| ---------- | --------- | ----------------- | ---------------- |
+| elf        | 38 µs     | 3 µs              | 3 µs             |
+| signaltree | 44 µs     | **4,368 µs**      | **~40 µs**       |
 
 Writes were always at parity. Every bit of the 150× was `undo`, because
 `entityMap`'s restore called `setAll` **unconditionally** — rebuilding the
@@ -83,10 +83,27 @@ one-entity change. 3.62 ms per undo, at any collection size.
 Since a snapshot shares its entity objects with the live tree (499/500 identical
 after a single edit), a reference walk finds exactly the rows that moved.
 Restore now diffs and writes only those, with `setAll` as the fallback for any
-add, removal, reorder or id change — **18× faster per undo**, correctness pinned
-by `entity-restore-diff.spec.ts`, which tests the FALLBACK shapes rather than the
+add, removal, reorder or id change — correctness pinned by
+`entity-restore-diff.spec.ts`, which tests the FALLBACK shapes rather than the
 happy path, because a shortcut that is wrong about when it applies would
 silently corrupt a restore.
+
+> **Provenance, because this number was previously wrong in three places at
+> once.** Earlier revisions published 78 µs (CHANGELOG), 237 µs (this table) and
+> ~110 µs (the decomposition below) for the same quantity, none of them
+> reproducible from a committed harness. Re-measured: **~40 µs per undo**,
+> median of 5 runs, isolating the undo phase from the recording phase, with
+> postconditions asserted (history reached 52 entries; the edited row actually
+> reverted). Spread across runs was 36–43 µs with one 101 µs outlier, so treat
+> it as "tens of µs", not a precise figure.
+>
+> **Quote the whole-workload table at the top of this section, not this
+> figure.** That one comes straight out of
+> `node --expose-gc tools/bench-compare.mjs --n 10000`, so anyone can re-derive
+> it; a per-undo cost divided out of a combined workload is exactly how one
+> measurement became three published numbers. An independent run of that harness
+> while writing this note gave 3.97 ms / 1.64 ms against the 4.32 / 1.76 above —
+> same ordering, same ratio, ordinary run-to-run spread.
 
 ### Where the remaining undo cost actually is, and what is NOT worth optimising
 
@@ -96,12 +113,20 @@ objects in DIRECTLY, since it already holds them — `upsertOne` routes to
 rather than reusing the one the snapshot is holding. Decomposing a 10,000 entity
 undo first:
 
-| component of one undo | cost |
-| --- | --- |
-| `tree()` snapshot capture, cold (O(N) pointer array) | 38 µs |
-| the reference diff walk over 10,000 rows | 15 µs |
-| `updateOne` for the one changed entity | **< 1 µs** |
-| total per undo | ~110 µs |
+| component                                            | cost       | when it is paid            |
+| ---------------------------------------------------- | ---------- | -------------------------- |
+| `tree()` snapshot capture, cold (O(N) pointer array) | 38 µs      | on **record**, not on undo |
+| the reference diff walk over 10,000 rows             | 15 µs      | on undo                    |
+| `updateOne` for the one changed entity               | **< 1 µs** | on undo                    |
+
+> **This table previously stated a "total per undo" of ~110 µs, which its own
+> components do not sum to** (38 + 15 + <1 ≈ 54 µs) — and it counted the
+> snapshot capture as an undo cost when capture happens when the entry is
+> _recorded_. The undo-side components come to ~16 µs, and the measured
+> end-to-end figure is ~40 µs; the remainder is the restore write path and
+> per-call overhead the decomposition does not break out. Corrected rather than
+> deleted, because the conclusion below still holds and the arithmetic error is
+> the instructive part.
 
 **The spread is under 1 % of the cost**, so removing it would buy nothing
 measurable while adding an internal replace-without-merge path that bypasses the
@@ -182,11 +207,11 @@ question is what it costs downstream.
 Measured: 1,000 rows, one per-row reactive consumer each, change **one** entity,
 count how many consumers are invalidated.
 
-| arm | consumers invalidated by a 1-entity change |
-| --- | --- |
-| **signaltree** (`byId(i)`) | **1 / 1000** |
-| **elf** (`selectEntity(i)`) | **1 / 1000** |
-| `@ngrx/signals` (`entityMap()[i]`) | **1000 / 1000** |
+| arm                                | consumers invalidated by a 1-entity change |
+| ---------------------------------- | ------------------------------------------ |
+| **signaltree** (`byId(i)`)         | **1 / 1000**                               |
+| **elf** (`selectEntity(i)`)        | **1 / 1000**                               |
+| `@ngrx/signals` (`entityMap()[i]`) | **1000 / 1000**                            |
 
 **elf does NOT lose granularity to its pointer swap** — `selectEntity` filters
 per entity, so a whole-state reference swap still notifies only the row that
@@ -260,13 +285,13 @@ same framework, same signals-first premise, same problem.
 
 Against that one comparison, measured here:
 
-| | SignalTree | `@ngrx/signals` | |
-| --- | --- | --- | --- |
-| consumers invalidated by a 1-entity change (1,000 rows) | **1** | 1,000 | **1000×** |
-| collection: build 10k + 200 updates + read all | **3.24 ms** | 10.98 ms | **3.4×** |
-| undo/redo: 50 writes + 50 undos over 10k | **4.32 ms** | 216.96 ms | **50×** |
-| retained per entity (marginal) | 136 B | 91 B | 0.67× |
-| history primitive | built in | hand-rolled | |
+|                                                         | SignalTree  | `@ngrx/signals` |           |
+| ------------------------------------------------------- | ----------- | --------------- | --------- |
+| consumers invalidated by a 1-entity change (1,000 rows) | **1**       | 1,000           | **1000×** |
+| collection: build 10k + 200 updates + read all          | **3.24 ms** | 10.98 ms        | **3.4×**  |
+| undo/redo: 50 writes + 50 undos over 10k                | **4.32 ms** | 216.96 ms       | **50×**   |
+| retained per entity (marginal)                          | 136 B       | 91 B            | 0.67×     |
+| history primitive                                       | built in    | hand-rolled     |           |
 
 Three wins of 3.4× to 1000×, one loss of 1.5× on per-entity memory, and the loss
 is the price of the biggest win: the id index and per-entity storage are what

@@ -84,7 +84,7 @@ class TimeTravelManager<T> {
     };
 
     // Add initial state to history
-    this.addEntry('INIT', this.tree());
+    this.addEntry('INIT');
   }
 
   /**
@@ -105,12 +105,20 @@ class TimeTravelManager<T> {
     return this.pausedSignal();
   }
 
-  addEntry(
-    action: string,
-    state: T,
-    payload?: unknown,
-    provisional = false
-  ): void {
+  // NOTE: there is deliberately NO `state` parameter.
+  //
+  // There used to be one, and it was a lie: every caller computed a snapshot to
+  // pass in — `this.tree()`, `originalTreeCall()` — and this method ignored it
+  // and called `snapshotState()` itself. Harmless in cost (both hit the same
+  // memo) and NOT harmless in contract: the signature promised "record this
+  // state" while the body recorded "whatever the tree is right now". A caller
+  // handing over a deferred or reconstructed state would have silently got
+  // something else.
+  //
+  // Recomputing here is the behaviour we actually want, so the parameter is
+  // gone rather than wired up. `finalizeProvisional` DOES take a state and does
+  // use it — that one is real.
+  addEntry(action: string, payload?: unknown, provisional = false): void {
     // Paused: the write still applies, it just does not become an undo step.
     // Checked before any snapshot work, so pausing also costs nothing.
     if (this.pausedSignal()) return;
@@ -146,8 +154,16 @@ class TimeTravelManager<T> {
     // Far cheaper than the structuredClone it replaced, and far from free: 50
     // entries over 10k rows is ~500k pointer copies.
     //
-    // This is why undo/redo over a large collection is NOT a strength — measured
-    // at ~150x slower than elf's state-history for that shape. See
+    // This is why undo/redo over a large collection is not where SignalTree
+    // wins: elf's state-history swaps ONE reference on undo, because it is an
+    // immutable store. Measured at ~2.5x behind elf on 50 writes + 50 undos over
+    // 10k entities (3.97ms vs 1.64ms) — and ~54x AHEAD of a hand-rolled
+    // snapshot history, which is what every library without the primitive
+    // forces. `node --expose-gc tools/bench-compare.mjs --n 10000`.
+    //
+    // The ~150x figure this comment used to quote was the PRE-FIX number, from
+    // before restore diffed instead of calling setAll unconditionally — and it
+    // cited the very document that retracts it. See
     // docs/compare/real-implementations.md.
     //
     // This is what makes the snapshot read-only contract load-bearing rather
@@ -231,7 +247,7 @@ class TimeTravelManager<T> {
     }
 
     // No provisional entry to finalize - fall back to adding a new entry
-    this.addEntry('update', state);
+    this.addEntry('update');
   }
 
   redo(): boolean {
@@ -262,11 +278,10 @@ class TimeTravelManager<T> {
   }
 
   resetHistory(): void {
-    const currentState = this.tree();
     this.history = [];
     this.bumpHistory();
     this.currentIndex = -1;
-    this.addEntry('RESET', currentState);
+    this.addEntry('RESET');
   }
 
   jumpTo(index: number): boolean {
@@ -489,8 +504,7 @@ export function timeTravel(
             // people's trees is the worst kind.
             if (!selfDirty) return;
             selfDirty = false;
-            const afterState = originalTreeCall();
-            timeTravelManager.addEntry('batch', afterState);
+            timeTravelManager.addEntry('batch');
           });
         }
       }
@@ -537,7 +551,7 @@ export function timeTravel(
         // 0.44ms without.
         if (beforeState !== afterState) {
           // Immediate entry on explicit tree updates (preserve historical behavior)
-          timeTravelManager.addEntry('update', afterState);
+          timeTravelManager.addEntry('update');
         }
 
         return result;

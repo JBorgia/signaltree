@@ -73,7 +73,7 @@ const GATES = [
   },
   {
     name: 'test:all',
-    covers: 'behaviour across all 8 published packages AND the demo app',
+    covers: 'behaviour across all 6 published packages AND the demo app',
     // Was `nx test core`. The gate's own name said "core" and its summary line
     // said "core behaviour", so it was honest about what it covered — and what
     // it covered was one package of eight. The other seven have real suites
@@ -99,11 +99,15 @@ const GATES = [
   },
   {
     name: 'lint:budget',
-    covers: 'eslint errors across all 9 projects, AND warnings never grow',
+    covers: 'eslint errors across all 10 projects, AND warnings never grow',
     // Replaces a bare `npm run lint:all`, which this harness caught passing
     // while an unused `any`-typed function sat in core: lint reported it as a
-    // warning and exited 0, because nothing passes --max-warnings. 577 warnings
-    // exist, so --max-warnings 0 is not available; the budget ratchets instead.
+    // warning and exited 0, because nothing passes --max-warnings. Warnings
+    // exist in the hundreds, so --max-warnings 0 is not available; the budget
+    // ratchets instead. The live count is printed by the gate itself and is
+    // deliberately NOT repeated here — a number duplicated into a comment is a
+    // number that goes stale, and this one already did (it said 577 against an
+    // actual 746, while check-lint-budget.mjs's own comment said 684).
     cmd: ['node', 'tools/check-lint-budget.mjs'],
     slow: true,
     mutation: {
