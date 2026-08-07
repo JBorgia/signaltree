@@ -1,3 +1,5 @@
+declare const ngDevMode: boolean | undefined;
+
 import { signal, WritableSignal } from '@angular/core';
 
 import { deepEqual } from './utils';
@@ -23,15 +25,52 @@ export interface EditSession<T> {
   getHistory(): UndoRedoHistory<T>;
 }
 
+/** @internal Dev dedupe for ST2028 — one report per session, not per clone. */
+let warnedLossyClone = false;
+
+/**
+ * @internal Deep copy for the undo/redo stacks.
+ *
+ * `structuredClone` preserves `Date`, `Map`, `Set`, `RegExp` and `undefined`
+ * values. The `JSON` fallback preserves NONE of them, and this matters more
+ * than it looks: `structuredClone` THROWS on a function, so a single callback
+ * anywhere in the value drops the whole clone onto the lossy path. MEASURED —
+ * the same object, with and without one function field:
+ *
+ *     clean                    Date: Date   Map: Map   `undefined` key: kept
+ *     + one function           Date: string Map: {}    `undefined` key: DROPPED
+ *
+ * That is silent corruption of an undo stack: the user hits undo and gets back
+ * a value whose dates are strings. The fallback stays — a lossy restore beats
+ * a thrown one mid-edit, and this is the only clone path — but it no longer
+ * happens quietly. [ST2028]
+ */
 function clone<T>(value: T): T {
-  try {
-    // Use structuredClone when available for deep copy
-    return (globalThis as any).structuredClone
-      ? (globalThis as any).structuredClone(value)
-      : JSON.parse(JSON.stringify(value));
-  } catch {
-    return JSON.parse(JSON.stringify(value));
+  const sc = (globalThis as { structuredClone?: (v: unknown) => unknown })
+    .structuredClone;
+  if (sc) {
+    try {
+      return sc(value) as T;
+    } catch (err) {
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        if (!warnedLossyClone) {
+          warnedLossyClone = true;
+          console.warn(
+            `SignalTree: createEditSession fell back to JSON cloning because ` +
+              `structuredClone rejected this value — usually a function or a ` +
+              `class instance somewhere inside it. The fallback DOES NOT ` +
+              `preserve Date, Map, Set, RegExp or undefined values anywhere in ` +
+              `the object, so undo/redo will hand those back in a different ` +
+              `shape. Remove the non-cloneable field from the edited value. ` +
+              `[ST2028]`,
+            err
+          );
+        }
+      }
+      return JSON.parse(JSON.stringify(value)) as T;
+    }
   }
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 export function createEditSession<T>(initial: T): EditSession<T> {

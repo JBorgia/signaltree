@@ -91,8 +91,18 @@ const TARGETS = {
     // change happened to be next rather than to the 0.05KB the marker snapshot
     // memo added here. Raised deliberately so the number reflects a measurement
     // with headroom, not a coincidence.
-    devKB: 8.0,
-    prodKB: 5.8,
+    //
+    // Bumped again for ST2027 (the deep-equal-copy no-op write). The diagnostic
+    // hooks the LEAF COMPARATOR rather than `recursiveUpdate`, because a direct
+    // `tree.$.x.set(v)` never reaches the latter — and that is the write form
+    // the corrupted benchmarks used, so hooking the cheaper site would have
+    // missed the case that motivated it. That needs a `path` threaded through
+    // `createSignalStore` and a ternary at five leaf-creation sites. Both are
+    // ngDevMode-guarded INLINE and fold; what cannot fold is the ternary's
+    // existence and the extra parameter in the signature. Measured: prod
+    // +0.07KB, dev +0.30KB.
+    devKB: 8.1,
+    prodKB: 5.9,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -197,8 +207,11 @@ const TARGETS = {
     // not here, and a diagnostic for a 75x cost (0.27ms hoisted against 20.54ms
     // inline over 1,000 entities) that is otherwise symptomless — the cache is
     // weak, so nothing leaks and nothing breaks; the app is just slow forever.
-    devKB: 11.8,
-    prodKB: 9.3,
+    // Bumped for ST2027 — see the attribution on `signaltree-bare`. Measured
+    // prod +0.07KB, dev +0.30KB from threading the leaf path for the
+    // diagnostic's message.
+    devKB: 12.1,
+    prodKB: 9.4,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
@@ -262,8 +275,9 @@ const TARGETS = {
     // against a SEVENTH instance of this defect class, so its bytes are the
     // cheapest on this list.
     // 14.0.0: split into dev/prod. Measured dev 9.71KB, prod 7.70KB.
-    devKB: 10.4,
-    prodKB: 7.9,
+    // Bumped for ST2027 — see the attribution on `signaltree-bare`.
+    devKB: 10.5,
+    prodKB: 8.0,
     code: `
       import { signalTree, form } from ${JSON.stringify(CORE)};
       const t = signalTree({ p: form({ initial: { name: '', email: '' } }) });
@@ -292,7 +306,10 @@ async function measure(entry, define) {
     logLevel: 'silent',
     define,
   });
-  return gzipSync(Buffer.from(out.outputFiles[0].contents), { level: 9 }).length / 1024;
+  return (
+    gzipSync(Buffer.from(out.outputFiles[0].contents), { level: 9 }).length /
+    1024
+  );
 }
 
 console.log('target                   prod (ships)      dev (diagnostics)');

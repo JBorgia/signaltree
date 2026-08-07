@@ -22,17 +22,16 @@ to pick up, and it is documented in
 One uncommitted change is **suspected to be at the wrong layer** and is flagged
 in §4.
 
-> ### ⛔ DO NOT PUBLISH TO npm UNTIL THE SNAPSHOT WORK IS COMPLETE
+> ### ✅ The snapshot-work publish hold is LIFTED
 >
-> Owner directive, 2026-08-06. The snapshot/rehydration sequence (§8 of the
-> architecture doc) lands across six steps, and **step 2 changes the shape of
-> `tree()` output and therefore of already-written persisted payloads**.
-> Publishing a partial sequence would ship one payload shape and then another,
-> which is the one failure mode the version-tag decision exists to prevent.
+> A ⛔ block sat here from 2026-08-06 saying not to publish until the
+> snapshot/rehydration sequence was complete, because step 2 changed the shape
+> of `tree()` output and therefore of already-written payloads. All six steps of
+> §8 landed, and the version-tag question was answered — format `2.0.0` is
+> **written and not enforced**, recorded at `SNAPSHOT_FORMAT_VERSION`.
 >
-> Commit and push freely. Do **not** run `./scripts/release.sh`, do not publish
-> to npm, and do not tag a release until every step in §8 is done and the
-> version-tag question is answered. Delete this block when that is true.
+> Removed rather than left in place, deliberately: a stale ⛔ is worse than none,
+> because people learn to publish over it and then miss the next real one.
 
 ---
 

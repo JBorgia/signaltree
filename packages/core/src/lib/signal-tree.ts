@@ -465,6 +465,22 @@ function currentHydrateMode(): 'merge' | 'restore' {
 
 /** Dev-mode: paths already warned about for ref-identical no-op writes. */
 const warnedNoopPaths = new Set<string>();
+/** @internal Dedupe for ST2027. Separate from ST2003 — different mistakes. */
+const warnedNoopCopyPaths = new Set<string>();
+
+/**
+ * @internal Is this value big enough that a wasted deep-equal walk matters?
+ *
+ * 32 matches ST2018's collection threshold so the two diagnostics agree on what
+ * counts as "a lot". Deliberately shallow — an O(1) length/key count, never a
+ * walk, because a diagnostic that has to traverse the value to decide whether
+ * traversing the value was wasteful is its own punchline.
+ */
+function isLargeEnoughToMatter(value: object): boolean {
+  if (Array.isArray(value)) return value.length >= 32;
+  if (value instanceof Map || value instanceof Set) return value.size >= 32;
+  return Object.keys(value).length >= 32;
+}
 
 function recursiveUpdate(
   target: unknown,
@@ -560,6 +576,7 @@ function recursiveUpdate(
         continue;
       }
       sig.set(value);
+
       if (out) {
         // Report only what LANDED. Leaves are created with a deep `equal`, so
         // a new-reference-but-deep-equal value — the ordinary shape of a
@@ -573,7 +590,13 @@ function recursiveUpdate(
         // is exactly the no-op case (and Object.is(NaN, NaN) makes that
         // indistinguishable). "The leaf no longer holds what it held" is the
         // question actually being asked.
-        if (!Object.is(untracked(() => sig()), current)) out.push(childPath);
+        if (
+          !Object.is(
+            untracked(() => sig()),
+            current
+          )
+        )
+          out.push(childPath);
       }
     } else if (isNodeAccessor(prop)) {
       if (typeof value === 'function') {
@@ -673,23 +696,91 @@ function recursiveUpdate(
 // SIGNAL STORE CREATION
 // =============================================================================
 
+/**
+ * @internal The comparator a LEAF is created with.
+ *
+ * In production this IS `base` — the ternary at each call site folds and this
+ * function becomes unreferenced, so `check-devmode-foldable` reclaims all of
+ * it. In dev it wraps `base` to catch ST2027.
+ *
+ * Why here rather than in `recursiveUpdate`, where ST2003 lives: a direct
+ * `tree.$.rows.set(v)` goes STRAIGHT to the Angular signal and never enters
+ * `recursiveUpdate` at all. That is the most common write form, and it is the
+ * one the corrupted benchmarks used — a diagnostic that only covers merge
+ * writes would have missed the case that motivated it. The comparator is the
+ * one place every write funnels through, and it already knows both halves of
+ * the answer: whether the values compared equal, and whether the references
+ * differed.
+ */
+function leafEqual(
+  base: (a: unknown, b: unknown) => boolean,
+  path: string
+): (a: unknown, b: unknown) => boolean {
+  return (a: unknown, b: unknown): boolean => {
+    const eq = base(a, b);
+    // A no-op write, and NOT the reference kind (ST2003 covers that): a new
+    // object that deep-equals the current value. `deepEqual` cannot
+    // short-circuit on it, so the whole structure was walked to conclude
+    // nothing changed — and then nothing notifies.
+    if (
+      eq &&
+      a !== b &&
+      a !== null &&
+      typeof a === 'object' &&
+      isLargeEnoughToMatter(a) &&
+      !warnedNoopCopyPaths.has(path)
+    ) {
+      warnedNoopCopyPaths.add(path);
+      console.warn(
+        `SignalTree: a write to "${path || '(root leaf)'}" changed NOTHING — ` +
+          `the new value is a different object but deep-equals the current ` +
+          `one, so the whole structure was compared and the write discarded. ` +
+          `A re-fetched payload does this. Skip the write when the data is ` +
+          `unchanged, or use compared() to pick a cheaper equality. [ST2027]`
+      );
+    }
+    return eq;
+  };
+}
+
 function createSignalStore<T>(
   obj: T,
-  equalityFn: (a: unknown, b: unknown) => boolean
+  equalityFn: (a: unknown, b: unknown) => boolean,
+  /**
+   * Dot-path to this node, used ONLY to name the leaf in ST2027. Threaded
+   * rather than reconstructed because the walk already knows it, and a
+   * diagnostic that cannot say WHICH leaf is most of the way to useless.
+   */
+  path = ''
 ): TreeNode<T> {
   // Primitives, null, undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
+    return signal(obj, {
+      equal:
+        typeof ngDevMode === 'undefined' || ngDevMode
+          ? leafEqual(equalityFn, path)
+          : equalityFn,
+    }) as unknown as TreeNode<T>;
   }
 
   // Arrays
   if (Array.isArray(obj)) {
-    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
+    return signal(obj, {
+      equal:
+        typeof ngDevMode === 'undefined' || ngDevMode
+          ? leafEqual(equalityFn, path)
+          : equalityFn,
+    }) as unknown as TreeNode<T>;
   }
 
   // Built-in objects (Date, Map, Set, etc.)
   if (isBuiltInObject(obj)) {
-    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
+    return signal(obj, {
+      equal:
+        typeof ngDevMode === 'undefined' || ngDevMode
+          ? leafEqual(equalityFn, path)
+          : equalityFn,
+    }) as unknown as TreeNode<T>;
   }
 
   // Regular object - recursive
@@ -777,7 +868,12 @@ function createSignalStore<T>(
 
     // Null, undefined, primitives
     if (value === null || value === undefined || typeof value !== 'object') {
-      store[key] = signal(value, { equal: equalityFn });
+      store[key] = signal(value, {
+        equal:
+          typeof ngDevMode === 'undefined' || ngDevMode
+            ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
+            : equalityFn,
+      });
       continue;
     }
 
@@ -787,12 +883,28 @@ function createSignalStore<T>(
         warnMarkerInArray(key, value);
         warnEntityArrayLeaf(key, value);
       }
-      store[key] = signal(value, { equal: equalityFn });
+      store[key] = signal(value, {
+        equal:
+          typeof ngDevMode === 'undefined' || ngDevMode
+            ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
+            : equalityFn,
+      });
       continue;
     }
 
     // Nested object - recurse and wrap in NodeAccessor
-    const nested = createSignalStore(value, equalityFn);
+    const nested = createSignalStore(
+      value,
+      equalityFn,
+      // Folds to '' in production — the path exists only to name a leaf in
+      // ST2027, so a prod build should not spend a string concat per node
+      // building one nothing will read.
+      typeof ngDevMode === 'undefined' || ngDevMode
+        ? path
+          ? `${path}.${key}`
+          : key
+        : ''
+    );
     store[key] = makeNodeAccessor(nested);
   }
 
