@@ -173,12 +173,20 @@
   twin, and it corrupted this repo's own benchmarks twice before anyone noticed.
   Gated to 32+ elements/keys, deduped per path, dev-only.
 
-- **ST2028** — edit-session lossy cloning. `createEditSession` clones with
-  `structuredClone`, which THROWS on a function or class instance, and the JSON
-  fallback preserves no `Date`, `Map`, `Set`, `RegExp` or `undefined` anywhere —
-  so one non-cloneable field degrades the entire object and undo hands back
-  dates as strings. The fallback is kept deliberately (a lossy restore beats a
-  thrown one mid-edit) and is no longer silent.
+- **`createEditSession`'s clone fallback is lossless**, and **ST2028** narrowed
+  with it. `structuredClone` throws on a function, so one callback anywhere in
+  the edited value dropped the whole object onto `JSON.parse(JSON.stringify())`
+  — silent corruption of an undo stack. Measured, after `applyChanges` then
+  `undo`: `Date` came back a string, `Map` and `Set` came back `{}`, an
+  `undefined` key was dropped, and the callback itself was gone.
+
+  JSON was never the only fallback. It is now a type-aware walk that preserves
+  `Date`, `Map`, `Set`, `RegExp`, `undefined`, cycles, and class prototypes —
+  an `ApiError` comes back an `ApiError`, with its non-enumerable `message`
+  intact (own property DESCRIPTORS, not `Object.keys`, which is the same trap
+  `deepEqual` documents one file over). What remains is narrow: a function is
+  shared by reference rather than copied, which is the right answer since a
+  function has no state to restore.
 
 - **`history?: boolean` on `entityMap`**, plus **ST2029**. A history entry holds
   the tree's snapshot, and a collection's snapshot is an N-pointer array rebuilt

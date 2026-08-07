@@ -26,24 +26,109 @@ export interface EditSession<T> {
 }
 
 /** @internal Dev dedupe for ST2028 — one report per session, not per clone. */
-let warnedLossyClone = false;
+let warnedSharedByReference = false;
+
+/**
+ * @internal Structural clone for the undo/redo stacks, for values
+ * `structuredClone` rejects.
+ *
+ * This used to be `JSON.parse(JSON.stringify(v))`, and that was silent
+ * corruption of an undo stack. `structuredClone` THROWS on a function, so ONE
+ * callback anywhere in the edited value dropped the WHOLE object onto the JSON
+ * path. MEASURED, the same value with one function field added, after
+ * `applyChanges` then `undo`:
+ *
+ *     Date        -> string          Set -> {}        Map -> {}
+ *     `undefined` key -> DROPPED     the function itself -> DROPPED
+ *
+ * The user hits undo and gets back a value whose dates are strings and whose
+ * callback is gone. JSON was never the only option: everything above survives a
+ * walk that knows about the types.
+ *
+ * Functions are shared BY REFERENCE, which is not a compromise — it is the
+ * right answer. A function has no state to restore, and its identity is usually
+ * what callers compare on. Class instances are copied prototype-and-all, so an
+ * `ApiError` comes back an `ApiError`, not a plain object.
+ *
+ * Cycles are tracked, because an edited value is user-shaped and a
+ * parent-pointing node is ordinary domain data.
+ */
+function structuralClone<T>(value: T, seen: WeakMap<object, unknown>): T {
+  if (value === null || typeof value !== 'object') {
+    // Functions land here and pass through by reference. Deliberate.
+    return value;
+  }
+
+  const hit = seen.get(value as object);
+  if (hit !== undefined) return hit as T;
+
+  if (value instanceof Date) return new Date(value.getTime()) as T;
+  if (value instanceof RegExp) {
+    return new RegExp(value.source, value.flags) as T;
+  }
+
+  if (Array.isArray(value)) {
+    const out: unknown[] = new Array(value.length);
+    seen.set(value, out);
+    for (let i = 0; i < value.length; i++) {
+      out[i] = structuralClone(value[i], seen);
+    }
+    return out as T;
+  }
+
+  if (value instanceof Map) {
+    const out = new Map();
+    seen.set(value, out);
+    for (const [k, v] of value) {
+      out.set(structuralClone(k, seen), structuralClone(v, seen));
+    }
+    return out as T;
+  }
+
+  if (value instanceof Set) {
+    const out = new Set();
+    seen.set(value, out);
+    for (const v of value) out.add(structuralClone(v, seen));
+    return out as T;
+  }
+
+  // Plain objects AND class instances. `Object.create` keeps the prototype, so
+  // methods and `instanceof` survive a round trip through the undo stack.
+  const out = Object.create(
+    Object.getPrototypeOf(value) as object | null
+  ) as Record<string, unknown>;
+  seen.set(value, out);
+
+  // Own property DESCRIPTORS, not `Object.keys`, and this is not thoroughness
+  // for its own sake: `Error`'s `name` and `message` are own but NON-enumerable,
+  // so a `Object.keys` walk restored `new ApiError('nope', 404)` with an EMPTY
+  // message. `deepEqual` documents the identical trap one file over. Symbol
+  // keys come along for the same reason — a marker or a branded field is not
+  // less real for being a symbol.
+  for (const key of Reflect.ownKeys(value as object)) {
+    const desc = Object.getOwnPropertyDescriptor(value as object, key);
+    if (!desc) continue;
+    // An accessor is read ONCE and stored as data. Copying the getter itself
+    // would make the history entry re-read live state on every access, which is
+    // the opposite of a snapshot.
+    const raw = 'value' in desc ? desc.value : desc.get?.call(value);
+    Object.defineProperty(out, key, {
+      value: structuralClone(raw, seen),
+      writable: desc.writable ?? true,
+      enumerable: desc.enumerable,
+      configurable: desc.configurable,
+    });
+  }
+  return out as T;
+}
 
 /**
  * @internal Deep copy for the undo/redo stacks.
  *
- * `structuredClone` preserves `Date`, `Map`, `Set`, `RegExp` and `undefined`
- * values. The `JSON` fallback preserves NONE of them, and this matters more
- * than it looks: `structuredClone` THROWS on a function, so a single callback
- * anywhere in the value drops the whole clone onto the lossy path. MEASURED —
- * the same object, with and without one function field:
- *
- *     clean                    Date: Date   Map: Map   `undefined` key: kept
- *     + one function           Date: string Map: {}    `undefined` key: DROPPED
- *
- * That is silent corruption of an undo stack: the user hits undo and gets back
- * a value whose dates are strings. The fallback stays — a lossy restore beats
- * a thrown one mid-edit, and this is the only clone path — but it no longer
- * happens quietly. [ST2028]
+ * `structuredClone` first — it is native and fast, and preserves `Date`, `Map`,
+ * `Set`, `RegExp` and `undefined` values. It THROWS on a function or a class
+ * instance with unclonable internals, and that is where {@link structuralClone}
+ * takes over. [ST2028]
  */
 function clone<T>(value: T): T {
   const sc = (globalThis as { structuredClone?: (v: unknown) => unknown })
@@ -51,26 +136,25 @@ function clone<T>(value: T): T {
   if (sc) {
     try {
       return sc(value) as T;
-    } catch (err) {
+    } catch {
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
-        if (!warnedLossyClone) {
-          warnedLossyClone = true;
+        if (!warnedSharedByReference) {
+          warnedSharedByReference = true;
           console.warn(
-            `SignalTree: createEditSession fell back to JSON cloning because ` +
-              `structuredClone rejected this value — usually a function or a ` +
-              `class instance somewhere inside it. The fallback DOES NOT ` +
-              `preserve Date, Map, Set, RegExp or undefined values anywhere in ` +
-              `the object, so undo/redo will hand those back in a different ` +
-              `shape. Remove the non-cloneable field from the edited value. ` +
-              `[ST2028]`,
-            err
+            `SignalTree: this edit session holds a value structuredClone ` +
+              `cannot copy — normally a function. Dates, Maps, Sets, RegExps ` +
+              `and undefined values are all still preserved across undo/redo, ` +
+              `but any FUNCTION is shared by reference between history ` +
+              `entries rather than copied, and a class instance's private ` +
+              `(#) fields are not carried across. If the value has state you ` +
+              `need restored, keep it out of the edited object. [ST2028]`
           );
         }
       }
-      return JSON.parse(JSON.stringify(value)) as T;
+      return structuralClone(value, new WeakMap());
     }
   }
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuralClone(value, new WeakMap());
 }
 
 export function createEditSession<T>(initial: T): EditSession<T> {

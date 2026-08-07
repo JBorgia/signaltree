@@ -15,7 +15,7 @@ import { createEditSession } from './edit-session';
  * middle of an edit, and this is the only clone path. What changed is that it
  * no longer happens quietly.
  */
-describe('ST2028 — the edit-session clone fallback is lossy and now says so', () => {
+describe('ST2028 — the edit-session clone fallback is LOSSLESS', () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -38,26 +38,30 @@ describe('ST2028 — the edit-session clone fallback is lossy and now says so', 
     expect('maybe' in v).toBe(true);
   });
 
-  it('degrades ALL of them when one function forces the JSON fallback', () => {
-    const s = createEditSession({
+  it('preserves ALL of them even when a function blocks structuredClone', () => {
+    // This test used to assert the OPPOSITE, and passed. It pinned the bug as
+    // the contract: one callback anywhere made `structuredClone` throw, the
+    // whole value fell to `JSON.parse(JSON.stringify(...))`, and undo handed
+    // back dates as strings, Maps and Sets as `{}`, `undefined` keys gone and
+    // the callback itself gone. A test can lock in a defect just as firmly as a
+    // requirement — it is left here, inverted, rather than deleted.
+    const session = createEditSession({
       when: new Date(0),
-      tags: new Map([['a', 1]]),
-      maybe: undefined,
-      onSave: () => 1,
+      lookup: new Map([['k', 1]]),
+      note: undefined as string | undefined,
+      onSave: () => undefined,
+      name: 'a',
     });
-    const v = s.modified() as Record<string, unknown>;
 
-    // Documenting the damage rather than asserting it is fine: one
-    // non-cloneable field costs every special type in the object.
-    expect(v['when'] instanceof Date).toBe(false);
-    expect(v['tags'] instanceof Map).toBe(false);
-    expect('maybe' in v).toBe(false);
+    session.applyChanges((v) => ({ ...v, name: 'b' }));
+    session.undo();
+    const back = session.modified();
 
-    // ...and says so. Asserted HERE rather than in its own test because the
-    // dedupe flag is module-global — a later test would find it already spent.
-    const msg = warn.mock.calls.map((c) => String(c[0])).join('\n');
-    expect(msg).toContain('ST2028');
-    expect(msg).toContain('structuredClone');
+    expect(back.when).toBeInstanceOf(Date);
+    expect(back.lookup).toBeInstanceOf(Map);
+    expect(back.lookup.get('k')).toBe(1);
+    expect('note' in back).toBe(true);
+    expect(typeof back.onSave).toBe('function');
   });
 
   it('reports once, not on every clone in the session', () => {
