@@ -272,6 +272,31 @@ store.$.users.removeMany(ids);
 store.$.users.removeWhere(pred);
 store.$.users.clear();
 
+// v14: insert at the FRONT (feeds, chat logs, activity streams).
+// `setAll([newRow, ...existing])` rebuilds every per-entity signal; prepend
+// re-orders storage only, so held nodes survive and no other row is invalidated.
+store.$.users.prependOne(user);
+store.$.users.prependMany(users);
+
+// v14: adopt the id the server assigned after an optimistic create. Keeps list
+// position, the node cache and the active selection.
+// WARNING: a node already HELD from byId(tempId) resolves to undefined
+// afterwards — a node closes over its id. Re-read with byId(newId).
+store.$.users.changeId(tempId, 42);
+
+// v14: active entity (master/detail) — no hand-rolled `activeId` + lookup.
+store.$.users.setActiveId(id);
+store.$.users.clearActiveId();
+store.$.users.activeId();      // Signal<K | undefined>
+store.$.users.activeEntity();  // Signal<User | undefined>
+// activeEntity resolves through the PER-ENTITY signal, so an unrelated row
+// changing does not recompute it. A hand-rolled
+// `computed(() => all().find(u => u.id === activeId()))` depends on the whole
+// collection and recomputes on every change — which is the reason this is
+// built in rather than left to the app.
+// Selecting a MISSING id is deliberately not an error: selection outlives the
+// row whenever a delete arrives while a detail pane is open.
+
 // Queries (all return signals)
 store.$.users.all();              // Signal<User[]>
 store.$.users.byId(id);           // EntityNode<User> | undefined — invoke: .byId(id)?.() → User | undefined
@@ -905,8 +930,8 @@ Enhancers add cross-cutting capabilities. Chain via `.with()`. Each is opt-in, t
 |---|---|---|
 | `batching()` | `tree.batch(fn)`, `tree.coalesce(fn)` | Group multiple synchronous writes; coalesce rapid updates |
 | `devTools(config?)` | Redux DevTools integration with path-based actions | Development/debugging |
-| `timeTravel({ maxHistorySize })` | `tree.undo()`, `tree.redo()`, history navigation | Undo/redo, form wizards, canvas apps |
-| `effects()` | `tree.effect(fn)`, `tree.subscribe(fn)` | DEPRECATED — use Angular's native `effect(() => tree.$.path())` instead; removal planned for the next major. `tree.effect()`/`tree.subscribe()` throw NG0203 outside injection contexts |
+| `timeTravel({ maxHistorySize, shouldSkip? })` | `tree.undo()`, `tree.redo()`, `canUndo()`/`canRedo()`/`getHistory()` (**all REACTIVE as of 14.0.0**), `pauseRecording()`/`resumeRecording()`/`isRecordingPaused()` | Undo/redo, form wizards, canvas apps. **Pause** so a bulk import is ONE undo step rather than a hundred — writes still apply, they just stop becoming steps. **`shouldSkip(prev, next)`** drops transitions the app finds uninteresting (a cursor position); it runs on every recorded write, so compare only the fields you mean. Before 14.0.0 `canUndo()` read a plain number, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled |
+| ~~`effects()`~~ | — | **REMOVED in 14.0.0.** Use Angular's `effect(() => tree.$.path())`, which accepts `{ injector }`. The enhancer called `effect()` with no injector handling, so using it outside an injection context threw NG0203 with no way to opt out |
 | `persistence(config)` | Auto save/load via storage adapters (localStorage, IndexedDB, custom) | Whole-tree persistence with adapters |
 | `serialization()` | JSON serialize/deserialize with Date/Map/Set preservation | Snapshotting, export/import |
 
@@ -979,9 +1004,25 @@ Specialized APIs live in subpaths to keep the main barrel small:
 import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
 import { createEditSession, createTreeEditSession } from '@signaltree/core/edit-session';
 import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
+import { lazy } from '@signaltree/core/lazy';
+import { isNodeAccessor, registerMarkerProcessor, onTreeError } from '@signaltree/core/authoring';
 ```
 
-The only published subpaths in `@signaltree/core` are `./security`, `./edit-session`, and `./storage`. The main barrel (`@signaltree/core`) re-exports everything; modern bundlers tree-shake unused symbols regardless.
+`@signaltree/core` publishes six entry points: `.`, `./security`, `./lazy`, `./edit-session`, `./storage`, `./authoring`.
+
+⚠️ **As of 14.0.0 the main barrel no longer re-exports everything.** The root is the APP surface — 34 symbols, every one demonstrated in the demo app. `./authoring` is the plumbing an enhancer, marker or tooling author needs, and **25 symbols moved there** in 14.0.0:
+
+| group | symbols |
+| --- | --- |
+| reader allowlists | `ENTITY_READERS`, `ENTITY_LOADER_READERS`, `STATUS_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STORED_READERS`, `ASYNC_SOURCE_READERS`, `ASYNC_QUERY_READERS` |
+| marker brands | `FORM_MARKER`, `ASYNC_SOURCE_MARKER`, `ASYNC_QUERY_MARKER` |
+| marker guards | `isFormMarker`, `isStoredMarker`, `isStatusMarker`, `isDerivedMarker`, `isAsyncSourceMarker`, `isAsyncQueryMarker` |
+| structural guards | `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree` |
+| misc | `parsePath`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` |
+
+`./authoring` also owns `registerMarkerProcessor`, `onHydrateDecision`, `onTreeError`, `createEnhancer`, `composeEnhancers`, `getPathNotifier`, `withWriteContext`, `ENHANCER_META`, and the `HydrateMode`/`HydrateReason` types. **Importing any of these from `@signaltree/core` is a compile error.** `isDev` and `withKind` stayed on the root, because an app legitimately branches on the first and tags a custom `form()` validator with the second.
+
+The split exists because a check asked "does every root export appear in the demo app?" and 26 of 59 did not — and every absentee was plumbing, sitting on the entry point an app imports.
 
 ### Async — `asyncSource` and `asyncQuery` markers (canonical, v9.5+)
 
@@ -1437,6 +1478,24 @@ A complete, agent-ready migration playbook ships inside `@signaltree/core` and i
 For migrations exceeding a single agent's context window, see `docs/skills/using-signaltree/reference/orchestrating-a-migration.md`.
 
 ---
+
+## Dev-mode diagnostics added in 14.0.0
+
+Every warning carries a stable `[ST####]` code; full map in
+[`docs/errors/README.md`](https://github.com/JBorgia/signaltree/blob/main/docs/errors/README.md).
+
+- **[ST2024]** `entityMap` hydrate received a payload carrying no entities. A **bare array now applies** — `tree({ rows: [...] })` works as of 14.0.0. Before, it left the collection untouched while sibling leaves in the same payload took their new values, and in production said nothing at all. This fires only for an object carrying neither an array nor an `all` array.
+- **[ST2025]** An `onTreeError` listener itself threw. The original error was still handled normally; this reports the listener failing, so adding error REPORTING never becomes a source of errors.
+- **[ST2026]** `where(pred)` / `find(pred)` called repeatedly with a NEW function of identical source. Results memoise per predicate **identity**, so an inline arrow in a template allocates a fresh one every change-detection cycle, misses the cache and re-filters the whole collection — measured **0.27 ms hoisted against 20.54 ms inline** over 1,000 entities. It is not a leak (the cache is a `WeakMap`), which is exactly why it needs a diagnostic: nothing grows, nothing errors, the app is just permanently slow.
+
+  ```typescript
+  // ❌ 75x slower — a new arrow every CD cycle
+  @for (row of tree.$.rows.where(r => !r.done)(); track row.id) {}
+
+  // ✅ hoist to a stable reference
+  protected readonly notDone = (r: Row) => !r.done;
+  @for (row of tree.$.rows.where(notDone)(); track row.id) {}
+  ```
 
 ## Resources
 

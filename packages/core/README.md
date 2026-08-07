@@ -918,7 +918,15 @@ to opt out.
 **Development Tools:**
 
 - `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
-- `timeTravel()` - Undo/redo functionality
+
+**Global error observation (14.0.0):** `import { onTreeError } from '@signaltree/core/authoring'` gives one place to see every error the library CATCHES — a `stored()` write that fails, an `asyncSource` loader that rejects. Markers still handle their own errors exactly as before; this is additive and deliberately cannot swallow, retry or transform. A listener that throws cannot damage the operation that reported to it (that is reported as `[ST2025]`).
+
+```typescript
+import { onTreeError } from '@signaltree/core/authoring';
+
+onTreeError((e) => Sentry.captureException(e.error, { extra: e }));
+```
+- `timeTravel(config?)` - Undo/redo. `canUndo()`, `canRedo()` and `getHistory()` are **reactive** as of 14.0.0 — before that they read plain values, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled. Also new in 14.0.0: `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` (writes still apply while paused; they just stop becoming undo steps, so a bulk import is one step instead of a hundred) and `timeTravel({ shouldSkip: (prev, next) => … })` to drop uninteresting transitions — it runs on **every** recorded write, so compare only the fields you mean.
 
 #### Additional Packages
 
@@ -2082,6 +2090,31 @@ const tree = signalTree({
 tree.$.users.addOne(newUser);
 tree.$.users.where((u) => u.active);
 tree.$.users.updateMany(['1', '2', '3'], { status: 'active' }); // ids + shared changes
+
+// New in 14.0.0 ────────────────────────────────────────────────────────────
+
+// Insert at the FRONT — feeds, chat logs, activity streams.
+// `setAll([newRow, ...existing])` rebuilds every per-entity signal; prepend
+// re-orders storage only, so held nodes survive and no other row is invalidated.
+tree.$.users.prependOne(newUser);
+tree.$.users.prependMany([a, b]);
+
+// Active entity — master/detail without hand-rolling `activeId` + a lookup.
+tree.$.users.setActiveId('42');
+tree.$.users.activeEntity(); // Signal<User | undefined>
+tree.$.users.clearActiveId();
+// `activeEntity` resolves through the PER-ENTITY signal, so an unrelated row
+// changing does not recompute it. A hand-rolled
+// `computed(() => all().find(u => u.id === activeId()))` depends on the whole
+// collection and recomputes on every change — the reason this is built in.
+// Selecting a missing id is deliberately not an error: a selection outlives its
+// row whenever a delete arrives while a detail pane is open.
+
+// Adopt the id the server assigned after an optimistic create. Keeps list
+// position, the node cache and the active selection.
+tree.$.users.changeId(tempId, serverId);
+// ⚠️ A node already HELD from `byId(tempId)` resolves to `undefined` afterwards
+// — a node closes over its id. Re-read with `byId(serverId)`.
 
 // Entity helpers work with nested structures
 // Example: deeply nested entities in a domain-driven design pattern
