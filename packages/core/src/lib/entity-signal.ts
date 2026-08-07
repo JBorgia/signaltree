@@ -142,6 +142,29 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<K, WritableSignal<E | undefined>>();
 
+  /** Active-entity selection. See the `activeId`/`activeEntity` accessors. */
+  const activeIdSignal = signal<K | undefined>(undefined);
+  let cachedActiveEntity: Signal<E | undefined> | undefined;
+
+  /**
+   * Re-orders `storage` so the given ids come first, in the order given.
+   *
+   * Only the map's iteration order changes; no per-entity signal is touched, so
+   * prepending does not invalidate any row's consumers. The derived collection
+   * signals pick the new order up from the version bump.
+   */
+  function moveToFront(ids: K[]): void {
+    const moving = new Set(ids);
+    const rest = Array.from(storage.entries()).filter(([k]) => !moving.has(k));
+    const front = ids
+      .map((id) => [id, storage.get(id)] as const)
+      .filter(([, v]) => v !== undefined);
+    storage.clear();
+    for (const [k, v] of front) storage.set(k, v as E);
+    for (const [k, v] of rest) storage.set(k, v);
+    updateSignals();
+  }
+
   /** Get (or lazily create) the per-entity signal, seeded from storage. */
   function getEntitySignal(id: K): WritableSignal<E | undefined> {
     let s = entitySignals.get(id);
@@ -415,6 +438,39 @@ export function createEntitySignal<
       return mapSignal;
     },
 
+    // ── Active entity ───────────────────────────────────────────────────────
+    get activeId(): Signal<K | undefined> {
+      return activeIdSignal.asReadonly();
+    },
+
+    /**
+     * Resolved through the per-entity signal, NOT through `mapSignal`.
+     *
+     * That is the whole reason to build this here rather than leave it to the
+     * app: a hand-rolled `computed(() => all().find(e => id(e) === activeId()))`
+     * depends on the entire collection, so it recomputes when ANY row changes.
+     * This depends on the active row's own signal, so it recomputes only when
+     * that row changes — which is what `byId` exists for.
+     */
+    get activeEntity(): Signal<E | undefined> {
+      return (cachedActiveEntity ??= computed(() => {
+        const id = activeIdSignal();
+        if (id === undefined) return undefined;
+        return getEntitySignal(id)();
+      }));
+    },
+
+    setActiveId(id: K | undefined): void {
+      // Not an error when the id is absent: selection frequently outlives the
+      // row (a delete arriving from a socket while a detail pane is open), and
+      // `activeEntity` already resolves to undefined in that case.
+      activeIdSignal.set(id);
+    },
+
+    clearActiveId(): void {
+      activeIdSignal.set(undefined);
+    },
+
     has(id: K): Signal<boolean> {
       return computed(() => mapSignal().has(id));
     },
@@ -491,6 +547,82 @@ export function createEntitySignal<
       }
 
       return id;
+    },
+
+    /**
+     * Insert at the FRONT, reusing `addOne` and then moving the entry.
+     *
+     * The storage map is insertion-ordered and JS gives no way to unshift one,
+     * so the entry order is rebuilt — O(n) in the number of entities. That is
+     * still markedly cheaper than the `setAll([entity, ...existing])` this
+     * replaces, which rebuilds the storage map AND resets every per-entity
+     * signal: only the newcomer's signal changes here, so held nodes survive and
+     * no unrelated row's consumers are invalidated.
+     *
+     * Reusing `addOne` rather than duplicating it keeps duplicate-detection,
+     * interceptors, notifier and tap handlers on exactly one path.
+     */
+    prependOne(entity: E, opts?: AddOptions<E, K>): K {
+      const id = api.addOne(entity, opts);
+      moveToFront([id]);
+      return id;
+    },
+
+    prependMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
+      const ids = api.addMany(entities, opts);
+      // Front, in the order given — so `prependMany([a, b])` reads back as
+      // [a, b, ...existing], which is what the call site looks like.
+      moveToFront(ids);
+      return ids;
+    },
+
+    /**
+     * Change an entity's id in place — the missing half of optimistic creation.
+     *
+     * Insert with a temp id, then adopt the id the server assigned. Everything
+     * keyed by the old id moves together: storage (keeping list position), the
+     * per-entity signal, the node cache, and the active-entity selection.
+     *
+     * ⚠️ A node already HELD from `byId(oldId)` does not follow the change — it
+     * resolves to `undefined` afterwards. A node closes over its id, so making
+     * it follow would mean aliasing the old key to the same signal, and a later
+     * `addOne({ id: oldId })` would then silently share one signal between two
+     * different entities. Re-read with `byId(newId)` after changing an id.
+     *
+     * That is a smaller guarantee than remove-then-add gives you — which is
+     * none — but it is worth stating precisely rather than implying identity
+     * survives. What this buys over remove-then-add is list position, the
+     * active selection, and not churning every other row's signals.
+     */
+    changeId(from: K, to: K): void {
+      const entity = storage.get(from);
+      if (!entity) {
+        throw new Error(`Entity with id ${String(from)} not found`);
+      }
+      if (from === to) return;
+      if (storage.has(to)) {
+        throw new Error(`Cannot change id to ${String(to)}: already in use`);
+      }
+
+      // Rebuild in order so the row keeps its position.
+      const entries = Array.from(storage.entries());
+      storage.clear();
+      for (const [key, value] of entries) {
+        if (key === from) storage.set(to, value);
+        else storage.set(key, value);
+      }
+
+      // Drop the old per-entity signal rather than aliasing it to the new key:
+      // an alias would be shared with a future `addOne({ id: from })`, which is
+      // a worse failure than a stale node resolving to undefined.
+      entitySignals.delete(from);
+      nodeCache.delete(from);
+      nodeCache.delete(to);
+      if (activeIdSignal() === from) activeIdSignal.set(to);
+
+      syncEntitySignal(to);
+      updateSignals();
+      pathNotifier.notify(`${basePath}.${String(to)}`, entity, entity);
     },
 
     addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {

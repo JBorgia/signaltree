@@ -841,9 +841,33 @@ export interface EntitySignal<E, K extends string | number = string> {
   where(predicate: (entity: E) => boolean): Signal<E[]>;
   find(predicate: (entity: E) => boolean): Signal<E | undefined>;
 
+  // Active entity — the master/detail primitive.
+  //
+  // Added in 14.0.0 after a capability audit found elf and Akita both ship it
+  // and every team otherwise hand-rolls `activeId: null` plus a derived lookup.
+  // `activeEntity` resolves through `byId`, so it is O(1) and invalidates only
+  // when THAT row changes — finer-grained than the filtered-stream versions the
+  // other libraries offer.
+  readonly activeId: Signal<K | undefined>;
+  readonly activeEntity: Signal<E | undefined>;
+  setActiveId(id: K | undefined): void;
+  clearActiveId(): void;
+
   // Mutations
   addOne(entity: E, opts?: AddOptions<E, K>): K;
   addMany(entities: E[], opts?: AddManyOptions<E, K>): K[];
+  /** Insert at the FRONT. Feeds, chat logs, activity streams. */
+  prependOne(entity: E, opts?: AddOptions<E, K>): K;
+  prependMany(entities: E[], opts?: AddManyOptions<E, K>): K[];
+  /**
+   * Change an entity's id in place, preserving its position.
+   *
+   * The missing half of optimistic creation: insert with a temp id, then adopt
+   * the id the server assigned. Without it the only option is remove-then-add,
+   * which loses list position, orphans any node held from `byId(tempId)`, and
+   * breaks any UI state keyed by the old id.
+   */
+  changeId(from: K, to: K): void;
   updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void;
   updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void;
   updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number;
