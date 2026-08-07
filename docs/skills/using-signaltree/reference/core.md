@@ -42,7 +42,7 @@ Both overloads return a **builder** whose `.with(enhancer)` chain composes enhan
   - Patch the subtree with an updater: `tree.$.user((u) => ({ ...u, name }))`.
   - Leaves are NOT callable for writes — `tree.$.counter.set(5)`. (`@signaltree/callable-syntax` promised that shorthand and was deleted in 14.0.0; it never worked in Angular apps.)
 
-**What's a leaf vs a branch?** It's a property of the *value's type*, not its position in the tree:
+**What's a leaf vs a branch?** It's a property of the _value's type_, not its position in the tree:
 
 - **Leaves** (have `.set()` / `.update()`): primitives (`string`, `number`, `boolean`, `null`, `undefined`, `bigint`, `symbol`), arrays, `Date`, `Map`, `Set`, `Error`, `RegExp`, `Promise`, functions, and class instances.
 - **Branches** (call form, no `.set()`): plain objects (records, interfaces, type aliases for object literals).
@@ -131,7 +131,7 @@ tree.updateAndReport({ users: [{ id: 2 }] }); // → ['users']
 
 **There is deliberately no subscription API.** A push-shaped `onPathChange` was
 built for 13.5.0 and cut before release: it had no consumers, and the change-
-notification design points at a *pull* shape (notify with a version; the
+notification design points at a _pull_ shape (notify with a version; the
 consumer asks what changed) — shipping both would mean supporting both forever.
 Call `updateAndReport()` where you write.
 
@@ -177,7 +177,7 @@ Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey`
 
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
 **Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (the `.isEmpty` alias was removed in v11).
-**Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when *that* entity changes (fan-out 1), not on every collection mutation.
+**Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when _that_ entity changes (fan-out 1), not on every collection mutation.
 **Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `store.$.users.active()` as a `Signal<User[]>` — **fully typed on `tree.$` since v13.2** (no cast; chain `.computed()` more than once and every name is typed independently). The `compute` fn receives only that collection's `E[]`, so a projection that needs other state (another collection, an external id signal) stays a normal `computed`/`.derived()`.
 
 ### `status()`
@@ -207,14 +207,14 @@ tree.$.load.notLoaded(); // boolean
 // — same Signal instance, both work; canonical preferred in new code.
 
 // v10.2+ Promise-vocabulary aliases (identical semantics, no args for booleans)
-tree.$.load.start();                       // === setLoading()
-tree.$.load.setSuccess();                  // === setLoaded() — NO ARGS
-tree.$.load.succeed();                     // === setLoaded()
-tree.$.load.fail('network failure');       // === setError('network failure')
+tree.$.load.start(); // === setLoading()
+tree.$.load.setSuccess(); // === setLoaded() — NO ARGS
+tree.$.load.succeed(); // === setLoaded()
+tree.$.load.fail('network failure'); // === setError('network failure')
 
 // Raw state and error if you need them
-tree.$.load.state();  // LoadingState (state is WritableSignal<LoadingState>)
-tree.$.load.error();  // E | null (error is WritableSignal<E | null> — write via .error.set(e))
+tree.$.load.state(); // LoadingState (state is WritableSignal<LoadingState>)
+tree.$.load.error(); // E | null (error is WritableSignal<E | null> — write via .error.set(e))
 
 // When comparing raw state, always use the LoadingState enum — never string literals
 const loading = tree.$.load.state() === LoadingState.Loading; // ✓
@@ -262,8 +262,14 @@ Load-and-expose async primitive. Materializes into an accessor with `data`, `loa
 import { signalTree, asyncSource } from '@signaltree/core';
 import type { Observable } from 'rxjs';
 
-interface User { id: number; name: string; }
-interface Report { id: string; rows: number; }
+interface User {
+  id: number;
+  name: string;
+}
+interface Report {
+  id: string;
+  rows: number;
+}
 declare const api: {
   list$(): Observable<User[]>;
   generateReport$(): Observable<Report>;
@@ -272,20 +278,20 @@ declare const api: {
 const store = signalTree({
   users: asyncSource<User[]>({
     initial: [],
-    load: () => api.list$(),   // auto-loads on materialization
+    load: () => api.list$(), // auto-loads on materialization
   }),
   report: asyncSource<Report>({
     load: () => api.generateReport$(),
-    lazy: true,                // skip auto-load; caller invokes .refresh()
+    lazy: true, // skip auto-load; caller invokes .refresh()
   }),
 });
 
-store.$.users();          // current value (User[] | undefined)
-store.$.users.loading();  // Signal<boolean>
-store.$.users.error();    // Signal<unknown | null>
-store.$.users.refresh();  // reload (cancels in-flight)
+store.$.users(); // current value (User[] | undefined)
+store.$.users.loading(); // Signal<boolean>
+store.$.users.error(); // Signal<unknown | null>
+store.$.users.refresh(); // reload (cancels in-flight)
 store.$.users.set([{ id: 1, name: 'Override' }]); // manual override
-store.$.users.reset();    // clear data/loading/error
+store.$.users.reset(); // clear data/loading/error
 ```
 
 Auto-cleans on the surrounding `DestroyRef`. **No manual `setLoading()` / `setLoaded()` wiring.**
@@ -298,8 +304,11 @@ Input-driven debounced query. A writable `input` signal drives a built-in `debou
 import { signalTree, asyncQuery } from '@signaltree/core';
 import type { Observable } from 'rxjs';
 
-interface User { id: number; name: string; }
-declare const api: { search$(q: string): Observable<User[]>; };
+interface User {
+  id: number;
+  name: string;
+}
+declare const api: { search$(q: string): Observable<User[]> };
 
 const store = signalTree({
   search: asyncQuery<string, User[]>({
@@ -315,10 +324,10 @@ const store = signalTree({
 // Or set imperatively:
 store.$.search.input.set('alice');
 
-store.$.search();          // current results
+store.$.search(); // current results
 store.$.search.loading();
 store.$.search.error();
-store.$.search.rerun();    // rerun current input, skip dedup
+store.$.search.rerun(); // rerun current input, skip dedup
 store.$.search.reset();
 ```
 
@@ -400,7 +409,7 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 
 ### `linked()` — derived-but-writable
 
-`.derived()` values are read-only `computed`s. When you need a value derived from a source that is *also writable* (and re-derives when the source changes), return `linked()` — comparable to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`. The merged path is a real `WritableSignal`, so `.set()`/`.update()` type-check.
+`.derived()` values are read-only `computed`s. When you need a value derived from a source that is _also writable_ (and re-derives when the source changes), return `linked()` — comparable to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`. The merged path is a real `WritableSignal`, so `.set()`/`.update()` type-check.
 
 ```ts
 import { signalTree, linked } from '@signaltree/core';
@@ -416,8 +425,7 @@ const tree = signalTree({ options: [] as Option[] }).derived(($) => ({
   // can't infer it from the body when `prev.value` is referenced.
   selected: linked({
     source: () => $.options(),
-    computation: (opts, prev): Option | undefined =>
-      opts.find((o) => o.id === prev?.value?.id) ?? opts[0],
+    computation: (opts, prev): Option | undefined => opts.find((o) => o.id === prev?.value?.id) ?? opts[0],
   }),
   // Simple form — re-derives when its reads change (return type inferred):
   count: linked(() => $.options().length),

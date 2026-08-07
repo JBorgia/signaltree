@@ -255,15 +255,15 @@ An earlier revision called `with()` "the only item in this document that would
 be a NEW capability" and recommended it for 14.0.0. **That recommendation is
 withdrawn.** Enumerating the use cases collapses it:
 
-| use case                    | already served?                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Optimistic update + rollback | **Yes — MEASURED.** `const before = tree()` → mutate → `tree(before)` restores exactly, across `entityMap`, `status`, `form`, plain leaves and derived. And it works *because of* this release |
-| Form drafts                 | Yes — that is what `form()` is                                                                               |
-| Time-travel scrub           | Mostly — `jumpTo` exists; preview-without-commit is a devtools nicety                                        |
-| Preview modes               | No — but a component usually computes the previewed value locally rather than forking global state           |
+| use case                     | already served?                                                                                                                                                                                |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Optimistic update + rollback | **Yes — MEASURED.** `const before = tree()` → mutate → `tree(before)` restores exactly, across `entityMap`, `status`, `form`, plain leaves and derived. And it works _because of_ this release |
+| Form drafts                  | Yes — that is what `form()` is                                                                                                                                                                 |
+| Time-travel scrub            | Mostly — `jumpTo` exists; preview-without-commit is a devtools nicety                                                                                                                          |
+| Preview modes                | No — but a component usually computes the previewed value locally rather than forking global state                                                                                             |
 
 **The decisive argument is structural, not a cost estimate.** Datomic's `with()`
-is valuable *because Datomic has a query language*: you speculate, then run
+is valuable _because Datomic has a query language_: you speculate, then run
 arbitrary queries against the result. SignalTree has no query surface — you read
 fields. "What would `$.a.b` be if I set `$.a.b`?" is the value you were about to
 set. **Speculation only pays where it propagates**, and the propagation surface
@@ -272,7 +272,7 @@ here is `.derived()`, which is a much smaller thing than a query engine.
 ⚠️ **One argument used to reach this conclusion does NOT hold, and is recorded so
 it is not reused:** "46 `.derived()` call sites repo-wide, 18 in the demo" was
 offered as evidence that the propagation surface is small. It is not evidence.
-That counts *our own* usage of *our own* feature — a demo under-uses derived
+That counts _our own_ usage of _our own_ feature — a demo under-uses derived
 precisely because demos showcase primitives. Measuring demand for a library
 feature by grepping the library's own repo is close to circular. The structural
 argument above stands on its own and needs no volume estimate.
@@ -476,8 +476,8 @@ invisible.
 `reason` (`'loader-owns-source'` | `'no-request-survives-boundary'`) that ships
 to production, and a `detail` prose string that folds away with `ngDevMode`.
 That follows the existing rule in
-[`dropping-dev-code.md`](../performance/dropping-dev-code.md) — *advisory prose
-is removable, identity is not.*
+[`dropping-dev-code.md`](../performance/dropping-dev-code.md) — _advisory prose
+is removable, identity is not._
 
 An earlier revision guarded the whole call site to keep the prose out of the
 bundle (0.19 KB gzip on the entities scenario). That made `onHydrateDecision` a

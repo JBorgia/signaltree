@@ -10,12 +10,12 @@ SignalTree's shape is: **only leaves are Angular signals; branches are plain
 callable accessors.** That produces a specific and lopsided performance profile,
 now measured rather than assumed:
 
-| operation | vs `@ngrx/signals` | why |
-| --------- | ------------------ | --- |
-| update one deep field (path walked each time) | **~20x faster** | 15 property reads + 1 signal write, against 15 object allocations for an immutable rebuild |
-| update through a HELD leaf reference | **~31x faster** | a capability SignalStore does not have at all — every write there goes through `patchState` at the root |
-| read the WHOLE state | **~2.25x slower** | they hold a POJO and return it; we must walk the signal graph and materialise one |
-| 1000 single-element updates in a 50k array | **~8x slower** (unreconciled, see below) | `equal: deepEqual` walks 50k elements on every leaf write |
+| operation                                     | vs `@ngrx/signals`                       | why                                                                                                     |
+| --------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| update one deep field (path walked each time) | **~20x faster**                          | 15 property reads + 1 signal write, against 15 object allocations for an immutable rebuild              |
+| update through a HELD leaf reference          | **~31x faster**                          | a capability SignalStore does not have at all — every write there goes through `patchState` at the root |
+| read the WHOLE state                          | **~2.25x slower**                        | they hold a POJO and return it; we must walk the signal graph and materialise one                       |
+| 1000 single-element updates in a 50k array    | **~8x slower** (unreconciled, see below) | `equal: deepEqual` walks 50k elements on every leaf write                                               |
 
 The first two ARE the product: partial updates that skip the rebuild, **while
 still supporting time travel**. The last two are the bill for it.
@@ -44,11 +44,11 @@ hour.
 
 ## Research tracks
 
-| Track | Question | Status |
-| ----- | -------- | ------ |
-| D — Persistent/immutable structures | HAMT, RRB vectors, path copying, structural sharing: what each buys for read / update / snapshot / memory, measured in JS | RUNNING |
-| E — What shipping libraries actually do | immer, Immutable.js, MobX, Valtio, Solid stores, Vue, Legend-State, Yjs: their state model and its read/write/snapshot profile | CLOSED |
-| F — SignalTree's own profile | where OUR model wins and loses, quantified; what `entityMap` already does differently; what time travel costs under each option | RUNNING |
+| Track                                   | Question                                                                                                                        | Status  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| D — Persistent/immutable structures     | HAMT, RRB vectors, path copying, structural sharing: what each buys for read / update / snapshot / memory, measured in JS       | RUNNING |
+| E — What shipping libraries actually do | immer, Immutable.js, MobX, Valtio, Solid stores, Vue, Legend-State, Yjs: their state model and its read/write/snapshot profile  | CLOSED  |
+| F — SignalTree's own profile            | where OUR model wins and loses, quantified; what `entityMap` already does differently; what time travel costs under each option | RUNNING |
 
 ## Findings D — persistent structures
 
@@ -83,15 +83,15 @@ Library internals read as source, not documentation:
 
 ### Headline table — 50,000-element collection, one element changed
 
-| structure | random get | persistent update@idx | whole-state read (→ POJO) | "what changed" | mem / retained version |
-| --- | --- | --- | --- | --- | --- |
-| plain array + `slice()` (immer) | **4.1 ns** | 32.3 µs (37.7 µs w/ record spread) | **0.3 ns** (return the ref) | 87 µs deepEqual · 232 µs ref-walk · 18 µs inline ref scan | **400 KB** |
-| 2-level chunked, C = 224 | 6.4 ns | **0.11 µs** | 52 µs (`[].concat(...)`) | **2.1 µs** | 4.1 KB |
-| 32-way vector trie (hand-rolled) | — | — | — | **0.26 µs** | — |
-| `immutable.List` (32-way trie + tail) | 13.4 ns | **0.097 µs** | 967 µs `toArray()` | **0.15 µs** (internal-node walk) | **2.0 KB** |
-| `list` (funkia, RRB) | 9.5 ns | 0.174 µs | 184 µs `toArray()` | — | 1.6 KB |
-| `hamt` (HAMT, int keys) | 34.1 ns | 0.178 µs | — | — | — |
-| journal of inverse deltas (mutate in place) | 4.1 ns | ~0.08 µs | **0.3 ns** | free (you logged it) | **0.5 KB** |
+| structure                                   | random get | persistent update@idx              | whole-state read (→ POJO)   | "what changed"                                            | mem / retained version |
+| ------------------------------------------- | ---------- | ---------------------------------- | --------------------------- | --------------------------------------------------------- | ---------------------- |
+| plain array + `slice()` (immer)             | **4.1 ns** | 32.3 µs (37.7 µs w/ record spread) | **0.3 ns** (return the ref) | 87 µs deepEqual · 232 µs ref-walk · 18 µs inline ref scan | **400 KB**             |
+| 2-level chunked, C = 224                    | 6.4 ns     | **0.11 µs**                        | 52 µs (`[].concat(...)`)    | **2.1 µs**                                                | 4.1 KB                 |
+| 32-way vector trie (hand-rolled)            | —          | —                                  | —                           | **0.26 µs**                                               | —                      |
+| `immutable.List` (32-way trie + tail)       | 13.4 ns    | **0.097 µs**                       | 967 µs `toArray()`          | **0.15 µs** (internal-node walk)                          | **2.0 KB**             |
+| `list` (funkia, RRB)                        | 9.5 ns     | 0.174 µs                           | 184 µs `toArray()`          | —                                                         | 1.6 KB                 |
+| `hamt` (HAMT, int keys)                     | 34.1 ns    | 0.178 µs                           | —                           | —                                                         | —                      |
+| journal of inverse deltas (mutate in place) | 4.1 ns     | ~0.08 µs                           | **0.3 ns**                  | free (you logged it)                                      | **0.5 KB**             |
 
 Same shape, 1000 retained versions of a 50k collection, measured retained
 heap: plain `slice()` **381.6 MB** · immer **381.7 MB** · chunked C=224
@@ -108,17 +108,17 @@ Source says 32 (`SHIFT = 5` in immutable.js; `SIZE = 5`,
 exactly as Bagwell 2001 describes. Measured shape of a fully built
 `immutable.Map` is different:
 
-| N (string keys `key_0…`) | node types | **measured avg branch fanout** | **measured max depth** | log₃₂ N |
-| --- | --- | --- | --- | --- |
-| 1,000 | 16 HashArrayMap, 258 BitmapIndexed, 1000 Value | **4.65** | 3 | 2 |
-| 100,000 | 835 / 30,265 / 100,000 | **4.22** | 5 | 4 |
-| 1,000,000 | 17,948 / 341,084 / 1,000,000 | **3.79** | **6** | 4 |
-| 1,000,000, **integer** keys | 33,825 HashArrayMap, 0 BitmapIndexed | **30.56** | **4** | 4 |
+| N (string keys `key_0…`)    | node types                                     | **measured avg branch fanout** | **measured max depth** | log₃₂ N |
+| --------------------------- | ---------------------------------------------- | ------------------------------ | ---------------------- | ------- |
+| 1,000                       | 16 HashArrayMap, 258 BitmapIndexed, 1000 Value | **4.65**                       | 3                      | 2       |
+| 100,000                     | 835 / 30,265 / 100,000                         | **4.22**                       | 5                      | 4       |
+| 1,000,000                   | 17,948 / 341,084 / 1,000,000                   | **3.79**                       | **6**                  | 4       |
+| 1,000,000, **integer** keys | 33,825 HashArrayMap, 0 BitmapIndexed           | **30.56**                      | **4**                  | 4       |
 
 At 1M string keys the fanout histogram is dominated by 2-child nodes
 (202,324 of 359,032 branch nodes). Proximate cause: immutable.js hashes
 strings with the JVM recurrence `hashed = (31*hashed + charCodeAt(i))|0`
-then `smi()`; for common-prefix keys the *high* bits stay correlated —
+then `smi()`; for common-prefix keys the _high_ bits stay correlated —
 the level-5 hash fragment occupies only **13 of 32** possible values with
 a max slot load of 150,000 against an ideal of 31,250. Marginal
 distribution at levels 0–4 is fine; the joint distribution is not.
@@ -126,26 +126,26 @@ Integer keys hash to themselves and the trie behaves as designed.
 
 Get/set, medians:
 
-| N | `immutable.Map` get | `hamt` get | plain obj get | `Map` get | `immutable.Map` set | `hamt` set | `{...obj}` copy | `new Map(m)` copy |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1,000 | 32.7 ns | 26.5 ns | **9.3 ns** | 10.4 ns | 141 ns | **111 ns** | 138 µs | 25.3 µs |
-| 100,000 | 76.6 ns | 59.7 ns | **12.0 ns** | 15.4 ns | 317 ns | **231 ns** | 33.8 ms | 6.1 ms |
-| 1,000,000 | 154.5 ns | 101.9 ns | **10.4 ns** | 14.4 ns | 365 ns | **288 ns** | 490 ms | 127 ms |
+| N         | `immutable.Map` get | `hamt` get | plain obj get | `Map` get | `immutable.Map` set | `hamt` set | `{...obj}` copy | `new Map(m)` copy |
+| --------- | ------------------- | ---------- | ------------- | --------- | ------------------- | ---------- | --------------- | ----------------- |
+| 1,000     | 32.7 ns             | 26.5 ns    | **9.3 ns**    | 10.4 ns   | 141 ns              | **111 ns** | 138 µs          | 25.3 µs           |
+| 100,000   | 76.6 ns             | 59.7 ns    | **12.0 ns**   | 15.4 ns   | 317 ns              | **231 ns** | 33.8 ms         | 6.1 ms            |
+| 1,000,000 | 154.5 ns            | 101.9 ns   | **10.4 ns**   | 14.4 ns   | 365 ns              | **288 ns** | 490 ms          | 127 ms            |
 
 So a HAMT get is **10–15x slower than a plain property read** and that
-gap *grows* with N (it should be ~flat; it isn't, because depth grows).
+gap _grows_ with N (it should be ~flat; it isn't, because depth grows).
 The HAMT wins on the persistent-set column by 3–4 orders of magnitude at
 100k+, and that is the entire case for it.
 
 **Structural sharing survival** (whole object graph walked by identity,
 `|reachable(v1) ∩ reachable(v2)| / |reachable(v2)|`), one `set`:
 
-| structure | v2 nodes | shared | **freshly allocated** |
-| --- | --- | --- | --- |
-| `immutable.Map` N=1,000 | 2,550 | 99.647% | **9** |
-| `immutable.Map` N=100,000 | 262,202 | 99.996% | **11** |
-| `hamt` N=1,000 | 1,549 | 99.484% | **8** |
-| `hamt` N=100,000 | 162,201 | 99.994% | **10** |
+| structure                 | v2 nodes | shared  | **freshly allocated** |
+| ------------------------- | -------- | ------- | --------------------- |
+| `immutable.Map` N=1,000   | 2,550    | 99.647% | **9**                 |
+| `immutable.Map` N=100,000 | 262,202  | 99.996% | **11**                |
+| `hamt` N=1,000            | 1,549    | 99.484% | **8**                 |
+| `hamt` N=100,000          | 162,201  | 99.994% | **10**                |
 
 Memory: `immutable.Map` **155 B/entry** at both 1k and 100k; `hamt`
 **108.8 B/entry**; plain object 42–63 B/entry; `Map` 32–37 B/entry.
@@ -168,30 +168,30 @@ produces **2** relaxed nodes, `slice`+`concat` (the splice path) produces
 
 Per-operation, medians (ns unless marked):
 
-| op | N | plain array | `immutable.List` | `list` (RRB) | `hamt` |
-| --- | --- | --- | --- | --- | --- |
-| get | 1,000 | **0.64** | 7.6 | 5.1 | 10.4 |
-| get | 50,000 | **4.1** | 13.4 | 9.5 | 34.1 |
-| get | 1,000,000 | **4.6** | 21.4 | 15.6 | 34.0 |
-| set@idx | 1,000 | 268 | **50** | 105 | 86 |
-| set@idx | 50,000 | 32,309 | **97** | 174 | 178 |
-| set@idx | 1,000,000 | 531,676 | **127** | 327 | 205 |
-| append | 50,000 | 132,306 | 77 | **37** | — |
-| append | 1,000,000 | 2.64 ms | 135 | **54** | — |
-| prepend | 50,000 | 414,171 | 334 | **14** | — |
-| prepend | 1,000,000 | 10.05 ms | 141 | **14.6** | — |
-| splice −1 @mid | 50,000 | **46,476** | 1,401,000 | 1,358 | — |
-| splice −1 @mid | 1,000,000 | 805,824 | 31,667,000 | **1,499** | — |
-| full iterate (sum) | 50,000 | **20,978** | 1,412,000 | 286,169 | — |
-| full iterate (sum) | 1,000,000 | **690,906** | 24,890,000 | 4,559,000 | — |
-| → plain array | 50,000 | 38,106 (`slice`) | 1,151,000 | **350,998** | — |
+| op                 | N         | plain array      | `immutable.List` | `list` (RRB) | `hamt` |
+| ------------------ | --------- | ---------------- | ---------------- | ------------ | ------ |
+| get                | 1,000     | **0.64**         | 7.6              | 5.1          | 10.4   |
+| get                | 50,000    | **4.1**          | 13.4             | 9.5          | 34.1   |
+| get                | 1,000,000 | **4.6**          | 21.4             | 15.6         | 34.0   |
+| set@idx            | 1,000     | 268              | **50**           | 105          | 86     |
+| set@idx            | 50,000    | 32,309           | **97**           | 174          | 178    |
+| set@idx            | 1,000,000 | 531,676          | **127**          | 327          | 205    |
+| append             | 50,000    | 132,306          | 77               | **37**       | —      |
+| append             | 1,000,000 | 2.64 ms          | 135              | **54**       | —      |
+| prepend            | 50,000    | 414,171          | 334              | **14**       | —      |
+| prepend            | 1,000,000 | 10.05 ms         | 141              | **14.6**     | —      |
+| splice −1 @mid     | 50,000    | **46,476**       | 1,401,000        | 1,358        | —      |
+| splice −1 @mid     | 1,000,000 | 805,824          | 31,667,000       | **1,499**    | —      |
+| full iterate (sum) | 50,000    | **20,978**       | 1,412,000        | 286,169      | —      |
+| full iterate (sum) | 1,000,000 | **690,906**      | 24,890,000       | 4,559,000    | —      |
+| → plain array      | 50,000    | 38,106 (`slice`) | 1,151,000        | **350,998**  | —      |
 
 **What RRB buys over a plain radix trie is exactly two things, and they
 are large:** prepend is **O(1) at any size** (14.6 ns at 1M vs 141 ns for
 `immutable.List` and **10 ms** for `[x, ...a]`), and **splice is
 O(log n)** — 1.5 µs at 1M against `immutable.List`'s **31.7 ms** (a
 21,000x gap) and the plain array's 806 µs. `immutable.List.splice` is
-implemented as a full rebuild, so it is *worse than a plain array* at
+implemented as a full rebuild, so it is _worse than a plain array_ at
 every size measured.
 
 **What it costs is iteration.** A `immutable.List` full scan is **28
@@ -207,7 +207,7 @@ spine.
 
 The paper names three techniques with these bounds (verified against the
 JCSS reprint): **fat node** — O(1) space per update, **O(log m)** time
-per access *and* update, via a per-field binary search *tree* keyed on
+per access _and_ update, via a per-field binary search _tree_ keyed on
 version stamp (not literally a sorted-array binary search); **node
 copying** — amortized O(1) time and space per update, worst-case O(1)
 per access, requires constant bounded in-degree; **node splitting** —
@@ -231,26 +231,26 @@ nothing else.**
 
 Measured, on a 5-deep / fanout-4 store (1024 leaves), 1000 versions:
 
-| technique | update | read leaf (current) | read leaf at old version | **snapshot** | **restore** | mem/version |
-| --- | --- | --- | --- | --- | --- | --- |
-| hand path copy (spread spine) | 329 ns | 50.0 ns | (hold the root) | **O(1), free** | **3.9 ns** (deref a held pointer) | 341 B |
-| immer `produce` | 1,311 ns | 50.0 ns | — | O(1), free | 3.9 ns | 413 B |
-| `immutable.js` `setIn` | 490 ns | — | — | O(1), free | 3.9 ns | 2,473 B |
-| **fat node** (append version to slot) | **50 ns** | 22.3 ns | **28.1 ns** (bsearch) | **4.96 ns** (bump a counter) | **4.96 ns** | 388 B |
-| **journal of inverse deltas** | 79 ns | 36.3 ns | n/a | O(1) | **63 ns single step, 83 µs to jump 1000** | **130 B** |
-| `structuredClone` per version | 419,610 ns | — | — | — | — | **101,016 B** |
+| technique                             | update     | read leaf (current) | read leaf at old version | **snapshot**                 | **restore**                               | mem/version   |
+| ------------------------------------- | ---------- | ------------------- | ------------------------ | ---------------------------- | ----------------------------------------- | ------------- |
+| hand path copy (spread spine)         | 329 ns     | 50.0 ns             | (hold the root)          | **O(1), free**               | **3.9 ns** (deref a held pointer)         | 341 B         |
+| immer `produce`                       | 1,311 ns   | 50.0 ns             | —                        | O(1), free                   | 3.9 ns                                    | 413 B         |
+| `immutable.js` `setIn`                | 490 ns     | —                   | —                        | O(1), free                   | 3.9 ns                                    | 2,473 B       |
+| **fat node** (append version to slot) | **50 ns**  | 22.3 ns             | **28.1 ns** (bsearch)    | **4.96 ns** (bump a counter) | **4.96 ns**                               | 388 B         |
+| **journal of inverse deltas**         | 79 ns      | 36.3 ns             | n/a                      | O(1)                         | **63 ns single step, 83 µs to jump 1000** | **130 B**     |
+| `structuredClone` per version         | 419,610 ns | —                   | —                        | —                            | —                                         | **101,016 B** |
 
 Time travel specifically:
 
-- **Path copying gives O(1) snapshot *and* O(1) restore** — a version *is*
+- **Path copying gives O(1) snapshot _and_ O(1) restore** — a version _is_
   a pointer. That is the strongest single result here: 3.9 ns to restore
   any of 1000 versions, and all versions are simultaneously addressable
   and immutable. It pays O(depth) allocations per write.
 - **Fat nodes give the cheapest write** (50 ns, 6.6x cheaper than a spread
   spine) and O(1) version stamping, but there is **no root pointer** —
-  you cannot hand version *k* to code that walks the tree without
-  threading *k* through every read, and materialising a whole state at
-  version *k* is O(size · log m). They win point queries and lose
+  you cannot hand version _k_ to code that walks the tree without
+  threading _k_ through every read, and materialising a whole state at
+  version _k_ is O(size · log m). They win point queries and lose
   snapshots-as-values.
 - **Journals are the cheapest memory** (130 B/version here, 508 B/version
   on the 50k-collection shape — **750x** less than immer) and the
@@ -264,15 +264,15 @@ Time travel specifically:
 
 Object-graph identity intersection after a single-field update:
 
-| shape | v2 nodes | shared | fresh |
-| --- | --- | --- | --- |
-| immer, 15-deep fanout-2 (32,768 leaves) | 65,535 | **99.976%** | **16** |
-| immer, `{rows: 50k records}` | 50,002 | **99.994%** | **3** |
-| immer, 15-deep spine → 50k rows | 50,032 | **99.964%** | **18** |
-| `immutable.js` Map→List→Map, 50k | 303,235 | **99.994%** | 17 |
-| plain `slice()` + record spread, 50k | 50,001 | **99.996%** | 2 |
+| shape                                   | v2 nodes | shared      | fresh  |
+| --------------------------------------- | -------- | ----------- | ------ |
+| immer, 15-deep fanout-2 (32,768 leaves) | 65,535   | **99.976%** | **16** |
+| immer, `{rows: 50k records}`            | 50,002   | **99.994%** | **3**  |
+| immer, 15-deep spine → 50k rows         | 50,032   | **99.964%** | **18** |
+| `immutable.js` Map→List→Map, 50k        | 303,235  | **99.994%** | 17     |
+| plain `slice()` + record spread, 50k    | 50,001   | **99.996%** | 2      |
 
-Every structure shares >99.6% of *objects*. The number is useless.
+Every structure shares >99.6% of _objects_. The number is useless.
 In **bytes**, on the 15-deep / 50k-wide shape:
 
 - total retained by one version: **392.4 KB**
@@ -299,19 +299,19 @@ Splitting a 50k collection into fixed-size chunks makes a persistent
 single-element update cost O(C + N/C) — copy one chunk, copy the chunk
 index — minimised at C = √N. It tracks the model almost exactly:
 
-| C | chunks | C + N/C | measured update |
-| --- | --- | --- | --- |
-| 8 | 6250 | 6258 | 882 ns |
-| 16 | 3125 | 3141 | 601 ns |
-| 32 | 1563 | 1595 | 804 ns |
-| 64 | 782 | 846 | 235 ns |
-| 128 | 391 | 519 | 114 ns |
-| **192** | **261** | **453** | **104 ns** |
-| **224 (=√50000)** | **224** | **448** | **110 ns** |
-| **256** | **196** | **452** | **106 ns** |
-| 512 | 98 | 610 | 152 ns |
-| 1024 | 49 | 1073 | 308 ns |
-| plain array | 1 | 50000 | **37,722 ns** |
+| C                 | chunks  | C + N/C | measured update |
+| ----------------- | ------- | ------- | --------------- |
+| 8                 | 6250    | 6258    | 882 ns          |
+| 16                | 3125    | 3141    | 601 ns          |
+| 32                | 1563    | 1595    | 804 ns          |
+| 64                | 782     | 846     | 235 ns          |
+| 128               | 391     | 519     | 114 ns          |
+| **192**           | **261** | **453** | **104 ns**      |
+| **224 (=√50000)** | **224** | **448** | **110 ns**      |
+| **256**           | **196** | **452** | **106 ns**      |
+| 512               | 98      | 610     | 152 ns          |
+| 1024              | 49      | 1073    | 308 ns          |
+| plain array       | 1       | 50000   | **37,722 ns**   |
 
 **343x faster than a plain `slice()`+spread**, at C = 192–256. The
 optimum is flat across 128–320, so exact tuning does not matter; being
@@ -320,7 +320,7 @@ within 2x of √N does.
 What it costs:
 
 - **iteration: 1.16–1.34x**, and that is all. Nested `for` over chunks:
-  37.6 µs at C=224 vs 28.0 µs plain — and *larger* chunks are cheaper
+  37.6 µs at C=224 vs 28.0 µs plain — and _larger_ chunks are cheaper
   (32.4 µs at C=16384), so the penalty is per-chunk loop setup, not
   cache behaviour.
 - **random get: 4.5 ns → 6.4 ns** (1.4x). Power-of-two C lets you use
@@ -351,16 +351,16 @@ plain 50k array is one node with fanout 50,000.
 
 50k records, one field changed, all versions structurally shared:
 
-| strategy | cost | what it returns |
-| --- | --- | --- |
-| root pointer compare `a === b` | **3.9 ns** | a boolean, no location |
-| `deepEqual(base, next)`, shared refs | 87–94 µs | boolean |
-| `deepEqual(base, structuredClone)` | **1.84 ms** | boolean |
-| generic recursive ref-walk over the plain array | **232 µs** | the path `["rows",25000,"v"]` |
-| hand-inlined `a[i] !== b[i]` scan over the plain array | **18 µs** | the index |
-| **ref-walk over chunked C=224** | **2.1 µs** | `[111,136,"v"]` |
-| **ref-walk over a 32-way trie (hand-rolled)** | **0.26 µs** | index 25000 |
-| **ref-walk over `immutable.List` internal nodes** | **0.15 µs** | the changed slot |
+| strategy                                               | cost        | what it returns               |
+| ------------------------------------------------------ | ----------- | ----------------------------- |
+| root pointer compare `a === b`                         | **3.9 ns**  | a boolean, no location        |
+| `deepEqual(base, next)`, shared refs                   | 87–94 µs    | boolean                       |
+| `deepEqual(base, structuredClone)`                     | **1.84 ms** | boolean                       |
+| generic recursive ref-walk over the plain array        | **232 µs**  | the path `["rows",25000,"v"]` |
+| hand-inlined `a[i] !== b[i]` scan over the plain array | **18 µs**   | the index                     |
+| **ref-walk over chunked C=224**                        | **2.1 µs**  | `[111,136,"v"]`               |
+| **ref-walk over a 32-way trie (hand-rolled)**          | **0.26 µs** | index 25000                   |
+| **ref-walk over `immutable.List` internal nodes**      | **0.15 µs** | the changed slot              |
 
 The generic ref-walk on a plain array is **2.7x slower than the deep
 comparison it was supposed to replace.** Sharing bought nothing, because
@@ -370,44 +370,44 @@ where; the per-slot recursion overhead (4.6 ns) is worse than
 and it buys a lot:
 
 | N (one element changed) | plain ref-walk | plain deepEqual | 32-way trie walk | `immutable.List` internal walk |
-| --- | --- | --- | --- | --- |
-| 1,000 | 4.4 µs | 1.7 µs | **0.16 µs** | **0.095 µs** |
-| 50,000 | 235 µs | 104 µs | **0.32 µs** | **0.156 µs** |
-| 1,000,000 | 4.76 ms | 1.71 ms | **0.41 µs** | **0.187 µs** |
+| ----------------------- | -------------- | --------------- | ---------------- | ------------------------------ |
+| 1,000                   | 4.4 µs         | 1.7 µs          | **0.16 µs**      | **0.095 µs**                   |
+| 50,000                  | 235 µs         | 104 µs          | **0.32 µs**      | **0.156 µs**                   |
+| 1,000,000               | 4.76 ms        | 1.71 ms         | **0.41 µs**      | **0.187 µs**                   |
 
 **The trie walk is flat in N** — 95 ns → 187 ns across three orders of
 magnitude, which is the O(depth) claim, measured. At 1M it is **9,100x**
 faster than the deep comparison.
 
 As k changed elements grow (50k collection), the trie stays ahead on
-*enumeration*: k=1 → 318 ns, k=10 → 1.75 µs, k=100 → 9.6 µs, k=1000 →
+_enumeration_: k=1 → 318 ns, k=10 → 1.75 µs, k=100 → 9.6 µs, k=1000 →
 38 µs, k=10000 → 82 µs, against a plain ref-walk's flat 232–699 µs.
-`deepEqual` gets *cheaper* as k grows (42 ns at k=1000) only because it
+`deepEqual` gets _cheaper_ as k grows (42 ns at k=1000) only because it
 short-circuits on the first difference — it answers a different question
 and cannot enumerate.
 
 Applied to SignalTree's leaf-equality problem — projected cost of the
 **equality term alone** for 1000 writes to a 50k-element leaf:
 
-| leaf `equal()` | per write | × 1000 writes |
-| --- | --- | --- |
-| `deepEqual` over the whole leaf | 90.6 µs | **90.6 ms** |
-| inline ref scan over 50k slots | 18.4 µs | 18.4 ms |
-| `deepEqual` over one 224-chunk | 516 ns | **0.52 ms** |
-| ref scan over one 224-chunk | 96.8 ns | **0.10 ms** |
-| `===` only | 3.9 ns | **0.004 ms** |
+| leaf `equal()`                  | per write | × 1000 writes |
+| ------------------------------- | --------- | ------------- |
+| `deepEqual` over the whole leaf | 90.6 µs   | **90.6 ms**   |
+| inline ref scan over 50k slots  | 18.4 µs   | 18.4 ms       |
+| `deepEqual` over one 224-chunk  | 516 ns    | **0.52 ms**   |
+| ref scan over one 224-chunk     | 96.8 ns   | **0.10 ms**   |
+| `===` only                      | 3.9 ns    | **0.004 ms**  |
 
 ### 7. Merkle-style content hashing of subtree identity
 
 Implemented FNV-1a over the tree with a `WeakMap` memo keyed on node
 identity (the only way to make it incremental in JS):
 
-| operation | 50k plain array | 50k as a 32-way trie |
-| --- | --- | --- |
-| hash from scratch | **4.02 ms** | 4.21 ms |
-| re-hash after 1 change, children memoised | **762 µs** | **2.2 µs** |
-| compare two hashes | 4.2 ns | 4.2 ns |
-| whole-tree hash, all nodes cached | 375 ns | — |
+| operation                                 | 50k plain array | 50k as a 32-way trie |
+| ----------------------------------------- | --------------- | -------------------- |
+| hash from scratch                         | **4.02 ms**     | 4.21 ms              |
+| re-hash after 1 change, children memoised | **762 µs**      | **2.2 µs**           |
+| compare two hashes                        | 4.2 ns          | 4.2 ns               |
+| whole-tree hash, all nodes cached         | 375 ns          | —                    |
 
 Same fanout lesson: re-hashing after one change costs 762 µs on a plain
 array because the changed array node still has to re-mix 50,000 child
@@ -417,7 +417,7 @@ did not already have** — structural sharing already gives you O(1)
 "unchanged?" for free at 3.9 ns, with no maintenance and no collisions.
 
 The one thing it buys that pointers cannot: comparing trees from
-*different allocation lineages*. `deepEqual(a, structuredClone(a))` costs
+_different allocation lineages_. `deepEqual(a, structuredClone(a))` costs
 **2.53 ms**; comparing two cached hashes costs **11.4 ns** (222,000x).
 But cold-hashing both sides costs **8.11 ms** — 3.2x worse than just
 deep-comparing. So it only pays if the hashes are already maintained,
@@ -433,7 +433,7 @@ two words or a string, and the mixing cost roughly doubles.
 Who does this in JS state management: **nobody I could find**. Verified
 absent from immer and immutable.js by source. Content-hash-addressed
 state exists (git; Merkle-DAG systems; Automerge's hash-linked change
-DAG) but as a *sync/identity* mechanism across processes, not as a
+DAG) but as a _sync/identity_ mechanism across processes, not as a
 change-detection mechanism inside a store — which is exactly what the
 lineage result above predicts.
 
@@ -441,13 +441,13 @@ lineage result above predicts.
 
 **Element kinds** (`%HasSmiElements` etc., 50k arrays):
 
-| kind | random get | `slice()` | full iterate | bytes/slot |
-| --- | --- | --- | --- | --- |
-| PACKED_SMI | **0.68 ns** | 41.8 µs | 17.3 µs | **7.80** |
-| PACKED_DOUBLE | 1.89 ns | 38.5 µs | 28.4 µs | 8.01 |
-| PACKED_ELEMENTS (objects) | 2.07 ns | 40.9 µs | 69.9 µs | 8.01 |
-| HOLEY_SMI | 2.20 ns | 40.6 µs | 41.3 µs | 8.01 |
-| **DICTIONARY** | **14.2 ns** | **126.5 ms** | **118.9 ms** | **800.01** |
+| kind                      | random get  | `slice()`    | full iterate | bytes/slot |
+| ------------------------- | ----------- | ------------ | ------------ | ---------- |
+| PACKED_SMI                | **0.68 ns** | 41.8 µs      | 17.3 µs      | **7.80**   |
+| PACKED_DOUBLE             | 1.89 ns     | 38.5 µs      | 28.4 µs      | 8.01       |
+| PACKED_ELEMENTS (objects) | 2.07 ns     | 40.9 µs      | 69.9 µs      | 8.01       |
+| HOLEY_SMI                 | 2.20 ns     | 40.6 µs      | 41.3 µs      | 8.01       |
+| **DICTIONARY**            | **14.2 ns** | **126.5 ms** | **118.9 ms** | **800.01** |
 
 Dictionary-mode arrays are **3,100x slower to copy** and **100x the
 memory per slot**. One `arr[100 * len] = x` does it. Everything else is
@@ -461,9 +461,9 @@ common way to get there.
 self-timed (measurement loop inside the generated function, so no shared
 harness call site):
 
-| shapes at the site | 1 | 2 | 3 | **4** | **5** | 6 | 8 | 16 | 64 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ns/read | 0.79 | 0.80 | 0.83 | **0.94** | **2.57** | 2.56 | 2.58 | 2.58 | 2.57 |
+| shapes at the site | 1    | 2    | 3    | **4**    | **5**    | 6    | 8    | 16   | 64   |
+| ------------------ | ---- | ---- | ---- | -------- | -------- | ---- | ---- | ---- | ---- |
+| ns/read            | 0.79 | 0.80 | 0.83 | **0.94** | **2.57** | 2.56 | 2.58 | 2.58 | 2.57 |
 
 The cliff is **exactly at 4 → 5 shapes** (V8's polymorphic IC limit), the
 penalty is **3.3x**, and it then plateaus — megamorphic reads are not
@@ -472,13 +472,13 @@ catastrophic.
 **Object spread is a different story.** Same experiment for `{...o}` on
 8-property objects:
 
-| shapes at the site | 1 | 2 | 4 | 8 | 16 | 64 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `{...o}` ns | **12.0** | 13.3 | 14.0 | **77.6** | 86.3 | 102.5 |
-| `Object.assign` ns | 59.2 | 64.7 | 65.9 | 97.6 | 73.2 | 97.7 |
+| shapes at the site | 1        | 2    | 4    | 8        | 16   | 64    |
+| ------------------ | -------- | ---- | ---- | -------- | ---- | ----- |
+| `{...o}` ns        | **12.0** | 13.3 | 14.0 | **77.6** | 86.3 | 102.5 |
+| `Object.assign` ns | 59.2     | 64.7 | 65.9 | 97.6     | 73.2 | 97.7  |
 
 **6.5x**, because `CloneObjectIC` has no megamorphic fast path. This is
-load-bearing: a *generic* path-copy helper (`setIn(obj, path, v)` with a
+load-bearing: a _generic_ path-copy helper (`setIn(obj, path, v)` with a
 single `{...o, [k]: v}` site handling every node shape in the store) is
 inherently polymorphic. Measured directly on a 5-deep spine: a
 specialised inlined spread chain costs **40.4 ns**, the generic recursive
@@ -490,12 +490,12 @@ this.
 **Dictionary-mode objects.** Spread cost per property:
 
 | props | fast-mode ns/prop | dictionary-mode ns/prop | ratio |
-| --- | --- | --- | --- |
-| 4 | 9.4 | 76.0 | 8.1x |
-| 8 | 8.3 | 69.3 | 8.4x |
-| 16 | 8.6 | 69.8 | 8.1x |
-| 32 | 9.7 | 78.9 | 8.1x |
-| 128 | 17.4 | 89.2 | 5.1x |
+| ----- | ----------------- | ----------------------- | ----- |
+| 4     | 9.4               | 76.0                    | 8.1x  |
+| 8     | 8.3               | 69.3                    | 8.4x  |
+| 16    | 8.6               | 69.8                    | 8.1x  |
+| 32    | 9.7               | 78.9                    | 8.1x  |
+| 128   | 17.4              | 89.2                    | 5.1x  |
 
 A single `delete o.k` on a store node makes every subsequent copy of that
 node **~8x more expensive, permanently**.
@@ -503,12 +503,12 @@ node **~8x more expensive, permanently**.
 **`Object.create(null)` is always dictionary mode** — `%HasFastProperties`
 returns `false` even for an empty one, and it never recovers:
 
-| | `{}` / `{a,b,c,d}` | `Object.create(null)` (+4 keys) |
-| --- | --- | --- |
-| read `.c` | **0.28 ns** | **2.80 ns** (9.9x) |
-| `{...o}` | **8.77 ns** | **292.7 ns** (33.4x) |
-| create | 5.3 ns / 4.5 ns | 10.3 ns / 58.8 ns |
-| retained bytes (empty / +4) | 64.8 / 64.1 B | **192.6 / 288.7 B** (3–4.5x) |
+|                             | `{}` / `{a,b,c,d}` | `Object.create(null)` (+4 keys) |
+| --------------------------- | ------------------ | ------------------------------- |
+| read `.c`                   | **0.28 ns**        | **2.80 ns** (9.9x)              |
+| `{...o}`                    | **8.77 ns**        | **292.7 ns** (33.4x)            |
+| create                      | 5.3 ns / 4.5 ns    | 10.3 ns / 58.8 ns               |
+| retained bytes (empty / +4) | 64.8 / 64.1 B      | **192.6 / 288.7 B** (3–4.5x)    |
 
 Using `Object.create(null)` for store nodes to avoid prototype pollution
 costs **33x on the copy path**. Also note `{...nullProtoObj}` returns an
@@ -517,18 +517,18 @@ prototype.
 
 **Map vs object.** Crossover depends entirely on the operation, not on N:
 
-| | N=8 | N=64 | N=1,000 | N=100,000 |
-| --- | --- | --- | --- | --- |
-| `obj[strKey]` | **7.3 ns** | **9.1 ns** | **9.2 ns** | **10.3 ns** |
-| `Map.get(strKey)` | 11.3 | 9.2 | 9.9 | 12.6 |
-| `obj[intKey]` | **3.7** | **4.1** | **3.7** | **3.7** |
-| `Map.get(int)` | 5.1 | 6.1 | 6.0 | 5.9 |
-| full copy `{...o}` | **12.4 ns** | 5.20 µs | 129 µs | 26.0 ms |
-| full copy `new Map(m)` | 185 ns | **1.37 µs** | **24.6 µs** | **5.0 ms** |
-| iterate `Object.keys`+read | 47 ns | 800 ns | 17.0 µs | 9.00 ms |
-| iterate `map.forEach` | **41 ns** | **289 ns** | **4.3 µs** | **0.56 ms** |
-| build from scratch | **58 ns** | 825 ns | 75.0 µs | 4.84 ms |
-| build into a `Map` | 92 ns | **783 ns** | **12.6 µs** | **4.04 ms** |
+|                            | N=8         | N=64        | N=1,000     | N=100,000   |
+| -------------------------- | ----------- | ----------- | ----------- | ----------- |
+| `obj[strKey]`              | **7.3 ns**  | **9.1 ns**  | **9.2 ns**  | **10.3 ns** |
+| `Map.get(strKey)`          | 11.3        | 9.2         | 9.9         | 12.6        |
+| `obj[intKey]`              | **3.7**     | **4.1**     | **3.7**     | **3.7**     |
+| `Map.get(int)`             | 5.1         | 6.1         | 6.0         | 5.9         |
+| full copy `{...o}`         | **12.4 ns** | 5.20 µs     | 129 µs      | 26.0 ms     |
+| full copy `new Map(m)`     | 185 ns      | **1.37 µs** | **24.6 µs** | **5.0 ms**  |
+| iterate `Object.keys`+read | 47 ns       | 800 ns      | 17.0 µs     | 9.00 ms     |
+| iterate `map.forEach`      | **41 ns**   | **289 ns**  | **4.3 µs**  | **0.56 ms** |
+| build from scratch         | **58 ns**   | 825 ns      | 75.0 µs     | 4.84 ms     |
+| build into a `Map`         | 92 ns       | **783 ns**  | **12.6 µs** | **4.04 ms** |
 
 **Objects always win single-key reads** (1.3–1.6x, at every size).
 **`Map` always wins bulk copy, bulk iteration, and bulk build**, and the
@@ -536,7 +536,7 @@ margin grows: at 1,000 keys `new Map(m)` is **5.3x** faster than
 `{...o}` and `forEach` is **4.0x** faster than `Object.keys`; at 100,000
 it is 5.2x and 16x. The crossover for copy sits between N=8 and N=64.
 For a store node that is read constantly and copied rarely, use an
-object; for a keyed *collection* that is copied or scanned wholesale, use
+object; for a keyed _collection_ that is copied or scanned wholesale, use
 a `Map`.
 
 ---
@@ -557,7 +557,7 @@ more than 32 children.
 
 **In tension: (b) against everything else — and it is a hard tension, not
 a constant factor.** "Fast whole-state read" in the O(1) sense means
-*returning a reference to a plain JS value*, and a plain JS value's array
+_returning a reference to a plain JS value_, and a plain JS value's array
 node **is** the whole collection. So:
 
 - If the whole state is a POJO, reading it is **0.3 ns** and updating one
@@ -569,7 +569,7 @@ node **is** the whole collection. So:
 These are the same fact viewed twice. **(a) and (b) are provably in
 tension** for wide collections: you cannot both (i) hand out a reference
 to a plain array in O(1) and (ii) avoid copying that array's 50,000
-slots on write, because the reference *is* the array. Likewise **(b) and
+slots on write, because the reference _is_ the array. Likewise **(b) and
 (c)**: an O(1) addressable snapshot of a POJO state requires the POJO to
 be immutable, which forces the O(width) write.
 
@@ -578,18 +578,18 @@ resolution is chunking.** A 2-level chunked collection at C ≈ √N sits
 between the two regimes: update **110 ns** (343x better than plain),
 memory **4.1 KB/version** (98x better), what-changed **2.1 µs** (43x
 better than `deepEqual`), and whole-state materialisation **52 µs** — 1.4x
-worse than `slice()` but *not* O(1). That last number is the entire
+worse than `slice()` but _not_ O(1). That last number is the entire
 price: you give up "return the reference" and accept "rebuild the array",
 which for a 50k collection is 52 µs.
 
 Restated as a rule the synthesis can use:
 
-| you want | you must accept |
-| --- | --- |
-| whole-state read as a returned reference (0.3 ns) | O(width) writes and O(width) memory per version — immer's profile |
-| O(log n) writes, O(1) snapshots, O(depth) diffs | whole-state reads become O(n) materialisation (52 µs chunked, 967 µs trie) and iteration slows 1.2–67x |
-| cheapest memory per version (0.5 KB) and cheapest write | journals: only one version exists at a time, restore is O(distance) |
-| cheapest write **and** simultaneously-addressable versions | fat nodes — but then there is no root pointer, and whole-state read at version k is O(n log m) |
+| you want                                                   | you must accept                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| whole-state read as a returned reference (0.3 ns)          | O(width) writes and O(width) memory per version — immer's profile                                      |
+| O(log n) writes, O(1) snapshots, O(depth) diffs            | whole-state reads become O(n) materialisation (52 µs chunked, 967 µs trie) and iteration slows 1.2–67x |
+| cheapest memory per version (0.5 KB) and cheapest write    | journals: only one version exists at a time, restore is O(distance)                                    |
+| cheapest write **and** simultaneously-addressable versions | fat nodes — but then there is no root pointer, and whole-state read at version k is O(n log m)         |
 
 The one thing that is **free** and that we are not currently taking: a
 leaf's `equal()` can be `===` (**3.9 ns**) instead of `deepEqual`
@@ -608,7 +608,7 @@ equality term alone, needs no new data structure, and the 1000-write /
    measured shares >99.6% of objects after a single-field update. In
    bytes, immer's 15-deep/50k-wide update allocates **392 KB, of which
    99.6% is one array node and 0.4% is the fifteen levels of depth.**
-3. **Reference-equality diffing was 2.7x *slower* than the deep
+3. **Reference-equality diffing was 2.7x _slower_ than the deep
    comparison** it was meant to replace, on a plain 50k array. The win
    comes from bounded fanout, not from sharing. I had this backwards
    going in.
@@ -680,14 +680,14 @@ library source installed from npm, on one machine, in one session.
   The deep write path is `deep.l1…l15.value` — 16 property hops from the root.
 - **Four operations**, identical semantics everywhere:
   (a) update one deeply nested field · (b) update one element of the
-  50,000-element collection · (c) obtain the *entire* state as a plain,
+  50,000-element collection · (c) obtain the _entire_ state as a plain,
   library-free object graph · (d) capture a snapshot and restore it.
 - Adaptive timing: warm up, then run ≥250 ms and divide. All figures are
   **µs/op**. **No subscribers/effects/reactions were attached during the write
   benchmarks** for any library — these are raw write-path costs, not
   notification costs.
 - Where a library offers more than one way to do an operation, both were
-  measured and the variant is named. Where the obvious cheap path is *wrong*,
+  measured and the variant is named. Where the obvious cheap path is _wrong_,
   that is called out rather than reported as a win.
 
 ### The table
@@ -695,20 +695,20 @@ library source installed from npm, on one machine, in one session.
 Bold = the cheapest correct variant. "held" = write through a nested handle
 captured once; "walk" = re-walk from the root on every write.
 
-| library (version) | in-memory model | (a) deep write | (b) 1-of-50k write | (c) whole state → POJO | (d) snapshot / restore | time travel | nested write handle |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| **baseline** — plain mutable object | POJO, nothing else | **0.036** held / 0.134 walk | **0.028** | **0.031** (it *is* the object) | 17 123 (`structuredClone`) / — | none | yes (it's just an object) |
-| **baseline** — hand-rolled immutable spread | POJO, path-copied on write | **1.358** | **42.63** | **0.032** | **0.033 / 0.033** | free | no |
-| **immer 11.1.16** | frozen POJO + transient revocable Proxy drafts; copy-on-write along the touched path only | **5.68** (4.34 autoFreeze off) | **2 858** (61.4 autoFreeze off) | **0.038** | **0.037 / 0.036** | free (persistent) + patches | no (drafts die with `produce`) |
-| **Immutable.js 5.1.9** | persistent HAMT `Map` + 32-way trie `List`; `items[0]` is itself a `Map` | **1.49** (`setIn`) | **0.499** (`setIn`) | 6 475 (`toJS`) | **0.059 / 0.055** | free (persistent) | no |
-| **Valtio 2.3.2** | mutable raw objects, one Proxy per object, global version counter; `snapshot()` materialises a structurally-shared POJO cached per `(target, version)` | **0.285** held / 0.447 walk | **0.310** held / 0.364 walk | 0.093 *cached*; **2 620 after a deep write**; **56 120–84 657 after an array write** | 0.079 take / **234 517** restore | bolted on; snapshots are non-writable | **yes** (identity-stable nested proxies) |
-| **MobX 7.0.0** | observable graph, one atom per property, Proxy per object, deep-observable eagerly on assignment | **1.14** held / 3.89 walk | **1.01** held / 1.62 walk | **175 978** (`toJS`) | 148 240 / 689 866 | none native | **yes** |
-| **Solid 1.9.14 `createStore`** | mutable raw POJO + *lazy* Proxy per object (`$PROXY`) + *lazy* signal per property (`$NODE`), allocated only on a tracked read | 2.61 `setStore` / **1.42** `produce` | 0.568 `setStore` / **0.525** `produce` | **0.107** (`unwrap` → raw target) | 37 712 clone / 66 700 `reconcile` | bolted on (`reconcile`) | **no** — `set` trap is a silent no-op |
-| **Vue 3.5.41 `reactive`** | mutable raw POJO + lazy Proxy per object cached in `reactiveMap`; `Dep` per `(target,key)` on first tracked read | **0.255** held / 1.594 walk | **0.227** held / 0.436 walk | **0.053** (`toRaw`) | 17 766 / 19 495 | bolted on | **yes** (objects; not primitive leaves) |
-| **Legend-State 2.1.15** | **one plain object holds all data** (`root._`); a *separate* lazily-grown "node" metadata tree mirrors only the paths you touched | **14.10** held leaf / 19.97 walk | **1.93** held leaf / 5.16 walk | **0.157** (`get`) / 0.159 (`peek`) | 26 419 / 91 436 | diff log only (`trackHistory`) | **yes** (identity-stable node proxies) |
-| **@ngrx/signals 21.1.1** | **3 Angular signals for the entire state** — one per *top-level* key; each wrapped in a `toDeepSignal` Proxy that memoises a `computed()` per accessed sub-path | **2.06** (`patchState` + caller-side path rebuild) | **66.5** slice+spread; 359 with `.map()` | **0.514** (`getState`); 0.056 root computed | **0.362 / 0.681** | free | **depth-1 only** |
-| **Yjs 13.6.32** | CRDT: linked list of `Item`s per type; `Y.Map`/`Y.Array` are live handles into the op log; **doc grows on every write** | **11.36** held / 33.76 walk | **10.95** held / 34.09 walk | 4 190 (`toJSON`) | `Y.snapshot()` 454 µs → **34 bytes**; materialise 107 945. Full update: 23 322 → 4.66 MB, apply 121 015 | **structural** | **yes** |
-| **Automerge 3.4.0** | CRDT: columnar op log in WASM; the JS `doc` is a lazily-materialising proxy over the backend | **249.7** | **6 717** | **271 026** (`toJS`); a *single* deep field read is 0.147 | `getHeads` **0.408**; `view(doc, heads)` 313 655; save 27 392 → 650 KB; load 532 530 | **structural** | **no** |
+| library (version)                           | in-memory model                                                                                                                                                 | (a) deep write                                     | (b) 1-of-50k write                       | (c) whole state → POJO                                                               | (d) snapshot / restore                                                                                  | time travel                           | nested write handle                      |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
+| **baseline** — plain mutable object         | POJO, nothing else                                                                                                                                              | **0.036** held / 0.134 walk                        | **0.028**                                | **0.031** (it _is_ the object)                                                       | 17 123 (`structuredClone`) / —                                                                          | none                                  | yes (it's just an object)                |
+| **baseline** — hand-rolled immutable spread | POJO, path-copied on write                                                                                                                                      | **1.358**                                          | **42.63**                                | **0.032**                                                                            | **0.033 / 0.033**                                                                                       | free                                  | no                                       |
+| **immer 11.1.16**                           | frozen POJO + transient revocable Proxy drafts; copy-on-write along the touched path only                                                                       | **5.68** (4.34 autoFreeze off)                     | **2 858** (61.4 autoFreeze off)          | **0.038**                                                                            | **0.037 / 0.036**                                                                                       | free (persistent) + patches           | no (drafts die with `produce`)           |
+| **Immutable.js 5.1.9**                      | persistent HAMT `Map` + 32-way trie `List`; `items[0]` is itself a `Map`                                                                                        | **1.49** (`setIn`)                                 | **0.499** (`setIn`)                      | 6 475 (`toJS`)                                                                       | **0.059 / 0.055**                                                                                       | free (persistent)                     | no                                       |
+| **Valtio 2.3.2**                            | mutable raw objects, one Proxy per object, global version counter; `snapshot()` materialises a structurally-shared POJO cached per `(target, version)`          | **0.285** held / 0.447 walk                        | **0.310** held / 0.364 walk              | 0.093 _cached_; **2 620 after a deep write**; **56 120–84 657 after an array write** | 0.079 take / **234 517** restore                                                                        | bolted on; snapshots are non-writable | **yes** (identity-stable nested proxies) |
+| **MobX 7.0.0**                              | observable graph, one atom per property, Proxy per object, deep-observable eagerly on assignment                                                                | **1.14** held / 3.89 walk                          | **1.01** held / 1.62 walk                | **175 978** (`toJS`)                                                                 | 148 240 / 689 866                                                                                       | none native                           | **yes**                                  |
+| **Solid 1.9.14 `createStore`**              | mutable raw POJO + _lazy_ Proxy per object (`$PROXY`) + _lazy_ signal per property (`$NODE`), allocated only on a tracked read                                  | 2.61 `setStore` / **1.42** `produce`               | 0.568 `setStore` / **0.525** `produce`   | **0.107** (`unwrap` → raw target)                                                    | 37 712 clone / 66 700 `reconcile`                                                                       | bolted on (`reconcile`)               | **no** — `set` trap is a silent no-op    |
+| **Vue 3.5.41 `reactive`**                   | mutable raw POJO + lazy Proxy per object cached in `reactiveMap`; `Dep` per `(target,key)` on first tracked read                                                | **0.255** held / 1.594 walk                        | **0.227** held / 0.436 walk              | **0.053** (`toRaw`)                                                                  | 17 766 / 19 495                                                                                         | bolted on                             | **yes** (objects; not primitive leaves)  |
+| **Legend-State 2.1.15**                     | **one plain object holds all data** (`root._`); a _separate_ lazily-grown "node" metadata tree mirrors only the paths you touched                               | **14.10** held leaf / 19.97 walk                   | **1.93** held leaf / 5.16 walk           | **0.157** (`get`) / 0.159 (`peek`)                                                   | 26 419 / 91 436                                                                                         | diff log only (`trackHistory`)        | **yes** (identity-stable node proxies)   |
+| **@ngrx/signals 21.1.1**                    | **3 Angular signals for the entire state** — one per _top-level_ key; each wrapped in a `toDeepSignal` Proxy that memoises a `computed()` per accessed sub-path | **2.06** (`patchState` + caller-side path rebuild) | **66.5** slice+spread; 359 with `.map()` | **0.514** (`getState`); 0.056 root computed                                          | **0.362 / 0.681**                                                                                       | free                                  | **depth-1 only**                         |
+| **Yjs 13.6.32**                             | CRDT: linked list of `Item`s per type; `Y.Map`/`Y.Array` are live handles into the op log; **doc grows on every write**                                         | **11.36** held / 33.76 walk                        | **10.95** held / 34.09 walk              | 4 190 (`toJSON`)                                                                     | `Y.snapshot()` 454 µs → **34 bytes**; materialise 107 945. Full update: 23 322 → 4.66 MB, apply 121 015 | **structural**                        | **yes**                                  |
+| **Automerge 3.4.0**                         | CRDT: columnar op log in WASM; the JS `doc` is a lazily-materialising proxy over the backend                                                                    | **249.7**                                          | **6 717**                                | **271 026** (`toJS`); a _single_ deep field read is 0.147                            | `getHeads` **0.408**; `view(doc, heads)` 313 655; save 27 392 → 650 KB; load 532 530                    | **structural**                        | **no**                                   |
 
 Construction cost of the same fixture, since it is not free and it varies by
 three orders of magnitude: Vue 3 ms · Legend-State <1 ms · Solid 127 ms ·
@@ -721,8 +721,8 @@ elements 626 µs · `JSON.stringify` 3 708 µs.
 
 ### The five distinct models
 
-**1. Immutable value at the root.** *immer, Immutable.js, hand-rolled spread,
-@ngrx/signals.* State is a value; a write produces a new value sharing
+**1. Immutable value at the root.** _immer, Immutable.js, hand-rolled spread,
+@ngrx/signals._ State is a value; a write produces a new value sharing
 everything untouched. Verified for immer: after a 15-deep write, `items`,
 `items[0]` and `meta` are reference-identical and every object on the written
 path is new (`tmp/trackE/probe-immer.mjs`). Same for Immutable.js. **Serialisation
@@ -735,23 +735,23 @@ that proves the model can be fixed: its 32-way trie makes the 50k-element write
 `toJS`, 6 475 µs, because its nodes are not POJOs.
 
 **2. Mutable POJO + a side reactivity structure that never owns the data.**
-*Vue, Solid, Legend-State.* The canonical state is a plain object; proxies and
+_Vue, Solid, Legend-State._ The canonical state is a plain object; proxies and
 dep-maps/signals/nodes are a parallel index built lazily over the paths you
 actually touch. Verified: `toRaw(state) === toRaw(state)` and the nested raws
 are not proxies (Vue); `unwrap(store)` returns the raw target in 0.107 µs
 (Solid); `obs.get() === theOriginalObjectYouPassedIn` (Legend-State). **This
-model gets O(1) serialisation *and* sub-µs partial writes.** What it does not
-get is a *snapshot*: the object it hands back is live, so a durable capture is a
+model gets O(1) serialisation _and_ sub-µs partial writes.** What it does not
+get is a _snapshot_: the object it hands back is live, so a durable capture is a
 deep clone — 17 766 / 37 712 / 26 419 µs respectively.
 
-**3. Per-leaf-owned state.** *MobX.* The atom owns the value; there is no POJO
+**3. Per-leaf-owned state.** _MobX._ The atom owns the value; there is no POJO
 anywhere. Writes are fast and local (1.01–1.14 µs) and independent of collection
 size. Both reads-as-a-whole and snapshots must be materialised: `toJS` **175 978
 µs**, restore 689 866 µs. This is SignalTree's family, and MobX is the evidence
 that the materialisation bill is a property of the model, not of any one
 implementation.
 
-**4. Versioned structural-sharing snapshot.** *Valtio.* An attempt at all three
+**4. Versioned structural-sharing snapshot.** _Valtio._ An attempt at all three
 at once: mutate in place (0.285 µs), and get a POJO from `snapshot()` that
 reuses untouched subtrees by reference. The sharing is real — verified in
 `probe-valtio-sharing.mjs`: after a deep write `s1.items === s2.items` and
@@ -761,17 +761,17 @@ nodes), not O(changed nodes)**, because `ensureVersion` must poll every
 descendant's version once the global counter moves (`esm/vanilla.mjs:96-108`).
 Measured directly, snapshot-after-a-deep-write against collection size:
 
-| items | 0 | 100 | 1 000 | 10 000 | 50 000 |
-| --- | --- | --- | --- | --- | --- |
-| µs | 9.87 | 11.36 | 26.61 | 217.82 | 4 219.19 |
+| items | 0    | 100   | 1 000 | 10 000 | 50 000   |
+| ----- | ---- | ----- | ----- | ------ | -------- |
+| µs    | 9.87 | 11.36 | 26.61 | 217.82 | 4 219.19 |
 
 The array is untouched and its snapshot is reused by reference — and it still
 costs 4.2 ms, purely to ask 50,000 proxies whether they changed. Structural
-sharing buys the *allocation*, not the *walk*.
+sharing buys the _allocation_, not the _walk_.
 
-**5. CRDT op log.** *Yjs, Automerge.* Time travel is structural: a Yjs snapshot
+**5. CRDT op log.** _Yjs, Automerge._ Time travel is structural: a Yjs snapshot
 is a state vector + delete set, **34 bytes**, and Automerge's `getHeads()` is
-0.408 µs. Both are O(1) to *record*. Everything else is expensive: writes are
+0.408 µs. Both are O(1) to _record_. Everything else is expensive: writes are
 11–250 µs, materialising a POJO is 4 190 µs (Yjs) to 271 026 µs (Automerge), and
 materialising a past state is 107 945 µs / 313 655 µs. The doc also grows
 monotonically with every write (Yjs update bytes went 4.66 MB → 4.86 MB over the
@@ -782,19 +782,19 @@ benchmark run with `gc:false`).
 **Which hold a POJO they can hand back for free (O(1)) vs must materialise
 one (O(state))?**
 
-| O(1) — a POJO already exists | O(state) — must be materialised |
-| --- | --- |
-| immer `state` (0.038 µs) | Immutable.js `toJS` — 6 475 µs |
-| Immutable.js *nothing* — see right | MobX `toJS` — **175 978 µs** |
-| Vue `toRaw` (0.053 µs) | Valtio `snapshot()` after any write — 2 620–84 657 µs |
-| Solid `unwrap` (0.107 µs) | Yjs `toJSON` — 4 190 µs |
-| Legend-State `get`/`peek` (0.157 µs) | Automerge `toJS` — **271 026 µs** |
-| @ngrx/signals `getState` (0.514 µs) | Vue/Solid/Legend *if you need a **value*** — 17 766 / 37 712 / 26 419 µs |
+| O(1) — a POJO already exists         | O(state) — must be materialised                                            |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| immer `state` (0.038 µs)             | Immutable.js `toJS` — 6 475 µs                                             |
+| Immutable.js _nothing_ — see right   | MobX `toJS` — **175 978 µs**                                               |
+| Vue `toRaw` (0.053 µs)               | Valtio `snapshot()` after any write — 2 620–84 657 µs                      |
+| Solid `unwrap` (0.107 µs)            | Yjs `toJSON` — 4 190 µs                                                    |
+| Legend-State `get`/`peek` (0.157 µs) | Automerge `toJS` — **271 026 µs**                                          |
+| @ngrx/signals `getState` (0.514 µs)  | Vue/Solid/Legend \*if you need a **value\*** — 17 766 / 37 712 / 26 419 µs |
 
 Two distinct reasons for landing in the left column, and they are not
 interchangeable: immer/ngrx are there because the state **is** an immutable
 value; Vue/Solid/Legend are there because the state is a **live mutable object**
-they never stopped holding. Only the first kind gets a free *snapshot* too.
+they never stopped holding. Only the first kind gets a free _snapshot_ too.
 
 Note `getState`'s mechanism (`ngrx-signals.mjs:256-265`): it reduces over
 `Reflect.ownKeys(STATE_SOURCE)` — **three keys for this entire 50,000-element
@@ -806,20 +806,20 @@ keys), not O(state).
 **Which support a stable nested write handle?** Verified by capture-then-write,
 not assumed:
 
-| library | handle? | evidence |
-| --- | --- | --- |
-| Valtio | **yes** | nested proxy identity stable; `node.value = i` at 0.285 µs, 1.6× faster than re-walking |
-| MobX | **yes** | identity stable; 1.14 µs held vs 3.89 µs walk — **3.4×** |
-| Vue | **yes, for object nodes** | identity stable, `isReactive(node)` true, and a held-handle write **does** re-trigger a subscribed effect. 0.255 µs held vs 1.594 µs walk — **6.3×**. Primitive leaves are returned by value, so no leaf handle. |
-| Legend-State | **yes** | `leaf === node.value` stable; `leaf.set(i)` 14.10 µs vs 19.97 µs walk |
-| Yjs | **yes** | `Y.Map` handle identity stable; 11.36 µs held vs 33.76 µs walk — **3.0×** |
-| **Solid** | **no** | `proxyTraps.set() { return true; }` (`store/dist/store.js`) — a Proxy `set` trap that reports success and writes nothing. Verified: `node.value = 4242` leaves the raw at `0`, silently, with no error. Every write goes through `setStore(...path, v)` from the root, or `produce`, whose setter proxy is valid only inside the callback. |
-| **@ngrx/signals** | **depth-1 only** | `store.deep` is the writable top-level signal and *does* expose `.set`/`.update`; `store.deep.l1` and deeper are Proxies over `computed()` with `set === undefined`, and their Proxy identity is **not** stable (`ngrx-signals.mjs:25` returns a new Proxy per access). |
-| **immer** | **no** | drafts are revoked when `produce` returns. `createDraft`/`finishDraft` lets a nested draft handle live across statements, but only within one draft session. |
-| **Immutable.js** | **no** | a held sub-collection is a *value*; writing it does not update the root. |
-| **Automerge** | **no** | all writes go through `A.change(doc, fn)`. A draft handle that escapes the callback silently discards writes (verified: value stays `1`). Worse, `doc.a.b.c = 42` outside `change()` **does not throw and reads back as 42 locally**, while a later `change` still sees the old value — silent divergence. |
+| library           | handle?                   | evidence                                                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Valtio            | **yes**                   | nested proxy identity stable; `node.value = i` at 0.285 µs, 1.6× faster than re-walking                                                                                                                                                                                                                                                    |
+| MobX              | **yes**                   | identity stable; 1.14 µs held vs 3.89 µs walk — **3.4×**                                                                                                                                                                                                                                                                                   |
+| Vue               | **yes, for object nodes** | identity stable, `isReactive(node)` true, and a held-handle write **does** re-trigger a subscribed effect. 0.255 µs held vs 1.594 µs walk — **6.3×**. Primitive leaves are returned by value, so no leaf handle.                                                                                                                           |
+| Legend-State      | **yes**                   | `leaf === node.value` stable; `leaf.set(i)` 14.10 µs vs 19.97 µs walk                                                                                                                                                                                                                                                                      |
+| Yjs               | **yes**                   | `Y.Map` handle identity stable; 11.36 µs held vs 33.76 µs walk — **3.0×**                                                                                                                                                                                                                                                                  |
+| **Solid**         | **no**                    | `proxyTraps.set() { return true; }` (`store/dist/store.js`) — a Proxy `set` trap that reports success and writes nothing. Verified: `node.value = 4242` leaves the raw at `0`, silently, with no error. Every write goes through `setStore(...path, v)` from the root, or `produce`, whose setter proxy is valid only inside the callback. |
+| **@ngrx/signals** | **depth-1 only**          | `store.deep` is the writable top-level signal and _does_ expose `.set`/`.update`; `store.deep.l1` and deeper are Proxies over `computed()` with `set === undefined`, and their Proxy identity is **not** stable (`ngrx-signals.mjs:25` returns a new Proxy per access).                                                                    |
+| **immer**         | **no**                    | drafts are revoked when `produce` returns. `createDraft`/`finishDraft` lets a nested draft handle live across statements, but only within one draft session.                                                                                                                                                                               |
+| **Immutable.js**  | **no**                    | a held sub-collection is a _value_; writing it does not update the root.                                                                                                                                                                                                                                                                   |
+| **Automerge**     | **no**                    | all writes go through `A.change(doc, fn)`. A draft handle that escapes the callback silently discards writes (verified: value stays `1`). Worse, `doc.a.b.c = 42` outside `change()` **does not throw and reads back as 42 locally**, while a later `change` still sees the old value — silent divergence.                                 |
 
-So this is a genuine capability split, and it splits *against* the immutable
+So this is a genuine capability split, and it splits _against_ the immutable
 libraries. Everything that holds mutable objects can offer a nested handle;
 everything that holds an immutable root cannot, because a nested position is not
 addressable once the root is replaced. Solid is the one mutable library that
@@ -827,11 +827,11 @@ declines to offer it — and does so by silently swallowing the write.
 
 **What does time travel cost, and is it free or bolted on?**
 
-| cost class | libraries | capture | restore |
-| --- | --- | --- | --- |
-| **free — the data model is already a value** | immer, Immutable.js, hand-rolled spread, @ngrx/signals | 0.033–0.362 µs | 0.033–0.681 µs |
-| **structural — O(1) to record, O(state) to materialise** | Yjs, Automerge | 34 bytes / 0.408 µs | 107 945 / 313 655 µs |
-| **bolted on — a deep clone in both directions** | Vue, Solid, Legend-State, MobX, Valtio | 17 766 – 148 240 µs | 19 495 – 689 866 µs |
+| cost class                                               | libraries                                              | capture             | restore              |
+| -------------------------------------------------------- | ------------------------------------------------------ | ------------------- | -------------------- |
+| **free — the data model is already a value**             | immer, Immutable.js, hand-rolled spread, @ngrx/signals | 0.033–0.362 µs      | 0.033–0.681 µs       |
+| **structural — O(1) to record, O(state) to materialise** | Yjs, Automerge                                         | 34 bytes / 0.408 µs | 107 945 / 313 655 µs |
+| **bolted on — a deep clone in both directions**          | Vue, Solid, Legend-State, MobX, Valtio                 | 17 766 – 148 240 µs | 19 495 – 689 866 µs  |
 
 The bolted-on row is exactly the "mutable POJO" and "per-leaf-owned" models. The
 free row is exactly the "immutable value at the root" model. Time travel is not
@@ -851,25 +851,25 @@ one element differs (68 942 µs) or none does.
 **Does anything get BOTH fast partial writes AND O(1) whole-state reads?**
 
 **Yes — Vue, Solid, Legend-State, and @ngrx/signals.** And the mechanism is the
-same in all four: *the canonical state is a plain JavaScript object, and
-reactivity is a side structure that never owns the data.* Handing back a POJO is
+same in all four: _the canonical state is a plain JavaScript object, and
+reactivity is a side structure that never owns the data._ Handing back a POJO is
 free because they never stopped having one.
 
-But that is only two of the three things you want, and *which* two differs:
+But that is only two of the three things you want, and _which_ two differs:
 
-| | O(1) whole-state POJO | O(1) snapshot | sub-µs partial write |
-| --- | --- | --- | --- |
-| mutable POJO + side reactivity (Vue, Solid, Legend) | ✅ | ❌ 17.8–37.7 ms | ✅ 0.23–14 µs |
-| immutable value at the root (immer, Immutable.js, ngrx) | ✅ | ✅ | ❌ 42–2 858 µs on the collection |
-| per-leaf-owned (MobX) | ❌ 176 ms | ❌ 148 ms | ✅ 1.0 µs |
-| versioned structural sharing (Valtio) | ⚠️ free cached, 2.6–85 ms after any write | ❌ 235 ms | ✅ 0.3 µs |
-| CRDT (Yjs, Automerge) | ❌ 4.2–271 ms | ✅ structurally | ❌ 11–250 µs |
+|                                                         | O(1) whole-state POJO                     | O(1) snapshot   | sub-µs partial write             |
+| ------------------------------------------------------- | ----------------------------------------- | --------------- | -------------------------------- |
+| mutable POJO + side reactivity (Vue, Solid, Legend)     | ✅                                        | ❌ 17.8–37.7 ms | ✅ 0.23–14 µs                    |
+| immutable value at the root (immer, Immutable.js, ngrx) | ✅                                        | ✅              | ❌ 42–2 858 µs on the collection |
+| per-leaf-owned (MobX)                                   | ❌ 176 ms                                 | ❌ 148 ms       | ✅ 1.0 µs                        |
+| versioned structural sharing (Valtio)                   | ⚠️ free cached, 2.6–85 ms after any write | ❌ 235 ms       | ✅ 0.3 µs                        |
+| CRDT (Yjs, Automerge)                                   | ❌ 4.2–271 ms                             | ✅ structurally | ❌ 11–250 µs                     |
 
 **Nothing measured gets all three.** The trade-off is inherent in the following
 precise sense: an O(1) whole-state read and an O(1) snapshot are only the same
-operation when the object you hand back is a *value*. Vue/Solid/Legend hand back
-a *live* object — free, but it changes underneath you, so a snapshot costs a
-clone. ngrx hands back a value — free *and* snapshottable — and pays for it by
+operation when the object you hand back is a _value_. Vue/Solid/Legend hand back
+a _live_ object — free, but it changes underneath you, so a snapshot costs a
+clone. ngrx hands back a value — free _and_ snapshottable — and pays for it by
 having no nested write handle and by making the caller rebuild the immutable
 path on every write. MobX and SignalTree own the leaves, which buys the write
 and costs both reads.
@@ -894,7 +894,7 @@ for a `produce` that touches nothing at all. Identity is still preserved
 `src/core/finalize.ts:79-81`), so the copies are allocated and thrown away.
 
 **immer — `produceWithPatches`.** +59% on the deep write (5.68 → 9.05 µs; 4.34 →
-6.82 µs with autoFreeze off) and *no measurable difference* on the array write
+6.82 µs with autoFreeze off) and _no measurable difference_ on the array write
 (2 858 → 2 882 µs), where the freeze walk swamps it. Patches are minimal — one
 `replace` op carrying the full 17-segment path for the deep write, one for the
 array element. `applyPatches` with the inverse costs 6.34 µs.
@@ -906,7 +906,7 @@ freshly-`slice()`d array on every `produce` (each element early-returns as
 already frozen, but the walk is still O(N)).
 
 **Immutable.js — `toJS`.** 6 475 µs, and this is the same "materialise a POJO"
-cost the brief flags. Worth noting it is *cheaper* than MobX (175 978 µs) and
+cost the brief flags. Worth noting it is _cheaper_ than MobX (175 978 µs) and
 Automerge (271 026 µs) and comparable to a `structuredClone` of the raw array
 (16 798 µs). `toJS` of the deep subtree alone is 0.924 µs — the cost is entirely
 the 50k collection.
@@ -933,24 +933,24 @@ object you passed to `observable()`** (verified: `obs.get() === plain`). 0.157
 **The write claim did not survive measurement.** A 16-deep write is **14.10 µs**
 — 55× Vue's and 50× Valtio's for the same write. From source, the cause is
 `computeChangesRecursive` (`index.mjs:523-537`): after every `set` it walks from
-the written node up to the root, and at *each* ancestor calls
+the written node up to the root, and at _each_ ancestor calls
 `getNodeValue(parent)` — which itself walks the parent chain — and allocates two
 fresh path arrays via `[node.key].concat(path)`. That is O(depth²) work and
 O(depth²) allocation **per write, whether or not anything is listening.**
 Measured, with no collection present at all:
 
-| depth | 1 | 2 | 4 | 8 | 16 |
-| --- | --- | --- | --- | --- | --- |
+| depth    | 1     | 2     | 4     | 8     | 16     |
+| -------- | ----- | ----- | ----- | ----- | ------ |
 | µs/write | 0.815 | 1.217 | 2.049 | 4.407 | 10.987 |
 
 ~0.7–0.8 µs per level, superlinear, and **completely independent of collection
 size** (12.15 µs at `items=0` vs 12.61 µs at `items=50000`). Legend-State is
-fast at reads and at *shallow* writes; it is the slowest non-CRDT library
+fast at reads and at _shallow_ writes; it is the slowest non-CRDT library
 measured at deep ones.
 
 **@ngrx/signals — `signalState` vs `signalStore`.** **The premise in the brief
 is wrong, and this does not explain the harness discrepancy.** `signalState`
-(`ngrx-signals.mjs:345-361`) and `withState` (`:789-807`) build the *identical*
+(`ngrx-signals.mjs:345-361`) and `withState` (`:789-807`) build the _identical_
 `STATE_SOURCE`: one `signal()` per top-level key, each wrapped in
 `toDeepSignal`. `signalState` adds exactly one thing — a root `computed()` that
 spreads the top-level keys, making the container itself callable. Verified both
@@ -961,14 +961,14 @@ operations measure within noise of each other (deep write 2.19 vs 2.06 µs;
 µs). **Both are "the DeepSignal one." Neither is lighter.** The demo-vs-harness
 discrepancy in "Open measurements" needs a different explanation.
 
-The one genuinely heavy ngrx path is reading *through* the DeepSignal chain:
+The one genuinely heavy ngrx path is reading _through_ the DeepSignal chain:
 `store.deep.l1…l15.value()` costs **1.22 µs** because `toDeepSignal` allocates a
 fresh Proxy at every hop (`:25`) even though the `computed()` behind it is
 memoised. Reading the same field off `getState()` costs 0.498 µs.
 
-**Yjs / Automerge — do they get time travel for free?** To *record*, yes and
+**Yjs / Automerge — do they get time travel for free?** To _record_, yes and
 dramatically: 34 bytes for a Yjs snapshot, 0.408 µs for Automerge's heads. To
-*use*, no: 107 945 µs and 313 655 µs respectively to materialise the past state.
+_use_, no: 107 945 µs and 313 655 µs respectively to materialise the past state.
 The CRDTs move the cost from capture to replay, which is the right trade for
 sync and the wrong one for an undo stack you scrub through.
 
@@ -977,7 +977,7 @@ sync and the wrong one for an undo stack you scrub through.
 1. **Valtio's snapshot is O(total nodes), not O(changed nodes).** Structural
    sharing is real and verified, and it still costs 4.2 ms to snapshot after
    touching one deep field, because the version poll has to visit all 50,000
-   untouched proxies. Caching the *result* does not help if you have to walk the
+   untouched proxies. Caching the _result_ does not help if you have to walk the
    tree to discover the cache is valid.
 2. **Valtio's cheap restore is a trap.** Assigning a snapshot back is 0.176 µs
    and leaves your entire state tree read-only, silently. The correct restore is
@@ -993,7 +993,7 @@ sync and the wrong one for an undo stack you scrub through.
    wrong before it was checked.
 5. **immer's `autoFreeze` is a 47× tax** on a single-element write in a 50k
    collection (2 858 µs → 61.4 µs when disabled), and it is on by default.
-6. **immer charges ~3.3 µs to merely *read* a deep path** inside `produce`,
+6. **immer charges ~3.3 µs to merely _read_ a deep path** inside `produce`,
    because the `get` trap pre-copies every ancestor before it knows whether
    you'll write.
 7. **Legend-State, the library whose pitch is speed, has the slowest deep write
@@ -1022,14 +1022,14 @@ sync and the wrong one for an undo stack you scrub through.
   investigate the duplicated `ARRAY_UPDATES` declaration.
 - **Any of this with live subscribers attached.** All write numbers are
   unsubscribed. Notification cost is the write-path spike's territory, and for
-  libraries whose write cost *is* notification bookkeeping (Legend-State,
+  libraries whose write cost _is_ notification bookkeeping (Legend-State,
   arguably MobX) the ranking could move under load.
 - **Memory.** Not measured for any library, despite build times spanning 1 ms to
   1 458 ms strongly implying large differences.
 - **Legend-State v3.** npm `latest` for `@legendapp/state` is 2.1.15 (v3 is not
   on `latest`); the O(depth²) finding applies to what npm installs today and may
   not apply to the v3 rewrite.
-- **Immutable.js's internals from source.** I verified its *behaviour* (root
+- **Immutable.js's internals from source.** I verified its _behaviour_ (root
   `Map`, `items` a `List`, `items[0]` a `Map`, correct structural sharing on
   `setIn`) and measured it, but read the HAMT/trie implementation only far
   enough to confirm the shape. Track D is the right place for that.
@@ -1042,7 +1042,7 @@ Harness deleted per the spike rules. To rebuild: `npm i immer@11.1.16
 immutable@5.1.9 valtio@2.3.2 mobx@7.0.0 solid-js@1.9.14 vue@3.5.41
 @legendapp/state@2.1.15 yjs@13.6.32 @automerge/automerge@3.4.0`, `@ngrx/signals`
 from the workspace root. Fixture and adaptive `bench()` as described under
-*Method*. **Run Solid with `node --conditions=browser`** or you will measure the
+_Method_. **Run Solid with `node --conditions=browser`** or you will measure the
 SSR shim.
 
 ## Findings F — SignalTree's measured profile
@@ -1083,14 +1083,14 @@ Per write, 10 000 writes per sample. A `nested(d)` chain; the leaf is a number.
 Both forms are legitimate and both are cheap. Read:
 
 - **The held reference is free.** At depth 15 it costs 15.5 ns — statistically
-  identical to a bare Angular `signal()` (16.0 ns). SignalTree adds *nothing*
+  identical to a bare Angular `signal()` (16.0 ns). SignalTree adds _nothing_
   measurable to a leaf write once the leaf is resolved. This is the strongest
   single result in the track.
 - **Walking costs ~2.9 ns per level** (46.7 ns at depth 15 vs 6.5 ns at depth 1).
   Path resolution is one property read per level and nothing else.
 - **The advantage over an immutable rebuild grows with depth**, as it must:
   1.0x at depth 1 (rebuilding one small object is cheap), 2.4x at depth 15
-  walked, **7.1x** held. Note this baseline is a *hand-written* POJO rebuild —
+  walked, **7.1x** held. Note this baseline is a _hand-written_ POJO rebuild —
   the floor. A real store (`patchState`) adds its own overhead on top, which is
   where the "~20x / ~31x vs `@ngrx/signals`" in the header table comes from.
   Those figures are not re-derived here; this table is the architecture-only
@@ -1117,7 +1117,7 @@ caches nothing.
 **The header table's "read the WHOLE state ~2.25x slower" is the wrong
 comparison and should be corrected.** `@ngrx/signals`' `signalState` holds a
 POJO and returns it by reference — that is the third column, 0.0007 ms. The
-honest statement is: *any* competitor that stores a POJO answers a whole-state
+honest statement is: _any_ competitor that stores a POJO answers a whole-state
 read in O(1), and we answer it in O(leaves). At 100 000 leaves that is four
 orders of magnitude, not 2.25x. The 2.25x figure is measuring something else and
 should not be cited until re-derived.
@@ -1142,8 +1142,8 @@ Three facts fall out, and together they close the open measurement at the top of
 this document:
 
 1. **SignalTree adds nothing over a bare Angular signal.** The
-   `useShallowComparison` column and the `Object.is` column match the *no signal
-   at all* column at every size. The array-leaf write path is a `slice()` plus a
+   `useShallowComparison` column and the `Object.is` column match the _no signal
+   at all_ column at every size. The array-leaf write path is a `slice()` plus a
    signal set; the tree itself costs nothing.
 2. **`slice()` dominates at 50k.** 47–49 µs of every arm is the array copy. Any
    claim about "SignalTree on large arrays" that does not subtract this is
@@ -1153,7 +1153,7 @@ this document:
    at the first changed element, at ~7.7 ns per reference-identical element:
    - mismatch at the front → 50k: 53.2 − 49.4 = **3.8 µs**
    - uniform-random mismatch (~N/2) → 50k: 218.4 − 48.3 = **170 µs**
-   - **no mismatch at all** → full walk *plus* a field-by-field compare of every
+   - **no mismatch at all** → full walk _plus_ a field-by-field compare of every
      element → 50k: 384.8 − 47.5 = **337 µs**
 
 **This resolves "the demo reports 11.3 ms, an independent harness measures
@@ -1220,9 +1220,10 @@ contains the collection **three times** (as an array, as a key array, and as a
 
 `timeTravel()` subscribes to the **global** `PathNotifier` flush event. Every
 live `timeTravel` tree therefore runs a full `snapshotState` + `structuredClone`
-+ `deepEqual` on **every flush anywhere in the process** — including flushes
-caused by a completely unrelated tree — and then throws the result away when the
-dedupe finds nothing changed.
+
+- `deepEqual` on **every flush anywhere in the process** — including flushes
+  caused by a completely unrelated tree — and then throws the result away when the
+  dedupe finds nothing changed.
 
 | unrelated 10 000-leaf `timeTravel` trees alive | cost of one `entityMap(2000).updateOne` + flush |
 | ---------------------------------------------- | ----------------------------------------------- |
@@ -1233,7 +1234,7 @@ dedupe finds nothing changed.
 
 Perfectly linear, ~3.2 ms per extra tree, all of it discarded (their histories
 stay at 1 entry). In an app with several time-travelled stores, every write in
-*any* store pays for *all* of them. This is a defect, not a tuning parameter.
+_any_ store pays for _all_ of them. This is a defect, not a tuning parameter.
 
 The trigger has to be a write that actually notifies. A plain leaf `.set()` on an
 unenhanced tree never calls the notifier, so a leaf-only benchmark cannot see
@@ -1265,14 +1266,14 @@ The decomposition says where a fix would have to aim:
 **~94% of the per-leaf cost is Angular's signal node, not SignalTree.**
 SignalTree adds ~34 B/leaf on top of the 521 B Angular charges for a writable
 signal, and the custom `equal` costs nothing. "One signal per leaf" is the
-expensive decision, and it is expensive *because of Angular's signal*, not
+expensive decision, and it is expensive _because of Angular's signal_, not
 because of anything in this repo. A tree with one array leaf holding the same
 data costs 790 KB against 5.5 MB — **7x less** — which is the same trade-off
 `entityMap` makes, from the other direction.
 
 All of the above is the **eager** path. `useLazySignals` exists but is opt-in and
 inert without `lazy: lazy()` from `@signaltree/core/lazy`; `LAZY_THRESHOLD: 50`
-only chooses the default *when the lazy feature is installed*. Nothing here
+only chooses the default _when the lazy feature is installed_. Nothing here
 measures that path.
 
 ---
@@ -1280,7 +1281,7 @@ measures that path.
 ### F-2. What `entityMap` already does differently
 
 **How it stores entities** (`packages/core/src/lib/entity-signal.ts`, as of
-commit `6d9aae8b`, which landed *during* this track):
+commit `6d9aae8b`, which landed _during_ this track):
 
 - The source of truth is a plain **`Map<K, E>`** closed over in
   `createEntitySignal`. It is not a signal.
@@ -1290,8 +1291,8 @@ commit `6d9aae8b`, which landed *during* this track):
 - The four collection queries — `all`, `count`, `ids`, `map` — are **lazy
   `computed`s** that read `version()` and rebuild from the `Map`.
 - **Per-entity signals**: a `Map<K, WritableSignal<E | undefined>>`, materialised
-  lazily on first `byId()`. `byId(id).field()` is a `computed` over *that
-  entity's* signal only. A mutation calls `syncEntitySignal(id)`, a no-op if
+  lazily on first `byId()`. `byId(id).field()` is a `computed` over _that
+  entity's_ signal only. A mutation calls `syncEntitySignal(id)`, a no-op if
   nobody has ever asked for that entity.
 
 Read this: **the version-counter design is what makes the write O(1), and it
@@ -1324,7 +1325,7 @@ Yes. Measured fan-out over 100 updates:
 | `computed(count())`           | **0**                    | **0**                      |
 
 Fan-out is exactly 1. The claim holds. (`count()` re-runs 0 times because it is
-itself a `computed` whose *value* does not change, so Angular's equality stops
+itself a `computed` whose _value_ does not change, so Angular's equality stops
 propagation at that node — a correct diamond, worth knowing.)
 
 For contrast, on an array leaf: **100 updates to element #1 re-ran a computed
@@ -1367,7 +1368,7 @@ So: is the "8x slower on large-array" finding about the wrong API? **Yes,
 mostly.** The right API for a 50 000-row collection is `entityMap` + `byId()`,
 and it is ~475x faster than the benchmarked one. But `entityMap` is not a free
 win: a component that renders the whole list from `all()` after every write is
-*worse off* than a plain array leaf with `useShallowComparison`. The benchmark
+_worse off_ than a plain array leaf with `useShallowComparison`. The benchmark
 should be re-cut into two scenarios — granular consumer and whole-list consumer —
 rather than simply replaced.
 
@@ -1377,7 +1378,7 @@ rather than simply replaced.
    same id.** `removeEntitySignal` deletes the per-entity signal, so a node
    captured earlier closes over an orphan. Verified: after `removeOne(1)` then
    `addOne({ id: 1, … })`, the held node reads `undefined` forever while a fresh
-   `byId(1)` returns the new entity. Held references survive *updates* correctly
+   `byId(1)` returns the new entity. Held references survive _updates_ correctly
    (same per-entity signal), so this is specifically the remove/re-add path — and
    the held reference is exactly the capability the header table calls the
    product.
@@ -1408,7 +1409,7 @@ therefore a question about collection leaves.
 | one row changes every poll      | 500              | 500                | 500                  | 0 (0%)              |
 
 It does exactly what it claims: 100% suppression on a steady-state poll, 80% on
-a mostly-quiet one. And the honesty argument is real, and is *not* a performance
+a mostly-quiet one. And the honesty argument is real, and is _not_ a performance
 trade-off:
 
 > 100 re-fetches of an identical payload, paths reported by `updateAndReport`:
@@ -1468,7 +1469,7 @@ it saves work.
 **Not on the axis of size — on the axis of provenance.** Cost per element does
 not change with size (124 ns/row, flat across four orders of magnitude), so any
 element-count threshold is arbitrary: it does not separate a cheap case from an
-expensive one, it picks a point on a straight line and changes the *semantics* on
+expensive one, it picks a point on a straight line and changes the _semantics_ on
 either side of it. A leaf that silently switches from "honest change reporting"
 to "reports every re-fetch as a change" at 501 rows is a worse API than either
 endpoint.
@@ -1479,8 +1480,8 @@ What the data actually separates is:
   7.7 ns/element, short-circuits at the first difference, effectively free. Keep
   `deepEqual`.
 - **all-fresh writes** (a re-fetch replacing the leaf wholesale) — 124 ns/row,
-  full walk, and simultaneously *the only case where the suppression is worth
-  anything*. The expensive case and the valuable case are the same case.
+  full walk, and simultaneously _the only case where the suppression is worth
+  anything_. The expensive case and the valuable case are the same case.
 
 If a threshold is wanted anyway, the numbers to hang it on: the walk stays under
 100 µs to ~800 fresh rows and under 1 ms to ~8 000; above ~10 000 fresh rows a
@@ -1514,7 +1515,7 @@ size-adaptive global default.
   collection was measured.
 - **Time travel with `includePayload: false`**, and with the default
   `maxHistorySize: 50` — large caps were used to isolate per-entry cost. The
-  default caps *retained* memory at 50 × entry (~12 MB at 10 000 leaves) but does
+  default caps _retained_ memory at 50 × entry (~12 MB at 10 000 leaves) but does
   not change per-entry CPU.
 - **Whether F-1d-ter reproduces in a browser** under Angular's own microtask
   scheduling. The mechanism is in the source (`getPathNotifier().onFlush`, never
@@ -1533,4 +1534,119 @@ node --expose-gc scripts/benchmarks/data-model-profile.mjs ttleak    # needs a c
 
 ## Synthesis
 
-_pending_
+## Synthesis
+
+**No pivot. The model is right, and the reason is sharper than "we measured
+faster" — it is that one competitor tried the strictly-better-looking thing and
+the measurement shows why it does not work.**
+
+### The question this spike was actually answering
+
+Tracks D, E and F were run to decide whether per-leaf ownership is the right
+data model for SignalTree, or an accident we should correct before 14.0.0 froze
+the snapshot format. The answer has three parts.
+
+### 1. Four models, and the trade is real
+
+Nothing surveyed gets all three of {O(1) whole-state read, O(1) snapshot,
+sub-µs partial write}. Track E's five shipping models reduce to a single
+sentence each:
+
+| model                          | who                                  | what it buys                              | what it costs                                                 |
+| ------------------------------ | ------------------------------------ | ----------------------------------------- | ------------------------------------------------------------- |
+| Immutable value at root        | immer, Immutable.js, `@ngrx/signals` | free snapshot, O(1) whole-state read      | O(width) writes; no granularity below the root                |
+| Mutable POJO + lazy side index | Vue, Solid, Legend-State             | O(1) read **and** sub-µs write            | no durable snapshot — a capture is a deep clone, 17.7–37.7 ms |
+| Per-leaf owned                 | **SignalTree**, MobX                 | O(1) writes at any size, fan-out 1        | reads-as-a-whole must be materialised                         |
+| Versioned shared snapshot      | Valtio                               | mutate in place _and_ a shared POJO       | the snapshot walk is O(total), not O(changed)                 |
+| CRDT op log                    | Yjs, Automerge                       | structural time travel, 34-byte snapshots | writes 11–250 µs, materialise 4.2–271 ms                      |
+
+**SignalTree bought the write.** MobX is the independent evidence that the
+materialisation bill is a property of the model rather than of our
+implementation: its `toJS` measures **176 ms**, the worst non-CRDT number in the
+survey.
+
+### 2. Valtio is the finding, not the benchmark
+
+Model 4 is what a greenfield build would reach for: mutate in place, hand back a
+structurally-shared POJO, get everything at once. The sharing is real and was
+verified directly (`probe-valtio-sharing.mjs`). **And the snapshot still costs
+4.2 ms after touching one deep field at 50k**, because `ensureVersion` must poll
+every descendant once the global counter moves.
+
+> Caching the result does not help if you have to walk the tree to discover the
+> cache is valid.
+
+That is the whole argument for the architecture we have, and it is mechanical
+rather than comparative. SignalTree's materialisation is one `computed` per node
+in a `WeakMap`, so **invalidation propagates at WRITE time through Angular's
+dependency graph** and a clean subtree's memo is never consulted. Valtio has a
+version counter and no graph, so staleness can only be _discovered at read time_
+— and discovery is a walk. Same ambition, asymptotically different result,
+because one has a dependency graph and the other has a number.
+
+So the ranking is not "SignalTree is faster than Valtio." It is: **per-leaf
+ownership plus memoised incremental materialisation over a reactive graph is the
+only surveyed combination that gets granular writes, fan-out-1 notification and
+an O(changed) _serialisable_ snapshot simultaneously.**
+
+### 3. What a greenfield build would genuinely change — and what it would not
+
+**Would not: chunk the collection.** Track D's bounded-fanout result is real —
+`immutable.List` at 50k does update in 97 ns, retains 2.0 KB per version and
+localises a change in 152 ns flat in N, and reference-equality diffing on a flat
+50k array is _2.7x slower_ than `deepEqual` while the trie version is 0.26 µs.
+It is nonetheless the wrong fix here, and reading the code is what settles it:
+`entityMap.all` must hand back `E[]`, so a chunked store still flattens on read
+— chunked materialisation measures **52 µs against `slice()`'s 38.7 µs**, i.e.
+slightly _worse_. The per-version memory and diff wins only materialise if the
+SNAPSHOT stays chunked, and then `tree().rows.all` is no longer an array, which
+contradicts the format 14.0.0 just committed to.
+
+**So the O(width) history cost is the price of the snapshot thesis, not a
+defect.** elf undoes in 3 µs because its state _is_ the shared immutable
+structure and it never has to produce a flat array to record a version. You can
+have "a snapshot is a plain JSON-shaped value" or "a history entry over a
+collection is O(changed)". Not both. We chose the first, and persistence, SSR
+and devtools are why.
+
+**Would change: let a marker decline HISTORY capture separately from
+SERIALISATION capture.** Today `transient: true` opts out of both, so a
+10k-row grid that wants persistence is forced into the undo stack, and
+`entityMap`'s `snapshot` hook (`{ all: node.all() }`) makes every
+collection-mutating write O(collection) once `timeTravel()` is attached.
+`pauseRecording()` is the imperative workaround shipped in 14.0.0; the
+declarative one is a flag on the marker contract, and it fits the M5/M6
+vocabulary the release already built.
+
+### 4. Two premises this spike overturned, worth not re-deriving
+
+- **Structural sharing alone buys nothing for diffing.** The win is bounded
+  fanout, not sharing. Every structure measured shares >99.6% of objects after a
+  single-field update, so counting shared objects is a vanity metric.
+- **"Depth is free; width is the entire bill."** immer's 15-deep/50k-wide update
+  allocates 392 KB, of which **99.6% is one array node and 0.4% is the fifteen
+  levels of depth**. Our deep-nesting win is real but it is not "we avoid a huge
+  copy along the path" — the path copy is cheap. It is that we avoid the wide
+  node and allocate nothing.
+
+### 5. The one free win, and why it is closed
+
+Track D proposed that a leaf's `equal()` could be `===` (3.9 ns) rather than
+`deepEqual` (90.6 µs) once the write path guarantees reference-identical
+unchanged subtrees — a projected 23,000x on the equality term. **Both halves are
+refuted** and it should not be re-proposed: the projection came off the
+in-process megamorphism phantom plus a no-op fixture, and re-measured in
+isolated processes `Object.is` is flat at ~41 ms against `deepEqual`'s 49 ms
+(head) — while the guarantee _cannot exist at a leaf_, because a leaf value
+comes from the caller and an HTTP re-fetch hands you a brand-new array. Making
+`===` the default would report every re-fetch as a change, which is exactly the
+correctness property `deepEqual` provides.
+
+### Status of the four goals
+
+| goal                   | verdict                                                                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Fast partial updates   | **Achieved**, and independent of state size — 0.006 ms at 1,024 root props against 21.4 ms                                               |
+| Cheap "what changed"   | **Achieved** — the write already located the leaf; `updateAndReport()` returns the paths                                                 |
+| Cheap time travel      | **Achieved for nested state** (an entry is O(depth) and shares clean subtrees); **O(width) for collections**, by construction, see §3    |
+| Fast whole-state reads | **Traded away deliberately.** Incremental materialisation makes it O(changed) rather than O(state), which is as close as this model gets |

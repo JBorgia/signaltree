@@ -1,4 +1,4 @@
-# Guide: `status()` — predicates, migration, and what it is *not* for
+# Guide: `status()` — predicates, migration, and what it is _not_ for
 
 The `status()` marker models the **load lifecycle of one tree slice**: `NotLoaded` → `Loading` →
 `Loaded` | `Error`, exposed as signal-backed predicates. This guide covers the exact predicate set,
@@ -10,17 +10,17 @@ doesn't cover.
 Six read predicates, all callable signals (source of truth:
 `packages/core/src/lib/markers/status.ts`):
 
-| Predicate | True when |
-|---|---|
-| `notLoaded()` | state is **exactly** `NotLoaded` |
-| `loading()` | a load is in flight |
-| `loaded()` | a load succeeded |
-| `hasError()` | the last load failed |
-| `idle()` | `!loading() && !loaded()` — covers `NotLoaded` **and** `Error` |
-| `settled()` | `loaded() \|\| hasError()` — "done, stop the spinner" |
+| Predicate     | True when                                                      |
+| ------------- | -------------------------------------------------------------- |
+| `notLoaded()` | state is **exactly** `NotLoaded`                               |
+| `loading()`   | a load is in flight                                            |
+| `loaded()`    | a load succeeded                                               |
+| `hasError()`  | the last load failed                                           |
+| `idle()`      | `!loading() && !loaded()` — covers `NotLoaded` **and** `Error` |
+| `settled()`   | `loaded() \|\| hasError()` — "done, stop the spinner"          |
 
 It is **`hasError()`**, not `error()`. (The loader surface on `entityMap` uses `error()` for the
-error *value*; `status()` uses `hasError()` for the boolean. They're different surfaces.)
+error _value_; `status()` uses `hasError()` for the boolean. They're different surfaces.)
 
 Write methods: `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`, plus
 the Promise-vocabulary aliases `start()` / `succeed()` / `setSuccess()` / `fail(err)`.
@@ -50,10 +50,18 @@ it — `status()` replaces the whole thing and the helpers get deleted.
 **Before:**
 
 ```typescript
-enum LoadingState { NotLoaded, Loading, Loaded }
+enum LoadingState {
+  NotLoaded,
+  Loading,
+  Loaded,
+}
 
-interface LoadableState { loadingState: LoadingState }
-interface ErrorableState { error: AppError | null }
+interface LoadableState {
+  loadingState: LoadingState;
+}
+interface ErrorableState {
+  error: AppError | null;
+}
 
 interface PlantState extends LoadableState, ErrorableState {
   plants: PlantDto[];
@@ -85,20 +93,20 @@ const tree = signalTree({
 tree.$.plants.status.loading();
 tree.$.plants.status.loaded();
 tree.$.plants.status.hasError();
-tree.$.plants.status.idle();     // "should I (re)fetch?"
-tree.$.plants.status.settled();  // "stop the spinner"
+tree.$.plants.status.idle(); // "should I (re)fetch?"
+tree.$.plants.status.settled(); // "stop the spinner"
 ```
 
 State mapping:
 
-| Manual model | `status()` |
-|---|---|
-| `LoadingState.NotLoaded` | `notLoaded()` |
-| `LoadingState.Loading` | `loading()` |
-| `LoadingState.Loaded` | `loaded()` |
-| a separate `error` field | `hasError()` + `error` carried by `setError(err)` |
-| `isLoading` / `isLoaded` / `isNotLoaded` helpers | delete — the predicates *are* these |
-| a "should I fetch?" check | `idle()` (see the footgun above) |
+| Manual model                                     | `status()`                                        |
+| ------------------------------------------------ | ------------------------------------------------- |
+| `LoadingState.NotLoaded`                         | `notLoaded()`                                     |
+| `LoadingState.Loading`                           | `loading()`                                       |
+| `LoadingState.Loaded`                            | `loaded()`                                        |
+| a separate `error` field                         | `hasError()` + `error` carried by `setError(err)` |
+| `isLoading` / `isLoaded` / `isNotLoaded` helpers | delete — the predicates _are_ these               |
+| a "should I fetch?" check                        | `idle()` (see the footgun above)                  |
 
 Migrate the guard/resolver call sites in the same pass: a manual model usually gated fetches on
 `isNotLoaded`, which is the bug `idle()` exists to fix.
@@ -120,7 +128,7 @@ That gives you `load()` / `refresh()` / `invalidate()` plus `loading()` / `loade
 [entity-collection cookbook](entity-collection-cookbook.md). Reach for a separate `status()` when
 you're tracking an operation that **isn't** a collection load — a save, a submit, a one-off command.
 
-## 3. What `status()` is *not* for
+## 3. What `status()` is _not_ for
 
 `status()` is one marker per tree slice. Three cases fall outside it, and each has a different right
 answer — knowing which is what keeps people from falling back to a hand-rolled enum.
@@ -134,7 +142,7 @@ alongside; otherwise the loader surface is the answer.
 
 ### Per-entity load state → model it as shape you own
 
-"Is *this row* loading?" is **not** a core primitive — there is no per-entity status marker. Model it
+"Is _this row_ loading?" is **not** a core primitive — there is no per-entity status marker. Model it
 as state, which is what state-as-shape means:
 
 ```typescript

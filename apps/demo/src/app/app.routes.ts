@@ -21,6 +21,31 @@ export const appRoutes: Route[] = [
     },
   },
 
+  {
+    path: 'whats-new-14',
+    loadComponent: () =>
+      import('./pages/whats-new-14/whats-new-14.component').then(
+        (c) => c.WhatsNew14Component
+      ),
+    data: {
+      title: "What's new in 14.0.0 — running",
+      description:
+        'Every 14.0.0 capability callable in the page: prepend, active entity, changeId, pause/resume recording, onTreeError, onHydrateDecision — plus ST2026 and fan-out measured live in your browser.',
+    },
+  },
+  {
+    path: 'does-it-fit',
+    loadComponent: () =>
+      import('./pages/does-it-fit/does-it-fit.component').then(
+        (c) => c.DoesItFitComponent
+      ),
+    data: {
+      title: 'Does SignalTree fit?',
+      description:
+        'The architectural trade, measured in both directions: where SignalTree wins by 469x, where it loses, what each library provides, and which workloads land where.',
+    },
+  },
+
   // =========================================================================
   // V7 Feature Demos
   // =========================================================================

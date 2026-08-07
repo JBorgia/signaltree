@@ -117,9 +117,11 @@ import { signal, computed } from '@angular/core';
 import { registerMarkerProcessor } from '@signaltree/core/authoring';
 
 const SELECTION_MARKER = Symbol('SELECTION_MARKER');
-let selectionRegistered = false;  // ← Track registration
+let selectionRegistered = false; // ← Track registration
 
-export interface SelectionMarker<T> { [SELECTION_MARKER]: true; }
+export interface SelectionMarker<T> {
+  [SELECTION_MARKER]: true;
+}
 
 export function selection<T>(): SelectionMarker<T> {
   // Self-register on first use (tree-shakeable!)
@@ -137,7 +139,7 @@ export function isSelectionMarker(v: unknown): v is SelectionMarker<unknown> {
 // Usage - no manual registration needed!
 const tree = signalTree({
   tasks: [] as { id: number; done: boolean }[],
-  selectedIds: selection<number>(),  // ← Self-registers & materializes
+  selectedIds: selection<number>(), // ← Self-registers & materializes
 });
 
 tree.$.selectedIds.toggle(1);
@@ -220,11 +222,11 @@ This pattern ensures:
 
 ## Built-in Markers
 
-| Marker                           | Purpose                                       | Materialized Type              |
-| -------------------------------- | ---------------------------------------------- | ------------------------------- |
-| `entityMap<E, K>()`              | Entity collections with CRUD; pass `load` in config for cache-aware (single-scope) self-loading (RFC 0002/0003) | `EntitySignal<E, K>`            |
-| `status<E>()`                    | Async loading state                           | `StatusSignal<E>`               |
-| `stored<T>(key, default)`        | localStorage persistence                      | `StoredSignal<T>`               |
+| Marker                    | Purpose                                                                                                         | Materialized Type    |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `entityMap<E, K>()`       | Entity collections with CRUD; pass `load` in config for cache-aware (single-scope) self-loading (RFC 0002/0003) | `EntitySignal<E, K>` |
+| `status<E>()`             | Async loading state                                                                                             | `StatusSignal<E>`    |
+| `stored<T>(key, default)` | localStorage persistence                                                                                        | `StoredSignal<T>`    |
 
 ### entityMap()
 
@@ -304,7 +306,7 @@ Before you write a marker, read these. Every one of them is a real bug that bit 
 
 **The trap.** Your materializer calls `someSignal.set(...)` (or auto-loads, or seeds from storage) while building the materialized shape.
 
-**Why it bites.** SignalTree finalizes markers **lazily, on first `tree.$` access** — which is frequently a template read *during Angular's render pass*. A signal write there throws `NG0600: Writing to signals is not allowed while Angular renders`, and every binding after the throw stays blank. This is not hypothetical: `form({ persist })` hydrated a saved draft with a synchronous `valuesSignal.set()` in the factory — invisible to every fresh-browser test (empty storage skipped the write), but a returning user's form threw on first render (CHANGELOG 11.5.0). The non-lazy `entityMap` loader and `asyncSource` auto-load had the same class of bug and now defer to a microtask (CHANGELOG 11.4.0). See `packages/core/src/lib/markers/form.ts:350-369` (hydrate via the signal's *initial value*, a pure read) and `packages/core/src/lib/markers/entity-loader.ts:597-624` (`queueMicrotask(kickoff)`).
+**Why it bites.** SignalTree finalizes markers **lazily, on first `tree.$` access** — which is frequently a template read _during Angular's render pass_. A signal write there throws `NG0600: Writing to signals is not allowed while Angular renders`, and every binding after the throw stays blank. This is not hypothetical: `form({ persist })` hydrated a saved draft with a synchronous `valuesSignal.set()` in the factory — invisible to every fresh-browser test (empty storage skipped the write), but a returning user's form threw on first render (CHANGELOG 11.5.0). The non-lazy `entityMap` loader and `asyncSource` auto-load had the same class of bug and now defer to a microtask (CHANGELOG 11.4.0). See `packages/core/src/lib/markers/form.ts:350-369` (hydrate via the signal's _initial value_, a pure read) and `packages/core/src/lib/markers/entity-loader.ts:597-624` (`queueMicrotask(kickoff)`).
 
 **The correct pattern.** Seed via the signal's **initial value** (a pure read), keep derived state in `computed()`, and defer any load/seed/auto-start to `queueMicrotask`.
 
@@ -335,7 +337,7 @@ function createRangeSignal(marker: { defaultValue: number }) {
 
 **The trap.** You throw from your materializer to reject bad configuration ("loud failure").
 
-**Why it bites.** `materializeMarkers()` wraps `processor.create()` in a `try/catch` that **swallows the throw** — dev logs a `console.error`, production silently degrades (the marker placeholder is simply left un-materialized) — see `packages/core/src/lib/internals/materialize-markers.ts:247-267`. So a "must fail loudly" validation becomes a fail-*open* no-op. The built-ins learned this: `entityMap({ load })` validates that `load` is a `loader()` feature synchronously **in the factory** with a coded `[ST2004]` throw (`packages/core/src/lib/markers/entity-map.ts:231-246`), and `loader()` validates `persist.maxScopes` **in the factory** (`packages/core/src/lib/markers/loader.ts:74-89`) — both with an explicit comment that a materializer-level throw "would not actually fail closed" (RFC 0005 §6/§7).
+**Why it bites.** `materializeMarkers()` wraps `processor.create()` in a `try/catch` that **swallows the throw** — dev logs a `console.error`, production silently degrades (the marker placeholder is simply left un-materialized) — see `packages/core/src/lib/internals/materialize-markers.ts:247-267`. So a "must fail loudly" validation becomes a fail-_open_ no-op. The built-ins learned this: `entityMap({ load })` validates that `load` is a `loader()` feature synchronously **in the factory** with a coded `[ST2004]` throw (`packages/core/src/lib/markers/entity-map.ts:231-246`), and `loader()` validates `persist.maxScopes` **in the factory** (`packages/core/src/lib/markers/loader.ts:74-89`) — both with an explicit comment that a materializer-level throw "would not actually fail closed" (RFC 0005 §6/§7).
 
 **The correct pattern.** Do config validation in the **factory function**, which runs at `signalTree({ ... })` definition time and cannot be swallowed. Give the error a stable code (see landmine 5).
 
@@ -390,7 +392,7 @@ function createRangeSignal(marker: { min: number; max: number }) {
 
 **The trap.** You rely on `asReadonly(tree)` (or `defineStore(..., { expose: 'readonly' })`) to hide your custom marker's `.set()` / mutators from readers.
 
-**Why it bites.** Readonly is **type-only** — `asReadonly()` returns the *exact same runtime object*, retyped (`packages/core/src/lib/readonly.ts:19-39, 414-422`). The per-marker readonly views (`ReadonlyEntitySignal`, `ReadonlyFormSignal`, `ReadonlyStatusSignal`, …) are **hand-listed reader allowlists for BUILT-IN markers only**. The dispatch (`ReadonlyViewOf`, `readonly.ts:318-349`) matches only the built-in marker types; a custom marker matches no row and falls through the generic object/accessor branch — it gets no curated reader view, and at runtime its mutators are still on the same object and still reachable. The module itself documents that "a future marker without a row here degrades silently" (RFC 0004 §3 V-P2).
+**Why it bites.** Readonly is **type-only** — `asReadonly()` returns the _exact same runtime object_, retyped (`packages/core/src/lib/readonly.ts:19-39, 414-422`). The per-marker readonly views (`ReadonlyEntitySignal`, `ReadonlyFormSignal`, `ReadonlyStatusSignal`, …) are **hand-listed reader allowlists for BUILT-IN markers only**. The dispatch (`ReadonlyViewOf`, `readonly.ts:318-349`) matches only the built-in marker types; a custom marker matches no row and falls through the generic object/accessor branch — it gets no curated reader view, and at runtime its mutators are still on the same object and still reachable. The module itself documents that "a future marker without a row here degrades silently" (RFC 0004 §3 V-P2).
 
 **The correct pattern.** Don't depend on `asReadonly()` for custom-marker write protection. Expose reads through a **separate reader object**, or split the write path into an `@Injectable` Ops service — the reader+Ops pattern the readonly module docs recommend.
 
@@ -831,14 +833,7 @@ export function withTiming<T>() {
 Markers and enhancers work independently but compose well:
 
 ```typescript
-import {
-  signalTree,
-  entityMap,
-  status,
-  stored,
-  devTools,
-  batching,
-} from '@signaltree/core';
+import { signalTree, entityMap, status, stored, devTools, batching } from '@signaltree/core';
 
 const tree = signalTree({
   // Markers in state
@@ -906,7 +901,7 @@ export function createStoredSignal<T>(marker: StoredMarker<T>): StoredSignal<T> 
 - [ ] Use `Symbol()` for unique marker identification
 - [ ] Keep type guards simple and fast (no deep inspection)
 - [ ] **Prefer self-registration inside the factory** (lazy + tree-shakeable). If you register imperatively instead, do it once **before any `signalTree()` call** — registering after a tree is built is a no-op for that tree (dev warns). See [Registration Timing](#registration-timing--self-registration-v701)
-- [ ] **Validate config in the FACTORY, not the materializer** — `processor.create()` throws are swallowed (dev `console.error`, silent in prod), so a materializer throw fails *open* ([landmine 2](#2-validate-in-the-factory-not-the-materializer))
+- [ ] **Validate config in the FACTORY, not the materializer** — `processor.create()` throws are swallowed (dev `console.error`, silent in prod), so a materializer throw fails _open_ ([landmine 2](#2-validate-in-the-factory-not-the-materializer))
 - [ ] **Never write a signal synchronously in your materializer** (NG0600) — seed via the initial value, keep derived state `computed()`, defer loads/auto-start to `queueMicrotask` ([landmine 1](#1-never-write-a-signal-synchronously-in-your-materializer-ng0600))
 - [ ] **Materialize into a plain object or a proper NodeAccessor** so tree walkers can traverse it — an unbranded bespoke callable is invisible ([landmine 3](#3-materialize-into-a-walkable-shape-the-callable-node-contract))
 - [ ] **Don't rely on `asReadonly()` to hide custom-marker mutators** — expose reads through a separate reader object / Ops service ([landmine 4](#4-asreadonly-does-not-strip-a-custom-markers-mutators))

@@ -24,7 +24,7 @@ unresolvable at build time: a minifier can't prove it false, keeps the branch,
 and the message strings stay in the output.
 
 The `typeof … === 'undefined' || …` shape is deliberate — it defaults to
-*warnings on*, so a plain `<script>` or an unusual toolchain still gets the
+_warnings on_, so a plain `<script>` or an unusual toolchain still gets the
 diagnostics. The cost of that default is that removal has to be opt-in.
 
 ## The fix, by bundler
@@ -72,13 +72,13 @@ the guardrails you actually want.
 esbuild, minified, gzip, SignalTree's own code only (Angular/rxjs/tslib
 external) — the same methodology as the bundle-budget gate:
 
-| Tree | Default | `ngDevMode: false` | Saved |
-|---|---|---|---|
-| bare `signalTree()` | 5.86 KB | 5.05 KB | **0.82 KB** |
-| with `stored()` | 7.19 KB | 6.23 KB | **0.96 KB** |
-| with `form()` | 7.96 KB | 7.00 KB | **0.96 KB** |
-| with `entityMap()` | 8.76 KB | 7.61 KB | **1.15 KB** |
-| with `persistence()` | 8.55 KB | 7.69 KB | **0.86 KB** |
+| Tree                 | Default | `ngDevMode: false` | Saved       |
+| -------------------- | ------- | ------------------ | ----------- |
+| bare `signalTree()`  | 5.86 KB | 5.05 KB            | **0.82 KB** |
+| with `stored()`      | 7.19 KB | 6.23 KB            | **0.96 KB** |
+| with `form()`        | 7.96 KB | 7.00 KB            | **0.96 KB** |
+| with `entityMap()`   | 8.76 KB | 7.61 KB            | **1.15 KB** |
+| with `persistence()` | 8.55 KB | 7.69 KB            | **0.86 KB** |
 
 Re-measured for 13.4.0. The saving grew because that release added four
 traversal diagnostics (`ST2008`–`ST2012`) on paths every tree reaches, and made
@@ -91,7 +91,7 @@ directly the way the budget gate does (`node scripts/v9-budget-checks.js`).
 
 **The guard must be inline to fold.** Writing
 `const DEV = typeof ngDevMode === 'undefined' || ngDevMode;` and testing `DEV`
-does *not* get folded by esbuild — the const survives minification and the
+does _not_ get folded by esbuild — the const survives minification and the
 guarded strings ship anyway. Verified empirically; use the full expression at
 each site.
 

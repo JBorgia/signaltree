@@ -7,8 +7,7 @@ the Completion ledger below before reading §4 as a to-do list.
 **Affects:** `@signaltree/core`, `@signaltree/enterprise`, `@signaltree/schema`, `@signaltree/ng-forms`, all doc surfaces (README, llms.txt/llms-full.txt, SKILL.md, demo app), release/validation tooling
 **Supersedes:** the branch-`12` `init` commit (`54fe4626`) where they overlap
 **Versions at writing:** 11.5.3 published; target ~~12.0.0~~ **11.6.0** (see §3 verdict V-MAJOR)
-**Selection criterion (explicit):** optimal end-state for the library. Difficulty, time, and cost are excluded from the decision function by owner directive. Options are rejected only for being *worse*, never for being *harder*.
-
+**Selection criterion (explicit):** optimal end-state for the library. Difficulty, time, and cost are excluded from the decision function by owner directive. Options are rejected only for being _worse_, never for being _harder_.
 
 ## Completion ledger (added 2026-07-28)
 
@@ -19,16 +18,16 @@ work: it was being treated as an open plan two majors after it landed.
 Verified against the tree at 13.2.0 (symbol presence checked in the barrels, not
 inferred):
 
-| §4 item | State |
-|---|---|
-| 1. Walker hardening | **Shipped.** `isTraversableNode` is a type guard (`lib/utils.ts:102`); `verify-no-adhoc-walkers.sh` is deleted as planned ("proven inert"). No `walkTree` unification, as decided. The optional `resolvePath` follow-up was never opened — still optional. |
-| 2. Readonly, truthful and minimal | **Shipped.** `asReadonly` + `ReadonlyStore` are exported and are the primary surface; per-marker reader allowlists exist (`ENTITY_READERS`/`STATUS_READERS`); no Proxy. Slice-bearing collections were confirmed in 13.2.0 to keep reads while still refusing writes. |
-| 3. Signal Forms parity | **Shipped, and its last open promise is now kept.** `withKind` is exported; single-authority async is enforced by `[ST2005]`; branded error factories ship. The "default flip in the next major" — deferred through 12.x and 13.x — **landed in 13.2.0** (`nativeErrors` now defaults to `true`). |
-| 4. Loader (`loadOrThrow` only) | **Shipped** (`markers/entity-loader.ts:179`). |
-| 5. Vocabulary pass | Believed applied; not re-verified in this pass. |
-| 6. Verified docs gates | **Shipped and then some** — taught-symbols, version-claims, release-state and package-hygiene gates all run in `pre-publish-validation.sh`. Two gate bugs found and fixed 2026-07-28 (a call site pointing at a deleted script, and a crash in `lint-skills.mjs`). The §6 addendum is resolved — see the RESOLVED note inline. |
-| 7. Naming coherence (S0) | **Shipped.** `signalForm()` is the single name; `markerSignalForm`/`signalFormBridge` are gone, not merely deprecated. |
-| 8–10. Doc surfaces, comparator stamp, fresh-agent test | Partly shipped; the classic-NgRx skill validation round remains outstanding and is tracked in the project notes, not here. |
+| §4 item                                                | State                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Walker hardening                                    | **Shipped.** `isTraversableNode` is a type guard (`lib/utils.ts:102`); `verify-no-adhoc-walkers.sh` is deleted as planned ("proven inert"). No `walkTree` unification, as decided. The optional `resolvePath` follow-up was never opened — still optional.                                                                     |
+| 2. Readonly, truthful and minimal                      | **Shipped.** `asReadonly` + `ReadonlyStore` are exported and are the primary surface; per-marker reader allowlists exist (`ENTITY_READERS`/`STATUS_READERS`); no Proxy. Slice-bearing collections were confirmed in 13.2.0 to keep reads while still refusing writes.                                                          |
+| 3. Signal Forms parity                                 | **Shipped, and its last open promise is now kept.** `withKind` is exported; single-authority async is enforced by `[ST2005]`; branded error factories ship. The "default flip in the next major" — deferred through 12.x and 13.x — **landed in 13.2.0** (`nativeErrors` now defaults to `true`).                              |
+| 4. Loader (`loadOrThrow` only)                         | **Shipped** (`markers/entity-loader.ts:179`).                                                                                                                                                                                                                                                                                  |
+| 5. Vocabulary pass                                     | Believed applied; not re-verified in this pass.                                                                                                                                                                                                                                                                                |
+| 6. Verified docs gates                                 | **Shipped and then some** — taught-symbols, version-claims, release-state and package-hygiene gates all run in `pre-publish-validation.sh`. Two gate bugs found and fixed 2026-07-28 (a call site pointing at a deleted script, and a crash in `lint-skills.mjs`). The §6 addendum is resolved — see the RESOLVED note inline. |
+| 7. Naming coherence (S0)                               | **Shipped.** `signalForm()` is the single name; `markerSignalForm`/`signalFormBridge` are gone, not merely deprecated.                                                                                                                                                                                                         |
+| 8–10. Doc surfaces, comparator stamp, fresh-agent test | Partly shipped; the classic-NgRx skill validation round remains outstanding and is tracked in the project notes, not here.                                                                                                                                                                                                     |
 
 **Nothing in §4 should be started from this document.** Anything still wanted from
 items 5 and 8–10 belongs in a new RFC or the ordinary backlog.
@@ -107,11 +106,11 @@ Enforcement replaces the bash script (deleted — dominated on every axis):
 `defineStore(factory, { expose: 'readonly' })` keeps its promise:
 
 - **Per-marker readonly views**: `ReadonlyEntitySignal` (`all/byId/where/find/
-  count/ids/has/empty` + loader reads `loading/loaded/error/lastLoadedAt/
-  params`), `ReadonlyStatusSignal` (predicates only), `ReadonlyFormSignal`
+count/ids/has/empty` + loader reads `loading/loaded/error/lastLoadedAt/
+params`), `ReadonlyStatusSignal` (predicates only), `ReadonlyFormSignal`
   (`values/errors/valid/dirty/touched/pristine`), readonly async marker views —
   mutators genuinely absent from the type.
-- **Mechanical derivation**: `ReadonlyTreeNode` computed *from* `TreeNode`
+- **Mechanical derivation**: `ReadonlyTreeNode` computed _from_ `TreeNode`
   (one marker dispatch), with a parity type-test so a future marker cannot
   drift the two surfaces.
 - **Accumulated-type preservation**: the readonly type is parameterized over
@@ -178,7 +177,7 @@ convention).
 - **Type-only readonly with markers passed through** (branch 12): overclaims;
   readonly-in-name-only for any store with markers.
 - **Drop readonly entirely, rely on Ops-service pattern**: defensible, but the
-  DI-token ergonomics are exactly what agent consumers reach for; a *true*
+  DI-token ergonomics are exactly what agent consumers reach for; a _true_
   readonly surface earns its keep.
 - **"Pick one async validation system" doc warning**: documents the defect
   instead of fixing it.
@@ -211,12 +210,12 @@ Verdicts:
   shared predicate already fixes the guard.
 - **Branch 12's consolidation is itself unfinished**: four raw dual-`typeof`
   guards remain (`materialize-markers.ts:224`, `intercept-leaf-signals.ts:49,
-  :68`, `update-engine.ts:417`) — two are the predicate's body inlined — and
+:68`, `update-engine.ts:417`) — two are the predicate's body inlined — and
   `intercept-leaf-signals.ts` is a **14th walker** the branch missed. The
   RFC's "13 sites consolidated" context claim was wrong.
 - **The bash script is not weak — it is inert.** Reproduced by execution: a
   `set -o pipefail` + while-loop exit-status bug makes the detection pipeline
-  report failure whenever the *last* `typeof`-object hit in a file is
+  report failure whenever the _last_ `typeof`-object hit in a file is
   non-violating, so the script exits 0 with all four live violations present.
   It has likely never flagged anything. Delete regardless.
 - The ESLint dual-`typeof` AST rule SURVIVES (four live violations to catch on
@@ -241,7 +240,7 @@ Verdicts:
   for every WeakSet/WeakMap consumer, and it puts a get-trap on the hottest
   read path of a performance-pitched library.
 - **"Mechanical derivation, one dispatch": overclaimed.** Compile-tested: a
-  derived readonly mapped type *is* achievable (call-signature and
+  derived readonly mapped type _is_ achievable (call-signature and
   NodeAccessor inference work), but it is a **second** dispatch with
   fail-silent drift — `CallableWritableSignal` and `Signal` both structurally
   extend `NodeAccessor`, so a future marker missing its row degrades silently,
@@ -299,7 +298,7 @@ Verdicts:
 
 Failed loads never become fresh (`lastLoadedAt` is set only on success), so
 retry-after-error is already `loadOrThrow()`; `refresh()`'s only distinct job
-is force-reloading *fresh* data, and the mirror is fake anyway (`refresh()`
+is force-reloading _fresh_ data, and the mirror is fake anyway (`refresh()`
 with no params on a never-loaded scoped collection has no throw semantics).
 RFC 0001 forbids pre-demand surface; TanStack (the deliberate vocabulary
 donor) has no `refetchOrThrow` for agents to expect. Ship `loadOrThrow`
@@ -317,7 +316,7 @@ audience. "Self-loading" names a different axis (fetches itself) than
 orthogonally in single sentences. **Winner: "cache-aware (single-scope)"** +
 the already-written A→B→A clarifier, applied 100% (37 "cache-aware" lines
 incl. 15 in the demo app, 28 "single-scope freshness-managed" lines to kill);
-"self-loading" stays as the auto-load descriptor. Demo route *titles* only —
+"self-loading" stays as the auto-load descriptor. Demo route _titles_ only —
 no URL/deep-link breakage.
 
 ### V-P6 (docs): export-coverage diff REFUTED; check-only survives; gate wiring is load-bearing
@@ -325,12 +324,11 @@ no URL/deep-link breakage.
 - Core exports **123 symbols; llms-full.txt names 27** — and the missing 96
   are overwhelmingly enhancer plumbing, guard functions, and exports
   `index.ts` itself labels internal (~5-8% gate precision). A raw coverage
-  diff either bloats the curated doc with hallucination targets (contra RFC
-  0001) or needs a ~90-entry allowlist that rots. **Replacement:** (a) a
+  diff either bloats the curated doc with hallucination targets (contra RFC 0001) or needs a ~90-entry allowlist that rots. **Replacement:** (a) a
   **reverse diff** — every backtick-quoted symbol llms-full.txt teaches must
   exist in the built `dist` d.ts (catches phantom/removed APIs, the real
   hallucination vector; precedent: `scripts/lint-skills.mjs`); (b) a
-  **~25-symbol golden API list** checked against *both* `index.ts` and
+  **~25-symbol golden API list** checked against _both_ `index.ts` and
   llms-full.txt (catches "shipped a capability, never taught it" — which is
   live today, see §4 S1).
 - Version claims: **generation REFUTED, check survives.** Three claim sites
@@ -374,7 +372,7 @@ pays full perception cost to protect nobody.
   these files concludes SignalTree has no Signal Forms integration — the
   intersection of audit threat #3 and the known Signal Forms gap, and the
   highest leverage-per-line item available. (§1's P6-as-specified, scoped to
-  *core* exports, would have stayed green forever while this persisted.)
+  _core_ exports, would have stayed green forever while this persisted.)
 - **S2 — measure the thing the audit actually defined.** The M3 adversarial
   fresh-agent test (audit success metric: first-attempt agent success) has
   never been run; nothing in §1 measures agent success. Run it against the
@@ -404,11 +402,11 @@ Target: **11.6.0**. Ordered by dependency.
    helper for the five path-walks — deliberately separate.
 2. **Readonly, truthful and minimal (P2′):** keep type-only narrowing;
    parameterize over `TAccum` (F1 — compile-verified); ship `asReadonly(tree)`
-   + exported `ReadonlyStore` type as the primary surface (F2 dies
-   structurally); keep `expose: 'readonly'` as sugar over it only if the
-   overload stays honest; per-marker reader views only via
-   `Pick`-over-`const`-allowlist with a re-signed `byId`, else document the
-   marker carve-out truthfully; **no Proxy**; fix the root-README overclaim.
+   - exported `ReadonlyStore` type as the primary surface (F2 dies
+     structurally); keep `expose: 'readonly'` as sugar over it only if the
+     overload stays honest; per-marker reader views only via
+     `Pick`-over-`const`-allowlist with a re-signed `byId`, else document the
+     marker carve-out truthfully; **no Proxy**; fix the root-README overclaim.
 3. **Signal Forms parity (P3′):** bridge emits Angular's branded error
    factories for built-in validators (via `validatorParams` on closures);
    `when()` forwards inner kind; export `withKind` (wrapping, not mutating);
@@ -441,6 +439,7 @@ Target: **11.6.0**. Ordered by dependency.
    > reference, so `markers/entity-map.ts` no longer imports it statically and a
    > plain `entityMap()` genuinely does not pay for the loader. The claim the
    > addendum called false is now **true**, and the docs teach it that way.
+
 7. **Naming coherence pass (S0 — must precede S1).** Found post-review:
    `markerSignalForm` is the only `marker`-prefixed export in the codebase —
    it matches none of the established families (markers = plain nouns,
@@ -461,8 +460,8 @@ Target: **11.6.0**. Ordered by dependency.
 9. **S3:** comparator-version stamp + claims-currency check for the NgRx
    comparison surfaces.
 10. **S2:** run the M3 fresh-agent test against the finished doc surfaces;
-   classic-NgRx migration skill validation round. Findings feed the next
-   cycle.
+    classic-NgRx migration skill validation round. Findings feed the next
+    cycle.
 
 Branch 12's commit is salvaged where it overlaps (predicate call-sites,
 validator tagging, `loadOrThrow`, doc corrections, the A→B→A clarifier) and
@@ -475,22 +474,23 @@ layer: **single-pass work at high velocity, protected by safety nets that were
 never tested for their ability to fail.**
 
 Evidence, one per layer:
-- *Cadence:* seven majors in seven months; 11.3.0 corrected same-day; branch
+
+- _Cadence:_ seven majors in seven months; 11.3.0 corrected same-day; branch
   12 authored overnight after 11.5.3 shipped (six workstreams, one commit,
   "init").
-- *Tests:* the worst shipped bugs were silently-inert features passing a
+- _Tests:_ the worst shipped bugs were silently-inert features passing a
   flat-fixture suite for multiple releases (batching, enterprise diff/patch,
   `updateOptimized`).
-- *Gates:* the script written to prevent the walker bug class was itself inert
+- _Gates:_ the script written to prevent the walker bug class was itself inert
   since creation; two doc validators rotted into no-ops (3 and 8 months);
   `release.sh` can skip everything; no CI runs validation.
-- *Docs:* claims asserted, never derived — "Angular 17+" vs peerDeps 20–22;
+- _Docs:_ claims asserted, never derived — "Angular 17+" vs peerDeps 20–22;
   install.md "derived from peerDependencies" and drifted anyway; the flagship
   Signal Forms bridge absent from every AI-facing doc.
-- *Review:* this RFC's own §1 — written in one confident pass — was ~50%
+- _Review:_ this RFC's own §1 — written in one confident pass — was ~50%
   refuted by adversarial review (§3). That refutation rate is what every
   unreviewed session has been shipping at.
-- *Measurement:* the audit's actual acceptance metric (M3 fresh-agent
+- _Measurement:_ the audit's actual acceptance metric (M3 fresh-agent
   first-attempt success) has never been run.
 
 There is no 100% guarantee and this document refuses to promise one — that
@@ -523,6 +523,7 @@ adversarial review (§5 rule 1). Verification: build+test+lint green across
 core/enterprise/schema/ng-forms, uncached.
 
 Delivered beyond the §4 spec (found during execution):
+
 - The ESLint AST rule caught **two additional guard sites** no prior pass
   found (serialization's zip-walker variant; lazy-tree's entity duck-type) —
   six sites fixed total, plus the 14th walker.
@@ -555,6 +556,7 @@ by §4 step 3; needs an explicit 11.6.0 changelog line at release.
 Renamed this pass: `markerSignalForm`/`signalFormBridge` → unified
 `signalForm()` (deprecated warned aliases; demo/docs updated). Flagged for
 future decision, NOT renamed (each needs its own deprecation plan):
+
 1. **`createFormTree` cross-package collision** — exported by BOTH
    `@signaltree/ng-forms` (form-tree factory) and `@signaltree/guardrails`
    (preset tree). Worst orphan found; same name, different things.
@@ -614,12 +616,13 @@ changing return type — the F2 cliff pattern).
 
 Queued for the cycle after 11.6.0 (deliberately NOT added to the frozen
 release):
+
 1. **Delete `externalDerived` from the barrel** — deprecated alias whose
    JSDoc promised removal in v8, still public at 11.x.
 2. **`@signaltree/core/authoring` subpath** for the ~15 enhancer-author
    plumbing exports (withWriteContext, getPathNotifier, ENHANCER_META,
    registerMarkerProcessor, the three zero-consumer create*Signal
-   factories, optionally the *_READERS consts). Two internal import sites
+   factories, optionally the *\_READERS consts). Two internal import sites
    (schema, guardrails); deprecated root re-exports one minor. Payoff: a
    barrel teachable end-to-end (M3 guessability).
 3. **`effects()` — finish or deprecate.** The one core enhancer not earning
@@ -633,7 +636,7 @@ release):
    exports map the `"default"` condition to noop.js — bundlers setting
    neither development nor production get the noop even in dev. The
    site-audit finding was real and this is why. Needs its own fix + test.
-5. **Persistence decision-table doc**: four surfaces (stored(), 
+5. **Persistence decision-table doc**: four surfaces (stored(),
    persistence(), /storage adapters, entityMap persist) with no routing
    guidance — a doc, not a relocation.
 6. Housekeeping: delete the enhancers/entities/ tombstone (throws
@@ -752,9 +755,9 @@ rebuilds) is retained — correctness over speed.
 
 `docs/guides/custom-markers-enhancers.md` covers the mechanism well but omits
 the five marker-authoring landmines this effort surfaced — each of which
-caused a real shipped bug in a *built-in* marker: (1) NG0600 (defer
+caused a real shipped bug in a _built-in_ marker: (1) NG0600 (defer
 auto-start/seed to a microtask), (2) the materializer swallows `create()`
-throws so validation must live in the *factory* (bit `maxScopes`), (3) the
+throws so validation must live in the _factory_ (bit `maxScopes`), (3) the
 callable-node traversal contract (the v11.4/11.5 inert-walker class), (4)
 `asReadonly` doesn't strip a custom marker's mutators (honest limitation),
 (5) `[ST####]` codes + plain-noun naming + conformance-fixture testing. Add

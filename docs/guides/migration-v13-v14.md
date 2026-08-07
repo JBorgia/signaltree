@@ -11,23 +11,23 @@ precisely because it used to fail invisibly at runtime.
 ## 1. Calling a leaf is no longer a setter
 
 ```ts
-tree.$.count(5);                   // ❌ TS2554: Expected 0 arguments, but got 1
-tree.$.count.set(5);               // ✅
+tree.$.count(5); // ❌ TS2554: Expected 0 arguments, but got 1
+tree.$.count.set(5); // ✅
 tree.$.count.update((n) => n + 1); // ✅
 ```
 
 **Branches and the root are unchanged** — they are callable and always were:
 
 ```ts
-tree.$.user({ name: 'Bob' });      // ✅ still a deep partial merge
-tree({ user: { name: 'Bob' } });   // ✅ still works
+tree.$.user({ name: 'Bob' }); // ✅ still a deep partial merge
+tree({ user: { name: 'Bob' } }); // ✅ still works
 ```
 
-**Why it is a removal rather than a deprecation.** A leaf *is* a real Angular
+**Why it is a removal rather than a deprecation.** A leaf _is_ a real Angular
 signal, and calling a signal is a READ that discards its argument. Measured:
 `tree.$.count(5)` on a leaf holding `0` returned `0` and left it at `0`. The
 type promised a uniformity the runtime never had, and it failed invisibly at
-compile time *and* at run time. The same expression one level up works because a
+compile time _and_ at run time. The same expression one level up works because a
 branch is SignalTree's own accessor.
 
 **Finding every site:** the compiler finds them all. `tsc --noEmit` after
@@ -61,13 +61,13 @@ import { isNodeAccessor, FORM_MARKER, ENTITY_READERS } from '@signaltree/core/au
 
 Moved (25 symbols):
 
-| group | symbols |
-| --- | --- |
+| group             | symbols                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | reader allowlists | `ENTITY_READERS`, `ENTITY_LOADER_READERS`, `STATUS_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STORED_READERS`, `ASYNC_SOURCE_READERS`, `ASYNC_QUERY_READERS` |
-| marker brands | `FORM_MARKER`, `ASYNC_SOURCE_MARKER`, `ASYNC_QUERY_MARKER` |
-| marker guards | `isFormMarker`, `isStoredMarker`, `isStatusMarker`, `isDerivedMarker`, `isAsyncSourceMarker`, `isAsyncQueryMarker` |
-| structural guards | `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree` |
-| misc | `parsePath`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` |
+| marker brands     | `FORM_MARKER`, `ASYNC_SOURCE_MARKER`, `ASYNC_QUERY_MARKER`                                                                                                          |
+| marker guards     | `isFormMarker`, `isStoredMarker`, `isStatusMarker`, `isDerivedMarker`, `isAsyncSourceMarker`, `isAsyncQueryMarker`                                                  |
+| structural guards | `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`                                                                             |
+| misc              | `parsePath`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`                                                                                                        |
 
 `isDev` and `withKind` stayed on the root: an app legitimately branches on the
 first, and the second is how you tag a custom `form()` validator.
@@ -103,7 +103,9 @@ wildcard, so no consumer could reach them even deliberately. Use
 `serialization()` and `persistence()`:
 
 ```ts
-const tree = signalTree(state).with(serialization()).with(persistence({ key: 'app' }));
+const tree = signalTree(state)
+  .with(serialization())
+  .with(persistence({ key: 'app' }));
 ```
 
 ## 6. `@signaltree/enterprise` is no longer published
@@ -159,12 +161,12 @@ collection untouched while sibling leaves in the same payload took their values.
 ## New in 14 that you may want while you are here
 
 ```ts
-tree.$.rows.prependOne(row);        // and prependMany
-tree.$.rows.setActiveId(id);        // master/detail without hand-rolling it
-tree.$.rows.activeEntity();         // granular: only THAT row invalidates it
-tree.$.rows.changeId(tempId, 42);   // adopt the id the server assigned
+tree.$.rows.prependOne(row); // and prependMany
+tree.$.rows.setActiveId(id); // master/detail without hand-rolling it
+tree.$.rows.activeEntity(); // granular: only THAT row invalidates it
+tree.$.rows.changeId(tempId, 42); // adopt the id the server assigned
 
-tree.pauseRecording();              // a bulk import becomes ONE undo step
+tree.pauseRecording(); // a bulk import becomes ONE undo step
 timeTravel({ shouldSkip: (a, b) => a.cursor !== b.cursor });
 
 import { onTreeError } from '@signaltree/core/authoring';

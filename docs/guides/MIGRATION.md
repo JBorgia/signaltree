@@ -62,8 +62,8 @@ measured 75x.
 
 **Dev-mode notice:**
 
-- The one-time `console.info` about the *upcoming* flip now reports the
-  *completed* one (kept because the change lands in a minor; `ngDevMode`-gated,
+- The one-time `console.info` about the _upcoming_ flip now reports the
+  _completed_ one (kept because the change lands in a minor; `ngDevMode`-gated,
   silenced by setting the option either way).
 
 ## 13.0.0
@@ -155,7 +155,7 @@ const tree = signalTree(largeState, { useLazySignals: true });
 
 // After (11.0.0)
 import { lazy } from '@signaltree/core/lazy';
-const tree = signalTree(largeState, { lazy: lazy() });            // auto-threshold applies
+const tree = signalTree(largeState, { lazy: lazy() }); // auto-threshold applies
 const forced = signalTree(state, { lazy: lazy(), useLazySignals: true }); // force lazy
 ```
 
@@ -165,17 +165,20 @@ Once `lazy: lazy()` is present, the size threshold and `useLazySignals`/`debugMo
 
 Two sets of long-deprecated (since v10.3 / v10) aliases were removed. Both are mechanical find-and-replace; TypeScript flags every site.
 
-| Removed | Use instead |
-|---|---|
-| `status().isLoading` / `.isLoaded` / `.isError` / `.isNotLoaded` | `.loading` / `.loaded` / `.hasError` / `.notLoaded` |
-| `entityMap().isEmpty` | `.empty` |
-| `tree.state` | `tree.$` (same reference — `state` was always an alias for `$`) |
+| Removed                                                          | Use instead                                                     |
+| ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| `status().isLoading` / `.isLoaded` / `.isError` / `.isNotLoaded` | `.loading` / `.loaded` / `.hasError` / `.notLoaded`             |
+| `entityMap().isEmpty`                                            | `.empty`                                                        |
+| `tree.state`                                                     | `tree.$` (same reference — `state` was always an alias for `$`) |
 
 ```ts
 // Before                          // After
-tree.$.load.isLoading();           tree.$.load.loading();
-tree.$.users.isEmpty();            tree.$.users.empty();
-tree.state.user.name();            tree.$.user.name();
+tree.$.load.isLoading();
+tree.$.load.loading();
+tree.$.users.isEmpty();
+tree.$.users.empty();
+tree.state.user.name();
+tree.$.user.name();
 ```
 
 For a non-reactive full snapshot, call `tree()` (unchanged).
@@ -186,7 +189,7 @@ For a non-reactive full snapshot, call `tree()` (unchanged).
 - **New `linked()`** — derived-but-writable signal for `.derived()`, comparable to NgRx `withLinkedState` (wraps Angular's `linkedSignal`). `linked({ source: () => $.options(), computation: (opts, prev): Opt | undefined => ... })` gives a value that derives from a source, is user-writable (`.set()`), and re-derives on source change (sticky selection). Purely additive.
 - **Bundle floor reduced ~29%** — injecting both `SecurityValidator` and the lazy/memory machinery drops the bare-tree floor 7.5KB → **5.3KB gzip** (~8.1KB with `entityMap` in use). A blocking CI budget gate prevents silent regressions.
 - **`devTools()` fully prod-stripped** — production builds (`ngDevMode` false) tree-shake the entire devtools implementation, so `.with(devTools())` no longer ships ~12KB to prod (a devtools-using tree drops ~11.3KB → 5.1KB gzip). Dev builds are unchanged — full devtools as before.
-- **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as *capability-per-KB + zero-deps*, not "smallest". See measured numbers in the benchmark.
+- **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as _capability-per-KB + zero-deps_, not "smallest". See measured numbers in the benchmark.
 - Includes the 10.5.0/10.6.0 additions (body-granular `entityMap`, `sortComparer`, `[ST####]` error codes, dev-mode guardrails) and the published-package fixes for `@signaltree/guardrails`.
 
 ## 9.0.1

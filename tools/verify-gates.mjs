@@ -63,7 +63,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const GATES = [
   {
     name: 'typecheck',
-    covers: 'core sources AND typing specs compile (both projects, not just one)',
+    covers:
+      'core sources AND typing specs compile (both projects, not just one)',
     cmd: ['npm', 'run', 'typecheck'],
     slow: true,
     mutation: {
@@ -79,7 +80,11 @@ const GATES = [
     // it covered was one package of eight. The other seven have real suites
     // (ng-forms alone has 44) and nothing in the gate suite ran them.
     cmd: [
-      'npx', 'nx', 'run-many', '-t', 'test',
+      'npx',
+      'nx',
+      'run-many',
+      '-t',
+      'test',
       // The demo has 27 suites and 191 tests that ran only if someone typed
       // `nx test demo` by hand. It is also the app the demo-coverage gate holds
       // up as proof every export is demonstrated — so it breaking silently would
@@ -94,7 +99,8 @@ const GATES = [
     mutation: {
       file: 'packages/core/src/lib/internals/materialize-markers.ts',
       find: '  let memo = SNAPSHOT_MEMO.get(node as object);\n  if (!memo) {',
-      replace: '  let memo = undefined as Signal<{ value: unknown }> | undefined;\n  if (!memo) {',
+      replace:
+        '  let memo = undefined as Signal<{ value: unknown }> | undefined;\n  if (!memo) {',
     },
   },
   {
@@ -141,7 +147,8 @@ const GATES = [
   },
   {
     name: 'devmode-foldable:self',
-    covers: 'the foldability checker detects a surviving literal AND a non-shrinking bundle',
+    covers:
+      'the foldability checker detects a surviving literal AND a non-shrinking bundle',
     cmd: ['node', 'tools/check-devmode-foldable.mjs', '--self-test'],
     needsBuild: true,
     mutation: {
@@ -152,7 +159,8 @@ const GATES = [
   },
   {
     name: 'guardrails-exports',
-    covers: 'guardrails resolves to the noop build under the production condition',
+    covers:
+      'guardrails resolves to the noop build under the production condition',
     cmd: ['node', 'scripts/verify-guardrails-default-condition.mjs'],
     needsBuild: true,
     mutation: {
@@ -173,14 +181,16 @@ const GATES = [
   },
   {
     name: 'taught-symbols',
-    covers: 'llms-full.txt teaches no removed API, and every golden symbol is taught',
+    covers:
+      'llms-full.txt teaches no removed API, and every golden symbol is taught',
     cmd: ['node', 'scripts/verify-taught-symbols.js'],
     needsBuild: true,
     // Was run by CI and by nothing else. A dead API in the AI-facing doc is the
     // hallucination vector this repo cares most about.
     mutation: {
       file: 'apps/demo/public/llms-full.txt',
-      append: '\n```ts\nimport { thisApiWasNeverReal } from "@signaltree/core";\n```\n',
+      append:
+        '\n```ts\nimport { thisApiWasNeverReal } from "@signaltree/core";\n```\n',
     },
   },
   {
@@ -196,7 +206,8 @@ const GATES = [
     // is what breaks an Angular 20 consumer who never touched /signals.
     mutation: {
       file: 'dist/packages/ng-forms/dist/core/ng-forms.js',
-      append: "\nexport { form as __gateLeak } from '@angular/forms/signals';\n",
+      append:
+        "\nexport { form as __gateLeak } from '@angular/forms/signals';\n",
     },
   },
   {
@@ -237,7 +248,9 @@ const GATES = [
         // Raw bytes, not gzip — this budget measures unminified size, so the
         // padding does not need to be incompressible.
         const pad = 'x'.repeat(40_000);
-        return `${original}\nglobalThis.__gateSizePad = ${JSON.stringify(pad)};\n`;
+        return `${original}\nglobalThis.__gateSizePad = ${JSON.stringify(
+          pad
+        )};\n`;
       },
     },
   },
@@ -250,7 +263,8 @@ const GATES = [
   },
   {
     name: 'tree-shaking:self',
-    covers: 'the tree-shaking checker detects code pulling in a forbidden module',
+    covers:
+      'the tree-shaking checker detects code pulling in a forbidden module',
     cmd: ['node', 'scripts/test-tree-shaking.js', '--self-test'],
     needsBuild: true,
     // Targets the DETECTION, not the reporting. A first attempt replaced the
@@ -277,7 +291,8 @@ const GATES = [
     // rather than a silent skip, which is how it surfaced immediately.
     mutation: {
       file: 'packages/core/src/enhancers/batching/batching.ts',
-      generate: (original) => original.replace(/batching/g, 'renamedByGateSelfTest'),
+      generate: (original) =>
+        original.replace(/batching/g, 'renamedByGateSelfTest'),
     },
   },
   {
@@ -314,7 +329,8 @@ const GATES = [
   },
   {
     name: 'dead-exports',
-    covers: 'no NEW export is unreachable from every entry point and every import',
+    covers:
+      'no NEW export is unreachable from every entry point and every import',
     // Ratcheted to ZERO: the 42 leads were triaged to nothing, so any new
     // unreachable export is a regression rather than one more on a pile.
     cmd: ['node', 'tools/find-dead-exports.mjs', '--max=0'],
@@ -324,8 +340,30 @@ const GATES = [
     },
   },
   {
+    name: 'release-claims',
+    covers:
+      'every symbol/code ADDED since the last release tag reaches every surface that claims to describe the library',
+    // The one gate that runs API -> claim. Every other one runs claim -> API,
+    // which cannot see a capability that shipped and was never written up:
+    // you can grep for a symbol a doc names, not for one it fails to name.
+    // Two things got through that blind spot in this release alone — the
+    // AI-priming surfaces (`49dd9ffb`, found by hand) and the capability
+    // matrix, which still carried ❌ for five capabilities the same release
+    // shipped and had been edited TWICE after they landed.
+    cmd: ['node', 'tools/check-release-claims.mjs'],
+    // Deleting a shipped capability from the priming file must fail. Chosen
+    // over a synthetic export because it reproduces the ACTUAL defect: the API
+    // is fine, the claim surface is the thing that went stale.
+    mutation: {
+      file: 'apps/demo/public/llms.txt',
+      find: 'prependOne',
+      replace: '__gateRemovedFromPriming',
+    },
+  },
+  {
     name: 'demo-coverage',
-    covers: 'every ROOT-barrel export is demonstrated in the demo app',
+    covers:
+      'every ROOT-barrel export is demonstrated in the demo app — NOT node methods, /authoring exports or types, which release-claims covers',
     cmd: ['node', 'tools/check-demo-coverage.mjs'],
     needsBuild: true,
     // Adding a root export with no demo must fail. This is the stronger of the
@@ -357,7 +395,8 @@ const GATES = [
   // (1.5s rather than minutes); the published numbers come from a full run.
   {
     name: 'bench-harness',
-    covers: 'all 4 benchmark arms construct, run, and satisfy their postconditions',
+    covers:
+      'all 4 benchmark arms construct, run, and satisfy their postconditions',
     cmd: ['node', '--expose-gc', 'tools/bench-compare.mjs', '--n', '200'],
     needsBuild: true,
     // The postconditions live in the child. Breaking the undo call makes the
@@ -371,7 +410,8 @@ const GATES = [
   },
   {
     name: 'memory-harness',
-    covers: 'every memory scenario runs under forced GC and reports collectability',
+    covers:
+      'every memory scenario runs under forced GC and reports collectability',
     cmd: ['node', '--expose-gc', 'tools/memory-report.mjs'],
     needsBuild: true,
     // Removing --expose-gc from the child would measure allocation instead of
@@ -384,7 +424,8 @@ const GATES = [
   },
   {
     name: 'memory-compare',
-    covers: 'all 4 cross-library memory arms construct and measure a marginal slope',
+    covers:
+      'all 4 cross-library memory arms construct and measure a marginal slope',
     cmd: ['node', '--expose-gc', 'tools/memory-compare.mjs', '--n', '1000'],
     needsBuild: true,
     // Anchored on the child's dispatch, NOT on its unknown-arm branch: the
@@ -408,7 +449,8 @@ const GATES = [
     mutation: {
       file: 'tools/bench-state-scale.mjs',
       find: '    for (let w = 0; w < WRITES; w++) tree.$.k0.v.set(w);\n  });\n\n  const store = createStore({ name: `flat${size}` }',
-      replace: '    for (let w = 0; w < WRITES; w++) void w;\n  });\n\n  const store = createStore({ name: `flat${size}` }',
+      replace:
+        '    for (let w = 0; w < WRITES; w++) void w;\n  });\n\n  const store = createStore({ name: `flat${size}` }',
     },
   },
   {
@@ -422,12 +464,14 @@ const GATES = [
     mutation: {
       file: 'tools/size-compare.mjs',
       find: "  import { createStore, withProps, select } from '@ngneat/elf';",
-      replace: "  import { nothing } from '@ngneat/this-package-does-not-exist';",
+      replace:
+        "  import { nothing } from '@ngneat/this-package-does-not-exist';",
     },
   },
   {
     name: 'size-report',
-    covers: 'every published package builds and its tree-shaken size is measurable',
+    covers:
+      'every published package builds and its tree-shaken size is measurable',
     cmd: ['node', 'tools/size-report.mjs'],
     needsBuild: true,
     // It refuses to report against a missing build rather than printing zeros,
@@ -468,7 +512,9 @@ const GATES = [
         for (let i = 0; i < 900; i++) {
           parts.push(`gateBloat_${i.toString(36)}_${(i * 2654435761) % 1e9}`);
         }
-        return `${original}\nglobalThis.__gateBloat = ${JSON.stringify(parts)};\n`;
+        return `${original}\nglobalThis.__gateBloat = ${JSON.stringify(
+          parts
+        )};\n`;
       },
     },
   },
@@ -476,12 +522,17 @@ const GATES = [
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
-const only = args.find((a) => a.startsWith('--only='))?.slice(7).split(',');
+const only = args
+  .find((a) => a.startsWith('--only='))
+  ?.slice(7)
+  .split(',');
 
 if (has('--list')) {
   for (const g of GATES) {
     console.log(
-      `${g.name.padEnd(20)} ${g.mutation ? 'provable' : 'UNPROVEN'}  ${g.covers}`
+      `${g.name.padEnd(20)} ${g.mutation ? 'provable' : 'UNPROVEN'}  ${
+        g.covers
+      }`
     );
   }
   process.exit(0);
@@ -509,7 +560,8 @@ const hash = (s) => createHash('sha256').update(s).digest('hex');
 /** Apply, run, restore. Restoration is verified, not assumed. */
 function withMutation(mutation, fn) {
   const path = join(ROOT, mutation.file);
-  if (!existsSync(path)) throw new Error(`mutation target missing: ${mutation.file}`);
+  if (!existsSync(path))
+    throw new Error(`mutation target missing: ${mutation.file}`);
   const original = readFileSync(path, 'utf8');
   const before = hash(original);
 
@@ -531,7 +583,8 @@ function withMutation(mutation, fn) {
     }
     mutated = original.replace(mutation.find, mutation.replace);
   }
-  if (mutated === original) throw new Error(`mutation was a no-op in ${mutation.file}`);
+  if (mutated === original)
+    throw new Error(`mutation was a no-op in ${mutation.file}`);
 
   try {
     writeFileSync(path, mutated);
@@ -539,7 +592,9 @@ function withMutation(mutation, fn) {
   } finally {
     writeFileSync(path, original);
     if (hash(readFileSync(path, 'utf8')) !== before) {
-      console.error(`\n  FATAL: could not restore ${mutation.file}. Tree is dirty.`);
+      console.error(
+        `\n  FATAL: could not restore ${mutation.file}. Tree is dirty.`
+      );
       process.exit(2);
     }
   }
@@ -548,7 +603,9 @@ function withMutation(mutation, fn) {
 const results = [];
 
 if (has('--self-test')) {
-  console.log(`\nGate self-test — each gate must FAIL against its own mutation\n`);
+  console.log(
+    `\nGate self-test — each gate must FAIL against its own mutation\n`
+  );
   for (const gate of selected) {
     if (!gate.mutation) {
       if (gate.provenBy) {
@@ -565,7 +622,9 @@ if (has('--self-test')) {
       console.log(`  ~ ${gate.name.padEnd(20)} UNPROVEN — ${gate.unproven}`);
       continue;
     }
-    process.stdout.write(`  · ${gate.name.padEnd(20)} mutating ${gate.mutation.file} ... `);
+    process.stdout.write(
+      `  · ${gate.name.padEnd(20)} mutating ${gate.mutation.file} ... `
+    );
     let code;
     try {
       code = withMutation(gate.mutation, () => run(gate));
@@ -592,13 +651,16 @@ if (has('--self-test')) {
     process.stdout.write(`  · ${gate.name.padEnd(20)} `);
     const code = run(gate);
     const ok = code === 0;
-    results.push({ gate, state: ok ? 'pass' : gate.knownFailing ? 'known' : 'fail' });
+    results.push({
+      gate,
+      state: ok ? 'pass' : gate.knownFailing ? 'known' : 'fail',
+    });
     console.log(
       ok
         ? `pass ✓  (${gate.covers})`
         : gate.knownFailing
-          ? `RED, known ✗  ${gate.knownFailing}`
-          : `FAIL (exit ${code}) ✗  ${gate.covers}`
+        ? `RED, known ✗  ${gate.knownFailing}`
+        : `FAIL (exit ${code}) ✗  ${gate.covers}`
     );
   }
 }
@@ -612,7 +674,9 @@ if (has('--self-test')) {
   console.log(
     `${proven}/${selected.length} gates PROVEN able to fail ` +
       `(${count('proven-by')} indirectly, via a companion self-test gate). ` +
-      `${count('unproven')} unproven, ${count('blind')} blind, ${count('error')} errored.`
+      `${count('unproven')} unproven, ${count('blind')} blind, ${count(
+        'error'
+      )} errored.`
   );
   for (const r of results.filter((r) => r.state === 'unproven')) {
     console.log(`  unproven: ${r.gate.name} — ${r.gate.unproven}`);
@@ -629,7 +693,9 @@ if (has('--self-test')) {
   );
   if (has('--fast')) {
     const skipped = GATES.filter((g) => g.slow).map((g) => g.name);
-    console.log(`  --fast SKIPPED: ${skipped.join(', ')} — this run did not cover them.`);
+    console.log(
+      `  --fast SKIPPED: ${skipped.join(', ')} — this run did not cover them.`
+    );
   }
   process.exit(count('fail') > 0 ? 1 : 0);
 }

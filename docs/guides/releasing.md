@@ -26,7 +26,7 @@
 
 ## Owner setup (one-time)
 
-- **`NPM_TOKEN` secret** — create a *granular* npm automation token with
+- **`NPM_TOKEN` secret** — create a _granular_ npm automation token with
   read/write on the `@signaltree/*` packages; add it under GitHub →
   Settings → Secrets and variables → Actions → `NPM_TOKEN`.
 - **Tag protection** — Settings → Rules → Rulesets: a tag ruleset for `v*`

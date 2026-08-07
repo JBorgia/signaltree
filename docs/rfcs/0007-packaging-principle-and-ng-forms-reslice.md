@@ -64,19 +64,19 @@ single-marker pattern into the repo's package-boundary test. Applying it:
   a boundary decision.
 
 **Within any package**, the second half of the rule is unchanged from RFC
-0005 §1: capability code arrives via the *import*, config only *carries* it
+0005 §1: capability code arrives via the _import_, config only _carries_ it
 (a branded feature object), and the absence of the helper on a config key that
 expects one fails loud — a coded error — never silent-inert. This is
 `security()`/`loader()`'s shape, and it is now `history()`'s.
 
 **The package boundary does not itself buy tree-shaking.** RFC 0005 §0 is the
-cautionary tale: `entity-map.ts` *statically imported* `attachLoader` and
+cautionary tale: `entity-map.ts` _statically imported_ `attachLoader` and
 called it behind a runtime config check, so the loader shipped in every
 `entityMap` bundle for a full version — a boundary existed (loader logic sat
-in its own module) and it made no difference, because the *import* was
+in its own module) and it made no difference, because the _import_ was
 unconditional. Splitting a capability into its own package or subpath is
 necessary but not sufficient; it must be paired with the no-static-import
-discipline (the helper's closure is the *only* reference to the engine code)
+discipline (the helper's closure is the _only_ reference to the engine code)
 or the split is cosmetic.
 
 ## 2. ng-forms re-slice — measured classification
@@ -85,14 +85,14 @@ Every `ng-forms` module was checked against the principle: does it have a
 real, structural dependency on `@angular/forms`, or only a `FormGroup`-shaped
 `any` and a duck-typed call?
 
-| Module | Real `@angular/forms` dependency? | Verdict |
-|---|---|---|
-| `createFormTree` | **Yes** — constructs and owns a `FormGroup` | Stays in `ng-forms` |
-| `signalForm` | **Yes** — `@angular/forms/signals`' `FieldTree`, `form()`, `validate()`, branded error factories | Stays |
-| ng-forms validators (`FieldValidator` shape) | Tied to `createFormTree`'s validator contract | Stays |
-| `wizard` | Built on `createFormTree` | Stays — **deferred**: no `signalForm()` path exists yet (flagged, not fixed here) |
-| `history` (`withFormHistory`) | **No** — `FormTree` is a local `interface { form: any; … }`; the only real dependency is `FormGroup.valueChanges`/`getRawValue()`, both duck-typed through `any` | **Moved** to core as `history()` |
-| `audit` (`createAuditTracker`/`createAuditCallback`) | **No** — depends only on `getChanges` (`@signaltree/shared`) and `ISignalTree` | **Moved** to core |
+| Module                                               | Real `@angular/forms` dependency?                                                                                                                                | Verdict                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `createFormTree`                                     | **Yes** — constructs and owns a `FormGroup`                                                                                                                      | Stays in `ng-forms`                                                               |
+| `signalForm`                                         | **Yes** — `@angular/forms/signals`' `FieldTree`, `form()`, `validate()`, branded error factories                                                                 | Stays                                                                             |
+| ng-forms validators (`FieldValidator` shape)         | Tied to `createFormTree`'s validator contract                                                                                                                    | Stays                                                                             |
+| `wizard`                                             | Built on `createFormTree`                                                                                                                                        | Stays — **deferred**: no `signalForm()` path exists yet (flagged, not fixed here) |
+| `history` (`withFormHistory`)                        | **No** — `FormTree` is a local `interface { form: any; … }`; the only real dependency is `FormGroup.valueChanges`/`getRawValue()`, both duck-typed through `any` | **Moved** to core as `history()`                                                  |
+| `audit` (`createAuditTracker`/`createAuditCallback`) | **No** — depends only on `getChanges` (`@signaltree/shared`) and `ISignalTree`                                                                                   | **Moved** to core                                                                 |
 
 `history` and `audit` share the same defect: each was placed in `ng-forms` at
 creation time because form-adjacent state felt Angular-forms-shaped, but
@@ -127,7 +127,7 @@ that happened to be filed under the wrong tree.
   drives BOTH the marker's `set`/`patch`/`reset`/`clear` API and any bound
   `signalForm()` field tree from one engine. The ng-forms bridge
   (`marker-bridge.ts:283-291`) runs an `effect` over the shared model to
-  capture edits made *through* the `FieldTree` (which writes the model signal
+  capture edits made _through_ the `FieldTree` (which writes the model signal
   directly, bypassing the marker's mutators); overlap with mutator-side
   recording is deduped by the engine's snapshot-equality guard
   (`form-history.ts:78`), so double-entries and undo/redo feedback loops
@@ -146,7 +146,7 @@ importing from `@signaltree/core` instead). `createAuditTracker`/
 
 **events ↔ entityMap bridge** (`packages/events/src/angular/`):
 
-- `entityEventHandler` (`entity-events.ts`) maps a *batch* of domain events
+- `entityEventHandler` (`entity-events.ts`) maps a _batch_ of domain events
   onto `entityMap`'s batch ops: events are grouped in-memory (`Map`/`Set`) by
   target id and inferred op (`upsert`/`update`/`remove`, `match`-driven or
   inferred by extractor precedence), same-id touches within a batch are
@@ -169,11 +169,11 @@ importing from `@signaltree/core` instead). `createAuditTracker`/
 
 **Measured tree-shaking result:**
 
-| Bundle | gzip |
-|---|---|
-| `form()` only | 7.46 KB |
-| `form()` + `history()` | 8.15 KB |
-| Δ | **~0.69 KB** |
+| Bundle                 | gzip         |
+| ---------------------- | ------------ |
+| `form()` only          | 7.46 KB      |
+| `form()` + `history()` | 8.15 KB      |
+| Δ                      | **~0.69 KB** |
 
 The history ENGINE identifiers (`canRedo`, `snapshotsEqual`, the undo/redo
 branch logic) are absent from the form-only bundle — only the brand property
@@ -212,7 +212,7 @@ for the loader), asserting:
   problem, not a re-slice.
 - No other package (`realtime`, `schema`, `enterprise`, `guardrails`,
   `callable-syntax`) was re-audited against the principle as part of this
-  RFC. §1 is the durable rule for *future* placement decisions and for
+  RFC. §1 is the durable rule for _future_ placement decisions and for
   whichever package gets audited next; retrofitting the rest of the packaging
   map is not claimed here.
 

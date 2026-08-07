@@ -20,14 +20,14 @@ tree.$.theme.set('dark'); // auto-saves to localStorage
 
 Default behavior, all of which is configurable:
 
-| Aspect            | Default                  | Configurable via         |
-| ----------------- | ------------------------ | ------------------------ |
-| Backend           | `localStorage`           | `options.storage`        |
+| Aspect            | Default                             | Configurable via                    |
+| ----------------- | ----------------------------------- | ----------------------------------- |
+| Backend           | `localStorage`                      | `options.storage`                   |
 | Format on disk    | `JSON.stringify` of `{ __v, data }` | `options.serialize` / `deserialize` |
-| Write debounce    | 100 ms                   | `options.debounceMs`     |
-| Versioning        | `__v: 1`                 | `options.version`        |
-| Migration         | None                     | `options.migrate`        |
-| Migration failure | Falls back to default    | `options.clearOnMigrationFailure` |
+| Write debounce    | 100 ms                              | `options.debounceMs`                |
+| Versioning        | `__v: 1`                            | `options.version`                   |
+| Migration         | None                                | `options.migrate`                   |
+| Migration failure | Falls back to default               | `options.clearOnMigrationFailure`   |
 
 ---
 
@@ -145,7 +145,7 @@ const STORAGE = createStorageKeys('myApp', {
 } as const);
 
 signalTree({
-  theme: stored(STORAGE.ui.theme, 'light'),     // key: "myApp:ui:theme"
+  theme: stored(STORAGE.ui.theme, 'light'), // key: "myApp:ui:theme"
   layout: stored(STORAGE.ui.layout, 'compact'), // key: "myApp:ui:layout"
 });
 

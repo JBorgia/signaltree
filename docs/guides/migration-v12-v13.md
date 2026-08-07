@@ -1,8 +1,8 @@
 # Migrating to SignalTree v13
 
-v13 applies RFC 0007's packaging principle — *independent dependency/runtime
+v13 applies RFC 0007's packaging principle — _independent dependency/runtime
 → its own package; a within-tree mechanic (needs only `@signaltree/core` +
-`@signaltree/shared`) → core* — to two capabilities that were filed under the
+`@signaltree/shared`) → core_ — to two capabilities that were filed under the
 wrong package, and adds a signal-native undo/redo feature plus an
 events↔`entityMap` bridge. Most apps touch at most one of the items below;
 every deprecated API has a direct, mechanical replacement and is **retained**
@@ -76,10 +76,7 @@ which is `signalForm()`-compatible:
 // before (createWizardForm)
 import { createWizardForm } from '@signaltree/ng-forms';
 
-const wizard = createWizardForm(
-  [{ fields: ['email', 'password'] }, { fields: ['firstName', 'lastName'] }],
-  { email: '', password: '', firstName: '', lastName: '' }
-);
+const wizard = createWizardForm([{ fields: ['email', 'password'] }, { fields: ['firstName', 'lastName'] }], { email: '', password: '', firstName: '', lastName: '' });
 await wizard.nextStep();
 
 // after (form() marker's wizard config)
@@ -110,10 +107,7 @@ ops:
 import { entityEventHandler } from '@signaltree/events/angular';
 
 const flush = entityEventHandler(store.$.trades.entities, {
-  match: (e) =>
-    e.type === 'TradeCreated' ? 'upsert' :
-    e.type === 'TradeStatusChanged' ? 'update' :
-    e.type === 'TradeCancelled' ? 'remove' : null,
+  match: (e) => (e.type === 'TradeCreated' ? 'upsert' : e.type === 'TradeStatusChanged' ? 'update' : e.type === 'TradeCancelled' ? 'remove' : null),
   upsert: (e) => (e.type === 'TradeCreated' ? e.data.trade : undefined),
   update: (e) => (e.type === 'TradeStatusChanged' ? { id: e.data.tradeId, changes: { status: e.data.status } } : undefined),
   remove: (e) => (e.type === 'TradeCancelled' ? e.data.tradeId : undefined),
@@ -130,11 +124,7 @@ current entry:
 import { OptimisticUpdateManager, applyOptimisticEntityChange } from '@signaltree/events/angular';
 
 const manager = new OptimisticUpdateManager();
-const { data, previousData, rollback } = applyOptimisticEntityChange(
-  store.$.trades.entities,
-  tradeId,
-  { status: 'accepted' }
-);
+const { data, previousData, rollback } = applyOptimisticEntityChange(store.$.trades.entities, tradeId, { status: 'accepted' });
 manager.apply({ id: crypto.randomUUID(), correlationId, type: 'UpdateTradeStatus', data, previousData: previousData ?? data, appliedAt: new Date(), timeoutMs: 5000, rollback });
 ```
 

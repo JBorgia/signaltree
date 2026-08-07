@@ -8,11 +8,11 @@ This is the comparison most "should I use SignalTree?" decisions actually hinge 
 
 ## TL;DR
 
-| Use... | When... |
-|---|---|
-| **Raw Angular signals** (`signal` / `computed` / `linkedSignal` / `effect` / `resource`) | Your state is a handful of values or one flat object; you don't need entity CRUD, forms, persistence, or undo; you want zero dependencies. **The right default for component-local state.** |
-| **SignalTree** | Your state has **structure** (nested domains, dashboards, multi-step forms, feature stores) and you want batteries — entity CRUD, async status, localStorage, forms, validation, undo — attached **at specific nodes at any depth**, with full recursive typing instead of hand-wiring. |
-| **Either** | Some structure, modest battery needs — taste and team familiarity decide. Worth noting SignalTree stays comfortable here: the shape is the API, so it doesn't impose ceremony while your state is still small. |
+| Use...                                                                                   | When...                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Raw Angular signals** (`signal` / `computed` / `linkedSignal` / `effect` / `resource`) | Your state is a handful of values or one flat object; you don't need entity CRUD, forms, persistence, or undo; you want zero dependencies. **The right default for component-local state.**                                                                                             |
+| **SignalTree**                                                                           | Your state has **structure** (nested domains, dashboards, multi-step forms, feature stores) and you want batteries — entity CRUD, async status, localStorage, forms, validation, undo — attached **at specific nodes at any depth**, with full recursive typing instead of hand-wiring. |
+| **Either**                                                                               | Some structure, modest battery needs — taste and team familiarity decide. Worth noting SignalTree stays comfortable here: the shape is the API, so it doesn't impose ceremony while your state is still small.                                                                          |
 
 The honest one-liner: **raw signals win for simple, component-local state; SignalTree wins once state is structured or wants batteries.** The dividing line isn't app size — it's whether you'd otherwise be writing the normalized-map, form-state, and persistence plumbing yourself.
 
@@ -27,7 +27,7 @@ As of Angular 20 the native primitives cover a lot:
 - `signal<T>()` — a writable reactive value.
 - `computed<T>()` — derived, memoized.
 - `effect()` — react to changes.
-- `linkedSignal<T>()` — a *writable* computed that resets when its source changes (stable since v19).
+- `linkedSignal<T>()` — a _writable_ computed that resets when its source changes (stable since v19).
 - `resource()` / `rxResource()` — async data loading with `value`/`status`/`error`/`reload` (developer-preview / stabilizing through the 19–20 line; check your version).
 
 For one value, a derived view, or a single async fetch, these are complete, zero-dependency, and will never be deprecated out from under you. **Use them directly for that** — SignalTree isn't trying to wrap a single `signal()`.
@@ -42,17 +42,17 @@ What native signals do **not** provide (and won't — they're primitives, not a 
 
 ## Axis-by-axis
 
-| Axis | Raw signals | SignalTree |
-|---|---|---|
-| Single value / derived / writable-derived | ✅ `signal`/`computed`/`linkedSignal` | ✅ leaves + `.derived()` (heavier for this) |
-| One async fetch | ✅ `resource`/`rxResource` | ✅ `asyncSource`/`asyncQuery` (comparable) |
+| Axis                                        | Raw signals                                       | SignalTree                                            |
+| ------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| Single value / derived / writable-derived   | ✅ `signal`/`computed`/`linkedSignal`             | ✅ leaves + `.derived()` (heavier for this)           |
+| One async fetch                             | ✅ `resource`/`rxResource`                        | ✅ `asyncSource`/`asyncQuery` (comparable)            |
 | **Deep nested state, signal at every path** | ⚠️ manual (signal-per-field or immutable replace) | ✅ automatic via the tree + partial deep-merge writes |
-| **Entity CRUD** | ❌ hand-rolled | ✅ `entityMap` |
-| **Forms / persistence / undo / DevTools** | ❌ none | ✅ markers + enhancers, **at any depth** |
-| Recursive deep typing of the whole state | ⚠️ you type each signal | ✅ inferred across the tree |
-| Dependency / bundle | ✅ zero (framework) | ⚠️ ~8.5 KB gz core (tree-shaken) |
-| Future-proofing | ✅ it *is* the framework | ⚠️ a dependency to maintain |
-| AI-codegen familiarity | ✅ agents know native signals cold | ⚠️ niche; relies on llms.txt priming |
+| **Entity CRUD**                             | ❌ hand-rolled                                    | ✅ `entityMap`                                        |
+| **Forms / persistence / undo / DevTools**   | ❌ none                                           | ✅ markers + enhancers, **at any depth**              |
+| Recursive deep typing of the whole state    | ⚠️ you type each signal                           | ✅ inferred across the tree                           |
+| Dependency / bundle                         | ✅ zero (framework)                               | ⚠️ ~8.5 KB gz core (tree-shaken)                      |
+| Future-proofing                             | ✅ it _is_ the framework                          | ⚠️ a dependency to maintain                           |
+| AI-codegen familiarity                      | ✅ agents know native signals cold                | ⚠️ niche; relies on llms.txt priming                  |
 
 ## Where raw signals win (use them, not SignalTree)
 
@@ -80,4 +80,4 @@ Outside that niche, raw signals are the better engineering choice — and Signal
 
 ---
 
-*See also: [SignalTree vs NgRx SignalStore](./ngrx-signalstore.md) for the other axis of the decision.*
+_See also: [SignalTree vs NgRx SignalStore](./ngrx-signalstore.md) for the other axis of the decision._

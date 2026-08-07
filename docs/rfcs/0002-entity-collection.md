@@ -9,7 +9,7 @@
 > **Folded into `entityMap` (11.4.0).** This RFC's `entityCollection` shipped as a
 > separate marker in 11.2.0. In 11.4.0 the marker was **removed** and its capability
 > folded into `entityMap` as an opt-in option: `entityMap<E, K>({ load, staleTime, swr,
-> tags, persist, … })` — passing `load` turns on the loader surface this RFC specifies;
+tags, persist, … })` — passing `load` turns on the loader surface this RFC specifies;
 > `entityMap<E, K>()` with no `load` is unchanged. See [RFC 0003 §0](0003-keyed-entity-collection.md#0-revision-note-113x0--1140-same-day-correction)
 > for the rationale and the scoped/parameterized follow-on. The design below is otherwise
 > historical — read `entityCollection<E, K>(config)` as `entityMap<E, K>(config)` with a
@@ -19,7 +19,7 @@
 
 ## 1. The question
 
-Every consumer of `entityMap` that loads its data from a server re-implements the *same* four things by hand:
+Every consumer of `entityMap` that loads its data from a server re-implements the _same_ four things by hand:
 
 1. an `entityMap` for the normalized rows,
 2. a `status()` for loading/loaded/error,
@@ -38,22 +38,22 @@ RFC 0001 sent AI composites (`toolCall`, `agentLoop`, `conversation`) to recipes
 
 - **Cache-aware collection loading is squarely a state-management concern** — freshness, in-flight state, and normalized identity are the substance of state management, not a domain model layered on top.
 - **The demand signal RFC 0001 asked for already exists.** RFC 0001 deferred streaming pending "a real demand signal." Here the signal is in hand: the audit's #1 finding, and boilerplate every server-backed `entityMap` consumer writes.
-- **It reduces net surface for codegen, not increases it.** The recipe alternative is ~40 lines an agent must assemble correctly every time (entityMap + status + loader + guard + `setAll` wiring). One marker with a declarative config is *fewer* tokens and *fewer* ways to get the guard wrong. This is the inverse of the AI-composite case, where the marker would have added concepts without removing boilerplate.
+- **It reduces net surface for codegen, not increases it.** The recipe alternative is ~40 lines an agent must assemble correctly every time (entityMap + status + loader + guard + `setAll` wiring). One marker with a declarative config is _fewer_ tokens and _fewer_ ways to get the guard wrong. This is the inverse of the AI-composite case, where the marker would have added concepts without removing boilerplate.
 
-**Conclusion: `entityCollection` clears the §2 bar. It ships as a core marker.** This is a deliberate, narrow exception to RFC 0001's marker-skepticism, justified by (a) it being a true state concern and (b) it *removing* more surface than it adds.
+**Conclusion: `entityCollection` clears the §2 bar. It ships as a core marker.** This is a deliberate, narrow exception to RFC 0001's marker-skepticism, justified by (a) it being a true state concern and (b) it _removing_ more surface than it adds.
 
 ## 3. What ships — and what explicitly does not
 
 Folding in the prioritized-gaps list (gaps 1–6):
 
-| Gap | Disposition | Where |
-|---|---|---|
-| **1. `entityCollection` loader** | **BUILD** | new marker (this RFC) |
-| **2. `staleTime` + SWR on async** | **BUILD, trimmed** | `staleTime` + `swr` boolean on `entityCollection`; **no** 3-way `cachePolicy` enum |
-| **3. single-flight dedup** | **FOLD IN** — not a standalone feature | the `.load()` guard below; primitives already coalesce via `switchMap`/teardown |
-| **4. invalidation + tags** | **BUILD, scoped** | `.invalidate()` + a tag registry (`invalidate(tag)`); **defer** general `tree.invalidate(path)` |
-| **5. unify persistence + hydrate-revalidate** | **SPLIT** — reject the merge, keep the SWR half | `persist:` option reusing `createIndexedDBAdapter`; **no** `stored`/`persistence` refactor |
-| **6. ETag + SSE cookbook** | **DOCS, last** | recipe after this lands |
+| Gap                                           | Disposition                                     | Where                                                                                           |
+| --------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **1. `entityCollection` loader**              | **BUILD**                                       | new marker (this RFC)                                                                           |
+| **2. `staleTime` + SWR on async**             | **BUILD, trimmed**                              | `staleTime` + `swr` boolean on `entityCollection`; **no** 3-way `cachePolicy` enum              |
+| **3. single-flight dedup**                    | **FOLD IN** — not a standalone feature          | the `.load()` guard below; primitives already coalesce via `switchMap`/teardown                 |
+| **4. invalidation + tags**                    | **BUILD, scoped**                               | `.invalidate()` + a tag registry (`invalidate(tag)`); **defer** general `tree.invalidate(path)` |
+| **5. unify persistence + hydrate-revalidate** | **SPLIT** — reject the merge, keep the SWR half | `persist:` option reusing `createIndexedDBAdapter`; **no** `stored`/`persistence` refactor      |
+| **6. ETag + SSE cookbook**                    | **DOCS, last**                                  | recipe after this lands                                                                         |
 
 **Explicitly out of scope (now and later):** a 3-way `cache-first | SWR | network-first` enum (TanStack-envy — two knobs cover the real need); merging the `stored` marker and `persistence` enhancer (deliberately different scopes, both work, breaking to merge); general path-based `tree.invalidate(path)` (more surface, less payoff than tag-based on loaded collections); HTTP/ETag/conditional-GET logic in core (browser + `HttpClient` own that); a normalized graph cache (`entityMap`'s by-id level is right; graph normalization is Apollo's niche).
 
@@ -64,28 +64,26 @@ Folding in the prioritized-gaps list (gaps 1–6):
 ```typescript
 // Shipped as entityMap({ load, ... }) in 11.4.0 (folded from the separate
 // entityCollection marker this RFC originally specified — see the note above):
-export function entityMap<E, K extends string | number = string>(
-  config?: EntityMapConfig<E, K>
-): EntityMapSignal<E, K>;
+export function entityMap<E, K extends string | number = string>(config?: EntityMapConfig<E, K>): EntityMapSignal<E, K>;
 
 export interface EntityMapConfig<E, K extends string | number = string> {
   // --- loading (opt-in: presence of `load` turns on the whole loader surface below) ---
-  load?: () => Observable<E[]> | Promise<E[]>;  // the fetch; omit for a plain client-only entityMap
-  selectId?: (entity: E) => K;                  // existing entityMap option, unchanged
-  lazy?: boolean;                               // default false: load on materialize; true: wait for .load()
+  load?: () => Observable<E[]> | Promise<E[]>; // the fetch; omit for a plain client-only entityMap
+  selectId?: (entity: E) => K; // existing entityMap option, unchanged
+  lazy?: boolean; // default false: load on materialize; true: wait for .load()
 
   // --- freshness (gap 2, trimmed) ---
-  staleTime?: number | string;                  // ms or '30m' / '5s' / '1h'; skip refetch while fresh. default 0 (always stale)
-  swr?: boolean;                                // default false: while revalidating, keep serving last value (no flip to Loading)
+  staleTime?: number | string; // ms or '30m' / '5s' / '1h'; skip refetch while fresh. default 0 (always stale)
+  swr?: boolean; // default false: while revalidating, keep serving last value (no flip to Loading)
 
   // --- identity/sorting passthrough to entityMap ---
   sortComparer?: (a: E, b: E) => number;
 
   // --- invalidation (gap 4, scoped) ---
-  tags?: string[];                              // register under these tags for invalidate(tag)
+  tags?: string[]; // register under these tags for invalidate(tag)
 
   // --- persistence (gap 5, SWR half only) ---
-  persist?: PersistOption;                      // see 4.4
+  persist?: PersistOption; // see 4.4
 }
 ```
 
@@ -96,23 +94,24 @@ export interface EntityMapConfig<E, K extends string | number = string> {
 The returned signal is the same `entityMap` signal (all its CRUD/query methods pass through unchanged), with a loader/status surface added when `load` is present in config:
 
 ```typescript
-export interface EntityMapSignal<E, K extends string | number = string>
-  extends EntitySignal<E, K> {              // full entityMap surface: all/byId/where/addOne/updateOne/...
+export interface EntityMapSignal<E, K extends string | number = string> extends EntitySignal<E, K> {
+  // full entityMap surface: all/byId/where/addOne/updateOne/...
 
   // --- loader control ---
-  load(): Promise<void>;                    // guarded: no-op if fresh OR in-flight (folds gap 3)
-  refresh(): Promise<void>;                 // force: ignores staleTime, still single-in-flight
-  invalidate(): void;                       // mark stale → next load()/read triggers refetch (gap 4)
+  load(): Promise<void>; // guarded: no-op if fresh OR in-flight (folds gap 3)
+  refresh(): Promise<void>; // force: ignores staleTime, still single-in-flight
+  invalidate(): void; // mark stale → next load()/read triggers refetch (gap 4)
 
   // --- status (mirrors LoadingState, no new enum) ---
   readonly loading: Signal<boolean>;
   readonly loaded: Signal<boolean>;
   readonly error: Signal<unknown | null>;
-  readonly lastLoadedAt: Signal<number | null>;   // drives staleTime; null until first success
+  readonly lastLoadedAt: Signal<number | null>; // drives staleTime; null until first success
 }
 ```
 
 Rationale for the method set:
+
 - **`load()` is the guarded path** — the one every subsystem calls. It checks `lastLoadedAt` against `staleTime` and checks the in-flight latch. This is where gap 3 lives: concurrent `load()` calls share the one in-flight promise (a stored `Promise` latch, not `shareReplay` — simpler and matches the signal-consumption model where all readers converge on the same `all` signal).
 - **`refresh()`** is the escape hatch (push told us it's stale, or user hit reload): bypass `staleTime`, still single-in-flight.
 - **`invalidate()`** flips freshness without fetching; the next `load()` (or a subscribed auto-refresh) does the work. This is the primitive realtime/SSE hands to.
@@ -132,21 +131,21 @@ Deferred: `tree.invalidate(path)`. Path-based invalidation across arbitrary node
 
 ```typescript
 type PersistOption =
-  | false                                   // default
+  | false // default
   | { adapter: StorageAdapter; key: string; hydrateThenRevalidate?: boolean };
 ```
 
-Reuses the existing [`StorageAdapter` + `createIndexedDBAdapter`](../../packages/core/src/enhancers/serialization/serialization.ts) — **no new persistence mechanism, no merge of `stored`/`persistence`.** When `hydrateThenRevalidate: true`, on materialize the collection seeds `all` from the persisted snapshot *instantly* (offline-first), marks itself stale, and revalidates via `load()` in the background — the SWR/offline story from gap 5, delivered through this marker rather than a persistence rewrite.
+Reuses the existing [`StorageAdapter` + `createIndexedDBAdapter`](../../packages/core/src/enhancers/serialization/serialization.ts) — **no new persistence mechanism, no merge of `stored`/`persistence`.** When `hydrateThenRevalidate: true`, on materialize the collection seeds `all` from the persisted snapshot _instantly_ (offline-first), marks itself stale, and revalidates via `load()` in the background — the SWR/offline story from gap 5, delivered through this marker rather than a persistence rewrite.
 
 ## 5. Interaction with existing primitives
 
-- **Does not replace `entityMap`** — `entityCollection` *is* an `entityMap` with a loader bolted on. Client-only collections keep using bare `entityMap`. Zero migration.
+- **Does not replace `entityMap`** — `entityCollection` _is_ an `entityMap` with a loader bolted on. Client-only collections keep using bare `entityMap`. Zero migration.
 - **Does not replace `asyncSource`/`asyncQuery`** — those stay the primitives for non-collection async (a single object, an input-driven query). `entityCollection` is the collection-shaped composition on top.
 - **No new status enum** — reuses `LoadingState` semantics via mirrored signals; agents already know the four states.
 
 ## 6. Codegen / discoverability impact
 
-Net **positive** for the audit's #3 priority. Before: an agent must know to assemble entityMap + status + guard + `setAll` and *remember the freshness guard* — the step most often skipped, producing exactly the redundant-fetch bug. After: one marker, declarative config, the guard baked in. Fewer tokens, fewer failure modes. Update llms.txt / SKILL.md with the one-liner form once shipped.
+Net **positive** for the audit's #3 priority. Before: an agent must know to assemble entityMap + status + guard + `setAll` and _remember the freshness guard_ — the step most often skipped, producing exactly the redundant-fetch bug. After: one marker, declarative config, the guard baked in. Fewer tokens, fewer failure modes. Update llms.txt / SKILL.md with the one-liner form once shipped.
 
 ## 7. Risks / open questions
 

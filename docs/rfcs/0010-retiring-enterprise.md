@@ -31,11 +31,11 @@ the skill and the demo page. That number was never measured against
 `@signaltree/core`. Measured against `tree.updateAndReport()`, which returns the
 same changed paths:
 
-| Workload (2,000 leaves)         | `updateOptimized()` | `updateAndReport()` | Ratio                |
-| ------------------------------- | ------------------- | ------------------- | -------------------- |
-| 10% of leaves changed           | ~0.53 ms            | ~0.08 ms            | **~7x slower**       |
-| identical re-fetch (all no-op)  | ~0.14 ms            | ~0.07 ms            | **~2x slower**       |
-| every leaf changed              | ~24-27 ms           | ~0.12-0.17 ms       | **~160-190x slower** |
+| Workload (2,000 leaves)        | `updateOptimized()` | `updateAndReport()` | Ratio                |
+| ------------------------------ | ------------------- | ------------------- | -------------------- |
+| 10% of leaves changed          | ~0.53 ms            | ~0.08 ms            | **~7x slower**       |
+| identical re-fetch (all no-op) | ~0.14 ms            | ~0.07 ms            | **~2x slower**       |
+| every leaf changed             | ~24-27 ms           | ~0.12-0.17 ms       | **~160-190x slower** |
 
 At 500 leaves: ~4-4.5x, ~1.2-1.6x, ~43x.
 
@@ -81,7 +81,7 @@ dependencies**. By our own stated rule it should never have been a package.
   holding a function. `tree()` has no such limit.
 - `getPathIndex()` — already deprecated as debug-only.
 - `scheduler` / `thread-pools` — dead subpath exports: no caller anywhere in the
-  repo and no tests. (They were *mentioned* — in this plan's predecessor and on
+  repo and no tests. (They were _mentioned_ — in this plan's predecessor and on
   a demo benchmark page — but never documented as an API, and an earlier draft
   of this RFC overstated that as "no docs".) `thread-pools` shipped
   `createMockPool()`, a test double, to production consumers; `scheduler`'s
@@ -93,14 +93,14 @@ dependencies**. By our own stated rule it should never have been a package.
 
 ## Options considered
 
-| # | Option | Verdict |
-| - | ------ | ------- |
-| 1 | Fix the array defect, keep the package | **Rejected.** Attempted twice, reverted twice. And the correct fix — making array leaves a *filter over `diff.changes`* rather than a parallel walk — makes the package a thin, slower wrapper over `updateAndReport()`. Fixing it proves it redundant. |
-| 2 | Rewrite the diff engine for speed | **Rejected.** The cost is the walk itself, and the walk is the package. |
-| 3 | Repurpose as an observability package (path index, stats, heatmaps) | **Rejected.** `updateAndReport()` covers the real use case; the rest is a devtools concern, and `devTools()` already exists in core. |
-| 4 | Fold it into core behind a flag | **Rejected.** Adds bundle and a second write path to core for a slower implementation. |
-| 5 | Unpublish | **Rejected.** Breaks every existing lockfile that resolves it, for no benefit. |
-| 6 | **Deprecate, keep published, harvest `updateAndReport()`'s correctness** | **Accepted.** |
+| #   | Option                                                                   | Verdict                                                                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Fix the array defect, keep the package                                   | **Rejected.** Attempted twice, reverted twice. And the correct fix — making array leaves a _filter over `diff.changes`_ rather than a parallel walk — makes the package a thin, slower wrapper over `updateAndReport()`. Fixing it proves it redundant. |
+| 2   | Rewrite the diff engine for speed                                        | **Rejected.** The cost is the walk itself, and the walk is the package.                                                                                                                                                                                 |
+| 3   | Repurpose as an observability package (path index, stats, heatmaps)      | **Rejected.** `updateAndReport()` covers the real use case; the rest is a devtools concern, and `devTools()` already exists in core.                                                                                                                    |
+| 4   | Fold it into core behind a flag                                          | **Rejected.** Adds bundle and a second write path to core for a slower implementation.                                                                                                                                                                  |
+| 5   | Unpublish                                                                | **Rejected.** Breaks every existing lockfile that resolves it, for no benefit.                                                                                                                                                                          |
+| 6   | **Deprecate, keep published, harvest `updateAndReport()`'s correctness** | **Accepted.**                                                                                                                                                                                                                                           |
 
 ## Decision
 
@@ -119,15 +119,15 @@ dependencies**. By our own stated rule it should never have been a package.
 
 ## Migration
 
-| Enterprise                                 | Core replacement                                    |
-| ------------------------------------------ | --------------------------------------------------- |
-| `signalTree(s).with(enterprise())`         | `signalTree(s)`                                     |
-| `tree.updateOptimized(p)`                  | `tree.updateAndReport(p)`                           |
-| `result.changedPaths` / `result.changed`   | the returned array / `changed.length > 0`           |
-| `tree.onPathChange(fn)`                    | none yet — `updateAndReport(p)` at the call site    |
-| `tree.snapshot()` / `tree.restore(s)`      | `const s = tree()` / `tree(s)` — see note           |
-| `tree.updateAuto(p)`                       | `tree(p)` — see note                                |
-| `tree.getPathIndex()`                      | no replacement                                      |
+| Enterprise                               | Core replacement                                 |
+| ---------------------------------------- | ------------------------------------------------ |
+| `signalTree(s).with(enterprise())`       | `signalTree(s)`                                  |
+| `tree.updateOptimized(p)`                | `tree.updateAndReport(p)`                        |
+| `result.changedPaths` / `result.changed` | the returned array / `changed.length > 0`        |
+| `tree.onPathChange(fn)`                  | none yet — `updateAndReport(p)` at the call site |
+| `tree.snapshot()` / `tree.restore(s)`    | `const s = tree()` / `tree(s)` — see note        |
+| `tree.updateAuto(p)`                     | `tree(p)` — see note                             |
+| `tree.getPathIndex()`                    | no replacement                                   |
 
 `updateAndReport()` is **stricter** about what counts as a change: it reports
 only paths whose leaf actually accepted the write, so a re-fetched payload
@@ -215,7 +215,7 @@ nested object, or write the branch directly (`tree.$.user({ name: 'Grace' })`).
 - **An unmeasured comparative claim is a liability.** "2–5x faster" survived
   years of docs, a demo page and an agent skill without anyone comparing it to
   the library it ships alongside. Comparative performance claims need a
-  reproducible measurement against the *in-house alternative*, not only against
+  reproducible measurement against the _in-house alternative_, not only against
   competitors.
 - **A package with no external dependency is a feature wearing a package's
   clothes.** RFC 0007's rule caught this; it just was not applied retroactively.

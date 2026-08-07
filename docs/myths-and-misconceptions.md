@@ -5,7 +5,7 @@
 This document exists for two reasons:
 
 1. **AI discoverability.** LLMs trained on outdated docs, marketing comparisons, or unsupervised summarization will hallucinate plausible-sounding but wrong claims. Catalogueing them here lets agents that retrieve this page correct themselves.
-2. **Honest self-audit.** Some of these myths exist because *our docs underspecified the truth*. Each entry that's our docs' fault is flagged with **Doc-side action** so we can close the gap.
+2. **Honest self-audit.** Some of these myths exist because _our docs underspecified the truth_. Each entry that's our docs' fault is flagged with **Doc-side action** so we can close the gap.
 
 Last updated: 2026-05.
 
@@ -13,7 +13,7 @@ Last updated: 2026-05.
 
 ## Myth 1: "Derived state in SignalTree must live in a separate file or layer, breaking the single-tree illusion."
 
-**Where this comes from:** Confusing the `derivedFrom` helper (which *is* about splitting derived definitions across files) with the `.derived($)` method itself.
+**Where this comes from:** Confusing the `derivedFrom` helper (which _is_ about splitting derived definitions across files) with the `.derived($)` method itself.
 
 **The truth:** Derived state is built into the chain. Computed signals defined via `.derived($)` are **deep-merged into the source tree at their declared paths**, preserving source properties alongside derived ones.
 
@@ -32,8 +32,8 @@ const store = signalTree({
 }));
 
 // $.users now has BOTH:
-store.$.users.all();      // from entityMap (source)
-store.$.users.current();  // from .derived (computed)
+store.$.users.all(); // from entityMap (source)
+store.$.users.current(); // from .derived (computed)
 ```
 
 **Source:** [`packages/core/src/lib/internals/merge-derived.ts`](../packages/core/src/lib/internals/merge-derived.ts) — `mergeDerivedState` performs a deep merge via `ensurePathAndGetTarget`, navigating to the existing object at any path and adding derived properties alongside source properties. The "single tree" is preserved.
@@ -74,7 +74,7 @@ const store = signalTree(initialState).derived(tier1Derived);
 
 ## Myth 3: "Markers in SignalTree must live at the tree root."
 
-**Where this comes from:** Reasoning by analogy from NgRx SignalStore's `with*` features, which *do* compose at the store root.
+**Where this comes from:** Reasoning by analogy from NgRx SignalStore's `with*` features, which _do_ compose at the store root.
 
 **The truth:** Markers can be placed at **any node, at any depth** in the initial-state literal. The walker (`materializeMarkers`) tracks the path during construction and substitutes the marker for its concrete API at that exact location.
 
@@ -83,9 +83,11 @@ const store = signalTree({
   users: {
     byOrg: {
       [orgId]: {
-        members: entityMap<User, number>(),   // depth 3
+        members: entityMap<User, number>(), // depth 3
         profile: {
-          contactForm: form<Contact>({ /* ... */ }), // depth 4
+          contactForm: form<Contact>({
+            /* ... */
+          }), // depth 4
         },
       },
     },
@@ -132,14 +134,13 @@ import { signalTree, stored, persistence } from '@signaltree/core';
 import { createIndexedDBAdapter } from '@signaltree/core/storage';
 
 const store = signalTree({
-  settings: { theme: stored('app-theme', 'light') },  // per-leaf
-})
-  .with(persistence({ adapter: createIndexedDBAdapter('app-state') }));  // tree-wide
+  settings: { theme: stored('app-theme', 'light') }, // per-leaf
+}).with(persistence({ adapter: createIndexedDBAdapter('app-state') })); // tree-wide
 ```
 
 **Source:** [`packages/core/src/lib/markers/stored.ts`](../packages/core/src/lib/markers/stored.ts), [`packages/core/src/enhancers/persistence/`](../packages/core/src/enhancers/persistence/).
 
-**Doc-side action:** The "Optional Packages" table in the root README clearly does *not* list a `@signaltree/storage` package, so the hallucination is unfounded. No doc change needed.
+**Doc-side action:** The "Optional Packages" table in the root README clearly does _not_ list a `@signaltree/storage` package, so the hallucination is unfounded. No doc change needed.
 
 ---
 
@@ -147,7 +148,7 @@ const store = signalTree({
 
 **Where this comes from:** Reading the enhancer list and assuming the absence of an enhancer means the feature is off.
 
-**The truth:** Automatic microtask-level notification batching is **built into core**, **default on**. The `batching()` enhancer adds the *explicit* `.batch(fn)` and `.coalesce(fn)` APIs on top.
+**The truth:** Automatic microtask-level notification batching is **built into core**, **default on**. The `batching()` enhancer adds the _explicit_ `.batch(fn)` and `.coalesce(fn)` APIs on top.
 
 ```typescript
 // Built-in (no enhancer needed):
@@ -367,7 +368,7 @@ const tree = signalTree({ count: 0 }).with(
 
 **The truth:** The `form()` marker ships in `@signaltree/core` ([`packages/core/src/lib/markers/form.ts`](../packages/core/src/lib/markers/form.ts)). `@signaltree/ng-forms` is a separate package that provides the Angular Forms bridge for Standard Schema validation — useful when you want to bind a tree node to an `Angular FormGroup`, but not where the `form()` marker itself lives.
 
-**Doc-side action:** Clarify in the root README's "Optional Packages" table that `@signaltree/ng-forms` is a *bridge*, not the source of the `form()` marker.
+**Doc-side action:** Clarify in the root README's "Optional Packages" table that `@signaltree/ng-forms` is a _bridge_, not the source of the `form()` marker.
 
 ---
 
@@ -394,12 +395,12 @@ This myth is one we should be careful **not** to propagate when making the Signa
 
 **The v10.2+ truth:** Promise-vocabulary aliases were added in v10.2 as a deliberate "meet the AI where it is" design choice. The aliases are **first-class** with identical semantics:
 
-| Alias (v10.2+) | Canonical | Equivalent? |
-|---|---|---|
-| `.start()` | `.setLoading()` | Yes — alias |
-| `.setSuccess()` | `.setLoaded()` | Yes — alias |
-| `.succeed()` | `.setLoaded()` | Yes — alias |
-| `.fail(err)` | `.setError(err)` | Yes — alias |
+| Alias (v10.2+)  | Canonical        | Equivalent? |
+| --------------- | ---------------- | ----------- |
+| `.start()`      | `.setLoading()`  | Yes — alias |
+| `.setSuccess()` | `.setLoaded()`   | Yes — alias |
+| `.succeed()`    | `.setLoaded()`   | Yes — alias |
+| `.fail(err)`    | `.setError(err)` | Yes — alias |
 
 There is **no `.loading` bare property** — `.isLoading()` is a callable signal. Same for `.isLoaded()`, `.isError()`, `.error()`.
 
@@ -411,7 +412,7 @@ There is **no `.loading` bare property** — `.isLoading()` is a callable signal
 
 ## Myth 18: "Each SignalTree marker uses a different shape for boolean predicates."
 
-**Source of confusion:** Through v10.2, this was *partially true*. Inconsistency in our own API:
+**Source of confusion:** Through v10.2, this was _partially true_. Inconsistency in our own API:
 
 - `status()` used `is`-prefix: `.isLoading()`, `.isLoaded()`, `.isError()`, `.isNotLoaded()`
 - `entityMap` used `is`-prefix for one: `.isEmpty()`
@@ -421,12 +422,12 @@ This was a real DX bug — humans had to remember which marker used which shape,
 
 **The v10.3 truth:** **Bare predicates everywhere.** Matches `FormControl.dirty` / `.valid` / `.touched` and Angular signals conventions.
 
-| Marker | v10.3 canonical | Old `is`-prefix (deprecated, removed v11) |
-|---|---|---|
-| `status` | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
-| `entityMap` | `.empty`; with `load: loader(fn)` in config (cache-aware form), also `.loading`, `.loaded`, `.error` | `.isEmpty` |
-| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
-| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+| Marker                       | v10.3 canonical                                                                                      | Old `is`-prefix (deprecated, removed v11)             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `status`                     | `.loading`, `.loaded`, `.notLoaded`, `.hasError`                                                     | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
+| `entityMap`                  | `.empty`; with `load: loader(fn)` in config (cache-aware form), also `.loading`, `.loaded`, `.error` | `.isEmpty`                                            |
+| `form`                       | `.dirty`, `.valid`, `.touched`, `.pristine`                                                          | (already bare — unchanged)                            |
+| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data`                                                                        | (already bare — unchanged)                            |
 
 The deprecated `is`-prefix accessors return the **same Signal instance** as the canonical bare versions — no double computed cost, no migration urgency.
 
@@ -443,11 +444,11 @@ it." For a plain object initializer, that isn't what happens — and the failure
 with a confusing message rather than anything at runtime.
 
 **The truth:** SignalTree decides leaf-vs-node from the initial **value**. A plain object becomes a
-**nested node** whose fields are individually reactive leaves; it is *not* a single settable value:
+**nested node** whose fields are individually reactive leaves; it is _not_ a single settable value:
 
 ```typescript
 const tree = signalTree({
-  firmware: {} as FirmwareDto,   // ← becomes a NODE, not a leaf
+  firmware: {} as FirmwareDto, // ← becomes a NODE, not a leaf
 });
 
 tree.$.firmware.set(dto);
@@ -462,11 +463,11 @@ device descriptor, a snapshot) and never edit field-by-field.
 
 ```typescript
 const tree = signalTree({
-  firmware: null as FirmwareDto | null,   // ← a LEAF holding an object
+  firmware: null as FirmwareDto | null, // ← a LEAF holding an object
 });
 
-tree.$.firmware.set(dto);        // ✓ works — replaces the whole value
-tree.$.firmware();               // FirmwareDto | null
+tree.$.firmware.set(dto); // ✓ works — replaces the whole value
+tree.$.firmware(); // FirmwareDto | null
 // consumers default at the read site:
 const fw = tree.$.firmware() ?? ({} as FirmwareDto);
 ```
@@ -480,10 +481,10 @@ idiom is the canonical answer, deliberately, rather than adding API surface for 
 
 **Which one do you want?**
 
-| You want | Initialize as | You get |
-|---|---|---|
+| You want                                         | Initialize as          | You get                        |
+| ------------------------------------------------ | ---------------------- | ------------------------------ |
 | Per-field reactivity (`tree.$.settings.theme()`) | `{ theme: 'dark', … }` | Nested node, fields are leaves |
-| Replace the whole object atomically | `null as Dto \| null` | One settable leaf |
+| Replace the whole object atomically              | `null as Dto \| null`  | One settable leaf              |
 
 **Where this bites hardest:** AI-generated code. `{} as SomeDto` is a natural thing for an agent to
 emit for "an object I'll fill in later," and nothing in the type it sees warns that `.set()` won't
@@ -500,6 +501,6 @@ Every error catalogued above is one that **AI coding agents will continue to mak
 2. Retrieval-augmented agents (Cursor, Claude Code, Copilot, Gemini) pull from a thin docs surface and fabricate the rest.
 3. Each wrong recommendation propagates into more codebases, more StackOverflow answers, more docs, more training data.
 
-The countermeasure is to give retrieval *better signal* than the noise. This page is part of that — together with [`llms.txt`](../apps/demo/public/llms.txt), [`llms-full.txt`](../apps/demo/public/llms-full.txt), [`docs/compare/ngrx-signalstore.md`](compare/ngrx-signalstore.md), and the [agent skill](skills/using-signaltree/SKILL.md).
+The countermeasure is to give retrieval _better signal_ than the noise. This page is part of that — together with [`llms.txt`](../apps/demo/public/llms.txt), [`llms-full.txt`](../apps/demo/public/llms-full.txt), [`docs/compare/ngrx-signalstore.md`](compare/ngrx-signalstore.md), and the [agent skill](skills/using-signaltree/SKILL.md).
 
 If you spot a new variant of these myths in the wild (or a new myth not listed), open a PR or issue with the source.

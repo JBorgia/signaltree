@@ -16,6 +16,7 @@ npm install @signaltree/core @signaltree/ng-forms
 Peer: `@angular/core ^20`, `@angular/forms ^20`, `rxjs ^7`.
 
 Two patterns — choose one:
+
 1. **Pattern B: `form()` marker + `formBridge()`** — recommended for new code. Form is one slice of a larger tree.
 2. **Pattern A: `createFormTree()`** — when entire component is a form and you want all helpers on one object. Emits dev-only deprecation note; fully functional.
 
@@ -28,7 +29,10 @@ import { createFormTree, ngFormValidators } from '@signaltree/ng-forms';
 const { required, email, minLength, pattern } = ngFormValidators;
 
 interface ProfileForm extends Record<string, unknown> {
-  name: string; email: string; role: string; company: { name: string; size: string }
+  name: string;
+  email: string;
+  role: string;
+  company: { name: string; size: string };
 }
 
 class ProfileComponent {
@@ -39,7 +43,7 @@ class ProfileComponent {
     {
       persistKey: 'profile-form',
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      validationBatchMs: 120,            // coalesce validation results (80–150ms for many async validators)
+      validationBatchMs: 120, // coalesce validation results (80–150ms for many async validators)
       fieldConfigs: {
         name: { validators: [required(), minLength(3)] },
         email: {
@@ -49,16 +53,18 @@ class ProfileComponent {
         },
         'company.name': { validators: [pattern(/^[A-Za-z0-9 .,'&-]{2,}$/)] },
       },
-      conditionals: [
-        { when: (v) => v.role === 'manager', fields: ['company.name'] },
-      ],
+      conditionals: [{ when: (v) => v.role === 'manager', fields: ['company.name'] }],
     }
   );
 
   async save() {
     try {
-      await this.profile.submit(async (values) => { /* typed ProfileForm */ });
-    } catch { /* FormValidationError thrown on validation failure */ }
+      await this.profile.submit(async (values) => {
+        /* typed ProfileForm */
+      });
+    } catch {
+      /* FormValidationError thrown on validation failure */
+    }
   }
 }
 ```
@@ -94,7 +100,10 @@ Pattern C — wizard via `form()` marker:
 import { form, signalTree } from '@signaltree/core';
 
 interface SignupForm extends Record<string, unknown> {
-  email: string; password: string; firstName: string; lastName: string
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
 }
 
 const tree = signalTree({
@@ -116,7 +125,11 @@ Pattern D — undo/redo, via core `history()` (v13+; recommended, works with bot
 ```ts
 import { signalTree, form, history } from '@signaltree/core';
 
-interface ContactForm extends Record<string, unknown> { name: string; email: string; ssn: string }
+interface ContactForm extends Record<string, unknown> {
+  name: string;
+  email: string;
+  ssn: string;
+}
 
 const tree = signalTree({
   contact: form<ContactForm>({
@@ -142,12 +155,16 @@ import { form, required } from '@angular/forms/signals';
 import { trackHistory } from '@signaltree/core';
 
 const model = signal({ title: '', priority: 'low', secret: '' });
-const f = form(model, (p) => { required(p.title); });
+const f = form(model, (p) => {
+  required(p.title);
+});
 // `exclude` keeps a field out of the undo stack — sensitive values, or noisy
 // fields you don't want to step back through. Keys are checked against the model.
 const hist = trackHistory(model, { capacity: 25, exclude: ['secret'], injector: inject(Injector) });
 
-hist.undo(); hist.redo(); hist.canUndo(); // FieldTree reflects undo/redo
+hist.undo();
+hist.redo();
+hist.canUndo(); // FieldTree reflects undo/redo
 ```
 
 Pattern E — pass an Angular Signal Forms schema + FormOptions to a marker-bridged form (v13.1+). `signalForm(marker, options)` takes `schema` as a `SchemaOrSchemaFn<T>` (inline `SchemaFn` OR a cached `schema()` object) for rules a marker's `validators` can't hold (`disabled`/`hidden`/`applyEach`/cross-field `validate`/`validateAsync`), and forwards `name`/`submission`/`experimentalWebMcpTool` verbatim to Angular's `form(model, schema, options)`:
@@ -163,7 +180,9 @@ type Profile = { email: string; optIn: boolean; [k: string]: unknown };
 declare const injector: Injector;
 declare const tree: ReturnType<typeof signalTree<{ profile: ReturnType<typeof form<Profile>> }>>;
 
-const s = schema<Profile>((p) => { disabled(p.email, { when: (c) => !c.valueOf(p.optIn) }); });
+const s = schema<Profile>((p) => {
+  disabled(p.email, { when: (c) => !c.valueOf(p.optIn) });
+});
 
 // WebMCP: expose the form as a tool to AI agents (Angular 22+; add
 // provideExperimentalWebMcpForms() to providers).
@@ -182,7 +201,10 @@ Legacy Pattern D — `withFormHistory` on `createFormTree` (`@deprecated` since 
 import { createFormTree } from '@signaltree/ng-forms';
 import { withFormHistory } from '@signaltree/ng-forms';
 
-interface ContactForm extends Record<string, unknown> { name: string; email: string }
+interface ContactForm extends Record<string, unknown> {
+  name: string;
+  email: string;
+}
 const formTree = createFormTree<ContactForm>({ name: '', email: '' });
 
 const formWithHistory = withFormHistory(formTree, { capacity: 20 });
@@ -192,6 +214,7 @@ formWithHistory.history().past.length;
 ```
 
 Key contracts:
+
 - Conditional fields: `when` predicate `false` → Angular control disabled + excluded from validation. Persisted state respects condition on hydration.
 - Persistence: `persistKey` + `storage` (any `Storage`-shaped object). `persistDebounceMs` defaults to 100ms. Pass `undefined` for `storage` in SSR.
 - `validationBatchMs: 0` = instant feedback; non-zero = coalesce for async validators.
@@ -203,6 +226,7 @@ Key contracts:
 - `required()` treats `false`, `0`, `''` as missing. For boolean-must-be-true (accept terms), write a custom `FieldValidator`.
 
 Gotchas:
+
 - `FormValidationError` thrown from `submit()` — always wrap in `try`/`catch`.
 - `dirty`/`touched` from signal tree = mirrored value; write via Angular control methods only.
 - Arrays: use mutation methods, not `.set([...])`.

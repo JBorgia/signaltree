@@ -3,7 +3,7 @@
 Three capabilities get asked for often enough that they look like missing features:
 a standard enhancer policy, a reusable entity-CRUD Ops base, and a selection
 read-model. All three are **compositions of primitives that already ship**, and
-each is deliberately *not* in `@signaltree/core`.
+each is deliberately _not_ in `@signaltree/core`.
 
 They live here because a recipe is the better answer when the composition is
 short and the opinions are yours: it costs no API surface, it can't be
@@ -34,10 +34,7 @@ export interface StandardEnhancerOptions {
   extra?: Array<Enhancer<unknown>>;
 }
 
-export function withStandardEnhancers<T extends object>(
-  tree: SignalTreeBuilder<T, TreeNode<T>>,
-  { treeName, extra = [] }: StandardEnhancerOptions,
-) {
+export function withStandardEnhancers<T extends object>(tree: SignalTreeBuilder<T, TreeNode<T>>, { treeName, extra = [] }: StandardEnhancerOptions) {
   const base = tree.with(batching()).with(devTools({ treeName }));
   return extra.reduce((acc, enhancer) => acc.with(enhancer), base);
 }
@@ -67,7 +64,7 @@ is wanted, so a production entry point never references it:
 // dev entry point
 withStandardEnhancers(signalTree(state), {
   treeName: 'MyApp Dev',
-  extra: [timeTravel()],           // import lives in the dev-only file
+  extra: [timeTravel()], // import lives in the dev-only file
 });
 
 // production entry point — no timeTravel import anywhere in this graph
@@ -96,13 +93,13 @@ REST endpoint, with optimistic writes and rollback.
 
 Most of this already ships. Before writing any of it, note what you get for free:
 
-| Concern | Already provided by |
-|---|---|
-| Normalized collection, O(1) `byId` | `entityMap()` |
-| Fetch + caching + `staleTime` + single-flight + SWR | `entityMap({ load: loader(fn) })` |
-| Load status | the loader surface: `loading()` / `loaded()` / `error()` |
-| Save/submit lifecycle | `status<Err>()` + its predicates |
-| Batch writes in one notification | `upsertMany` / `updateMany` / `removeMany` |
+| Concern                                             | Already provided by                                      |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| Normalized collection, O(1) `byId`                  | `entityMap()`                                            |
+| Fetch + caching + `staleTime` + single-flight + SWR | `entityMap({ load: loader(fn) })`                        |
+| Load status                                         | the loader surface: `loading()` / `loaded()` / `error()` |
+| Save/submit lifecycle                               | `status<Err>()` + its predicates                         |
+| Batch writes in one notification                    | `upsertMany` / `updateMany` / `removeMany`               |
 
 What is **not** provided is the opinionated glue: your REST verb/URL conventions,
 your error model, and the optimistic-rollback policy. That glue is what the
@@ -113,16 +110,13 @@ recipe is.
 ```typescript
 import { entityMap, loader, status } from '@signaltree/core';
 
-export function entityCrudState<T extends { id: string }>(
-  api: ApiService,
-  config: { name: string; endpoint: string; staleTime?: string },
-) {
+export function entityCrudState<T extends { id: string }>(api: ApiService, config: { name: string; endpoint: string; staleTime?: string }) {
   return {
     entities: entityMap<T, string>({
       selectId: (e) => e.id,
       load: loader(() => api.get$<T[]>(config.endpoint), {
         staleTime: config.staleTime ?? '5m',
-        swr: true,     // serve cached rows while revalidating
+        swr: true, // serve cached rows while revalidating
         lazy: true,
       }),
     }),
@@ -148,9 +142,15 @@ export abstract class EntityCrudOps<T extends { id: string }> {
   private readonly api = inject(ApiService);
 
   // Reads proxy the slice — no copies, no sync.
-  get entities() { return this.slice.entities.all; }
-  get isSaving() { return this.slice.save.loading; }
-  get saveError() { return this.slice.save.error; }
+  get entities() {
+    return this.slice.entities.all;
+  }
+  get isSaving() {
+    return this.slice.save.loading;
+  }
+  get saveError() {
+    return this.slice.save.error;
+  }
 
   update$(id: string, changes: Partial<T>): Observable<T | AppError> {
     const { entities, save } = this.slice;
@@ -161,13 +161,16 @@ export abstract class EntityCrudOps<T extends { id: string }> {
 
     return this.api.patch$<Partial<T>, T>(`${this.config.endpoint}/${id}`, changes).pipe(
       take(1),
-      tap((saved) => { entities.upsertOne(saved); save.setLoaded(); }),
+      tap((saved) => {
+        entities.upsertOne(saved);
+        save.setLoaded();
+      }),
       catchError((e) => {
-        if (previous) entities.upsertOne(previous);   // restore the snapshot
+        if (previous) entities.upsertOne(previous); // restore the snapshot
         const error = toAppError(e, `${this.config.name}.update`);
         save.setError(error);
         return of(error);
-      }),
+      })
     );
   }
 }
@@ -185,16 +188,16 @@ export class PlantOps extends EntityCrudOps<Plant> {
 
 ### Two things to get right
 
-**Snapshot before you mutate.** Rollback needs the *previous value*, so capture
+**Snapshot before you mutate.** Rollback needs the _previous value_, so capture
 it first. `updateAndReport()` is not the tool here — it returns the changed
 **paths** (for partial-payload sync, audit trails, targeted persistence), not the
 prior values, so it cannot restore state on its own.
 
 **Roll back the whole of what you touched.** If an operation clears selection,
-snapshot the selection too and restore *that*, not the ids you were acting on:
+snapshot the selection too and restore _that_, not the ids you were acting on:
 
 ```typescript
-const previousSelection = selection.selectedIds();   // not `[id]`
+const previousSelection = selection.selectedIds(); // not `[id]`
 ```
 
 Restoring `[id]` looks right and passes a single-selection test, then silently
@@ -222,16 +225,14 @@ same branded-helper rule, not take a raw `load:` function.
 `computed`s, so they belong in `.derived()`:
 
 ```typescript
-export function selectionDerived<T extends { id: string }>(slice: {
-  entities: Pick<EntitySignal<T, string>, 'byId'>;
-  selection: { selectedIds: Signal<string[]> };
-}) {
+export function selectionDerived<T extends { id: string }>(slice: { entities: Pick<EntitySignal<T, string>, 'byId'>; selection: { selectedIds: Signal<string[]> } }) {
   return {
     selection: {
       selectedEntities: computed(() =>
-        slice.selection.selectedIds()
+        slice.selection
+          .selectedIds()
           .map((id) => slice.entities.byId(id)?.() ?? null)
-          .filter((x): x is T => x != null),
+          .filter((x): x is T => x != null)
       ),
       isMultiEdit: computed(() => slice.selection.selectedIds().length > 1),
       hasSelections: computed(() => slice.selection.selectedIds().length > 0),

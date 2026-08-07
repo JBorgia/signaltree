@@ -34,7 +34,7 @@ compatibility with):
   value comparison, so `{ regionUrl }` object literals compare by value) instead
   of routing through a caller-supplied queryKey-array function.
 - **`currentKey: Signal<string | null>`** → **`params: Signal<P | undefined>`**.
-  The signal now exposes the *typed* scope object it loaded, not a serialized
+  The signal now exposes the _typed_ scope object it loaded, not a serialized
   string — no `JSON.stringify` round-trip for callers who want to read it back.
 - **`clearOnKeyChange`** → **`clearOnParamsChange`** (same semantics, renamed
   to track the option it now pairs with).
@@ -63,7 +63,7 @@ global key. SignalTree shipped the two halves separately and neither is the
 whole thing:
 
 - **`asyncQuery`** keys by input (`input` signal + `equal`, re-runs on change) — but it
-  is a *single document*: no normalized `entityMap` surface (`byId`/`where`/`upsert`),
+  is a _single document_: no normalized `entityMap` surface (`byId`/`where`/`upsert`),
   and **no `staleTime` cache** (toggling input A→B→A refetches A every time).
 - **`entityMap`'s loader** has the normalized store + `staleTime` + dedup + tags + persist
   — but **one global key**.
@@ -72,7 +72,7 @@ The missing primitive is their **intersection**: a normalized collection whose f
 is keyed by a caller-supplied scope. Without it, every consumer with scoped lists
 hand-rolls the same guard — a per-collection key field: compute a scope key, skip the
 fetch when the key is unchanged AND the collection is loaded, store the key on success,
-expose a `force` bypass, and (the subtle bug) clear the list *only* on a real key change.
+expose a `force` bypass, and (the subtle bug) clear the list _only_ on a real key change.
 See the before/after in §7.
 
 ## 2. What ships
@@ -99,7 +99,7 @@ New/changed surface (`P` defaults to `void` — the existing parameterless form 
 byte-for-byte compatible):
 
 - Config: `load: (params: P) => …` (a loader declaring a parameter makes the collection
-  *scoped*), `equal?: (a: P, b: P) => boolean` (default: structural value comparison),
+  _scoped_), `equal?: (a: P, b: P) => boolean` (default: structural value comparison),
   `clearOnParamsChange?: boolean`.
 - Signal: `load(params: P)`, `refresh(params?: P)`, and a new
   `params: Signal<P | undefined>` (the typed scope of the currently-loaded data;
@@ -114,7 +114,7 @@ from a separate config flag — one loader-shape decision drives both typing and
 behavior.
 
 **NG0600 safety.** Because SignalTree finalizes markers lazily on first `.$` access —
-frequently a template read *during* Angular's render — materializing a cache-aware
+frequently a template read _during_ Angular's render — materializing a cache-aware
 `entityMap` performs no synchronous signal writes: a global (non-lazy) collection's
 initial auto-load and offline-first seed are deferred to a microtask, landing after the
 current render pass. Reading a non-lazy collection first inside a template no longer
@@ -169,7 +169,7 @@ global collections, which have no `P`).
    built now.**
 2. **Why `equal`, not a `key` queryKey function (the 11.3.0→11.4.0 correction).** The
    original design borrowed TanStack Query's `queryKey` shape: a `key: (params) =>
-   unknown[]` function the caller writes, serialized internally to decide freshness.
+unknown[]` function the caller writes, serialized internally to decide freshness.
    Same-day review found three problems:
    - **Inconsistent with the rest of core.** `asyncQuery` and `asyncStream` already
      compare their input/scope via an `equal` comparator, not a caller-supplied key
@@ -213,12 +213,12 @@ global collections, which have no `P`).
    marker (the other 11.3.0→11.4.0 correction).** Same-day review re-applied RFC
    0001 §2's test to the marker boundary itself, not just the config-option
    names: a second marker only earns its keep if it removes more surface than
-   it adds *and* isn't reachable by making an existing marker's config richer.
+   it adds _and_ isn't reachable by making an existing marker's config richer.
    `entityCollection` failed both once `equal`/`params`/`clearOnParamsChange`
    were in hand — it was structurally `entityMap` plus one optional field
    (`load`), so the "two markers" surface was pure overhead: an extra export,
    an extra import, and a decision (which one for this collection?) an agent
-   had to make correctly for *every* server-backed entity list. Folding it in
+   had to make correctly for _every_ server-backed entity list. Folding it in
    removes that decision entirely — `entityMap()` with no `load` is the exact
    marker it always was, and `entityMap({ load, … })` is the same marker with
    the loader surface switched on.
@@ -265,7 +265,7 @@ ceremony, and the clear-on-change decision moves into the (tested-once) primitiv
 ```ts
 customers: entityMap<Customer, string, { regionUrl: string }>({
   load: ({ regionUrl }) => api.getCustomers$(regionUrl),
-  selectId: c => c.externalId,
+  selectId: (c) => c.externalId,
   staleTime: '30m',
   // freshness compared per scope with `equal` (structural by default)
 });

@@ -7,15 +7,15 @@
 
 ## 0. The measured problem
 
-The docs claim (`entity-map.ts` module comment, cookbook, llms-full.txt): *"the
+The docs claim (`entity-map.ts` module comment, cookbook, llms-full.txt): _"the
 loader machinery lives in `./entity-loader` and is only pulled in when `load`
-is used."* **Measured 2026-07-23, this is false:**
+is used."_ **Measured 2026-07-23, this is false:**
 
-| Bundle (esbuild, `@angular/*`/rxjs external, branch-12 dist) | gzip |
-|---|---|
-| `signalTree` only | 7,618 B |
-| `signalTree` + plain `entityMap()` (no `load`) | **13,470 B** |
-| `signalTree` + `entityMap({ load })` | 13,484 B |
+| Bundle (esbuild, `@angular/*`/rxjs external, branch-12 dist) | gzip         |
+| ------------------------------------------------------------ | ------------ |
+| `signalTree` only                                            | 7,618 B      |
+| `signalTree` + plain `entityMap()` (no `load`)               | **13,470 B** |
+| `signalTree` + `entityMap({ load })`                         | 13,484 B     |
 
 > **Correction (§6, 2026-07-23):** the sentence below misattributes the
 > delta. The loader's true removable share is **~2.3 KB gzip unminified /
@@ -35,14 +35,14 @@ runtime config check — a conditional no bundler can dead-code-eliminate.
 Two consequences:
 
 1. **A false public claim** (RFC 0004 audit class a) — must be corrected in
-   docs *regardless of which option wins*, and a loader-shake case must be
+   docs _regardless of which option wins_, and a loader-shake case must be
    added to `verify-tree-shaking.js` (which today only tests enhancers), with
    a negative test proving the check fails on the current build (§5 rule 2).
 2. **RFC 0003 §0's fold-in rationale is partially undermined.** It argued
    "no tree-shaking win from splitting" — the win exists (~5.9 KB); it just
-   was never implemented. Note the rationale conflated two axes: *marker
-   count* (one vs two markers — the decision-burden axis, correctly resolved
-   toward ONE marker) and *import structure* (static vs injected capability —
+   was never implemented. Note the rationale conflated two axes: _marker
+   count_ (one vs two markers — the decision-burden axis, correctly resolved
+   toward ONE marker) and _import structure_ (static vs injected capability —
    the tree-shaking axis, never actually addressed). This RFC is only about
    the second axis; nothing here reopens the single-marker decision.
 
@@ -59,7 +59,7 @@ With a **fail-closed guard**: a raw config object that isn't the branded
 helper output throws a coded error instead of silently skipping — "TS
 consumers get a compile error; this guard catches the JS/`any` case and fails
 loudly." `lazy()` follows the same injected-feature pattern. This is the
-blueprint: capability code arrives via the *import*, the config *carries* it,
+blueprint: capability code arrives via the _import_, the config _carries_ it,
 and absence of the helper is loud, never silent-inert (§5 rule 4's defect
 class).
 
@@ -72,8 +72,8 @@ class).
 - **Con:** every plain-collection user pays ~5.9 KB gzip for machinery they
   don't use; the "only pay for what you use" pitch is false for the
   second-most-important marker; inconsistent with the library's own
-  `security()`/`lazy()` precedent. Keeping A means *changing the claim to
-  match the code* — publicly documenting that `entityMap` always includes the
+  `security()`/`lazy()` precedent. Keeping A means _changing the claim to
+  match the code_ — publicly documenting that `entityMap` always includes the
   loader.
 
 ### B. Injected capability — `entityMap({ load: loader(fn, opts) })` ★ recommended
@@ -100,10 +100,10 @@ const tree = signalTree({
   outcome; exact `security()` precedent including the fail-closed guard (a
   raw function on `load` without the helper → coded `[ST####]` error naming
   the fix — silent-inert is impossible); the branded feature object can carry
-  the scope-param type `P`, likely *improving* the current three-generic
+  the scope-param type `P`, likely _improving_ the current three-generic
   inference story; loader-family config keys move inside the helper, so the
   plain `entityMap` config surface gets smaller and more honest.
-- **Con:** +1 import and +1 wrapper call of ceremony; a *fourth* shape for
+- **Con:** +1 import and +1 wrapper call of ceremony; a _fourth_ shape for
   this capability in five weeks (11.2 separate marker → 11.3 `key` shape →
   11.4 fold-in → this) — prior-churn is real, though adoption is ~zero and
   the 11.4 shape is three days old, so this is the cheapest moment there will
@@ -137,7 +137,7 @@ is just B with method-call sugar and one extra concept. Dominated by B.
 
 Two same-named exports with different capabilities: importing the plain one
 and passing `load` either silently no-ops (the §5 rule-4 defect class,
-disqualifying) or needs the same fail-closed guard as B while *also* carrying
+disqualifying) or needs the same fail-closed guard as B while _also_ carrying
 the two-names confusion. Dominated by B.
 
 ### F. Separate marker (`entityCollection`)
@@ -158,7 +158,7 @@ payload:
 
 - **11.6.0:** introduce `loader()`; raw `load: fn` still works via the static
   import (unchanged behavior) but is deprecated with a dev-mode pointer to
-  the helper. Docs/size claims corrected to the measured numbers *now* —
+  the helper. Docs/size claims corrected to the measured numbers _now_ —
   including the interim truth that the shake win only materializes for apps
   using the helper form once the raw path is gone.
 - **v12 (whenever earned):** remove the raw-`fn` path and the static import —
@@ -180,21 +180,21 @@ and a check of what the loaded-path bundle actually contains (e.g. whether
 
 Full size ladder (esbuild, `@angular/*`/rxjs external, branch-12 dist, gzip):
 
-| Bundle | gzip | Δ over bare |
-|---|---|---|
-| bare `signalTree` | 7,629 | — |
-| + `status()` | 8,528 | +899 |
-| + `asyncSource()` | 8,741 | +1,112 |
-| + `asyncQuery()` | 9,002 | +1,373 |
-| + `stored()` | 9,056 | +1,427 |
-| + `form()` plain | 10,272 | +2,643 |
+| Bundle                            | gzip   | Δ over bare           |
+| --------------------------------- | ------ | --------------------- |
+| bare `signalTree`                 | 7,629  | —                     |
+| + `status()`                      | 8,528  | +899                  |
+| + `asyncSource()`                 | 8,741  | +1,112                |
+| + `asyncQuery()`                  | 9,002  | +1,373                |
+| + `stored()`                      | 9,056  | +1,427                |
+| + `form()` plain                  | 10,272 | +2,643                |
 | + `form()` with `asyncValidators` | 10,283 | **+11 vs plain form** |
-| + `entityMap()` plain | 13,479 | +5,850 |
-| + `entityMap({ load })` | 13,489 | **+10 vs plain** |
+| + `entityMap()` plain             | 13,479 | +5,850                |
+| + `entityMap({ load })`           | 13,489 | **+10 vs plain**      |
 
 **What's healthy:** the marker architecture itself tree-shakes correctly —
 each marker pays only its own way (self-registering processors work as
-claimed). The violations are all *within-marker capabilities* gated on config
+claimed). The violations are all _within-marker capabilities_ gated on config
 instead of imports.
 
 ### Confirmed instances of the anti-pattern
@@ -240,10 +240,10 @@ instead of imports.
 
 1. **Extend `verify-tree-shaking.js` into a size-matrix gate**: the §4 ladder
    becomes a scripted matrix (bare + per-marker + per-capability) with two
-   assertion kinds per row — *forbidden identifiers* (e.g. a plain
+   assertion kinds per row — _forbidden identifiers_ (e.g. a plain
    `entityMap` bundle must not contain `beginLoad`; a `createFormTree`
    bundle on the post-fix layout must not contain legacy-bridge identifiers)
-   and *byte budgets* with tolerance. Wired as a blocking section of
+   and _byte budgets_ with tolerance. Wired as a blocking section of
    `pre-publish-validation.sh` (§5 rule 3).
 2. **Negative tests first** (§5 rule 2): the forbidden-identifier assertions
    for instances 1–3 **must fail against today's build** before the fixes
@@ -265,11 +265,11 @@ dist; strict-tsc probes against real dist types).
 ### The headline number was wrong — REFUTED
 
 §0 attributed the full plain-entityMap delta ("~5.9 KB gzip loader penalty")
-to the loader. Both reviewers independently re-measured by *removing* the
+to the loader. Both reviewers independently re-measured by _removing_ the
 loader (stub / patched dist): the loader's true removable share is
 **~2.3 KB gzip unminified / ~1.5 KB min+gzip**. The remaining ~3.6 KB is
 `entity-signal.ts` CRUD machinery a plain collection legitimately uses and no
-option removes. §0's own metafile datum (8,938 *raw* bytes) was consistent
+option removes. §0's own metafile datum (8,938 _raw_ bytes) was consistent
 with ~2.3 KB gzip all along; the rhetoric wasn't.
 
 ### It also collided with a standing decision
@@ -286,7 +286,7 @@ end-to-end through a branded `LoaderFeature<E, P>` (strict-tsc probes, incl.
 negative cases); the `TreeNode` dispatch needs zero changes (structural,
 type-only); the runtime handoff works (option-B-simulated dist drops every
 loader identifier; the `invalidateTag` barrel re-export was confirmed
-innocent — `entity-map.ts`'s static *call* is the sole culprit); the
+innocent — `entity-map.ts`'s static _call_ is the sole culprit); the
 fail-closed guard belongs in the `entityMap()` factory (earlier than
 `security`'s construction-time check — today the config isn't validated until
 first `.$` access). Naming, if ever built: **`load: load(fn, opts)`** — the
@@ -350,9 +350,10 @@ take the reclaim now and spend the guessability/churn cost as the v12 "earned
 major" payload (RFC 0004 §3 V-MAJOR).
 
 **What shipped (breaking):**
+
 - `loader(fn, opts)` is the required way to make an `entityMap` cache-aware:
   `entityMap({ load: loader(fn, { staleTime, swr, tags, persist, equal, lazy,
-  clearOnParamsChange }) })`. It returns a branded `LoaderFeature<E, P>` whose
+clearOnParamsChange }) })`. It returns a branded `LoaderFeature<E, P>` whose
   closure is the sole reference to `attachLoader` (exact `security()` precedent).
 - The raw `load: fn` form is **removed**. `entity-map.ts` no longer imports
   `attachLoader`. A raw function on `load` **fails closed** at the `entityMap()`

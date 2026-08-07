@@ -1,10 +1,9 @@
-
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import {
   SIGNALTREE_CORE_VERSION,
-    SIGNALTREE_VERSION_SUMMARY,
+  SIGNALTREE_VERSION_SUMMARY,
 } from '../../version';
 
 export interface DemoExample {
@@ -13,12 +12,7 @@ export interface DemoExample {
   description: string;
   route: string;
   queryParams?: Record<string, string>;
-  category:
-    | 'learn'
-    | 'packages'
-    | 'examples'
-    | 'advanced'
-    | 'benchmarks';
+  category: 'learn' | 'packages' | 'examples' | 'advanced' | 'benchmarks';
 }
 
 export interface ExternalLink {
@@ -47,6 +41,22 @@ export class NavigationComponent {
   }
 
   examples: DemoExample[] = [
+    {
+      id: 'whats-new-14',
+      title: "What's new in 14.0.0",
+      description:
+        'Every new capability, callable — plus ST2026 and fan-out measured in your browser',
+      route: '/whats-new-14',
+      category: 'learn',
+    },
+    {
+      id: 'does-it-fit',
+      title: 'Does SignalTree fit?',
+      description:
+        'The trade, measured both ways — where it wins, where it loses, and what each library provides',
+      route: '/does-it-fit',
+      category: 'learn',
+    },
     {
       id: 'docs',
       title: 'Documentation',
@@ -166,35 +176,40 @@ export class NavigationComponent {
     {
       id: 'async-markers',
       title: 'Async markers (asyncSource & asyncQuery)',
-      description: 'SignalTree-native async primitives — load-and-expose + debounced input-driven query',
+      description:
+        'SignalTree-native async primitives — load-and-expose + debounced input-driven query',
       route: '/async',
       category: 'examples',
     },
     {
       id: 'marker-zoo',
       title: 'Marker zoo (all 6 markers, 4 depths)',
-      description: 'All marker types in one tree at different depths — showcases path-attached composition',
+      description:
+        'All marker types in one tree at different depths — showcases path-attached composition',
       route: '/marker-zoo',
       category: 'examples',
     },
     {
       id: 'entity-collection',
       title: 'entityMap cache-aware loading (v11.2)',
-      description: 'Cache-aware collections, visualized: single-flight, staleTime, invalidateTag, SWR, offline-first',
+      description:
+        'Cache-aware collections, visualized: single-flight, staleTime, invalidateTag, SWR, offline-first',
       route: '/entity-collection',
       category: 'examples',
     },
     {
       id: 'built-for-ai',
       title: 'Built for AI coding agents',
-      description: 'llms.txt, agent skills, drop-in templates, and the codegen accuracy benchmark',
+      description:
+        'llms.txt, agent skills, drop-in templates, and the codegen accuracy benchmark',
       route: '/built-for-ai',
       category: 'learn',
     },
     {
       id: 'benchmark',
       title: 'AI-codegen benchmark scorecard',
-      description: '720-cell measured result — SignalTree 49% cold → 98% primed (+49pp). Per-library, per-agent breakdowns.',
+      description:
+        '720-cell measured result — SignalTree 49% cold → 98% primed (+49pp). Per-library, per-agent breakdowns.',
       route: '/benchmark',
       category: 'learn',
     },
@@ -208,7 +223,8 @@ export class NavigationComponent {
     {
       id: 'custom-extensions',
       title: 'Custom Markers & Enhancers',
-      description: 'Build your own markers and enhancers — registerMarkerProcessor() and .with() chains',
+      description:
+        'Build your own markers and enhancers — registerMarkerProcessor() and .with() chains',
       route: '/custom-extensions',
       category: 'advanced',
     },

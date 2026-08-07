@@ -9,24 +9,24 @@
 
 ## Improvement Summary Grid
 
-| # | Improvement | Priority | Effort | Impact | Status | Category |
-|---|-------------|----------|--------|--------|--------|----------|
-| 1 | Add `createEvent()` helper on EventBusService | P1 | Low | High | ✅ Done | DX - Publishing |
-| 2 | Queue configuration presets | P1 | Low | Medium | ✅ Done | DX - Configuration |
-| 3 | Add `publishEvent()` convenience method | P1 | Low | High | ✅ Done | DX - Publishing |
-| 4 | Event fan-out / routing rules | P2 | Medium | High | ⏳ Backlog | Architecture |
-| 5 | Type inference for event type from generic | P2 | Medium | Medium | ⏳ Backlog | Type Safety |
-| 6 | Module-level source/environment config | P1 | Low | High | ✅ Done | DX - Configuration |
-| 7 | MockEventBus parity with EventBusService | P2 | Low | Medium | ✅ Done | Testing |
-| 8 | Health check endpoint integration | P2 | Low | Medium | ⏳ Backlog | Operations |
-| 9 | OpenTelemetry trace propagation | P2 | Medium | High | ⏳ Backlog | Observability |
-| 10 | Event schema evolution helpers | P3 | High | Medium | ⏳ Backlog | Architecture |
-| 11 | Subscriber decorator improvements | P2 | Medium | Medium | ⏳ Backlog | DX - Subscribers |
-| 12 | Typed event map for registry | P2 | Medium | High | ⏳ Backlog | Type Safety |
-| 13 | Circuit breaker for queue failures | P3 | Medium | Medium | ⏳ Backlog | Resilience |
-| 14 | Event replay utilities | P3 | High | Medium | ⏳ Backlog | Operations |
-| 15 | Metrics export to Prometheus | P2 | Medium | Medium | ⏳ Backlog | Observability |
-| 16 | Event batching with windowing | P3 | High | Medium | ⏳ Backlog | Performance |
+| #   | Improvement                                   | Priority | Effort | Impact | Status     | Category           |
+| --- | --------------------------------------------- | -------- | ------ | ------ | ---------- | ------------------ |
+| 1   | Add `createEvent()` helper on EventBusService | P1       | Low    | High   | ✅ Done    | DX - Publishing    |
+| 2   | Queue configuration presets                   | P1       | Low    | Medium | ✅ Done    | DX - Configuration |
+| 3   | Add `publishEvent()` convenience method       | P1       | Low    | High   | ✅ Done    | DX - Publishing    |
+| 4   | Event fan-out / routing rules                 | P2       | Medium | High   | ⏳ Backlog | Architecture       |
+| 5   | Type inference for event type from generic    | P2       | Medium | Medium | ⏳ Backlog | Type Safety        |
+| 6   | Module-level source/environment config        | P1       | Low    | High   | ✅ Done    | DX - Configuration |
+| 7   | MockEventBus parity with EventBusService      | P2       | Low    | Medium | ✅ Done    | Testing            |
+| 8   | Health check endpoint integration             | P2       | Low    | Medium | ⏳ Backlog | Operations         |
+| 9   | OpenTelemetry trace propagation               | P2       | Medium | High   | ⏳ Backlog | Observability      |
+| 10  | Event schema evolution helpers                | P3       | High   | Medium | ⏳ Backlog | Architecture       |
+| 11  | Subscriber decorator improvements             | P2       | Medium | Medium | ⏳ Backlog | DX - Subscribers   |
+| 12  | Typed event map for registry                  | P2       | Medium | High   | ⏳ Backlog | Type Safety        |
+| 13  | Circuit breaker for queue failures            | P3       | Medium | Medium | ⏳ Backlog | Resilience         |
+| 14  | Event replay utilities                        | P3       | High   | Medium | ⏳ Backlog | Operations         |
+| 15  | Metrics export to Prometheus                  | P2       | Medium | Medium | ⏳ Backlog | Observability      |
+| 16  | Event batching with windowing                 | P3       | High   | Medium | ⏳ Backlog | Performance        |
 
 ---
 
@@ -37,6 +37,7 @@
 **Problem**: Every event publish required manually constructing a full BaseEvent with id, timestamp, version, actor, metadata, etc.
 
 **Solution Implemented**: Added `createEvent()` method to EventBusService that auto-fills:
+
 - `id` (UUID v7)
 - `timestamp` (ISO 8601)
 - `correlationId`
@@ -55,9 +56,13 @@ await this.eventBus.publish({
 });
 
 // After
-const event = this.eventBus.createEvent('TradeAccepted', { tradeId, acceptedById }, {
-  actor: { id: userId, type: 'user' },
-});
+const event = this.eventBus.createEvent(
+  'TradeAccepted',
+  { tradeId, acceptedById },
+  {
+    actor: { id: userId, type: 'user' },
+  }
+);
 await this.eventBus.publish(event);
 ```
 
@@ -88,6 +93,7 @@ EventBusModule.forRoot({
 ```
 
 Available presets:
+
 - `'priority-based'` - 5 separate queues per priority (production recommended)
 - `'single-queue'` - 1 queue with priority numbers (simpler)
 - `'minimal'` - 1 queue, low concurrency (development)
@@ -102,10 +108,14 @@ Available presets:
 
 ```typescript
 // Single call to create and publish
-await this.eventBus.publishEvent('TradeAccepted', { tradeId, acceptedById }, {
-  actor: { id: userId, type: 'user' },
-  priority: 'high',
-});
+await this.eventBus.publishEvent(
+  'TradeAccepted',
+  { tradeId, acceptedById },
+  {
+    actor: { id: userId, type: 'user' },
+    priority: 'high',
+  }
+);
 ```
 
 ---
@@ -166,8 +176,8 @@ await this.eventBus.publish<TradeAccepted>({
 ```typescript
 EventBusModule.forRoot({
   redis: { host: 'localhost', port: 6379 },
-  source: 'swapacado-backend',  // Used in event metadata
-  environment: 'production',     // Used in event metadata
+  source: 'swapacado-backend', // Used in event metadata
+  environment: 'production', // Used in event metadata
 });
 ```
 
@@ -211,9 +221,9 @@ export class HealthController {
   @Get()
   check() {
     return this.eventBusHealth.check({
-      queues: true,     // Check queue connections
-      redis: true,      // Check Redis connection
-      workers: true,    // Check subscriber workers
+      queues: true, // Check queue connections
+      redis: true, // Check Redis connection
+      workers: true, // Check subscriber workers
     });
   }
 }
@@ -259,7 +269,7 @@ export class OrderSubscriber extends BaseSubscriber {
   migrateV1ToV2(event: OrderCreatedV1): OrderCreatedV2 {
     return { ...event, newField: calculateDefault(event) };
   }
-  
+
   async handle(event: OrderCreatedV2) {
     // Always receives latest version
   }
@@ -355,7 +365,7 @@ EventBusModule.forRoot({
 
 ```typescript
 // Replay from DLQ
-await dlqService.replayAll({ 
+await dlqService.replayAll({
   filter: { eventType: 'Trade*', since: new Date('2025-01-01') },
   targetQueue: 'events-normal',
 });
@@ -415,6 +425,7 @@ async handle(events: PageView[]): Promise<ProcessingResult> {
 ## Implementation Roadmap
 
 ### Phase 1 - Quick Wins (Done ✅)
+
 - [x] `createEvent()` helper
 - [x] Queue presets
 - [x] `publishEvent()` convenience method
@@ -422,16 +433,19 @@ async handle(events: PageView[]): Promise<ProcessingResult> {
 - [x] MockEventBus parity
 
 ### Phase 2 - DX Polish (Next Sprint)
+
 - [ ] Health check integration
 - [ ] Typed event map for registry
 - [ ] Subscriber decorator improvements
 
 ### Phase 3 - Production Hardening
+
 - [ ] OpenTelemetry integration
 - [ ] Circuit breaker
 - [ ] Prometheus metrics
 
 ### Phase 4 - Advanced Features
+
 - [ ] Event routing/fan-out
 - [ ] Schema evolution helpers
 - [ ] Event replay utilities

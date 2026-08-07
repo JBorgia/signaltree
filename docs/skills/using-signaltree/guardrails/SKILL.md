@@ -21,14 +21,17 @@ Basic — performance budget + console warnings:
 import { signalTree } from '@signaltree/core';
 import { guardrails } from '@signaltree/guardrails';
 
-interface AppState { items: unknown[]; ui: { search: string } }
+interface AppState {
+  items: unknown[];
+  ui: { search: string };
+}
 
 const tree = signalTree<AppState>({ items: [], ui: { search: '' } }).with(
   guardrails({
-    mode: 'warn',                   // 'warn' | 'throw' | 'silent'
+    mode: 'warn', // 'warn' | 'throw' | 'silent'
     budgets: {
-      maxUpdateTime: 16,            // ms per update
-      maxTreeDepth: 8,              // nesting depth, not path-segment count
+      maxUpdateTime: 16, // ms per update
+      maxTreeDepth: 8, // nesting depth, not path-segment count
     },
     hotPaths: { enabled: true, threshold: 10, topN: 5 },
     reporting: { console: true, interval: 5000 },
@@ -49,7 +52,7 @@ const tree = signalTree(initial).with(
       trackUnread: true,
     },
     suppression: {
-      autoSuppress: ['hydrate', 'reset', 'bulk', 'migration', 'time-travel', 'serialization'],  // values from intent/source that silence budget warnings
+      autoSuppress: ['hydrate', 'reset', 'bulk', 'migration', 'time-travel', 'serialization'], // values from intent/source that silence budget warnings
       respectMetadata: true,
     },
   })
@@ -73,12 +76,8 @@ const tree = signalTree({ ui: { when: '' } }).with(
       {
         name: 'no-date-strings-in-ui',
         severity: 'warning',
-        test: (context) =>
-          context.path[0] === 'ui' &&
-          typeof context.value === 'string' &&
-          /^\d{4}-\d{2}-\d{2}/.test(context.value as string),
-        message: (context) =>
-          `ui path "${context.path.join('.')}" holds a date string; use Date in state.`,
+        test: (context) => context.path[0] === 'ui' && typeof context.value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(context.value as string),
+        message: (context) => `ui path "${context.path.join('.')}" holds a date string; use Date in state.`,
       },
     ],
   })
@@ -97,6 +96,7 @@ const shell = createAppShellTree(signalTree, initial);
 Use `mode: 'throw'` in test harnesses to fail tests on over-budget updates. Use `P50/P95/P99` reporting via `reporting.customReporter: (report) => fetch('/telemetry', ...)`.
 
 Gotchas:
+
 - Don't install `@signaltree/shared` — private package, npm resolution fails.
 - `maxTreeDepth` counts object nesting depth, not path length. A 12-deep branch trips a `maxTreeDepth: 10` budget even if rest of tree is flat.
 - `trackDownstream: true` walks consumer computeds — more accurate, noticeably slower. Only enable when chasing re-computation cycles.

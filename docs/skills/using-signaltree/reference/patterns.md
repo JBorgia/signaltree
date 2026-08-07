@@ -226,13 +226,13 @@ The chain in `createAppTree()` is unchanged — `.derived(entityResolutionDerive
 
 Once a tree has more than ~3 domains with computeds, ad-hoc `computed(...)` calls scattered across state factories become hard to reason about (which signal depends on which?). Validated production trees converge on a five-tier ladder, each tier strictly building on the one below:
 
-| Tier | Name              | Sees                          | Job                                                                              |
-| ---- | ----------------- | ----------------------------- | -------------------------------------------------------------------------------- |
-| 0    | Base state        | —                             | Raw data: `entityMap`s, primitive leaves, `status()` slices. No computeds.       |
-| 1    | Entity resolution | `AppTreeBase`                 | Resolve `*Id` leaves to full entities via `entityMap.byId()`. Pure lookup.       |
-| 2    | Complex logic     | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete).   |
-| 3    | Workflow          | `AppTreeWithComplexLogic`     | Domain-specific state machines (workflow steps, current index, status maps).     |
-| 4    | Navigation        | `AppTreeWithWorkflow`         | Position queries on top of workflow (next/previous, canAdvance, statusInfo).     |
+| Tier | Name              | Sees                          | Job                                                                            |
+| ---- | ----------------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| 0    | Base state        | —                             | Raw data: `entityMap`s, primitive leaves, `status()` slices. No computeds.     |
+| 1    | Entity resolution | `AppTreeBase`                 | Resolve `*Id` leaves to full entities via `entityMap.byId()`. Pure lookup.     |
+| 2    | Complex logic     | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete). |
+| 3    | Workflow          | `AppTreeWithComplexLogic`     | Domain-specific state machines (workflow steps, current index, status maps).   |
+| 4    | Navigation        | `AppTreeWithWorkflow`         | Position queries on top of workflow (next/previous, canAdvance, statusInfo).   |
 | 5    | UI aggregates     | `AppTreeWithNavigation`       | Cross-domain rollups for shells / error banners (overall loading, firstError). |
 
 **Why these specific layers?** Each one answers a different question and depends only on lower layers, so the dependency graph is always acyclic by construction:
@@ -957,9 +957,9 @@ tree.$.tickets.loading.setError(new Error('network failure'));
 tree.$.tickets.loading.setNotLoaded(); // reset to initial state
 
 // Boolean signals — v10.3 canonical (bare names). Prefer these over .state() string comparisons.
-tree.$.tickets.loading.loading();   // boolean
-tree.$.tickets.loading.loaded();    // boolean
-tree.$.tickets.loading.hasError();  // boolean
+tree.$.tickets.loading.loading(); // boolean
+tree.$.tickets.loading.loaded(); // boolean
+tree.$.tickets.loading.hasError(); // boolean
 tree.$.tickets.loading.notLoaded(); // boolean
 // (The is-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
 
@@ -1087,7 +1087,7 @@ const store = signalTree({
   }),
 });
 
-store.$.users.refresh();           // load-and-expose
+store.$.users.refresh(); // load-and-expose
 store.$.search.input.set('alice'); // drives debounced pipeline
 ```
 

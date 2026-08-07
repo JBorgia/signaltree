@@ -26,13 +26,17 @@ import { signalTree, entityMap } from '@signaltree/core';
 import { supabaseRealtime } from '@signaltree/realtime/supabase';
 import { createClient } from '@supabase/supabase-js';
 
-interface Listing { id: number; title: string; status: string }
-interface Message { id: string; text: string }
+interface Listing {
+  id: number;
+  title: string;
+  status: string;
+}
+interface Message {
+  id: string;
+  text: string;
+}
 
-const supabase = createClient(
-  import.meta.env['VITE_SUPABASE_URL'],
-  import.meta.env['VITE_SUPABASE_ANON_KEY']
-);
+const supabase = createClient(import.meta.env['VITE_SUPABASE_URL'], import.meta.env['VITE_SUPABASE_ANON_KEY']);
 
 const tree = signalTree({
   listings: entityMap<Listing, number>(),
@@ -67,9 +71,9 @@ supabaseRealtime(supabase, {
   listings: {
     table: 'listings',
     event: '*',
-    transform: (row): Listing => ({ id: row['id'] as number, title: row['title'] as string, /* ...more fields */ }),
+    transform: (row): Listing => ({ id: row['id'] as number, title: row['title'] as string /* ...more fields */ }),
   },
-})
+});
 ```
 
 Custom adapter (non-Supabase):
@@ -78,20 +82,35 @@ Custom adapter (non-Supabase):
 import { signalTree, entityMap } from '@signaltree/core';
 import { realtime } from '@signaltree/realtime';
 
-interface Todo { id: string; title: string }
+interface Todo {
+  id: string;
+  title: string;
+}
 type RealtimeAdapter = Parameters<typeof realtime>[0];
 
 const myAdapter: RealtimeAdapter = {
-  async connect() { /* open socket */ },
-  disconnect() { /* close socket */ },
-  subscribe(_config, _callback) { return () => { /* cleanup */ }; },
-  isConnected() { return true; },
-  onConnectionChange(_cb) { return () => { /* cleanup */ }; },
+  async connect() {
+    /* open socket */
+  },
+  disconnect() {
+    /* close socket */
+  },
+  subscribe(_config, _callback) {
+    return () => {
+      /* cleanup */
+    };
+  },
+  isConnected() {
+    return true;
+  },
+  onConnectionChange(_cb) {
+    return () => {
+      /* cleanup */
+    };
+  },
 };
 
-const tree = signalTree({ todos: entityMap<Todo, string>() }).with(
-  realtime(myAdapter, { todos: { table: 'todos', event: '*' } })
-);
+const tree = signalTree({ todos: entityMap<Todo, string>() }).with(realtime(myAdapter, { todos: { table: 'todos', event: '*' } }));
 ```
 
 Dynamic subscriptions (add after initial connect):
@@ -107,6 +126,7 @@ cleanup(); // or via returned CleanupFn
 Reconnect options (on `realtime`): `autoReconnect` (default `true`), `reconnectDelay` (default 1000ms, exponential backoff), `maxReconnectAttempts` (default 10).
 
 Gotchas:
+
 - Only `entityMap` slices auto-sync. Plain signals or object paths log a dev warning and are ignored.
 - Subscriptions keyed by tree path, not table. Same table → two paths = two independent channels. Two subscriptions at same tree path: second overwrites first.
 - Supabase `filter` is passed verbatim to Supabase Realtime — not a JS filter. Use `transform` for JS-level cross-row filtering.

@@ -31,21 +31,21 @@ account.age().value.set(12);
 const [err] = account.age().errors();
 
 // 13.2 (branded, the new default)
-err instanceof NgValidationError;   // true
-err instanceof MinValidationError;  // true
-err.min;                            // 18 — a typed constraint, not string-parsed
-err.kind;                           // 'min' — still present on branded errors
-err.message;                        // 'Too young' — still present
+err instanceof NgValidationError; // true
+err instanceof MinValidationError; // true
+err.min; // 18 — a typed constraint, not string-parsed
+err.kind; // 'min' — still present on branded errors
+err.message; // 'Too young' — still present
 
 // 13.1 and earlier (plain object, now behind `nativeErrors: false`)
-err instanceof NgValidationError;   // false
-err.kind;                           // 'min'
-err.message;                        // 'Too young'
+err instanceof NgValidationError; // false
+err.kind; // 'min'
+err.message; // 'Too young'
 // err.min                          // ✗ did not exist
 ```
 
 `kind` and `message` are present in **both** shapes, so code that only reads
-those two properties keeps working. What changes is the error's *identity*:
+those two properties keeps working. What changes is the error's _identity_:
 it's now a class instance, and it carries typed constraint properties.
 
 ### Why
@@ -101,8 +101,8 @@ or code only reads `.kind` / `.message`. You need to act only where you:
 ## 2. The dev-mode notice now reports the completed flip
 
 `signalForm()` emitted a one-time dev-mode `console.info` when `nativeErrors` was
-left unset, warning that the default *would* flip. That notice now reports that it
-*has*:
+left unset, warning that the default _would_ flip. That notice now reports that it
+_has_:
 
 > `nativeErrors` now defaults to TRUE as of 13.2 — built-in validator failures are
 > Angular branded errors … Pass `nativeErrors: false` for the previous shape.
@@ -132,7 +132,7 @@ They're now typed, and `.computed()` chains type each name independently:
 
 ```typescript
 // 13.2
-store.$.plants.byUrl();       // Signal<Record<string, PlantDto>>
+store.$.plants.byUrl(); // Signal<Record<string, PlantDto>>
 store.$.plants.activeCount(); // Signal<number>
 ```
 
@@ -141,7 +141,7 @@ collections keep their loader surface alongside the slices, and a collection wit
 no slices resolves to exactly `EntitySignal<E, K>` as before.
 
 The one strictly-observable type change: a slice-bearing collection's resolved
-type now includes the slice members, so an *exact*-type assertion in your own code
+type now includes the slice members, so an _exact_-type assertion in your own code
 (e.g. `Equal<typeof store.$.plants, EntitySignal<PlantDto, string>>`) will see the
 richer type. Ordinary assignments to `EntitySignal<E, K>` are unaffected — an
 intersection is assignable to its member.

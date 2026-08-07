@@ -18,10 +18,10 @@ decision and §6 was carried out in code — verified: `asyncStream` appears in
 
 SignalTree's "built for AI" work has two distinct axes:
 
-1. **AI codegen discoverability** — coding agents *writing* correct SignalTree code (llms.txt, SKILL.md, the benchmark). Mature and clearly valuable.
-2. **AI-embedded runtime** — apps that *run* LLMs (chat, streaming, tool calls, RAG, agents).
+1. **AI codegen discoverability** — coding agents _writing_ correct SignalTree code (llms.txt, SKILL.md, the benchmark). Mature and clearly valuable.
+2. **AI-embedded runtime** — apps that _run_ LLMs (chat, streaming, tool calls, RAG, agents).
 
-A streaming spike (`asyncStream`) was promoted to a public core marker on the 10.5.0 line (staged, **not published**). Before publishing it — or building "the whole AI vision" — we must answer: **does AI-embedded support belong *in the library*, and if so, how much?**
+A streaming spike (`asyncStream`) was promoted to a public core marker on the 10.5.0 line (staged, **not published**). Before publishing it — or building "the whole AI vision" — we must answer: **does AI-embedded support belong _in the library_, and if so, how much?**
 
 ## 2. The test
 
@@ -29,20 +29,20 @@ SignalTree is a **state** library — "reactive JSON, signals at every path." Th
 
 ## 3. Decomposition
 
-| Capability | State concern? | Disposition |
-|---|---|---|
-| Accumulate a stream into reactive state | **Yes** — async-write pattern; sibling to `asyncSource`/`asyncQuery` | **Core** — one primitive (see §5) |
-| Partial-JSON parsing (`partialJson`) | No — a codec/parser | External util / not core |
-| Schema-validated structured output | No — validation already lives in `@signaltree/schema` | `@signaltree/schema` |
-| `toolCall` / `agentLoop` / `conversation` | No — domain models; compositions of `entityMap` + `status` at depth | **Recipes/docs** (or opinionated external pkg) |
-| Provider adapters (Anthropic/OpenAI/Vercel) | No — vendor I/O | External leaf pkgs; **never core** |
-| `vectorStore` / RAG | No — search/embeddings | External or out of scope |
+| Capability                                  | State concern?                                                       | Disposition                                    |
+| ------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------- |
+| Accumulate a stream into reactive state     | **Yes** — async-write pattern; sibling to `asyncSource`/`asyncQuery` | **Core** — one primitive (see §5)              |
+| Partial-JSON parsing (`partialJson`)        | No — a codec/parser                                                  | External util / not core                       |
+| Schema-validated structured output          | No — validation already lives in `@signaltree/schema`                | `@signaltree/schema`                           |
+| `toolCall` / `agentLoop` / `conversation`   | No — domain models; compositions of `entityMap` + `status` at depth  | **Recipes/docs** (or opinionated external pkg) |
+| Provider adapters (Anthropic/OpenAI/Vercel) | No — vendor I/O                                                      | External leaf pkgs; **never core**             |
+| `vectorStore` / RAG                         | No — search/embeddings                                               | External or out of scope                       |
 
 ## 4. Decision
 
-**SignalTree stays a focused state library. It is the state substrate that is *excellent for* AI apps — not an AI framework.**
+**SignalTree stays a focused state library. It is the state substrate that is _excellent for_ AI apps — not an AI framework.**
 
-1. **The AI-embedded value ships first as recipes/docs**, not API. Tool calls, agents, and conversations are *compositions of existing primitives* (`entityMap` + `status` at depth + an accumulating async primitive). Showing the canonical composition serves the codegen goal **better** than new API surface does — new markers *add* hallucination surface and concepts to learn, which is the opposite of what the codegen bet wants. The depth-attachment differentiator already makes nested agent/tool state natural; the win is *demonstrating* it.
+1. **The AI-embedded value ships first as recipes/docs**, not API. Tool calls, agents, and conversations are _compositions of existing primitives_ (`entityMap` + `status` at depth + an accumulating async primitive). Showing the canonical composition serves the codegen goal **better** than new API surface does — new markers _add_ hallucination surface and concepts to learn, which is the opposite of what the codegen bet wants. The depth-attachment differentiator already makes nested agent/tool state natural; the win is _demonstrating_ it.
 2. **At most one new state primitive in core**: stream accumulation (see §5).
 3. **Everything heavier is external, if-and-when demand appears.** A `@signaltree/ai` exists only for opinionated composites/provider glue and may never be needed if recipes suffice. Parsing → util; schema → `@signaltree/schema`; provider SDKs → never touch core.
 
@@ -50,10 +50,10 @@ SignalTree is a **state** library — "reactive JSON, signals at every path." Th
 
 The one legitimately-state primitive (fold a stream into state) was built as a **new `asyncStream` marker** (staged, unpublished). The two shapes:
 
-- **Option A — keep `asyncStream` as a distinct marker.** Pro: clear, distinct cancellation/accumulate/supersede semantics; reads as its own concept. Con: a *third* async marker for agents to learn and disambiguate (`asyncSource`/`asyncQuery`/`asyncStream`), each with its own "redo" verb.
+- **Option A — keep `asyncStream` as a distinct marker.** Pro: clear, distinct cancellation/accumulate/supersede semantics; reads as its own concept. Con: a _third_ async marker for agents to learn and disambiguate (`asyncSource`/`asyncQuery`/`asyncStream`), each with its own "redo" verb.
 - **Option B — add `accumulate?` + `equal?` (+ AbortSignal) options to `asyncSource`** (which already multi-emits). Pro: **zero new public surface** — fewer concepts to learn or hallucinate (strictly better for codegen). Con: muddies `asyncSource`'s "load-and-expose" clarity; conflates replace-semantics with accumulate-semantics.
 
-**DECISION:** Streaming stays **experimental and unshipped**. `asyncStream` is **un-exported from the public barrel** (returned to experimental status — the implementation + tests are preserved, but it is not public API). The A-vs-B choice is **deferred** until a real demand signal justifies shipping streaming at all — committing to either *now* would itself be the premature-public-API mistake §4 warns against. When demand appears, **Option B (the `asyncSource` accumulate-option) is the leading candidate**, re-examined against the replace-vs-accumulate semantics concern at that time. Until then, the recipe-first story (§7) uses only shipped primitives.
+**DECISION:** Streaming stays **experimental and unshipped**. `asyncStream` is **un-exported from the public barrel** (returned to experimental status — the implementation + tests are preserved, but it is not public API). The A-vs-B choice is **deferred** until a real demand signal justifies shipping streaming at all — committing to either _now_ would itself be the premature-public-API mistake §4 warns against. When demand appears, **Option B (the `asyncSource` accumulate-option) is the leading candidate**, re-examined against the replace-vs-accumulate semantics concern at that time. Until then, the recipe-first story (§7) uses only shipped primitives.
 
 ## 6. Disposition of the staged 10.5.0 code
 

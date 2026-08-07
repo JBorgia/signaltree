@@ -12,18 +12,18 @@ asserts recompute counts, not just values.
 
 ## Results
 
-| API | reactive |
-| --- | --- |
-| `entityMap.all()` | ✅ |
-| `entityMap.count()` | ✅ |
-| `entityMap.where(p)()` | ✅ |
-| `entityMap.find(p)()` | ✅ |
-| `entityMap.has(id)()` | ✅ |
-| `entityMap.byId(id)()` | ✅ |
-| `tree()` | ✅ |
-| `timeTravel.canUndo()` / `canRedo()` | ✅ *(fixed in rc.1)* |
-| `timeTravel.getCurrentIndex()` / `getHistory()` | ✅ *(fixed in rc.1)* |
-| `status()` marker | ✅ |
+| API                                             | reactive             |
+| ----------------------------------------------- | -------------------- |
+| `entityMap.all()`                               | ✅                   |
+| `entityMap.count()`                             | ✅                   |
+| `entityMap.where(p)()`                          | ✅                   |
+| `entityMap.find(p)()`                           | ✅                   |
+| `entityMap.has(id)()`                           | ✅                   |
+| `entityMap.byId(id)()`                          | ✅                   |
+| `tree()`                                        | ✅                   |
+| `timeTravel.canUndo()` / `canRedo()`            | ✅ _(fixed in rc.1)_ |
+| `timeTravel.getCurrentIndex()` / `getHistory()` | ✅ _(fixed in rc.1)_ |
+| `status()` marker                               | ✅                   |
 
 **One real defect, already fixed.** Time-travel state was the only
 non-reactive surface, and it is now a signal.
@@ -46,9 +46,9 @@ which is the natural thing to write in a template:
 allocates a NEW arrow every change-detection cycle, misses the cache every time,
 and re-filters the whole collection. Measured over 1,000 entities, 2,000 reads:
 
-| | time |
-| --- | --- |
-| hoisted predicate (memo hit) | 0.27 ms |
+|                              | time               |
+| ---------------------------- | ------------------ |
+| hoisted predicate (memo hit) | 0.27 ms            |
 | inline predicate (memo miss) | **20.54 ms — 75x** |
 
 **It is not a leak.** The cache is a `WeakMap`, and 50,000 inline-predicate calls

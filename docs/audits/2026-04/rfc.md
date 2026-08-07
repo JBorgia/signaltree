@@ -1,4 +1,5 @@
 # SignalTree 9.2.1 — Audit RFC
+
 ## 2026-04 Audit Cycle
 
 **Audit date:** 2026-04-29  
@@ -7,7 +8,7 @@
 **Angular baseline:** 20.x (peer dep `^20.0.0 || ^21.0.0`)  
 **Methodology:** specs/design/audit-architecture.md (Versus Iterative Convergence, T3 Full RFC)  
 **Findings DB:** docs/audits/2026-04/findings.json (16 findings, all open)  
-**Scaffolds:** specs/examples/signaltree/ · specs/examples/ngrx-signal-store/  
+**Scaffolds:** specs/examples/signaltree/ · specs/examples/ngrx-signal-store/
 
 ---
 
@@ -21,11 +22,11 @@ SignalTree is an Angular state management library with a strong design premise: 
 
 ### Top-3 Priority Actions
 
-| Priority | Action | Findings |
-|---|---|---|
-| **P0-A** | Remove all `entities()` / `withTimeTravel` / `effect()` / `unwrap()` / `update()` / `subscribe()` references from README; replace with working equivalents | F-002, F-003, F-005 |
-| **P0-B** | Add a callable-syntax caveat box **in the Quick Start section** — not just in a separate advanced section | F-009 |
-| **P1-A** | Fix the EntityNode write gap: either implement deep writes (node.name.set()) or change the type to read-only Signal<T> and document `updateOne()` as the mutation path | F-012, F-013 |
+| Priority | Action                                                                                                                                                                 | Findings            |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **P0-A** | Remove all `entities()` / `withTimeTravel` / `effect()` / `unwrap()` / `update()` / `subscribe()` references from README; replace with working equivalents             | F-002, F-003, F-005 |
+| **P0-B** | Add a callable-syntax caveat box **in the Quick Start section** — not just in a separate advanced section                                                              | F-009               |
+| **P1-A** | Fix the EntityNode write gap: either implement deep writes (node.name.set()) or change the type to read-only Signal<T> and document `updateOne()` as the mutation path | F-012, F-013        |
 
 These three actions would take the README from "fails within 2 minutes for any AI agent" to "plausibly produces working code on first attempt." The remaining 13 findings are DX improvements and clean-up but are not adoption-blockers in the same category.
 
@@ -54,24 +55,24 @@ The audit ran Versus Iterative Convergence methodology (phases 0–5):
 
 ### 2.1 Finding summary
 
-| ID | Severity | Surface | Title |
-|---|---|---|---|
-| F-001 | P1 | docs/README.md | Version claim: 7.6.0 vs actual 9.2.1 |
-| F-002 | P0 | core/README.md | `entities()` throws at runtime, not exported, but documented throughout |
-| F-003 | P0 | core/README.md | `effect()`, `subscribe()`, `update()`, `unwrap()` listed in API reference but don't exist on ISignalTree |
-| F-004 | P0 | core/README.md | README ends with corrupt code fragment (stray delimiters + orphaned tree.unwrap() call) |
-| F-005 | P1 | core/README.md | `withTimeTravel` doesn't exist; correct name is `timeTravel`; config key `maxHistory` wrong (should be `maxHistorySize`) |
-| F-006 | P1 | core/README.md | `.with(a(), b())` multi-arg — silently ignores second arg; must chain `.with(a()).with(b())` |
-| F-007 | P1 | core/README.md | `setMany`, `selectAll`, `selectBy`, `selectTotal`, `selectIds` documented — none exist; correct names are `setAll`, `all`, `where`, `count`, `ids` |
-| F-008 | P1 | core/README.md | Config key `batching` wrong; correct is `batchUpdates` |
-| F-009 | P1 | core/README.md | Callable setter used throughout Quick Start without stating it requires `@signaltree/callable-syntax` build transform |
-| F-010 | P2 | core/index.ts | `effects()` enhancer exists in source, not exported — no public import path |
-| F-011 | P1 | entity-signal.ts | `addMany()` mode option ('skip'/'overwrite') typed but not implemented |
-| F-012 | P1 | entity-signal.ts | EntityNode call signatures `(value)`, `(updater)` typed but silently no-ops at runtime |
-| F-013 | P1 | entity-signal.ts | EntityNode deep property writes (`node.name.set()`) typed as `CallableWritableSignal` but throw at runtime (plain closure) |
-| F-014 | P2 | constants.ts | Production error messages are bare numeric codes — opaque without a lookup URL |
-| F-015 | P2 | entity-signal.ts | `all()`, `byId()` return-type comments wrong in README (`Signal<E[]>` vs `E[]`) |
-| F-016 | P3 | packages/shared | `@signaltree/shared` version 9.0.1 vs monorepo 9.2.1 — drift |
+| ID    | Severity | Surface          | Title                                                                                                                                              |
+| ----- | -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F-001 | P1       | docs/README.md   | Version claim: 7.6.0 vs actual 9.2.1                                                                                                               |
+| F-002 | P0       | core/README.md   | `entities()` throws at runtime, not exported, but documented throughout                                                                            |
+| F-003 | P0       | core/README.md   | `effect()`, `subscribe()`, `update()`, `unwrap()` listed in API reference but don't exist on ISignalTree                                           |
+| F-004 | P0       | core/README.md   | README ends with corrupt code fragment (stray delimiters + orphaned tree.unwrap() call)                                                            |
+| F-005 | P1       | core/README.md   | `withTimeTravel` doesn't exist; correct name is `timeTravel`; config key `maxHistory` wrong (should be `maxHistorySize`)                           |
+| F-006 | P1       | core/README.md   | `.with(a(), b())` multi-arg — silently ignores second arg; must chain `.with(a()).with(b())`                                                       |
+| F-007 | P1       | core/README.md   | `setMany`, `selectAll`, `selectBy`, `selectTotal`, `selectIds` documented — none exist; correct names are `setAll`, `all`, `where`, `count`, `ids` |
+| F-008 | P1       | core/README.md   | Config key `batching` wrong; correct is `batchUpdates`                                                                                             |
+| F-009 | P1       | core/README.md   | Callable setter used throughout Quick Start without stating it requires `@signaltree/callable-syntax` build transform                              |
+| F-010 | P2       | core/index.ts    | `effects()` enhancer exists in source, not exported — no public import path                                                                        |
+| F-011 | P1       | entity-signal.ts | `addMany()` mode option ('skip'/'overwrite') typed but not implemented                                                                             |
+| F-012 | P1       | entity-signal.ts | EntityNode call signatures `(value)`, `(updater)` typed but silently no-ops at runtime                                                             |
+| F-013 | P1       | entity-signal.ts | EntityNode deep property writes (`node.name.set()`) typed as `CallableWritableSignal` but throw at runtime (plain closure)                         |
+| F-014 | P2       | constants.ts     | Production error messages are bare numeric codes — opaque without a lookup URL                                                                     |
+| F-015 | P2       | entity-signal.ts | `all()`, `byId()` return-type comments wrong in README (`Signal<E[]>` vs `E[]`)                                                                    |
+| F-016 | P3       | packages/shared  | `@signaltree/shared` version 9.0.1 vs monorepo 9.2.1 — drift                                                                                       |
 
 **Severity distribution:** 3×P0 · 8×P1 · 3×P2 · 1×P3 (P3 not shown separately)
 
@@ -87,13 +88,14 @@ Two clusters explain ~75% of the finding set:
 
 **Cluster A — API name divergence (F-002, F-005, F-007, F-008):** Eight specific API names in the README are wrong. These appear to originate from two sources: (a) older versions where names were different (entities → entityMap, withTimeTravel → timeTravel, batching → batchUpdates), and (b) cross-contamination from NgRx's naming conventions (selectAll, selectIds, selectTotal, selectBy). The NgRx-echo names are particularly harmful for AI agents — they will pick NgRx names from training data even when reading SignalTree docs if the docs reinforce those names.
 
-**Cluster B — Callable syntax: the invisible dependency (F-009):** SignalTree's primary DX differentiator — `tree.$.count(5)` syntax — silently fails without `@signaltree/callable-syntax`. The feature is described in the README but the caveat appears *after* the Quick Start examples that already use it. An agent reading left-to-right generates non-working code before reaching the warning. This is architecturally significant: the library's best feature becomes a trap.
+**Cluster B — Callable syntax: the invisible dependency (F-009):** SignalTree's primary DX differentiator — `tree.$.count(5)` syntax — silently fails without `@signaltree/callable-syntax`. The feature is described in the README but the caveat appears _after_ the Quick Start examples that already use it. An agent reading left-to-right generates non-working code before reaching the warning. This is architecturally significant: the library's best feature becomes a trap.
 
 ### 2.3 AI-legibility assessment
 
 **Verdict: a cold AI agent given only the current README has approximately 0% success rate at producing code that compiles and runs on the first attempt.**
 
 Evidence:
+
 - The first working entityMap example requires knowing NOT to do `.with(entities())` — README says both
 - The first setter example uses callable syntax without the caveat
 - Four API method names are wrong for EntitySignal operations
@@ -110,28 +112,30 @@ After the second or third iteration with error messages, a capable agent would l
 **Invoice editor** — nested entity collection (Invoice contains LineItem[]). Both sides implement O1–O10 identically per `specs/examples/feature-contract.md`.
 
 Expected derived values (test data):
+
 - `li-1`: subtotal=100, tax=10, total=110
 - `li-2`: subtotal=200, tax=0, total=200
 - Invoice: subtotal=310, total=300 (after discount=10)
 
 ### 3.2 DX comparison
 
-| Dimension | SignalTree | NgRx SignalStore |
-|---|---|---|
-| **LOC — store definition** | ~130 | ~115 |
-| **Time to first compiling** | ~25 min | ~15 min |
-| **TS errors hit** | 3 | 1 |
-| **Workarounds required** | 3 (F-002, F-009, F-012/F-013) | 0 |
-| **Nested entity mutation** | Read + spread + updateOne | `updateEntity({ id, changes: fn })` |
-| **Derived state** | Angular `computed()` | `withComputed()` + Angular `computed()` |
-| **Entity init** | `entityMap<Invoice, string>()` | `withEntities<Invoice>()` + `withHooks` |
-| **Subjective DX (1–5)** | 2 | 4 |
+| Dimension                   | SignalTree                     | NgRx SignalStore                        |
+| --------------------------- | ------------------------------ | --------------------------------------- |
+| **LOC — store definition**  | ~130                           | ~115                                    |
+| **Time to first compiling** | ~25 min                        | ~15 min                                 |
+| **TS errors hit**           | 3                              | 1                                       |
+| **Workarounds required**    | 3 (F-002, F-009, F-012/F-013)  | 0                                       |
+| **Nested entity mutation**  | Read + spread + updateOne      | `updateEntity({ id, changes: fn })`     |
+| **Derived state**           | Angular `computed()`           | `withComputed()` + Angular `computed()` |
+| **Entity init**             | `entityMap<Invoice, string>()` | `withEntities<Invoice>()` + `withHooks` |
+| **Subjective DX (1–5)**     | 2                              | 4                                       |
 
 ### 3.3 Mutation ergonomics — the core gap
 
 The most significant DX gap is nested entity mutation. For `addLineItem()`:
 
 **SignalTree** (required workaround per F-012/F-013):
+
 ```typescript
 addLineItem(invoiceId: string, item: LineItem): void {
   const invoice = this.tree.$.invoices.byId(invoiceId)?.();  // read full entity
@@ -143,6 +147,7 @@ addLineItem(invoiceId: string, item: LineItem): void {
 ```
 
 **NgRx SignalStore** (idiomatic, no workaround):
+
 ```typescript
 addLineItem(invoiceId: string, item: LineItem): void {
   patchState(store, updateEntity({
@@ -165,6 +170,7 @@ Both sides use Angular `computed()` for derived state. The `invoiceSignals(invoi
 The SignalTree invoice-editor scaffold works correctly. All 10 operations are implemented. The DX friction is concentrated in the entity mutation path — specifically the EntityNode type/impl mismatch (F-012, F-013). If deep entity writes were fixed, the SignalTree DX would be broadly competitive with NgRx SignalStore on this feature.
 
 **Scaffold artifacts:**
+
 - `specs/examples/signaltree/invoice-editor/store.ts`
 - `specs/examples/signaltree/invoice-editor/dx-notes.json`
 - `specs/examples/ngrx-signal-store/invoice-editor/store.ts`
@@ -183,6 +189,7 @@ These are the three highest-leverage changes. Each is concrete enough to impleme
 **Problem:** 11 of 16 findings (F-001 through F-009, F-015) are README accuracy issues. An AI agent given this README generates non-compiling code on first attempt, every time.
 
 **Proposed changes (ordered by impact):**
+
 1. Remove all `.with(entities())` references — replace with entityMap() self-registration pattern
 2. Move callable-syntax caveat box to Quick Start section (above the first setter example)
 3. Replace `withTimeTravel` → `timeTravel`, `maxHistory` → `maxHistorySize`
@@ -219,11 +226,13 @@ Change `EntityNode<E>[P]` from `CallableWritableSignal<T[P]>` to `Signal<T[P]>`.
 **Problem:** F-002 and F-010 — Two enhancers exist in source but are either deprecated-and-throws (`entities`) or silently hidden (`effects`). The README documents both. This creates a confusing public surface.
 
 **Option A — Clean removal + migration note:**
+
 - Delete `packages/core/src/enhancers/entities/entities.ts` entirely (or keep the runtime error throw but stop exporting it)
 - Remove all `entities()` references from README with a clear migration note box
 - For `effects()`: decide — export or remove. If Angular's built-in `effect()` is the recommended path, remove the enhancer and update the README
 
 **Option B — Export and document:**
+
 - Export `effects()` from `index.ts`, require `.with(effects())` in README examples
 - Add a migration guide: "v6: .with(entities()) → v7+: entityMap() self-registers, no enhancer needed"
 
@@ -242,6 +251,7 @@ Change `EntityNode<E>[P]` from `CallableWritableSignal<T[P]>` to `Signal<T[P]>`.
 Validate the AI-legibility findings empirically. A fresh Claude session given only the `@signaltree/core` README (no source, no audit findings, no prior context) is asked to implement the same invoice editor feature defined in `specs/examples/feature-contract.md`.
 
 Expected result per M1 findings: multiple failures on first attempt, concentrated on:
+
 - entities() / callable setter / withTimeTravel (F-002, F-009, F-005)
 - EntitySignal name errors (F-007)
 - multi-arg .with() (F-006)
@@ -254,6 +264,7 @@ Prompts for the M3 test session are specified in:
 ### 5.3 Success criteria
 
 The test produces:
+
 1. A complete transcript at `specs/examples/m3-prompts/transcript.md`
 2. An annotated version at `specs/examples/m3-prompts/transcript-annotated.md` mapping each agent error to a finding ID
 3. A failure-count table: errors × finding IDs × number of recovery turns
@@ -272,13 +283,13 @@ Per `specs/design/second-pair-of-eyes.md`: the M3 agent session MUST NOT be give
 
 The current codebase does not contain a benchmark harness. Before building one, these are the honest questions to ask:
 
-| Benchmark | Why it matters | Expected result |
-|---|---|---|
-| **Bundle size (gzip)** — SignalTree core vs @ngrx/signals | SignalTree's stated differentiator is smaller bundle | Need production build to measure; likely SignalTree smaller given fewer features |
-| **Initial render time** — 1000-item entity list, cold start | Most impactful perf metric for Angular apps | Expected similar; both use Angular signals under the hood |
-| **Update throughput** — 10k updates/sec on flat signal tree | Validates "faster than NgRx" claim | Likely similar given both use Angular's signal primitives |
-| **Memory — 10k entities** | Practical concern for large entity collections | SignalTree entityMap() vs NgRx entity adapter |
-| **Derived recomputation** | Signals are lazy; both should recompute only on access | Expected parity |
+| Benchmark                                                   | Why it matters                                         | Expected result                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **Bundle size (gzip)** — SignalTree core vs @ngrx/signals   | SignalTree's stated differentiator is smaller bundle   | Need production build to measure; likely SignalTree smaller given fewer features |
+| **Initial render time** — 1000-item entity list, cold start | Most impactful perf metric for Angular apps            | Expected similar; both use Angular signals under the hood                        |
+| **Update throughput** — 10k updates/sec on flat signal tree | Validates "faster than NgRx" claim                     | Likely similar given both use Angular's signal primitives                        |
+| **Memory — 10k entities**                                   | Practical concern for large entity collections         | SignalTree entityMap() vs NgRx entity adapter                                    |
+| **Derived recomputation**                                   | Signals are lazy; both should recompute only on access | Expected parity                                                                  |
 
 ### 6.2 What NOT to benchmark
 
@@ -302,24 +313,24 @@ Bundle size capture requires `ng build --configuration production`. This require
 
 All 16 findings are machine-queryable in `docs/audits/2026-04/findings.json`. Summary:
 
-| ID | Sev | Surface | Title (abbreviated) |
-|---|---|---|---|
-| F-001 | P1 | docs/README.md | Version claim: 7.6.0 vs 9.2.1 |
-| F-002 | P0 | core/README.md | `entities()` throws at runtime, documented as valid |
-| F-003 | P0 | core/README.md | Phantom tree methods: effect/subscribe/update/unwrap |
-| F-004 | P0 | core/README.md | Corrupt trailing code fragment |
-| F-005 | P1 | core/README.md | `withTimeTravel` / `maxHistory` wrong names |
-| F-006 | P1 | core/README.md | Multi-arg `.with()` silently drops second enhancer |
-| F-007 | P1 | core/README.md | 5 EntitySignal method names wrong (NgRx echo) |
-| F-008 | P1 | core/README.md | Config key `batching` wrong (should be `batchUpdates`) |
-| F-009 | P1 | core/README.md | Callable setter in Quick Start without transform caveat |
-| F-010 | P2 | core/index.ts | `effects()` not exported, no public import path |
-| F-011 | P1 | entity-signal.ts | `addMany` mode option typed but not implemented |
-| F-012 | P1 | entity-signal.ts | EntityNode call signatures silently no-op at runtime |
-| F-013 | P1 | entity-signal.ts | EntityNode deep property writes typed but throw at runtime |
-| F-014 | P2 | constants.ts | Production errors are numeric codes (0, 1, 2…) |
-| F-015 | P2 | entity-signal.ts | Wrong return-type comments in entityMap API reference |
-| F-016 | P3 | packages/shared | @signaltree/shared version drift: 9.0.1 vs 9.2.1 |
+| ID    | Sev | Surface          | Title (abbreviated)                                        |
+| ----- | --- | ---------------- | ---------------------------------------------------------- |
+| F-001 | P1  | docs/README.md   | Version claim: 7.6.0 vs 9.2.1                              |
+| F-002 | P0  | core/README.md   | `entities()` throws at runtime, documented as valid        |
+| F-003 | P0  | core/README.md   | Phantom tree methods: effect/subscribe/update/unwrap       |
+| F-004 | P0  | core/README.md   | Corrupt trailing code fragment                             |
+| F-005 | P1  | core/README.md   | `withTimeTravel` / `maxHistory` wrong names                |
+| F-006 | P1  | core/README.md   | Multi-arg `.with()` silently drops second enhancer         |
+| F-007 | P1  | core/README.md   | 5 EntitySignal method names wrong (NgRx echo)              |
+| F-008 | P1  | core/README.md   | Config key `batching` wrong (should be `batchUpdates`)     |
+| F-009 | P1  | core/README.md   | Callable setter in Quick Start without transform caveat    |
+| F-010 | P2  | core/index.ts    | `effects()` not exported, no public import path            |
+| F-011 | P1  | entity-signal.ts | `addMany` mode option typed but not implemented            |
+| F-012 | P1  | entity-signal.ts | EntityNode call signatures silently no-op at runtime       |
+| F-013 | P1  | entity-signal.ts | EntityNode deep property writes typed but throw at runtime |
+| F-014 | P2  | constants.ts     | Production errors are numeric codes (0, 1, 2…)             |
+| F-015 | P2  | entity-signal.ts | Wrong return-type comments in entityMap API reference      |
+| F-016 | P3  | packages/shared  | @signaltree/shared version drift: 9.0.1 vs 9.2.1           |
 
 ---
 
@@ -351,4 +362,4 @@ Actions ordered by impact-to-effort ratio:
 
 ---
 
-*RFC generated by M5 synthesis — 2026-04-29. Findings DB authoritative; this narrative is derived from it.*
+_RFC generated by M5 synthesis — 2026-04-29. Findings DB authoritative; this narrative is derived from it._

@@ -15,31 +15,31 @@ feature.
 
 Bare `signalTree`: **5.65 KB**
 
-| marker | total | delta |
-| --- | --- | --- |
-| `compared` | 5.72 | **+0.06** |
-| `asyncSource` | 6.41 | +0.76 |
-| `status` | 6.42 | +0.77 |
-| `asyncQuery` | 6.56 | +0.91 |
-| `stored` | 6.87 | +1.22 |
-| `form` | 7.75 | +2.10 |
-| `entityMap` (plain) | 8.40 | **+2.75** |
-| `entityMap` + `loader` | 9.93 | +4.28 |
+| marker                 | total | delta     |
+| ---------------------- | ----- | --------- |
+| `compared`             | 5.72  | **+0.06** |
+| `asyncSource`          | 6.41  | +0.76     |
+| `status`               | 6.42  | +0.77     |
+| `asyncQuery`           | 6.56  | +0.91     |
+| `stored`               | 6.87  | +1.22     |
+| `form`                 | 7.75  | +2.10     |
+| `entityMap` (plain)    | 8.40  | **+2.75** |
+| `entityMap` + `loader` | 9.93  | +4.28     |
 
-| enhancer | total | delta |
-| --- | --- | --- |
-| `devTools` | 5.72 | **+0.07** (impl is lazy — 8.25 KB chunk on connect) |
-| `batching` | 6.62 | +0.97 |
-| `timeTravel` | 7.33 | +1.67 |
-| `serialization` | 7.50 | +1.84 |
-| `persistence` | 8.01 | +2.35 |
-| `createAuditTracker` | 5.92 | +0.27 |
+| enhancer             | total | delta                                               |
+| -------------------- | ----- | --------------------------------------------------- |
+| `devTools`           | 5.72  | **+0.07** (impl is lazy — 8.25 KB chunk on connect) |
+| `batching`           | 6.62  | +0.97                                               |
+| `timeTravel`         | 7.33  | +1.67                                               |
+| `serialization`      | 7.50  | +1.84                                               |
+| `persistence`        | 8.01  | +2.35                                               |
+| `createAuditTracker` | 5.92  | +0.27                                               |
 
-| realistic | total |
-| --- | --- |
+| realistic                                     | total        |
+| --------------------------------------------- | ------------ |
 | typical app (`entityMap` + `status` + `form`) | **10.71 KB** |
-| everything (7 markers + 3 enhancers) | 18.42 KB |
-| `@signaltree/core/storage` imported alone | 0.38 KB |
+| everything (7 markers + 3 enhancers)          | 18.42 KB     |
+| `@signaltree/core/storage` imported alone     | 0.38 KB      |
 
 **Three structural decisions are confirmed working by these numbers:**
 
@@ -61,27 +61,27 @@ against +14.58 if every feature's individual delta were additive — about
 
 A bare tree with no markers and no enhancers still ships:
 
-| module | minified bytes | share of floor |
-| --- | --- | --- |
-| `lib/signal-tree.js` | 6827 | 39% |
-| `lib/path-notifier.js` | **2239** | **13%** |
-| `lib/constants.js` | 2155 | 12% |
-| `lib/utils.js` | 1958 | 11% |
-| `shared/lib/deep-equal.js` | 1298 | 7% |
-| `shared/lib/is-built-in-object.js` | 1074 | 6% |
-| `lib/internals/materialize-markers.js` | 976 | 6% |
-| `lib/internals/merge-derived.js` | **713** | **4%** |
-| everything else | 483 | 3% |
+| module                                 | minified bytes | share of floor |
+| -------------------------------------- | -------------- | -------------- |
+| `lib/signal-tree.js`                   | 6827           | 39%            |
+| `lib/path-notifier.js`                 | **2239**       | **13%**        |
+| `lib/constants.js`                     | 2155           | 12%            |
+| `lib/utils.js`                         | 1958           | 11%            |
+| `shared/lib/deep-equal.js`             | 1298           | 7%             |
+| `shared/lib/is-built-in-object.js`     | 1074           | 6%             |
+| `lib/internals/materialize-markers.js` | 976            | 6%             |
+| `lib/internals/merge-derived.js`       | **713**        | **4%**         |
+| everything else                        | 483            | 3%             |
 
 Two entries are machinery a bare tree never uses. Priced by stubbing them and
 re-measuring:
 
-| | bare tree | reclaim |
-| --- | --- | --- |
-| today | 5.64 KB | — |
-| `path-notifier` injected | 5.03 KB | **0.61 KB** |
-| `merge-derived` injected | 5.37 KB | 0.28 KB |
-| both | 4.75 KB | **0.90 KB (16%)** |
+|                          | bare tree | reclaim           |
+| ------------------------ | --------- | ----------------- |
+| today                    | 5.64 KB   | —                 |
+| `path-notifier` injected | 5.03 KB   | **0.61 KB**       |
+| `merge-derived` injected | 5.37 KB   | 0.28 KB           |
+| both                     | 4.75 KB   | **0.90 KB (16%)** |
 
 `lib/constants.js` at 2155 bytes is almost entirely the `ST####` message table,
 and it ships in production **on purpose** — see

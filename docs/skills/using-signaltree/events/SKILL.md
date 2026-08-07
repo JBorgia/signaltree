@@ -8,6 +8,7 @@ description: Guides AI agents using @signaltree/events for Zod-validated event s
 Use when an app needs typed event contracts with runtime validation, stable IDs/correlation, idempotency, and retry semantics across a process boundary (queue, WebSocket, service bus). Skip for local in-process emitters.
 
 Three layers, composable independently:
+
 1. Schema + validation — `createEventSchema`, `validateEvent`, `isValidEvent`, `parseEvent`
 2. Registry + factory — `EventRegistry`, `createEventFactory`
 3. Transport adapters (subpath) — `/nestjs` (BullMQ/Redis), `/angular` (WebSocket bridge), `/testing` (`MockEventBus`)
@@ -48,8 +49,10 @@ const UserCreatedSchema = createEventSchema('user.created', {
   name: z.string().min(1),
 });
 
-if (isValidEvent(UserCreatedSchema, incoming)) { /* typed */ }
-const event = parseEvent(UserCreatedSchema, incoming);   // throws on fail
+if (isValidEvent(UserCreatedSchema, incoming)) {
+  /* typed */
+}
+const event = parseEvent(UserCreatedSchema, incoming); // throws on fail
 const result = validateEvent(UserCreatedSchema, incoming); // never throws; result.success + result.error.issues
 ```
 
@@ -74,8 +77,13 @@ import { classifyError, isRetryableError, InMemoryIdempotencyStore, BaseEvent } 
 declare const incomingEvent: BaseEvent<string, unknown>;
 declare function processEvent(e: BaseEvent<string, unknown>): Promise<void>;
 
-try { await processEvent(incomingEvent); }
-catch (err) { if (isRetryableError(err)) { /* enqueue retry */ } }
+try {
+  await processEvent(incomingEvent);
+} catch (err) {
+  if (isRetryableError(err)) {
+    /* enqueue retry */
+  }
+}
 
 const store = new InMemoryIdempotencyStore({ defaultTtlMs: 60_000 });
 const result = await store.check(incomingEvent, 'welcome-email-subscriber');
@@ -110,20 +118,14 @@ type Trade = { id: string; status: string; [k: string]: unknown };
 
 // A discriminated union gives the extractors typed `e.data`; with a bare
 // `BaseEvent`, `data` is `unknown` and every access needs a cast.
-type TradeEvent =
-  | BaseEvent<'TradeCreated', { trade: Trade }>
-  | BaseEvent<'TradeStatusChanged', { tradeId: string; status: string }>
-  | BaseEvent<'TradeCancelled', { tradeId: string }>;
+type TradeEvent = BaseEvent<'TradeCreated', { trade: Trade }> | BaseEvent<'TradeStatusChanged', { tradeId: string; status: string }> | BaseEvent<'TradeCancelled', { tradeId: string }>;
 
 // entities: a @signaltree/core entityMap accessor, e.g. store.$.trades.entities
 declare const entities: EntitySignal<Trade, string>;
 declare const eventsReceivedThisTick: TradeEvent[];
 
 const flush = entityEventHandler<Trade, string, TradeEvent>(entities, {
-  match: (e) =>
-    e.type === 'TradeCreated' ? 'upsert' :
-    e.type === 'TradeStatusChanged' ? 'update' :
-    e.type === 'TradeCancelled' ? 'remove' : null,
+  match: (e) => (e.type === 'TradeCreated' ? 'upsert' : e.type === 'TradeStatusChanged' ? 'update' : e.type === 'TradeCancelled' ? 'remove' : null),
   upsert: (e) => (e.type === 'TradeCreated' ? e.data.trade : undefined),
   update: (e) => (e.type === 'TradeStatusChanged' ? { id: e.data.tradeId, changes: { status: e.data.status } } : undefined),
   remove: (e) => (e.type === 'TradeCancelled' ? e.data.tradeId : undefined),
@@ -160,7 +162,7 @@ manager.apply({
   rollback, // restores previousData via upsertOne, or removeOne if this was a fresh create
 });
 
-manager.confirm(correlationId);              // server accepted
+manager.confirm(correlationId); // server accepted
 manager.rollback(correlationId, new Error()); // server rejected / explicit rollback
 ```
 
@@ -178,12 +180,13 @@ const created = factory.create('user.created', { id: crypto.randomUUID(), email:
 
 const bus = new MockEventBus();
 await bus.publish(created);
-bus.getPublishedEvents();               // all recorded events
+bus.getPublishedEvents(); // all recorded events
 bus.getPublishedEventsByType('user.created');
 bus.getPublishedCount('user.created');
 ```
 
 Gotchas:
+
 - Zod required — install explicitly even without schema authoring.
 - `/nestjs` peers (`bullmq`, `reflect-metadata`) are optional in `peerDependenciesMeta`; package manager won't prompt. Install only for that subpath.
 - `EventBusModule.forRoot` needs Redis at config time; use `forRootAsync` for async config.

@@ -2,7 +2,7 @@
 
 v12 is an "earned major": it lands one real capability improvement (a smaller,
 tree-shakeable `entityMap` loader) and clears the entire backlog of APIs that
-were marked *"deprecated — removed next major"*. Most apps touch only one or two
+were marked _"deprecated — removed next major"_. Most apps touch only one or two
 of the items below. Every removed API has a direct, mechanical replacement.
 
 ## 1. `entityMap` loaders now use `loader()` (breaking)
@@ -73,15 +73,15 @@ and `getBatchQueueSize()` are also removed — use the tree's
 
 Use the canonical single-word factory (each is a drop-in rename):
 
-| Removed | Use |
-| --- | --- |
-| `withBatching` | `batching()` |
-| `withDevTools` | `devTools()` |
-| `withSerialization` | `serialization()` |
-| `withPersistence` | `persistence()` |
-| `withEnterprise` | `enterprise()` |
-| `withGuardrails` | `guardrails()` |
-| `createRealtimeEnhancer` | `realtime()` |
+| Removed                  | Use               |
+| ------------------------ | ----------------- |
+| `withBatching`           | `batching()`      |
+| `withDevTools`           | `devTools()`      |
+| `withSerialization`      | `serialization()` |
+| `withPersistence`        | `persistence()`   |
+| `withEnterprise`         | `enterprise()`    |
+| `withGuardrails`         | `guardrails()`    |
+| `createRealtimeEnhancer` | `realtime()`      |
 
 ## 5. Enhancer/marker-author plumbing moved to `/authoring`
 
@@ -101,11 +101,11 @@ Affected: `withWriteContext`, `getActiveWriteContext`, `interceptLeafSignals`,
 
 ## 6. `@signaltree/ng-forms` renames
 
-| Removed | Use |
-| --- | --- |
-| `markerSignalForm` / `signalFormBridge` | `signalForm()` |
+| Removed                                                                                                               | Use                                                      |
+| --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `markerSignalForm` / `signalFormBridge`                                                                               | `signalForm()`                                           |
 | bare `required` / `email` / `min` / `max` / `minLength` / `maxLength` / `pattern` / `unique` / `compose` / `debounce` | `ngFormValidators.required`, `ngFormValidators.email`, … |
-| `createFormTree` (guardrails) | `createGuardedFormTree()` |
+| `createFormTree` (guardrails)                                                                                         | `createGuardedFormTree()`                                |
 
 ## Nothing else changed
 

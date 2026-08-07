@@ -23,7 +23,9 @@ import { signalTree } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
-interface State { user: { email: string; age: number } }
+interface State {
+  user: { email: string; age: number };
+}
 
 const tree = signalTree<State>({ user: { email: '', age: 0 } }).with(
   schemas({
@@ -31,12 +33,12 @@ const tree = signalTree<State>({ user: { email: '', age: 0 } }).with(
       'user.email': z.string().email(),
       'user.age': z.number().int().min(0),
     },
-  }),
+  })
 );
 
 tree.$.user.email.set('not-an-email');
-tree.schemas.errorsAt('user.email')();  // 'Invalid email'
-tree.schemas.isValid();                  // false
+tree.schemas.errorsAt('user.email')(); // 'Invalid email'
+tree.schemas.isValid(); // false
 ```
 
 ## Async schemas — pending state + write-sequence guard
@@ -49,17 +51,15 @@ const usernameSchema = z.string().refine(
     const r = await fetch(`/api/check-username?u=${value}`);
     return (await r.json()).available;
   },
-  { message: 'Username taken' },
+  { message: 'Username taken' }
 );
 
-const tree = signalTree({ user: { username: '' } }).with(
-  schemas({ schemas: { 'user.username': usernameSchema } }),
-);
+const tree = signalTree({ user: { username: '' } }).with(schemas({ schemas: { 'user.username': usernameSchema } }));
 
 tree.$.user.username.set('jonathan');
-tree.schemas.isPendingAt('user.username')();  // true (in flight)
+tree.schemas.isPendingAt('user.username')(); // true (in flight)
 // On settle:
-tree.schemas.errorsAt('user.username')();      // null or 'Username taken'
+tree.schemas.errorsAt('user.username')(); // null or 'Username taken'
 ```
 
 The write-sequence guard drops stale verdicts. If a newer write arrives mid-flight, the older schema run is orphaned — its promise still resolves (we can't abort it), but its verdict is discarded.
@@ -81,11 +81,11 @@ schemas({
 });
 
 tree.$.users.u42.email.set('bad');
-tree.schemas.errorsAt('users.u42.email')();  // 'Invalid email'
+tree.schemas.errorsAt('users.u42.email')(); // 'Invalid email'
 
 // ❌ AVOID — registering at the collection root
 schemas({
-  schemas: { users: z.array(userSchema) },  // receives entityMap marker, not an array
+  schemas: { users: z.array(userSchema) }, // receives entityMap marker, not an array
 });
 ```
 
@@ -101,13 +101,11 @@ const userSchema = z.object({
   age: z.number().int().min(0),
 });
 
-const tree = signalTree({ user: { email: '', age: -1 } }).with(
-  schemas({ schemas: { user: userSchema } }),
-);
+const tree = signalTree({ user: { email: '', age: -1 } }).with(schemas({ schemas: { user: userSchema } }));
 
 tree.$.user.email.set('bad');
-tree.schemas.errorsAt('user.email')();  // 'Invalid email'
-tree.schemas.errorsAt('user.age')();    // 'Invalid age' (initial state)
+tree.schemas.errorsAt('user.email')(); // 'Invalid email'
+tree.schemas.errorsAt('user.age')(); // 'Invalid age' (initial state)
 ```
 
 The ancestor schema validates the whole subtree at the registered path. Issues are distributed to the leaves via `issue.path`.
@@ -117,9 +115,9 @@ The ancestor schema validates the whole subtree at the registered path. Issues a
 ```ts
 schemas({
   schemas: {
-    user: userSchema,                          // ancestor
-    'users.*.email': z.string().email(),       // wildcard
-    'users.admin.email': z.string().email(),   // specific
+    user: userSchema, // ancestor
+    'users.*.email': z.string().email(), // wildcard
+    'users.admin.email': z.string().email(), // specific
   },
 });
 ```
@@ -140,11 +138,11 @@ const tree = signalTree(initialState).with(
     schemas: { 'user.email': z.string().email() },
     suppressIntents: ['hydrate', 'migration'],
     suppressSources: ['time-travel'],
-  }),
+  })
 );
 
 withWriteContext({ intent: 'hydrate' }, () => {
-  tree.$.user.set(serverPayload);  // skipped by validation
+  tree.$.user.set(serverPayload); // skipped by validation
 });
 ```
 
@@ -166,16 +164,16 @@ Both **supersede** in-flight runs by bumping version. Orphaned promises still ru
 
 ```ts
 // Per-path
-tree.schemas.errorsAt('user.email')();  // string | null
+tree.schemas.errorsAt('user.email')(); // string | null
 tree.schemas.isValidAt('user.email')(); // boolean
 tree.schemas.isPendingAt('user.email')(); // boolean (async runs only)
 
 // Aggregate
-tree.schemas.isValid();           // O(1) — counter-backed
-tree.schemas.pending();           // any leaf in flight?
-tree.schemas.pendingPaths();      // readonly string[]
-tree.schemas.errors();            // Record<path, string | null>
-tree.schemas.errorList();         // readonly string[] (non-null only)
+tree.schemas.isValid(); // O(1) — counter-backed
+tree.schemas.pending(); // any leaf in flight?
+tree.schemas.pendingPaths(); // readonly string[]
+tree.schemas.errors(); // Record<path, string | null>
+tree.schemas.errorList(); // readonly string[] (non-null only)
 ```
 
 `isValid()` is O(1) per read — backed by an invalid-count counter maintained inside the verdict applier. Safe to use in button-disabled bindings without performance concern.

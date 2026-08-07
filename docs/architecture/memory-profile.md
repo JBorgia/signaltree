@@ -16,16 +16,16 @@ compete.
 
 Node 24.3 / V8 13.6, forced GC, one process per scenario.
 
-| scenario | retained | per unit | collectable after release |
-| --- | --- | --- | --- |
-| `signalTree`, 20k scalar leaves | 11.81 MB | **619 B/leaf** | ✅ |
-| plain object of 20k RAW Angular signals | 11.00 MB | **577 B/signal** | ✅ |
-| plain object, 20k keys (floor) | 1.21 MB | 63 B/key | ✅ |
-| `entityMap`, 1k entities | 0.31 MB | 330 B/entity | ✅ |
-| `entityMap`, 10k entities | 2.85 MB | 299 B/entity | ✅ |
-| `entityMap` 10k **+ a held `tree()` snapshot** | 2.86 MB | 300 B/entity | ✅ |
-| `entityMap` 10k **+ `byId()` on every row, HELD** | 34.08 MB | **3,573 B/entity** | ✅ |
-| `entityMap` 10k + `byId()` on every row, not held | 8.05 MB | **844 B/entity** | ✅ |
+| scenario                                          | retained | per unit           | collectable after release |
+| ------------------------------------------------- | -------- | ------------------ | ------------------------- |
+| `signalTree`, 20k scalar leaves                   | 11.81 MB | **619 B/leaf**     | ✅                        |
+| plain object of 20k RAW Angular signals           | 11.00 MB | **577 B/signal**   | ✅                        |
+| plain object, 20k keys (floor)                    | 1.21 MB  | 63 B/key           | ✅                        |
+| `entityMap`, 1k entities                          | 0.31 MB  | 330 B/entity       | ✅                        |
+| `entityMap`, 10k entities                         | 2.85 MB  | 299 B/entity       | ✅                        |
+| `entityMap` 10k **+ a held `tree()` snapshot**    | 2.86 MB  | 300 B/entity       | ✅                        |
+| `entityMap` 10k **+ `byId()` on every row, HELD** | 34.08 MB | **3,573 B/entity** | ✅                        |
+| `entityMap` 10k + `byId()` on every row, not held | 8.05 MB  | **844 B/entity**   | ✅                        |
 
 2,000 repeated `tree()` reads grew the heap by **0.039 MB**.
 
@@ -84,7 +84,7 @@ evidence of a leak. V8 does not shrink `heapUsed` promptly, so the first version
 of the "reclaimed" column reported every `entityMap` scenario as a 2.3 MB leak.
 A `WeakRef` is the definitive test — but it is **not cleared within the same
 synchronous turn**, however many times you call `gc()`. Without yielding to a
-macrotask first, every scenario reports a leak, *including a plain object*, which
+macrotask first, every scenario reports a leak, _including a plain object_, which
 is how that bug announced itself.
 
 ---
@@ -94,11 +94,11 @@ is how that bug announced itself.
 `node --expose-gc tools/memory-compare.mjs`. Same 10,000 entity objects in each
 library's idiomatic collection, one process per arm.
 
-| arm | @10k | **marginal** | fixed |
-| --- | --- | --- | --- |
-| elf | 3.15 MB | **96 B/entity** | 2.23 MB |
-| raw Angular signals | 6.59 MB | **89 B/entity** | 5.74 MB |
-| `@ngrx/signals` | 6.68 MB | **91 B/entity** | 5.81 MB |
+| arm                        | @10k    | **marginal**     | fixed   |
+| -------------------------- | ------- | ---------------- | ------- |
+| elf                        | 3.15 MB | **96 B/entity**  | 2.23 MB |
+| raw Angular signals        | 6.59 MB | **89 B/entity**  | 5.74 MB |
+| `@ngrx/signals`            | 6.68 MB | **91 B/entity**  | 5.81 MB |
 | **SignalTree `entityMap`** | 7.89 MB | **134 B/entity** | 6.61 MB |
 
 **MARGINAL is the slope between 1k and 10k**, so every fixed cost — module load,
@@ -115,13 +115,13 @@ array", not "we use less memory".
 
 ### The number that actually matters for a large list
 
-| SignalTree usage at 10k | per entity |
-| --- | --- |
-| entity objects alone (the floor) | 89 B |
-| plain array leaf | 113 B |
-| `entityMap`, collection read via `.all()` | 315 B |
-| `byId()` on every row, nodes **not retained** | **844 B** |
-| **`byId()` on every row, nodes HELD** | **3,573 B** |
+| SignalTree usage at 10k                       | per entity  |
+| --------------------------------------------- | ----------- |
+| entity objects alone (the floor)              | 89 B        |
+| plain array leaf                              | 113 B       |
+| `entityMap`, collection read via `.all()`     | 315 B       |
+| `byId()` on every row, nodes **not retained** | **844 B**   |
+| **`byId()` on every row, nodes HELD**         | **3,573 B** |
 
 `byId()` materialises a per-entity node so that row can be bound and written
 independently — the whole point of the feature — and it is by a wide margin the
@@ -140,7 +140,7 @@ state free. The weak cache removed an accidental cost, not the intrinsic one,
 and saying otherwise would be quoting the flattering half of the measurement.
 
 **This is the memory guidance that matters on a phone:** call `byId()` freely,
-but *keep* a node only for rows a user can actually interact with. A 10,000-row
+but _keep_ a node only for rows a user can actually interact with. A 10,000-row
 list holding a node per row retains 34 MB, and nothing else in this document
 comes close to it.
 

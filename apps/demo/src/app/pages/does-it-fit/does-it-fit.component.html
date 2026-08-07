@@ -1,0 +1,308 @@
+<div class="fit-container">
+  <header class="page-header">
+    <p class="page-eyebrow">Evaluating · read this before the benchmarks</p>
+    <h1 class="page-title">Does SignalTree fit your workload?</h1>
+    <p class="page-lede">
+      SignalTree makes one architectural trade, and it is not free. Writes are
+      independent of state size and notification is independent of subscriber
+      count — and you pay for that whenever you materialize the whole tree. Two
+      questions decide whether the trade is in your favour. One of them has
+      answers that send you elsewhere.
+    </p>
+    <nav class="page-toc" aria-label="On this page">
+      <a href="#q1">1. How narrow are your reads?</a>
+      <a href="#q2">2. Do you read everything, or undo deeply?</a>
+      <a href="#capabilities">3. What each library provides</a>
+      <a href="#grid">4. Which apps land where</a>
+      <a href="#lose">5. Where we lose</a>
+    </nav>
+  </header>
+
+  <section id="q1" class="section">
+    <p class="section-eyebrow">Question 1</p>
+    <h2 class="section-title">
+      How many consumers are bound below the top level, and how often do you
+      write?
+    </h2>
+    <p class="section-intro">
+      Only leaves are signals. A write goes to one leaf and dirties only that
+      leaf's consumers — everything else returns a cached value at the cost of a
+      pointer check. An immutable store re-runs every subscriber's projection on
+      every emission and filters downstream, so its cost grows with how many
+      things are watching.
+    </p>
+
+    <h3 class="table-title">Write cost against live consumers</h3>
+    <p class="table-note">
+      100 fixed fields · 200 writes · median of 11 · one write to one field.
+    </p>
+    <div class="table-scroll">
+      <table class="bench-table">
+        <thead>
+          <tr>
+            <th scope="col">Live consumers</th>
+            <th scope="col">SignalTree</th>
+            <th scope="col">Immutable store (elf)</th>
+            <th scope="col">Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of fanout; track row.consumers) {
+          <tr>
+            <th scope="row">{{ row.consumers }}</th>
+            <td class="num good">{{ row.signaltree }}</td>
+            <td class="num">{{ row.immutable }}</td>
+            <td class="num ratio">{{ row.ratio }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="table-title">Write cost against state size</h3>
+    <p class="table-note">
+      Zero consumers, so this isolates the store write itself, not selector
+      fan-out.
+    </p>
+    <div class="table-scroll">
+      <table class="bench-table">
+        <thead>
+          <tr>
+            <th scope="col">Root props</th>
+            <th scope="col">SignalTree</th>
+            <th scope="col">Immutable store (elf)</th>
+            <th scope="col">Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of scale; track row.consumers) {
+          <tr>
+            <th scope="row">{{ row.consumers }}</th>
+            <td class="num good">{{ row.signaltree }}</td>
+            <td class="num">{{ row.immutable }}</td>
+            <td class="num ratio">{{ row.ratio }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="section-aside">
+      SignalTree's column is flat because nothing above the written leaf is
+      rebuilt. It is not flat in the consumer table, because a change-detection
+      pass still reads every consumer — a cached computed read is cheap, not
+      free.
+    </p>
+  </section>
+
+  <section id="q2" class="section section-alt">
+    <p class="section-eyebrow">Question 2</p>
+    <h2 class="section-title">
+      Do you read the whole collection on every change, or undo deeply over it?
+    </h2>
+    <p class="section-intro">
+      Either one hands the win back. These are the same measurements read in the
+      direction that does not flatter us.
+    </p>
+    <div class="stat-row">
+      <div class="stat">
+        <p class="stat-value">1.90 µs</p>
+        <p class="stat-label">update + <code>byId()</code></p>
+        <p class="stat-note">Per-entity binding. Fan-out of exactly 1.</p>
+      </div>
+      <div class="stat stat-bad">
+        <p class="stat-value">97.47 µs</p>
+        <p class="stat-label">update + <code>all()</code></p>
+        <p class="stat-note">
+          Rebuilds the array on every mutation — 1.8x slower than a plain array
+          leaf, with no granularity earned back.
+        </p>
+      </div>
+      <div class="stat stat-bad">
+        <p class="stat-value">~2.5x</p>
+        <p class="stat-label">behind elf on undo, 10,000 rows</p>
+        <p class="stat-note">
+          An immutable store swaps one reference. We write values back into
+          per-entity signals — the cost of granular reads.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="capabilities" class="section">
+    <p class="section-eyebrow">Capability</p>
+    <h2 class="section-title">What each library actually provides</h2>
+    <p class="section-intro">
+      Every cell is read from the library's
+      <strong>installed type declarations</strong>, not its README — a
+      comparison written from docs measures documentation, and flatters whoever
+      writes the better one. Reproduce it with
+      <code>node tools/api-surface.mjs</code>. Akita is omitted: unmaintained
+      upstream, so it is not a live choice.
+    </p>
+    <p class="legend">
+      <span class="cell yes">●</span> built in
+      <span class="cell partial">◐</span> partial / needs assembly
+      <span class="cell no">○</span> absent
+      <span class="badge-new">14</span> changed in 14.0.0-rc.1
+    </p>
+
+    @for (group of capabilities; track group.group) {
+    <h3 class="table-title">{{ group.group }}</h3>
+    <div class="table-scroll">
+      <table class="cap-table">
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            <th scope="col">SignalTree</th>
+            <th scope="col">&#64;ngrx/signals</th>
+            <th scope="col">elf</th>
+            <th scope="col">NGXS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of group.rows; track row.capability) {
+          <tr>
+            <th scope="row">
+              {{ row.capability }}
+              @if (row.newIn14) {
+              <span class="badge-new" title="Changed in 14.0.0-rc.1">14</span>
+              }
+            </th>
+            <td class="cell {{ row.signaltree }}">
+              <span aria-hidden="true">{{
+                row.signaltree === 'yes'
+                  ? '●'
+                  : row.signaltree === 'partial'
+                  ? '◐'
+                  : '○'
+              }}</span>
+              <span class="sr-only">{{ row.signaltree }}</span>
+            </td>
+            <td class="cell {{ row.ngrxSignals }}">
+              <span aria-hidden="true">{{
+                row.ngrxSignals === 'yes'
+                  ? '●'
+                  : row.ngrxSignals === 'partial'
+                  ? '◐'
+                  : '○'
+              }}</span>
+              <span class="sr-only">{{ row.ngrxSignals }}</span>
+            </td>
+            <td class="cell {{ row.elf }}">
+              <span aria-hidden="true">{{
+                row.elf === 'yes' ? '●' : row.elf === 'partial' ? '◐' : '○'
+              }}</span>
+              <span class="sr-only">{{ row.elf }}</span>
+            </td>
+            <td class="cell {{ row.ngxs }}">
+              <span aria-hidden="true">{{
+                row.ngxs === 'yes' ? '●' : row.ngxs === 'partial' ? '◐' : '○'
+              }}</span>
+              <span class="sr-only">{{ row.ngxs }}</span>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+
+    <p class="section-aside">
+      <strong>Read the absent cells too.</strong> elf has per-entity undo,
+      reorder, bounded collections and per-entity UI state that we do not. Those
+      are real, and the capability audit that found them is the same exercise
+      that caught our own <code>canUndo()</code> being non-reactive — found by
+      reading a competitor's type signature, not by our test suite.
+    </p>
+  </section>
+
+  <section id="grid" class="section section-alt">
+    <p class="section-eyebrow">Applied</p>
+    <h2 class="section-title">Which apps land where</h2>
+    <p class="section-intro">
+      Two columns, deliberately separated.
+      <strong>What the measurements say</strong> is not the same question as
+      <strong>what teams pick</strong> — ecosystem gravity is a real force, but
+      it is a fact about hiring, not about fit. Collapsing them lets one
+      masquerade as the other.
+    </p>
+    <p class="section-intro">
+      The library measurements are ours. The mapping from a domain to a workload
+      is judgment — validate it against your own app rather than taking the row.
+    </p>
+    <div class="table-scroll">
+      <table class="fit-table">
+        <thead>
+          <tr>
+            <th scope="col">Workload</th>
+            <th scope="col">Typical domains</th>
+            <th scope="col">What the measurements say</th>
+            <th scope="col">What teams usually pick</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of fit; track row.workload) {
+          <tr [class]="'fit-' + row.fit">
+            <th scope="row">{{ row.workload }}</th>
+            <td>{{ row.domains }}</td>
+            <td class="fit-answer">{{ row.best }}</td>
+            <td class="fit-usual">{{ row.usual }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="section-aside">
+      Where the two columns disagree, the honest reading is "this is a toss-up
+      that gravity decides" — not "NgRx fits better." For CRUD consoles and
+      claims workflows the measured gap runs the other way: 28.5x on the
+      collection task and 50x on undo, because <code>@ngrx/signals</code> has no
+      undo, form, persistence or caching primitive and a typical app hand-rolls
+      all four.
+    </p>
+  </section>
+
+  <section id="lose" class="section section-alt">
+    <p class="section-eyebrow">Honest</p>
+    <h2 class="section-title">Where we lose, and what to use instead</h2>
+    <p class="section-intro">
+      These are not caveats bolted onto a pitch. They are the direct
+      consequences of the same design that produces the numbers above.
+    </p>
+    <div class="lose-grid">
+      @for (item of lose; track item.title) {
+      <article class="lose-card">
+        <h3 class="lose-title">{{ item.title }}</h3>
+        <p class="lose-measured">{{ item.measured }}</p>
+        <p class="lose-why">{{ item.why }}</p>
+        <p class="lose-instead"><strong>Instead:</strong> {{ item.instead }}</p>
+      </article>
+      }
+    </div>
+  </section>
+
+  <section class="section caveat">
+    <h2 class="section-title">Don't take the numbers — re-run them</h2>
+    <p class="section-intro">
+      Every figure on this page comes from a harness in the repository, gated in
+      CI so it cannot rot silently. The fan-out and state-size tables are
+      <code>tools/bench-state-scale.mjs</code>; the collection and undo figures
+      are <code>tools/bench-compare.mjs</code>, documented in
+      <code>docs/compare/real-implementations.md</code>.
+    </p>
+    <p class="section-intro">
+      <strong>Known limit:</strong> these are Node v24.3 / V8 on a single
+      machine. Whether the ratios transfer to a browser is
+      <em>not established</em>. Treat them as evidence about the architecture,
+      not as a promise about your app.
+    </p>
+    <p class="section-aside">
+      One of our own comparisons was published backwards once — an earlier
+      revision claimed SignalTree was 20x faster than elf at undo when it was
+      not measuring undo at all. The retraction and the corrected numbers are
+      both kept in <code>docs/compare/real-implementations.md</code>, because a
+      benchmark you cannot see us fail is not evidence.
+    </p>
+  </section>
+</div>

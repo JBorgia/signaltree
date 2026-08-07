@@ -89,6 +89,14 @@
 
 ### Added
 
+- **Newly public in `@signaltree/events`.** Six symbols existed and shipped but
+  were unreachable from any entry point, so no consumer could name them:
+  `createOptimisticUpdateManager` plus its siblings in the same module —
+  `composeHandlers`, `conditionalHandler`, `createHandlerRegistry`,
+  `debouncedHandler` — and `DLQ_SERVICE`, the injection token that pairs with
+  the already-exported `DlqService`, which a NestJS consumer injecting by token
+  could not reference. Found by the dead-export scan; no behaviour changed.
+
 - **Collection APIs from the capability audit** — `prependOne`/`prependMany`,
   `activeId`/`activeEntity`/`setActiveId`/`clearActiveId`, and `changeId`.
   Sourced by reading the shipped type declarations of `@ngrx/signals`, elf,

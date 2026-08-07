@@ -20,7 +20,7 @@
 Nothing above may be cited as evidence. Re-derive from **source code** (this
 repo) or **primary external sources** (library source, official docs, CVE
 records, spec text). If a claim cannot be re-derived, record it as
-*unsubstantiated* rather than repeating it.
+_unsubstantiated_ rather than repeating it.
 
 ## The two questions
 
@@ -41,29 +41,29 @@ These may share an answer. That is a hypothesis, not a finding.
 
 Each of these was reproduced by running code, not read from a doc.
 
-| # | Observation | How established |
-| - | ----------- | --------------- |
-| O1 | `updateOptimized(JSON.parse('{"__proto__":0}'))` then `(…{"__proto__":{"isAdmin":true}})` set `({}).isAdmin` | probe, enterprise |
-| O2 | Lazy proxy `get` used `key in target`, returning a writable proxy over `Object.prototype` | probe, core |
-| O3 | `applyState(tree.$, JSON.parse('{"__proto__":{…}}'))` polluted `Object.prototype`; reachable from a devtools `postMessage` | probe, core |
-| O4 | `signalTree(JSON.parse('{"__proto__":{…}}'))` replaced the root `$`'s prototype; hidden node accepted later writes | probe, core |
-| O5 | `mergeDeep(t, JSON.parse('{"__proto__":{…}}'))` sets `t`'s prototype (no global pollution) — **still unfixed** | probe, shared |
-| O6 | `deepEqual(new Error('a'), new Error('b')) === true`; same for `new Number(1)/(2)` — **unfixed** | probe, shared |
-| O7 | `deepEqual(Object.create(Date.prototype), new Date(0))` **throws** — **unfixed** | probe, shared |
-| O8 | Every `PathNotifier.notify()` call site is in `entity-signal.ts`; ordinary leaf/branch writes never notify | grep, core |
-| O9 | `onPathChange` has zero non-doc, non-test consumers anywhere in the repo | grep |
+| #   | Observation                                                                                                                | How established   |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| O1  | `updateOptimized(JSON.parse('{"__proto__":0}'))` then `(…{"__proto__":{"isAdmin":true}})` set `({}).isAdmin`               | probe, enterprise |
+| O2  | Lazy proxy `get` used `key in target`, returning a writable proxy over `Object.prototype`                                  | probe, core       |
+| O3  | `applyState(tree.$, JSON.parse('{"__proto__":{…}}'))` polluted `Object.prototype`; reachable from a devtools `postMessage` | probe, core       |
+| O4  | `signalTree(JSON.parse('{"__proto__":{…}}'))` replaced the root `$`'s prototype; hidden node accepted later writes         | probe, core       |
+| O5  | `mergeDeep(t, JSON.parse('{"__proto__":{…}}'))` sets `t`'s prototype (no global pollution) — **still unfixed**             | probe, shared     |
+| O6  | `deepEqual(new Error('a'), new Error('b')) === true`; same for `new Number(1)/(2)` — **unfixed**                           | probe, shared     |
+| O7  | `deepEqual(Object.create(Date.prototype), new Date(0))` **throws** — **unfixed**                                           | probe, shared     |
+| O8  | Every `PathNotifier.notify()` call site is in `entity-signal.ts`; ordinary leaf/branch writes never notify                 | grep, core        |
+| O9  | `onPathChange` has zero non-doc, non-test consumers anywhere in the repo                                                   | grep              |
 
 ## Hypotheses — UNVERIFIED, to be proven or killed
 
-- **H1.** O1–O5 share one root cause: *no boundary between keys that come from
-  trusted tree structure and keys that come from untrusted external input.*
+- **H1.** O1–O5 share one root cause: _no boundary between keys that come from
+  trusted tree structure and keys that come from untrusted external input._
   Prediction if true: the safe `[key] =` sites all iterate tree-derived keys,
   and every unsafe one iterates payload-derived keys. Testable by enumeration.
 - **H2.** The fix family is "remove the sink" (null-prototype storage / Map
   storage / `defineProperty`) rather than "add a guard at each site". Untested.
 - **H3.** RFC 0004's rejection of walker unification does not cover this bug
-  class, because its argument is about *value-shape* guards while this is about
-  *key provenance*. Must be checked against the actual walkers, not the RFC.
+  class, because its argument is about _value-shape_ guards while this is about
+  _key provenance_. Must be checked against the actual walkers, not the RFC.
 - **H4.** Q1 and Q2 have the same answer: a single write chokepoint that emits
   a patch/journal, which every consumer (change reporting, path notification,
   time-travel, persistence, devtools, guardrails) subscribes to. Strongly
@@ -74,25 +74,25 @@ Each of these was reproduced by running code, not read from a doc.
 
 Updated as tracks land. A hypothesis is only moved on evidence recorded below.
 
-| # | Status after Track B | Evidence |
-| - | -------------------- | -------- |
-| H1 | **PARTIALLY TRUE, and the predicted partition does not exist.** Track C enumerated 61 key-iteration sites: 12 TREE, 11 CONFIG, 38 PAYLOAD. The prediction fails in both directions — safe sites that iterate PAYLOAD keys (#1, #3, #40) and an unsafe site that iterates CONFIG keys (`merge-derived.ts:86`). Worse, provenance is not a property of a call site: `unwrap` is TREE at depth 0 and PAYLOAD as soon as it recurses into a leaf's value, which is exactly why the new sink at `utils.ts:325` was missed. Track A's point lands too — 2 of the 38 are unguarded *reads* that recurse into `Object.prototype`. | § C1, § C3 |
-| H2 | **RESHAPED, and the framing was too narrow.** Guards do not converge: of six blocklist deployments traced, **four needed a second advisory**, and lodash is still patching instances — five pollution CVEs 2018→2026, the newest (CVE-2026-2950, published 2026-04-01) existing only because the 2025 fix validated a path segment *before* normalising it. But my three proposed sinks-removals all have problems: `Object.freeze(Object.prototype)` does **not** stop `obj.__proto__ = x` (freezing an accessor only clears `[[Configurable]]`; the setter survives); a null-prototype base silently *destroys* immer's protection, which turns out to be emergent rather than designed; and CodeQL recommends `defineProperty` for **neither** code shape — which is what I used in the enterprise fix. | § A |
-| H2b | **NEW OPTION, not previously considered — invert the loop.** Redux/NgRx immunity is **not** immutability. `combineReducers` iterates the *developer's reducer map*, so payload keys never reach a property access at all. `@ngrx/signals`' `patchState` is the same idea made explicit, and Track A calls it the cleanest class-closing design in the corpus. Directly applicable here: a SignalTree's shape is declared upfront, and `recursiveUpdate` already DISCARDS keys outside the initial shape (ST2010). Iterating the tree's keys and looking *up* into the payload — rather than iterating payload keys and indexing into the tree — may be behaviour-preserving AND close the class. Untested; Track C's partition decides. | § A |
-| H3 | **SUPPORTED by the walkers, but for a reason RFC 0004 does not address.** `visitTree` has exactly two callers (batching, interceptLeafSignals) and carries no key guard at all; ~27 other hand-rolled walkers exist, and the eight key guards that do exist are spread across eight *different* ones, using **four incompatible definitions of "unsafe key"** — one of which is opt-in and one of which (`diff-engine.keyValidator`) is never supplied by any caller. Walk unification and key provenance are orthogonal: `visitTree` proves you can unify the walk and still have no guard. | § C9 |
-| H2b | **SUPPORTED and directly actionable.** `recursiveUpdate` (`signal-tree.ts:289`) is exactly the loop Track A describes: it iterates `Object.entries(payload)` and indexes `targetObj[key]`. Inverting it is behaviour-preserving in principle — the ST2010 discard already means only tree keys can land — but Track C measured a cost the inversion does **not** pay for: 32 of the 38 PAYLOAD sites are outside `recursiveUpdate` entirely, including all four proven sinks (#9, #22, #35, #36). Inversion closes the update path and nothing else. | § C1, § C4 |
-| H4 | **PARTIALLY KILLED.** The premise "patches are a byproduct of the write" is factually wrong about immer, the library I had in mind: it records only *which keys were touched* and runs a key-scoped diff at COMMIT (`patches.ts:238`). Write-then-revert in one recipe emits ZERO patches. And on unification: only CRDTs unify sync/persistence/observation, and they pay for it — Yjs needs a separate structural-replay stack for undo, Automerge has no undo API at all. Everyone else deliberately keeps them separate. | § B.2 M3, § B.5 |
-| H5 | **CONFIRMED — two models I had not considered.** **M0**: notify with NO payload plus a version; consumer pulls. This is where the standards track landed — TC39 `Watcher.notify()` takes no arguments and forbids reading signals inside it. **M5**: versioned immutable snapshots with structural sharing, where "what changed" is a *pull query* answered by reference identity (measured: 0.003 µs to compare vs 0.047 µs merely to BUILD one dot-path string). | § B.2 M0, M5 |
+| #   | Status after Track B                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Evidence        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| H1  | **PARTIALLY TRUE, and the predicted partition does not exist.** Track C enumerated 61 key-iteration sites: 12 TREE, 11 CONFIG, 38 PAYLOAD. The prediction fails in both directions — safe sites that iterate PAYLOAD keys (#1, #3, #40) and an unsafe site that iterates CONFIG keys (`merge-derived.ts:86`). Worse, provenance is not a property of a call site: `unwrap` is TREE at depth 0 and PAYLOAD as soon as it recurses into a leaf's value, which is exactly why the new sink at `utils.ts:325` was missed. Track A's point lands too — 2 of the 38 are unguarded _reads_ that recurse into `Object.prototype`.                                                                                                                                                                                  | § C1, § C3      |
+| H2  | **RESHAPED, and the framing was too narrow.** Guards do not converge: of six blocklist deployments traced, **four needed a second advisory**, and lodash is still patching instances — five pollution CVEs 2018→2026, the newest (CVE-2026-2950, published 2026-04-01) existing only because the 2025 fix validated a path segment _before_ normalising it. But my three proposed sinks-removals all have problems: `Object.freeze(Object.prototype)` does **not** stop `obj.__proto__ = x` (freezing an accessor only clears `[[Configurable]]`; the setter survives); a null-prototype base silently _destroys_ immer's protection, which turns out to be emergent rather than designed; and CodeQL recommends `defineProperty` for **neither** code shape — which is what I used in the enterprise fix. | § A             |
+| H2b | **NEW OPTION, not previously considered — invert the loop.** Redux/NgRx immunity is **not** immutability. `combineReducers` iterates the _developer's reducer map_, so payload keys never reach a property access at all. `@ngrx/signals`' `patchState` is the same idea made explicit, and Track A calls it the cleanest class-closing design in the corpus. Directly applicable here: a SignalTree's shape is declared upfront, and `recursiveUpdate` already DISCARDS keys outside the initial shape (ST2010). Iterating the tree's keys and looking _up_ into the payload — rather than iterating payload keys and indexing into the tree — may be behaviour-preserving AND close the class. Untested; Track C's partition decides.                                                                    | § A             |
+| H3  | **SUPPORTED by the walkers, but for a reason RFC 0004 does not address.** `visitTree` has exactly two callers (batching, interceptLeafSignals) and carries no key guard at all; ~27 other hand-rolled walkers exist, and the eight key guards that do exist are spread across eight _different_ ones, using **four incompatible definitions of "unsafe key"** — one of which is opt-in and one of which (`diff-engine.keyValidator`) is never supplied by any caller. Walk unification and key provenance are orthogonal: `visitTree` proves you can unify the walk and still have no guard.                                                                                                                                                                                                               | § C9            |
+| H2b | **SUPPORTED and directly actionable.** `recursiveUpdate` (`signal-tree.ts:289`) is exactly the loop Track A describes: it iterates `Object.entries(payload)` and indexes `targetObj[key]`. Inverting it is behaviour-preserving in principle — the ST2010 discard already means only tree keys can land — but Track C measured a cost the inversion does **not** pay for: 32 of the 38 PAYLOAD sites are outside `recursiveUpdate` entirely, including all four proven sinks (#9, #22, #35, #36). Inversion closes the update path and nothing else.                                                                                                                                                                                                                                                       | § C1, § C4      |
+| H4  | **PARTIALLY KILLED.** The premise "patches are a byproduct of the write" is factually wrong about immer, the library I had in mind: it records only _which keys were touched_ and runs a key-scoped diff at COMMIT (`patches.ts:238`). Write-then-revert in one recipe emits ZERO patches. And on unification: only CRDTs unify sync/persistence/observation, and they pay for it — Yjs needs a separate structural-replay stack for undo, Automerge has no undo API at all. Everyone else deliberately keeps them separate.                                                                                                                                                                                                                                                                               | § B.2 M3, § B.5 |
+| H5  | **CONFIRMED — two models I had not considered.** **M0**: notify with NO payload plus a version; consumer pulls. This is where the standards track landed — TC39 `Watcher.notify()` takes no arguments and forbids reading signals inside it. **M5**: versioned immutable snapshots with structural sharing, where "what changed" is a _pull query_ answered by reference identity (measured: 0.003 µs to compare vs 0.047 µs merely to BUILD one dot-path string).                                                                                                                                                                                                                                                                                                                                         | § B.2 M0, M5    |
 
 ### The bug class has a real name, and it is not "prototype pollution"
 
-CWE-913 → **CWE-915** → CWE-1321. CWE-915's alternate terms are *mass
-assignment*, *autobinding*, *object injection*, and its description states this
+CWE-913 → **CWE-915** → CWE-1321. CWE-915's alternate terms are _mass
+assignment_, _autobinding_, _object injection_, and its description states this
 problem verbatim. Prototype pollution is one variant of it. Of the three-way
 split I asked about, only "pollute a global prototype" has a canonical
 definition (Silent Spring, USENIX '23 — "root prototype"); local
-prototype-setting and prototype *confusion* have **no names in the literature**.
-CodeQL splits by *code shape* rather than blast radius, and gives different
+prototype-setting and prototype _confusion_ have **no names in the literature**.
+CodeQL splits by _code shape_ rather than blast radius, and gives different
 remediation per shape: `Map`/`Object.create(null)` for indexing, own-ness or
 blocklist for merge.
 
@@ -107,7 +107,7 @@ target-copy loop at `index.js:57-59`.
 
 Useful as calibration: this class is not a SignalTree failing, it is endemic.
 It also shows the sub-classes are separable — immer converts RTK's prototype
-*write* into a thrown error while doing nothing about the read-side confusion.
+_write_ into a thrown error while doing nothing about the read-side confusion.
 
 ### The chokepoint question has an answer, and it is not the root
 
@@ -131,11 +131,11 @@ unannotated Angular internal.
 
 ## Research tracks
 
-| Track | Assigned | Status | Output |
-| ----- | -------- | ------ | ------ |
-| A — External prior art: untrusted-key ingress & prototype pollution defence in JS state/merge libraries | subagent | RUNNING | § Findings A |
-| B — External prior art: change notification / patch streams | subagent | **DONE** | § Findings B |
-| C — Internal ground truth: enumerate every external-data ingress and every write site from CODE ONLY | subagent | DONE | § Findings C |
+| Track                                                                                                   | Assigned | Status   | Output       |
+| ------------------------------------------------------------------------------------------------------- | -------- | -------- | ------------ |
+| A — External prior art: untrusted-key ingress & prototype pollution defence in JS state/merge libraries | subagent | RUNNING  | § Findings A |
+| B — External prior art: change notification / patch streams                                             | subagent | **DONE** | § Findings B |
+| C — Internal ground truth: enumerate every external-data ingress and every write site from CODE ONLY    | subagent | DONE     | § Findings C |
 
 ## Findings A — external prior art, untrusted-key ingress
 
@@ -159,18 +159,18 @@ here) it is marked **[delegated]**. Everything unmarked was run directly.
 **There is a recognised parent class, and it is not "prototype pollution".**
 From MITRE's own records:
 
-- **CWE-913** *Improper Control of Dynamically-Managed Code Resources* (class)
-  → **CWE-915** *Improperly Controlled Modification of Dynamically-Determined
-  Object Attributes* (base) → **CWE-1321** *Improperly Controlled Modification
-  of Object Prototype Attributes ('Prototype Pollution')* (variant).
+- **CWE-913** _Improper Control of Dynamically-Managed Code Resources_ (class)
+  → **CWE-915** _Improperly Controlled Modification of Dynamically-Determined
+  Object Attributes_ (base) → **CWE-1321** _Improperly Controlled Modification
+  of Object Prototype Attributes ('Prototype Pollution')_ (variant).
 - CWE-915's own extended description is a verbatim statement of this spike's
-  problem: *"The product receives input from an upstream component that
+  problem: _"The product receives input from an upstream component that
   specifies multiple attributes, properties, or fields that are to be
   initialized or updated in an object, but it does not properly control which
-  attributes can be modified."* Its listed **alternate terms are "Mass
-  Assignment", "AutoBinding", and "Object Injection"**, and it is a *PeerOf*
+  attributes can be modified."_ Its listed **alternate terms are "Mass
+  Assignment", "AutoBinding", and "Object Injection"**, and it is a _PeerOf_
   CWE-502 (deserialization of untrusted data).
-- CWE-1321 *CanPrecede* **CWE-471** *Modification of Assumed-Immutable Data*.
+- CWE-1321 _CanPrecede_ **CWE-471** _Modification of Assumed-Immutable Data_.
   Note lodash's 2018 advisory is tagged CWE-471 + CWE-1321, and merge-deep's is
   tagged CWE-471 — the ecosystem used CWE-471 before CWE-1321 existed.
 
@@ -179,26 +179,26 @@ Sources: <https://cwe.mitre.org/data/definitions/1321.html>,
 
 So the accurate name for "untrusted keys index into and assign onto objects" is
 **CWE-915 / mass assignment / object injection**. Prototype pollution is one
-*variant* of it — the variant where the key happens to hit a prototype-reachable
+_variant_ of it — the variant where the key happens to hit a prototype-reachable
 name. That reframing matters: a defence aimed only at `__proto__` addresses the
 variant, not the class, and the CWE tree says so explicitly.
 
 **On the (a)/(b)/(c) distinction the question asks about.** The distinction is
-made in *tooling*, only partially in the *literature*, and not at all in CWE.
+made in _tooling_, only partially in the _literature_, and not at all in CWE.
 
 - **(a) global prototype pollution** — the only thing the academic literature
-  defines. Shcherbakov, Balliu & Staicu, *Silent Spring: Prototype Pollution
-  Leads to Remote Code Execution in Node.js*, USENIX Security '23
-  (<https://arxiv.org/abs/2207.11171>) defines it as *"the ability of an
+  defines. Shcherbakov, Balliu & Staicu, _Silent Spring: Prototype Pollution
+  Leads to Remote Code Execution in Node.js_, USENIX Security '23
+  (<https://arxiv.org/abs/2207.11171>) defines it as _"the ability of an
   attacker to inject properties into an object's **root prototype** at
-  runtime"*. Its second concept is the **gadget** — pre-existing legitimate
+  runtime"_. Its second concept is the **gadget** — pre-existing legitimate
   code that later reads the injected property — and **universal gadget**, a
   gadget in a core Node.js API. The paper does **not** use "prototype
   confusion" and does not treat case (b).
 - **(b) local prototype replacement** and **(c) read-walks-off-the-object** have
   **no canonical names I could find**. Targeted searching of USENIX / ACM DL /
   arXiv / NDSS for a taxonomy paper distinguishing them returned nothing.
-- CodeQL does split the problem, but along a *different* axis — by code shape,
+- CodeQL does split the problem, but along a _different_ axis — by code shape,
   not by blast radius. It ships exactly three queries:
   `js/prototype-polluting-assignment` (indexing an object with an untrusted
   key), `js/prototype-pollution-utility` (a merge/extend helper), and
@@ -207,14 +207,14 @@ made in *tooling*, only partially in the *literature*, and not at all in CWE.
   <https://codeql.github.com/codeql-query-help/javascript/>
 - Notably the two CodeQL queries give **different remediation advice**, which is
   the closest thing to a recognised split of the problem:
-  - `js/prototype-polluting-assignment` (our case) recommends, in order: *"an
+  - `js/prototype-polluting-assignment` (our case) recommends, in order: _"an
     associative data structure that is resilient to untrusted key values, such
-    as a `Map`"*; *"a prototype-less object created with
-    `Object.create(null)`"*; or restricting the key by prefixing/format check.
-  - `js/prototype-pollution-utility` (the merge case) recommends: *"Only merge
+    as a `Map`"_; _"a prototype-less object created with
+    `Object.create(null)`"_; or restricting the key by prefixing/format check.
+  - `js/prototype-pollution-utility` (the merge case) recommends: _"Only merge
     or assign a property recursively when it is an own property of the
     destination object. Alternatively, block the property names `__proto__`
-    and `constructor`."*
+    and `constructor`."_
   - **Neither mentions `Object.defineProperty`.**
 
 **Working conclusion on naming:** call the class CWE-915 (mass assignment /
@@ -228,22 +228,22 @@ Legend for the last column: **CLASS** = the shape of the code makes the whole
 family unrepresentable; **INSTANCE** = a guard bolted onto specific call sites;
 **NONE** = no defence found.
 
-| Library / version | What the source actually does | Citation | Verdict |
-| --- | --- | --- | --- |
-| **lodash** 4.18.1 | Three *independently written* guards. (1) `safeGet(object,key)` returns `undefined` for `__proto__` and for `constructor` when it holds a function — a **read-side blocklist** used by `baseMerge`/`baseMergeDeep`. (2) `baseAssignValue` special-cases `__proto__` to `Object.defineProperty` instead of `=`. (3) `baseSet` early-returns on `key === '__proto__' \|\| 'constructor' \|\| 'prototype'`. (4) `baseUnset` has a *fourth*, separately-written path guard. | `node_modules/lodash/_safeGet.js:8-18`, `_baseAssignValue.js:13-23`, `_baseSet.js:29-31`, `_baseUnset.js:24-45` | **INSTANCE ×4** |
-| **immer** 11.1.15 | Two layers. (1) `applyPatches_` blocklists `__proto__`/`constructor` on *intermediate* path segments and `prototype` on functions. (2) The draft Proxy's `setPrototypeOf` trap unconditionally `die(12)`s. (3) Structurally: `each()` iterates `Reflect.ownKeys`/`Object.keys` only, and `has()` is `Object.prototype.hasOwnProperty.call` — it never iterates inherited keys. | `dist/immer.mjs:1105` (patch blocklist), `:591-592` (`setPrototypeOf(){die(12)}`), `:103` (`has`), `:96-102` (`each`) | **INSTANCE + partial CLASS** |
-| **valtio** 2.3.2 | **No prototype guard anywhere.** `grep` for `__proto__` in `vanilla.js` returns zero hits. The `set` trap is `Reflect.set(target, prop, nextValue, receiver)`; there is no `get` trap at all, so reads forward straight to the target. The snapshot path is the exception: it uses `Object.defineProperty(snap, key, desc)`. | `vanilla.js:53-67` (handler), `:38` (`defineProperty` in `createSnapshotDefault`), no guard lines exist | **NONE** (write path) / **CLASS** (snapshot path, by accident) |
-| **Yjs** 13.6.32 **[delegated]** | Backing store is a real `Map`: `this._map = new Map()`; remote keys decoded off the wire go to `parent._map.set(...)`. No blocklist anywhere (zero grep hits for `__proto__`). The sink **reappears at `toJSON()`**, which builds `const map = {}` then `map[key] = v`. | `src/types/AbstractType.js:270`, `src/structs/Item.js:511`, `src/types/YMap.js:124-137` | **CLASS in storage, sink RELOCATED to `toJSON()`** |
-| **Automerge** 3.4.0 **[delegated]** | Storage is Rust/WASM columnar — safe by construction. But *every* value the app sees (`load`, `change`, `view`, `toJS`) comes from WASM `materialize`, whose glue does `new Object()` + `arg0[arg1]=arg2`. So the sink is hit on ordinary reads, not just an opt-in serialize. The only `__proto__` hits in the bundle are `__proto__: null` in wasm-bindgen's *own* import table — unrelated to document data. | `dist/cjs/fullfat_node.cjs:2244`, `:2283-2286`, `:6810-6834` | **CLASS in storage, sink RELOCATED and hit more often than Yjs** |
-| **Redux** 5.0.1 | Genuinely immune, for a structural reason: `combineReducers` iterates `Object.keys(reducers)` — the **developer's static reducer map** — and writes `nextState[key]` with that trusted key. The action payload's keys are never used to index anything. Redux core contains no merge and no path-based setter. | `dist/redux.mjs` `combineReducers` (`reducerKeys = Object.keys(reducers)`, `finalReducerKeys`) | **CLASS (by not having the feature)** |
-| **NgRx `@ngrx/store`** 21.1.1 | Identical structure to Redux — `finalReducerKeys = Object.keys(reducers)`, `nextState[key] = ...`. Closed key set. | `fesm2022/ngrx-store.mjs:319-343` | **CLASS (by not having the feature)** |
-| **NgRx `@ngrx/signals`** 21.1.1 | `patchState` derives an **allowlist** from the declared state: `stateKeys = Reflect.ownKeys(stateSource[STATE_SOURCE])`, then for each incoming key `if (stateKeys.includes(key))` write via `signals[key].set(...)`; otherwise `console.warn` and drop. Writes go through an existing signal's `.set()`, never `obj[k]=v` on a state object. | `fesm2022/ngrx-signals.mjs:205-225` | **CLASS (closed key set + no object sink)** |
-| **NgRx `@ngrx/entity`** 21.1.1 | **Live defect.** `entities: {}` (plain object, not null-proto); `addOneMutably` guards with `if (key in state.entities)` — `in` walks the prototype chain; `setOneMutably` does `state.entities[key] = entity` with `key = selectId(entity)`, i.e. a **payload-derived key**. No immer. | `fesm2022/ngrx-entity.mjs:4-8`, `:78-84`, `:97-107`, `:401` | **NONE** |
-| **Redux Toolkit** 2.12.0 | *Byte-for-byte the same adapter logic* as NgRx (`if (key in state.entities)`, `state.entities[key] = entity`, `entities: {}`), but the operators run inside an immer draft, so the prototype write hits immer's `setPrototypeOf` trap and throws instead of corrupting. The `key in` confusion is **not** fixed. | `dist/redux-toolkit.modern.mjs:1321`, `:1437-1458` | **INSTANCE (inherited from immer); read-side confusion NONE** |
-| **deepmerge** 4.3.1 | `propertyIsUnsafe(target,key)` = *"key is reachable on the chain but is not an own **enumerable** property of the destination"* → skip. This is the own-ness strategy, not a blocklist; the string `__proto__` never appears. **But it guards only the `source` loop.** The `target`-copy loop two lines earlier is unguarded. | guard `index.js:47-52`, applied at `:62`; **unguarded loop at `:57-59`** | **INSTANCE (one of two loops)** |
-| **merge-deep** 3.0.3 **[delegated + verified here]** | `isValidKey(key)` blocklists exactly `__proto__`, `constructor`, `prototype`, combined with `hasOwn(obj,key)`. Reached that state via **two** advisories: CVE-2018-3722 (blocked `__proto__` only, v3.0.1) then GHSL-2020-160 (added the other two, v3.0.3). | `index.js:34-36`, `:61-63` | **INSTANCE, patched twice** |
-| **defaults-deep** 0.2.4 **[delegated + verified here]** | The entire guard is `if (key === '__proto__') return;`. CVE-2018-3723 fixed that; **CVE-2018-16486 (the `constructor.prototype` route) was never fixed** — package abandoned. Delegated probe confirmed it still pollutes `Object.prototype` today. | `index.js:19-21` | **INSTANCE; second advisory unfixed since 2018** |
-| **mutative** 1.3.0 **[delegated]** | Same two-layer shape as immer: blocklist in `apply()` (JSON-Patch) + unconditional `setPrototypeOf` rejection on drafts. No advisories; proactive. | `dist/mutative.cjs.development.js:1611-1615` | **INSTANCE + partial CLASS** |
+| Library / version                                       | What the source actually does                                                                                                                                                                                                                                                                                                                                                                                                                                           | Citation                                                                                                              | Verdict                                                          |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **lodash** 4.18.1                                       | Three _independently written_ guards. (1) `safeGet(object,key)` returns `undefined` for `__proto__` and for `constructor` when it holds a function — a **read-side blocklist** used by `baseMerge`/`baseMergeDeep`. (2) `baseAssignValue` special-cases `__proto__` to `Object.defineProperty` instead of `=`. (3) `baseSet` early-returns on `key === '__proto__' \|\| 'constructor' \|\| 'prototype'`. (4) `baseUnset` has a _fourth_, separately-written path guard. | `node_modules/lodash/_safeGet.js:8-18`, `_baseAssignValue.js:13-23`, `_baseSet.js:29-31`, `_baseUnset.js:24-45`       | **INSTANCE ×4**                                                  |
+| **immer** 11.1.15                                       | Two layers. (1) `applyPatches_` blocklists `__proto__`/`constructor` on _intermediate_ path segments and `prototype` on functions. (2) The draft Proxy's `setPrototypeOf` trap unconditionally `die(12)`s. (3) Structurally: `each()` iterates `Reflect.ownKeys`/`Object.keys` only, and `has()` is `Object.prototype.hasOwnProperty.call` — it never iterates inherited keys.                                                                                          | `dist/immer.mjs:1105` (patch blocklist), `:591-592` (`setPrototypeOf(){die(12)}`), `:103` (`has`), `:96-102` (`each`) | **INSTANCE + partial CLASS**                                     |
+| **valtio** 2.3.2                                        | **No prototype guard anywhere.** `grep` for `__proto__` in `vanilla.js` returns zero hits. The `set` trap is `Reflect.set(target, prop, nextValue, receiver)`; there is no `get` trap at all, so reads forward straight to the target. The snapshot path is the exception: it uses `Object.defineProperty(snap, key, desc)`.                                                                                                                                            | `vanilla.js:53-67` (handler), `:38` (`defineProperty` in `createSnapshotDefault`), no guard lines exist               | **NONE** (write path) / **CLASS** (snapshot path, by accident)   |
+| **Yjs** 13.6.32 **[delegated]**                         | Backing store is a real `Map`: `this._map = new Map()`; remote keys decoded off the wire go to `parent._map.set(...)`. No blocklist anywhere (zero grep hits for `__proto__`). The sink **reappears at `toJSON()`**, which builds `const map = {}` then `map[key] = v`.                                                                                                                                                                                                 | `src/types/AbstractType.js:270`, `src/structs/Item.js:511`, `src/types/YMap.js:124-137`                               | **CLASS in storage, sink RELOCATED to `toJSON()`**               |
+| **Automerge** 3.4.0 **[delegated]**                     | Storage is Rust/WASM columnar — safe by construction. But _every_ value the app sees (`load`, `change`, `view`, `toJS`) comes from WASM `materialize`, whose glue does `new Object()` + `arg0[arg1]=arg2`. So the sink is hit on ordinary reads, not just an opt-in serialize. The only `__proto__` hits in the bundle are `__proto__: null` in wasm-bindgen's _own_ import table — unrelated to document data.                                                         | `dist/cjs/fullfat_node.cjs:2244`, `:2283-2286`, `:6810-6834`                                                          | **CLASS in storage, sink RELOCATED and hit more often than Yjs** |
+| **Redux** 5.0.1                                         | Genuinely immune, for a structural reason: `combineReducers` iterates `Object.keys(reducers)` — the **developer's static reducer map** — and writes `nextState[key]` with that trusted key. The action payload's keys are never used to index anything. Redux core contains no merge and no path-based setter.                                                                                                                                                          | `dist/redux.mjs` `combineReducers` (`reducerKeys = Object.keys(reducers)`, `finalReducerKeys`)                        | **CLASS (by not having the feature)**                            |
+| **NgRx `@ngrx/store`** 21.1.1                           | Identical structure to Redux — `finalReducerKeys = Object.keys(reducers)`, `nextState[key] = ...`. Closed key set.                                                                                                                                                                                                                                                                                                                                                      | `fesm2022/ngrx-store.mjs:319-343`                                                                                     | **CLASS (by not having the feature)**                            |
+| **NgRx `@ngrx/signals`** 21.1.1                         | `patchState` derives an **allowlist** from the declared state: `stateKeys = Reflect.ownKeys(stateSource[STATE_SOURCE])`, then for each incoming key `if (stateKeys.includes(key))` write via `signals[key].set(...)`; otherwise `console.warn` and drop. Writes go through an existing signal's `.set()`, never `obj[k]=v` on a state object.                                                                                                                           | `fesm2022/ngrx-signals.mjs:205-225`                                                                                   | **CLASS (closed key set + no object sink)**                      |
+| **NgRx `@ngrx/entity`** 21.1.1                          | **Live defect.** `entities: {}` (plain object, not null-proto); `addOneMutably` guards with `if (key in state.entities)` — `in` walks the prototype chain; `setOneMutably` does `state.entities[key] = entity` with `key = selectId(entity)`, i.e. a **payload-derived key**. No immer.                                                                                                                                                                                 | `fesm2022/ngrx-entity.mjs:4-8`, `:78-84`, `:97-107`, `:401`                                                           | **NONE**                                                         |
+| **Redux Toolkit** 2.12.0                                | _Byte-for-byte the same adapter logic_ as NgRx (`if (key in state.entities)`, `state.entities[key] = entity`, `entities: {}`), but the operators run inside an immer draft, so the prototype write hits immer's `setPrototypeOf` trap and throws instead of corrupting. The `key in` confusion is **not** fixed.                                                                                                                                                        | `dist/redux-toolkit.modern.mjs:1321`, `:1437-1458`                                                                    | **INSTANCE (inherited from immer); read-side confusion NONE**    |
+| **deepmerge** 4.3.1                                     | `propertyIsUnsafe(target,key)` = _"key is reachable on the chain but is not an own **enumerable** property of the destination"_ → skip. This is the own-ness strategy, not a blocklist; the string `__proto__` never appears. **But it guards only the `source` loop.** The `target`-copy loop two lines earlier is unguarded.                                                                                                                                          | guard `index.js:47-52`, applied at `:62`; **unguarded loop at `:57-59`**                                              | **INSTANCE (one of two loops)**                                  |
+| **merge-deep** 3.0.3 **[delegated + verified here]**    | `isValidKey(key)` blocklists exactly `__proto__`, `constructor`, `prototype`, combined with `hasOwn(obj,key)`. Reached that state via **two** advisories: CVE-2018-3722 (blocked `__proto__` only, v3.0.1) then GHSL-2020-160 (added the other two, v3.0.3).                                                                                                                                                                                                            | `index.js:34-36`, `:61-63`                                                                                            | **INSTANCE, patched twice**                                      |
+| **defaults-deep** 0.2.4 **[delegated + verified here]** | The entire guard is `if (key === '__proto__') return;`. CVE-2018-3723 fixed that; **CVE-2018-16486 (the `constructor.prototype` route) was never fixed** — package abandoned. Delegated probe confirmed it still pollutes `Object.prototype` today.                                                                                                                                                                                                                     | `index.js:19-21`                                                                                                      | **INSTANCE; second advisory unfixed since 2018**                 |
+| **mutative** 1.3.0 **[delegated]**                      | Same two-layer shape as immer: blocklist in `apply()` (JSON-Patch) + unconditional `setPrototypeOf` rejection on drafts. No advisories; proactive.                                                                                                                                                                                                                                                                                                                      | `dist/mutative.cjs.development.js:1611-1615`                                                                          | **INSTANCE + partial CLASS**                                     |
 
 #### A.1.1 — lodash: the full patch archaeology
 
@@ -251,14 +251,14 @@ I installed 15 lodash versions and probed each. The transition points I measured
 line up exactly with the advisories, and show **five separate rounds over eight
 years, each fixing one function family**:
 
-| Advisory | CVE | Function family | First patched (advisory) | First patched (measured) | Fix shape in source |
-| --- | --- | --- | --- | --- | --- |
-| GHSA-fvqr-27wr-82fm | CVE-2018-3721 | `merge`/`mergeWith`/`defaultsDeep`, `__proto__` | 4.17.5 | **4.17.5** | introduced `safeGet`, blocking `__proto__` only |
-| GHSA-4xc9-xhrj-v574 | CVE-2018-16487 | same, `constructor.prototype` | 4.17.11 | **4.17.11** | — |
-| GHSA-jf85-cpcp-j695 | CVE-2019-10744 | `defaultsDeep`, `constructor.prototype` | 4.17.12 | **4.17.12** | `safeGet` gained the `constructor` clause |
-| GHSA-p6mc-m468-83gw | CVE-2020-8203 | `set`/`setWith`/`update`/`zipObjectDeep`/`pick` | 4.17.19 | **4.17.17** | a *new, separate* 3-name blocklist inside `baseSet` |
-| GHSA-xxjr-mmjv-4gpg | CVE-2025-13465 | `unset`/`omit` | 4.17.23 | **4.17.23** | a *fourth* blocklist, inside `baseUnset` |
-| GHSA-f23m-r3pf-42rh | CVE-2026-2950 | `unset`/`omit`, array-path bypass | 4.18.0 | **4.18.0** | `toKey()` moved *before* the check |
+| Advisory            | CVE            | Function family                                 | First patched (advisory) | First patched (measured) | Fix shape in source                                 |
+| ------------------- | -------------- | ----------------------------------------------- | ------------------------ | ------------------------ | --------------------------------------------------- |
+| GHSA-fvqr-27wr-82fm | CVE-2018-3721  | `merge`/`mergeWith`/`defaultsDeep`, `__proto__` | 4.17.5                   | **4.17.5**               | introduced `safeGet`, blocking `__proto__` only     |
+| GHSA-4xc9-xhrj-v574 | CVE-2018-16487 | same, `constructor.prototype`                   | 4.17.11                  | **4.17.11**              | —                                                   |
+| GHSA-jf85-cpcp-j695 | CVE-2019-10744 | `defaultsDeep`, `constructor.prototype`         | 4.17.12                  | **4.17.12**              | `safeGet` gained the `constructor` clause           |
+| GHSA-p6mc-m468-83gw | CVE-2020-8203  | `set`/`setWith`/`update`/`zipObjectDeep`/`pick` | 4.17.19                  | **4.17.17**              | a _new, separate_ 3-name blocklist inside `baseSet` |
+| GHSA-xxjr-mmjv-4gpg | CVE-2025-13465 | `unset`/`omit`                                  | 4.17.23                  | **4.17.23**              | a _fourth_ blocklist, inside `baseUnset`            |
+| GHSA-f23m-r3pf-42rh | CVE-2026-2950  | `unset`/`omit`, array-path bypass               | 4.18.0                   | **4.18.0**               | `toKey()` moved _before_ the check                  |
 
 Three things fall out of this that are worth more than the list itself.
 
@@ -269,7 +269,7 @@ says otherwise. `baseAssignValue`'s `Object.defineProperty` branch for
 (`v4.17.4/node_modules/lodash/lodash.js:2572`). The actual bug was in
 `baseMergeDeep`, which read `var objValue = object[key]` — for `key ===
 '__proto__'` that walks off the object and yields `Object.prototype`, which was
-then passed as the *recursion target*. Verified:
+then passed as the _recursion target_. Verified:
 
 ```
 lodash 4.17.4: _.merge({}, JSON.parse('{"__proto__":{"X":1}}'))
@@ -278,7 +278,7 @@ lodash 4.17.4: _.merge({}, JSON.parse('{"__proto__":{"X":1}}'))
   getPrototypeOf(target) === Object.prototype     // target's own prototype untouched
 ```
 
-The write went into `Object.prototype` *through the recursion*, not through an
+The write went into `Object.prototype` _through the recursion_, not through an
 assignment on the target. The fix — `safeGet` — is therefore a **read-side**
 blocklist. This is exactly the (c) "read walks off the intended object" shape,
 and it is the highest-profile prototype-pollution CVE in the ecosystem.
@@ -291,7 +291,7 @@ const src = Object.create({inherited:'yes'}); src.own = 1;
 _.merge({}, src)  =>  {"own":1,"inherited":"yes"}
 ```
 
-So a source object that is *itself* sitting on a polluted prototype propagates
+So a source object that is _itself_ sitting on a polluted prototype propagates
 that pollution into the destination as own properties. The guard family does not
 address this.
 
@@ -338,7 +338,7 @@ solely because the 2025 fix validated a value before normalising it.**
 
 `produce(base, d => { d['__proto__'] = payload })` throws
 `[Immer] Object.setPrototypeOf() cannot be used on an Immer draft`. That looks
-like a deliberate `__proto__` guard. It is not. The `set` trap's *first*
+like a deliberate `__proto__` guard. It is not. The `set` trap's _first_
 statement is a general accessor-forwarding feature:
 
 ```js
@@ -368,7 +368,7 @@ creates an own `constructor` key). And immer's `applyPatches_` blocklist only
 scans `i < path.length - 1`; the final segment is covered only by the same
 accidental accessor route.
 
-Two things immer *does* get structurally right, and they matter more than the
+Two things immer _does_ get structurally right, and they matter more than the
 guard: `each()` iterates `Reflect.ownKeys`/`Object.keys` (never inherited), and
 `has()` is `Object.prototype.hasOwnProperty.call(...)` rather than `in`.
 Round-tripping is also lossless where lodash's is not — an own `__proto__` data
@@ -395,20 +395,20 @@ returns empty for the package).
 
 #### A.1.4 — the NgRx / RTK natural experiment
 
-`@ngrx/entity` and `@reduxjs/toolkit`'s entity adapter ship *the same algorithm*.
+`@ngrx/entity` and `@reduxjs/toolkit`'s entity adapter ship _the same algorithm_.
 The only difference is that RTK runs it inside an immer draft. Measured:
 
-| operation, id from `JSON.parse` | @ngrx/entity 21.1.1 | RTK 2.12.0 |
-| --- | --- | --- |
-| `setOne({id:"__proto__"})` | **`entities`' prototype replaced by the entity**; `ids: []` | **throws** `[Immer] Object.setPrototypeOf…` |
-| `addOne({id:"__proto__"})` | silently dropped (`ids: []`) | silently dropped |
-| `addOne({id:"toString"})` | silently dropped | silently dropped |
-| `setOne({id:"toString"})` | stored in `entities`, **absent from `ids`** → invisible to `selectAll` | same |
-| `setAll([{id:"toString"},{id:"constructor"},{id:"ok"}])` | — | `ids: ["ok"]`, two entities vanish |
+| operation, id from `JSON.parse`                          | @ngrx/entity 21.1.1                                                    | RTK 2.12.0                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| `setOne({id:"__proto__"})`                               | **`entities`' prototype replaced by the entity**; `ids: []`            | **throws** `[Immer] Object.setPrototypeOf…` |
+| `addOne({id:"__proto__"})`                               | silently dropped (`ids: []`)                                           | silently dropped                            |
+| `addOne({id:"toString"})`                                | silently dropped                                                       | silently dropped                            |
+| `setOne({id:"toString"})`                                | stored in `entities`, **absent from `ids`** → invisible to `selectAll` | same                                        |
+| `setAll([{id:"toString"},{id:"constructor"},{id:"ok"}])` | —                                                                      | `ids: ["ok"]`, two entities vanish          |
 
 Both defects come from one line — `if (key in state.entities)`, where `in` walks
 the prototype chain, so any id equal to an `Object.prototype` member name reads
-as "already present". This is the *identical shape* to observation **O2** in this
+as "already present". This is the _identical shape_ to observation **O2** in this
 doc. It is live in two of the most widely deployed state libraries in the
 ecosystem, and immer catches only the prototype-write half of it. **Key finding:
 a structural write chokepoint converted a silent corruption into a loud error but
@@ -418,7 +418,7 @@ did nothing about the read-side confusion — they are separable sub-classes.**
 
 deepmerge is the package the ecosystem holds up as having solved this properly,
 and it has no CVE. Its guard is real and it is the own-ness strategy, not a
-blocklist. But `mergeObject` has *two* loops and only the second is guarded:
+blocklist. But `mergeObject` has _two_ loops and only the second is guarded:
 
 ```js
 function mergeObject(target, source, options) {
@@ -446,7 +446,7 @@ deepmerge(JSON.parse('{"n":{"__proto__":{"evil3":1}}}'), {n:{z:1}})
 ```
 
 This is class (b) — local prototype replacement — in the reference-quality
-package, reachable whenever the *first* argument came from `JSON.parse`. Not
+package, reachable whenever the _first_ argument came from `JSON.parse`. Not
 global pollution, so arguably out of scope for a CVE, which is likely why it has
 gone unreported. I found no advisory covering it.
 
@@ -459,75 +459,75 @@ who actually ships it.
 
 **S1 — Name blocklist (`__proto__`, `constructor`, `prototype`).**
 
-*Mechanism:* reject a small set of literal key strings before indexing.
-*Ships in:* lodash (×4 independent copies), immer `applyPatches`, mutative
+_Mechanism:_ reject a small set of literal key strings before indexing.
+_Ships in:_ lodash (×4 independent copies), immer `applyPatches`, mutative
 `apply`, merge-deep, defaults-deep.
-*Cost:* ~free at runtime, trivial to add.
-*What it breaks:* legitimate data whose keys are those names. lodash's `baseSet`
+_Cost:_ ~free at runtime, trivial to add.
+_What it breaks:_ legitimate data whose keys are those names. lodash's `baseSet`
 silently returns without writing; merge-deep silently drops the key.
-*Track record — the single most important number in this section:* of the six
+_Track record — the single most important number in this section:_ of the six
 blocklist deployments I traced, **four needed a second advisory**. merge-deep
 (2018 → 2021), defaults-deep (2018 → still unfixed), lodash `merge` (2018 →
 2018), lodash `unset` (2025 → 2026). The failure mode is always the same: the
 first version enumerates the names the reporter used.
-*Verdict:* patches instances. Empirically the least durable option in this
+_Verdict:_ patches instances. Empirically the least durable option in this
 corpus.
 
 ---
 
 **S2 — Own-ness check on the destination (`hasOwnProperty` / `propertyIsEnumerable`).**
 
-*Mechanism:* only write a key that is already an own (and, in deepmerge's case,
+_Mechanism:_ only write a key that is already an own (and, in deepmerge's case,
 enumerable) property of the destination. Never names a string.
-*Ships in:* deepmerge (`index.js:47-52`); recommended by CodeQL's
+_Ships in:_ deepmerge (`index.js:47-52`); recommended by CodeQL's
 `js/prototype-pollution-utility`; immer's `has()` uses the same primitive.
-*Cost:* one extra descriptor lookup per key.
-*What it breaks:* it is *by definition* a closed-world policy — new keys can't be
+_Cost:_ one extra descriptor lookup per key.
+_What it breaks:_ it is _by definition_ a closed-world policy — new keys can't be
 added unless the destination already has them. deepmerge tolerates this because
 its unguarded first loop seeds `destination` from `target`; that is also where
 its hole is.
-*Verdict:* closes the class **for the loop it is applied to**. It is not
+_Verdict:_ closes the class **for the loop it is applied to**. It is not
 inherited by other loops in the same function — see A.1.5.
 
 ---
 
 **S3 — `Object.defineProperty` instead of `obj[k] = v`.**
 
-*Mechanism:* `defineProperty` performs `[[DefineOwnProperty]]`, which never
+_Mechanism:_ `defineProperty` performs `[[DefineOwnProperty]]`, which never
 consults the prototype chain and never invokes an accessor. It is the only
 write primitive in JS that structurally cannot trigger the `__proto__` setter.
-*Ships in:* lodash `baseAssignValue` (for `__proto__` only), valtio's
-`createSnapshotDefault` (for *all* keys — the one place valtio is safe by
+_Ships in:_ lodash `baseAssignValue` (for `__proto__` only), valtio's
+`createSnapshotDefault` (for _all_ keys — the one place valtio is safe by
 construction).
-*Cost:* measurably slower than `=` in hot loops; more verbose; you must decide
+_Cost:_ measurably slower than `=` in hot loops; more verbose; you must decide
 `writable`/`enumerable`/`configurable` explicitly.
-*What it breaks:* it bypasses setters — so any legitimate accessor on the target
+_What it breaks:_ it bypasses setters — so any legitimate accessor on the target
 stops firing. That is fatal for anything proxy-based that relies on trap
 interception (immer would lose its `set` trap semantics entirely).
-*Notable:* **CodeQL does not recommend this in either query.** It is nonetheless
+_Notable:_ **CodeQL does not recommend this in either query.** It is nonetheless
 the strategy with the cleanest theoretical story, and the one that generalises
-past `__proto__` to *any* inherited accessor.
-*Verdict:* closes the class at the site where it is used.
+past `__proto__` to _any_ inherited accessor.
+_Verdict:_ closes the class at the site where it is used.
 
 ---
 
 **S4 — Closed key set / allowlist from declared structure.**
 
-*Mechanism:* derive the set of writable keys from something the developer
+_Mechanism:_ derive the set of writable keys from something the developer
 declared, and drop anything not in it. The untrusted key is never used to index;
-it is used to *look up* in a trusted set.
-*Ships in:* Redux `combineReducers` and NgRx `combineReducers` (key set =
+it is used to _look up_ in a trusted set.
+_Ships in:_ Redux `combineReducers` and NgRx `combineReducers` (key set =
 `Object.keys(reducers)`); **`@ngrx/signals`' `patchState`**, which is the
 purest example: `stateKeys = Reflect.ownKeys(STATE_SOURCE)`, then
 `if (stateKeys.includes(key)) signals[key].set(v)` else warn and drop.
-*Cost:* the shape of state must be declared up front. Dynamic/open-ended maps
+_Cost:_ the shape of state must be declared up front. Dynamic/open-ended maps
 (entity dictionaries, user-defined fields) cannot use it — which is exactly why
 `@ngrx/entity` doesn't and is broken.
-*What it breaks:* nothing, within its applicability. `@ngrx/signals` emits a dev
+_What it breaks:_ nothing, within its applicability. `@ngrx/signals` emits a dev
 warning on drop, so it fails loudly.
-*Verdict:* **closes the class**, and is the reason Redux/NgRx have zero
+_Verdict:_ **closes the class**, and is the reason Redux/NgRx have zero
 prototype-pollution advisories despite handling untrusted payloads constantly.
-The protective property is *not* immutability and *not* reducer purity — it is
+The protective property is _not_ immutability and _not_ reducer purity — it is
 that the payload's keys never reach a property access. Worth stating plainly
 because "Redux is safe because it's immutable" is the folk explanation and it is
 wrong.
@@ -536,16 +536,16 @@ wrong.
 
 **S5 — Null-prototype storage (`Object.create(null)`).**
 
-*Mechanism:* an object with no prototype has no `__proto__` accessor and no
+_Mechanism:_ an object with no prototype has no `__proto__` accessor and no
 inherited names, so `o[k] = v` always creates an own data property and `k in o`
 is equivalent to own-ness for every `k`. It kills (a), (b) and (c) at once for
 that object.
-*Ships in production:* Node's `querystring.parse` returns null-prototype
+_Ships in production:_ Node's `querystring.parse` returns null-prototype
 (verified: `Object.getPrototypeOf(qs.parse('a=1')) === null`, and
 `qs.parse('__proto__=1')` yields an own `__proto__` key with prototype intact).
 **`Object.groupBy` returns a null-prototype object per spec** — verified — which
 is TC39's own current answer to "give me a plain keyed container".
-*Cost / what breaks* (all measured on Node 24.3.0):
+_Cost / what breaks_ (all measured on Node 24.3.0):
 
 ```
 JSON.stringify(o)              WORKS      => {"a":1,"b":{"c":2}}
@@ -561,7 +561,7 @@ o.toString()                   TypeError: not a function
 String(o) / `${o}` / o + ''    TypeError: Cannot convert object to primitive value
 ```
 
-*The decisive cost is that it does not stick.* Every ordinary copy re-introduces
+_The decisive cost is that it does not stick._ Every ordinary copy re-introduces
 `Object.prototype`:
 
 ```
@@ -571,26 +571,26 @@ structuredClone(o)         -> prototype is Object.prototype
 JSON.parse(JSON.stringify(o)) -> prototype is Object.prototype
 ```
 
-So null-prototype must be *re-applied at every construction site*. That is the
+So null-prototype must be _re-applied at every construction site_. That is the
 same discipline burden as a blocklist, relocated — a point worth weighing
 against the "it closes the class" framing.
-*Framework interop, concrete:* Angular's `renderStringify` is
+_Framework interop, concrete:_ Angular's `renderStringify` is
 `if (typeof value === 'string') return value; if (value == null) return '';
 return String(value);` (`@angular/core@22.0.7`,
 `fesm2022/_pending_tasks-chunk.mjs:483-487`). `String()` on a null-prototype
 object throws, so `{{ someNullProtoObject }}` in a template is a runtime
 TypeError.
-*Verdict:* closes the class per-object; does not close it per-codebase.
+_Verdict:_ closes the class per-object; does not close it per-codebase.
 
 ---
 
 **S6 — `Map` (or other non-object) storage.**
 
-*Mechanism:* `Map` keys live in a separate slot with no prototype chain, so the
+_Mechanism:_ `Map` keys live in a separate slot with no prototype chain, so the
 whole class is unrepresentable.
-*Ships in:* **Yjs** (`this._map = new Map()`), Automerge (WASM columnar store),
+_Ships in:_ **Yjs** (`this._map = new Map()`), Automerge (WASM columnar store),
 `Map.groupBy` (spec).
-*Cost / what breaks* (measured):
+_Cost / what breaks_ (measured):
 
 ```
 JSON.stringify(new Map([['a',1]]))  => "{}"            <-- total data loss
@@ -602,38 +602,38 @@ Object.fromEntries(map)             => WORKS and is SAFE (CreateDataProperty)
 Plus: no spread, no destructuring, no `?.` by key, no dot access, different
 iteration protocol, and — for Angular specifically — templates need `keyvalue`
 or explicit conversion.
-*The critical finding:* **it relocates rather than eliminates.** Both Yjs and
+_The critical finding:_ **it relocates rather than eliminates.** Both Yjs and
 Automerge reintroduce the sink the moment they materialise a plain object.
 Yjs's `toJSON` does `const map = {}; map[key] = v`. Automerge's WASM glue does
-`new Object()` then `arg0[arg1] = arg2` — and Automerge hits it on *every*
+`new Object()` then `arg0[arg1] = arg2` — and Automerge hits it on _every_
 `load`/`change`, not just on an explicit serialize. **[delegated]** Neither
 project has a `__proto__` blocklist; neither has an advisory; neither produced
 global pollution in probes — only per-object prototype replacement at the
 materialisation boundary.
-*Verdict:* closes the class in storage; **the boundary is where you must then
+_Verdict:_ closes the class in storage; **the boundary is where you must then
 defend**, and it is easy to forget because the storage looks obviously safe.
 
 ---
 
 **S7 — Reject prototype mutation structurally (Proxy `setPrototypeOf` trap).**
 
-*Mechanism:* a Proxy whose `setPrototypeOf` trap unconditionally throws makes (b)
+_Mechanism:_ a Proxy whose `setPrototypeOf` trap unconditionally throws makes (b)
 impossible for anything behind the proxy, regardless of key name.
-*Ships in:* immer (`die(12)`), mutative **[delegated]**.
-*Cost:* only applies to proxied objects, and only while they are proxied.
-*What it breaks:* nothing legitimate — code that deliberately reassigns a state
+_Ships in:_ immer (`die(12)`), mutative **[delegated]**.
+_Cost:_ only applies to proxied objects, and only while they are proxied.
+_What it breaks:_ nothing legitimate — code that deliberately reassigns a state
 object's prototype is already pathological.
-*Caveat established above:* in immer this trap is only *reached* via the
+_Caveat established above:_ in immer this trap is only _reached_ via the
 accessor-forwarding path, so it silently does not fire on null-prototype targets.
 The trap itself is structural; the routing into it is not.
-*Verdict:* closes sub-class (b) cleanly. Does nothing for (a) via a gadget, and
+_Verdict:_ closes sub-class (b) cleanly. Does nothing for (a) via a gadget, and
 nothing for (c).
 
 ---
 
 **S8 — Freeze the prototypes at startup (SES `lockdown()` / `Object.freeze(Object.prototype)`).**
 
-*Ships in production, verified from source rather than a README* **[delegated]**:
+_Ships in production, verified from source rather than a README_ **[delegated]**:
 MetaMask's browser extension calls `lockdown({consoleTaming:'unsafe',
 errorTaming:'unsafe', domainTaming:'unsafe', overrideTaming:'severe'})` in
 `app/scripts/lockdown-run.js`, wired in via `@lavamoat/webpack` with generated
@@ -641,7 +641,7 @@ policy files checked in. `ses`'s `hardenIntrinsics()`
 (`packages/ses/src/lockdown.js:556-580`) walks the full permitted-intrinsics
 graph from `permits.js` — every built-in prototype, not just `Object.prototype`.
 
-*The load-bearing negative result:* **`Object.freeze(Object.prototype)` does NOT
+_The load-bearing negative result:_ **`Object.freeze(Object.prototype)` does NOT
 prevent `obj.__proto__ = x`**, in strict or sloppy mode. Measured:
 
 ```
@@ -652,23 +652,23 @@ descriptor after  freeze: {getter:true, setter:true, configurable:false}
 ```
 
 Only `configurable` flips. Per ECMA-262 §7.3.15 `SetIntegrityLevel`, freezing an
-*accessor* property sets `[[Configurable]]: false` and nothing else — `[[Get]]`
+_accessor_ property sets `[[Configurable]]: false` and nothing else — `[[Get]]`
 and `[[Set]]` are untouched. And the `__proto__` setter (§20.1.3.8.2, Annex B
 legacy-normative-optional) operates on `thisValue.[[SetPrototypeOf]]` — the
 **receiver**, not on `Object.prototype`. So freezing blocks (a) global pollution
 but leaves (b) local prototype replacement wide open. **[delegated]**
 
-*What breaks under freeze-only-`Object.prototype`:* narrow. Polyfills onto
+_What breaks under freeze-only-`Object.prototype`:_ narrow. Polyfills onto
 `String.prototype`/`Array.prototype`, `class extends Array`/`Error`, mixins via
 `Object.assign(Cls.prototype, …)`, `Object.create(null)` — all still work. Only
 code that extends `Object.prototype` itself breaks. A verified real casualty:
 `should.js` throws at import time (`lib/should.js:104-108` defines onto
 `Object.prototype` by default).
-*What breaks under full `lockdown()`:* substantial, from Endo's own wiki —
+_What breaks under full `lockdown()`:_ substantial, from Endo's own wiki —
 `tape`, `depd` (used by **express** and **morgan**), `better-assert`,
 `node-lmdb`, `brace-expansion`/`temp` (import-time `Math.random`), `jsesc`,
 `babel`, `json-merge-patch`. **[delegated]**
-*Verdict:* closes (a) globally and process-wide; does not close (b) or (c). Only
+_Verdict:_ closes (a) globally and process-wide; does not close (b) or (c). Only
 viable for an application, never for a library — a library cannot freeze its
 host's intrinsics.
 
@@ -697,7 +697,7 @@ host's intrinsics.
 - **`structuredClone` is safe on the way in, lossy on the way out**: per WHATWG
   `StructuredDeserialize` it uses `CreateDataProperty` (so an own `__proto__`
   round-trips as data), but it always assigns the realm's default prototype —
-  custom prototypes and null prototypes are *not* preserved. Verified.
+  custom prototypes and null prototypes are _not_ preserved. Verified.
 - **Records & Tuples is WITHDRAWN** — `tc39/proposal-record-tuple` is archived;
   consensus to withdraw reached at the 2025-04-14 plenary (issue #394), from
   Stage 2. The successor, `tc39/proposal-composites`, is **Stage 1** and much
@@ -713,7 +713,7 @@ host's intrinsics.
 1. **The canonical prototype-pollution CVE was a read bug, not a write bug.**
    lodash's `defineProperty` write hardening predated CVE-2018-3721; the actual
    defect was `object[key]` in `baseMergeDeep` returning `Object.prototype` and
-   the merge recursing *into* it. "Harden the assignment" would not have fixed
+   the merge recursing _into_ it. "Harden the assignment" would not have fixed
    it. (§A.1.1(i))
 
 2. **immer's `__proto__` protection is a side effect, not a design.** It comes
@@ -755,7 +755,7 @@ host's intrinsics.
    normalising.
 
 9. **Redux's immunity has nothing to do with immutability.** It comes from
-   `combineReducers` iterating the *developer's* reducer map. `@ngrx/signals`'
+   `combineReducers` iterating the _developer's_ reducer map. `@ngrx/signals`'
    `patchState` is the same idea made explicit and is, in this corpus, the
    cleanest class-closing design for a state library specifically.
 
@@ -784,7 +784,7 @@ host's intrinsics.
   Advisory API. It may be repo-scoped, withdrawn, or unpublished. Its content is
   unknown.
 - **The exact fix commits for merge-deep and deepmerge** were retrieved via
-  WebFetch summarisation rather than raw `git show`; the resulting *source state*
+  WebFetch summarisation rather than raw `git show`; the resulting _source state_
   was verified directly here, but the byte-level diffs are second-hand.
   **[delegated]**
 - **Automerge's Rust source** was not read — only the compiled `.wasm` plus
@@ -819,48 +819,48 @@ jotai 2.20.2, solid-js 1.9.14, @ngrx/{store,store-devtools,effects,signals}
 
 ### B.1 Survey table
 
-| Library | Mechanism | Shape of what's emitted | When / batching | Source |
-| ------- | --------- | ----------------------- | --------------- | ------ |
-| **immer** | `produceWithPatches` / `produce(base, fn, patchListener)` | `{op:'add'\|'replace'\|'remove', path:(string\|number)[], value?}` + a parallel **inverse** array. Path is a mixed-type array, *not* a JSON Pointer. | Once, synchronously, at the end of `produce()`. `finalize.ts:57` calls `patchListener_` exactly once per produce. | `immer/src/plugins/patches.ts:132,171,238`; `src/core/finalize.ts:57`; `src/core/scope.ts:62` |
-| **JSON Patch (RFC 6902)** | wire format, not a runtime | 6 ops: `add remove replace move copy test`; `path` is an RFC 6901 Pointer **string** | n/a. "application of the entire patch document SHALL NOT be deemed successful" if any op fails (atomic). | rfc-editor.org/rfc/rfc6902.txt |
-| **JSON Merge Patch (RFC 7386)** | wire format | a partial object; `null` means *delete* | n/a | rfc-editor.org/rfc/rfc7386.txt |
-| **fast-json-patch** `compare()` | whole-tree diff after the fact | RFC 6902 ops — but **only** `replace/add/remove`; never `move`/`copy`/`test` | on demand, O(total tree) | ran it; see B.3 |
-| **valtio** | `subscribe(proxyObj, cb, notifyInSync?)` | **positional tuple**: `['set', path[], value, prevValue]` / `['delete', path[], prevValue]`. Path elements are strings (array indices too). Relative to the subscribed node. | **microtask** by default, all ops since last flush coalesced into one array; `notifyInSync=true` → one sync call per write. | `valtio/esm/vanilla.mjs:41-68,90-116,191-223` |
-| **valtio** (ops disabled — the **default**) | same `subscribe` | `ops === []`; callback still fires | same | `vanilla.mjs:79` `let createOp;` — undefined until `unstable_enableOp()` (`:266`) |
-| **valtio** `snapshot()` | versioned immutable snapshot, structurally shared | a frozen-ish POJO tree; unchanged subtrees are **reference-identical** across versions | pull, cached per global version | `vanilla.mjs:5-40,71,224` |
-| **MobX** `observe(target, cb)` | per-observable listener | `{observableKind, type:'add'\|'update'\|'remove'\|'splice', name/index, object, newValue, oldValue, added, removed, addedCount, removedCount, debugObjectName}` | **synchronous**, inline in the write; **shallow only** — a parent's listener does *not* fire for nested mutations | `mobx/src/types/observableobject.ts`, `observablearray.ts`, `observablemap.ts`; dispatch `src/types/listen-utils.ts` |
-| **MobX** `intercept` | pre-write hook | receives the change object, may mutate it or return `null` to cancel | before the write commits; FIFO; `null` breaks the chain | `mobx/src/types/intercept-utils.ts` `interceptChange` |
-| **MobX** `spy` | global firehose | same events as `observe`, plus action/reaction/computation events | sync; **stripped in production** | `mobx/src/core/spy.ts` — `if (!__DEV__) { console.warn("[mobx.spy] Is a no-op in production builds"); return ... }` |
-| **MobX** `reaction`/`autorun` | derivation | `reaction(expr, eff)` → `(newValue, oldValue, r)` for **the selector's result only**; `autorun` gets no payload at all | batched by transaction | `mobx/src/api/autorun.ts` |
-| **MobX** `onBecomeObserved/Unobserved` | 0↔1-observer transition hook | no change payload; fires once per transition | on transition | `mobx/src/api/become-observed.ts`; `src/core/atom.ts` `onBO()/onBUO()` |
-| **Yjs** `observeDeep` | per-type events bubbled to ancestors | `YMapEvent.keys: Map<string,{action:'add'\|'update'\|'delete', oldValue}>`; `YArrayEvent/YTextEvent.delta: [{retain},{insert},{delete}]`; **`event.path: (string\|number)[]`** relative to the observed root | **synchronous at the end of the outermost `Y.transact()`**, batched per transaction, before the `update` event | `yjs/dist/yjs.mjs:3245-3384` (`cleanupTransactions`), `:4558` `path`, `:4577` `keys`, `:4638` `delta` |
-| **Yjs** `Doc.on('update')` | binary CRDT op stream | `Uint8Array` | end of transaction; **encoder is gated**: `if (doc._observers.has('update')) { ... }` | `yjs.mjs:3348` |
-| **Automerge** `patchCallback` | patches from applying ops | `{action:'put'\|'del'\|'splice'\|'inc'\|'insert'\|'mark'\|'unmark'\|'conflict', path:(string\|number)[], value?/values?}` | at commit of `change()`/`applyChanges()`/`merge()`/`receiveSyncMessage()` | types `@automerge/automerge/dist/wasm_types.d.ts:153-224`; threading `dist/cjs/fullfat_node.cjs:6716-6788` |
-| **Legend-State** `obs.onChange(cb)` | per-node listener with bubbling | `{value, getPrevious(), changes: [{path: string[], pathTypes, valueAtPath, prevAtPath}]}` — **parent listeners get the child path** | **synchronous** by default; inside `batch()` coalesced and flushed synchronously at `endBatch()`; `{immediate:true}` bypasses batching; `{trackingType:true}` = shallow (fires only at that exact node) | `@legendapp/state/index.js:470,478,498,525,542,555,611`; types `src/observableInterfaces.d.ts:54-59,88-93` |
-| **Zustand** `subscribe` | whole-store listener | `(state, previousState)` — whole objects | sync per `setState` | `zustand/vanilla.js` |
-| **Zustand** `subscribeWithSelector` | selector-diff wrapper | `(nextSlice, prevSlice)` | sync; fires only if `equalityFn` says different | `zustand/middleware.js:251-274`. `grep "path\|wildcard\|glob"` over `zustand/*.js` → **zero hits** |
-| **Jotai** | `store.sub(atom, cb)` — per-atom, no payload | public store is exactly `{get, set, sub}` | sync | `jotai/vanilla/internals.js` `buildStore()` :784-810 |
-| **Jotai** internal `storeHooks` | wildcard "an atom changed" | receives the **atom object**, not a value or path; `f` (flush) hook has zero payload | per write / per commit | `INTERNAL_getBuildingBlocksRev3(store)[6]`; `jotai/vanilla/internals.js:106-144,773-777`. `INTERNAL_`-prefixed, `Rev3` = third incompatible revision |
-| **Solid** `createStore` | fine-grained per-property signals | **nothing** — `setProperty` writes the value then calls one per-property signal setter | n/a | `solid-js/store/dist/store.cjs:74-81,130-152`. `grep "subscribe\|listener\|onChange\|observe"` → **zero hits** |
-| **Solid** `produce`/`reconcile` | mutate + fire per-node signals | nothing emitted; `reconcile` runs an old-vs-new diff and calls `setProperty` only for differing leaves | n/a | `store.cjs:338-452` (`applyState`) |
-| **Solid** `DEV.hooks.afterUpdate` | dev-build global | **zero payload** ("something updated"). Store fields are deliberately hidden from `registerGraph`/`afterCreateSignal` — store signals are created with `{internal:true}` | dev build only (`store.cjs:454` sets `const DEV = undefined` in prod) | `solid-js/dist/dev.cjs:175-180,210-234,1801-1805`; `store.cjs:76-79` |
-| **Vue 3** `watch(src, cb, {deep:true})` | deep dependency tracking | `(value, oldValue)` — and for a reactive object **`value === oldValue`** (same proxy). Tells you nothing about what changed. | scheduler-batched | verified by running; `@vue/reactivity 3.5.41` |
-| **Vue 3** `onTrack`/`onTrigger` | debugger hooks | `{effect, target, type:'set'\|'add'\|'delete'\|'clear', key, newValue, oldValue, oldTarget}` — **no path**, just the raw target object + key | **synchronous at the write**, before the watcher callback | `dist/reactivity.cjs.js:604,626,701`. `grep onTrack\|onTrigger\|subsHead` in `reactivity.cjs.prod.js` → **0 hits**. **Dev-only.** |
-| **Angular** `effect` / `linkedSignal` / `resource` | derivations | nothing about *what* changed; an effect can only react to signals it reads | — | angular.dev/guide/signals documents no global write-observation API |
-| **Angular** `setPostSignalSetFn(fn)` | **global post-write hook on every writable signal in the process** | the raw `SignalNode` (`{value, version, kind:'signal', debugName?}`) — after the write, so no old value | **synchronous**, inside `signalValueChanged`, after `producerNotifyConsumers` | `@angular/core/fesm2022/_effect-chunk.mjs:332,349,384`; exported from the public entrypoint `@angular/core/primitives/signals` |
-| **Angular** `ɵgetSignalGraph(injector)` | pull-based graph snapshot for DevTools | `{nodes:[{kind,id,epoch,label,value}], edges:[{consumer,producer}]}` | on demand | `types/core.d.ts:4601-4625`; `fesm2022/_debug_node-chunk.mjs:12219` |
-| **TC39 proposal-signals** `Signal.subtle.Watcher` | notify-then-pull | `notify()` takes **no arguments**; you call `getPending(): Signal[]` to learn what's dirty | once per dirty transition until re-`watch()`ed; "No signals may be read or written during the notify" | proposal README lines 272-295 |
-| **RxDB** `collection.$` | change feed | `{operation:'INSERT'\|'UPDATE'\|'DELETE', documentId, documentData, previousDocumentData, isLocal}` — whole documents, **not** field-level | synchronous `Subject.next()` at the write | `src/rx-change-event.ts`, `src/rx-database.ts` `$emit()` |
-| **PouchDB/CouchDB** `_changes` | ordered, resumable feed | `{id, seq, changes:[{rev}], doc?, deleted?}`; feed modes `normal\|longpoll\|continuous\|eventsource`, PouchDB `live:true` | pull or streamed; `since=seq` resumes | docs.couchdb.org/en/stable/api/database/changes.html — `seq` "is the primary key for the changes feed, and is also used as a checkpointer by the replication algorithm" |
-| **Firebase RTDB** | `child_added/changed/removed/moved`, `value` | **child-level**, one tree level under the ref. No wildcard path query. | local-optimistic: "All writes to the database trigger local events immediately, before any interaction with the server" | firebase.google.com/docs/database/web/read-and-write |
-| **Redux / NgRx** | one `dispatch` chokepoint + action log | serializable actions | sync through the middleware/meta-reducer chain | `@ngrx/store/fesm2022/ngrx-store.mjs:197,359,485` |
-| **NgRx store-devtools** | **recompute-from-action-log** | `LiftedState = {committedState, actionsById, stagedActionIds, computedStates, currentStateIndex}` | replay on invalidation | `@ngrx/store-devtools/fesm2022/ngrx-store-devtools.mjs:467` `computeNextEntry`, `:491` `recomputeStates`, `:521` `liftInitialState` |
-| **NgRx SignalStore** | `patchState` + `watchState` | `watchState` gets whole state; **no interceptor of any kind** (`withHooks` is init/destroy only) | sync | `@ngrx/signals/fesm2022/ngrx-signals.mjs:5,205,789` |
+| Library                                            | Mechanism                                                          | Shape of what's emitted                                                                                                                                                                                      | When / batching                                                                                                                                                                                         | Source                                                                                                                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **immer**                                          | `produceWithPatches` / `produce(base, fn, patchListener)`          | `{op:'add'\|'replace'\|'remove', path:(string\|number)[], value?}` + a parallel **inverse** array. Path is a mixed-type array, _not_ a JSON Pointer.                                                         | Once, synchronously, at the end of `produce()`. `finalize.ts:57` calls `patchListener_` exactly once per produce.                                                                                       | `immer/src/plugins/patches.ts:132,171,238`; `src/core/finalize.ts:57`; `src/core/scope.ts:62`                                                                           |
+| **JSON Patch (RFC 6902)**                          | wire format, not a runtime                                         | 6 ops: `add remove replace move copy test`; `path` is an RFC 6901 Pointer **string**                                                                                                                         | n/a. "application of the entire patch document SHALL NOT be deemed successful" if any op fails (atomic).                                                                                                | rfc-editor.org/rfc/rfc6902.txt                                                                                                                                          |
+| **JSON Merge Patch (RFC 7386)**                    | wire format                                                        | a partial object; `null` means _delete_                                                                                                                                                                      | n/a                                                                                                                                                                                                     | rfc-editor.org/rfc/rfc7386.txt                                                                                                                                          |
+| **fast-json-patch** `compare()`                    | whole-tree diff after the fact                                     | RFC 6902 ops — but **only** `replace/add/remove`; never `move`/`copy`/`test`                                                                                                                                 | on demand, O(total tree)                                                                                                                                                                                | ran it; see B.3                                                                                                                                                         |
+| **valtio**                                         | `subscribe(proxyObj, cb, notifyInSync?)`                           | **positional tuple**: `['set', path[], value, prevValue]` / `['delete', path[], prevValue]`. Path elements are strings (array indices too). Relative to the subscribed node.                                 | **microtask** by default, all ops since last flush coalesced into one array; `notifyInSync=true` → one sync call per write.                                                                             | `valtio/esm/vanilla.mjs:41-68,90-116,191-223`                                                                                                                           |
+| **valtio** (ops disabled — the **default**)        | same `subscribe`                                                   | `ops === []`; callback still fires                                                                                                                                                                           | same                                                                                                                                                                                                    | `vanilla.mjs:79` `let createOp;` — undefined until `unstable_enableOp()` (`:266`)                                                                                       |
+| **valtio** `snapshot()`                            | versioned immutable snapshot, structurally shared                  | a frozen-ish POJO tree; unchanged subtrees are **reference-identical** across versions                                                                                                                       | pull, cached per global version                                                                                                                                                                         | `vanilla.mjs:5-40,71,224`                                                                                                                                               |
+| **MobX** `observe(target, cb)`                     | per-observable listener                                            | `{observableKind, type:'add'\|'update'\|'remove'\|'splice', name/index, object, newValue, oldValue, added, removed, addedCount, removedCount, debugObjectName}`                                              | **synchronous**, inline in the write; **shallow only** — a parent's listener does _not_ fire for nested mutations                                                                                       | `mobx/src/types/observableobject.ts`, `observablearray.ts`, `observablemap.ts`; dispatch `src/types/listen-utils.ts`                                                    |
+| **MobX** `intercept`                               | pre-write hook                                                     | receives the change object, may mutate it or return `null` to cancel                                                                                                                                         | before the write commits; FIFO; `null` breaks the chain                                                                                                                                                 | `mobx/src/types/intercept-utils.ts` `interceptChange`                                                                                                                   |
+| **MobX** `spy`                                     | global firehose                                                    | same events as `observe`, plus action/reaction/computation events                                                                                                                                            | sync; **stripped in production**                                                                                                                                                                        | `mobx/src/core/spy.ts` — `if (!__DEV__) { console.warn("[mobx.spy] Is a no-op in production builds"); return ... }`                                                     |
+| **MobX** `reaction`/`autorun`                      | derivation                                                         | `reaction(expr, eff)` → `(newValue, oldValue, r)` for **the selector's result only**; `autorun` gets no payload at all                                                                                       | batched by transaction                                                                                                                                                                                  | `mobx/src/api/autorun.ts`                                                                                                                                               |
+| **MobX** `onBecomeObserved/Unobserved`             | 0↔1-observer transition hook                                       | no change payload; fires once per transition                                                                                                                                                                 | on transition                                                                                                                                                                                           | `mobx/src/api/become-observed.ts`; `src/core/atom.ts` `onBO()/onBUO()`                                                                                                  |
+| **Yjs** `observeDeep`                              | per-type events bubbled to ancestors                               | `YMapEvent.keys: Map<string,{action:'add'\|'update'\|'delete', oldValue}>`; `YArrayEvent/YTextEvent.delta: [{retain},{insert},{delete}]`; **`event.path: (string\|number)[]`** relative to the observed root | **synchronous at the end of the outermost `Y.transact()`**, batched per transaction, before the `update` event                                                                                          | `yjs/dist/yjs.mjs:3245-3384` (`cleanupTransactions`), `:4558` `path`, `:4577` `keys`, `:4638` `delta`                                                                   |
+| **Yjs** `Doc.on('update')`                         | binary CRDT op stream                                              | `Uint8Array`                                                                                                                                                                                                 | end of transaction; **encoder is gated**: `if (doc._observers.has('update')) { ... }`                                                                                                                   | `yjs.mjs:3348`                                                                                                                                                          |
+| **Automerge** `patchCallback`                      | patches from applying ops                                          | `{action:'put'\|'del'\|'splice'\|'inc'\|'insert'\|'mark'\|'unmark'\|'conflict', path:(string\|number)[], value?/values?}`                                                                                    | at commit of `change()`/`applyChanges()`/`merge()`/`receiveSyncMessage()`                                                                                                                               | types `@automerge/automerge/dist/wasm_types.d.ts:153-224`; threading `dist/cjs/fullfat_node.cjs:6716-6788`                                                              |
+| **Legend-State** `obs.onChange(cb)`                | per-node listener with bubbling                                    | `{value, getPrevious(), changes: [{path: string[], pathTypes, valueAtPath, prevAtPath}]}` — **parent listeners get the child path**                                                                          | **synchronous** by default; inside `batch()` coalesced and flushed synchronously at `endBatch()`; `{immediate:true}` bypasses batching; `{trackingType:true}` = shallow (fires only at that exact node) | `@legendapp/state/index.js:470,478,498,525,542,555,611`; types `src/observableInterfaces.d.ts:54-59,88-93`                                                              |
+| **Zustand** `subscribe`                            | whole-store listener                                               | `(state, previousState)` — whole objects                                                                                                                                                                     | sync per `setState`                                                                                                                                                                                     | `zustand/vanilla.js`                                                                                                                                                    |
+| **Zustand** `subscribeWithSelector`                | selector-diff wrapper                                              | `(nextSlice, prevSlice)`                                                                                                                                                                                     | sync; fires only if `equalityFn` says different                                                                                                                                                         | `zustand/middleware.js:251-274`. `grep "path\|wildcard\|glob"` over `zustand/*.js` → **zero hits**                                                                      |
+| **Jotai**                                          | `store.sub(atom, cb)` — per-atom, no payload                       | public store is exactly `{get, set, sub}`                                                                                                                                                                    | sync                                                                                                                                                                                                    | `jotai/vanilla/internals.js` `buildStore()` :784-810                                                                                                                    |
+| **Jotai** internal `storeHooks`                    | wildcard "an atom changed"                                         | receives the **atom object**, not a value or path; `f` (flush) hook has zero payload                                                                                                                         | per write / per commit                                                                                                                                                                                  | `INTERNAL_getBuildingBlocksRev3(store)[6]`; `jotai/vanilla/internals.js:106-144,773-777`. `INTERNAL_`-prefixed, `Rev3` = third incompatible revision                    |
+| **Solid** `createStore`                            | fine-grained per-property signals                                  | **nothing** — `setProperty` writes the value then calls one per-property signal setter                                                                                                                       | n/a                                                                                                                                                                                                     | `solid-js/store/dist/store.cjs:74-81,130-152`. `grep "subscribe\|listener\|onChange\|observe"` → **zero hits**                                                          |
+| **Solid** `produce`/`reconcile`                    | mutate + fire per-node signals                                     | nothing emitted; `reconcile` runs an old-vs-new diff and calls `setProperty` only for differing leaves                                                                                                       | n/a                                                                                                                                                                                                     | `store.cjs:338-452` (`applyState`)                                                                                                                                      |
+| **Solid** `DEV.hooks.afterUpdate`                  | dev-build global                                                   | **zero payload** ("something updated"). Store fields are deliberately hidden from `registerGraph`/`afterCreateSignal` — store signals are created with `{internal:true}`                                     | dev build only (`store.cjs:454` sets `const DEV = undefined` in prod)                                                                                                                                   | `solid-js/dist/dev.cjs:175-180,210-234,1801-1805`; `store.cjs:76-79`                                                                                                    |
+| **Vue 3** `watch(src, cb, {deep:true})`            | deep dependency tracking                                           | `(value, oldValue)` — and for a reactive object **`value === oldValue`** (same proxy). Tells you nothing about what changed.                                                                                 | scheduler-batched                                                                                                                                                                                       | verified by running; `@vue/reactivity 3.5.41`                                                                                                                           |
+| **Vue 3** `onTrack`/`onTrigger`                    | debugger hooks                                                     | `{effect, target, type:'set'\|'add'\|'delete'\|'clear', key, newValue, oldValue, oldTarget}` — **no path**, just the raw target object + key                                                                 | **synchronous at the write**, before the watcher callback                                                                                                                                               | `dist/reactivity.cjs.js:604,626,701`. `grep onTrack\|onTrigger\|subsHead` in `reactivity.cjs.prod.js` → **0 hits**. **Dev-only.**                                       |
+| **Angular** `effect` / `linkedSignal` / `resource` | derivations                                                        | nothing about _what_ changed; an effect can only react to signals it reads                                                                                                                                   | —                                                                                                                                                                                                       | angular.dev/guide/signals documents no global write-observation API                                                                                                     |
+| **Angular** `setPostSignalSetFn(fn)`               | **global post-write hook on every writable signal in the process** | the raw `SignalNode` (`{value, version, kind:'signal', debugName?}`) — after the write, so no old value                                                                                                      | **synchronous**, inside `signalValueChanged`, after `producerNotifyConsumers`                                                                                                                           | `@angular/core/fesm2022/_effect-chunk.mjs:332,349,384`; exported from the public entrypoint `@angular/core/primitives/signals`                                          |
+| **Angular** `ɵgetSignalGraph(injector)`            | pull-based graph snapshot for DevTools                             | `{nodes:[{kind,id,epoch,label,value}], edges:[{consumer,producer}]}`                                                                                                                                         | on demand                                                                                                                                                                                               | `types/core.d.ts:4601-4625`; `fesm2022/_debug_node-chunk.mjs:12219`                                                                                                     |
+| **TC39 proposal-signals** `Signal.subtle.Watcher`  | notify-then-pull                                                   | `notify()` takes **no arguments**; you call `getPending(): Signal[]` to learn what's dirty                                                                                                                   | once per dirty transition until re-`watch()`ed; "No signals may be read or written during the notify"                                                                                                   | proposal README lines 272-295                                                                                                                                           |
+| **RxDB** `collection.$`                            | change feed                                                        | `{operation:'INSERT'\|'UPDATE'\|'DELETE', documentId, documentData, previousDocumentData, isLocal}` — whole documents, **not** field-level                                                                   | synchronous `Subject.next()` at the write                                                                                                                                                               | `src/rx-change-event.ts`, `src/rx-database.ts` `$emit()`                                                                                                                |
+| **PouchDB/CouchDB** `_changes`                     | ordered, resumable feed                                            | `{id, seq, changes:[{rev}], doc?, deleted?}`; feed modes `normal\|longpoll\|continuous\|eventsource`, PouchDB `live:true`                                                                                    | pull or streamed; `since=seq` resumes                                                                                                                                                                   | docs.couchdb.org/en/stable/api/database/changes.html — `seq` "is the primary key for the changes feed, and is also used as a checkpointer by the replication algorithm" |
+| **Firebase RTDB**                                  | `child_added/changed/removed/moved`, `value`                       | **child-level**, one tree level under the ref. No wildcard path query.                                                                                                                                       | local-optimistic: "All writes to the database trigger local events immediately, before any interaction with the server"                                                                                 | firebase.google.com/docs/database/web/read-and-write                                                                                                                    |
+| **Redux / NgRx**                                   | one `dispatch` chokepoint + action log                             | serializable actions                                                                                                                                                                                         | sync through the middleware/meta-reducer chain                                                                                                                                                          | `@ngrx/store/fesm2022/ngrx-store.mjs:197,359,485`                                                                                                                       |
+| **NgRx store-devtools**                            | **recompute-from-action-log**                                      | `LiftedState = {committedState, actionsById, stagedActionIds, computedStates, currentStateIndex}`                                                                                                            | replay on invalidation                                                                                                                                                                                  | `@ngrx/store-devtools/fesm2022/ngrx-store-devtools.mjs:467` `computeNextEntry`, `:491` `recomputeStates`, `:521` `liftInitialState`                                     |
+| **NgRx SignalStore**                               | `patchState` + `watchState`                                        | `watchState` gets whole state; **no interceptor of any kind** (`withHooks` is init/destroy only)                                                                                                             | sync                                                                                                                                                                                                    | `@ngrx/signals/fesm2022/ngrx-signals.mjs:5,205,789`                                                                                                                     |
 
 ### B.2 The distinct architectural MODELS
 
 Nine mechanisms recur across the survey. They are not variants of one thing —
-they differ in *who computes the delta* and *when*.
+they differ in _who computes the delta_ and _when_.
 
 ---
 
@@ -876,9 +876,9 @@ consumer then pulls whatever granularity it wants.
 - Enables: invalidation, "redraw/resave something", cheap epoch-based staleness checks.
 - Costs: O(1) per write, **zero allocation**. Measured: valtio write with a sync
   subscriber and ops off = 0.00035 ms/op.
-- Does NOT enable: knowing *what* changed. Every consumer that needs that must
+- Does NOT enable: knowing _what_ changed. Every consumer that needs that must
   pair M0 with a pull mechanism (M5 or M6).
-- **Surprise:** this is the model the *standards track* chose. The TC39 proposal
+- **Surprise:** this is the model the _standards track_ chose. The TC39 proposal
   explicitly forbids reading or writing signals inside `notify`, forcing the
   pull.
 
@@ -892,7 +892,7 @@ if the result differs.
   `Object.is`), **MobX** `reaction`.
 - Enables: precise, typed, refactor-safe subscriptions with old/new values.
 - Costs: O(selectors × writes). No structural information ever exists — you get
-  the *value* you asked for, never a path. Cannot answer wildcard questions.
+  the _value_ you asked for, never a path. Cannot answer wildcard questions.
 - This is what Angular `computed` + `effect` already gives SignalTree for free.
 
 ---
@@ -921,12 +921,12 @@ if the result differs.
 
 ---
 
-**M3 — Write-time key bookkeeping, diffed at commit.** *This is what immer
-actually does, and it is not "patches emitted by the write".*
+**M3 — Write-time key bookkeeping, diffed at commit.** _This is what immer
+actually does, and it is not "patches emitted by the write"._
 
 - The write path records only **which keys were touched**, value-free and cheap:
   `proxy.ts:212` `state.assigned_.set(prop, true)`. At `produce()` commit,
-  `generatePatchesFromAssigned` (`patches.ts:238`) iterates *only those keys* and
+  `generatePatchesFromAssigned` (`patches.ts:238`) iterates _only those keys_ and
   compares `base_[key]` vs `copy_[key]`.
 - Proof that it is a diff and not a journal: **write-then-revert inside one
   recipe emits zero patches**, and two writes to the same path emit one patch.
@@ -948,7 +948,7 @@ actually does, and it is not "patches emitted by the write".*
 
 **M4 — Whole-tree diff after the fact.** Keep the old tree, structurally compare.
 
-- Who: **fast-json-patch** `compare()`; **Solid** `reconcile` in the *inverse*
+- Who: **fast-json-patch** `compare()`; **Solid** `reconcile` in the _inverse_
   direction (diff an incoming new state into existing fine-grained signals,
   `store.cjs:338-452`).
 - Enables: works with **any** write mechanism — no instrumentation, no
@@ -964,7 +964,7 @@ actually does, and it is not "patches emitted by the write".*
 ---
 
 **M5 — Versioned immutable snapshot with structural sharing; "what changed" is a
-*query*, answered by reference identity.**
+_query_, answered by reference identity.**
 
 - Who: **valtio** `snapshot()` (`vanilla.mjs:5-40,224`). Also what immer's output
   is, and what Automerge/Yjs materialised docs are.
@@ -977,17 +977,17 @@ actually does, and it is not "patches emitted by the write".*
   own slice. Devtools can hold two references. Nothing is emitted, nothing is
   allocated per write, and there is no subscription API to design.
 - Costs: requires copy-on-write along the write path (M3's cost) and immutable
-  reads; you cannot mutate in place. Reference identity is a *conservative*
+  reads; you cannot mutate in place. Reference identity is a _conservative_
   answer — same reference proves unchanged, different reference does not prove
   changed.
 - Measured cost of the primitive: reference identity compare = 0.003 µs vs
-  0.047 µs to *build* a `'a.b.c'` dot-path string. Building the string is the
+  0.047 µs to _build_ a `'a.b.c'` dot-path string. Building the string is the
   dominant cost of a path-string model and is paid per write.
 
 ---
 
-**M6 — Ordered, replayable log with a checkpoint cursor.** State is *derived
-from* the log rather than the log describing the state.
+**M6 — Ordered, replayable log with a checkpoint cursor.** State is _derived
+from_ the log rather than the log describing the state.
 
 - Who: **CouchDB/PouchDB** `_changes` (`seq` "is the primary key for the changes
   feed, and is also used as a checkpointer by the replication algorithm";
@@ -1010,8 +1010,8 @@ from* the log rather than the log describing the state.
 
 **M7 — Interception before the write.** MobX `intercept` (mutate `change` or
 return `null` to cancel — `intercept-utils.ts`; verified that returning `null`
-cancels the write *and* suppresses the downstream `observe`), Redux middleware.
-Officially discouraged in MobX (B.4). This is the only model that can *veto*.
+cancels the write _and_ suppresses the downstream `observe`), Redux middleware.
+Officially discouraged in MobX (B.4). This is the only model that can _veto_.
 
 ---
 
@@ -1051,41 +1051,40 @@ that makes M2 affordable.
   strings (`['list','3']`); RFC 6902 is a single Pointer string; Yjs/Automerge
   use mixed arrays. There is no interop without a conversion layer.
 - **JSON Merge Patch cannot express two things you will hit.** Per RFC 7386, a
-  `null` in the patch means *delete*, so **you cannot set a value to null**; and
+  `null` in the patch means _delete_, so **you cannot set a value to null**; and
   "it is not possible to patch part of a target that is not an object, such as
   to replace just some of the values in an array." It is a fine wire format for
-  coarse partial updates and useless as a change *record*.
+  coarse partial updates and useless as a change _record_.
 - **Prototype-pollution guard exists in the apply path, not the generate path.**
   immer's `applyPatches_` throws on `__proto__`/`constructor`/`prototype`
   (`patches.ts:340-346`, added for immer issue #738). Verified: both throw
   `[Immer] Patching reserved attributes like __proto__, prototype and
-  constructor is not allowed`. Relevant to Q1: *a patch stream is an untrusted-key
-  ingress the moment it can be applied from outside.*
+constructor is not allowed`. Relevant to Q1: _a patch stream is an untrusted-key
+  ingress the moment it can be applied from outside._
 
 ### B.4 What the maintainers themselves say (verbatim, with URLs)
 
-- **MobX**, mobx.js.org/intercept-and-observe.html: *"⚠️ Warning: intercept and
+- **MobX**, mobx.js.org/intercept-and-observe.html: _"⚠️ Warning: intercept and
   observe are low level utilities, and should not be needed in practice. Use some
   form of reaction instead, as observe doesn't respect transactions and doesn't
-  support deep observing of changes. Using these utilities is an anti-pattern."*
-  And on `intercept` specifically: *"Please avoid this API. It basically provides
+  support deep observing of changes. Using these utilities is an anti-pattern."_
+  And on `intercept` specifically: _"Please avoid this API. It basically provides
   a bit of aspect-oriented programming, creating flows that are really hard to
-  debug."* Both stated reasons were reproduced empirically: `observe` on a parent
+  debug."_ Both stated reasons were reproduced empirically: `observe` on a parent
   did **not** fire for a nested mutation, and it fires inline rather than at
   transaction end.
-- **MobX**, mobx.js.org/analyzing-reactivity.html: *"In production builds, the spy
-  API is a no-op as it will be minimized away."* Confirmed by grep:
+- **MobX**, mobx.js.org/analyzing-reactivity.html: _"In production builds, the spy
+  API is a no-op as it will be minimized away."_ Confirmed by grep:
   `spyReportStart` appears 15× in `mobx.cjs.development.js`, **0×** in
   `mobx.cjs.production.min.js`.
-- **MobX 7 CHANGELOG**: *"The public `trace` API and its related runtime support
-  have been removed."* `require('mobx').trace === undefined`; both trace doc URLs
-  404.
+- **MobX 7 CHANGELOG**: _"The public `trace` API and its related runtime support
+  have been removed."_ `require('mobx').trace === undefined`; both trace doc URLs 404.
 - **valtio**, `vanilla/utils.mjs:20`: the `watch` util now warns
-  *"[DEPRECATED] The `watch` util is no longer maintained."* `proxyWithHistory` is
+  _"[DEPRECATED] The `watch` util is no longer maintained."_ `proxyWithHistory` is
   gone from the 2.x exports entirely.
 - **Redux**, redux.js.org: the chokepoint is a convention, not a guarantee —
-  *"nothing prevents you from accidentally mutating the current state value!…
-  The Redux store doesn't do anything else to prevent accidental mutations."*
+  _"nothing prevents you from accidentally mutating the current state value!…
+  The Redux store doesn't do anything else to prevent accidental mutations."_
 
 ### B.5 Direct answers to the key questions
 
@@ -1096,24 +1095,24 @@ better than "notify with path strings"?**
 
 They are not on one axis, and the framing of the question contains an error worth
 naming: **immer does not emit patches from the write path.** It records touched
-*keys* during the write and runs a key-scoped **diff at commit** (M3). The
+_keys_ during the write and runs a key-scoped **diff at commit** (M3). The
 libraries that genuinely emit at the write trap are valtio and MobX (M2), and
 their output is measurably worse-shaped: `splice(0,1)` gives four raw ops
 including a `length` write, where immer's commit diff gives two normalized
-patches. Coalescing and normalization are *free* in M3 and *absent* in M2.
+patches. Coalescing and normalization are _free_ in M3 and _absent_ in M2.
 
 Ranked on the things that actually differ:
 
-| | diff-after (M4) | commit-diff from write-bookkeeping (M3) | raw ops at the trap (M2) | path strings only |
-| - | - | - | - | - |
-| runtime, 1 leaf write in 10 k-leaf tree | **0.783 ms** | **0.068 ms** | **0.0004 ms** | ~0.05 µs to build the string |
-| scales with | total tree size | breadth along the write path | depth of the write | depth of the write |
-| coalesces repeated writes | yes (implicitly) | **yes, verified** | **no** | no |
-| normalizes array ops | partly | yes | **no — leaks `length` writes** | n/a |
-| gives old value | yes | yes | yes | **no** |
-| gives inverse for undo | derivable | **free and exact, verified round-trip** | derivable from prev | **no** |
-| needs instrumented writes | **no** | yes (proxy/draft) | yes (proxy/trap) | yes |
-| needs a transaction boundary | no | **yes** | no | no |
+|                                         | diff-after (M4)  | commit-diff from write-bookkeeping (M3) | raw ops at the trap (M2)       | path strings only            |
+| --------------------------------------- | ---------------- | --------------------------------------- | ------------------------------ | ---------------------------- |
+| runtime, 1 leaf write in 10 k-leaf tree | **0.783 ms**     | **0.068 ms**                            | **0.0004 ms**                  | ~0.05 µs to build the string |
+| scales with                             | total tree size  | breadth along the write path            | depth of the write             | depth of the write           |
+| coalesces repeated writes               | yes (implicitly) | **yes, verified**                       | **no**                         | no                           |
+| normalizes array ops                    | partly           | yes                                     | **no — leaks `length` writes** | n/a                          |
+| gives old value                         | yes              | yes                                     | yes                            | **no**                       |
+| gives inverse for undo                  | derivable        | **free and exact, verified round-trip** | derivable from prev            | **no**                       |
+| needs instrumented writes               | **no**           | yes (proxy/draft)                       | yes (proxy/trap)               | yes                          |
+| needs a transaction boundary            | no               | **yes**                                 | no                             | no                           |
 
 The thing "notify with path strings" uniquely fails at is **carrying a value**. A
 path with no value can drive invalidation and audit logging and nothing else — it
@@ -1130,7 +1129,7 @@ observation behind ONE mechanism?**
 
 **Only the CRDTs, and they pay for it with a completely different data model.**
 
-- **Yjs**: one binary `update` stream serves sync *and* persistence; structured
+- **Yjs**: one binary `update` stream serves sync _and_ persistence; structured
   `observeDeep` deltas serve UI; `Y.UndoManager` serves undo. But undo is **not**
   inverse patches — `StackItem` records `DeleteSet`s of CRDT struct IDs and
   `undo()` structurally replays by deleting previously-inserted structs
@@ -1148,7 +1147,7 @@ the state (`:106-114`). Time travel is `Object.assign(proxyObject, wholeState)`
 from a snapshot (`:133`) — **not** inverse patches. The author of the op stream
 did not use the op stream for state transfer.
 
-NgRx is the other end: store-devtools *is* unified with the action log
+NgRx is the other end: store-devtools _is_ unified with the action log
 (`recomputeStates` re-derives state by replaying actions through the reducer),
 but only because state is defined as a fold over that log. Persistence and undo
 there are still separate concerns.
@@ -1180,7 +1179,7 @@ leaves.**
    `onInit`/`onDestroy` only. Redux has the same gap in weaker form ("nothing
    prevents you from accidentally mutating the current state value").
 2. **Instrument every leaf so there is no bypass to have.** valtio, MobX,
-   Legend-State, Vue and Solid all put the trap on the *node*, not the root. A
+   Legend-State, Vue and Solid all put the trap on the _node_, not the root. A
    "direct write" is still a trapped write. The root API is then just sugar. This
    is the only construction in the survey that is actually complete.
 3. **Own the data type entirely.** Yjs/Automerge: you cannot write except through
@@ -1200,6 +1199,7 @@ C. after microtask: [[{"path":"a.b.c","value":11,"version":2},
                       {"path":"a.b.d","value":22,"version":1},
                       {"path":"z","value":5,"version":1}]]
 ```
+
 …with zero journal entries while no listener was registered, equal-value writes
 suppressed by Angular's own equality gate before the hook, and another tree's
 signals filtered out. `linkedSignalSetFn` routes through `signalSetFn`, so
@@ -1209,7 +1209,7 @@ calls `signalSetFn`), which is correct.
 Caveats that must be recorded: it is **one global slot** (`setPostSignalSetFn`
 returns the previous fn — every consumer must chain, and Angular DevTools may
 want it); it is exported from the public entrypoint `@angular/core/primitives/signals`
-but **has no angular.dev API page and no stability annotation**; it fires *after*
+but **has no angular.dev API page and no stability annotation**; it fires _after_
 the assignment so the **old value is not recoverable** from the node; and it sees
 leaf writes only — branch add/remove is invisible because branches aren't signals.
 Nothing in the shipped `@angular/*` packages currently installs a hook, so there
@@ -1224,18 +1224,18 @@ Yes — at least three, and two of them are what the strongest libraries actuall
 converged on.
 
 1. **M5 — versioned immutable snapshot with structural sharing; "what changed" as
-   a *pull query* answered by reference identity.** Nothing is emitted and there
+   a _pull query_ answered by reference identity.** Nothing is emitted and there
    is no subscription payload to design. `snap1.untouched === snap2.untouched`
    proves an entire subtree is unchanged in O(1) — 0.003 µs, ~16× cheaper than
-   *constructing* one dot-path string. Each consumer descends only into the
+   _constructing_ one dot-path string. Each consumer descends only into the
    subtree it cares about, so persistence pays for its slice and devtools pays
    for theirs, instead of every write paying for the union of everyone's needs.
    valtio ships this (`vanilla.mjs:5-40`) and, notably, **uses it in preference
    to its own op stream** for devtools state transfer.
 2. **M0 — notify-with-no-payload plus a monotonic version, consumer pulls.** This
-   is where the *standards track* landed: TC39 `Watcher.notify()` takes no
+   is where the _standards track_ landed: TC39 `Watcher.notify()` takes no
    arguments and forbids reading signals inside it; you call `getPending():
-   Signal[]` afterwards. Angular already has both halves (`producerNotifyConsumers`
+Signal[]` afterwards. Angular already has both halves (`producerNotifyConsumers`
    and a global `epoch`, `_effect-chunk.mjs:9,91,384`). The consumer decides
    granularity; the write path allocates nothing.
 3. **M6 — an ordered log with a checkpoint cursor**, which buys the one thing
@@ -1247,7 +1247,7 @@ The genuinely interesting composition — and the one the evidence points at —
 **M0 + M5**: instrument the leaves (Angular's `setPostSignalSetFn` gives this for
 free), notify with a version and nothing else, and let each consumer pull exactly
 what it needs from version-stamped structurally-shared snapshots. That collapses
-`updateAndReport`, `onPathChange` and `PathNotifier` into *one* invalidation
+`updateAndReport`, `onPathChange` and `PathNotifier` into _one_ invalidation
 signal plus a query, rather than three payload formats.
 
 ### B.6 Surprises
@@ -1270,26 +1270,26 @@ signal plus a query, rather than three payload formats.
    It solves the "direct leaf write bypasses the root" problem outright.
 5. **The TC39 Signals proposal deliberately gives the notify callback no
    payload** and forbids signal access inside it. The standards-track answer to
-   "what changed" is *pull the dirty set*.
+   "what changed" is _pull the dirty set_.
 6. **Solid deliberately hides store fields from its own devtools graph** — store
    per-property signals are created with `{internal: true}`, which skips
    `registerGraph`/`afterCreateSignal` (`store.cjs:76-79`, `dev.cjs:210-234`).
    And Solid's public store API has **zero** subscribe/observe surface. This is a
    choice, not an omission.
 7. **Vue's `watch(deep: true)` hands you `value === oldValue`** — the same proxy.
-   The closest analogue to a signal tree gives you *nothing* about what changed
+   The closest analogue to a signal tree gives you _nothing_ about what changed
    through its public deep-watch API, and its only path-ish channel
    (`onTrack`/`onTrigger`) is **completely stripped in production** (0
    occurrences in `reactivity.cjs.prod.js`) and carries no path anyway, just
    `{target, key}`. Directly relevant to the "guardrails dead in prod" note:
-   Vue's answer is that hot-path/debug instrumentation *should* be dev-only, and
+   Vue's answer is that hot-path/debug instrumentation _should_ be dev-only, and
    it accepts an expensive dev payload (it clones whole Maps/Sets as `oldTarget`)
    precisely because prod strips it.
 8. **Automerge has no undo/redo API at all** (0 grep hits across the package) and
    pays for patch generation unconditionally (1.02× with vs without a callback).
 9. **Yjs's `delta`/`keys`/`path` are lazy memoized getters that throw if read
    after the handler returns.** Instrumented: 0 invocations when the observer
-   never reads them. The library that most *needs* deltas still refuses to
+   never reads them. The library that most _needs_ deltas still refuses to
    compute them speculatively.
 10. **MobX's `observe` is shallow-only** — a parent's listener does not fire for
     a nested mutation. The API that looks most like `onPathChange` doesn't do the
@@ -1307,21 +1307,21 @@ signal plus a query, rather than three payload formats.
   DevTools is a browser extension I did not inspect, and I could not test the
   interaction.
 - **Old values from the Angular hook.** The hook fires after `node.value =
-  newValue`; I found no way to recover the previous value from the node. Capturing
+newValue`; I found no way to recover the previous value from the node. Capturing
   it would require wrapping every setter, which reintroduces the bypass problem.
-- **A same-workload benchmark across libraries.** My numbers compare *models*
+- **A same-workload benchmark across libraries.** My numbers compare _models_
   (M2/M3/M4) using each library's idiomatic path; they are not a like-for-like
   library shootout, and immer's absolute numbers include its copy-on-write, which
   the others don't do.
 - **MobX 6 vs 7 by direct source diff.** Only mobx 7.0.0 was installed; the 6→7
   API stability claim for `observe`/`intercept`/`spy`/`reaction`/`onBecomeObserved`
-  rests on the CHANGELOG, not a tarball diff. `trace()` removal in 7 *is* directly
+  rests on the CHANGELOG, not a tarball diff. `trace()` removal in 7 _is_ directly
   verified.
 - **Legend-State's zero-listener cost in ns/op.** Established qualitatively from
   source (the parent walk is unconditional) but not measured.
 - **Official Automerge prose docs for patch semantics** — automerge.org has no
   patches page at the URLs tried; that section rests on `.d.ts` + bundled source
-  + live runs.
+  - live runs.
 - **RxDB cross-tab (BroadcastChannel) delivery semantics** — only the
   single-instance synchronous `$emit()` path was traced.
 - **Whether an M0+M5 design actually works for this repo's consumers**
@@ -1334,11 +1334,12 @@ signal plus a query, rather than three payload formats.
 (excluding `*.spec.ts`) or reproduced by running throwaway `zz-*.spec.ts`
 probes under `npx vitest run zz-` in `packages/core`, `packages/shared`,
 `packages/enterprise` and `packages/guardrails`. Comments, JSDoc and RFCs were
-read only to be checked *against* the code; where they disagree the
+read only to be checked _against_ the code; where they disagree the
 disagreement is listed in §C7. All probe files were deleted; `git status
 --porcelain` shows only this doc.
 
 Notation for provenance:
+
 - **TREE** — key came from the tree's own signal graph (`Object.keys(store)`,
   `Object.keys(node)` on a live accessor).
 - **PAYLOAD** — key came from data crossing the library boundary
@@ -1352,69 +1353,69 @@ Notation for provenance:
 
 Loops are listed once (not once per assignment inside them).
 
-| # | Site | Keys from | Use | Guard | Verified |
-| - | ---- | --------- | --- | ----- | -------- |
-| 1 | `core/src/lib/signal-tree.ts:465` `createSignalStore` | PAYLOAD (`signalTree(initial)`) | WRITE `store[key] = …` ×6 | `key === '__proto__'` inline (line 480), dev-only diagnostic ST2016 | probe D1/D2 clean |
-| 2 | `core/src/lib/signal-tree.ts:289` `recursiveUpdate` | PAYLOAD (`Partial<T>`) | READ `targetObj[key]` | **none** — reads `Object.prototype` for `__proto__`, falls through with no branch and no diagnostic | probe D3/D4/D5 clean (no sink present) |
-| 3 | `core/src/lib/utils.ts:468` `applyState` | PAYLOAD (devtools postMessage, snapshot restore) | READ + WRITE `stateNode[key] = val` (2 sites) | `key === '__proto__'` **and** `hasOwnProperty(stateNode, key)` | probe D6/D7 clean |
-| 4 | `core/src/lib/lazy/lazy-tree.ts:90` proxy `get` | PAYLOAD (any property read) | READ | `isUnsafeKey` = `key === '__proto__'` only | probe P3 clean |
-| 5 | `core/src/lib/lazy/lazy-tree.ts:208` proxy `set` | PAYLOAD | WRITE `target[key] = value` | `isUnsafeKey` | — |
-| 6 | `core/src/lib/lazy/lazy-tree.ts:240` proxy `defineProperty` | PAYLOAD | WRITE | `isUnsafeKey` | — |
-| 7 | `core/src/lib/lazy/lazy-tree.ts:247` proxy `has` | PAYLOAD | READ | `isUnsafeKey` | — |
-| 8 | `core/src/lib/utils.ts:243` `unwrap` (accessor branch) | TREE | WRITE `result[key] = …` into fresh `{}` | `hasOwnProperty` on source | — |
-| 9 | `core/src/lib/utils.ts:325` `unwrap` (plain branch) | **PAYLOAD** (recurses into leaf *values*) | WRITE `result[key] = …` into fresh `{}` | `hasOwnProperty` on source only — **no name check** | **PROVEN**: probe A1/A2 — a leaf holding `JSON.parse('{"deep":{"__proto__":{…}}}')` yields a snapshot whose `blob.deep` has an attacker-keyed prototype; `JSON.stringify` shows `{}` |
-| 10 | `core/src/enhancers/serialization/serialization.ts:276` `unwrapObjectSafely` | PAYLOAD (leaf values) | WRITE into fresh `{}` | none | same class as #9 |
-| 11 | `…/serialization.ts:368` `detectCircularReferences` | PAYLOAD | READ | none | no sink |
-| 12 | `…/serialization.ts:553` `restoreSpecialTypes` | PAYLOAD (`JSON.parse` of storage) | WRITE into fresh `{}` | none | same class as #9 |
-| 13 | `…/serialization.ts:595` `updateSignals` (rehydrate) | PAYLOAD (`JSON.parse` of storage) | READ `target[key]`, then **recurses into `Object.prototype`** | `hasOwnProperty` on **source**, not on target; no name check | probe P1 clean (no write sink: only `signal.set()` is reachable) |
-| 13b | `…/serialization.ts:659` nodeMap path walk | PAYLOAD (dotted paths from the persisted metadata) | READ `node[p]` walking arbitrary segments | none | no sink found |
-| 14 | `…/serialization.ts:745` `encodeSpecials` | PAYLOAD | WRITE into fresh `{}` | none | same class as #9 |
-| 15 | `…/serialization.ts:813` `walkAlias` | TREE | WRITE `nodeMap[path]` | n/a | — |
-| 16 | `core/src/enhancers/devtools/devtools-impl.ts:380` snapshot diff | PAYLOAD ∪ TREE | READ | none | — |
-| 17 | `…/devtools-impl.ts:458` `sanitizeState` | PAYLOAD | WRITE into fresh `{}` | none | same class as #9 |
-| 18 | `…/devtools-impl.ts:1775` `refreshTreeTopKeys` | TREE | READ | n/a | — |
-| 19 | `core/src/enhancers/batching/batching.ts:356` `batchUpdate` | PAYLOAD | READ `$[key]` then call `.set` | none | `$['__proto__']` → `Object.prototype`, `typeof … === 'function'` false → skipped; no sink |
-| 20 | `core/src/enhancers/utils/copy-tree-properties.ts:12,24` | TREE | WRITE `defineProperty` | `hasOwnProperty` + skip non-configurable | — |
-| 21 | `core/src/lib/entity-signal.ts:246` `createEntityNode` | **PAYLOAD** (an entity from realtime/HTTP) | WRITE `Object.defineProperty(node, key, {get})` | **none** | mints an own `__proto__`/`constructor` accessor on the node; no global sink |
-| 22 | `core/src/lib/markers/form.ts:391` `readFromStorage` | **PAYLOAD** (`localStorage` JSON) | WRITE via object **spread** `{…initial, …JSON.parse(stored)}` | none | **PROVEN**: probe P4 — result has a real own `__proto__` key (`ownProtoKey=true`, prototype unchanged) |
-| 23 | `core/src/lib/markers/form.ts:599` `createFieldsProxy` | CONFIG (`config.initial`) | WRITE `proxy[key]`, `defineProperty(fieldAccessor, childKey)` | none | uses `initial`, not the hydrated values — so #22's own `__proto__` does not reach it |
-| 24 | `core/src/lib/markers/form.ts:419/473/489/665/813/825/844` | CONFIG (`config.initial`) | READ/WRITE into fresh `{}` | none | — |
-| 25 | `core/src/lib/markers/entity-loader.ts:239` param key sort | CONFIG/PAYLOAD (loader params) | READ | none | cache-key building only |
-| 26 | `core/src/lib/markers/entity-loader.ts:713` tag walk | TREE | READ | none | — |
-| 27 | `core/src/lib/markers/stored.ts:229` `createStorageKeys` | CONFIG | WRITE into fresh `{}` | none | — |
-| 28 | `core/src/lib/markers/entity-map.ts:264` slice install | CONFIG | WRITE `entitySignal[name] = …` | none | — |
-| 29 | `core/src/lib/internals/merge-derived.ts:86` `ensurePathAndGetTarget` | CONFIG (derived factory keys) | WRITE `current[part] = {}` after an **inherited** `part in current` test | none | a derived factory returning `{__proto__: …}` is a sink; developer-controlled |
-| 30 | `core/src/lib/internals/merge-derived.ts:170/185/201` | CONFIG | WRITE `target[key] = …` | none | — |
-| 31 | `core/src/lib/internals/materialize-markers.ts:241/316` | TREE | WRITE `node[key] = materialized` | n/a | — |
-| 32 | `core/src/lib/internals/visit-tree.ts:70` | TREE | READ, try/catch | n/a | the canonical walker; used by batching, interceptLeafSignals |
-| 33 | `core/src/lib/audit/audit.ts:125` | PAYLOAD (keys returned by `getChanges`) | READ `previousState[key]` | none | — |
-| 34 | `core/src/security.ts:47` `security()` walk | PAYLOAD | READ + `validateKey` | denylist `['__proto__','constructor','prototype']` — **opt-in only** | never runs unless the consumer passes `security()` |
-| 35 | `shared/src/lib/merge-deep.ts:19` | **PAYLOAD** (`JSON.parse(localStorage)` via ng-forms) | WRITE `targetObj[key] = …` ×2 | **none** | **PROVEN (O5 still open)**: probe S1 sets the target's prototype; S2 the same one level down; S3 replaces `target.constructor` |
-| 36 | `shared/src/lib/get-changes.ts:19` | **PAYLOAD**, and `for…in` so **inherited keys too** | WRITE `changes[key] = …` into fresh `{}` | **none** | **PROVEN**: probe S4 — the returned `changes` object's prototype is attacker-supplied while `Object.keys(changes)` is `[]` |
-| 37 | `shared/src/lib/deep-clone.ts:107` | PAYLOAD | WRITE `defineProperty(result, key, descriptor)` | none (uses `defineProperty`, so no setter invocation) | probe S6: clone keeps a real own `__proto__` (`ownProto=true`) — mints the own-key primitive |
-| 38 | `shared/src/lib/deep-equal.ts:83` | PAYLOAD | READ | none | O6/O7 still open — probe S7 `deepEqual(new Error('a'), new Error('b')) === true`; S8 same for `new Number(1)/(2)`; S9 `deepEqual(Object.create(Date.prototype), new Date(0))` **throws** |
-| 39 | `enterprise/src/lib/update-engine.ts:377` path walk | PAYLOAD | READ | `isUnsafeKey` (name first) **then** `hasOwnProperty` | probe E1/E2 clean |
-| 40 | `enterprise/src/lib/update-engine.ts:450` `applyPatch` | PAYLOAD | WRITE `defineProperty` | `isUnsafeKey` + own **enumerable** descriptor required | — |
-| 41 | `enterprise/src/lib/update-engine.ts:479` `applyDeepToNode` | PAYLOAD | READ + recurse | `isUnsafeKey` + `hasOwnProperty` | — |
-| 42 | `enterprise/src/lib/diff-engine.ts:243/266` | PAYLOAD | READ | `opts.keyValidator` — **optional, defaulted `undefined` at line 120, and supplied by no caller in the repo.** Dead guard. | grep |
-| 43 | `enterprise/src/lib/update-engine.ts:539` `isEqual` | PAYLOAD | READ | none | — |
-| 44 | `enterprise/src/lib/path-index.ts:301` | TREE | READ | none | — |
-| 45 | `ng-forms/src/core/ng-forms.ts:1291` `hydrateInitialValues` | **PAYLOAD** (`storage.getItem` → `JSON.parse`) | passes straight to `mergeDeep` (#35) | none | **this is the live consumer of the O5 sink** — it is `mergeDeep`'s only caller in the repo |
-| 46 | `ng-forms/src/core/ng-forms.ts:662` `enhanceArraysRecursively` | TREE via `for…in` (walks inherited) | WRITE `obj[key] = enhanceArray(…)` | none | — |
-| 47 | `ng-forms/src/core/ng-forms.ts:817` `createAbstractControl` | PAYLOAD (form values) | WRITE `controls[key] = …` into fresh `{}` | none | same class as #9 |
-| 48 | `ng-forms/src/core/ng-forms.ts:528` `setValues` | PAYLOAD (`Partial<T>`) | READ, forwards each key to `setValue` | none | — |
-| 49 | `ng-forms/src/core/ng-forms.ts:1192/1198/1230/1236/1313/1347` validator maps | CONFIG | READ/WRITE `normalized[path] = …` | `findValidator` uses `hasOwnProperty` (line ~1338); `resolveFieldConfig` (line 1310) uses a bare truthiness `fieldConfigs[path]` — **inconsistent** | — |
-| 50 | `ng-forms/src/enhancer/form-bridge.ts:348` `createFormGroupFromValues` | PAYLOAD (form values, possibly storage-hydrated) | WRITE `controls[key] = …` into fresh `{}` → `new FormGroup(controls)` | none | a `__proto__` key silently vanishes from the FormGroup |
-| 51 | `ng-forms/src/enhancer/form-bridge.ts:403` `patchFormGroupValues` | PAYLOAD | READ via `group.get(key)` | Angular's own lookup | — |
-| 52 | `ng-forms/src/enhancer/form-bridge.ts:127` `findFormSignals` | TREE | READ | `_`/`set`/`update` skip | — |
-| 53 | `ng-forms/src/enhancer/form-bridge.ts:448` `collectControlErrors` | TREE (Angular controls) | WRITE `result[path]` | none | — |
-| 54 | `schema/src/lib/schema.ts:131` `compileEntries` | CONFIG (`config.schemas`) | READ | none | — |
-| 55 | `schema/src/lib/internals/matcher.ts:157/215` | TREE | READ + WRITE `out[key]` into fresh `{}` | none | — |
-| 56 | `realtime/src/create-realtime-enhancer.ts:151` | CONFIG (subscription paths) | READ | none | — |
-| 57 | `realtime/src/create-realtime-enhancer.ts:~170` path walk `entitySignal?.[part]` | CONFIG | READ | none | dotted-path navigation, developer-supplied |
-| 58 | `realtime` `callback` → `entitySignal.upsertOne(transformed)` | **PAYLOAD** (server realtime event) | hands the raw entity to `entityMap` → feeds #21 | none | untrusted server payload reaches `defineProperty` at #21 |
-| 59 | `events/src/angular/entity-events.ts:93` | PAYLOAD (event) | READ `Object.keys(value).sort()` for an idempotency key | none | no sink |
-| 60 | `guardrails/src/lib/guardrails.ts:431/500/1036` | PAYLOAD (snapshots) | READ | none | diffing only |
+| #   | Site                                                                             | Keys from                                             | Use                                                                      | Guard                                                                                                                                               | Verified                                                                                                                                                                                 |
+| --- | -------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `core/src/lib/signal-tree.ts:465` `createSignalStore`                            | PAYLOAD (`signalTree(initial)`)                       | WRITE `store[key] = …` ×6                                                | `key === '__proto__'` inline (line 480), dev-only diagnostic ST2016                                                                                 | probe D1/D2 clean                                                                                                                                                                        |
+| 2   | `core/src/lib/signal-tree.ts:289` `recursiveUpdate`                              | PAYLOAD (`Partial<T>`)                                | READ `targetObj[key]`                                                    | **none** — reads `Object.prototype` for `__proto__`, falls through with no branch and no diagnostic                                                 | probe D3/D4/D5 clean (no sink present)                                                                                                                                                   |
+| 3   | `core/src/lib/utils.ts:468` `applyState`                                         | PAYLOAD (devtools postMessage, snapshot restore)      | READ + WRITE `stateNode[key] = val` (2 sites)                            | `key === '__proto__'` **and** `hasOwnProperty(stateNode, key)`                                                                                      | probe D6/D7 clean                                                                                                                                                                        |
+| 4   | `core/src/lib/lazy/lazy-tree.ts:90` proxy `get`                                  | PAYLOAD (any property read)                           | READ                                                                     | `isUnsafeKey` = `key === '__proto__'` only                                                                                                          | probe P3 clean                                                                                                                                                                           |
+| 5   | `core/src/lib/lazy/lazy-tree.ts:208` proxy `set`                                 | PAYLOAD                                               | WRITE `target[key] = value`                                              | `isUnsafeKey`                                                                                                                                       | —                                                                                                                                                                                        |
+| 6   | `core/src/lib/lazy/lazy-tree.ts:240` proxy `defineProperty`                      | PAYLOAD                                               | WRITE                                                                    | `isUnsafeKey`                                                                                                                                       | —                                                                                                                                                                                        |
+| 7   | `core/src/lib/lazy/lazy-tree.ts:247` proxy `has`                                 | PAYLOAD                                               | READ                                                                     | `isUnsafeKey`                                                                                                                                       | —                                                                                                                                                                                        |
+| 8   | `core/src/lib/utils.ts:243` `unwrap` (accessor branch)                           | TREE                                                  | WRITE `result[key] = …` into fresh `{}`                                  | `hasOwnProperty` on source                                                                                                                          | —                                                                                                                                                                                        |
+| 9   | `core/src/lib/utils.ts:325` `unwrap` (plain branch)                              | **PAYLOAD** (recurses into leaf _values_)             | WRITE `result[key] = …` into fresh `{}`                                  | `hasOwnProperty` on source only — **no name check**                                                                                                 | **PROVEN**: probe A1/A2 — a leaf holding `JSON.parse('{"deep":{"__proto__":{…}}}')` yields a snapshot whose `blob.deep` has an attacker-keyed prototype; `JSON.stringify` shows `{}`     |
+| 10  | `core/src/enhancers/serialization/serialization.ts:276` `unwrapObjectSafely`     | PAYLOAD (leaf values)                                 | WRITE into fresh `{}`                                                    | none                                                                                                                                                | same class as #9                                                                                                                                                                         |
+| 11  | `…/serialization.ts:368` `detectCircularReferences`                              | PAYLOAD                                               | READ                                                                     | none                                                                                                                                                | no sink                                                                                                                                                                                  |
+| 12  | `…/serialization.ts:553` `restoreSpecialTypes`                                   | PAYLOAD (`JSON.parse` of storage)                     | WRITE into fresh `{}`                                                    | none                                                                                                                                                | same class as #9                                                                                                                                                                         |
+| 13  | `…/serialization.ts:595` `updateSignals` (rehydrate)                             | PAYLOAD (`JSON.parse` of storage)                     | READ `target[key]`, then **recurses into `Object.prototype`**            | `hasOwnProperty` on **source**, not on target; no name check                                                                                        | probe P1 clean (no write sink: only `signal.set()` is reachable)                                                                                                                         |
+| 13b | `…/serialization.ts:659` nodeMap path walk                                       | PAYLOAD (dotted paths from the persisted metadata)    | READ `node[p]` walking arbitrary segments                                | none                                                                                                                                                | no sink found                                                                                                                                                                            |
+| 14  | `…/serialization.ts:745` `encodeSpecials`                                        | PAYLOAD                                               | WRITE into fresh `{}`                                                    | none                                                                                                                                                | same class as #9                                                                                                                                                                         |
+| 15  | `…/serialization.ts:813` `walkAlias`                                             | TREE                                                  | WRITE `nodeMap[path]`                                                    | n/a                                                                                                                                                 | —                                                                                                                                                                                        |
+| 16  | `core/src/enhancers/devtools/devtools-impl.ts:380` snapshot diff                 | PAYLOAD ∪ TREE                                        | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 17  | `…/devtools-impl.ts:458` `sanitizeState`                                         | PAYLOAD                                               | WRITE into fresh `{}`                                                    | none                                                                                                                                                | same class as #9                                                                                                                                                                         |
+| 18  | `…/devtools-impl.ts:1775` `refreshTreeTopKeys`                                   | TREE                                                  | READ                                                                     | n/a                                                                                                                                                 | —                                                                                                                                                                                        |
+| 19  | `core/src/enhancers/batching/batching.ts:356` `batchUpdate`                      | PAYLOAD                                               | READ `$[key]` then call `.set`                                           | none                                                                                                                                                | `$['__proto__']` → `Object.prototype`, `typeof … === 'function'` false → skipped; no sink                                                                                                |
+| 20  | `core/src/enhancers/utils/copy-tree-properties.ts:12,24`                         | TREE                                                  | WRITE `defineProperty`                                                   | `hasOwnProperty` + skip non-configurable                                                                                                            | —                                                                                                                                                                                        |
+| 21  | `core/src/lib/entity-signal.ts:246` `createEntityNode`                           | **PAYLOAD** (an entity from realtime/HTTP)            | WRITE `Object.defineProperty(node, key, {get})`                          | **none**                                                                                                                                            | mints an own `__proto__`/`constructor` accessor on the node; no global sink                                                                                                              |
+| 22  | `core/src/lib/markers/form.ts:391` `readFromStorage`                             | **PAYLOAD** (`localStorage` JSON)                     | WRITE via object **spread** `{…initial, …JSON.parse(stored)}`            | none                                                                                                                                                | **PROVEN**: probe P4 — result has a real own `__proto__` key (`ownProtoKey=true`, prototype unchanged)                                                                                   |
+| 23  | `core/src/lib/markers/form.ts:599` `createFieldsProxy`                           | CONFIG (`config.initial`)                             | WRITE `proxy[key]`, `defineProperty(fieldAccessor, childKey)`            | none                                                                                                                                                | uses `initial`, not the hydrated values — so #22's own `__proto__` does not reach it                                                                                                     |
+| 24  | `core/src/lib/markers/form.ts:419/473/489/665/813/825/844`                       | CONFIG (`config.initial`)                             | READ/WRITE into fresh `{}`                                               | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 25  | `core/src/lib/markers/entity-loader.ts:239` param key sort                       | CONFIG/PAYLOAD (loader params)                        | READ                                                                     | none                                                                                                                                                | cache-key building only                                                                                                                                                                  |
+| 26  | `core/src/lib/markers/entity-loader.ts:713` tag walk                             | TREE                                                  | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 27  | `core/src/lib/markers/stored.ts:229` `createStorageKeys`                         | CONFIG                                                | WRITE into fresh `{}`                                                    | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 28  | `core/src/lib/markers/entity-map.ts:264` slice install                           | CONFIG                                                | WRITE `entitySignal[name] = …`                                           | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 29  | `core/src/lib/internals/merge-derived.ts:86` `ensurePathAndGetTarget`            | CONFIG (derived factory keys)                         | WRITE `current[part] = {}` after an **inherited** `part in current` test | none                                                                                                                                                | a derived factory returning `{__proto__: …}` is a sink; developer-controlled                                                                                                             |
+| 30  | `core/src/lib/internals/merge-derived.ts:170/185/201`                            | CONFIG                                                | WRITE `target[key] = …`                                                  | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 31  | `core/src/lib/internals/materialize-markers.ts:241/316`                          | TREE                                                  | WRITE `node[key] = materialized`                                         | n/a                                                                                                                                                 | —                                                                                                                                                                                        |
+| 32  | `core/src/lib/internals/visit-tree.ts:70`                                        | TREE                                                  | READ, try/catch                                                          | n/a                                                                                                                                                 | the canonical walker; used by batching, interceptLeafSignals                                                                                                                             |
+| 33  | `core/src/lib/audit/audit.ts:125`                                                | PAYLOAD (keys returned by `getChanges`)               | READ `previousState[key]`                                                | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 34  | `core/src/security.ts:47` `security()` walk                                      | PAYLOAD                                               | READ + `validateKey`                                                     | denylist `['__proto__','constructor','prototype']` — **opt-in only**                                                                                | never runs unless the consumer passes `security()`                                                                                                                                       |
+| 35  | `shared/src/lib/merge-deep.ts:19`                                                | **PAYLOAD** (`JSON.parse(localStorage)` via ng-forms) | WRITE `targetObj[key] = …` ×2                                            | **none**                                                                                                                                            | **PROVEN (O5 still open)**: probe S1 sets the target's prototype; S2 the same one level down; S3 replaces `target.constructor`                                                           |
+| 36  | `shared/src/lib/get-changes.ts:19`                                               | **PAYLOAD**, and `for…in` so **inherited keys too**   | WRITE `changes[key] = …` into fresh `{}`                                 | **none**                                                                                                                                            | **PROVEN**: probe S4 — the returned `changes` object's prototype is attacker-supplied while `Object.keys(changes)` is `[]`                                                               |
+| 37  | `shared/src/lib/deep-clone.ts:107`                                               | PAYLOAD                                               | WRITE `defineProperty(result, key, descriptor)`                          | none (uses `defineProperty`, so no setter invocation)                                                                                               | probe S6: clone keeps a real own `__proto__` (`ownProto=true`) — mints the own-key primitive                                                                                             |
+| 38  | `shared/src/lib/deep-equal.ts:83`                                                | PAYLOAD                                               | READ                                                                     | none                                                                                                                                                | O6/O7 still open — probe S7 `deepEqual(new Error('a'), new Error('b')) === true`; S8 same for `new Number(1)/(2)`; S9 `deepEqual(Object.create(Date.prototype), new Date(0))` **throws** |
+| 39  | `enterprise/src/lib/update-engine.ts:377` path walk                              | PAYLOAD                                               | READ                                                                     | `isUnsafeKey` (name first) **then** `hasOwnProperty`                                                                                                | probe E1/E2 clean                                                                                                                                                                        |
+| 40  | `enterprise/src/lib/update-engine.ts:450` `applyPatch`                           | PAYLOAD                                               | WRITE `defineProperty`                                                   | `isUnsafeKey` + own **enumerable** descriptor required                                                                                              | —                                                                                                                                                                                        |
+| 41  | `enterprise/src/lib/update-engine.ts:479` `applyDeepToNode`                      | PAYLOAD                                               | READ + recurse                                                           | `isUnsafeKey` + `hasOwnProperty`                                                                                                                    | —                                                                                                                                                                                        |
+| 42  | `enterprise/src/lib/diff-engine.ts:243/266`                                      | PAYLOAD                                               | READ                                                                     | `opts.keyValidator` — **optional, defaulted `undefined` at line 120, and supplied by no caller in the repo.** Dead guard.                           | grep                                                                                                                                                                                     |
+| 43  | `enterprise/src/lib/update-engine.ts:539` `isEqual`                              | PAYLOAD                                               | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 44  | `enterprise/src/lib/path-index.ts:301`                                           | TREE                                                  | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 45  | `ng-forms/src/core/ng-forms.ts:1291` `hydrateInitialValues`                      | **PAYLOAD** (`storage.getItem` → `JSON.parse`)        | passes straight to `mergeDeep` (#35)                                     | none                                                                                                                                                | **this is the live consumer of the O5 sink** — it is `mergeDeep`'s only caller in the repo                                                                                               |
+| 46  | `ng-forms/src/core/ng-forms.ts:662` `enhanceArraysRecursively`                   | TREE via `for…in` (walks inherited)                   | WRITE `obj[key] = enhanceArray(…)`                                       | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 47  | `ng-forms/src/core/ng-forms.ts:817` `createAbstractControl`                      | PAYLOAD (form values)                                 | WRITE `controls[key] = …` into fresh `{}`                                | none                                                                                                                                                | same class as #9                                                                                                                                                                         |
+| 48  | `ng-forms/src/core/ng-forms.ts:528` `setValues`                                  | PAYLOAD (`Partial<T>`)                                | READ, forwards each key to `setValue`                                    | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 49  | `ng-forms/src/core/ng-forms.ts:1192/1198/1230/1236/1313/1347` validator maps     | CONFIG                                                | READ/WRITE `normalized[path] = …`                                        | `findValidator` uses `hasOwnProperty` (line ~1338); `resolveFieldConfig` (line 1310) uses a bare truthiness `fieldConfigs[path]` — **inconsistent** | —                                                                                                                                                                                        |
+| 50  | `ng-forms/src/enhancer/form-bridge.ts:348` `createFormGroupFromValues`           | PAYLOAD (form values, possibly storage-hydrated)      | WRITE `controls[key] = …` into fresh `{}` → `new FormGroup(controls)`    | none                                                                                                                                                | a `__proto__` key silently vanishes from the FormGroup                                                                                                                                   |
+| 51  | `ng-forms/src/enhancer/form-bridge.ts:403` `patchFormGroupValues`                | PAYLOAD                                               | READ via `group.get(key)`                                                | Angular's own lookup                                                                                                                                | —                                                                                                                                                                                        |
+| 52  | `ng-forms/src/enhancer/form-bridge.ts:127` `findFormSignals`                     | TREE                                                  | READ                                                                     | `_`/`set`/`update` skip                                                                                                                             | —                                                                                                                                                                                        |
+| 53  | `ng-forms/src/enhancer/form-bridge.ts:448` `collectControlErrors`                | TREE (Angular controls)                               | WRITE `result[path]`                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 54  | `schema/src/lib/schema.ts:131` `compileEntries`                                  | CONFIG (`config.schemas`)                             | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 55  | `schema/src/lib/internals/matcher.ts:157/215`                                    | TREE                                                  | READ + WRITE `out[key]` into fresh `{}`                                  | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 56  | `realtime/src/create-realtime-enhancer.ts:151`                                   | CONFIG (subscription paths)                           | READ                                                                     | none                                                                                                                                                | —                                                                                                                                                                                        |
+| 57  | `realtime/src/create-realtime-enhancer.ts:~170` path walk `entitySignal?.[part]` | CONFIG                                                | READ                                                                     | none                                                                                                                                                | dotted-path navigation, developer-supplied                                                                                                                                               |
+| 58  | `realtime` `callback` → `entitySignal.upsertOne(transformed)`                    | **PAYLOAD** (server realtime event)                   | hands the raw entity to `entityMap` → feeds #21                          | none                                                                                                                                                | untrusted server payload reaches `defineProperty` at #21                                                                                                                                 |
+| 59  | `events/src/angular/entity-events.ts:93`                                         | PAYLOAD (event)                                       | READ `Object.keys(value).sort()` for an idempotency key                  | none                                                                                                                                                | no sink                                                                                                                                                                                  |
+| 60  | `guardrails/src/lib/guardrails.ts:431/500/1036`                                  | PAYLOAD (snapshots)                                   | READ                                                                     | none                                                                                                                                                | diffing only                                                                                                                                                                             |
 
 **Distinct unsafe-key definitions in the repo: four, none shared.**
 `core/src/lib/lazy/lazy-tree.ts:27` (`__proto__` only) ·
@@ -1451,7 +1452,7 @@ Public/API surfaces through which external data reaches a tree:
 
 **H1 is PARTIALLY TRUE — and the partition it predicts does not exist.**
 
-What H1 gets right: every *proven* defect (O1–O5, plus the three new ones
+What H1 gets right: every _proven_ defect (O1–O5, plus the three new ones
 below) is a payload-derived key reaching an indexing expression. There is not
 one counter-example: no TREE-provenance site has ever produced one of these
 bugs, and the reason is structural — TREE keys are produced by
@@ -1462,33 +1463,33 @@ What H1 gets wrong, and this is the load-bearing part:
 
 - **The prediction "the safe `[key] =` sites all iterate tree-derived keys" is
   false.** Sites #8, #20, #31, #53, #55 write with TREE keys and are safe; but
-  sites #1, #3, #5, #6, #40 write with PAYLOAD keys and are *also* safe,
+  sites #1, #3, #5, #6, #40 write with PAYLOAD keys and are _also_ safe,
   because each grew its own guard. Provenance does not predict safety —
-  *whether someone remembered to add a guard* does.
+  _whether someone remembered to add a guard_ does.
 - **There is a large third class the hypothesis has no name for: CONFIG.**
   Sites #23–#30, #49, #54, #56–#57 iterate developer-authored literals. They
   are neither tree-derived nor attacker-derived. Under a strict "guard every
   PAYLOAD site" rule they are all skipped; under a strict "only trust TREE
   keys" rule they all need guards. The codebase currently guards none of them,
-  and `merge-derived.ts:86` (`part in current` — an *inherited* membership
+  and `merge-derived.ts:86` (`part in current` — an _inherited_ membership
   test followed by `current[part] = {}`) is a real sink that only a
   developer-authored derived factory can reach.
 - **Sites that are BOTH.** `unwrap` (#8/#9) is one function whose keys are
   TREE at the top level and PAYLOAD as soon as it recurses into a leaf's
-  *value*. Same for `unwrapObjectSafely` (#10), `sanitizeState` (#17) and
+  _value_. Same for `unwrapObjectSafely` (#10), `sanitizeState` (#17) and
   `enhanceArraysRecursively` (#46). Provenance is not a property of a call
   site; it changes with recursion depth inside a single loop. This is why #9
   was missed: everyone reading it sees "walking the tree".
 - **Three distinct sink shapes, not one.** (a) plain assignment invoking the
   `Object.prototype.__proto__` setter (#35, #36, #9) — the classic; (b)
-  `defineProperty`/spread *minting a real own `__proto__`* (#21, #22, #37),
+  `defineProperty`/spread _minting a real own `__proto__`_ (#21, #22, #37),
   which is not pollution itself but permanently defeats every
   `hasOwnProperty`-based guard downstream — `update-engine.ts:381`'s own
-  comment describes exactly this two-call bypass; (c) unguarded *reads* that
+  comment describes exactly this two-call bypass; (c) unguarded _reads_ that
   walk into `Object.prototype` and recurse there (#13, #2), harmless today
   only because no write happens to be reachable from that branch.
 
-So: one *mechanism* (payload key meets an index expression), but not one root
+So: one _mechanism_ (payload key meets an index expression), but not one root
 cause you can fix at one place, and no clean partition. The honest statement
 is: **the defect class is "a key of unknown provenance is used as an index",
 and provenance is not tracked anywhere in the codebase — not in a type, not in
@@ -1498,18 +1499,18 @@ a wrapper, not in a naming convention.**
 
 61 rows enumerated. By key provenance:
 
-| Class | Count | Rows |
-| ----- | ----- | ---- |
-| TREE | 12 | #8, #15, #18, #20, #26, #31, #32, #44, #46, #52, #53, #55 |
-| CONFIG | 11 | #23, #24, #25, #27, #28, #29, #30, #49, #54, #56, #57 |
-| **PAYLOAD** | **38** | all remaining rows |
+| Class       | Count  | Rows                                                      |
+| ----------- | ------ | --------------------------------------------------------- |
+| TREE        | 12     | #8, #15, #18, #20, #26, #31, #32, #44, #46, #52, #53, #55 |
+| CONFIG      | 11     | #23, #24, #25, #27, #28, #29, #30, #49, #54, #56, #57     |
+| **PAYLOAD** | **38** | all remaining rows                                        |
 
 Of the 38 PAYLOAD rows:
 
 - **10 are genuinely guarded** — #1, #3, #4, #5, #6, #7, #39, #40, #41, and
   #34 (only when the consumer opts into `security()`).
 - **3 carry a guard that does not actually cover the case** — #13
-  (`hasOwnProperty` on the *source*, not the target, then recurses into
+  (`hasOwnProperty` on the _source_, not the target, then recurses into
   `Object.prototype`), #42 (`keyValidator` never supplied by any caller),
   #37 (`defineProperty` avoids the setter but mints the own-key primitive).
 - **25 have no guard at all.**
@@ -1522,7 +1523,7 @@ of the 38 are unguarded today.**
 writes into the signal graph" covers #1, #2, #3, #19, #40, #41 — i.e. the
 existing write-path guards plus `recursiveUpdate`. It covers **none** of #9,
 #10, #12, #13, #17, #21, #22, #35, #36, #37, #47, #50, because those are
-*snapshot / clone / serialize / hydrate-before-construction* paths that never
+_snapshot / clone / serialize / hydrate-before-construction_ paths that never
 touch a signal.
 
 **The decision-relevant number: a single write chokepoint closes 6 of 38
@@ -1542,22 +1543,22 @@ check at all. That is a different, larger, and cheaper 13 than the chokepoint's
 Tree: `signalTree({ a: 1, nested: { b: 2 } })`, one enhancer at a time.
 `—` = not observed. All values measured, not inferred.
 
-| Write path | `onPathChange` | `updateAndReport` return | `PathNotifier` (bare) | `PathNotifier` (+devTools *or* timeTravel) | timeTravel history | devTools | persistence | guardrails |
-| ---------- | -------------- | ------------------------ | --------------------- | ------------------------------------------ | ------------------ | -------- | ----------- | ---------- |
-| `tree({a:10})` root call | ✅ `[a]` | n/a | — | ✅ `a` | ✅ +1 | ✅ | ✅ (poll) | ❌ |
-| `tree(fn)` root updater | ✅ `[a]` | n/a | — | ✅ | ✅ | ✅ | ✅ (poll) | ❌ |
-| `tree.batchUpdate({a:11})` | ✅ `[a]` | n/a | — | ✅ | **❌ (and the write itself is LOST — see §C7 #1)** | ✅ | ✅ (poll) | ❌ |
-| `tree.updateAndReport({…})` | ✅ | ✅ `['nested.b']` | — | ✅ | **❌ (write LOST)** | ✅ | ✅ (poll) | ❌ |
-| `tree.$.a.set(99)` leaf | **❌** | ❌ | — | ✅ `a` | ✅ +1 | ✅ | ✅ (poll) | ❌ |
-| `tree.$.deep.x.y.update(fn)` | **❌** | ❌ | — | ✅ `deep.x.y` | ✅ | ✅ | ✅ (poll) | ❌ |
-| `tree.$.nested({b:77})` branch call | **❌** | ❌ | — | ✅ `nested.b` | ✅ | ✅ | ✅ (poll) | ❌ |
-| `applyState(tree.$, {…})` | **❌** | ❌ | — | ✅ `a` | ✅ | ✅ | ✅ (poll) | ❌ |
-| `entityMap.upsertOne(…)` | **❌** | ❌ | ✅ `users.a` | ✅ | ✅ | ✅ | ✅ (poll) | ✅ |
-| `tree({users:[…]})` on an entityMap | ❌ ret `[]` | ❌ `[]` | — | — | ❌ | ❌ | ❌ | ❌ — **the write is silently discarded** (`signal-tree.ts:429` fall-through, no diagnostic) |
-| `status().setLoading()` / `.setLoaded(v)` | ❌ | ❌ | — | ✅ `st.state` | ✅ | ✅ | ✅ | ❌ |
-| `form().patch({…})` / `.set()` | ❌ | ❌ | ❌ | **❌** | **❌** | **❌** | **❌** | ❌ |
-| `tree.$.a = 12345` (raw property) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (poll only) | ❌ |
-| `toWritableSignal(node).set(v)` | ❌ | ❌ | — | ✅ `nested.b` | ✅ | ✅ | ✅ | ❌ |
+| Write path                                | `onPathChange` | `updateAndReport` return | `PathNotifier` (bare) | `PathNotifier` (+devTools _or_ timeTravel) | timeTravel history                                 | devTools | persistence    | guardrails                                                                                  |
+| ----------------------------------------- | -------------- | ------------------------ | --------------------- | ------------------------------------------ | -------------------------------------------------- | -------- | -------------- | ------------------------------------------------------------------------------------------- |
+| `tree({a:10})` root call                  | ✅ `[a]`       | n/a                      | —                     | ✅ `a`                                     | ✅ +1                                              | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree(fn)` root updater                   | ✅ `[a]`       | n/a                      | —                     | ✅                                         | ✅                                                 | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree.batchUpdate({a:11})`                | ✅ `[a]`       | n/a                      | —                     | ✅                                         | **❌ (and the write itself is LOST — see §C7 #1)** | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree.updateAndReport({…})`               | ✅             | ✅ `['nested.b']`        | —                     | ✅                                         | **❌ (write LOST)**                                | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree.$.a.set(99)` leaf                   | **❌**         | ❌                       | —                     | ✅ `a`                                     | ✅ +1                                              | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree.$.deep.x.y.update(fn)`              | **❌**         | ❌                       | —                     | ✅ `deep.x.y`                              | ✅                                                 | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `tree.$.nested({b:77})` branch call       | **❌**         | ❌                       | —                     | ✅ `nested.b`                              | ✅                                                 | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `applyState(tree.$, {…})`                 | **❌**         | ❌                       | —                     | ✅ `a`                                     | ✅                                                 | ✅       | ✅ (poll)      | ❌                                                                                          |
+| `entityMap.upsertOne(…)`                  | **❌**         | ❌                       | ✅ `users.a`          | ✅                                         | ✅                                                 | ✅       | ✅ (poll)      | ✅                                                                                          |
+| `tree({users:[…]})` on an entityMap       | ❌ ret `[]`    | ❌ `[]`                  | —                     | —                                          | ❌                                                 | ❌       | ❌             | ❌ — **the write is silently discarded** (`signal-tree.ts:429` fall-through, no diagnostic) |
+| `status().setLoading()` / `.setLoaded(v)` | ❌             | ❌                       | —                     | ✅ `st.state`                              | ✅                                                 | ✅       | ✅             | ❌                                                                                          |
+| `form().patch({…})` / `.set()`            | ❌             | ❌                       | ❌                    | **❌**                                     | **❌**                                             | **❌**   | **❌**         | ❌                                                                                          |
+| `tree.$.a = 12345` (raw property)         | ❌             | ❌                       | ❌                    | ❌                                         | ❌                                                 | ❌       | ✅ (poll only) | ❌                                                                                          |
+| `toWritableSignal(node).set(v)`           | ❌             | ❌                       | —                     | ✅ `nested.b`                              | ✅                                                 | ✅       | ✅             | ❌                                                                                          |
 
 Notes on the measurements:
 
@@ -1568,7 +1569,7 @@ Notes on the measurements:
   attached**, because those two are the only things that call
   `interceptLeafSignals`. `@signaltree/schema` calls it too but routes the
   callback to its own dispatcher, never to the notifier. So "does a leaf write
-  notify?" depends on which *unrelated* enhancer happens to be installed.
+  notify?" depends on which _unrelated_ enhancer happens to be installed.
 - **guardrails observes literally nothing on a plain-object tree.** Measured:
   `getStats().updateCount` is `0` after both `tree.$.a.set(99)` and
   `tree({nested:{b:42}})`. It subscribes to `PathNotifier` `'**'` and returns
@@ -1580,7 +1581,7 @@ Notes on the measurements:
   `tree.$.f()` returns `{"email":"z@z.z"}`. Consequence: form state is invisible
   to persistence, time-travel, devtools, guardrails and audit, and no
   diagnostic fires (the `[ST2008]` warning at `utils.ts:281` lives only in
-  `unwrap`'s *accessor* branch; a root-level marker takes the plain branch at
+  `unwrap`'s _accessor_ branch; a root-level marker takes the plain branch at
   `utils.ts:338` which skips silently).
 - **`onPathChange` has zero consumers (O9 confirmed) and is the only observer
   with no polling and no monkey-patching — but it is blind to every write that
@@ -1592,7 +1593,7 @@ Notes on the measurements:
 **Yes, trivially, by seven distinct routes.** A single write chokepoint at the
 root is not achievable without removing capability that is currently public:
 
-1. **`tree.$.leaf.set(v)` / `.update(fn)`** — the leaf *is* an Angular
+1. **`tree.$.leaf.set(v)` / `.update(fn)`** — the leaf _is_ an Angular
    `WritableSignal`. `core/src/index.ts` exposes `$`; leaves are handed out
    unwrapped. Measured: no `onPathChange`.
 2. **`tree.$.branch(payload)`** — every nested `NodeAccessor` has the same
@@ -1606,18 +1607,18 @@ root is not achievable without removing capability that is currently public:
    it). The root store is a plain object literal, so its keys are writable by
    default.
 4. **Captured references.** `const s = tree.$.a` before any enhancer attaches,
-   then `s.set(…)` later. Measured as *still observed* (interception mutates
-   the signal object in place), but capturing the *method* — `const set =
-   tree.$.a.set` — escapes, and so does any write between tree construction and
+   then `s.set(…)` later. Measured as _still observed_ (interception mutates
+   the signal object in place), but capturing the _method_ — `const set =
+tree.$.a.set` — escapes, and so does any write between tree construction and
    `.with(devTools())`.
 5. **Marker-private signals.** `form()`'s `valuesSignal` lives in a closure and
    is never exposed as a child of the node, so `interceptLeafSignals` cannot
-   reach it — its `isWritableSignal` test requires **both** `set` *and*
+   reach it — its `isWritableSignal` test requires **both** `set` _and_
    `update`, and the materialized form callable has `.set`/`.patch` but no
    `.update`, so the walker recurses past it into `.valid`/`.dirty`/`.errors`
    and finds nothing writable. Measured: `notifier=[]`.
 6. **`applyState()`** — exported from `@signaltree/core/authoring`, writes
-   straight into leaves, and its last branch (`utils.ts:549`) will *replace* a
+   straight into leaves, and its last branch (`utils.ts:549`) will _replace_ a
    node with a raw value.
 7. **`enterprise().updateOptimized()`** — writes through `defineProperty` at
    `update-engine.ts:450`, entirely outside `recursiveUpdate`.
@@ -1635,22 +1636,22 @@ events `[a, a]` — count 2.** Every `'**'` subscriber (including guardrails'
 
 There are **nine** distinct change-detection mechanisms in the repo, not four:
 
-| Mechanism | Where | Trigger | Cost |
-| --------- | ----- | ------- | ---- |
-| `onPathChange` + `collectPaths`/`notifyPaths` | `core/src/lib/signal-tree.ts:617-700` | root call / `batchUpdate` / `updateAndReport` only | ~free (a `Set.size` check per write) |
-| `PathNotifier` global singleton | `core/src/lib/path-notifier.ts` | `entityMap` self-notify; leaf writes iff someone installed an interceptor | microtask flush |
-| `interceptLeafSignals` → notifier | devtools `devtools-impl.ts:1808`, time-travel `time-travel.ts:345` | every leaf `.set`/`.update` | monkey-patch per leaf, full-tree walk at attach |
-| `interceptLeafSignals` → own dispatcher | `schema/src/lib/schema.ts:82` | same | a second full monkey-patch pass |
-| `wrapSignalSetters` | `core/src/enhancers/batching/batching.ts:158` | same | a third |
-| wrapped callable + `deepEqual(before, after)` | `time-travel.ts:~365-400` | root call form only | full snapshot + deep compare **per write** |
-| `PathNotifier.onFlush` | `time-travel.ts:352` | once per microtask flush | full snapshot per flush |
-| `JSON.stringify(tree())` polling | `serialization.ts:1160-1172` | **`setInterval`-equivalent, every 100 ms, forever** | full snapshot + full JSON stringify, 10×/s |
-| `structuredClone` + `getChanges` polling | `core/src/lib/audit/audit.ts:158-162` | **`setInterval(handleChange, 100)`** | full structuredClone + shallow diff, 10×/s |
+| Mechanism                                     | Where                                                              | Trigger                                                                   | Cost                                            |
+| --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------- |
+| `onPathChange` + `collectPaths`/`notifyPaths` | `core/src/lib/signal-tree.ts:617-700`                              | root call / `batchUpdate` / `updateAndReport` only                        | ~free (a `Set.size` check per write)            |
+| `PathNotifier` global singleton               | `core/src/lib/path-notifier.ts`                                    | `entityMap` self-notify; leaf writes iff someone installed an interceptor | microtask flush                                 |
+| `interceptLeafSignals` → notifier             | devtools `devtools-impl.ts:1808`, time-travel `time-travel.ts:345` | every leaf `.set`/`.update`                                               | monkey-patch per leaf, full-tree walk at attach |
+| `interceptLeafSignals` → own dispatcher       | `schema/src/lib/schema.ts:82`                                      | same                                                                      | a second full monkey-patch pass                 |
+| `wrapSignalSetters`                           | `core/src/enhancers/batching/batching.ts:158`                      | same                                                                      | a third                                         |
+| wrapped callable + `deepEqual(before, after)` | `time-travel.ts:~365-400`                                          | root call form only                                                       | full snapshot + deep compare **per write**      |
+| `PathNotifier.onFlush`                        | `time-travel.ts:352`                                               | once per microtask flush                                                  | full snapshot per flush                         |
+| `JSON.stringify(tree())` polling              | `serialization.ts:1160-1172`                                       | **`setInterval`-equivalent, every 100 ms, forever**                       | full snapshot + full JSON stringify, 10×/s      |
+| `structuredClone` + `getChanges` polling      | `core/src/lib/audit/audit.ts:158-162`                              | **`setInterval(handleChange, 100)`**                                      | full structuredClone + shallow diff, 10×/s      |
 
 Duplication and correctness findings, all measured:
 
 - **The two polling mechanisms both claim to prefer `tree.subscribe()` and both
-  always fall back to polling.** `subscribe` is *declared* on
+  always fall back to polling.** `subscribe` is _declared_ on
   `EffectsMethods<T>` (`core/src/lib/types.ts:344`) and **implemented nowhere in
   the repo.** Measured: `typeof tree.subscribe === 'undefined'` on a
   `persistence()`-enhanced tree. So the "no polling needed in production"
@@ -1658,19 +1659,19 @@ Duplication and correctness findings, all measured:
 - **`createAuditTracker` logs phantom changes forever.** Measured: with **zero
   writes**, the log had **2 entries after 250 ms**, each
   `{"nested":{"b":2}}`. Cause: `getChanges` (`shared/src/lib/get-changes.ts`)
-  is a *shallow reference* comparison, and `unwrap` builds a brand-new nested
+  is a _shallow reference_ comparison, and `unwrap` builds a brand-new nested
   object on every call, so every top-level branch reports "changed" on every
   poll. It is also blind to any change deeper than one level that does not
   alter the top-level reference — which, because of the above, it can never
   distinguish.
 - **`guardrails` and `devtools` both subscribe `'**'` to the same global
-  notifier, but only devtools filters by tree ownership**
-  (`isPathOwnedByTree`, `devtools-impl.ts:1790`). Measured: two independent
+notifier, but only devtools filters by tree ownership**
+(`isPathOwnedByTree`, `devtools-impl.ts:1790`). Measured: two independent
   trees, one enhanced, share one notifier; guardrails on tree A will receive
   tree B's paths verbatim, and paths carry no tree identity.
 - **`signalTree()` construction mutates global notifier state.**
   `signal-tree.ts:594` calls `getPathNotifier().setBatchingEnabled(...)` on
-  *every* tree creation, so a tree created with `batchUpdates: false` silently
+  _every_ tree creation, so a tree created with `batchUpdates: false` silently
   switches every other tree in the process to synchronous notification.
   Reproduced accidentally while writing the probes.
 - **`persistence` is the only observer that sees all nine non-marker write
@@ -1678,7 +1679,7 @@ Duplication and correctness findings, all measured:
   brute-forces `JSON.stringify(tree())`. It is also the only one that observes
   the raw-property-assignment bypass (§C6 route 3).
 - **timeTravel double-records.** It records once from its wrapped callable
-  (`deepEqual` compare) *and* once from `PathNotifier.onFlush`. For a root call
+  (`deepEqual` compare) _and_ once from `PathNotifier.onFlush`. For a root call
   both fire; the `onFlush` entry is labelled `'batch'`, the other `'update'`.
 
 ### C8 — Where a comment / RFC contradicts the code
@@ -1690,7 +1691,7 @@ Each of these was checked by running the code.
    `t.batchUpdate({a:10})` leaves `a === 1`; `t.updateAndReport({a:20})` leaves
    `a === 1` and returns `[]`; `t.onPathChange(fn)` returns a function but the
    listener never fires even for a root call that does change `a`. Cause:
-   time-travel builds a *fresh* `enhancedTree` function and copies with
+   time-travel builds a _fresh_ `enhancedTree` function and copies with
    `Object.assign(enhancedTree, tree)`, which does not copy non-enumerable
    properties — and `batchUpdate`/`updateAndReport`/`onPathChange` are all
    defined `enumerable: false` on the base tree. The builder's forwarders
@@ -1698,34 +1699,34 @@ Each of these was checked by running the code.
    so a missing method is a **silent no-op returning `[]`**. devTools,
    batching and guardrails are unaffected (they mutate the tree in place).
 2. **`batching()` changes `batchUpdate`'s signature.** Core's accepts an object;
-   `batching.ts:349` replaces it with one that requires an updater *function*.
+   `batching.ts:349` replaces it with one that requires an updater _function_.
    Measured: `b.batchUpdate({a:10})` throws `TypeError: updater is not a
-   function`. Nothing in either JSDoc mentions this.
+function`. Nothing in either JSDoc mentions this.
 3. **`.with(enterprise())` replaces `onPathChange` semantics.**
    `enterprise-enhancer.ts:134` assigns its own implementation over core's.
    Measured: after `enterprise()`, `tree({a:5})` and `updateAndReport({a:6})`
    fire **no** listener; only `updateOptimized({a:7})` does. This directly
-   contradicts core's own JSDoc at `signal-tree.ts:931-934` — *"The enterprise
+   contradicts core's own JSDoc at `signal-tree.ts:931-934` — _"The enterprise
    version only fired for `updateOptimized()`; this one fires for every
-   root-level write"* — which is true right up until you apply `enterprise()`.
+   root-level write"_ — which is true right up until you apply `enterprise()`.
 4. **`onPathChange`'s "deliberate boundary" comment
    (`signal-tree.ts:936-940`) is accurate but incomplete.** It names only
    `tree.$.user.name.set('x')`. Measured, it is also blind to branch-accessor
    calls, `applyState`, every entityMap mutation, every marker API, and raw
    property assignment — six more routes.
 5. **`enterprise/src/lib/diff-engine.ts:76` `keyValidator`** is documented as
-   *"Optional key validator for security (e.g., to prevent prototype
-   pollution)"*. It is defaulted to `undefined` (line 120) and **no caller in
+   _"Optional key validator for security (e.g., to prevent prototype
+   pollution)"_. It is defaulted to `undefined` (line 120) and **no caller in
    the repo ever supplies one.** The comment describes a guard that does not
    run.
 6. **`core/src/lib/utils.ts:470-482`'s security note claims own-ness is "the
-   load-bearing guard".** True for `applyState`, but the *same file's* `unwrap`
+   load-bearing guard".** True for `applyState`, but the _same file's_ `unwrap`
    (line 325) uses own-ness with **no** name check and is a live sink (row #9),
    so the file simultaneously asserts and violates its own rule.
 7. **`interceptLeafSignals`' doc block claims it "centralizes that traversal"
    (`intercept-leaf-signals.ts:15`).** Measured: three separate callers each
    install their own independent wrapper with no idempotence, producing
-   duplicate notifications. It centralizes the *walk*, not the *wrapping*.
+   duplicate notifications. It centralizes the _walk_, not the _wrapping_.
 8. **`serialization.ts:1146`'s "This leverages Angular's effect system - no
    polling needed in production"** — `tree.subscribe` does not exist, so the
    `try` always throws and the polling branch always runs.
@@ -1738,7 +1739,7 @@ Each of these was checked by running the code.
    snapshot-restore pattern — therefore silently drops all entity state.
 10. **`RFC 0004`'s "the bug lived in the guard, not the loop"** — not
     re-derivable. Rows #9, #35, #36 have **no guard at all**; there is nothing
-    for the bug to live in. Recorded as *unsubstantiated* per the spike rules.
+    for the bug to live in. Recorded as _unsubstantiated_ per the spike rules.
 
 ### C9 — H3, checked against the actual walkers
 
@@ -1747,7 +1748,7 @@ class. Answering it from the walkers rather than the RFC:
 
 **`visitTree` (`core/src/lib/internals/visit-tree.ts`) has exactly two
 callers** — `batching.ts:156` and `intercept-leaf-signals.ts:53`. Both are
-*enhancer-attach* walks that monkey-patch `.set`. Neither reads nor writes
+_enhancer-attach_ walks that monkey-patch `.set`. Neither reads nor writes
 state by key.
 
 Every other tree walk in the repo is hand-rolled. Enumerated, at least 27
@@ -1773,7 +1774,7 @@ walkers, and no two guards are the same code.** Four distinct definitions of
 opt-in.
 
 So H3 is answerable without reference to RFC 0004: whatever RFC 0004 argued
-about *value-shape* guards, the measurable fact is that **the guard for this
+about _value-shape_ guards, the measurable fact is that **the guard for this
 bug class is currently duplicated 4 ways across ~29 walkers, 2 of which share a
 skeleton.** The unification question and the key-provenance question are
 independent — you can unify the walk without touching key provenance
@@ -1783,9 +1784,9 @@ code, but for a reason the RFC's argument does not address either way.**
 
 ### C10 — What I could NOT establish
 
-- **Whether any *global* prototype pollution is still reachable.** Every door I
+- **Whether any _global_ prototype pollution is still reachable.** Every door I
   tested (D1–D11, P1–P4, E1–E2, S1–S9, A1–A4) either is guarded or produces
-  only *contained* damage (a local object's prototype, or a minted own
+  only _contained_ damage (a local object's prototype, or a minted own
   `__proto__`). I could not construct a two-step chain from a contained
   primitive (#21, #22, #37) to a global sink, but I also could not prove no
   such chain exists — `mergeDeep` (#35) is a global-shaped sink that I could
@@ -1801,7 +1802,7 @@ code, but for a reason the RFC's argument does not address either way.**
   (`supabase-realtime.ts` → `create-realtime-enhancer.ts` → `upsertOne`) but
   did not run it against a live or mocked Supabase channel, so row #58 is
   code-derived, not probe-derived.
-- **Whether the double-notification in §C6 causes an observable *behavioural*
+- **Whether the double-notification in §C6 causes an observable _behavioural_
   bug** (as opposed to double-counting) in guardrails' budget rules — I
   measured the duplicate events but guardrails observed nothing at all on the
   trees I built, so the two findings could not be combined.
@@ -1834,8 +1835,8 @@ subscribe typeof=undefined
 ### Q1 — the security class
 
 **H4 is dead.** A single write chokepoint covers 6 sites, closes **1 of the 25
-unguarded payload sites**, and that one has no known sink. *Every proven defect
-is outside its reach.* It was motivated reasoning, exactly as suspected.
+unguarded payload sites**, and that one has no known sink. _Every proven defect
+is outside its reach._ It was motivated reasoning, exactly as suspected.
 
 **H1 is partially true and the predicted partition does not exist.** 61 sites:
 12 TREE, 11 CONFIG, 38 PAYLOAD. It fails both ways — guarded sites iterate
@@ -1845,11 +1846,11 @@ reasons, and the second is the important one:
 - CONFIG is a third provenance class the hypothesis had no name for (11 sites,
   zero guards).
 - **Provenance is DYNAMIC, not static.** `unwrap` is TREE at depth 0 and PAYLOAD
-  the moment it recurses into a leaf's *value*. A per-site static classification
+  the moment it recurses into a leaf's _value_. A per-site static classification
   cannot express that, which is precisely why the newest sink was missed.
 - Three distinct sink SHAPES, not one: setter-invoking assignment;
-  `defineProperty`/spread *minting a real own `__proto__`* (which permanently
-  defeats every downstream `hasOwnProperty` guard); and unguarded *reads* that
+  `defineProperty`/spread _minting a real own `__proto__`_ (which permanently
+  defeats every downstream `hasOwnProperty` guard); and unguarded _reads_ that
   recurse into `Object.prototype`.
 
 **Guards do not converge** — four of six blocklist deployments traced needed a
@@ -1858,13 +1859,13 @@ lodash CVE was a READ bug, so my four fixes were write-biased.
 
 Ranked by sites-closed per unit of risk:
 
-| Option | Sites closed | Cost / risk |
-| ------ | ------------ | ----------- |
-| **Null-prototype accumulators** — every site that writes into a freshly-built object | **13** | Very low. No API change, no behaviour change; `Object.create(null)` where `{}` is built. Larger AND cheaper than the chokepoint. |
-| **Invert the loop** — iterate the tree's DECLARED keys and look *up* into the payload, so payload keys never index anything | the payload-write class | Low-medium. Behaviour-preserving in principle: ST2010 already discards keys outside the initial shape. This is Redux/NgRx's actual immunity mechanism and Track A's cleanest class-closer. Needs measurement on wide payloads. |
-| Guard each site | up to 25 | Proven not to converge. Rejected as a strategy, retained only as spot fixes. |
-| Single write chokepoint | 1 of 25 | Rejected — does not address the class. |
-| `Object.freeze(Object.prototype)` | 0 | Rejected — does not stop `obj.__proto__ = x`. |
+| Option                                                                                                                      | Sites closed            | Cost / risk                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Null-prototype accumulators** — every site that writes into a freshly-built object                                        | **13**                  | Very low. No API change, no behaviour change; `Object.create(null)` where `{}` is built. Larger AND cheaper than the chokepoint.                                                                                               |
+| **Invert the loop** — iterate the tree's DECLARED keys and look _up_ into the payload, so payload keys never index anything | the payload-write class | Low-medium. Behaviour-preserving in principle: ST2010 already discards keys outside the initial shape. This is Redux/NgRx's actual immunity mechanism and Track A's cleanest class-closer. Needs measurement on wide payloads. |
+| Guard each site                                                                                                             | up to 25                | Proven not to converge. Rejected as a strategy, retained only as spot fixes.                                                                                                                                                   |
+| Single write chokepoint                                                                                                     | 1 of 25                 | Rejected — does not address the class.                                                                                                                                                                                         |
+| `Object.freeze(Object.prototype)`                                                                                           | 0                       | Rejected — does not stop `obj.__proto__ = x`.                                                                                                                                                                                  |
 
 **Not yet fixed, all reproduced:** `unwrap()` returns objects with
 attacker-controlled prototypes to every snapshot consumer; `form.ts:391` mints a
@@ -1874,7 +1875,7 @@ real own `__proto__`; `get-changes.ts`; `mergeDeep` (live path:
 
 ### Q2 — onPathChange
 
-**Cut it.** Not because it is unused — because it is *broken*, and because the
+**Cut it.** Not because it is unused — because it is _broken_, and because the
 problem is not a missing mechanism.
 
 - It silently does nothing under `timeTravel()` (verified above).
@@ -1910,7 +1911,7 @@ Every finding in this spike falls out of that one decision:
 
 - **Pollution immunity is definitional.** A `Map` has no `__proto__` accessor and
   no prototype chain to walk off. Track A found CodeQL prescribes exactly this
-  for the *indexing* shape, and Track C found this repo's own `path-index.ts` is
+  for the _indexing_ shape, and Track C found this repo's own `path-index.ts` is
   already Map-backed and is the one walker with no sink. There is nothing to
   guard, so there is nothing to forget to guard — which is the property the
   blocklist strategy provably lacks (4 of 6 deployments needed a second
@@ -1918,20 +1919,20 @@ Every finding in this spike falls out of that one decision:
 - **It gives change-recording a home.** The same index that resolves a child is
   the natural place to stamp "this path is dirty as of version N".
 - **It kills the depth-dynamic provenance problem** that defeated H1: a payload
-  key is *looked up*, never *dereferenced*, so it never matters how deep the
+  key is _looked up_, never _dereferenced_, so it never matters how deep the
   recursion is or whose keys we are holding.
 
 SignalTree has a property almost nothing else in the corpus has, and currently
 does not exploit: **its shape is declared and fixed at construction.** That makes
 it structurally closer to Redux — whose immunity Track A established comes from
-`combineReducers` iterating the *developer's* map, so payload keys never reach a
+`combineReducers` iterating the _developer's_ map, so payload keys never reach a
 property access — than to lodash, whose model it currently follows.
 
 ### Three invariants
 
 **I1 — External keys resolve through a lookup, never a dereference.**
 `children.get(key)` instead of `node[key]`. O(1), O(payload) not O(tree), and
-pollution-immune by construction. Closes the write class *and* the read class —
+pollution-immune by construction. Closes the write class _and_ the read class —
 which matters, because the canonical lodash CVE was a **read** bug and four of my
 five fixes were write-biased.
 
@@ -1939,7 +1940,7 @@ five fixes were write-biased.
 `Object.create(null)` wherever a fresh object is built from foreign keys. Track C
 counted **13 such sites**; this closes all of them, costs nothing, and changes no
 behaviour. (Track A's caveat is noted and does not apply: null-prototype bases
-destroy *immer's* emergent protection, and we are not immer.)
+destroy _immer's_ emergent protection, and we are not immer.)
 
 **I3 — A leaf's value is opaque data, never traversed for structure.**
 This is the invariant whose absence produced the newest sink: `unwrap` is
@@ -1959,7 +1960,7 @@ Track B's evidence points one way:
 - **The standards track chose notify-without-payload.** TC39's `Watcher.notify()`
   takes no arguments and forbids reading signals inside it; you call
   `getPending()`. Angular and Vue both already run on a global version/epoch.
-- **Path strings are the expensive part.** 0.047 µs to *build* one dot-path
+- **Path strings are the expensive part.** 0.047 µs to _build_ one dot-path
   string versus 0.003 µs to answer "did this change?" by reference identity —
   and the string is paid on every write in a push model, versus only when asked
   in a pull model.
@@ -1971,7 +1972,7 @@ dirty. Nothing else happens.** No allocation, no string building, no dispatch,
 no listener list — unless someone asks. Consumers pull `changedSince(version)`.
 
 **Core owns the leaf write path at construction, and this is the key move.**
-SignalTree *creates every leaf signal itself*, so it does not need Angular's
+SignalTree _creates every leaf signal itself_, so it does not need Angular's
 `setPostSignalSetFn` — that hook is a real capability (Track B proved it
 captures a direct `tree.$.a.b.set(x)`) but it is an unannotated internal in a
 single global slot, and depending on it is an avoidable bet. Owning the leaf at

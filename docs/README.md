@@ -56,12 +56,12 @@ Use this index to navigate the documentation.
 
 ## 📦 Package Documentation
 
-| Document                                                 | Description                         |
-| -------------------------------------------------------- | ----------------------------------- |
-| [Events](events.md)                                      | @signaltree/events package docs     |
-| [Core](../packages/core/README.md)                       | @signaltree/core package            |
-| [Enterprise](../packages/enterprise/README.md)           | @signaltree/enterprise — DEPRECATED, migration guide |
-| [Angular Forms](../packages/ng-forms/README.md)          | @signaltree/ng-forms package        |
+| Document                                        | Description                                          |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| [Events](events.md)                             | @signaltree/events package docs                      |
+| [Core](../packages/core/README.md)              | @signaltree/core package                             |
+| [Enterprise](../packages/enterprise/README.md)  | @signaltree/enterprise — DEPRECATED, migration guide |
+| [Angular Forms](../packages/ng-forms/README.md) | @signaltree/ng-forms package                         |
 
 ---
 

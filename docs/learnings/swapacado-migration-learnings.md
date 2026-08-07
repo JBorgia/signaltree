@@ -22,11 +22,7 @@ This document captures pain points and improvement opportunities discovered whil
 
 ```typescript
 // Local implementation (more ergonomic)
-const event = this.eventBus.createEvent<'TradeAccepted', TradeAccepted['data']>(
-  'TradeAccepted',
-  { tradeId, acceptedById, initiatorId, recipientId, acceptedAt: new Date().toISOString() },
-  { actor: { id: acceptedById, type: 'user' }, metadata: { tradeId } }
-);
+const event = this.eventBus.createEvent<'TradeAccepted', TradeAccepted['data']>('TradeAccepted', { tradeId, acceptedById, initiatorId, recipientId, acceptedAt: new Date().toISOString() }, { actor: { id: acceptedById, type: 'user' }, metadata: { tradeId } });
 await this.eventBus.publish(event);
 ```
 
@@ -53,7 +49,8 @@ await this.eventBus.publish<TradeAccepted>({
 });
 ```
 
-**Impact**: 
+**Impact**:
+
 - ~40% more boilerplate code per event publish
 - Repeated `source`, `environment`, `version` values across all event publishes
 - Higher chance of inconsistency in metadata
@@ -90,10 +87,12 @@ private readonly routingRules = {
 ```
 
 SignalTree's EventBusModule publishes to a single queue based on priority. Cross-cutting concerns (notifications, analytics, search indexing) require either:
+
 - Multiple explicit publish calls, or
 - Subscribers that re-publish to other queues
 
 **Impact**:
+
 - Harder to implement "publish once, process many" patterns
 - Business logic polluted with infrastructure concerns
 
@@ -132,7 +131,8 @@ EventBusModule.forRootAsync({
 });
 ```
 
-**Impact**: 
+**Impact**:
+
 - Verbose configuration for common patterns
 - Easy to misconfigure (e.g., forget a priority level)
 
@@ -182,33 +182,38 @@ await this.eventBus.publish<TradeAccepted>({
 ## What Worked Well
 
 ### 1. Global Module Pattern
+
 The `@Global()` decorator on EventBusModule meant we didn't need to import it in every feature module - EventBusService was available everywhere.
 
 ### 2. BaseSubscriber Pattern
+
 The `BaseSubscriber` class with built-in idempotency, error classification, and DLQ handling is excellent. It reduced subscriber boilerplate significantly.
 
 ### 3. Registry-Based Validation
+
 The EventRegistry with Zod schemas catches invalid events early. This prevented several bugs during migration.
 
 ### 4. Partial Event Acceptance
+
 The `publish()` method accepting `Omit<T, 'id' | 'timestamp'>` and filling in defaults is convenient - it just needs more defaults.
 
 ---
 
 ## Suggested Improvements Priority
 
-| Priority | Improvement | Effort | Impact |
-|----------|-------------|--------|--------|
-| P1 | Add `createEvent()` helper | Low | High |
-| P2 | Default queue configuration preset | Low | Medium |
-| P3 | Event routing/fan-out support | Medium | High |
-| P4 | Better type inference | Medium | Medium |
+| Priority | Improvement                        | Effort | Impact |
+| -------- | ---------------------------------- | ------ | ------ |
+| P1       | Add `createEvent()` helper         | Low    | High   |
+| P2       | Default queue configuration preset | Low    | Medium |
+| P3       | Event routing/fan-out support      | Medium | High   |
+| P4       | Better type inference              | Medium | Medium |
 
 ---
 
 ## Code Examples for Reference
 
 ### Before (Local Implementation)
+
 ```typescript
 private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, initiatorId: string, recipientId: string) {
   const event = this.eventBus.createEvent<'TradeAccepted', TradeAccepted['data']>(
@@ -221,6 +226,7 @@ private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, i
 ```
 
 ### After (SignalTree)
+
 ```typescript
 private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, initiatorId: string, recipientId: string) {
   await this.eventBus.publish<TradeAccepted>({
@@ -238,9 +244,10 @@ private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, i
 ```
 
 ### Ideal (Proposed)
+
 ```typescript
 private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, initiatorId: string, recipientId: string) {
-  await this.eventBus.publish('TradeAccepted', 
+  await this.eventBus.publish('TradeAccepted',
     { tradeId, acceptedById, initiatorId, recipientId, acceptedAt: new Date().toISOString() },
     { actor: { id: acceptedById, type: 'user' }, metadata: { tradeId } }
   );
@@ -254,4 +261,3 @@ private async publishTradeAcceptedEvent(tradeId: string, acceptedById: string, i
 1. Create GitHub issues for each improvement
 2. Prototype `createEvent()` helper in a branch
 3. Consider publishing these learnings to SignalTree docs
-

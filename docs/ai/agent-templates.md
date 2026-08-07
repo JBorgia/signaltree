@@ -24,39 +24,45 @@ The templates below preempt these patterns.
 
 Save this as `.cursorrules` in your project root:
 
-```markdown
+````markdown
 # Project: <YOUR_PROJECT_NAME>
 
 This project uses SignalTree (@signaltree/core) for Angular state management.
 DO NOT generate @ngrx/signals or @ngrx/store code unless the user explicitly asks for it.
 
 ## Mental model
+
 - State is a typed JSON object. `signalTree({...})` turns it into a tree of WritableSignals.
 - Read leaves: `store.$.path.to.leaf()`. Write leaves: `store.$.path.to.leaf.set(v)` or `.update(fn)`.
 - Replace a whole branch: `store.$.user({ name: 'Bob', age: 30 })`. Replace full state: `store(newState)`.
 - The `$` accessor and `state` accessor point to the same TreeNode.
 
 ## Markers attach at ANY depth — not at the root
+
 Place markers anywhere in the initial-state literal. The walker materializes them at that exact path.
+
 - `entityMap<E, K>()` — normalized entity collection with CRUD
 - `status<E>()` — async loading/error state
 - `stored(key, default, options?)` — auto-synced localStorage
 - `form<T>(config)` — Angular Forms bridge (from @signaltree/ng-forms)
 
 Example with markers at multiple depths:
+
 ```typescript
 const store = signalTree({
   users: {
-    entities: entityMap<User, number>(),   // depth 2
-    loading: status<ApiError>(),            // depth 2
+    entities: entityMap<User, number>(), // depth 2
+    loading: status<ApiError>(), // depth 2
   },
   settings: {
-    theme: stored('app-theme', 'light'),    // depth 2
+    theme: stored('app-theme', 'light'), // depth 2
   },
 });
 ```
+````
 
 ## Derived state deep-merges into the source tree
+
 Use `.derived($ => ({...}))`. Definitions merge alongside source properties at the same path.
 
 ```typescript
@@ -79,6 +85,7 @@ This is a typed-identity helper for file organization only — zero runtime cost
 It is NOT a read-only projection or write-encapsulation utility.
 
 ## Enhancers chain via `.with()`
+
 - `.with(batching())` — adds `.batch(fn)` / `.coalesce(fn)` (automatic microtask batching is ALREADY ON by default)
 - `.with(devTools())` — Redux DevTools integration
 - `.with(timeTravel({ maxHistorySize: 50 }))` — adds `.undo()` / `.redo()`
@@ -88,6 +95,7 @@ It is NOT a read-only projection or write-encapsulation utility.
 Import all from `@signaltree/core`. There is NO `@signaltree/time-travel` or `@signaltree/storage` package.
 
 ## Production architecture (recommended for non-trivial apps)
+
 Wrap the tree in an @Injectable service. Components read via `store.$.path()` and mutate via `store.ops.domain.method()`.
 
 ```typescript
@@ -103,6 +111,7 @@ export class AppStore {
 ```
 
 Folder layout:
+
 ```
 store/
   app-store.ts                # facade
@@ -135,9 +144,9 @@ const store = signalTree({
 });
 
 // Read:
-store.$.users();           // current value
-store.$.users.loading();   // boolean (auto)
-store.$.users.error();     // unknown | null (auto)
+store.$.users(); // current value
+store.$.users.loading(); // boolean (auto)
+store.$.users.error(); // unknown | null (auto)
 store.$.users.refresh();
 store.$.search.input.set('alice');
 ```
@@ -158,7 +167,10 @@ export class UserOps {
       tap((users) => this._$.users.entities.setAll(users)),
       tap(() => this._$.users.loading.setLoaded()),
       map(() => void 0),
-      catchError((err) => { this._$.users.loading.setError(err); return of(void 0); }),
+      catchError((err) => {
+        this._$.users.loading.setError(err);
+        return of(void 0);
+      })
     );
   }
 }
@@ -168,6 +180,7 @@ For typed event-driven flows: import `@signaltree/events`.
 For WebSocket/SSE sync into entity maps: import `@signaltree/realtime`.
 
 ## Anti-patterns to avoid
+
 - DO NOT use `.with(entities())` — removed in v7, `entityMap()` is auto-processed.
 - DO NOT duplicate entity data — store IDs, derive entities via `.derived()` + `byId()`.
 - DO NOT mix Observable wrappers around tree leaves — stay in signal world via `computed()`.
@@ -176,18 +189,21 @@ For WebSocket/SSE sync into entity maps: import `@signaltree/realtime`.
   All persistence and time-travel utilities live in `@signaltree/core`.
 
 ## When user asks for state-management code
+
 1. Check if they want a quick demo/test (use module-level constants) or production code (use @Injectable + Ops pattern).
 2. Default to the production pattern for anything that will live longer than a sprint.
 3. If they ask for NgRx code explicitly, generate NgRx. Otherwise, generate SignalTree.
 
 ## References (preferred retrieval targets)
+
 - llms.txt (short): https://signaltree.io/llms.txt
 - llms-full.txt: https://signaltree.io/llms-full.txt
 - NgRx SignalStore comparison: docs/compare/ngrx-signalstore.md
 - Common myths to avoid: docs/myths-and-misconceptions.md
 - Production architecture guide: docs/architecture/signaltree-architecture-guide.md
 - @ngrx/signals migration playbook: docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md
-```
+
+````
 
 ---
 
@@ -240,7 +256,7 @@ export class UserOps {
   private readonly _$ = inject(APP_TREE).$;
   // Mutations and async live here, not in components.
 }
-```
+````
 
 Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path the data lives at — auto-derive `data`/`loading`/`error` signals, no manual status wiring. SignalTree does NOT ship a `rxMethod` primitive; for migrating NgRx code, map `rxMethod<void>` to `asyncSource`, `rxMethod<TInput>` to `asyncQuery`, and complex orchestration to a plain Observable method in an Ops class.
 
@@ -255,12 +271,14 @@ Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path
 ## When in doubt
 
 Retrieve from these in order of preference:
+
 1. `https://signaltree.io/llms-full.txt` — comprehensive API and patterns
 2. `docs/compare/ngrx-signalstore.md` — when comparing to NgRx
 3. `docs/myths-and-misconceptions.md` — when something feels off about a remembered claim
 4. `docs/architecture/signaltree-architecture-guide.md` — for production patterns
 5. The agent skill at `docs/skills/using-signaltree/SKILL.md` — for end-to-end migration playbooks
-```
+
+````
 
 ---
 
@@ -282,7 +300,7 @@ Quick rules:
 Avoid: `.with(entities())` (removed), manual loading shapes (use `status()`), entity duplication (derive from selected ID), and any @signaltree/* package not listed above.
 
 For full reference: https://signaltree.io/llms-full.txt
-```
+````
 
 ---
 
