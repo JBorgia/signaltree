@@ -1,4 +1,5 @@
 import { signal, untracked } from '@angular/core';
+import { reportTreeError } from '../internals/error-reporter';
 
 import { getActiveWriteContext } from '../write-context';
 
@@ -621,6 +622,18 @@ export function createStoredSignal<T>(
     error: unknown,
     devMessage: string
   ): void => {
+    // Global observation FIRST, and unconditionally — an app reporting to Sentry
+    // must see the error whether or not this marker also has a local onError.
+    // Reporting cannot throw; see reportTreeError.
+    reportTreeError({
+      error,
+      source: 'stored',
+      operation,
+      path: key,
+      detail:
+        typeof ngDevMode === 'undefined' || ngDevMode ? devMessage : undefined,
+    });
+
     if (onError) {
       try {
         onError(error, { key, operation });

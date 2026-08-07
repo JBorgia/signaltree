@@ -9,6 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
+import { reportTreeError } from '../internals/error-reporter';
 import { registerBuiltinMarkerProcessor ,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
@@ -250,6 +251,7 @@ export function createAsyncSourceSignal<T>(
     } catch (err) {
       loadingSignal.set(false);
       errorSignal.set(err);
+      reportTreeError({ error: err, source: 'async-source', operation: 'load' });
       return;
     }
 

@@ -51,6 +51,8 @@ class TimeTravelManager<T> {
    */
   private readonly indexSignal = signal(-1);
   private readonly historyVersion = signal(0);
+  /** Signal, not a boolean, so a "recording paused" indicator can bind to it. */
+  private readonly pausedSignal = signal(false);
 
   private get currentIndex(): number {
     return this.indexSignal();
@@ -91,12 +93,27 @@ class TimeTravelManager<T> {
    * later (coalesced / updated) rather than creating multiple history
    * entries for rapid updates.
    */
+  pause(): void {
+    this.pausedSignal.set(true);
+  }
+
+  resume(): void {
+    this.pausedSignal.set(false);
+  }
+
+  isPaused(): boolean {
+    return this.pausedSignal();
+  }
+
   addEntry(
     action: string,
     state: T,
     payload?: unknown,
     provisional = false
   ): void {
+    // Paused: the write still applies, it just does not become an undo step.
+    // Checked before any snapshot work, so pausing also costs nothing.
+    if (this.pausedSignal()) return;
     // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
@@ -160,6 +177,12 @@ class TimeTravelManager<T> {
     if (last && last.state === entry.state) {
       if ((last as any).__provisional) delete (last as any).__provisional;
       return; // skip duplicate
+    }
+
+    // App-supplied skip, checked AFTER reference-dedup so the cheap exact test
+    // runs first and the comparator only sees transitions that really differ.
+    if (last && this.config.shouldSkip?.(last.state, entry.state)) {
+      return;
     }
 
     this.history.push(entry as TimeTravelEntry<T>);
@@ -382,6 +405,17 @@ export function timeTravel(
         getCurrentIndex(): number {
           return -1;
         },
+        pauseRecording(): void {
+          /* disabled */
+        },
+        resumeRecording(): void {
+          /* disabled */
+        },
+        isRecordingPaused(): boolean {
+          // Disabled means nothing is recorded, which is what a caller asking
+          // this wants to know — reporting `false` would say the opposite.
+          return true;
+        },
       };
 
       return Object.assign(tree, noopMethods) as unknown as ISignalTree<T> &
@@ -565,6 +599,12 @@ export function timeTravel(
       timeTravelManager.canRedo();
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getCurrentIndex'] =
       () => timeTravelManager.getCurrentIndex();
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['pauseRecording'] =
+      () => timeTravelManager.pause();
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['resumeRecording'] =
+      () => timeTravelManager.resume();
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['isRecordingPaused'] =
+      () => timeTravelManager.isPaused();
 
     // Expose internal manager for advanced tooling / demo usage
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =

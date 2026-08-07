@@ -52,6 +52,20 @@ export interface TimeTravelConfig {
   includePayload?: boolean;
 
   /**
+   * Return `true` to SKIP recording a transition.
+   *
+   * Reference-dedup already collapses snapshots that are identical, which is
+   * narrower than this: a comparator lets the app decide a change is
+   * uninteresting — a cursor position, a hover flag, a field the user is still
+   * typing into — so undo lands on something a person recognises as a step.
+   *
+   * ⚠️ It runs on EVERY recorded write. A comparator that walks the whole state
+   * reintroduces the O(state) cost per write that reference-dedup was
+   * introduced to remove. Compare the few fields you mean.
+   */
+  shouldSkip?: (previous: unknown, next: unknown) => boolean;
+
+  /**
    * Custom action names for different operations
    */
   actionNames?: {
@@ -397,6 +411,18 @@ export interface TimeTravelMethods<T = unknown> {
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
+  /**
+   * Stop recording. Writes still apply; they just do not become undo steps.
+   *
+   * Without this a bulk import writes a hundred entries and the user's next
+   * undo reverts one row of it. `maxHistorySize` bounds the memory that costs
+   * but does nothing for whether undo means anything to a person.
+   */
+  pauseRecording(): void;
+  /** Resume recording. Nothing that happened while paused is backfilled. */
+  resumeRecording(): void;
+  /** Reactive, so a "recording" indicator can bind to it. */
+  isRecordingPaused(): boolean;
   /** Internal time-travel manager exposed for advanced tooling/debugging */
   readonly __timeTravel?: {
     undo(): void;

@@ -57,3 +57,13 @@ export type { EnhancerMeta } from './lib/types';
 export { createFormSignal } from './lib/markers/form';
 export { createAsyncSourceSignal } from './lib/markers/async-source';
 export { createAsyncQuerySignal } from './lib/markers/async-query';
+
+// Global error observation — every error the library CATCHES, in one place.
+// Not a handler: it cannot swallow, retry or transform, because making every
+// marker's error path depend on a listener is a far larger promise than "tell
+// me when something failed". Local handling is unchanged; this is additive.
+export { onTreeError } from './lib/internals/error-reporter';
+export type {
+  TreeErrorEvent,
+  TreeErrorSource,
+} from './lib/internals/error-reporter';
