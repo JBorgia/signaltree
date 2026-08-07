@@ -145,10 +145,17 @@ The dispatch key is derivable from the data, so this is a hybrid, not a choice:
 
 Containers (array / `Map` / `Set` / `Date`) are copied individually instead of
 the whole tree. `length`/`size`/`getTime` is an O(1) check that catches every
-shape change at any size; contents are copied up to 1,000 elements, above which
-a watch is shape-only by design rather than by failure. ST2030 now reports one
-container that could not be copied, with everything else in state unaffected —
-where it used to mean the entire snapshot had degraded.
+shape change at any size — push/pop/splice/delete/add/clear, which is the
+overwhelming majority of in-place mutation. Contents are copied under an
+AGGREGATE budget of 5,000 elements tree-wide (~4µs per poll).
+
+That budget was per-container at first, capped at 1,000, and it was the same
+wrong noun this document keeps finding: fifty containers of 999 elements pass a
+per-container cap individually and cost 50,000 element comparisons twenty times
+a second. What is bounded has to be the thing that costs time, and that is a sum.
+
+ST2030 now reports one container that could not be copied, with everything else
+in state unaffected — where it used to mean the entire snapshot had degraded.
 
 Each of the three mechanisms is mutation-verified independently: removing the
 in-place check fails 4 tests, removing the contents copy fails 2, removing the

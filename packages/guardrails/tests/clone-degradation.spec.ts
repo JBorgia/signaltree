@@ -226,3 +226,89 @@ describe('guardrails change detection', () => {
     });
   });
 });
+
+/**
+ * The contents budget is an aggregate, not a per-container cap.
+ *
+ * A per-container cap was the first version and it counts the wrong noun: many
+ * mid-sized containers each pass it, and the poll cost is their SUM. What is
+ * bounded is total elements deep-compared per poll.
+ */
+describe('guardrails: the contents-watch budget', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+    process.env['NODE_ENV'] = 'development';
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete (globalThis as { __DEV__?: boolean }).__DEV__;
+  });
+
+  function attach<T extends State>(initial: T) {
+    const tree = createMockTree(initial);
+    return guardrails(TEST_CONFIG_BASE)(
+      tree as unknown as ISignalTree<T>
+    ) as unknown as MockTree<T> & { __guardrails?: GuardrailsAPI };
+  }
+
+  it('spends the budget across containers, not per container', async () => {
+    // Twelve containers of 800 = 9,600 elements. A per-container cap of 1,000
+    // would copy every one of them and deep-compare 9,600 elements per poll.
+    const state: State = {};
+    for (let c = 0; c < 12; c++) {
+      state[`c${c}`] = Array.from({ length: 800 }, (_, i) => ({ i }));
+    }
+    const enhanced = attach(state);
+    await poll(2);
+
+    // The FIRST containers are within budget, so a contents edit there is seen.
+    (state['c0'] as Array<{ i: number }>)[0].i = -1;
+    await poll(2);
+    expect(
+      enhanced.__guardrails?.getReport().stats.updateCount ?? 0
+    ).toBeGreaterThan(0);
+    enhanced.destroy();
+  });
+
+  it('past the budget, CONTENTS go unwatched — the documented tradeoff', async () => {
+    // The observable consequence of budgeting in aggregate. Under a
+    // per-container cap of 1,000 every one of these would be copied and this
+    // edit WOULD be seen — at the price of 9,600 element comparisons per poll.
+    const state: State = {};
+    for (let c = 0; c < 12; c++) {
+      state[`c${c}`] = Array.from({ length: 800 }, (_, i) => ({ i }));
+    }
+    const enhanced = attach(state);
+    await poll(2);
+
+    (state['c11'] as Array<{ i: number }>)[0].i = -1; // contents, length same
+    await poll(2);
+    expect(enhanced.__guardrails?.getReport().stats.updateCount ?? 0).toBe(0);
+    enhanced.destroy();
+  });
+
+  it('a container past the budget keeps its O(1) shape check', async () => {
+    const state: State = {};
+    for (let c = 0; c < 12; c++) {
+      state[`c${c}`] = Array.from({ length: 800 }, (_, i) => ({ i }));
+    }
+    const enhanced = attach(state);
+    await poll(2);
+
+    // c11 is well past the 5,000-element budget, so its contents are unwatched
+    // — but pushing to it changes its length, which is always checked.
+    (state['c11'] as Array<{ i: number }>).push({ i: 999 });
+    await poll(2);
+    expect(
+      enhanced.__guardrails?.getReport().stats.updateCount ?? 0
+    ).toBeGreaterThan(0);
+    enhanced.destroy();
+  });
+});

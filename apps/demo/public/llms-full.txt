@@ -1514,7 +1514,7 @@ Every warning carries a stable `[ST####]` code; full map in
   The tradeoff is real and only you can make it: `undo()` will NOT revert an
   excluded collection. Defensible for a 50,000-row server-owned grid, wrong for
   a shopping cart. Use `transient: true` to drop it from persistence too.
-- **[ST2030]** `@signaltree/guardrails` could not copy a container in state. Guardrails answers "did anything change" from snapshot REFERENCE identity — exact and O(1), because `tree()` returns the identical object when nothing changed. The one thing that escapes it is a container mutated IN PLACE (`tree.$.rows().push(x)` notifies nothing), so it copies each array/`Map`/`Set`/`Date` and re-checks those. `structuredClone` throws on a function or class instance, so a container holding one keeps its SHAPE watched (length/size changes still caught) but not its contents. Scoped to that container; nothing else is affected.
+- **[ST2030]** `@signaltree/guardrails` could not copy a container in state. Guardrails answers "did anything change" from snapshot REFERENCE identity — exact and O(1), because `tree()` returns the identical object when nothing changed. The one thing that escapes it is a container mutated IN PLACE (`tree.$.rows().push(x)` notifies nothing), so it copies each array/`Map`/`Set`/`Date` and re-checks those. `structuredClone` throws on a function or class instance, so a container holding one keeps its SHAPE watched (length/size changes still caught) but not its contents. Scoped to that container; nothing else is affected. Contents watching is budgeted in aggregate (5,000 elements tree-wide), not per container, because what costs time per poll is the sum.
 
 ## Resources
 

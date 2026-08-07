@@ -62,16 +62,25 @@ function resolveEnabledFlag(option?: EnabledOption): boolean {
 let warnedCloneDegraded = false;
 
 /**
- * @internal Largest container whose CONTENTS are watched, not just its shape.
+ * @internal Total elements whose CONTENTS are watched across the WHOLE tree.
  *
- * Above this, a watch records length/size only. Cloning a 50,000-element array
- * every change, and deep-comparing it 20 times a second, costs more than the
- * class of bug it catches — an in-place edit of a FIELD of an element, with the
- * element count unchanged. Everything that changes the container's shape
- * (push/pop/splice/delete/add/clear) is still caught at any size, because that
- * is an O(1) check.
+ * Budgeted in aggregate, not per container, because the cost is what gets
+ * deep-compared on every poll and that is a sum. A per-container cap of 1,000
+ * was the first version of this and it is the wrong noun: fifty containers of
+ * 999 elements pass it individually and cost 50,000 element comparisons twenty
+ * times a second. Same mistake as judging history retention by row count
+ * instead of `entries x width`.
+ *
+ * 5,000 elements is ~4µs per poll against `deepEqual`'s measured array rate,
+ * so ~80µs/second at the 50ms interval — real, bounded, and knowable.
+ *
+ * Exhausting the budget costs only CONTENTS watching, and only for the
+ * containers past the limit. Every container keeps its O(1) shape check at any
+ * size, so push/pop/splice/delete/add/clear is caught regardless — which is the
+ * overwhelming majority of in-place mutation. What goes unwatched is an edit to
+ * a FIELD of an element with the element count unchanged.
  */
-const WATCH_CONTENTS_MAX = 1000;
+const WATCH_CONTENTS_BUDGET = 5000;
 
 /**
  * @internal One mutable container reachable from the snapshot.
@@ -109,15 +118,12 @@ function isMutableContainer(value: unknown): value is object {
  * Run only when the snapshot REFERENCE changed — i.e. when something genuinely
  * happened and we are already walking. Never on an idle poll.
  */
-function collectContainerWatches(
-  state: unknown,
-  budget = 5000
-): ContainerWatch[] {
+function collectContainerWatches(state: unknown): ContainerWatch[] {
   const watches: ContainerWatch[] = [];
   const seen = new WeakSet<object>();
+  let contentsBudget = WATCH_CONTENTS_BUDGET;
 
   const visit = (node: unknown, path: string): void => {
-    if (watches.length >= budget) return;
     if (!node || typeof node !== 'object') return;
     if (seen.has(node)) return;
     seen.add(node);
@@ -125,8 +131,11 @@ function collectContainerWatches(
     if (isMutableContainer(node)) {
       const shape = shapeOf(node);
       let before: unknown = null;
-      if (shape >= 0 && shape <= WATCH_CONTENTS_MAX) {
+      // A Date reports its time as its shape, so it needs no contents copy and
+      // must not be charged to a budget denominated in elements.
+      if (!(node instanceof Date) && shape >= 0 && shape <= contentsBudget) {
         before = cloneContainer(node);
+        if (before !== null) contentsBudget -= shape;
       }
       watches.push({ path, live: node, shape, before });
       return; // Contents of a container are covered by its own copy.
