@@ -40,6 +40,31 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
      * default strategy is change-blind. Set `true` to force polling there.
      */
     disablePathNotifier?: boolean;
+
+    /**
+     * Freeze each state snapshot, so an in-place mutation THROWS where it
+     * happens instead of being noticed on a later poll.
+     *
+     * Off by default, because it makes dev behave differently from production —
+     * the same reason NgRx ships `strictStateImmutability` opt-in.
+     *
+     * Everything else here detects an in-place mutation (`tree.$.rows().push(x)`,
+     * which notifies nothing) up to one poll interval later, and infers its path
+     * by diffing. Freezing turns that into a `TypeError` on the mutating line
+     * with a real stack — strictly better information, and it enforces a
+     * contract the library already documents: a `tree()` snapshot is read-only.
+     *
+     * With this on, per-container copying is skipped entirely: nothing can
+     * mutate in place without throwing first, so there is nothing to compare
+     * against, and guardrails stops paying for the copies.
+     *
+     * The catch, and the reason it is opt-in: the snapshot SHARES leaf values
+     * with what you passed in. Freezing `tree.$.rows()` freezes the array you
+     * handed to `.set()`. If your own code reuses and mutates that array, it
+     * will now throw — which is the bug, but it is your call whether to find it
+     * this way.
+     */
+    strictImmutability?: boolean;
   };
 
   /** Performance budget limits */

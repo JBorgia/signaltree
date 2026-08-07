@@ -41,9 +41,9 @@ function attach(config: Parameters<typeof guardrails>[0]) {
 }
 
 function triggerViolation(tree: ISignalTree<{ flag: boolean }>) {
-  (
-    tree.$ as unknown as Record<string, { set(v: unknown): void }>
-  )['flag'].set(true);
+  (tree.$ as unknown as Record<string, { set(v: unknown): void }>)['flag'].set(
+    true
+  );
   vi.advanceTimersByTime(55); // one polling tick (50ms) evaluates rules
 }
 
@@ -117,9 +117,9 @@ describe('guardrails reporting channels', () => {
       customRules: [alwaysFails],
     });
 
-    (
-      tree.$ as unknown as Record<string, { set(v: unknown): void }>
-    )['flag'].set(true);
+    (tree.$ as unknown as Record<string, { set(v: unknown): void }>)[
+      'flag'
+    ].set(true);
 
     expect(() => vi.advanceTimersByTime(55)).toThrow(
       '[Guardrails] pinned violation'
@@ -132,23 +132,72 @@ describe('guardrails reporting channels', () => {
     tree.destroy?.();
   });
 
-  it('warns once (per process) that the PathNotifier strategy is change-blind for plain-object trees', () => {
+  it('does NOT accuse PathNotifier of blindness before it has missed anything', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
     const isChangeBlindWarning = (c: unknown[]) =>
       String(c[0]).includes('change-blind');
 
-    // PathNotifier strategy selected (no disablePathNotifier) → one warning.
+    // This used to warn on ATTACH, for every plain-object tree, whether or not
+    // the notifier was actually missing anything — and told the user to go
+    // disable it. A diagnostic that speculates is a diagnostic people learn to
+    // ignore.
     const t1 = signalTree({ a: 0 });
     guardrails()(t1);
+    expect(warn.mock.calls.filter(isChangeBlindWarning).length).toBe(0);
+
+    t1.destroy?.();
+  });
+
+  it('warns once, per process, only after the backstop catches a real miss', () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const isChangeBlindWarning = (c: unknown[]) =>
+      String(c[0]).includes('change-blind');
+
+    const t1 = signalTree({ a: 0 });
+    guardrails()(t1);
+
+    // A plain-leaf write: nothing the notifier reports, so only the polling
+    // backstop can see it. Affordable at all because the change check is now a
+    // reference compare rather than a clone + full walk.
+    (t1.$ as unknown as Record<string, { set(v: unknown): void }>)['a'].set(1);
+    vi.advanceTimersByTime(120);
+
     expect(warn.mock.calls.filter(isChangeBlindWarning).length).toBe(1);
 
-    // Second attach in the same process: still exactly one.
+    // Still exactly one after further misses, and across a second attach.
+    (t1.$ as unknown as Record<string, { set(v: unknown): void }>)['a'].set(2);
+    vi.advanceTimersByTime(120);
     const t2 = signalTree({ b: 0 });
     guardrails()(t2);
+    (t2.$ as unknown as Record<string, { set(v: unknown): void }>)['b'].set(1);
+    vi.advanceTimersByTime(120);
+
     expect(warn.mock.calls.filter(isChangeBlindWarning).length).toBe(1);
 
     t1.destroy?.();
     t2.destroy?.();
+    vi.useRealTimers();
+  });
+
+  it('the backstop still DETECTS the change, not just reports blindness', () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const tree = signalTree({ a: 0 });
+    const enhanced = guardrails()(tree) as typeof tree & {
+      __guardrails?: { getReport(): { stats: { updateCount: number } } };
+    };
+
+    (tree.$ as unknown as Record<string, { set(v: unknown): void }>)['a'].set(
+      1
+    );
+    vi.advanceTimersByTime(120);
+
+    expect(
+      enhanced.__guardrails?.getReport().stats.updateCount ?? 0
+    ).toBeGreaterThan(0);
+    tree.destroy?.();
+    vi.useRealTimers();
   });
 });

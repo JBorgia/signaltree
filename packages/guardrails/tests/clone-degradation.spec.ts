@@ -312,3 +312,84 @@ describe('guardrails: the contents-watch budget', () => {
     enhanced.destroy();
   });
 });
+
+/**
+ * `strictImmutability` — catch the mutation where it happens, not on a poll.
+ *
+ * Everything else in this file detects an in-place mutation up to one poll
+ * interval later and infers its path by diffing. Freezing turns it into a
+ * `TypeError` on the mutating line with a real stack. Opt-in, because it makes
+ * dev behave differently from production — the same reason NgRx ships
+ * `strictStateImmutability` opt-in.
+ */
+describe('guardrails: strictImmutability', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+    process.env['NODE_ENV'] = 'development';
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete (globalThis as { __DEV__?: boolean }).__DEV__;
+  });
+
+  function attachStrict<T extends State>(initial: T) {
+    const tree = createMockTree(initial);
+    return guardrails({
+      changeDetection: { disablePathNotifier: true, strictImmutability: true },
+    })(tree as unknown as ISignalTree<T>) as unknown as MockTree<T> & {
+      __guardrails?: GuardrailsAPI;
+    };
+  }
+
+  it('an in-place push THROWS at the mutating line', () => {
+    const rows: number[] = [1, 2, 3];
+    const enhanced = attachStrict({ rows, count: 0 });
+
+    expect(() => rows.push(4)).toThrow(TypeError);
+    enhanced.destroy();
+  });
+
+  it('an in-place field edit THROWS too — the case a shape check misses', () => {
+    const rows = [{ id: 1, name: 'a' }];
+    const enhanced = attachStrict({ rows, count: 0 });
+
+    expect(() => {
+      rows[0].name = 'b';
+    }).toThrow(TypeError);
+    enhanced.destroy();
+  });
+
+  it('ordinary writes through the tree still work', () => {
+    // Freezing the SNAPSHOT must not freeze the tree. A write replaces values;
+    // it does not mutate the frozen ones.
+    const enhanced = attachStrict({ rows: [1, 2], count: 0 });
+
+    expect(() => enhanced({ count: 1 })).not.toThrow();
+    expect(enhanced().count).toBe(1);
+    enhanced.destroy();
+  });
+
+  it('is OFF by default — no throw, detection by polling instead', async () => {
+    const rows: number[] = [1, 2, 3];
+    const tree = createMockTree({ rows, count: 0 });
+    const enhanced = guardrails(TEST_CONFIG_BASE)(
+      tree as unknown as ISignalTree<{ rows: number[]; count: number }>
+    ) as unknown as MockTree<{ rows: number[]; count: number }> & {
+      __guardrails?: GuardrailsAPI;
+    };
+
+    expect(() => rows.push(4)).not.toThrow();
+    await poll(2);
+    expect(
+      enhanced.__guardrails?.getReport().stats.updateCount ?? 0
+    ).toBeGreaterThan(0);
+    enhanced.destroy();
+  });
+});

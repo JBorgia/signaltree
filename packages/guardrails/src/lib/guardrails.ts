@@ -1,6 +1,4 @@
-import {
-  getPathNotifier,
-} from '@signaltree/core/authoring';
+import { getPathNotifier } from '@signaltree/core/authoring';
 import { deepEqual } from '@signaltree/shared';
 
 /**
@@ -113,11 +111,59 @@ function isMutableContainer(value: unknown): value is object {
 }
 
 /**
+ * @internal Freeze a snapshot so an in-place mutation throws where it happens.
+ *
+ * Depth-first over plain objects and containers. `Map` and `Set` cannot be
+ * frozen into immutability — `Object.freeze` does not stop `set`/`add` — so
+ * their CONTENTS are frozen and the container itself is left to the shape
+ * check, which still catches a size change. That gap is stated rather than
+ * papered over.
+ */
+function freezeDeep(value: unknown, seen: WeakSet<object>): void {
+  if (!value || typeof value !== 'object') return;
+  if (seen.has(value)) return;
+  seen.add(value);
+
+  if (value instanceof Map) {
+    for (const v of value.values()) freezeDeep(v, seen);
+    return;
+  }
+  if (value instanceof Set) {
+    for (const v of value) freezeDeep(v, seen);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const v of value) freezeDeep(v, seen);
+    Object.freeze(value);
+    return;
+  }
+  if (value instanceof Date || value instanceof RegExp) {
+    Object.freeze(value);
+    return;
+  }
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    freezeDeep((value as Record<string, unknown>)[key], seen);
+  }
+  Object.freeze(value);
+}
+
+/**
  * @internal Find every mutable container in a snapshot and record its state.
  *
  * Run only when the snapshot REFERENCE changed — i.e. when something genuinely
  * happened and we are already walking. Never on an idle poll.
  */
+function trackSnapshot<T>(context: GuardrailsContext<T>, state: unknown): void {
+  if (context.config.changeDetection?.strictImmutability) {
+    // Nothing can mutate in place without throwing, so there is nothing to
+    // compare against and no reason to pay for the copies.
+    freezeDeep(state, new WeakSet());
+    context.containerWatches = [];
+    return;
+  }
+  context.containerWatches = collectContainerWatches(state);
+}
+
 function collectContainerWatches(state: unknown): ContainerWatch[] {
   const watches: ContainerWatch[] = [];
   const seen = new WeakSet<object>();
@@ -316,9 +362,13 @@ export function guardrails(
       signalUsage: new Map(),
       memoryHistory: [],
       previousState: initialSnapshot as never,
-      containerWatches: collectContainerWatches(initialSnapshot),
+      containerWatches: [],
       disposed: false,
     } as GuardrailsContext<any>;
+
+    // After construction, because it needs the config to decide between
+    // freezing and copying.
+    trackSnapshot(context, initialSnapshot);
 
     // Try reactive subscription first (zero polling in Angular production)
     // Fall back to polling for non-Angular environments (tests)
@@ -377,19 +427,41 @@ function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
             handlePathNotifierChange(context, path, value, prev);
           }
         );
-        if (!warnedChangeBlindPlainTrees && isDevEnvironment()) {
-          warnedChangeBlindPlainTrees = true;
-          console.warn(
-            '[Guardrails] Using PathNotifier change detection: guardrails ' +
-              'monitoring is change-blind for plain-object trees (the ' +
-              'notifier only fires for entity collections, or for leaf ' +
-              'writes when devtools is attached). If this tree has no ' +
-              'entity collections, enable polling via ' +
-              '`changeDetection: { disablePathNotifier: true }`.'
-          );
-        }
-        // Success! Using PathNotifier - no polling, precise path tracking
-        return unsubscribe;
+        // PathNotifier gives precise paths for free, but it is change-BLIND
+        // for a plain-object tree: it fires for entity collections, and for
+        // leaf writes only when devtools has installed its interceptor. So it
+        // is no longer used ALONE.
+        //
+        // The backstop below is what makes this safe, and it is affordable only
+        // because the change check stopped cloning: a poll that establishes
+        // "nothing happened" is now one reference compare, measured at 0.045us
+        // at 400 branches against 122.8us for the clone it replaced. Polling was
+        // the last resort when it cost 122us. At 45 nanoseconds it is a seatbelt.
+        //
+        // It also turns a SPECULATIVE warning into a PROVEN one. This used to
+        // warn every plain-object user that monitoring "is change-blind",
+        // whether or not it actually was, and tell them to go disable
+        // PathNotifier. Now the backstop reports only when it has personally
+        // caught a change the notifier did not.
+        const stopBackstop = startPollingChangeDetection(context, {
+          onChangeDetected: () => {
+            if (warnedChangeBlindPlainTrees || !isDevEnvironment()) return;
+            warnedChangeBlindPlainTrees = true;
+            console.warn(
+              '[Guardrails] PathNotifier missed a state change — this tree is ' +
+                'partly change-blind to it, which happens when a tree has no ' +
+                'entity collections and devtools has not installed its leaf ' +
+                'interceptor. The polling backstop caught it, so monitoring is ' +
+                'intact; paths from the backstop are coarser than the ' +
+                "notifier's. Set `changeDetection: { disablePathNotifier: " +
+                'true }` to use polling alone and silence this.'
+            );
+          },
+        });
+        return () => {
+          unsubscribe();
+          stopBackstop();
+        };
       }
     } catch {
       // PathNotifier failed or not available, fall through to next strategy
@@ -413,7 +485,7 @@ function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
     // subscribe() failed or is not available - fall back to polling
   }
 
-  // Strategy 3: Fall back to polling (last resort)
+  // Strategy 3: polling. No longer a "last resort" — see the backstop above.
   return startPollingChangeDetection(context);
 }
 
@@ -455,7 +527,7 @@ function handlePathNotifierChange<T>(
 
   // Update previous state snapshot for compatibility with other methods
   context.previousState = context.tree();
-  context.containerWatches = collectContainerWatches(context.previousState);
+  trackSnapshot(context, context.previousState);
 }
 
 /**
@@ -469,7 +541,7 @@ function handleStateChange<T>(context: GuardrailsContext<T>): void {
 
   if (!previousState) {
     context.previousState = currentState;
-    context.containerWatches = collectContainerWatches(currentState);
+    trackSnapshot(context, currentState);
     return;
   }
 
@@ -500,7 +572,7 @@ function handleStateChange<T>(context: GuardrailsContext<T>): void {
     const mutated = findInPlaceMutations(context.containerWatches ?? []);
     if (mutated.length === 0) return;
     reportChangedPaths(context, mutated, previousState, currentState);
-    context.containerWatches = collectContainerWatches(currentState);
+    trackSnapshot(context, currentState);
     return;
   }
 
@@ -511,7 +583,7 @@ function handleStateChange<T>(context: GuardrailsContext<T>): void {
     currentState
   );
   context.previousState = currentState;
-  context.containerWatches = collectContainerWatches(currentState);
+  trackSnapshot(context, currentState);
 }
 
 /**
@@ -560,10 +632,15 @@ function reportChangedPaths<T>(
  * Used as fallback when reactive subscription is not available
  */
 function startPollingChangeDetection<T>(
-  context: GuardrailsContext<T>
+  context: GuardrailsContext<T>,
+  options?: { onChangeDetected?: () => void }
 ): () => void {
   const pollForChanges = () => {
+    const before = context.stats.updateCount;
     handleStateChange(context);
+    if (options?.onChangeDetected && context.stats.updateCount !== before) {
+      options.onChangeDetected();
+    }
   };
 
   // Start polling
