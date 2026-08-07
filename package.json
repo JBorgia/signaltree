@@ -129,7 +129,8 @@
     "gates:self-test": "node tools/verify-gates.mjs --self-test",
     "gates:list": "node tools/verify-gates.mjs --list",
     "lint:budget": "node tools/check-lint-budget.mjs",
-    "dead-exports": "node tools/find-dead-exports.mjs"
+    "dead-exports": "node tools/find-dead-exports.mjs",
+    "prepare:publish-artifacts": "node scripts/prepare-publish-artifacts.mjs"
   },
   "private": true,
   "dependencies": {

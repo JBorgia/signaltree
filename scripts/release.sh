@@ -438,12 +438,14 @@ print_success "Package builds completed"
 # without requiring a separate web/GitHub fetch. The +49pp lift we measure
 # only fires when llms.txt is in the agent's context — shipping it via npm
 # install reaches every user automatically.
-if [ -f "apps/demo/public/llms.txt" ] && [ -d "dist/packages/core" ]; then
-    print_step "Copying llms.txt + llms-full.txt into @signaltree/core tarball..."
-    cp apps/demo/public/llms.txt dist/packages/core/llms.txt
-    cp apps/demo/public/llms-full.txt dist/packages/core/llms-full.txt
-    print_success "AI priming surfaces shipped with @signaltree/core"
-fi
+# Tarball contents: AI skills + llms.txt, then VERIFY every declared `files`
+# entry resolves. One script, shared by all three publish paths.
+#
+# This replaces a conditional `cp` that each of these scripts carried its own
+# copy of. A missing source made all three skip it SILENTLY and publish core
+# without the llms.txt that primes retrieval-aware agents -- and npm never warns
+# when a `files` glob matches nothing, so the tarball just shipped light.
+node scripts/prepare-publish-artifacts.mjs || exit 1
 
 # Preflight: ensure all publishable dist folders exist BEFORE publishing anything.
 print_step "Verifying dist outputs exist for all packages (fail-fast)..."

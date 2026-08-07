@@ -256,6 +256,20 @@ const GATES = [
     unproven: 'reports sizes; the budget assertion lives in bundle-budget below',
   },
   {
+    name: 'publish-artifacts',
+    covers: 'every declared `files` entry of every package resolves in dist',
+    cmd: ['node', 'scripts/prepare-publish-artifacts.mjs'],
+    needsBuild: true,
+    // npm does NOT warn when a `files` glob matches nothing — the tarball just
+    // ships light. Removing a real entry's source must fail here, because
+    // nothing downstream will notice.
+    mutation: {
+      file: 'dist/packages/core/package.json',
+      find: '"files": [',
+      replace: '"files": [\n    "this-entry-matches-nothing/**/*",',
+    },
+  },
+  {
     name: 'bundle-budget',
     covers: 'built package sizes stay inside their budgets',
     cmd: ['node', 'tools/check-bundle-budget.mjs'],

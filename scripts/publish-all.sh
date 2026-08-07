@@ -83,16 +83,14 @@ case "$VERSION" in
         ;;
 esac
 
-# Ship the AI priming surfaces with @signaltree/core. ci-publish.sh and
-# release.sh both do this; this path did not, so publishing through it shipped
-# core WITHOUT the llms.txt that primes retrieval-aware agents on a plain
-# `npm install` — silently, because npm does not warn when a `files` glob
-# matches nothing.
-if [ -f "apps/demo/public/llms.txt" ] && [ -d "dist/packages/core" ]; then
-    echo "Copying llms.txt + llms-full.txt into @signaltree/core tarball..."
-    cp apps/demo/public/llms.txt dist/packages/core/llms.txt
-    cp apps/demo/public/llms-full.txt dist/packages/core/llms-full.txt
-fi
+# Tarball contents: AI skills + llms.txt, then VERIFY every declared `files`
+# entry resolves. One script, shared by all three publish paths.
+#
+# This replaces a conditional `cp` that each of these scripts carried its own
+# copy of. A missing source made all three skip it SILENTLY and publish core
+# without the llms.txt that primes retrieval-aware agents -- and npm never warns
+# when a `files` glob matches nothing, so the tarball just shipped light.
+node scripts/prepare-publish-artifacts.mjs || exit 1
 
 # Resolve pnpm `workspace:` / bare `*` specs before publishing. This path had
 # NO rewrite at all, so publishing through it shipped
