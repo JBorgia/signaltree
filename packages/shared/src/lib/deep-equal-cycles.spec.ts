@@ -142,3 +142,78 @@ describe('deepEqual: own keys only, never inherited', () => {
     expect(deepEqual(a, b)).toBe(true);
   });
 });
+
+/**
+ * The constructor gate (14.0.0).
+ *
+ * These four pairs used to compare EQUAL, and a signal's `equal` returning true
+ * DROPS the write. The gate is chosen on that asymmetry: a wrongly-unequal
+ * verdict costs one redundant notification, a wrongly-equal one loses state
+ * silently. This suite exists so the stricter answers cannot regress back to
+ * "convenient" without someone deleting a test that says why.
+ */
+describe('deepEqual: the constructor gate', () => {
+  class Row {
+    constructor(public id: number, public name: string) {}
+  }
+
+  it('a class instance never equals a plain object with the same fields', () => {
+    expect(deepEqual(new Row(1, 'a'), { id: 1, name: 'a' } as never)).toBe(
+      false
+    );
+  });
+
+  it('but two instances of the SAME class still compare by value', () => {
+    expect(deepEqual(new Row(1, 'a'), new Row(1, 'a'))).toBe(true);
+    expect(deepEqual(new Row(1, 'a'), new Row(2, 'a'))).toBe(false);
+  });
+
+  it('a null-prototype object never equals a plain object', () => {
+    const bare = Object.assign(Object.create(null), { id: 1 });
+    expect(deepEqual(bare, { id: 1 })).toBe(false);
+  });
+
+  it('two null-prototype objects still compare by value', () => {
+    const a = Object.assign(Object.create(null), { id: 1 });
+    const b = Object.assign(Object.create(null), { id: 1 });
+    const c = Object.assign(Object.create(null), { id: 2 });
+    expect(deepEqual(a, b)).toBe(true);
+    expect(deepEqual(a, c)).toBe(false);
+  });
+
+  it('a prototype-forged Date never equals a plain object', () => {
+    // No [[DateValue]], so `Object.prototype.toString` reported this as
+    // "[object Object]" and the old gate let it through to a key comparison
+    // that found nothing to disagree about. A strict correctness fix.
+    expect(deepEqual(Object.create(Date.prototype), {})).toBe(false);
+  });
+
+  it('still rejects a built-in on one side only', () => {
+    // The job the gate this replaced existed to do. None of these has own
+    // enumerable keys, so without a gate the key comparison calls them equal.
+    expect(deepEqual(new Date(0) as never, {} as never)).toBe(false);
+    expect(deepEqual(new Uint8Array(0) as never, {} as never)).toBe(false);
+    expect(deepEqual(new Map() as never, {} as never)).toBe(false);
+  });
+
+  it('an object with its OWN `constructor` key is compared, not gated out', () => {
+    expect(deepEqual({ constructor: 'x' }, { constructor: 'x' })).toBe(true);
+    expect(deepEqual({ constructor: 'x' }, { constructor: 'y' })).toBe(false);
+  });
+
+  it('a Proxy that throws on `get` reports unequal instead of escaping', () => {
+    // This is a signal's `equal`. A throw here does not fail a comparison, it
+    // fails the WRITE — so the gate swallows and answers "changed", which is
+    // the recoverable direction.
+    const hostile = new Proxy(
+      { id: 1 },
+      {
+        get() {
+          throw new Error('no');
+        },
+      }
+    );
+    expect(() => deepEqual(hostile, { id: 1 })).not.toThrow();
+    expect(deepEqual(hostile, { id: 1 })).toBe(false);
+  });
+});

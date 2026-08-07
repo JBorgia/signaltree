@@ -214,3 +214,89 @@ The generalisable lesson, which is worth more than the finding: **when surveying
 prior art, read the API surface for what it implies about failure modes, not just
 the implementation for techniques.** Ten self-generated options found a 3x
 optimisation and missed a crash.
+
+---
+
+## 5. Resolution of the deferred items (14.0.0)
+
+Three things in this RFC were left open. All three are now closed.
+
+### 5.1 The prototype gate — REPLACED by a constructor check
+
+Deferred pending a blast-radius measurement, because it is a semantic change and
+not only a faster one. Measured, both halves.
+
+**The gain.** Over 1,000-row entity arrays, 2,000 object-node comparisons, min
+of four alternating rounds in one process:
+
+| gate                                        | time    | vs current  |
+| ------------------------------------------- | ------- | ----------- |
+| `getPrototypeOf` ×2 + `toString` ×2 (before) | 168.5µs | —           |
+| `a.constructor !== b.constructor`            | 139.7µs | **17% off** |
+| the same, wrapped in `try`                   | 140.0µs | 17% off     |
+| `getPrototypeOf(a) !== getPrototypeOf(b)`    | 170.4µs | 1% SLOWER   |
+
+14.4ns per object node. The fourth row is the informative one: comparing the two
+prototypes to each other rather than to `Object.prototype` is the same shape of
+test and gains nothing, which identifies the cost as the `getPrototypeOf`
+runtime calls — V8 inline-caches an ordinary `.constructor` read and does not
+inline those.
+
+**The blast radius.** Four pairs change verdict, and every one flips from equal
+to NOT equal:
+
+| pair                                          | before | after |
+| --------------------------------------------- | ------ | ----- |
+| class instance vs plain object, same fields   | true   | false |
+| `Object.create(null)` vs `{}`, same keys      | true   | false |
+| cross-realm `{}` vs local `{}`                | true   | false |
+| `Object.create(Date.prototype)` vs `{}`       | true   | false |
+
+That direction is the whole argument. This comparator is a signal's `equal`, so
+a wrongly-EQUAL verdict does not produce a wrong comparison, it **drops the
+write** and nothing downstream learns the state changed. A wrongly-unequal one
+costs a redundant notification. The comparator has shipped two false-equal
+defects (Errors comparing equal regardless of state; inherited keys via `in`)
+and zero false-unequal ones. The last row is a strict correctness fix: a
+prototype-forged Date has no `[[DateValue]]`, so `toString` called it a plain
+object and it compared equal to `{}`.
+
+**The `try` is not defensive padding.** It measures free (140.0 vs 139.7µs — V8
+does not penalise a non-throwing try, the same finding the Date branch already
+relies on) and it buys a guarantee: a Proxy with a throwing `get` trap cannot
+escape through the comparator and fail a write. The gate being replaced could
+itself throw, on a Proxy trapping `getPrototypeOf`. Throw surface goes down.
+
+Pinned by 8 tests in `deep-equal-cycles.spec.ts`, mutation-verified: reverting
+the gate fails exactly 4 of them.
+
+**A note on how this was nearly missed.** The 20,000-pair parity suite passed
+unchanged across this edit, because its generator only ever produces plain
+objects and arrays. A generative suite proves the property its generator can
+express and nothing else — none of the four divergences above is reachable from
+that generator, so parity's silence was not evidence.
+
+### 5.2 Bounded equality for large arrays — still option 1, do nothing
+
+Re-raised and re-declined, now with the reason sharpened by 5.1. §1 recommended
+against sampling because a sampled comparator returns "equal" without having
+looked, which is precisely the false-equal direction that drops writes. Nothing
+learned since argues the other way, and two things argue harder for it: the
+constructor gate took 17% off the same path without touching correctness, and
+ST2027 now names the case bounded equality was meant to rescue — a deep-equal
+copy write — so the expensive comparison is reported rather than hidden. The
+cheaper equality a user genuinely wants remains available per-leaf via
+`compared()`, which is a choice they make explicitly about their own data.
+
+### 5.3 The speculative snapshot `with()` — still option 1, do nothing
+
+Re-raised and re-declined. §2 established that what `with()` would offer is
+mostly already served by `createEditSession` (draft, commit, cancel, undo) and
+that the Datomic analogy is weaker here because a SignalTree has no immutable
+value to speculate against — it is a graph of live signals, so a speculative
+overlay would need every read to route through it. That has not changed. If it
+is ever built, option 3 in §2 remains the shape.
+
+Recording both declines rather than letting them lapse: an unresolved
+recommendation reads as an oversight later, and a decline with a reason does not.
+

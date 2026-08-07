@@ -2,6 +2,22 @@
 
 ### BREAKING
 
+- **`deepEqual` is stricter about object identity.** The default leaf
+  comparator now gates on `a.constructor !== b.constructor` instead of
+  comparing prototypes and `Object.prototype.toString` tags. Four pairs that
+  compared EQUAL now compare unequal: a class instance vs a plain object with
+  the same fields, `Object.create(null)` vs `{}`, a cross-realm `{}` vs a local
+  one, and a prototype-forged `Object.create(Date.prototype)` vs `{}`. Every
+  one of those flips toward "changed", which is the recoverable direction — a
+  wrongly-equal verdict from a signal's `equal` DROPS the write and nothing
+  downstream learns; a wrongly-unequal one costs a redundant notification. This
+  comparator has shipped two false-equal defects and zero false-unequal ones.
+  It is also 17% faster on the object path (168.5µs → 140.0µs over 1,000-row
+  entity arrays, 14.4ns per object node), and it can no longer throw out of a
+  write when handed a hostile Proxy. If you were relying on a class instance
+  comparing equal to its plain-object twin, pass `compared()` on that leaf.
+  Rationale and measurements: RFC 0013 §5.1.
+
 - **`@signaltree/enterprise` is no longer published.** Deprecated in 13.5.0 and
   removed in 14.0.0. Its replacement is `tree.updateAndReport()` in core, which
   needs no enhancer, adds no bundle, and measured faster in every workload — the

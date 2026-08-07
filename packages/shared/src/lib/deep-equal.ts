@@ -180,14 +180,46 @@ function equalsInner(
   // comparison below would find "no differences" and call them EQUAL, silently
   // swallowing a malformed payload AND honestly reporting it as no change.
   //
-  // Gated on "not two ordinary objects" so the common case — two plain objects
-  // — never pays for the two `Object.prototype.toString` calls, which are the
-  // expensive part.
-  if (
-    (Object.getPrototypeOf(a) !== Object.prototype ||
-      Object.getPrototypeOf(b) !== Object.prototype) &&
-    Object.prototype.toString.call(a) !== Object.prototype.toString.call(b)
-  ) {
+  // One property read, not two `getPrototypeOf` calls plus two
+  // `Object.prototype.toString` calls. `.constructor` is an ordinary inherited
+  // read that V8 inline-caches; `getPrototypeOf` is a runtime call it does not.
+  // MEASURED over 1,000-row entity arrays, min of four alternating rounds:
+  // 168.5us -> 140.0us, 17% off the object path, 14.4ns per object node. A
+  // variant comparing the two prototypes to each other instead of to
+  // `Object.prototype` measured 1% SLOWER, which is what identifies the cost as
+  // the runtime calls rather than the shape of the comparison.
+  //
+  // The `try` costs nothing measurable (140.0us with, 139.7us without — V8 does
+  // not penalise a non-throwing try) and it buys a real guarantee: a Proxy with
+  // a throwing `get` trap cannot escape through the comparator. This is a
+  // signal's `equal`, so a throw here does not fail a comparison, it fails the
+  // WRITE. The gate this replaced could itself throw, on a Proxy trapping
+  // `getPrototypeOf` — so throw surface goes DOWN, not up.
+  //
+  // This is stricter than the gate it replaces, in four cases, all of which
+  // flip from "equal" to "not equal":
+  //
+  //     class instance vs plain object, same fields   was true, now false
+  //     Object.create(null) vs {}, same keys          was true, now false
+  //     cross-realm {} vs local {}                    was true, now false
+  //     Object.create(Date.prototype) vs {}           was true, now false
+  //
+  // Every one of those moves in the SAFE direction. For a signal's `equal`,
+  // "wrongly unequal" costs a redundant notification; "wrongly equal" DROPS THE
+  // WRITE and nothing downstream ever learns the state changed. This comparator
+  // has already shipped two false-equal defects (Errors, and inherited keys via
+  // `in`) and zero false-unequal ones, which is the asymmetry the gate is
+  // chosen against. The last case is a strict correctness improvement: a
+  // prototype-forged Date has no [[DateValue]], so `toString` reported it as a
+  // plain object and it compared equal to `{}`.
+  try {
+    if (
+      (a as { constructor?: unknown }).constructor !==
+      (b as { constructor?: unknown }).constructor
+    ) {
+      return false;
+    }
+  } catch {
     return false;
   }
 
