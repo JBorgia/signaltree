@@ -18,6 +18,30 @@ const { execSync } = require('child_process');
 console.log('🌲 Tree-Shaking Effectiveness Test\n');
 console.log('='.repeat(70));
 
+/**
+ * `--self-test` proves the checker can fail, by feeding it a case whose code
+ * imports the very thing the case declares must be absent.
+ *
+ * The gate had no self-test on the grounds that it "builds its own fixtures, so
+ * there is nothing to mutate". That reasoning is what let it sit in the suite
+ * while it could not fail at all: it had no `process.exit`, so a detected
+ * failure printed a banner and returned success. If a tool builds its own
+ * inputs, the self-test builds a BAD one.
+ */
+const SELF_TEST = process.argv.includes('--self-test');
+
+const SELF_TEST_CASE = {
+  name: 'SELF-TEST — deliberately imports what it forbids',
+  code: `
+      import { signalTree, devTools } from '@signaltree/core';
+      const tree = signalTree({ count: 0 }).with(devTools());
+    `,
+  expectedFiles: ['signal-tree.js'],
+  // devtools IS imported above, so a working checker must report this case as
+  // failing. If it passes, the detection is broken.
+  shouldNotInclude: ['devtools'],
+};
+
 const testCases = [
   {
     name: 'Core only (signalTree + basic utils)',
@@ -147,7 +171,9 @@ console.log('\n📊 Testing Different Import Patterns:\n');
 
 const results = [];
 
-testCases.forEach((testCase, index) => {
+const CASES = SELF_TEST ? [SELF_TEST_CASE] : testCases;
+
+CASES.forEach((testCase, index) => {
   console.log(`${index + 1}. ${testCase.name}`);
   console.log('   Code:');
   testCase.code
@@ -222,3 +248,24 @@ if (allPassed) {
 }
 
 console.log();
+
+// EXIT NON-ZERO ON FAILURE.
+//
+// This script had no `process.exit` at all. It computed `allPassed`, printed
+// "Tree-shaking has ISSUES", and exited 0 — so every caller, including the gate
+// suite it was added to, saw success while the banner said the opposite. A
+// check that reports a failure it cannot signal is a check nothing acts on.
+if (SELF_TEST) {
+  // Inverted: the planted case MUST be reported as failing.
+  const detected = !allPassed;
+  console.log(
+    detected
+      ? '✓ Self-test passed: the checker detects code that pulls in a forbidden module.'
+      : '✗ Self-test FAILED: a case importing a forbidden module was reported as clean.'
+  );
+  process.exit(detected ? 0 : 1);
+}
+
+if (!allPassed) {
+  process.exit(1);
+}

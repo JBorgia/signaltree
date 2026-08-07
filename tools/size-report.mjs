@@ -160,6 +160,24 @@ for (const [label, code] of COMBOS) {
   out.combos.push({ feature: label, totalKB: +k.toFixed(2), deltaKB: +(k - base).toFixed(2) });
 }
 
+/**
+ * A measured size of ~zero means the build is empty, not that the library is
+ * free.
+ *
+ * The only guard here was `existsSync` on the built barrel, and an EMPTY file
+ * exists. A truncated or failed build therefore produced a size table full of
+ * near-zero numbers and exited 0 — a reporter's worst failure mode, because the
+ * output looks like a spectacular result rather than a broken run.
+ */
+if (!(base > 0.5)) {
+  console.error(
+    `\n✗ the bare signalTree bundle measured ${base.toFixed(2)}KB gzip.\n` +
+      `  That is not a real measurement — the built barrel is empty or truncated.\n` +
+      `  Rebuild with \`nx run-many -t build --all\` before trusting any number here.`
+  );
+  process.exit(1);
+}
+
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify(out, null, 2));
 } else {

@@ -131,7 +131,20 @@ const GATES = [
     // the OUTPUT, so there is no single input file whose corruption it must
     // catch. Proving it would mean shipping a deliberately unfoldable fixture
     // through the same pipeline — worth doing, not yet done.
-    unproven: 'asserts on a bundle it builds itself; needs a fixture, not a file mutation',
+    // Proven by its own --self-test gate below: if a tool builds its own
+    // inputs, the self-test builds a BAD one.
+    provenBy: 'devmode-foldable:self',
+  },
+  {
+    name: 'devmode-foldable:self',
+    covers: 'the foldability checker detects a surviving literal AND a non-shrinking bundle',
+    cmd: ['node', 'tools/check-devmode-foldable.mjs', '--self-test'],
+    needsBuild: true,
+    mutation: {
+      file: 'tools/check-devmode-foldable.mjs',
+      find: "const WARN_ONLY_CODES = ['ST2001', 'ST2002', 'ST2003', 'ST2007'];",
+      replace: 'const WARN_ONLY_CODES = [];',
+    },
   },
   {
     name: 'guardrails-exports',
@@ -229,21 +242,54 @@ const GATES = [
     covers: 'an unused enhancer does not survive into a consumer bundle',
     cmd: ['node', 'scripts/test-tree-shaking.js'],
     needsBuild: true,
-    unproven: 'builds its own fixtures; needs a fixture, not a file mutation',
+    provenBy: 'tree-shaking:self',
+  },
+  {
+    name: 'tree-shaking:self',
+    covers: 'the tree-shaking checker detects code pulling in a forbidden module',
+    cmd: ['node', 'scripts/test-tree-shaking.js', '--self-test'],
+    needsBuild: true,
+    // Targets the DETECTION, not the reporting. A first attempt replaced the
+    // exit code with a constant 0, which is tautological — breaking how a check
+    // reports proves nothing about whether it can see anything. Emptying the
+    // forbidden list means the planted case no longer trips detection, which is
+    // the failure that matters.
+    mutation: {
+      file: 'scripts/test-tree-shaking.js',
+      find: "  shouldNotInclude: ['devtools'],\n};",
+      replace: '  shouldNotInclude: [],\n};',
+    },
   },
   {
     name: 'sanity',
     covers: 'workspace smoke/parity checks',
     cmd: ['node', 'scripts/sanity-checks.js'],
     needsBuild: true,
-    unproven: 'a broad smoke script; no single input whose corruption it must catch',
+    // Four file-exists/contains greps. Largely redundant — if signal-tree.ts
+    // went missing, typecheck, build and 1,500 tests would all fail long before
+    // a string grep did — but it costs ~0.2s and it can now prove itself.
+    mutation: {
+      file: 'packages/enterprise/src/lib/enterprise-enhancer.ts',
+      generate: (original) => original.replace(/enterprise/g, 'renamedByGateSelfTest'),
+    },
   },
   {
     name: 'package-hygiene',
     covers: 'no junk in any tarball, and every declared entry is present',
     cmd: ['node', 'scripts/verify-package-hygiene.js'],
     needsBuild: true,
-    unproven: 'inspects packed tarballs; a mutation would need a fixture package',
+    provenBy: 'package-hygiene:self',
+  },
+  {
+    name: 'package-hygiene:self',
+    covers: 'the hygiene checker flags junk and a missing required entry',
+    cmd: ['node', 'scripts/verify-package-hygiene.js', '--self-test'],
+    needsBuild: true,
+    mutation: {
+      file: 'scripts/verify-package-hygiene.js',
+      find: "  { re: /\\.spec\\./, why: 'test spec' },",
+      replace: '',
+    },
   },
   {
     name: 'readme-apis',
@@ -363,14 +409,27 @@ const GATES = [
     covers: 'cross-library gzip cost is measurable for both libraries',
     cmd: ['node', 'tools/size-compare.mjs'],
     needsBuild: true,
-    unproven: 'reports sizes; no threshold to breach — the budget gate owns ours',
+    // It printed ERROR for a failed build and exited 0 until now — the same
+    // defect bench-compare and memory-compare had. A size claim published from
+    // a table with the inconvenient row silently missing is the risk.
+    mutation: {
+      file: 'tools/size-compare.mjs',
+      find: "  import { createStore, withProps, select } from '@ngneat/elf';",
+      replace: "  import { nothing } from '@ngneat/this-package-does-not-exist';",
+    },
   },
   {
     name: 'size-report',
     covers: 'every published package builds and its tree-shaken size is measurable',
     cmd: ['node', 'tools/size-report.mjs'],
     needsBuild: true,
-    unproven: 'reports sizes; the budget assertion lives in bundle-budget below',
+    // It refuses to report against a missing build rather than printing zeros,
+    // which is the failure mode that matters for a REPORTER: a size table built
+    // from nothing looks like a very good result.
+    mutation: {
+      file: 'dist/packages/core/dist/index.js',
+      generate: () => '',
+    },
   },
   {
     name: 'publish-artifacts',
@@ -485,6 +544,16 @@ if (has('--self-test')) {
   console.log(`\nGate self-test — each gate must FAIL against its own mutation\n`);
   for (const gate of selected) {
     if (!gate.mutation) {
+      if (gate.provenBy) {
+        // Not unproven — proven INDIRECTLY, by a companion gate that mutates the
+        // checker itself. Counted as proven so the summary is not pessimistic,
+        // and named so the link is visible rather than assumed.
+        results.push({ gate, state: 'proven-by' });
+        console.log(
+          `  · ${gate.name.padEnd(20)} proven via ${gate.provenBy} ✓`
+        );
+        continue;
+      }
       results.push({ gate, state: 'unproven' });
       console.log(`  ~ ${gate.name.padEnd(20)} UNPROVEN — ${gate.unproven}`);
       continue;
@@ -532,9 +601,10 @@ const count = (s) => results.filter((r) => r.state === s).length;
 console.log(`\n${'─'.repeat(78)}`);
 
 if (has('--self-test')) {
-  const proven = count('proven');
+  const proven = count('proven') + count('proven-by');
   console.log(
-    `${proven}/${selected.length} gates PROVEN able to fail. ` +
+    `${proven}/${selected.length} gates PROVEN able to fail ` +
+      `(${count('proven-by')} indirectly, via a companion self-test gate). ` +
       `${count('unproven')} unproven, ${count('blind')} blind, ${count('error')} errored.`
   );
   for (const r of results.filter((r) => r.state === 'unproven')) {

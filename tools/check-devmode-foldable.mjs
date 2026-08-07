@@ -113,6 +113,58 @@ function findDiagnostics(text) {
   return WARN_ONLY_CODES.filter((code) => text.includes(`[${code}]`));
 }
 
+/**
+ * `--self-test` proves this checker can fail, by pushing two DELIBERATELY broken
+ * fixtures through the very same build pipeline.
+ *
+ * This gate had no self-test for a while, and the reason given was that it
+ * "asserts on a bundle it builds itself, so there is no input file to mutate".
+ * That was true and it was also the wrong conclusion: if the tool builds its own
+ * inputs, the self-test builds a BAD one. Both failure modes it claims to catch
+ * are checked here —
+ *
+ *   1. a diagnostic literal that survives `ngDevMode: false`, and
+ *   2. a bundle that does not shrink at all, which is what happens when the
+ *      guards stop being statically foldable.
+ *
+ * A checker that cannot detect either is reported as broken.
+ */
+if (process.argv.includes('--self-test')) {
+  console.log('Self-test — the checker must FAIL against deliberately broken fixtures\n');
+  let bad = 0;
+
+  // 1. An advisory code that cannot fold: a bare string literal survives every
+  //    build, so findDiagnostics must see it.
+  const survives = await measure(
+    'selftest-literal',
+    'globalThis.__sink = "[ST2001] planted, cannot fold";',
+    true
+  );
+  const caughtLiteral = findDiagnostics(survives.text).includes('ST2001');
+  console.log(
+    `  ${caughtLiteral ? '✓' : '✗'} detects an advisory literal surviving ngDevMode=false`
+  );
+  if (!caughtLiteral) bad++;
+
+  // 2. A bundle with no dev code at all does not shrink, which is the signal
+  //    that the guards stopped folding.
+  const inert = 'globalThis.__sink = 1;';
+  const devInert = await measure('selftest-inert', inert, false);
+  const prodInert = await measure('selftest-inert', inert, true);
+  const caughtNoShrink = !(devInert.gzipKB - prodInert.gzipKB > 0.01);
+  console.log(
+    `  ${caughtNoShrink ? '✓' : '✗'} detects a bundle that does not shrink at all`
+  );
+  if (!caughtNoShrink) bad++;
+
+  console.log(
+    bad
+      ? `\n✗ ${bad} self-test failure(s) — this checker cannot be trusted.`
+      : '\n✓ Self-test passed: both failure modes are detectable.'
+  );
+  process.exit(bad ? 1 : 0);
+}
+
 console.log('🔍 Verifying dev-only code folds when ngDevMode is defined false\n');
 
 let failed = false;

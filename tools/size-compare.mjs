@@ -183,3 +183,23 @@ console.log(
     '  selectEntity returns an Observable and ours returns a signal, so the\n' +
     '  consumer pays differently downstream. That cost is not in these numbers.'
 );
+
+/**
+ * A measurement that failed to build fails the process.
+ *
+ * It printed `ERROR` in the table and exited 0, which is the same defect
+ * bench-compare and memory-compare both had: a comparison missing half its rows
+ * looked, to anything automated, exactly like a complete one. Here it is worse
+ * than cosmetic — a silent build failure would let a size claim be published
+ * from a table with the inconvenient row missing.
+ */
+const failedMeasurements = rows.flatMap((r) =>
+  Object.entries(r)
+    .filter(([k, v]) => k !== 'capability' && typeof v !== 'number')
+    .map(([k, v]) => `${r.capability} / ${k}: ${v?.error ?? 'not measured'}`)
+);
+if (failedMeasurements.length) {
+  console.error(`\n${failedMeasurements.length} measurement(s) FAILED:`);
+  for (const f of failedMeasurements) console.error(`  ✗ ${f}`);
+  process.exit(1);
+}
