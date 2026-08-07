@@ -3,6 +3,17 @@ export default {
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/packages/ng-forms',
+  // Without these, `nx test ng-forms --coverage` printed NOTHING — jest needs to
+  // be told what to instrument and how to report. Every other package reported a
+  // number; this one reported silence, and a number nobody can see is a number
+  // nobody defends.
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.spec.ts',
+    '!src/test-setup.ts',
+    '!src/index.ts',
+  ],
+  coverageReporters: ['text-summary', 'text', 'json'],
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
     '^@signaltree/schema$': '<rootDir>/../../packages/schema/src/index.ts',
