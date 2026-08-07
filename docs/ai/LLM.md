@@ -60,7 +60,7 @@ store.$.settings.theme.set('dark');
 **v6 (old):**
 
 ```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
 const store = signalTree({
   users: entityMap<User, number>(),
@@ -768,7 +768,7 @@ describe('UsersComponent', () => {
 ### Step 1: Remove `.with(entities())`
 
 ```diff
-- import { signalTree, entityMap, entities } from '@signaltree/core';
+- import { signalTree, entityMap } from '@signaltree/core';
 + import { signalTree, entityMap } from '@signaltree/core';
 
 const store = signalTree({

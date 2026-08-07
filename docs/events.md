@@ -547,11 +547,11 @@ export class TradeSubscriber extends BaseSubscriber {
 
 ```typescript
 import { Injectable, Inject } from '@nestjs/common';
-import { EventBus, EVENT_BUS } from '@signaltree/events/nestjs';
+import { EventBusService } from '@signaltree/events/nestjs';
 
 @Injectable()
 export class TradeService {
-  constructor(@Inject(EVENT_BUS) private readonly eventBus: EventBus) {}
+  constructor(private readonly eventBus: EventBusService) {}
 
   async createProposal(dto: CreateProposalDto): Promise<Trade> {
     const trade = await this.repository.create(dto);

@@ -207,7 +207,7 @@ Every SignalTree application follows one rule. Once you know it, every structura
 | **REACT** | `.with(effects()) → tree.effect()` | State changes are the events — no actions, no dispatch                            |
 
 ```typescript
-import { signalTree, entityMap, effects } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
 // READ — all computed on the tree
 // REACT — .with(effects()) adds tree.effect() and tree.subscribe()
@@ -1812,7 +1812,7 @@ export class PlantEditorComponent {
 **Option B: Use ng-forms Integration**
 
 ```typescript
-import { signalForm } from '@signaltree/ng-forms';
+import { signalForm } from '@signaltree/ng-forms/signals';
 
 @Component({...})
 export class PlantEditorComponent {

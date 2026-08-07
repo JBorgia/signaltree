@@ -101,11 +101,46 @@ if (SURFACE.size === 0) {
   process.exit(1);
 }
 
+/**
+ * Documents that DESCRIBE THE PAST are exempt, and the distinction is the whole
+ * reason this check can be green.
+ *
+ * A migration guide's "before" block is *supposed* to name an API that no longer
+ * exists — that is what the reader is migrating away from. Same for an RFC, an
+ * audit, or a learnings write-up: they record what was true when written. Twenty
+ * of the first thirty-one hits were exactly this, and "fixing" them would have
+ * meant deleting the evidence a migration guide exists to show.
+ *
+ * What is NOT exempt is anything a reader follows as current advice — the
+ * guides, the architecture docs, and above all `docs/ai/**`, which becomes the
+ * `llms.txt` that ships in the core tarball. A dead API there is one an agent
+ * will generate.
+ */
+const HISTORICAL_DIRS = new Set(['archive', 'rfcs', 'audits', 'learnings']);
+const HISTORICAL_FILE = /migration|MIGRATION|CHANGELOG/;
+
+/** Everything a user or an agent reads: shipped READMEs plus all of docs/. */
+function markdownUnder(dir, out = []) {
+  const abs = join(ROOT, dir);
+  if (!existsSync(abs)) return out;
+  for (const name of readdirSync(abs, { withFileTypes: true })) {
+    const rel = `${dir}/${name.name}`;
+    if (name.isDirectory()) {
+      if (HISTORICAL_DIRS.has(name.name) || name.name === 'node_modules') continue;
+      markdownUnder(rel, out);
+    } else if (name.name.endsWith('.md') && !HISTORICAL_FILE.test(rel)) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
 const READMES = [
   'README.md',
   ...readdirSync(join(ROOT, 'packages'))
     .map((p) => `packages/${p}/README.md`)
     .filter((f) => existsSync(join(ROOT, f))),
+  ...markdownUnder('docs'),
 ];
 
 /** `import { a, b as c } from '@signaltree/x';` inside a fenced block. */

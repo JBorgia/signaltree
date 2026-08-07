@@ -41,8 +41,8 @@ function myEnhancer(config?: MyConfig) {
 ## Imports
 
 ```typescript
-import type { ISignalTree, EnhancerMeta } from '@signaltree/core';
-import { ENHANCER_META } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
+import { ENHANCER_META, type EnhancerMeta } from '@signaltree/core/authoring';
 ```
 
 ## Usage
