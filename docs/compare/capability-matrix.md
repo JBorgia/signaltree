@@ -8,16 +8,16 @@ Every row is read from the **installed `.d.ts` of the shipped package**, not fro
 a README or from memory of a library's marketing. Reproduce it with
 `node tools/api-surface.mjs`. Versions audited:
 
-| library | version | unique exports | entry points |
-| --- | --- | --- | --- |
-| `@signaltree/core` | 14.0.0-rc.1 | 191 (root: 154) | 6 |
-| `@ngrx/signals` | 21.1.1 | 73 | 5 |
-| `@ngrx/store` | 21.1.1 | 79 | 2 |
-| `@ngneat/elf` | 2.5.1 | 40 | 1 |
-| `@ngneat/elf-entities` | 5.0.2 | 61 | 1 |
-| `@ngneat/elf-state-history` | 1.4.0 | 2 | 1 |
-| `@ngxs/store` | 20.1.0 | 131 | 6 |
-| `@datorama/akita` | 8.0.1 | 186 | 1 (unmaintained upstream) |
+| library                     | version     | unique exports  | entry points              |
+| --------------------------- | ----------- | --------------- | ------------------------- |
+| `@signaltree/core`          | 14.0.0-rc.1 | 191 (root: 154) | 6                         |
+| `@ngrx/signals`             | 21.1.1      | 73              | 5                         |
+| `@ngrx/store`               | 21.1.1      | 79              | 2                         |
+| `@ngneat/elf`               | 2.5.1       | 40              | 1                         |
+| `@ngneat/elf-entities`      | 5.0.2       | 61              | 1                         |
+| `@ngneat/elf-state-history` | 1.4.0       | 2               | 1                         |
+| `@ngxs/store`               | 20.1.0      | 131             | 6                         |
+| `@datorama/akita`           | 8.0.1       | 186             | 1 (unmaintained upstream) |
 
 Counts are the UNION across every subpath in each package's exports map, types
 included — surface area, not features.
@@ -25,7 +25,7 @@ included — surface area, not features.
 > **An earlier revision of this table said 248 for us and 56 for elf.** Both were
 > wrong, and unevenly so, which is worse than being wrong. The scan followed
 > NAMED re-exports into the modules behind them, so `export { signalTree } from
-> './lib/signal-tree'` — one public symbol — pulled in everything that module
+'./lib/signal-tree'` — one public symbol — pulled in everything that module
 > exports. `@ngrx` and `@ngxs` ship single-file rolled-up declaration bundles
 > with nothing to recurse into, so they were counted honestly while we and elf
 > were inflated. The headline was comparing our internals against their public
@@ -54,55 +54,55 @@ deliberate declines, and the analysis below says which and why.
 
 ### Collections
 
-| capability | SignalTree | `@ngrx/signals` | elf | Akita | NGXS |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| CRUD (add/update/remove/upsert/setAll) | ✅ | ✅ | ✅ | ✅ | 🟡 |
-| **O(1) per-entity read that invalidates only that row** | ✅ | ❌ | ✅ | 🟡 | ❌ |
-| Predicate update / remove | ✅ | ✅ | ✅ | ✅ | 🟡 |
-| Predicate **select / count** | 🟡 | ❌ | ✅ | ✅ | 🟡 |
-| `prepend` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| **Active-entity tracking** | ❌ | ❌ | ✅ | ✅ | ❌ |
-| **Per-entity UI state, kept off the domain entity** | ❌ | ❌ | ✅ | ✅ | ❌ |
-| **Id migration (temp id → server id)** | ❌ | ❌ | ✅ | 🟡 | ❌ |
-| Reorder / move | ❌ | ❌ | ✅ | 🟡 | ❌ |
-| Bounded / FIFO collection | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Union / merge two collections | 🟡 | ❌ | ✅ | 🟡 | ❌ |
-| First / last | 🟡 | ❌ | ✅ | ✅ | 🟡 |
-| Multiple named collections in one store | ✅ | ✅ | ✅ | ❌ | ✅ |
-| **Pagination** | ❌ | ❌ | ❌ | ✅ | ❌ |
+| capability                                              |  SignalTree   | `@ngrx/signals` | elf | Akita | NGXS |
+| ------------------------------------------------------- | :-----------: | :-------------: | :-: | :---: | :--: |
+| CRUD (add/update/remove/upsert/setAll)                  |      ✅       |       ✅        | ✅  |  ✅   |  🟡  |
+| **O(1) per-entity read that invalidates only that row** |      ✅       |       ❌        | ✅  |  🟡   |  ❌  |
+| Predicate update / remove                               |      ✅       |       ✅        | ✅  |  ✅   |  🟡  |
+| Predicate **select / count**                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
+| `prepend`                                               | ✅ _(14.0.0)_ |       ✅        | ✅  |  ✅   |  ✅  |
+| **Active-entity tracking**                              | ✅ _(14.0.0)_ |       ❌        | ✅  |  ✅   |  ❌  |
+| **Per-entity UI state, kept off the domain entity**     |      ❌       |       ❌        | ✅  |  ✅   |  ❌  |
+| **Id migration (temp id → server id)**                  | ✅ _(14.0.0)_ |       ❌        | ✅  |  🟡   |  ❌  |
+| Reorder / move                                          |      ❌       |       ❌        | ✅  |  🟡   |  ❌  |
+| Bounded / FIFO collection                               |      ❌       |       ❌        | ✅  |  ❌   |  ❌  |
+| Union / merge two collections                           |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
+| First / last                                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
+| Multiple named collections in one store                 |      ✅       |       ✅        | ✅  |  ❌   |  ✅  |
+| **Pagination**                                          |      ❌       |       ❌        | ❌  |  ✅   |  ❌  |
 
 ### History, async, forms
 
-| capability | SignalTree | `@ngrx/signals` | elf | Akita | NGXS |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| Undo / redo | ✅ | ❌ | ✅ | ✅ | 🟡 |
-| **Reactive `canUndo`/`canRedo`** | ✅ *(fixed in rc.1)* | ❌ | ✅ | ✅ | 🟡 |
-| Jump to index | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Pause / resume recording** | ❌ | ❌ | ✅ | ✅ | ❌ |
-| **Comparator to skip uninteresting entries** | 🟡 | ❌ | ✅ | ✅ | ❌ |
-| **Per-entity undo/redo** | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Loading / error status | ✅ | 🟡 | 🟡 | ✅ | 🟡 |
-| Async source / query primitive | ✅ | 🟡 | ❌ | 🟡 | ❌ |
-| **Request caching / dedup** | 🟡 | ❌ | ❌ | ✅ | ❌ |
-| Optimistic updates | 🟡 *(events pkg)* | ❌ | ❌ | 🟡 | ❌ |
-| Form model + validators | ✅ | ❌ | ❌ | 🟡 | ❌ |
-| Form wizard | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Dirty checking** | 🟡 *(forms only)* | ❌ | ❌ | ✅ | ❌ |
+| capability                                   |      SignalTree      | `@ngrx/signals` | elf | Akita | NGXS |
+| -------------------------------------------- | :------------------: | :-------------: | :-: | :---: | :--: |
+| Undo / redo                                  |          ✅          |       ❌        | ✅  |  ✅   |  🟡  |
+| **Reactive `canUndo`/`canRedo`**             | ✅ _(fixed in rc.1)_ |       ❌        | ✅  |  ✅   |  🟡  |
+| Jump to index                                |          ✅          |       ❌        | ✅  |  ✅   |  ❌  |
+| **Pause / resume recording**                 |    ✅ _(14.0.0)_     |       ❌        | ✅  |  ✅   |  ❌  |
+| **Comparator to skip uninteresting entries** |    ✅ _(14.0.0)_     |       ❌        | ✅  |  ✅   |  ❌  |
+| **Per-entity undo/redo**                     |          ❌          |       ❌        | ✅  |  ✅   |  ❌  |
+| Loading / error status                       |          ✅          |       🟡        | 🟡  |  ✅   |  🟡  |
+| Async source / query primitive               |          ✅          |       🟡        | ❌  |  🟡   |  ❌  |
+| **Request caching / dedup**                  |          ✅          |       ❌        | ❌  |  ✅   |  ❌  |
+| Optimistic updates                           |  🟡 _(events pkg)_   |       ❌        | ❌  |  🟡   |  ❌  |
+| Form model + validators                      |          ✅          |       ❌        | ❌  |  🟡   |  ❌  |
+| Form wizard                                  |          ✅          |       ❌        | ❌  |  ❌   |  ❌  |
+| **Dirty checking**                           |  🟡 _(forms only)_   |       ❌        | ❌  |  ✅   |  ❌  |
 
 ### Infrastructure
 
-| capability | SignalTree | `@ngrx/signals` | elf | Akita | NGXS |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| Persistence | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Devtools | ✅ | 🟡 | ✅ | ✅ | ✅ |
-| Batching / transactions | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| **Action lifecycle observability** | 🟡 | ✅ | 🟡 | 🟡 | ✅ |
-| **Plugin architecture with a public contract** | 🟡 | ✅ | ✅ | ✅ | ✅ |
-| **Global unhandled-error hook** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Testing utilities | 🟡 | 🟡 | 🟡 | ✅ | ✅ |
-| SSR / transfer state | ❌ | ❌ | ❌ | ❌ | 🟡 |
-| Diagnostics with stable codes | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Granular signals for arbitrary NESTED state** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| capability                                      |  SignalTree   | `@ngrx/signals` | elf | Akita | NGXS |
+| ----------------------------------------------- | :-----------: | :-------------: | :-: | :---: | :--: |
+| Persistence                                     |      ✅       |       ❌        | ✅  |  ✅   |  ✅  |
+| Devtools                                        |      ✅       |       🟡        | ✅  |  ✅   |  ✅  |
+| Batching / transactions                         |      ✅       |       🟡        | ✅  |  ✅   |  🟡  |
+| **Action lifecycle observability**              |      🟡       |       ✅        | 🟡  |  🟡   |  ✅  |
+| **Plugin architecture with a public contract**  |      🟡       |       ✅        | ✅  |  ✅   |  ✅  |
+| **Global unhandled-error hook**                 | ✅ _(14.0.0)_ |       ❌        | ❌  |  ❌   |  ✅  |
+| Testing utilities                               |      🟡       |       🟡        | 🟡  |  ✅   |  ✅  |
+| SSR / transfer state                            |      ❌       |       ❌        | ❌  |  ❌   |  🟡  |
+| Diagnostics with stable codes                   |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
+| **Granular signals for arbitrary NESTED state** |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
 
 ---
 
@@ -124,6 +124,22 @@ competitor's type signature and asking why theirs was shaped differently.
 
 ## The gaps worth closing, ranked — with the implementation trade-off
 
+> **Five of these eight SHIPPED in 14.0.0-rc.1, and this document did not say so
+> for a day.** Items 1, 3, 4, 7 and 8 were written as the input to that work; the
+> commits that closed them (`62af19d8`, `4e6b3ba0`) landed the same day, and this
+> file was edited **afterwards** — twice — without the grid being re-checked.
+> Each now carries its shipped API and the date.
+>
+> Worth recording because the failure is structural, not careless. Every gate in
+> this repo is a _no-dangling-reference_ check: `readme-apis` and `lint-skills`
+> assert that a symbol a doc NAMES exists. **A ❌ is a claim about absence, and
+> you cannot grep for a symbol that is not mentioned** — so thirty gates were
+> blind to it by construction. `49dd9ffb` caught exactly this class for the
+> AI-priming surfaces, by hand, against a hand-listed set of files; this one was
+> not on the list. `tools/check-release-claims.mjs` now derives the symbol set
+> from the API diff instead of a maintained list, so the sweep cannot miss a
+> surface again.
+
 ### 1. Active-entity tracking — elf, Akita
 
 `setActiveId(id)`, `selectActiveEntity()`, `withActiveIds` for multi-select.
@@ -139,12 +155,15 @@ relative offset (`next`/`prev`) — better than it sounds, because "select the
 next row" otherwise means the caller re-implements bounds checking.
 
 **Trade-off:** the entity must be looked up by id on read, so the derived value
-is only as granular as the lookup. Ours would be *better* here than elf's — we
+is only as granular as the lookup. Ours would be _better_ here than elf's — we
 would build it on `byId()`, which is O(1) and invalidates one row, so the active
 entity would be a genuinely fine-grained signal rather than a filtered stream.
 
-**Verdict: adopt.** Small, high-frequency, and our primitives make it a better
-version rather than a copy.
+**Verdict: SHIPPED in 14.0.0-rc.1** (`62af19d8`) as `activeId` / `activeEntity` /
+`setActiveId` / `clearActiveId`. Built the better way predicted above:
+`activeEntity` resolves through `byId`, so it is O(1) and invalidates only when
+THAT row changes — a hand-rolled `computed(() => all().find(...))` recomputes on
+every collection change. Akita's relative offset (`next`/`prev`) was not taken.
 
 ### 2. Per-entity UI state — elf `withUIEntities`, Akita `EntityUIStore`
 
@@ -162,7 +181,7 @@ a sharp edge, not a free win.
 
 **Verdict: adopt the concept, not the API.** We already have the better
 mechanism: a sibling `entityMap` in the same tree, and `stored()` decides what
-persists. What we lack is the *guidance* — this belongs in docs and possibly a
+persists. What we lack is the _guidance_ — this belongs in docs and possibly a
 thin helper, not a new primitive.
 
 ### 3. Id migration — elf `updateEntitiesIds`
@@ -179,7 +198,11 @@ state keyed by the old id. We ship `OptimisticUpdateManager` in
 `WeakRef` node cache and any consumer holding a node from `byId(tempId)`. Doing
 it correctly means re-keying those, not just moving the storage entry.
 
-**Verdict: adopt.** It closes a hole in a feature we already ship.
+**Verdict: SHIPPED in 14.0.0-rc.1** (`62af19d8`) as `changeId(from, to)`. It
+states its own limitation rather than hiding it: a node already HELD from the old
+id resolves to `undefined`, because a node closes over its id and aliasing the old
+key would let a later `addOne({ id: oldId })` share one signal between two
+entities.
 
 ### 4. Pause / resume + comparator on history — elf, Akita
 
@@ -188,14 +211,18 @@ it correctly means re-keying those, not just moving the storage entry.
 **Why:** without pause, a bulk import writes a hundred history entries and the
 user's next undo reverts one row of it. Our `maxHistorySize` bounds the memory
 but does not make undo mean anything sensible. We have reference-dedup, which
-skips *identical* snapshots — that is narrower than a comparator, which lets the
+skips _identical_ snapshots — that is narrower than a comparator, which lets the
 app decide that a change is uninteresting.
 
 **Trade-off:** a comparator runs on every recorded write, so a careless one is
 an O(state) walk per write — exactly the cost the reference-dedup was introduced
 to remove. It should be opt-in and documented as such.
 
-**Verdict: adopt pause/resume. Adopt the comparator with the cost stated.**
+**Verdict: SHIPPED in 14.0.0-rc.1** (`4e6b3ba0`) as `pauseRecording()` /
+`resumeRecording()` / `isRecordingPaused()`, plus `timeTravel({ shouldSkip })`.
+The cost IS stated, in the config's own doc comment. `isRecordingPaused` is
+reactive — the `canUndo` lesson applied before shipping rather than after.
+`pauseRecording` is checked before any snapshot work, so pausing costs nothing.
 
 ### 5. Pagination — Akita only
 
@@ -227,7 +254,7 @@ only appeared once the tool enumerated every subpath in their exports map.
 
 **Why it is more than devtools:** it is the seam for cross-cutting concerns —
 analytics, retry, a global spinner, error reporting — without wrapping every
-call site. Our `PathNotifier` sees *changes*, which is not the same: it cannot
+call site. Our `PathNotifier` sees _changes_, which is not the same: it cannot
 distinguish "the save failed" from "nothing was written".
 
 **Trade-off:** it presumes actions. We do not have actions, and adding them to
@@ -243,7 +270,10 @@ closer to a `onAsyncSettled` hook than to NGXS actions.
 `NgxsUnhandledErrorHandler`. Nobody else has it, including us. An error thrown
 inside an effect or an async loader currently surfaces wherever it surfaces.
 
-**Verdict: adopt.** Small, and the absence is conspicuous once seen.
+**Verdict: SHIPPED in 14.0.0-rc.1** (`4e6b3ba0`) as `onTreeError` from
+`@signaltree/core/authoring`. Markers still handle their own errors exactly as
+before; this is additive, and a listener that throws cannot damage the operation
+that reported to it — that case is **ST2025**.
 
 ### 8. `prepend` — everyone except us
 
@@ -256,8 +286,9 @@ made it 4/4 against us.
 Chat logs, feeds, activity streams. `setAll([newRow, ...existing])` is
 O(collection) and rebuilds the id index; a prepend is neither.
 
-**Verdict: adopt.** Trivial, and being alone in lacking it is the strongest
-signal in the grid.
+**Verdict: SHIPPED in 14.0.0-rc.1** (`62af19d8`) as `prependOne` / `prependMany`.
+Reordering touches only the storage map's iteration order, so no per-entity signal
+is invalidated — prepending does not dirty any row's consumers.
 
 ---
 
@@ -269,11 +300,11 @@ The right question, and the grid above does not answer it. Three measurements do
 
 `node tools/size-compare.mjs` — same capability, same esbuild + gzip method.
 
-| capability | SignalTree | elf | |
-| --- | --- | --- | --- |
-| store + a few fields | 5.69 KB | **1.01 KB** | 5.6x |
-| entity collection, CRUD + read | 8.59 KB | **2.38 KB** | 3.6x |
-| entity collection + undo/redo | 10.33 KB | **2.84 KB** | 3.6x |
+| capability                     | SignalTree | elf         |      |
+| ------------------------------ | ---------- | ----------- | ---- |
+| store + a few fields           | 5.69 KB    | **1.01 KB** | 5.6x |
+| entity collection, CRUD + read | 9.18 KB    | **2.38 KB** | 3.9x |
+| entity collection + undo/redo  | 11.02 KB   | **2.84 KB** | 3.9x |
 
 With RxJS bundled — a signals-first app that would otherwise not carry it — elf's
 numbers become 4.24 / 5.54 / 5.94 KB, so the gap narrows to 1.3x–1.7x. It never
@@ -291,45 +322,46 @@ library's design gives it no advantage.**
 ### 3. On general state, the result inverts — by orders of magnitude
 
 The thesis is that only leaves are signals, branches are plain accessors, and a
-write is O(1) *regardless of state size*. Nothing had ever tested that against
+write is O(1) _regardless of state size_. Nothing had ever tested that against
 anyone. `node tools/bench-state-scale.mjs`, 200 writes, warmed, postconditioned,
 elf using its own `setProp`:
 
 **Write cost vs state size, no consumers attached** — nested shape, which is how
 an app is actually written and is much kinder to elf than flat root props:
 
-| state | SignalTree | elf | |
-| --- | --- | --- | --- |
-| 100 fields | 0.008 ms | 0.041 ms | 5x |
-| 1,000 fields | 0.006 ms | 0.366 ms | 60x |
-| 5,000 fields | 0.008 ms | 1.313 ms | 162x |
-| 10,000 fields | 0.006 ms | 1.079 ms | **~185x** |
+| state         | SignalTree | elf      |           |
+| ------------- | ---------- | -------- | --------- |
+| 100 fields    | 0.007 ms   | 0.039 ms | 5x        |
+| 1,000 fields  | 0.006 ms   | 0.315 ms | 52x       |
+| 5,000 fields  | 0.008 ms   | 1.275 ms | 160x      |
+| 10,000 fields | 0.006 ms   | 0.984 ms | **~166x** |
 
-*(Ranges are the spread across two full runs, which reproduce to within a few
+_(Ranges are the spread across two full runs, which reproduce to within a few
 percent. An earlier draft quoted 253x at 10,000 fields from a single run; the
 reproducible figure is ~176–196x. Same conclusion, smaller number, and the
-smaller number is the one that is true.)*
+smaller number is the one that is true.)_
 
 **SignalTree is flat.** 0.006 ms at 10,000 fields is the same as at 100. elf's
 cost is proportional to the slice it immutably copies, because that is what an
 immutable store does. On a flat shape — every field a root property — elf goes
-from 0.042 ms at 64 props to 20.9 ms at 1,024, a **2,832x** ratio, with a sharp
+from 0.039 ms at 64 props to 20.7 ms at 1,024, a **3,829x** ratio, with a sharp
 inflection between 64 and 128 that looks like V8 leaving its fast path for object
 spread.
 
 **Write cost vs live consumers**, 100 fields fixed:
 
-| consumers | SignalTree | elf | |
-| --- | --- | --- | --- |
-| 100 | 0.020 ms | 2.372 ms | 116x |
-| 1,000 | 0.046 ms | 21.328 ms | 464x |
-| 5,000 | 0.195 ms | 109.462 ms | **562x** |
+| consumers | SignalTree | elf        |          |
+| --------- | ---------- | ---------- | -------- |
+| 100       | 0.020 ms   | 2.253 ms   | 110x     |
+| 1,000     | 0.045 ms   | 20.175 ms  | 449x     |
+| 5,000     | 0.195 ms   | 95.730 ms  | **491x** |
 
 The mechanism, counted directly: with 1,000 selectors on nested state and one
 field changed, **elf executes 1,000 of 1,000 projection functions** and notifies
+
 1. SignalTree executes **1**. elf's `distinctUntilChanged` correctly suppresses
-the notification — nobody re-renders who shouldn't — but every selector still
-runs on every write.
+   the notification — nobody re-renders who shouldn't — but every selector still
+   runs on every write.
 
 ### So the honest positioning
 
@@ -361,10 +393,10 @@ elf ships **no signal API** (its only peer dependency is `rxjs`), but
 signal, so "signals elf" is one wrapper away. Measured: 1,000 consumers over
 nested state, 200 writes.
 
-| | time | projections run per write |
-| --- | --- | --- |
-| SignalTree, native signals | **0.070 ms** | 1 / 1000 |
-| elf + `toSignal` | **20.332 ms** | **1000 / 1000** |
+|                            | time          | projections run per write |
+| -------------------------- | ------------- | ------------------------- |
+| SignalTree, native signals | **0.070 ms**  | 1 / 1000                  |
+| elf + `toSignal`           | **20.332 ms** | **1000 / 1000**           |
 
 290x, and the projection count is unchanged. **`toSignal` changes the
 CONSUMPTION api and nothing else.** The cost lives in elf's store and pipe
@@ -384,10 +416,10 @@ versus many independent signals**, and it is upstream of how you consume it.
 A todo list: entity collection, a filter, a derived count, one editable row, and
 undo/redo. Every API below verified present in the installed packages.
 
-| | lines | imports | packages |
-| --- | --- | --- | --- |
-| SignalTree | **13** | **1** | **1** |
-| elf | 25 | 5 | 4 |
+|            | lines  | imports | packages |
+| ---------- | ------ | ------- | -------- |
+| SignalTree | **13** | **1**   | **1**    |
+| elf        | 25     | 5       | 4        |
 
 The line count is the least of it. The shape differs in three ways that persist
 no matter how the code is written:
@@ -412,13 +444,13 @@ surface (40 exports against our 154), and reducers that compose as plain data.
 
 Partly first-mover, but there is a harder reason visible in the manifests:
 
-| package | version | peer dependencies |
-| --- | --- | --- |
-| `@ngrx/store` | 21.1.1 | `@angular/core@^21.0.0`, rxjs |
-| `@ngrx/signals` | 21.1.1 | `@angular/core@^21.0.0`, rxjs |
-| `@ngneat/elf` | 2.5.1 | **rxjs only** |
-| `@ngneat/elf-entities` | 5.0.2 | elf, rxjs |
-| `@datorama/akita` | 8.0.1 | rxjs, tslib |
+| package                | version | peer dependencies             |
+| ---------------------- | ------- | ----------------------------- |
+| `@ngrx/store`          | 21.1.1  | `@angular/core@^21.0.0`, rxjs |
+| `@ngrx/signals`        | 21.1.1  | `@angular/core@^21.0.0`, rxjs |
+| `@ngneat/elf`          | 2.5.1   | **rxjs only**                 |
+| `@ngneat/elf-entities` | 5.0.2   | elf, rxjs                     |
+| `@datorama/akita`      | 8.0.1   | rxjs, tslib                   |
 
 **elf declares no relationship to Angular at all.** That is a deliberate design
 — it is framework-agnostic — and it cuts both ways. It never breaks on an

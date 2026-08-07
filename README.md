@@ -47,8 +47,67 @@ For components that should only ever read the store, `asReadonly(tree)` narrows 
 
 ## When to Use SignalTree
 
-Most Angular apps that have outgrown "a few signals in a component" are a good fit. If you're
-writing an app with real domain state — not a demo — you're likely in scope.
+SignalTree makes a specific architectural trade: **writes are independent of state size, and
+notification is independent of subscriber count — and you pay for that whenever you materialize the
+whole tree.** Two questions decide whether that trade is in your favour.
+
+**1. How many live consumers are bound _below the top level_, and how often do you write?**
+
+Only leaves are signals, so a write goes to one leaf and dirties only that leaf's consumers. An
+immutable store re-runs every subscriber's projection on every emission and filters downstream.
+Measured against elf at 100 fixed fields ([`tools/bench-state-scale.mjs`](tools/bench-state-scale.mjs),
+200 writes, median of 11):
+
+| live consumers | SignalTree | elf        |
+| -------------- | ---------- | ---------- |
+| 0              | 0.007 ms   | 0.380 ms   |
+| 1,000          | 0.045 ms   | 20.175 ms  |
+| 5,000          | 0.195 ms   | 95.730 ms  |
+
+And write cost against state size, with zero consumers: at 1,024 root props SignalTree is
+**0.005 ms** and an immutable store is **20.741 ms**, because it copies the slice and we don't.
+
+**2. Do you read the whole collection on every change, or undo deeply over it?**
+
+Either one hands the win back:
+
+- Over 10,000 rows, `update` + `byId()` is **2.13 µs**; `update` + `all()` is **9.91 µs**, because
+  `all()` rebuilds the array on every change and there are no per-entity consumers to earn the
+  granularity back. That gap widens with collection size and with how many per-entity nodes have
+  been materialised.
+- Undo/redo over a 10,000-row collection measures **~3× behind elf** (3.67 ms against 1.24 ms). An immutable store restores
+  by swapping one reference; SignalTree writes values back into per-entity signals. That is the
+  price of granular reads, not a defect — see
+  [`docs/compare/real-implementations.md`](docs/compare/real-implementations.md).
+
+**High write frequency × many per-entity bindings → SignalTree, by a wide margin. Whole-collection
+reads or deep undo → an immutable store fits better.**
+
+> Numbers are Node v24.3 / V8 on one machine. Browser transfer is not yet established — re-run the
+> harnesses rather than trusting the table.
+
+### Which apps land where
+
+Two columns, deliberately separated: **what the measurements say** is a different question from
+**what teams pick**. Ecosystem gravity is real, but it is a fact about hiring, not about fit —
+collapsing them lets one masquerade as the other. The library measurements are ours; the mapping
+from a domain to a workload is judgment, so validate it against your own app.
+
+| Workload                                          | Typical domains                                                                                     | What the measurements say                                                                     | What teams usually pick                 |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Streaming telemetry into many per-entity bindings | Fleet & logistics, grid/SCADA, telecom NOC, manufacturing MES, airline & rail ops, trading blotters | **SignalTree, decisively** — 448× at 1,000 consumers                                          | SignalTree                              |
+| Offline-first with server-owned collections       | Field service, mobile ops                                                                           | **SignalTree** — `loader` + `hydrateThenRevalidate`                                           | SignalTree                              |
+| Deep nested forms with audit and persistence      | Healthcare, claims, regulated workflows                                                             | **SignalTree** — `form()`, `history()`, `stored()` are primitives here and assembly elsewhere | Toss-up; governance decides             |
+| CRUD over moderate lists, server round-trips      | CRM, ERP, admin consoles, insurance                                                                 | **SignalTree leans** — 3.2× on the collection task, 49× on undo                              | `@ngrx/signals`, on gravity             |
+| Drag-driven boards and schedules                  | Dispatch, Gantt, planning                                                                           | **SignalTree leans** — high write frequency, per-item bindings, moderate collections          | Toss-up                                 |
+| Undo/redo over moderate state                     | Editors-in-a-panel, wizards, bulk edit                                                              | **SignalTree** — `@ngrx/signals` has no undo primitive at all                                 | Hand-rolled history (the 278.44 ms arm) |
+| Whole-dataset reads on every change               | BI and analytics explorers                                                                          | **Depends on modelling** — a plain array leaf is at parity; `entityMap` is the wrong tool     | Toss-up                                 |
+| Deep undo over **large** collections              | Design tools, media timelines                                                                       | **An immutable root wins** — needs 10k+ rows _and_ deep history _and_ undo as a core feature  | elf, or immutable under NgRx            |
+| Concurrent editing of one document                | CMS authoring, co-editing                                                                           | **Not a store decision** — a CRDT goes underneath either way                                  | Yjs/Automerge + any store               |
+| Large teams, long-lived, hiring-driven            | Banking core, public sector                                                                         | **No technical winner at this altitude**                                                      | NgRx classic — legitimately so          |
+
+Where the two columns disagree, the honest reading is "a toss-up that gravity decides" — not
+"something else fits better."
 
 **Reach for SignalTree when you have:**
 
@@ -80,6 +139,16 @@ writing an app with real domain state — not a demo — you're likely in scope.
 
 **Where something else may fit better:**
 
+- **Every widget reads the whole collection.** A chart-driven analytics explorer re-reads `all()` on
+  every change and binds nothing per entity, so it pays the materialization tax and collects none of
+  the fan-out benefit — measured at 97.47 µs against 1.90 µs for the per-entity path. Model it as a
+  plain array leaf, or use a store that returns its state by reference.
+- **Deep undo over large collections.** Restoring writes values back into per-entity signals rather
+  than swapping a reference — ~2.5× behind elf at 10,000 rows. If the undo stack _is_ the product
+  (design tools, timeline editors), that ratio is the wrong way round for you. If you just need undo
+  over a big grid, `pauseRecording()` and `timeTravel({ shouldSkip })` are the levers.
+- **Collaborative document editing.** Merge semantics belong in a CRDT (Yjs, Automerge) underneath
+  whatever store you pick; no state library is the right layer for that.
 - **A couple of values in one component.** Raw Angular signals (`signal` / `computed` /
   `linkedSignal` / `resource`) are complete for that, and reaching for any store would be
   ceremony. The interesting question isn't "is my app big enough" — it's whether you want the
@@ -375,14 +444,14 @@ store.registerCleanup(() => ws.close());
 
 ## Optional Packages
 
-| Package                       | Purpose                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms          |
-| `@signaltree/enterprise`      | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core               |
-| `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
-| `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |
-| `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement     |
-| `@signaltree/schema`          | Schema-driven validation via StandardSchema (Zod, Valibot, ArkType, …)       |
+| Package                  | Purpose                                                                  |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `@signaltree/ng-forms`   | Two-way binding between SignalTree nodes and Angular reactive forms      |
+| `@signaltree/enterprise` | **Deprecated (13.5.0)** — use `tree.updateAndReport()` in core           |
+| `@signaltree/events`     | Event-oriented helpers for reacting to state changes                     |
+| `@signaltree/realtime`   | Keep entity maps in sync with live data sources (WebSocket, SSE)         |
+| `@signaltree/guardrails` | Dev-only performance budgets, hot-path detection, and policy enforcement |
+| `@signaltree/schema`     | Schema-driven validation via StandardSchema (Zod, Valibot, ArkType, …)   |
 
 ## Real-World Migration (Case Study)
 

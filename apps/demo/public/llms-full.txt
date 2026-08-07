@@ -770,7 +770,7 @@ specialise.
 
 IT DOES NOT FIX LARGE COLLECTIONS — a comparator over a 50k array is still O(N)
 and cannot touch the `slice()` that built it (~41ms of a ~49ms workload). Use
-`entityMap` (1.63ms vs 49.80ms on the same task); core warns via ST2018.
+`entityMap` (0.25ms vs ~73ms on the same task); core warns via ST2018.
 
 `compared()` makes its position a LEAF even for an object value, where a bare
 object would have become a branch — there is no `tree.$.user.name` accessor.
@@ -1457,8 +1457,9 @@ not a number to design around, and `tree()` is memoised since 13.5.0 so repeated
 reads between writes are free.
 
 The collection number depends ENTIRELY on using `entityMap` — the same collection
-as a plain array leaf measures 49.80ms against SignalStore's 46.56ms, i.e. parity
-(ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
+as a plain array leaf measures ~73ms of direct work against SignalStore's ~39ms,
+so it is WORSE than the immutable store, not at parity: SignalTree rebuilds the
+array AND walks it to compare (ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
 immutable array rebuild "for fairness"; that measures SignalTree impersonating
 SignalStore.
 
@@ -1484,6 +1485,10 @@ For migrations exceeding a single agent's context window, see `docs/skills/using
 Every warning carries a stable `[ST####]` code; full map in
 [`docs/errors/README.md`](https://github.com/JBorgia/signaltree/blob/main/docs/errors/README.md).
 
+- **[ST2020]** Two `stored()` markers registered on the SAME storage key. Each makes its own signal, neither observes the other, so one holds a stale value and they race on write. Warned rather than silently interned: two calls may carry conflicting `defaultValue`/`version`/`migrate` and there is no correct merge.
+- **[ST2021]** A marker placed inside an ARRAY. Array elements are never traversed, so the marker is never materialized — `tree.$.list()[0]` stays a raw object, is not a signal, and every write to it is lost. Put markers on object properties, or hold the collection in an `entityMap`.
+- **[ST2022]** A marker registered via `registerMarkerProcessor` without declaring what part of it is STATE. Three answers are valid and silence is not one: a `snapshot` hook (plus optional `hydrate`), `transient: true` for a marker that deliberately has none, or a node that is already a real Angular signal. Checked at registration, because `materializeMarkers` swallows `create()` throws and a guard there would fail open.
+- **[ST2023]** A marker declares `snapshot` but no `hydrate`, and its node is not a writable signal. It serialises perfectly and silently DISCARDS every write, so `tree(tree())` loses its value. ST2022 cannot see this, because declaring a `snapshot` is a valid answer to the question ST2022 asks.
 - **[ST2024]** `entityMap` hydrate received a payload carrying no entities. A **bare array now applies** — `tree({ rows: [...] })` works as of 14.0.0. Before, it left the collection untouched while sibling leaves in the same payload took their new values, and in production said nothing at all. This fires only for an object carrying neither an array nor an `all` array.
 - **[ST2025]** An `onTreeError` listener itself threw. The original error was still handled normally; this reports the listener failing, so adding error REPORTING never becomes a source of errors.
 - **[ST2026]** `where(pred)` / `find(pred)` called repeatedly with a NEW function of identical source. Results memoise per predicate **identity**, so an inline arrow in a template allocates a fresh one every change-detection cycle, misses the cache and re-filters the whole collection — measured **0.27 ms hoisted against 20.54 ms inline** over 1,000 entities. It is not a leak (the cache is a `WeakMap`), which is exactly why it needs a diagnostic: nothing grows, nothing errors, the app is just permanently slow.

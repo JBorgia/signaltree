@@ -280,12 +280,15 @@
         <code>rxjs</code>, and <code>tslib</code> are treated as ambient peers
         (external), so rxjs-based libraries (NgRx, NgXs, Akita, Elf) show their
         <em>marginal</em> cost assuming rxjs is already present — NgRx Store is
-        ~10.6KB if it isn't. SignalTree numbers reflect a tree that actually uses
-        <code>entityMap</code> (~11.6KB); a bare store of a few fields is
-        ~5.7KB, and adding undo/redo takes it to ~11.0KB. SignalTree does not
-        win on bundle size — it is the largest library in this table, and it
-        trades those KB for built-in granularity, entity maps, and
-        depth-attached markers.
+        ~10.6KB if it isn't. All arms are built with
+        <code>ngDevMode</code> defined false, as a production Angular build
+        does, so dev-only warnings and diagnostics are excluded on every side.
+        SignalTree numbers reflect a tree that actually uses
+        <code>entityMap</code> (~9.2KB); a bare store of a few fields is ~5.7KB,
+        and adding undo/redo takes it to ~11.0KB. SignalTree does not win on
+        bundle size — it is the largest library in this table, and it trades
+        those KB for built-in granularity, entity maps, and depth-attached
+        markers.
       </p>
     </div>
 

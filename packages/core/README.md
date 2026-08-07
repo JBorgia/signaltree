@@ -199,14 +199,16 @@ Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`
 own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
 `node tools/check-bundle-budget.mjs`.
 
-- Bare `signalTree` (no markers/enhancers): **5.6 KB**
-- A tree using a plain `entityMap()`: **8.4 KB**
+- Bare `signalTree` (no markers/enhancers): **5.7 KB**
+- A tree using a plain `entityMap()`: **9.2 KB**
 
-⚠️ The condition matters. The same code in a **development** build is ~1.8 KB
+⚠️ The condition matters. The same code in a **development** build is ~1.8-2.4 KB
 larger per tree, because the dev diagnostics are guarded strings that fold away
-under `ngDevMode: false` — so a bare tree measures ~7.4 KB in dev. Neither number
+under `ngDevMode: false` — so a bare tree measures ~7.5 KB in dev and one using
+`entityMap()` measures ~11.6 KB. Neither number
 is wrong; quoting one without saying which invites someone to measure the other
 and conclude the docs lie.
+
 - Core + `batching()`: bare `signalTree` plus `batching()`'s own delta (see per-enhancer deltas under "Available extension packages")
 - Unused enhancers: **automatically excluded** by tree-shaking
 
@@ -293,12 +295,12 @@ convention.
 **`mode` is a property of the CALL SITE** — the only place that knows whether a
 process boundary was crossed:
 
-| | `merge` | `restore` | `rehydrate` |
-| --- | --- | --- | --- |
-| **Triggered by** | `tree(partial)` | `undo()` / `redo()` / `jumpTo()` | `deserialize()`, SSR transfer, `localStorage` |
-| **Process boundary crossed?** | no | no | **yes** |
-| **In-flight request possible?** | yes | yes | **no** — nothing survived |
-| **Rule** | write what was given | **exact** | **opinionated** |
+|                                 | `merge`              | `restore`                        | `rehydrate`                                   |
+| ------------------------------- | -------------------- | -------------------------------- | --------------------------------------------- |
+| **Triggered by**                | `tree(partial)`      | `undo()` / `redo()` / `jumpTo()` | `deserialize()`, SSR transfer, `localStorage` |
+| **Process boundary crossed?**   | no                   | no                               | **yes**                                       |
+| **In-flight request possible?** | yes                  | yes                              | **no** — nothing survived                     |
+| **Rule**                        | write what was given | **exact**                        | **opinionated**                               |
 
 The rule in one line: **restore is exact, rehydrate is opinionated.**
 
@@ -309,17 +311,17 @@ that nothing will ever resolve.
 
 What that means per marker:
 
-| | `restore` (undo/redo) | `rehydrate` (deserialize/SSR) |
-| --- | --- | --- |
-| `status()` in `LOADING` | stays `LOADING` | normalised to `NotLoaded` |
-| `form()` `touched` | restored | dropped — the user hasn't touched anything yet |
-| `form()` `submitting` | **never** restored | never restored |
-| loader-backed `entityMap` | accepts the write | **declines** — the loader owns this data |
-| `asyncSource` with a loader | accepts the write | **declines** |
-| `stored()` write-through | **yes** — you are undoing the persisted change too | n/a |
+|                             | `restore` (undo/redo)                              | `rehydrate` (deserialize/SSR)                  |
+| --------------------------- | -------------------------------------------------- | ---------------------------------------------- |
+| `status()` in `LOADING`     | stays `LOADING`                                    | normalised to `NotLoaded`                      |
+| `form()` `touched`          | restored                                           | dropped — the user hasn't touched anything yet |
+| `form()` `submitting`       | **never** restored                                 | never restored                                 |
+| loader-backed `entityMap`   | accepts the write                                  | **declines** — the loader owns this data       |
+| `asyncSource` with a loader | accepts the write                                  | **declines**                                   |
+| `stored()` write-through    | **yes** — you are undoing the persisted change too | n/a                                            |
 
 **Devtools replay is not undo.** Both rewind state, but only one should have
-side effects. Scrubbing a timeline is *inspection*; it must not rewrite
+side effects. Scrubbing a timeline is _inspection_; it must not rewrite
 `localStorage`, because the user is dragging a slider, not making a decision.
 Undo must, because the user is undoing the persisted change as well. Core
 distinguishes them by the write's `source` (`'time-travel'` vs `'devtools'`) —
@@ -926,6 +928,23 @@ import { onTreeError } from '@signaltree/core/authoring';
 
 onTreeError((e) => Sentry.captureException(e.error, { extra: e }));
 ```
+
+**Hydrate-decision observation (14.0.0):** `import { onHydrateDecision } from '@signaltree/core/authoring'` reports when a marker DECLINES a rehydrate payload because its own loader owns that data, or NORMALISES one because no in-flight request survives a process boundary. Deliberately **not** a warning — both decisions are correct, and warning on correct behaviour trains people to ignore the channel. The event carries a stable machine-readable `reason` (`'loader-owns-source'` | `'no-request-survives-boundary'`) that reaches production listeners, plus a `detail` prose string that folds away under `ngDevMode: false`.
+
+```typescript
+import { onHydrateDecision } from '@signaltree/core/authoring';
+
+onHydrateDecision((e) => console.debug(e.marker, e.decision, e.reason));
+```
+
+**Recognising a tree (14.0.0):** `isSignalTree(value)` moved to `@signaltree/core/authoring` with the rest of the guards. Use it when you accept `unknown` and need to branch — writing an enhancer, a devtools bridge, or a serializer that may be handed either a tree or a plain object.
+
+```typescript
+import { isSignalTree } from '@signaltree/core/authoring';
+
+if (isSignalTree(candidate)) candidate.destroy();
+```
+
 - `timeTravel(config?)` - Undo/redo. `canUndo()`, `canRedo()` and `getHistory()` are **reactive** as of 14.0.0 — before that they read plain values, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled. Also new in 14.0.0: `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` (writes still apply while paused; they just stop becoming undo steps, so a bulk import is one step instead of a hundred) and `timeTravel({ shouldSkip: (prev, next) => … })` to drop uninteresting transitions — it runs on **every** recorded write, so compare only the fields you mean.
 
 #### Additional Packages
@@ -1919,9 +1938,11 @@ notified.
   specialise.
 - **Large collections.** A comparator over a 50,000-element array is still O(N),
   and it does nothing about the `slice()` that produced the new array — measured,
-  that copy alone is ~41 ms of a ~49 ms workload. Use
-  [`entityMap`](#9-entitymape-k---normalized-collections): 1.63 ms against
-  49.80 ms on the same task. Core warns about this shape (**ST2018**).
+  the rebuild is ~38 ms and the equality walk another ~35 ms per 1,000 updates.
+  Use [`entityMap`](#9-entitymape-k---normalized-collections): 0.25 ms against
+  ~73 ms on the same task, roughly 300x. That is worse than an immutable store
+  rather than at parity with one — NgRx SignalStore does it in ~39 ms, because
+  it rebuilds without also walking the array. Core warns here (**ST2018**).
 
 **It makes the position a LEAF.** `compared({ a: 1, b: 2 }, eq)` stores one
 signal holding `{a, b}` — there is no `tree.$.x.a`. That is the point (the object

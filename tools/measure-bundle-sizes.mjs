@@ -105,6 +105,23 @@ for (const [id, code] of Object.entries(ENTRIES)) {
       write: false,
       legalComments: 'none',
       logLevel: 'silent',
+      // Production builds define this false, and Angular's own CLI does it for
+      // every app that ships. Without it, every dev-only warning, guard and
+      // diagnostic string stays in the measured bundle -- code no user ever
+      // downloads.
+      //
+      // It is not a uniform tax, so omitting it was not a wash: SignalTree
+      // carries far more ngDevMode-guarded material than the others (ST-coded
+      // diagnostics, construction-time shape warnings), so it was paying the
+      // largest phantom bill. Adding the define moves signaltree 11.63 -> 9.21
+      // KB, ngxs 8.91 -> 7.44 and ngrx-signals 2.35 -> 1.92, while elf, akita
+      // and ngrx-store do not move at all.
+      //
+      // The corroboration that this is right rather than merely flattering:
+      // tools/size-compare.mjs has always set it, and independently measures
+      // the same entity-collection scenario at 9.18 KB. The two tools disagreed
+      // by 2.4 KB for exactly this reason and now agree to within 0.03 KB.
+      define: { ngDevMode: 'false' },
     });
     const js = out.outputFiles[0].contents;
     const gz = gzipSync(Buffer.from(js), { level: 9 });

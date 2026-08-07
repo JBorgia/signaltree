@@ -433,24 +433,28 @@ export class UserFormComponent {
   });
 
   it('should measure bundle impact and tree-shaking', () => {
+    // Own-code gzip, production (ngDevMode: false), @angular/rxjs/tslib external
+    // -- the same basis tools/measure-bundle-sizes.mjs and check-bundle-budget
+    // report. These were previously on mixed and much larger bases (ngrx "52KB",
+    // akita "28KB") that matched no measurement in the repo.
     const bundleMetrics = [
       {
         scenario: 'Minimal Setup',
-        signalTree: '7.3KB',
-        ngrx: '52KB',
-        akita: '28KB',
+        signalTree: '5.7KB',
+        ngrx: '5.4KB',
+        akita: '7.8KB',
         treeshaking: '100%',
       },
       {
         scenario: 'With Batching',
-        signalTree: '8.6KB', // Core 7.3KB + Batching 1.3KB
-        ngrx: '52KB (no built-in)',
-        akita: '28KB (manual)',
+        signalTree: '6.7KB', // bare 5.70KB + batching 0.99KB
+        ngrx: '5.4KB (no built-in)',
+        akita: '7.8KB (manual)',
         treeshaking: '100%',
       },
       {
         scenario: 'Full Featured',
-        signalTree: '27.0KB', // Updated to actual measured total
+        signalTree: '19.5KB', // tools/size-report.mjs "everything" combination
         ngrx: '85KB+',
         akita: '35KB',
         treeshaking: '100%',

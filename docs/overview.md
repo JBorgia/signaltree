@@ -48,7 +48,7 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 - Angular 20, 21, or 22 (see `peerDependencies`), TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.65KB**; with `entityMap` **8.39KB**; with `form()` **7.75KB**. **Development** (default build, diagnostics included): **7.40 / 10.84 / 9.77KB** — defining `ngDevMode: false` reclaims **~2.07KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
+- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.70KB**; with `entityMap` **9.17KB**; with `form()` **7.80KB**. **Development** (default build, diagnostics included): **7.45 / 11.60 / 9.81KB** — defining `ngDevMode: false` reclaims **~1.8-2.4KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)
@@ -64,10 +64,10 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 These bound what's published to npm. Real apps tree-shake down to a fraction of these figures.
 
-| Metric                         | Budget   | Current |
-| ------------------------------ | -------- | ------- |
-| Core publishable (gzipped)     | <30.00KB | 25.64KB |
-| Total ecosystem publishable    | <40.00KB | 36.32KB |
+| Metric                      | Budget   | Current |
+| --------------------------- | -------- | ------- |
+| Core publishable (gzipped)  | <30.00KB | 25.64KB |
+| Total ecosystem publishable | <40.00KB | 36.32KB |
 
 ### Frequency weighting system
 

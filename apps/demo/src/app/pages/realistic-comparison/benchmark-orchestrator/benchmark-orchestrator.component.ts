@@ -442,7 +442,7 @@ export class BenchmarkOrchestratorComponent
       color: '#3b82f6',
       selected: true,
       stats: {
-        bundleSize: '11.6KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs (14.0.0)
+        bundleSize: '9.2KB', // gzip, with entityMap in use, ngDevMode stripped — tools/measure-bundle-sizes.mjs (14.0.0)
         githubStars: 2800,
       },
     },
@@ -466,7 +466,7 @@ export class BenchmarkOrchestratorComponent
       color: '#ef4444',
       selected: false,
       stats: {
-        bundleSize: '5.3KB', // gzip, own code (rxjs external; ~10.6KB if rxjs absent) — measured
+        bundleSize: '5.4KB', // gzip, own code (rxjs external; ~10.6KB if rxjs absent) — measured
         githubStars: 7900,
       },
     },
@@ -477,7 +477,7 @@ export class BenchmarkOrchestratorComponent
       color: '#10b981',
       selected: false,
       stats: {
-        bundleSize: '2.3KB', // gzip, with withEntities — measured
+        bundleSize: '1.9KB', // gzip, with withEntities — measured
         githubStars: 7900,
       },
     },
@@ -513,7 +513,7 @@ export class BenchmarkOrchestratorComponent
       color: '#f97316',
       selected: false,
       stats: {
-        bundleSize: '8.9KB', // gzip — measured
+        bundleSize: '7.4KB', // gzip — measured
         githubStars: 3400,
       },
     },

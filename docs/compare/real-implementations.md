@@ -49,12 +49,12 @@ both were correctness or memory fixes that happened to be on the hot path.
 
 | arm          | median      | retained | history                      |
 | ------------ | ----------- | -------- | ---------------------------- |
-| **elf**      | **1.76 ms** | 4.72 MB  | built-in `elf-state-history` |
-| signaltree   | **4.32 ms** | 5.24 MB  | built-in `timeTravel()`      |
-| ngrx-signals | 216.96 ms   | 0.94 MB  | hand-rolled                  |
-| raw-signals  | 329.25 ms   | 6.16 MB  | hand-rolled                  |
+| **elf**      | **1.24 ms** | 4.77 MB  | built-in `elf-state-history` |
+| signaltree   | **3.67 ms** | 5.25 MB  | built-in `timeTravel()`      |
+| ngrx-signals | 179.84 ms   | 0.94 MB  | hand-rolled                  |
+| raw-signals  | 278.44 ms   | 6.16 MB  | hand-rolled                  |
 
-**SignalTree is ~2.5× behind elf and ~50× ahead of a hand-rolled history.** That
+**SignalTree is ~3× behind elf and ~49× ahead of a hand-rolled history.** That
 is after fixing a real defect the retraction exposed — see "What the correction
 found" below. The first honest measurement had SignalTree at 190 ms, level with
 hand-rolled; it is now 4.13 ms.
@@ -288,12 +288,12 @@ Against that one comparison, measured here:
 |                                                         | SignalTree  | `@ngrx/signals` |           |
 | ------------------------------------------------------- | ----------- | --------------- | --------- |
 | consumers invalidated by a 1-entity change (1,000 rows) | **1**       | 1,000           | **1000×** |
-| collection: build 10k + 200 updates + read all          | **3.24 ms** | 10.98 ms        | **3.4×**  |
-| undo/redo: 50 writes + 50 undos over 10k                | **4.32 ms** | 216.96 ms       | **50×**   |
+| collection: build 10k + 200 updates + read all          | **2.94 ms** | 9.48 ms         | **3.2×**  |
+| undo/redo: 50 writes + 50 undos over 10k                | **3.67 ms** | 179.84 ms       | **49×**   |
 | retained per entity (marginal)                          | 136 B       | 91 B            | 0.67×     |
 | history primitive                                       | built in    | hand-rolled     |           |
 
-Three wins of 3.4× to 1000×, one loss of 1.5× on per-entity memory, and the loss
+Three wins of 3.2× to 1000×, one loss of 1.5× on per-entity memory, and the loss
 is the price of the biggest win: the id index and per-entity storage are what
 make `byId()` O(1) and per-entity writes not touch the array.
 
