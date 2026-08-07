@@ -434,13 +434,11 @@ Three further things a team weighs that no benchmark shows:
   structurally cannot: it has no way to depend on `signal()`. Its model is
   drifting away from the framework rather than toward it, and `toSignal` does
   not close that gap (see above).
-- **The same org shipped Akita, which is now unmaintained.** Choosing elf means
-  betting on a maintainer whose previous state library was abandoned. That is a
-  reasonable thing to weigh and it is not a technical argument at all.
-- **elf's versions are a loose constellation** — elf 2.5.1, elf-entities 5.0.2,
-  elf-state-history 1.4.0 — rather than a coordinated release train. Assembling
-  five packages at five independent versions is a supply-chain judgement an
-  architect makes once and lives with.
+- **A single coordinated release train versus a constellation.** NgRx ships its
+  packages together on one version; elf is elf 2.5.1, elf-entities 5.0.2,
+  elf-state-history 1.4.0. Assembling five packages at five independent versions
+  is a supply-chain judgement an architect makes once and lives with, and it is
+  not a technical argument about either library's quality.
 
 **So elf being better on the axes measured here did not make it win, and would
 not have.** Libraries are chosen on maintenance guarantees, framework alignment,
