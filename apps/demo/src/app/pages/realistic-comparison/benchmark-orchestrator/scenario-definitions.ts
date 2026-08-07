@@ -85,7 +85,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     frequencyWeight: 1.8, // High - Lists, tables, collections are very common
     realWorldFrequency: 'High - Lists, tables, data grids, search results',
     architecturalTradeOffs:
-      'Each library uses its own best idiom for the same task. Immutable stores must rebuild the collection on every change; SignalTree uses entityMap, which owns each entity separately and writes one in O(1). Modelling the same collection as a plain array leaf in SignalTree measures ~300x slower (~73ms vs 0.25ms on 1000 updates to 50k rows) and is worse than an immutable store rather than at parity with one — core warns about that shape at construction (ST2018).',
+      'Each library uses its own best idiom for the same task. Immutable stores must rebuild the collection on every change; SignalTree uses entityMap, which owns each entity separately and writes one in O(1). Modelling the same collection as a plain array leaf in SignalTree measures ~100x slower (~50ms vs ~0.5ms on 1000 updates to 50k rows) and lands slightly behind an immutable store rather than at parity with one — core warns about that shape at construction (ST2018).',
     enhancers: {
       required: ['highPerformanceBatching'],
       optional: [],

@@ -770,7 +770,7 @@ specialise.
 
 IT DOES NOT FIX LARGE COLLECTIONS — a comparator over a 50k array is still O(N)
 and cannot touch the `slice()` that built it (~41ms of a ~49ms workload). Use
-`entityMap` (0.25ms vs ~73ms on the same task); core warns via ST2018.
+`entityMap` (~0.5ms vs ~50ms on the same task); core warns via ST2018.
 
 `compared()` makes its position a LEAF even for an object value, where a bare
 object would have become a branch — there is no `tree.$.user.name` accessor.
@@ -1457,9 +1457,9 @@ not a number to design around, and `tree()` is memoised since 13.5.0 so repeated
 reads between writes are free.
 
 The collection number depends ENTIRELY on using `entityMap` — the same collection
-as a plain array leaf measures ~73ms of direct work against SignalStore's ~39ms,
-so it is WORSE than the immutable store, not at parity: SignalTree rebuilds the
-array AND walks it to compare (ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
+as a plain array leaf measures ~50ms against SignalStore's ~39ms, so it lands
+slightly BEHIND the immutable store rather than at parity: SignalTree rebuilds
+the array AND walks it to compare (ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
 immutable array rebuild "for fairness"; that measures SignalTree impersonating
 SignalStore.
 

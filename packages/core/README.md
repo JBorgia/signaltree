@@ -1940,9 +1940,14 @@ notified.
   and it does nothing about the `slice()` that produced the new array — measured,
   the rebuild is ~38 ms and the equality walk another ~35 ms per 1,000 updates.
   Use [`entityMap`](#9-entitymape-k---normalized-collections): 0.25 ms against
-  ~73 ms on the same task, roughly 300x. That is worse than an immutable store
-  rather than at parity with one — NgRx SignalStore does it in ~39 ms, because
-  it rebuilds without also walking the array. Core warns here (**ST2018**).
+  ~50 ms on the same task, roughly **100x**. It also lands slightly behind an
+  immutable store rather than at parity — NgRx SignalStore does it in ~39 ms,
+  because it rebuilds without also walking the array to compare. Core warns here
+  (**ST2018**).
+
+  Two cost modes, worth separating: a run of REAL changes is ~50 ms, while
+  re-setting values that are already there is ~132 ms, because `deepEqual`
+  cannot short-circuit and walks the whole array to conclude nothing changed.
 
 **It makes the position a LEAF.** `compared({ a: 1, b: 2 }, eq)` stores one
 signal holding `{a, b}` — there is no `tree.$.x.a`. That is the point (the object
