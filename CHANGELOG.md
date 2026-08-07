@@ -130,6 +130,33 @@
   a leak (the cache is a `WeakMap`), which is why it needed a diagnostic —
   nothing breaks, the app is just slow forever.
 
+- **ST2027** — the no-op copy write. The new value is a DIFFERENT object that
+  deep-equals the current one, so the comparator walks the whole structure to
+  conclude nothing changed and the write is discarded: ~2.8 ms on a 50,000
+  element array, to do nothing. The shape a re-fetched payload takes. ST2003
+  already covered re-setting the identical reference; this is the expensive
+  twin, and it corrupted this repo's own benchmarks twice before anyone noticed.
+  Gated to 32+ elements/keys, deduped per path, dev-only.
+
+- **ST2028** — edit-session lossy cloning. `createEditSession` clones with
+  `structuredClone`, which THROWS on a function or class instance, and the JSON
+  fallback preserves no `Date`, `Map`, `Set`, `RegExp` or `undefined` anywhere —
+  so one non-cloneable field degrades the entire object and undo hands back
+  dates as strings. The fallback is kept deliberately (a lossy restore beats a
+  thrown one mid-edit) and is no longer silent.
+
+- **`history?: boolean` on `entityMap`**, plus **ST2029**. A history entry holds
+  the tree's snapshot, and a collection's snapshot is an N-pointer array rebuilt
+  on every change — so `timeTravel()` over a big collection made every
+  collection-mutating write O(collection), permanently. Measured over 50 writes:
+  24.73 MB retained at 50,000 rows, against 5.61 MB with `history: false`. The
+  flag scopes exactly one thing — what `undo()` can reach. The collection still
+  appears in `tree()` and still round-trips through `serialization()`; use
+  `transient: true` to drop it from those too. **Undo becomes partial** for an
+  excluded collection, which is a product decision the library cannot make for
+  you, which is why it is opt-in. ST2029 warns once at attach when a 1,000+ row
+  collection is left on the default.
+
 - **Newly exported types.** `persistence(config)` REQUIRED a `PersistenceConfig`
   and `serialization(config?)` accepts a `SerializationConfig`, and neither was
   exported — you could call both and declare neither the object passed nor the

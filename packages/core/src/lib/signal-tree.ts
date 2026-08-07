@@ -403,9 +403,9 @@ function warnEntityArrayLeaf(key: string, value: readonly unknown[]): void {
   console.warn(
     `SignalTree: "${key}" holds ${value.length} objects with a stable ` +
       `"${idKey}" — use entityMap({ selectId: (e) => e.${idKey} }). An array ` +
-      `leaf rebuilds and re-compares the whole array on every update (~100x ` +
-      `slower at 50k). Read-only or replaced wholesale? compared() silences ` +
-      `this. [ST2018]`
+      `leaf rebuilds and re-compares the whole array on every update — two ` +
+      `orders of magnitude at 50k. Read-only or replaced wholesale? ` +
+      `compared() silences this. [ST2018]`
   );
 }
 

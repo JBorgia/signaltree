@@ -41,6 +41,98 @@ function warnApplyStateOverwrite(key: string, target: unknown): void {
   );
 }
 
+/**
+ * Marks a materialised node as excluded from TIME-TRAVEL capture only.
+ *
+ * Set by `entityMap({ history: false })`. Every other snapshot consumer —
+ * `serialization()`, `persistence()`, devtools, audit — still sees the node in
+ * full; only `timeTravel()` prunes it from the entry it records. See RFC 0012
+ * for why the two needed separating: `transient: true` opted out of BOTH, so a
+ * large streaming collection either paid O(collection) per recorded write or
+ * did not persist at all.
+ *
+ * `SignalTree:`-prefixed deliberately — `buildFromStore`'s symbol loop skips
+ * that prefix by identity, so the mark can never itself reach a payload.
+ */
+export const HISTORY_EXCLUDED = Symbol.for('SignalTree:HistoryExcluded');
+
+/**
+ * @internal Remove history-excluded nodes from an already-built snapshot.
+ *
+ * Walks the LIVE tree and the PLAIN snapshot in step: the mark lives on the
+ * live node, the keys to drop live in the snapshot. Returns the same object
+ * when nothing is excluded, so a tree without the flag pays one shallow walk
+ * and allocates nothing — and structural sharing downstream is preserved
+ * because the identical reference comes back.
+ *
+ * Restore is symmetric and needs no counterpart: a pruned key is simply absent
+ * from the entry, and `recursiveUpdate` already leaves absent keys alone.
+ */
+const PRUNED = new WeakMap<object, unknown>();
+
+export function pruneHistoryExcluded<T>(snapshot: T, liveNode: unknown): T {
+  // Memoised on the INPUT snapshot, and this is load-bearing rather than an
+  // optimisation. `addEntry` dedupes history by REFERENCE — `tree()` hands back
+  // the identical object when nothing changed, so `last.state === entry.state`
+  // is an exact O(1) test for "no-op write". Pruning built a fresh object every
+  // call, which made that test never fire: duplicate entries accumulated and
+  // `undo()` stepped onto one and appeared to do nothing.
+  //
+  // Same input snapshot -> same pruned output preserves the contract. The
+  // WeakMap is keyed on the memoised snapshot, so entries die with it.
+  if (snapshot !== null && typeof snapshot === 'object') {
+    const hit = PRUNED.get(snapshot as object);
+    if (hit !== undefined) return hit as T;
+  }
+  const result = pruneUncached(snapshot, liveNode);
+  if (snapshot !== null && typeof snapshot === 'object') {
+    PRUNED.set(snapshot as object, result);
+  }
+  return result;
+}
+
+function pruneUncached<T>(snapshot: T, liveNode: unknown): T {
+  if (
+    snapshot === null ||
+    typeof snapshot !== 'object' ||
+    Array.isArray(snapshot) ||
+    !isTraversableNode(liveNode)
+  ) {
+    return snapshot;
+  }
+
+  const live = liveNode as Record<string, unknown>;
+  let copy: Record<string, unknown> | undefined;
+
+  for (const key of Object.keys(snapshot as Record<string, unknown>)) {
+    const liveChild = live[key];
+    if (liveChild === undefined || liveChild === null) continue;
+
+    if (
+      typeof liveChild === 'object' &&
+      (liveChild as Record<symbol, unknown>)[HISTORY_EXCLUDED] === true
+    ) {
+      copy ??= { ...(snapshot as Record<string, unknown>) };
+      delete copy[key];
+      continue;
+    }
+
+    // Recurse only into branches — a leaf's value cannot carry the mark.
+    if (isNodeAccessor(liveChild) || isTraversableNode(liveChild)) {
+      const child = (snapshot as Record<string, unknown>)[key];
+      if (child !== null && typeof child === 'object' && !Array.isArray(child)) {
+        const pruned = pruneUncached(child, liveChild);
+        if (pruned !== child) {
+          copy ??= { ...(snapshot as Record<string, unknown>) };
+          copy[key] = pruned;
+        }
+      }
+    }
+  }
+
+  return (copy ?? snapshot) as T;
+}
+
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 

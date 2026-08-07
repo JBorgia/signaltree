@@ -1,6 +1,10 @@
 import { signal } from '@angular/core';
 
-import { snapshotState } from '../../lib/utils';
+import {
+  HISTORY_EXCLUDED,
+  pruneHistoryExcluded,
+  snapshotState,
+} from '../../lib/utils';
 import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
@@ -169,7 +173,15 @@ class TimeTravelManager<T> {
     // This is what makes the snapshot read-only contract load-bearing rather
     // than advisory (nodes are frozen in dev). A caller that mutates a snapshot
     // now corrupts history as well as the cache.
-    const plain = snapshotState(this.tree.$ as unknown as TreeNode<T>);
+    // Prune history-excluded nodes AFTER building, not by snapshotting
+    // differently. The memo stays untouched — one snapshot, one cell, sharing
+    // preserved — and the entry simply does not retain what it dropped. A tree
+    // with no `history: false` anywhere gets the identical object back, so it
+    // pays one shallow walk and allocates nothing. See RFC 0012 option B.
+    const plain = pruneHistoryExcluded(
+      snapshotState(this.tree.$ as unknown as TreeNode<T>),
+      this.tree.$
+    );
 
     const entry: TimeTravelEntry<T> & { __provisional?: boolean } = {
       state: plain as T,
@@ -388,11 +400,93 @@ class TimeTravelManager<T> {
  * ```
  */
 
+
+/** @internal Rows above which capturing a collection into history is worth a word. */
+const HISTORY_COLLECTION_THRESHOLD = 1000;
+
+/**
+ * @internal One-time scan at `timeTravel()` attach for ST2029.
+ *
+ * Shallow by design — it walks the tree's own nodes looking for entity
+ * collections, and stops at the first report. A diagnostic about the cost of
+ * capturing large state must not itself walk large state.
+ */
+function warnLargeCollectionsInHistory(tree: unknown): void {
+  const root = (tree as { $?: Record<string, unknown> }).$;
+  if (!root || typeof root !== 'object') return;
+
+  const seen = new WeakSet<object>();
+  const visit = (node: Record<string, unknown>, path: string): boolean => {
+    if (seen.has(node)) return false;
+    seen.add(node);
+
+    for (const key of Object.keys(node)) {
+      const child = node[key] as Record<string, unknown> | undefined;
+      if (!child || typeof child !== 'object') continue;
+      const childPath = path ? `${path}.${key}` : key;
+
+      const all = (child as { all?: () => unknown[] }).all;
+      const isCollection =
+        typeof all === 'function' &&
+        typeof (child as { setAll?: unknown }).setAll === 'function';
+
+      if (isCollection) {
+        if ((child as Record<symbol, unknown>)[HISTORY_EXCLUDED] === true) {
+          continue;
+        }
+        let size = 0;
+        try {
+          size = all.call(child).length;
+        } catch {
+          continue;
+        }
+        if (size >= HISTORY_COLLECTION_THRESHOLD) {
+          console.warn(
+            `SignalTree: timeTravel() is capturing "${childPath}", a collection ` +
+              `of ${size} entities, into every history entry — each entry ` +
+              `retains a fresh array of that width, so every write to it is now ` +
+              `O(collection). If this collection should persist but not be ` +
+              `undoable, pass entityMap({ history: false }); if it should be ` +
+              `neither, use transient: true. [ST2029]`
+          );
+          return true;
+        }
+        continue;
+      }
+
+      if (visit(child, childPath)) return true;
+    }
+    return false;
+  };
+
+  try {
+    visit(root, '');
+  } catch {
+    // A diagnostic must never break construction.
+  }
+}
+
 export function timeTravel(
   config: TimeTravelConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
   const { enabled = true } = config;
   const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
+    // ST2029 — a large collection is being captured into history by default.
+    //
+    // `entityMap`'s snapshot is an N-pointer array rebuilt on every collection
+    // change, and time travel records on every self-dirty flush. So attaching
+    // this enhancer to a tree holding a big collection makes every
+    // collection-mutating write O(collection width), permanently. MEASURED over
+    // 50 recorded writes at 50k rows: 24.73MB retained, against 5.61MB with
+    // `history: false`.
+    //
+    // The trap is silent and permanent — nothing breaks, the app is simply
+    // heavier forever — which is the ST2026 shape and the reason it earns a
+    // code. Checked ONCE at attach, not per write.
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      warnLargeCollectionsInHistory(tree);
+    }
+
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods<T> = {

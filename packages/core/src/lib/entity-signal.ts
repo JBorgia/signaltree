@@ -1,6 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { PathNotifier } from '../lib/path-notifier';
+import { HISTORY_EXCLUDED } from './utils';
 
 // Angular's global dev-mode flag (defined by the Angular CLI; undefined in
 // plain test/node contexts, treated as dev there).
@@ -1257,6 +1258,24 @@ export function createEntitySignal<
       };
     },
   };
+
+  // ==================
+  // HISTORY SCOPE
+  // ==================
+
+  // `history: false` marks this collection as excluded from time-travel
+  // capture WITHOUT excluding it from any other snapshot consumer. Stamped on
+  // the node rather than held in a side table so the pruner can ask the value
+  // it already has, and `SignalTree:`-prefixed so `unwrap`'s symbol loop skips
+  // it and it never reaches a payload. See RFC 0012.
+  if (config.history === false) {
+    Object.defineProperty(api, HISTORY_EXCLUDED, {
+      value: true,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
 
   // ==================
   // PROXY FOR BRACKET NOTATION

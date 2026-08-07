@@ -90,6 +90,43 @@ that exercises two things at once can pass for the wrong one.**
 
 ---
 
+## Opting a collection out — and what it costs you
+
+The last row of that table (`collection entries` → restored, both modes) is the
+default, and for a big collection it is expensive. A history entry holds the
+tree's snapshot, and an `entityMap`'s snapshot is an N-pointer array rebuilt
+whenever the collection changes. So attaching `timeTravel()` to a tree holding
+a large collection makes every collection-mutating write O(collection width),
+permanently. MEASURED over 50 recorded writes:
+
+| rows   | default | `history: false` |
+| ------ | ------- | ---------------- |
+| 1,000  | 0.76MB  | 0.18MB           |
+| 10,000 | 5.08MB  | 1.25MB           |
+| 50,000 | 24.73MB | 5.61MB           |
+
+`entityMap({ history: false })` takes the collection out of history capture.
+Everything else about it is unchanged — it still appears in `tree()`, it still
+round-trips through `serialization()`, it is still persisted. The flag scopes
+one thing: what `undo()` can reach.
+
+**State this plainly to your users, because the tool cannot.** Undo becomes
+_partial_. The scalars around the collection revert; the collection does not.
+A user who deletes a row and hits undo gets their filter panel back and their
+row stays deleted. That is a defensible product decision for a 50,000-row grid
+whose rows are server-owned anyway, and an indefensible one for a shopping cart.
+The flag is opt-in for exactly that reason — the tree cannot tell those apart.
+
+If the collection should be in neither history nor the persisted snapshot, that
+is a different flag: `transient: true`.
+
+Leaving a 1,000+ row collection on the default with `timeTravel()` attached
+warns once at attach, as [ST2029](../errors/README.md). Like ST2026, nothing
+breaks — the app is simply heavier forever — which is why it needs saying out
+loud.
+
+---
+
 ## What ships
 
 Undo/redo works for form values, collection entries, status and plain leaves,

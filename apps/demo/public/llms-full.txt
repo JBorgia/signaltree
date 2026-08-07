@@ -770,7 +770,7 @@ specialise.
 
 IT DOES NOT FIX LARGE COLLECTIONS — a comparator over a 50k array is still O(N)
 and cannot touch the `slice()` that built it (~41ms of a ~49ms workload). Use
-`entityMap` (~0.5ms vs ~50ms on the same task); core warns via ST2018.
+`entityMap` (~0.3ms against ~40ms on the same task, two orders of magnitude); core warns via ST2018.
 
 `compared()` makes its position a LEAF even for an object value, where a bare
 object would have become a branch — there is no `tree.$.user.name` accessor.
@@ -1457,9 +1457,9 @@ not a number to design around, and `tree()` is memoised since 13.5.0 so repeated
 reads between writes are free.
 
 The collection number depends ENTIRELY on using `entityMap` — the same collection
-as a plain array leaf measures ~50ms against SignalStore's ~39ms, so it lands
-slightly BEHIND the immutable store rather than at parity: SignalTree rebuilds
-the array AND walks it to compare (ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
+as a plain array leaf measures ~40ms against SignalStore's ~39ms, so it lands
+level with the immutable store rather than ahead of it: SignalTree rebuilds the
+array AND walks it to compare (ST2018 warns about that shape). Never quote a benchmark that forces SignalTree to do an
 immutable array rebuild "for fairness"; that measures SignalTree impersonating
 SignalStore.
 
@@ -1501,6 +1501,19 @@ Every warning carries a stable `[ST####]` code; full map in
   protected readonly notDone = (r: Row) => !r.done;
   @for (row of tree.$.rows.where(notDone)(); track row.id) {}
   ```
+
+- **[ST2027]** A write whose new value is a DIFFERENT object that deep-equals the current one, so the whole structure was compared and the write discarded. The shape a re-fetched payload takes. Distinct from ST2003 (re-setting the identical REFERENCE): this is the expensive twin, because `deepEqual` cannot short-circuit and must walk everything to conclude nothing changed — **~2.8 ms on a 50,000-element array, to do nothing**. Invisible by construction: no error, no state change, only slowness. Skip the write when the data is unchanged, or use `compared()` for a cheaper equality. Gated to 32+ elements/keys, deduped per path.
+- **[ST2028]** `createEditSession` fell back to lossy JSON cloning. It clones with `structuredClone`, which preserves `Date`, `Map`, `Set`, `RegExp` and `undefined` — and THROWS on a function or class instance, so ONE non-cloneable field anywhere degrades the whole object and undo/redo hands back dates as strings and maps as `{}`. The fallback stays (a lossy restore beats a thrown one mid-edit) but is no longer silent.
+- **[ST2029]** `timeTravel()` attached to a tree holding an `entityMap` of 1,000+ entities with `history` left at its default. A history entry holds the tree's snapshot and a collection's snapshot is an N-pointer array, so every collection-mutating write becomes O(collection), permanently: **24.73 MB retained over 50 writes at 50,000 rows, against 5.61 MB with `history: false`**. Same shape as ST2026 — nothing breaks, the app is just heavier forever. Checked once at attach.
+
+  ```typescript
+  // Persisted and serialised as always, but out of undo's reach.
+  entityMap<Row, number>({ selectId: (r) => r.id, history: false });
+  ```
+
+  The tradeoff is real and only you can make it: `undo()` will NOT revert an
+  excluded collection. Defensible for a 50,000-row server-owned grid, wrong for
+  a shopping cart. Use `transient: true` to drop it from persistence too.
 
 ## Resources
 

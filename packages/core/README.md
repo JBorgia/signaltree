@@ -1940,10 +1940,15 @@ notified.
   and it does nothing about the `slice()` that produced the new array — measured,
   the rebuild is ~38 ms and the equality walk another ~35 ms per 1,000 updates.
   Use [`entityMap`](#9-entitymape-k---normalized-collections): 0.25 ms against
-  ~50 ms on the same task, roughly **100x**. It also lands slightly behind an
-  immutable store rather than at parity — NgRx SignalStore does it in ~39 ms,
-  because it rebuilds without also walking the array to compare. Core warns here
-  (**ST2018**).
+  ~40 ms on the same task — **two orders of magnitude**. It also lands roughly
+  level with an immutable store rather than ahead of one: NgRx SignalStore does
+  it in ~39 ms, because it rebuilds without also walking the array to compare.
+  Core warns here (**ST2018**).
+
+  **Quote the absolutes, not a multiplier.** The `entityMap` side is
+  sub-millisecond and therefore load-sensitive, so the measured ratio spans
+  ~47x-183x on one machine. This figure has been published wrong five times by
+  picking a point in that range.
 
   Two cost modes, worth separating: a run of REAL changes is ~50 ms, while
   re-setting values that are already there is ~132 ms, because `deepEqual`
