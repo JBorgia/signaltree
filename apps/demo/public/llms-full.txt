@@ -1514,6 +1514,7 @@ Every warning carries a stable `[ST####]` code; full map in
   The tradeoff is real and only you can make it: `undo()` will NOT revert an
   excluded collection. Defensible for a 50,000-row server-owned grid, wrong for
   a shopping cart. Use `transient: true` to drop it from persistence too.
+- **[ST2030]** `@signaltree/guardrails` could not snapshot state for change detection — `structuredClone` throws on a function or class instance, so one such field anywhere in state degrades the whole snapshot. Guardrails keeps working and holds the live snapshot by reference instead (valid: `tree()` is immutable and structurally shared); the only thing it loses is detecting a leaf value **mutated in place**, which never notifies a signal anyway. It used to JSON round-trip instead, which turned a `Date` into a string and a `Set` into `{}` — so `previousState` could never deep-equal the live state again and every poll reported a change, forever, out of nothing. Remove the non-cloneable field; `rules.noFunctionsInState()` finds it.
 
 ## Resources
 
