@@ -189,6 +189,52 @@ const GATES = [
     },
   },
   {
+    name: 'exports-importable',
+    covers: 'every package export can actually be imported',
+    cmd: ['node', 'scripts/verify-exports.js'],
+    needsBuild: true,
+    // Ran nowhere: an npm script nothing invoked, absent from CI. It passed the
+    // whole time, which is the only reason that was survivable.
+    mutation: {
+      file: 'dist/packages/core/package.json',
+      find: '"import": "./dist/index.js"',
+      replace: '"import": "./dist/does-not-exist.js"',
+    },
+  },
+  {
+    name: 'v9-budgets',
+    // The dev-code leak check inside this script is WARNING-ONLY by explicit
+    // decision ("some are intentional error logs"), so it is deliberately not
+    // claimed here. The self-test caught the overclaim: an unguarded
+    // console.log appended to the shipped bundle passed.
+    covers: 'raw bundle-size ceiling and the public value-export count budget',
+    cmd: ['node', 'scripts/v9-budget-checks.js'],
+    needsBuild: true,
+    mutation: {
+      file: 'dist/packages/core/dist/index.js',
+      generate: (original) => {
+        // Raw bytes, not gzip — this budget measures unminified size, so the
+        // padding does not need to be incompressible.
+        const pad = 'x'.repeat(40_000);
+        return `${original}\nglobalThis.__gateSizePad = ${JSON.stringify(pad)};\n`;
+      },
+    },
+  },
+  {
+    name: 'tree-shaking',
+    covers: 'an unused enhancer does not survive into a consumer bundle',
+    cmd: ['node', 'scripts/test-tree-shaking.js'],
+    needsBuild: true,
+    unproven: 'builds its own fixtures; needs a fixture, not a file mutation',
+  },
+  {
+    name: 'sanity',
+    covers: 'workspace smoke/parity checks',
+    cmd: ['node', 'scripts/sanity-checks.js'],
+    needsBuild: true,
+    unproven: 'a broad smoke script; no single input whose corruption it must catch',
+  },
+  {
     name: 'package-hygiene',
     covers: 'no junk in any tarball, and every declared entry is present',
     cmd: ['node', 'scripts/verify-package-hygiene.js'],
