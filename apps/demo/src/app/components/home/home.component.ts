@@ -125,12 +125,18 @@ export class HomeComponent {
       cta: 'Read forms docs →',
     },
     {
-      title: '@signaltree/enterprise',
+      // DEPRECATED since 13.5.0. Kept on this list because it is still
+      // published — enterprise@13.x will not resolve against core@14, so a
+      // 14-compatible release is what lets existing users upgrade at all — but
+      // it must not read as a recommendation. Its own README records that the
+      // headline performance claim was inverted: `tree.updateAndReport()` is
+      // built in, adds no bundle, and is faster in every workload measured.
+      title: '@signaltree/enterprise (deprecated)',
       description:
-        'Advanced diagnostics and scaling-oriented tooling for larger teams and heavier state graphs.',
+        'Deprecated since 13.5.0 — use `tree.updateAndReport()` from @signaltree/core instead. It is built in, needs no enhancer, and measured faster in every workload. This package ships only so existing installs keep resolving.',
       route: '/docs',
       queryParams: { package: 'enterprise' },
-      cta: 'Read enterprise docs →',
+      cta: 'Read the migration note →',
     },
   ];
 

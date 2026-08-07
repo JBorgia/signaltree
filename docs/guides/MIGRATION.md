@@ -2,6 +2,34 @@
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
+## 14.0.0
+
+> The largest breaking release since v9, and almost all of it fails at COMPILE
+> time by design — the one change that could have been silent (a leaf call that
+> did nothing) is now a type error precisely because it used to fail invisibly.
+> Full detail, every symbol, and a checklist:
+> [`docs/guides/migration-v13-v14.md`](migration-v13-v14.md).
+
+**Breaking:**
+
+- **Calling a leaf is no longer a setter.** `tree.$.count(5)` is TS2554; use
+  `.set()` / `.update()`. Branches and the root are unchanged.
+- **`@signaltree/callable-syntax` is deleted.** No replacement.
+- **25 authoring symbols moved to `@signaltree/core/authoring`** — the reader
+  allowlists, marker brands, marker and structural guards, `parsePath`,
+  `SIGNAL_TREE_CONSTANTS`/`_MESSAGES`. Import path only; nothing changed shape.
+- **`effects()` removed** — use Angular's `effect()`, which accepts
+  `{ injector }`.
+- **`enableSerialization` / `applyPersistence` / `deepCloneJSON` removed** —
+  they were reachable from no entry point.
+- **Snapshot payloads carry values, not machinery.** `tree({ rows: [...] })`
+  with a bare array now applies rather than silently doing nothing.
+
+**Worth knowing (not breaking):** `canUndo()`/`canRedo()`/`getHistory()` are
+reactive now — an undo button in a zoneless app previously never enabled. And
+ST2026 warns when an inline predicate defeats the `where()`/`find()` memo, which
+measured 75x.
+
 ## 13.2.0 (unreleased)
 
 > One behavior change: `signalForm()`'s `nativeErrors` option now defaults to
