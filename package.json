@@ -19,7 +19,7 @@
   "scripts": {
     "build": "nx build",
     "test": "nx test",
-    "lint": "nx lint",
+    "lint": "nx run-many -t lint",
     "serve": "nx serve",
     "e2e": "nx e2e",
     "start": "nx serve demo",
