@@ -34,16 +34,9 @@ export { defineStore, type DefineStoreConfig } from './lib/define-store';
  */
 export {
   asReadonly,
-  // Per-marker reader-key allowlists (const) — the `Pick` sources for the
-  // readonly views; importable by parity fixtures.
-  ENTITY_READERS,
-  ENTITY_LOADER_READERS,
-  STATUS_READERS,
-  FORM_READERS,
-  FORM_WIZARD_READERS,
-  STORED_READERS,
-  ASYNC_SOURCE_READERS,
-  ASYNC_QUERY_READERS,
+  // The per-marker reader-key allowlists moved to '@signaltree/core/authoring'
+  // in 14.0.0. They exist to TYPE `asReadonly`; an app calls `asReadonly(tree)`
+  // and never names them.
   type ReadonlyStore,
   type ReadonlyView,
   type ReadonlyNodeAccessor,
@@ -135,9 +128,8 @@ export type {
   EntitySignalWithSlices,
   EntityMapMarkerWithSlices,
 } from './lib/markers/entity-map';
-// A type guard, alongside the isNodeAccessor / isAnySignal / isTraversableNode
-// family it belongs with.
-export { isSignalTree } from './lib/types';
+// isSignalTree lives on '@signaltree/core/authoring' with the rest of the guard
+// family.
 
 // Per-leaf equality (13.5.0)
 export { compared, byKeys } from './lib/markers/compared';
@@ -170,7 +162,6 @@ export type { SignalTreeBuilder } from './lib/internals/builder-types';
 
 export {
   // derived() function removed in v6.3.1 - use computed() directly
-  isDerivedMarker,
   type DerivedMarker,
   type DerivedType,
 } from './lib/markers/derived';
@@ -178,7 +169,6 @@ export {
 // Status marker (v7) - async operation state
 export {
   status,
-  isStatusMarker,
   LoadingState,
   type StatusMarker,
   type StatusSignal,
@@ -188,7 +178,6 @@ export {
 // Stored marker (v7) - localStorage persistence
 export {
   stored,
-  isStoredMarker,
   createStorageKeys,
   clearStoragePrefix,
   flushAllStoredSignals,
@@ -204,10 +193,8 @@ export {
 // (authoring-only factory, zero application consumers).
 export {
   form,
-  isFormMarker,
   validators,
   withKind,
-  FORM_MARKER,
   type FormMarker,
   type FormSignal,
   type FormConfig,
@@ -246,8 +233,6 @@ export {
 // (authoring-only factory, zero application consumers).
 export {
   asyncSource,
-  isAsyncSourceMarker,
-  ASYNC_SOURCE_MARKER,
   type AsyncSourceMarker,
   type AsyncSourceSignal,
   type AsyncSourceConfig,
@@ -259,8 +244,6 @@ export {
 // (authoring-only factory, zero application consumers).
 export {
   asyncQuery,
-  isAsyncQueryMarker,
-  ASYNC_QUERY_MARKER,
   type AsyncQueryMarker,
   type AsyncQuerySignal,
   type AsyncQueryConfig,
@@ -312,15 +295,10 @@ export {
   equal,
   deepEqual,
 
-  // Signal utilities - Signal-specific helpers
-  isNodeAccessor,
-  isAnySignal,
-  isTraversableNode,
   toWritableSignal,
-
-  // Helper functions - Path parsing
-  parsePath,
-  isBuiltInObject,
+  // isNodeAccessor / isAnySignal / isTraversableNode / isBuiltInObject /
+  // parsePath moved to '@signaltree/core/authoring' in 14.0.0 — you reach for a
+  // structural guard when you are walking a tree, which is authoring work.
 } from './lib/utils';
 
 // `composeEnhancers`, `getPathNotifier` — removed from the root barrel in v12;
@@ -410,7 +388,10 @@ export { devTools } from './enhancers/devtools/devtools';
  * @see {@link SIGNAL_TREE_CONSTANTS} for configuration values
  * @see {@link SIGNAL_TREE_MESSAGES} for error/warning messages
  */
-export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/constants';
+// SIGNAL_TREE_CONSTANTS / SIGNAL_TREE_MESSAGES moved to
+// '@signaltree/core/authoring' in 14.0.0; `isDev` stays, since an app legitimately
+// branches on it.
+export { isDev } from './lib/constants';
 
 // ============================================
 // PUBLIC API SUMMARY

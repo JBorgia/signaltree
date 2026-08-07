@@ -8,7 +8,8 @@ import {
     ValidationErrors,
     ValidatorFn,
 } from '@angular/forms';
-import { FormSignal, ISignalTree, isTraversableNode } from '@signaltree/core';
+import { FormSignal, ISignalTree } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 
 // =============================================================================
 // TYPES
@@ -578,4 +579,4 @@ function tryInjectInjector(): Injector | undefined {
 // RE-EXPORTS FOR CONVENIENCE
 // =============================================================================
 
-export { FORM_MARKER, isFormMarker } from '@signaltree/core';
+export { FORM_MARKER, isFormMarker } from '@signaltree/core/authoring';

@@ -6,14 +6,32 @@
     "declarationMap": true,
     "inlineSources": true,
     "types": [],
-    "typeRoots": ["./src/types", "../../node_modules/@types"],
+    "typeRoots": [
+      "./src/types",
+      "../../node_modules/@types"
+    ],
     "paths": {
-      "@signaltree/core": ["../../packages/core/src/index.ts"],
-      "@signaltree/core/*": ["../../packages/core/src/*"],
-      "@signaltree/schema": ["../../packages/schema/src/index.ts"],
-      "@signaltree/schema/*": ["../../packages/schema/src/*"],
-      "@signaltree/shared": ["../../packages/shared/src/index.ts"],
-      "@signaltree/shared/*": ["../../packages/shared/src/*"]
+      "@signaltree/core": [
+        "../../packages/core/src/index.ts"
+      ],
+      "@signaltree/core/*": [
+        "../../packages/core/src/*"
+      ],
+      "@signaltree/schema": [
+        "../../packages/schema/src/index.ts"
+      ],
+      "@signaltree/schema/*": [
+        "../../packages/schema/src/*"
+      ],
+      "@signaltree/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@signaltree/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@signaltree/core/authoring": [
+        "packages/core/src/authoring.ts"
+      ]
     }
   },
   "exclude": [
@@ -22,5 +40,7 @@
     "vitest.config.ts",
     "src/**/*.test.ts"
   ],
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

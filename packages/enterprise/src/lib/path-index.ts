@@ -1,5 +1,5 @@
 import { isSignal } from '@angular/core';
-import { isTraversableNode } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 
 /**
  * PathIndex - Fast signal lookup using Trie data structure

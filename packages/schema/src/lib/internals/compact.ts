@@ -1,4 +1,4 @@
-import { isTraversableNode } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 
 import type { Registry } from './state';
 import { removeBoundPath, removePendingPath } from './state';

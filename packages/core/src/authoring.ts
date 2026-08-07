@@ -73,3 +73,58 @@ export type {
   TreeErrorEvent,
   TreeErrorSource,
 } from './lib/internals/error-reporter';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Moved here from the root barrel in 14.0.0.
+//
+// The invariant that exposed it: "everything usable is demoed, so everything
+// exported should appear in the demo app." It did not — 26 of 59 root runtime
+// exports were absent. The absentees were not a gap in the demo; they were all
+// of one kind. The READER allowlists exist to TYPE `asReadonly`, the marker
+// symbols are brands for writing a marker processor, and the guards answer
+// questions you only ask while walking a tree or building tooling. None of it
+// is app code, and all of it sat on the entry point an app imports.
+//
+// This entry point already existed for exactly this distinction. Nothing was
+// deleted and nothing changed shape — the imports move.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Reader-key allowlists — the `Pick` sources behind the readonly views.
+export {
+  ENTITY_READERS,
+  ENTITY_LOADER_READERS,
+  STATUS_READERS,
+  FORM_READERS,
+  FORM_WIZARD_READERS,
+  STORED_READERS,
+  ASYNC_SOURCE_READERS,
+  ASYNC_QUERY_READERS,
+} from './lib/readonly';
+
+// Marker brand symbols — for recognising a marker you did not create.
+export { FORM_MARKER } from './lib/markers/form';
+export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source';
+export { ASYNC_QUERY_MARKER } from './lib/markers/async-query';
+
+// Marker type guards — you ask "is this a marker?" when writing a processor.
+export { isFormMarker } from './lib/markers/form';
+export { isStoredMarker } from './lib/markers/stored';
+export { isStatusMarker } from './lib/markers/status';
+export { isDerivedMarker } from './lib/markers/derived';
+export { isAsyncSourceMarker } from './lib/markers/async-source';
+export { isAsyncQueryMarker } from './lib/markers/async-query';
+
+// Structural guards and path plumbing — tree-walking tools.
+// `isTraversableNode` in particular is what the repo's own lint rule points
+// contributors at instead of hand-rolling an "object or function" check.
+export {
+  isNodeAccessor,
+  isAnySignal,
+  isTraversableNode,
+  isBuiltInObject,
+  parsePath,
+} from './lib/utils';
+export { isSignalTree } from './lib/types';
+
+// Constants and diagnostic message text.
+export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';

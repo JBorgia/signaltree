@@ -1,5 +1,5 @@
 import { isSignal } from '@angular/core';
-import { isTraversableNode } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 
 import type { SchemaEntry, PatternSegment, Registry } from './state';
 import { WILDCARD, addBoundPath } from './state';

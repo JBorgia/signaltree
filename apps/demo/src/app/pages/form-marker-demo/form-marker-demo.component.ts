@@ -16,6 +16,7 @@ import {
   type ISignalTree,
   signalTree,
   validators,
+  withKind,
 } from '@signaltree/core';
 import { formBridge } from '@signaltree/ng-forms';
 
@@ -66,6 +67,20 @@ interface AuditProfile {
 // COMPONENT
 // =============================================================================
 
+/**
+ * A custom validator. `withKind` tags the failure so consumers see
+ * `{ kind: 'no-links', message }` instead of a bare string — the demo exists
+ * partly to make sure every root-barrel export has a place someone can see it
+ * used, and this was the last one that did not.
+ */
+const noLinks = withKind(
+  (value: unknown) =>
+    typeof value === 'string' && /https?:\/\//i.test(value)
+      ? 'Please do not include links'
+      : null,
+  'no-links'
+);
+
 @Component({
   selector: 'app-form-marker-demo',
   standalone: true,
@@ -108,6 +123,10 @@ export class FormMarkerDemoComponent implements OnDestroy {
         message: [
           validators.required('Message is required'),
           validators.minLength(10, 'Message must be at least 10 characters'),
+          // A CUSTOM validator, tagged with `withKind` so the failure arrives as
+          // { kind: 'no-links', message } rather than an anonymous string. That
+          // tag is what lets a template branch on WHY something failed.
+          noLinks,
         ],
       },
     }),

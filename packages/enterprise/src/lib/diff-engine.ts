@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-import { isBuiltInObject } from '@signaltree/core';
+import { isBuiltInObject } from '@signaltree/core/authoring';
 
 import type { Path } from './path-index';
 

@@ -21,7 +21,8 @@ import {
   validateStandardSchema,
   type FieldTree,
 } from '@angular/forms/signals';
-import { isTraversableNode, toWritableSignal } from '@signaltree/core';
+import { toWritableSignal } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 import type { SchemaMethods } from '@signaltree/schema';
 
 /**

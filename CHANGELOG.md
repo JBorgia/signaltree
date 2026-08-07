@@ -2,6 +2,39 @@
 
 ### BREAKING
 
+- **25 symbols moved from `@signaltree/core` to `@signaltree/core/authoring`.**
+  Nothing was deleted and nothing changed shape — the import path moves.
+
+  ```ts
+  // before
+  import { isNodeAccessor, FORM_MARKER, ENTITY_READERS } from '@signaltree/core';
+  // after
+  import { isNodeAccessor, FORM_MARKER, ENTITY_READERS } from '@signaltree/core/authoring';
+  ```
+
+  Moved: the eight `*_READERS` allowlists, `FORM_MARKER` / `ASYNC_SOURCE_MARKER`
+  / `ASYNC_QUERY_MARKER`, the six `is*Marker` guards, `isNodeAccessor`,
+  `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`,
+  `parsePath`, `SIGNAL_TREE_CONSTANTS` and `SIGNAL_TREE_MESSAGES`.
+
+  Found by an invariant worth stating: *if everything usable is demoed, then
+  everything exported appears in the demo app.* It did not — 26 of 59 root
+  runtime exports were absent, and the absentees were not a scattering of
+  overlooked features. They were all one kind: the READER allowlists exist to
+  TYPE `asReadonly`, the marker symbols are brands for writing a marker
+  processor, the guards answer questions you only ask while walking a tree.
+  None of it is app code, and all of it sat on the entry point an app imports.
+
+  So the failure was not an incomplete demo — it was the root barrel mixing the
+  app API with authoring plumbing. `/authoring` already existed for exactly this
+  distinction. The root barrel is now 34 symbols, all of them demonstrated, and
+  `tools/check-demo-coverage.mjs` gates it so the mixing cannot return.
+
+  `isDev` and `withKind` deliberately stayed: an app legitimately branches on
+  the first, and the second is how you tag a custom `form()` validator. `withKind`
+  was the one root export the demo genuinely lacked, and the demo now uses it.
+
+
 - **Calling a leaf is no longer a setter.** `tree.$.count(5)` is a compile
   error; the `(value: NotFn<T>): void` and updater overloads are gone from
   `CallableWritableSignal<T>`. Use `.set()` / `.update()`. Branches and the root

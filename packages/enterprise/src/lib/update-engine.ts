@@ -1,5 +1,5 @@
 import { isSignal } from '@angular/core';
-import { isBuiltInObject, isTraversableNode } from '@signaltree/core';
+import { isBuiltInObject, isTraversableNode } from '@signaltree/core/authoring';
 
 import { ChangeType, DiffEngine } from './diff-engine';
 import { PathIndex } from './path-index';

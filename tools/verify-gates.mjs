@@ -154,6 +154,19 @@ const GATES = [
     },
   },
   {
+    name: 'demo-coverage',
+    covers: 'every ROOT-barrel export is demonstrated in the demo app',
+    cmd: ['node', 'tools/check-demo-coverage.mjs'],
+    needsBuild: true,
+    // Adding a root export with no demo must fail. This is the stronger of the
+    // two reachability checks: dead-exports asks whether anything IMPORTS a
+    // symbol, this asks whether anything SHOWS it to a person.
+    mutation: {
+      file: 'dist/packages/core/dist/index.js',
+      append: '\nexport const __gateUndemoedExport = 1;\n',
+    },
+  },
+  {
     name: 'dead-exports:self',
     covers: 'the reachability scan itself is neither too narrow nor too broad',
     cmd: ['node', 'tools/find-dead-exports.mjs', '--self-test'],

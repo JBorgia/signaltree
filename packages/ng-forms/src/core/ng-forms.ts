@@ -28,7 +28,8 @@ import {
     ValidationErrors,
     ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
-import { isTraversableNode, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { isTraversableNode } from '@signaltree/core/authoring';
 import {
   deepClone,
   isGlobKey,
