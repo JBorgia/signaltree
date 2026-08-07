@@ -146,6 +146,16 @@
   a leak (the cache is a `WeakMap`), which is why it needed a diagnostic —
   nothing breaks, the app is just slow forever.
 
+- **ST2030** — `@signaltree/guardrails` could not snapshot state. It clones the
+  tree on every change so the next poll has a stable "before", and
+  `structuredClone` throws on a function or class instance. The JSON fallback
+  that used to catch that is REMOVED: JSON turns a `Date` into a string and a
+  `Set` into `{}`, so `previousState` could never deep-equal the live state
+  again and guardrails reported a change on every poll, forever, out of nothing
+  — a diagnostic fabricating the problem it exists to find. It now holds the
+  live snapshot by reference (valid, because `tree()` is immutable and
+  structurally shared), loses only in-place-mutation detection, and says so.
+
 - **ST2027** — the no-op copy write. The new value is a DIFFERENT object that
   deep-equals the current one, so the comparator walks the whole structure to
   conclude nothing changed and the write is discarded: ~2.8 ms on a 50,000

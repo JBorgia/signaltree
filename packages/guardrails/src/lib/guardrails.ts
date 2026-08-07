@@ -58,6 +58,36 @@ function resolveEnabledFlag(option?: EnabledOption): boolean {
   return option;
 }
 
+/** @internal Dev dedupe for ST2030 — one report per session. */
+let warnedCloneDegraded = false;
+
+/**
+ * @internal Snapshot the previous state so the next tick has something stable
+ * to diff against.
+ *
+ * The clone itself is deliberate (`2be2186b`, "robust polling detection") and
+ * stays: it is what lets polling notice a leaf value mutated IN PLACE, which
+ * never notifies a signal and so is invisible to every other path.
+ *
+ * The JSON fallback that commit added does NOT stay. It was reasonable as
+ * written and turns out to be worse than no clone at all, for a reason that
+ * only shows up over time: JSON round-tripping turns a `Date` into a string and
+ * a `Map`/`Set` into `{}`. The result is a `previousState` that can never
+ * `deepEqual` the live state again — so `handleStateChange` reports a change on
+ * EVERY poll, forever, inventing hot paths and issues out of nothing. A
+ * diagnostic that fabricates the problem it exists to find is the one failure
+ * mode it cannot have.
+ *
+ * Returning the original REFERENCE instead only costs in-place-mutation
+ * detection for that one tick, and never lies: `tree()` hands back an immutable,
+ * structurally-shared snapshot, so a retained reference is a valid "before".
+ * (Verified: a snapshot captured before a write still reads the old value after
+ * it, with no clone involved.)
+ *
+ * `structuredClone` throws on a function or class instance — one such field
+ * anywhere in state degrades the whole snapshot — so the degrade is reported
+ * rather than absorbed. [ST2030]
+ */
 function tryStructuredClone<T>(value: T): T {
   const cloneFn = (
     globalThis as typeof globalThis & {
@@ -68,18 +98,25 @@ function tryStructuredClone<T>(value: T): T {
   if (isFunction(cloneFn)) {
     try {
       return cloneFn(value);
-    } catch {
-      // Fall through to return original value.
+    } catch (err) {
+      if (!warnedCloneDegraded) {
+        warnedCloneDegraded = true;
+        console.warn(
+          `SignalTree guardrails: could not snapshot state for change ` +
+            `detection — structuredClone rejected it, usually a function or a ` +
+            `class instance somewhere in the tree. Guardrails keeps working, ` +
+            `but it can no longer see a leaf value MUTATED IN PLACE, because ` +
+            `its "before" now aliases the live snapshot. Every other check is ` +
+            `unaffected. Remove the non-cloneable field from state — ` +
+            `rules.noFunctionsInState() finds it. [ST2030]`,
+          err
+        );
+      }
+      return value;
     }
   }
 
-  try {
-    // Fallback to JSON-based deep clone for plain objects.
-    return JSON.parse(JSON.stringify(value)) as T;
-  } catch {
-    // As a last resort, return the original reference.
-    return value;
-  }
+  return value;
 }
 
 /**
