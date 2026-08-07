@@ -120,6 +120,35 @@ const entry = pruneHistoryExcluded(plain, this.tree.$);
 - ❌ Puts the burden on every write site, and the failure mode is invisible: an
   app that forgets simply gets slow, which is the ST2026 shape.
 
+### D. Make the rebuild cheaper instead of avoiding it — **measured and rejected**
+
+`allSignal` rebuilds with `Array.from(storage.values())`. It does not have to:
+`updateOne` knows exactly which entity changed, so the previous array could be
+patched instead. MEASURED, one index replaced:
+
+| N      | rebuild | `prev.slice()` + patch |      |
+| ------ | ------- | ---------------------- | ---- |
+| 1,000  | 1.1 µs  | 0.3 µs                 | 3.4x |
+| 10,000 | 10.5 µs | 2.2 µs                 | 4.7x |
+| 50,000 | 88.3 µs | 30.3 µs                | 2.9x |
+
+Real, and still rejected, for three reasons in increasing order of weight:
+
+1. **It is a constant factor, not a complexity change.** `slice()` is still
+   O(N). Option B takes the same cost to ZERO for a collection that opts out.
+2. **The consumer it helps is the one we steer away from.** Reading `all()`
+   after every single-entity update is the whole-collection-read anti-pattern;
+   `byId()` is the granular path and ST2018 already points there.
+3. **Its enabling machinery regresses something currently flat.** Patching needs
+   an id→index map to find the slot. Appending keeps it O(1), but `removeOne`
+   shifts every later index — O(N) to reindex. `removeOne` measures FLAT today
+   (0.52 / 0.39 / 0.51 µs at 1k / 10k / 100k), so this trades an O(1) operation
+   for a constant-factor win on a discouraged one.
+
+Recorded because the option is genuinely attractive and the first two objections
+are not decisive on their own — the third is. If option B is ever abandoned,
+re-derive this rather than assuming it was rejected on the numbers alone.
+
 ## 5. Recommendation
 
 **Option B**, with:

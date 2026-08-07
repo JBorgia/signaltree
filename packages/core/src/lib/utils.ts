@@ -235,9 +235,15 @@ export function composeEnhancers<T>(
  * no way to say so until `snapshot()` existed.
  *
  * The lookup is an O(1) read of a symbol stamped at `create()` time, not a scan
- * over registered processors: `owns()` runs on every node of every
- * materialisation, and a scan would let one slow third-party predicate degrade
- * trees that do not contain that marker.
+ * over registered processors: this runs on every node of every materialisation,
+ * and a scan would let one slow third-party predicate degrade trees that do not
+ * contain that marker.
+ *
+ * (An earlier revision of this comment attributed that lookup to an `owns()`
+ * hook. There is no such hook and there never was — see the note on
+ * PROCESSOR_STAMP in materialize-markers.ts. The name leaked out of a design
+ * proposal into three comments and then into a research document that repeated
+ * it as fact; this was the last copy.)
  *
  * Returns `undefined` for anything that is not a marker, or whose processor
  * declines a snapshot — `stored()` is already a real signal, so the ordinary
@@ -821,4 +827,3 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
     }
   }
 }
-
