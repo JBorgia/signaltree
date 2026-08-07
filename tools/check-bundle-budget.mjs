@@ -29,13 +29,63 @@
  */
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, statSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const CORE = new URL('../dist/packages/core/dist/index.js', import.meta.url)
   .pathname;
 const REPO_NODE_MODULES = new URL('../node_modules', import.meta.url).pathname;
+
+/**
+ * This gate measures BUILT OUTPUT (`dist/`), not source — and for a long time
+ * it never checked whether that output matched the source it was run against.
+ * It could not fail on a stale `dist`; it measured whatever was lying there.
+ *
+ * Not hypothetical. `npm run build` was itself broken (it resolved to a project
+ * with no build target and exited 1), so nothing rebuilt `dist`, so this gate
+ * reported a green number from an artifact several commits old through an
+ * entire release-hardening session. Two bugs, each survivable alone: the dead
+ * script let the artifact go stale, and the missing freshness check made the
+ * staleness invisible. Every budget "verification" in between was measuring
+ * code nobody had written yet.
+ *
+ * So the gate builds for itself now rather than trusting what it finds. Nx
+ * caches, so a fresh tree costs a cache hit; an unbuilt one costs a build,
+ * which is the correct price for a number that claims to describe the code.
+ *
+ * Timestamps were tried first and rejected: an Nx cache RESTORE writes correct
+ * output without bumping mtimes, so "source newer than dist" reports a stale
+ * build that is not stale. A check with false alarms gets disabled, which
+ * leaves you back here.
+ */
+const BUILD_PROJECTS = 'core,shared,ng-forms,guardrails,events,realtime,schema';
+
+function ensureBuilt() {
+  try {
+    execSync(`npx nx run-many -t build --projects=${BUILD_PROJECTS}`, {
+      cwd: new URL('..', import.meta.url).pathname,
+      stdio: 'pipe',
+    });
+  } catch (err) {
+    console.error(
+      `\n❌ Could not build the packages this gate measures.\n` +
+        `   It reads dist/, so it refuses to report a number rather than\n` +
+        `   report one for whatever happens to be there.\n\n` +
+        String(err.stdout ?? err.message).slice(-1500)
+    );
+    process.exit(1);
+  }
+  try {
+    statSync(CORE);
+  } catch {
+    console.error(`\n❌ Build reported success but ${CORE} is missing.\n`);
+    process.exit(1);
+  }
+}
+
+ensureBuilt();
 
 // id -> { code, budgetKB }
 const TARGETS = {
@@ -210,8 +260,29 @@ const TARGETS = {
     // Bumped for ST2027 — see the attribution on `signaltree-bare`. Measured
     // prod +0.07KB, dev +0.30KB from threading the leaf path for the
     // diagnostic's message.
+    //
+    // ⚠️ RE-BASELINED for 14.0.0, and read the reason before trusting anything
+    // above. Until `ensureBuilt()` was added, this gate measured whatever was
+    // in `dist/` without checking it matched the source — and `npm run build`
+    // was broken, so `dist/` was stale for an entire hardening session. Every
+    // number attributed above was computed that way. They are recorded as
+    // written, not silently corrected, because a fabricated correction would be
+    // no better; treat the pre-14.0.0 attributions as indicative, not measured.
+    //
+    // First honest baseline, both ends rebuilt from source:
+    //
+    //     b254edc1 (14.0.0 hardening start)   9.13 prod   11.56 dev
+    //     after the hardening work            9.40 prod   12.07 dev
+    //
+    // +0.27 prod, +0.51 dev. `signaltree-bare` moved +0.09/+0.35 over the same
+    // span, so ~0.18KB of the prod growth is entity-specific: the `where`/`find`
+    // storage-scan fast path and `entityMap`'s `history` flag (RFC 0012). The
+    // shared remainder is ST2027's leaf-path threading and ST2028's structural
+    // clone. Dev outgrows prod roughly 2:1, which is the expected shape when
+    // most of what landed is diagnostic text that folds — `ngDevMode: false`
+    // reclaims it (see check-devmode-foldable).
     devKB: 12.1,
-    prodKB: 9.4,
+    prodKB: 9.5,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
