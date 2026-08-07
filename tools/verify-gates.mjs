@@ -163,6 +163,22 @@ const GATES = [
     },
   },
   {
+    name: 'angular-compat',
+    covers: 'no Angular API newer than the ^20 floor is imported as a VALUE',
+    cmd: ['node', 'tools/check-angular-compat.mjs'],
+    needsBuild: true,
+    // The repo's own Angular is 22, so an accidental value-import of Signal
+    // Forms would build, test and publish green while breaking every Angular 20
+    // consumer at import time.
+    // Mutating the /signals entry proves nothing — it is ALLOWED to use Signal
+    // Forms. The regression that matters is the MAIN entry reaching it, which
+    // is what breaks an Angular 20 consumer who never touched /signals.
+    mutation: {
+      file: 'dist/packages/ng-forms/dist/core/ng-forms.js',
+      append: "\nexport { form as __gateLeak } from '@angular/forms/signals';\n",
+    },
+  },
+  {
     name: 'version-claims',
     covers: 'every documented Angular-version claim matches peerDependencies',
     cmd: ['node', 'scripts/verify-version-claims.js'],
