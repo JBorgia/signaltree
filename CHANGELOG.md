@@ -43,6 +43,46 @@
 
 ### Added
 
+- **Collection APIs from the capability audit** — `prependOne`/`prependMany`,
+  `activeId`/`activeEntity`/`setActiveId`/`clearActiveId`, and `changeId`.
+  Sourced by reading the shipped type declarations of `@ngrx/signals`, elf,
+  Akita and NGXS rather than their docs; prepend was the one capability every
+  other library had and we did not.
+
+  `activeEntity` resolves through the per-entity signal rather than the
+  collection, so an unrelated row changing does not recompute it — a hand-rolled
+  `computed(() => all().find(...))` recomputes on every collection change, which
+  is the reason to build it in. `changeId` states its limitation: a node already
+  HELD from the old id resolves to `undefined`, because a node closes over its
+  id and aliasing the old key would let a later `addOne({ id: oldId })` share one
+  signal between two entities.
+
+- **`pauseRecording()` / `resumeRecording()` / `isRecordingPaused()`** on
+  `timeTravel`, plus a `shouldSkip(prev, next)` comparator. Without pause a bulk
+  import writes a hundred history entries and the user's next undo reverts one
+  row of it. `isRecordingPaused` is reactive — the same lesson as `canUndo`,
+  applied before shipping this time. The comparator runs on every recorded
+  write, so it is documented to compare the few fields you mean.
+
+- **`onTreeError`** (`@signaltree/core/authoring`) — one place to observe every
+  error the library catches. Markers still handle their own errors exactly as
+  before; this is additive, and a listener that throws cannot damage the
+  operation that reported to it. **ST2025** reports a throwing listener.
+
+- **ST2026** — the inline-predicate trap. `where`/`find` memoise per predicate
+  IDENTITY, so an inline arrow in a template allocates a new one per
+  change-detection cycle, misses the cache and re-filters the collection:
+  measured 0.27 ms hoisted against 20.54 ms inline over 1,000 entities. It is not
+  a leak (the cache is a `WeakMap`), which is why it needed a diagnostic —
+  nothing breaks, the app is just slow forever.
+
+- **Newly exported types.** `persistence(config)` REQUIRED a `PersistenceConfig`
+  and `serialization(config?)` accepts a `SerializationConfig`, and neither was
+  exported — you could call both and declare neither the object passed nor the
+  methods gained. Now exported with `SerializationMethods`, `PersistenceMethods`
+  and `SerializedState`. From `/authoring`: `HydrateMode` and `HydrateReason`,
+  which `HydrateDecisionEvent` already used in its public shape.
+
 - **ST2023** — a marker that declares `snapshot` but no `hydrate`, whose node is
   not a writable signal. It serialises perfectly and silently discards every
   write, so `tree(tree())` loses its value. ST2022 cannot see this, because a
@@ -79,6 +119,38 @@
   reported zero errors for a breaking type change that broke 22 call sites.
 
 ### Fixed
+
+- **`canUndo()` / `canRedo()` / `getHistory()` are reactive.** They read a plain
+  number and a plain array, so `computed(() => tree.canUndo())` evaluated once
+  and cached `false` forever. Zone change detection re-read the method every
+  cycle and hid it completely — in a **zoneless** app the undo button never
+  enabled. Found by reading elf's `StateHistory`, which exposes `hasPast$` as an
+  observable, and asking why theirs was shaped differently; every existing
+  time-travel test called the methods imperatively, which is the one way this
+  cannot show up.
+
+- **`tree({ rows: [...] })` no longer half-applies.** `entityMap` accepted only
+  `{ all: [...] }`, the shape a snapshot emits, so a bare array left the
+  collection unchanged while sibling leaves in the same payload took their new
+  values. Dev warned (ST2024); production did nothing at all. A partial hydrate
+  is worse than a failed one, because the parts that did apply make it look like
+  it worked.
+
+- **`byId()` no longer allocates permanently.** The node cache was a strong
+  `Map`, so merely READING every row cost 4,149 B/entity — 39.6 MB at 10k. It is
+  a `WeakRef` cache with a `FinalizationRegistry` now: a walk that keeps nothing
+  costs 844 B/entity, 4.9x less. Holding the nodes still costs 3,573 B/entity,
+  because a materialised per-entity node is real state.
+
+- **A marker's snapshot wrapper no longer churns on unrelated writes.**
+  `unwrap` rebuilt it whenever any child changed, so `tree().rows !== previous.rows`
+  after writing an unrelated leaf — enough to make `computed(() => tree().rows)`
+  recompute and an OnPush component re-render. Memoised with a `computed`.
+
+- **`entityMap` restore diffs instead of calling `setAll`.** Restore rebuilt the
+  storage map, the id index and every per-entity signal to apply a one-entity
+  change: 4,368 µs per undo at 10k entities, now 78 µs.
+
 
 - **`.derived()` values were reaching snapshots, and whether they did depended
   on TOUCH ORDER.** `finalize()` (the `$` getter) runs `applyDerivedFactories`
