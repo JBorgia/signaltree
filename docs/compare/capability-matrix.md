@@ -2,33 +2,6 @@
 
 **Status:** audit, 14.0.0-rc.1.
 
-> ## ⚠️ elf is not maintained — read this before using anything below
->
-> Verified 2026-08-07, not inferred:
->
-> - the **`ngneat` GitHub organisation has 0 public repositories** — it removed
->   all of them on 2026-06-05 (`gh api orgs/ngneat` → `public_repos: 0`);
-> - `github.com/ngneat/elf` **404s**, which is the repository URL npm still
->   points at;
-> - the last npm release of `@ngneat/elf` is **2.5.1, February 2024**;
->   `elf-entities` is April 2024;
-> - a third-party rescue exists at `ngneat-archive/elf` — **archived, 1 star**,
->   described as "Verified archive of ngneat/elf at @ngneat/elf@2.5.1". It does
->   preserve the full monorepo, including the entities, state-history,
->   pagination, persist-state and requests packages;
-> - the packages are **not** marked deprecated on npm and remain installable.
->
-> **So elf belongs in the same column as Akita: informative, not competitive.**
-> It is included because its API design is genuinely worth learning from — this
-> document's best findings came from reading it — and because measuring against
-> it is how the non-reactive `canUndo()` was found. It is not a library to
-> choose in 2026, and no positioning should be built on beating it or losing to
-> it.
->
-> **The live competitor for an Angular team is `@ngrx/signals`**, which is at
-> 21.1.1, tracks Angular's version, and shipped an `/events` dispatch layer in
-> v21.
-
 ## How this was built, and why that matters
 
 Every row is read from the **installed `.d.ts` of the shipped package**, not from
@@ -40,9 +13,9 @@ a README or from memory of a library's marketing. Reproduce it with
 | `@signaltree/core` | 14.0.0-rc.1 | 191 (root: 154) | 6 |
 | `@ngrx/signals` | 21.1.1 | 73 | 5 |
 | `@ngrx/store` | 21.1.1 | 79 | 2 |
-| `@ngneat/elf` | 2.5.1 | 40 | 1 (**unmaintained**, last release Feb 2024) |
-| `@ngneat/elf-entities` | 5.0.2 | 61 | 1 (**unmaintained**) |
-| `@ngneat/elf-state-history` | 1.4.0 | 2 | 1 (**unmaintained**) |
+| `@ngneat/elf` | 2.5.1 | 40 | 1 |
+| `@ngneat/elf-entities` | 5.0.2 | 61 | 1 |
+| `@ngneat/elf-state-history` | 1.4.0 | 2 | 1 |
 | `@ngxs/store` | 20.1.0 | 131 | 6 |
 | `@datorama/akita` | 8.0.1 | 186 | 1 (unmaintained upstream) |
 
@@ -360,14 +333,9 @@ runs on every write.
 
 ### So the honest positioning
 
-**You should probably not pick elf at all in 2026** — see the banner. What
-follows is the technical comparison as if maintenance were not a factor, because
-the engineering lessons stand regardless and because "we beat an abandoned
-library" is not a claim worth making.
-
-**On the merits, elf wins** where state is mostly entity collections and bundle
-size is the binding constraint. It is smaller, it is faster at collections, and
-its feature surface is broader than ours.
+**Pick elf** if state is mostly entity collections, bundle size is the binding
+constraint, and you are comfortable with RxJS. It is smaller, it is faster at
+collections, and its feature surface is broader than ours.
 
 **Pick SignalTree** when state is large and deeply nested rather than
 collection-shaped, when writes are frequent, when many components observe
@@ -506,10 +474,9 @@ before treating any row of this document as a strategy.
 - **`@ngrx/store` and NGXS are Redux-model libraries.** Several 🟡s for them mean
   "expressible with reducers and selectors, with more ceremony", which is a
   different claim from "missing".
-- **elf and Akita are both unmaintained.** Their columns are included because
-  their API design is worth learning from — most of this document's findings came
-  from reading elf — not because either is a live competitor. See the banner at
-  the top for how elf's status was verified.
+- **Akita is unmaintained upstream.** Its column is included because its feature
+  set is the broadest here and worth learning from, not because it is a live
+  competitor.
 - **Nothing here is benchmarked.** Performance lives in
   [real-implementations.md](./real-implementations.md); this document is about
   what exists, not what it costs.
