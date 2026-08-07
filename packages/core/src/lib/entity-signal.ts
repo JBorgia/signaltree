@@ -177,7 +177,8 @@ export function createEntitySignal<
     if (predicateSources.size > 200) return;
     const seen = (predicateSources.get(source) ?? 0) + 1;
     predicateSources.set(source, seen);
-    if (seen < PREDICATE_CHURN_THRESHOLD || warnedPredicates.has(source)) return;
+    if (seen < PREDICATE_CHURN_THRESHOLD || warnedPredicates.has(source))
+      return;
     warnedPredicates.add(source);
     console.warn(
       `SignalTree: \`${method}()\` has been called ${seen} times with a NEW ` +
@@ -323,8 +324,12 @@ export function createEntitySignal<
     ) {
       warnedMissingId = true;
       console.warn(
-        `SignalTree entityMap${basePath ? ` at "${basePath}"` : ''}: an entity ` +
-          `resolved to id=${String(id)}. Entities need a stable key — give them ` +
+        `SignalTree entityMap${
+          basePath ? ` at "${basePath}"` : ''
+        }: an entity ` +
+          `resolved to id=${String(
+            id
+          )}. Entities need a stable key — give them ` +
           `an \`id\` field or pass entityMap({ selectId: (e) => e.yourKey }). ` +
           `Without it, entities collide under a single key. [ST2001]`
       );
@@ -375,7 +380,10 @@ export function createEntitySignal<
         throw new Error(`Entity with id ${String(id)} not found`);
       }
       if (typeof valueOrUpdater === 'function') {
-        api.updateOne(id, (valueOrUpdater as (c: E) => E)(current) as Partial<E>);
+        api.updateOne(
+          id,
+          (valueOrUpdater as (c: E) => E)(current) as Partial<E>
+        );
       } else {
         api.updateOne(id, valueOrUpdater as Partial<E>);
       }
@@ -394,7 +402,9 @@ export function createEntitySignal<
         set: (value: E[typeof fieldKey]) => {
           api.updateOne(id, { [fieldKey]: value } as Partial<E>);
         },
-        update: (fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]) => {
+        update: (
+          fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]
+        ) => {
           api.updateOne(id, {
             [fieldKey]: fn(entitySig()?.[fieldKey]),
           } as Partial<E>);
@@ -537,7 +547,43 @@ export function createEntitySignal<
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         warnOnPredicateChurn('where', predicate);
       }
-      const s = computed(() => allSignal().filter(predicate));
+      // Filter DURING iteration rather than materialising `all` and discarding
+      // most of it. `allSignal()` builds an array of every entity; `.filter()`
+      // then walks it again and keeps a few. Iterating `storage.values()`
+      // straight into the result array skips the intermediate entirely.
+      //
+      // MEASURED in situ, one process per arm, updateOne baseline subtracted.
+      // Ranges because the spread across runs is wide — quote the shape, not a
+      // point figure:
+      //     N=100      1.2us -> 1.3us   (neutral; not worth it at this size)
+      //     N=1,000    6.9us -> 2.6us
+      //     N=10,000  67-73us -> 24-47us
+      //     N=100,000  826us -> 328us
+      // So roughly 2-3x from N=1,000 up, and nothing below a few hundred.
+      //
+      // ⚠️ Measured on a machine running other work. Alternating order
+      // (after/before/after) held the ordering and the two `after` runs
+      // agreed, so the DIRECTION is sound and the ranges do not overlap —
+      // but treat the magnitudes as indicative and re-measure quiet before
+      // publishing any of them.
+      //
+      // Only valid WITHOUT `sortComparer`. With one, `allSignal()` sorts, so
+      // bypassing it would silently return insertion order instead of sorted
+      // order — a behaviour change, not an optimisation. Without one,
+      // `allSignal()` is `Array.from(storage.values())`, so the fast path is
+      // order-IDENTICAL rather than merely order-equivalent.
+      //
+      // `version()` is read directly for the same invalidation `allSignal()`
+      // has; the sorted branch gets it transitively.
+      const s = computed(() => {
+        if (config.sortComparer) return allSignal().filter(predicate);
+        version();
+        const out: E[] = [];
+        for (const entity of storage.values()) {
+          if (predicate(entity)) out.push(entity);
+        }
+        return out;
+      });
       whereCache.set(predicate, s);
       return s;
     },
@@ -549,7 +595,28 @@ export function createEntitySignal<
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         warnOnPredicateChurn('find', predicate);
       }
-      const s = computed(() => allSignal().find(predicate));
+      // Same bypass as `where`, and the win here is algorithmic rather than a
+      // constant factor: `allSignal().find()` builds the WHOLE array before
+      // looking at the first element, so a match at index 5 of 10,000 still
+      // costs O(N). Iterating stops at the match.
+      //
+      // MEASURED in situ at 10k, updateOne baseline subtracted:
+      //     match at the END    52-61us -> 12-20us   (~3-5x)
+      //     match at index 5      13.6us -> 0.2us    (~50x)
+      // The second is the point: `find` goes from O(N) ALWAYS to O(position).
+      // The first is the same intermediate-array saving as `where`.
+      //
+      // Sorted collections keep the old path: `find` returns the FIRST match,
+      // which is order-dependent, so with a `sortComparer` the sorted array is
+      // the only correct thing to scan. See the note on `where` above.
+      const s = computed(() => {
+        if (config.sortComparer) return allSignal().find(predicate);
+        version();
+        for (const entity of storage.values()) {
+          if (predicate(entity)) return entity;
+        }
+        return undefined;
+      });
       findCache.set(predicate, s);
       return s;
     },
