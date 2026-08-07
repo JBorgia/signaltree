@@ -53,14 +53,36 @@ and costs ~2.8 ms at 50k.
 3. **Default to `Object.is`, make deep equality opt-in.** Inverts a design
    commitment: SignalTree suppresses no-op notifications so a re-fetched payload
    does not cascade. Removing that by default is a different library.
+
+   **Worth recording that the host framework takes the other side.** Angular
+   signals default to `Object.is`, and Angular's own guidance is not to override
+   it without cause. Our divergence is deliberate and defensible — it is what
+   stops a re-fetched payload cascading — but "a different library" understates
+   the counterargument, and this option should not be dismissed as lightly as an
+   earlier revision of this RFC did.
+
 4. **Bound by depth rather than width.** Does not help — the cost here is width.
 5. **Sample K elements and assume the rest match.** Can report equal when they
    are not, which drops a real write. The only unsafe direction; never do this.
 6. **Cache a structural hash per array.** Hashing IS the O(N) walk, paid on
    write instead of compare, plus invalidation.
-7. **Adopt `lodash.isEqual`.** MEASURED: 1.8x faster on partial-walk arrays,
-   **2.4x slower** on the full walk and 1.26x slower on small objects — the two
-   cases that dominate. Also a dependency in a zero-dep package.
+7. **Adopt a third-party comparator.** MEASURED against both, and an earlier
+   revision of this RFC judged it on `lodash.isEqual` alone, which is not the
+   opponent that matters:
+
+   |                      |        ours |   lodash |    `fast-deep-equal` |
+   | -------------------- | ----------: | -------: | -------------------: |
+   | object, 10 keys      |    229.2 ns | 326.7 ns |         **207.0 ns** |
+   | array 1k, one change | **1.08 µs** |        — |              1.76 µs |
+   | array 1k, all-new    |     62.6 µs |        — |          **41.1 µs** |
+   | **cyclic value**     |  **`true`** |        — | **THREW RangeError** |
+
+   So against the actual leader we win **one of three on speed** — the
+   partial-walk case, which is the inline-reference loop — and lose the other
+   two. What settles it is the last row: `fast-deep-equal` stack-overflows on a
+   cyclic value, so adopting it would reintroduce the crash §4 documents, in a
+   zero-dep package, to be ~10% faster on small objects.
+
 8. **Bound by byte size rather than element count.** Requires measuring size,
    which is the walk.
 9. **A `maxCompare` config option.** Config as a substitute for a decision — the
@@ -169,3 +191,26 @@ A diagnostic here would have caught both. It is cheap: the comparator already
 knows it returned `true`, and the write path already knows the reference
 differed. Proposed as the next free `ST####`, and recommended **ahead of**
 either proposal above.
+
+---
+
+## 4. What this RFC missed, and how it was found
+
+Every option in §1 was generated from first principles, and **none of them was
+cycle safety** — because the whole section was framed as a performance question
+and never asked what makes the comparator _wrong_.
+
+Reading `fast-equals` surfaced it in two searches: that library ships circular
+support as a **separate entry point** (`circularDeepEqual`), and an API shaped
+that way implies a failure class. Testing for it found that `deepEqual` threw
+`RangeError: Maximum call stack size exceeded` on any cyclic value — the default
+leaf comparator, crashing on a parent-pointing node list, which is ordinary
+domain data.
+
+Fixed and pinned by `deep-equal-cycles.spec.ts`; the guard is a depth counter
+that only materialises a `WeakMap` past a depth no legitimate state reaches.
+
+The generalisable lesson, which is worth more than the finding: **when surveying
+prior art, read the API surface for what it implies about failure modes, not just
+the implementation for techniques.** Ten self-generated options found a 3x
+optimisation and missed a crash.

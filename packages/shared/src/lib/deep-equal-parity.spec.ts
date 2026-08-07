@@ -32,7 +32,12 @@ function reference(a: unknown, b: unknown): boolean {
   }
   if (a instanceof RegExp && b instanceof RegExp)
     return a.source === b.source && a.flags === b.flags;
-  if (a instanceof Map || b instanceof Map || a instanceof Set || b instanceof Set)
+  if (
+    a instanceof Map ||
+    b instanceof Map ||
+    a instanceof Set ||
+    b instanceof Set
+  )
     return deepEqual(a, b); // out of scope for the two converted branches
   if (
     (Object.getPrototypeOf(a) !== Object.prototype ||
@@ -51,7 +56,7 @@ function reference(a: unknown, b: unknown): boolean {
 /** Deterministic PRNG so a failure is reproducible from the seed alone. */
 function rng(seed: number) {
   let s = seed >>> 0;
-  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0x100000000);
+  return () => (s = (s * 1664525 + 1013904223) >>> 0) / 0x100000000;
 }
 
 function gen(r: () => number, depth = 0): unknown {

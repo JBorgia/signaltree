@@ -2,7 +2,12 @@ import { deepClone } from './deep-clone.js';
 import { deepEqual, equal } from './deep-equal.js';
 import { isBuiltInObject } from './is-built-in-object.js';
 import { LRUCache } from './lru-cache.js';
-import { clearParsePathCache, getParsePathCacheSize, parsePath, setParsePathCacheSize } from './parse-path.js';
+import {
+  clearParsePathCache,
+  getParsePathCacheSize,
+  parsePath,
+  setParsePathCacheSize,
+} from './parse-path.js';
 
 describe('Shared utilities', () => {
   describe('deepClone', () => {

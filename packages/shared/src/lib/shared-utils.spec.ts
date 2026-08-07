@@ -79,7 +79,8 @@ describe('deepClone', () => {
      * types is what exercises the fallback, without stubbing a global or
      * resetting the module registry.
      */
-    const forceFallback = <T>(value: T) => deepClone({ fn: () => 1, value }).value;
+    const forceFallback = <T>(value: T) =>
+      deepClone({ fn: () => 1, value }).value;
 
     it('clones a Date through the fallback', () => {
       const cloned = forceFallback(new Date(1234));
@@ -186,10 +187,9 @@ describe('getChanges', () => {
 
 describe('mergeDeep', () => {
   it('merges nested objects rather than replacing them', () => {
-    const merged = mergeDeep(
-      { user: { name: 'a', age: 1 } },
-      { user: { name: 'b' } } as never
-    );
+    const merged = mergeDeep({ user: { name: 'a', age: 1 } }, {
+      user: { name: 'b' },
+    } as never);
     expect(merged).toEqual({ user: { name: 'b', age: 1 } });
   });
 

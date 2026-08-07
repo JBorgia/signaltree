@@ -138,7 +138,9 @@ describe('deepEqual — property based (seeded)', () => {
   });
 
   it('type-distinct: same-shape values of different container types are unequal', () => {
-    expect(deepEqual([1, 2], { 0: 1, 1: 2 } as unknown as number[])).toBe(false);
+    expect(deepEqual([1, 2], { 0: 1, 1: 2 } as unknown as number[])).toBe(
+      false
+    );
     expect(deepEqual(new Map([['a', 1]]), { a: 1 } as unknown)).toBe(false);
     expect(deepEqual(new Set([1, 2]), [1, 2] as unknown)).toBe(false);
     expect(deepEqual(new Date(0), 0 as unknown as Date)).toBe(false);
@@ -226,11 +228,21 @@ describe('deepEqual — built-in identity (13.5.0)', () => {
   });
 
   it('distinguishes primitive wrapper objects by value', () => {
-    expect(deepEqual(new Number(1) as never, new Number(2) as never)).toBe(false);
-    expect(deepEqual(new Number(1) as never, new Number(1) as never)).toBe(true);
-    expect(deepEqual(new String('a') as never, new String('b') as never)).toBe(false);
-    expect(deepEqual(new Boolean(true) as never, new Boolean(false) as never)).toBe(false);
-    expect(deepEqual(new Number(NaN) as never, new Number(NaN) as never)).toBe(true);
+    expect(deepEqual(new Number(1) as never, new Number(2) as never)).toBe(
+      false
+    );
+    expect(deepEqual(new Number(1) as never, new Number(1) as never)).toBe(
+      true
+    );
+    expect(deepEqual(new String('a') as never, new String('b') as never)).toBe(
+      false
+    );
+    expect(
+      deepEqual(new Boolean(true) as never, new Boolean(false) as never)
+    ).toBe(false);
+    expect(deepEqual(new Number(NaN) as never, new Number(NaN) as never)).toBe(
+      true
+    );
   });
 
   it('does not throw on an object that merely inherits Date.prototype', () => {
@@ -302,12 +314,18 @@ describe('deepEqual — built-in SUBCLASSES carrying state (audit regression)', 
   });
 
   it('a wrapper subclass differing only in its own state is NOT equal', () => {
-    expect(deepEqual(new Money(5, 'USD') as never, new Money(5, 'EUR') as never)).toBe(false);
-    expect(deepEqual(new Money(5, 'USD') as never, new Money(5, 'USD') as never)).toBe(true);
+    expect(
+      deepEqual(new Money(5, 'USD') as never, new Money(5, 'EUR') as never)
+    ).toBe(false);
+    expect(
+      deepEqual(new Money(5, 'USD') as never, new Money(5, 'USD') as never)
+    ).toBe(true);
   });
 
   it('still separates plain errors, and value still gates the wrapper', () => {
     expect(deepEqual(new Error('a'), new Error('b'))).toBe(false);
-    expect(deepEqual(new Money(5, 'USD') as never, new Money(6, 'USD') as never)).toBe(false);
+    expect(
+      deepEqual(new Money(5, 'USD') as never, new Money(6, 'USD') as never)
+    ).toBe(false);
   });
 });

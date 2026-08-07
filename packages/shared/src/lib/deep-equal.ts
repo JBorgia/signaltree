@@ -14,6 +14,36 @@
  *   end, behind a prototype gate, so ordinary objects never pay for it.
  */
 export function deepEqual<T>(a: T, b: T): boolean {
+  return equalsInner(a, b, 0, undefined);
+}
+
+/**
+ * Depth at which cycle tracking switches on.
+ *
+ * A cycle is INFINITELY deep, so it always trips this; legitimate state does
+ * not. SignalTree advertises arbitrary nesting and its own extreme-depth
+ * fixtures run 15-20 levels, so 64 is comfortably above anything real while
+ * being nothing against a ~10,000-frame stack limit. Below it, cycle handling
+ * costs one integer compare per recursion and allocates nothing.
+ */
+const CYCLE_GUARD_DEPTH = 64;
+
+/**
+ * @internal The walker. `seen` is created LAZILY — see CYCLE_GUARD_DEPTH.
+ *
+ * Before this existed, `deepEqual` recursed forever on a cyclic value and threw
+ * `RangeError: Maximum call stack size exceeded`. Not theoretical: an array leaf
+ * is the ordinary place a parent-pointing node list lives (file tree, org chart,
+ * comment thread, AST), and replacing that leaf crashed the write. Plain objects
+ * become BRANCHES so they never reach here, which is why this survived — the
+ * crash needs the cycle inside a value that stays a LEAF.
+ */
+function equalsInner(
+  a: unknown,
+  b: unknown,
+  depth: number,
+  seen: WeakMap<object, unknown> | undefined
+): boolean {
   if (a === b) return true;
   if (a == null || b == null) return a === b;
 
@@ -27,6 +57,24 @@ export function deepEqual<T>(a: T, b: T): boolean {
   // changed by every re-write of the same NaN, notifying every dependent
   // computed and effect on a no-op. Matches lodash isEqual and Object.is.
   if (typeA !== 'object') return a !== a && b !== b;
+
+  // CYCLE GUARD. Both sides are objects from here down, so this is the point
+  // where unbounded recursion becomes possible.
+  //
+  // Keyed on `a`, holding the `b` it was paired with. Seeing the SAME pair again
+  // means we are inside a cycle and have already committed to comparing them, so
+  // returning true is the co-inductive answer (and the one lodash and
+  // fast-equals give). A DIFFERENT `b` for the same `a` is a diamond, not a
+  // cycle — we overwrite and keep walking, which stays correct.
+  // Deliberately NOT hoisted into locals. Two extra locals in this function
+  // measured ~11% on the array path — V8's inlining is sensitive to its size,
+  // and this runs on every leaf write. The rare branch pays for itself instead:
+  // below the threshold this is one integer compare and nothing else.
+  if (depth >= CYCLE_GUARD_DEPTH) {
+    seen ??= new WeakMap<object, unknown>();
+    if (seen.get(a as object) === b) return true;
+    seen.set(a as object, b);
+  }
 
   if (Array.isArray(a)) {
     if (!Array.isArray(b) || a.length !== b.length) return false;
@@ -51,7 +99,7 @@ export function deepEqual<T>(a: T, b: T): boolean {
       const x = a[i];
       const y = bArr[i];
       if (x === y) continue;
-      if (!deepEqual(x, y)) return false;
+      if (!equalsInner(x, y, depth + 1, seen)) return false;
     }
     return true;
   }
@@ -80,7 +128,8 @@ export function deepEqual<T>(a: T, b: T): boolean {
   if (a instanceof Map && b instanceof Map) {
     if (a.size !== b.size) return false;
     for (const [key, value] of a) {
-      if (!b.has(key) || !deepEqual(value, b.get(key))) return false;
+      if (!b.has(key) || !equalsInner(value, b.get(key), depth + 1, seen))
+        return false;
     }
     return true;
   }
@@ -157,7 +206,7 @@ export function deepEqual<T>(a: T, b: T): boolean {
     const x = objA[key];
     const y = objB[key];
     if (x === y) continue;
-    if (!deepEqual(x, y)) return false;
+    if (!equalsInner(x, y, depth + 1, seen)) return false;
   }
   return true;
 }
