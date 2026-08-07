@@ -101,3 +101,44 @@ describe('deepEqual: the guard does not break non-cyclic sharing', () => {
     expect(deepEqual(chain(1), chain(2))).toBe(false);
   });
 });
+
+/**
+ * A FALSE EQUAL is the dangerous direction for a signal comparator: a genuine
+ * change reported as no-change means the write is dropped and nothing notifies.
+ *
+ * `Object.keys` yields own enumerable keys, but the old code asked `key in objB`,
+ * which is true for INHERITED ones — so two objects with different own-key sets
+ * compared equal whenever a prototype covered the difference, and the extra key
+ * on the right-hand side was never examined at all.
+ *
+ * Found by reading fast-deep-equal, which uses `hasOwnProperty` for this reason.
+ */
+describe('deepEqual: own keys only, never inherited', () => {
+  it('objects with DIFFERENT own-key sets are not equal', () => {
+    const a = { shared: 1, own: 2 };
+    const b: Record<string, unknown> = Object.create({ shared: 1 });
+    b['own'] = 2;
+    b['extra'] = 3;
+
+    // The trap: key COUNTS match, and every key of `a` is `in` `b`.
+    expect(Object.keys(a)).toHaveLength(Object.keys(b).length);
+    expect('shared' in b).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(b, 'shared')).toBe(false);
+
+    expect(deepEqual(a, b)).toBe(false);
+  });
+
+  it('an inherited property does not stand in for a missing own one', () => {
+    const a = { p: 9 };
+    const b = Object.create({ p: 9 }) as Record<string, unknown>;
+    expect(deepEqual(a, b)).toBe(false); // b has NO own keys
+  });
+
+  it('matching own keys still compare equal regardless of prototype', () => {
+    const a = Object.create({ ignored: 1 }) as Record<string, unknown>;
+    const b = Object.create({ ignored: 2 }) as Record<string, unknown>;
+    a['x'] = 1;
+    b['x'] = 1;
+    expect(deepEqual(a, b)).toBe(true);
+  });
+});

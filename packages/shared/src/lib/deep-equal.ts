@@ -197,12 +197,31 @@ function equalsInner(
   const keysB = Object.keys(objB);
   if (keysA.length !== keysB.length) return false;
 
-  // Same inline reference check as the array branch above. Measured 228ns ->
-  // 184ns on a 10-key object — small, but this runs on every object-valued
-  // leaf write in the library.
+  // `hasOwnProperty`, NOT `key in objB`. This was a correctness bug, not a
+  // micro-optimisation.
+  //
+  // `Object.keys` yields OWN enumerable keys, but `in` is true for INHERITED
+  // ones — so two objects with DIFFERENT own-key sets compared EQUAL whenever
+  // the difference was covered by a prototype:
+  //
+  //     a = { shared: 1, own: 2 }                       // own: shared, own
+  //     b = Object.create({ shared: 1 })                // shared is INHERITED
+  //     b.own = 2; b.extra = 3;                         // own: own, extra
+  //     deepEqual(a, b)  ->  true      // WRONG: b.extra was never examined
+  //
+  // The key COUNTS match, every key of `a` is `in` `b`, and nothing ever looks
+  // at `b`'s own keys — so `extra` is invisible. That is a FALSE EQUAL, which
+  // is the dangerous direction: the comparator is a signal's `equal`, so a
+  // genuine change reported as no-change means the write is DROPPED and nothing
+  // notifies. Found by reading fast-deep-equal, which uses `hasOwnProperty` for
+  // exactly this reason.
+  //
+  // `hasOwnProperty` is also the faster of the two — `in` walks the prototype
+  // chain on every key.
+  const hasOwn = Object.prototype.hasOwnProperty;
   for (let i = 0; i < keysA.length; i++) {
     const key = keysA[i];
-    if (!(key in objB)) return false;
+    if (!hasOwn.call(objB, key)) return false;
     const x = objA[key];
     const y = objB[key];
     if (x === y) continue;
