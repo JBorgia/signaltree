@@ -158,15 +158,29 @@ export function createEntitySignal<
    * after forced GC) which is exactly why it needs a diagnostic: nothing grows,
    * nothing breaks, the app is simply slow forever.
    *
-   * Detection is by SOURCE TEXT: many distinct function identities whose source
-   * is byte-identical can only mean the same lambda re-created in a loop. Counted
-   * per collection and warned once per source, so a legitimately dynamic
-   * predicate (`v => v.x > threshold` rebuilt when `threshold` changes) does not
-   * warn until it has clearly become per-frame churn.
+   * Detection is by SOURCE TEXT plus RATE, and the rate half is load-bearing.
+   *
+   * Byte-identical source across many distinct identities is necessary but NOT
+   * sufficient: `v => v.x > threshold`, rebuilt whenever `threshold` changes, has
+   * identical source too. Counting identities alone cannot tell the two apart,
+   * and it eventually accuses BOTH — the first version of this warned after 12
+   * distinct identities however long they took to accumulate, so a legitimately
+   * dynamic predicate warned during any long session, and the advice it gave
+   * ("hoist it") was actively wrong for that shape, because the closure really
+   * does differ each time.
+   *
+   * Rate separates them cleanly, and it is derivable rather than guessed. The
+   * trap is driven by CHANGE DETECTION, so it produces a new identity every CD
+   * cycle — tens per second. A predicate rebuilt from user input or a filter
+   * control produces one per interaction, which is orders of magnitude slower.
+   * Anything above ~6/second is a frame loop; nothing a user does reaches it.
    */
-  const predicateSources = new Map<string, number>();
+  const predicateWindows = new Map<string, { count: number; start: number }>();
   const warnedPredicates = new Set<string>();
+  /** Distinct identities within {@link PREDICATE_CHURN_WINDOW_MS} to accuse. */
   const PREDICATE_CHURN_THRESHOLD = 12;
+  /** ~6 identities/second is well above user-driven, well below a frame loop. */
+  const PREDICATE_CHURN_WINDOW_MS = 2000;
 
   function warnOnPredicateChurn(
     method: 'where' | 'find',
@@ -175,22 +189,33 @@ export function createEntitySignal<
     const source = String(predicate);
     // Guard against pathological state growth in a long dev session: the map is
     // only ever as large as the number of DISTINCT predicate sources.
-    if (predicateSources.size > 200) return;
-    const seen = (predicateSources.get(source) ?? 0) + 1;
-    predicateSources.set(source, seen);
-    if (seen < PREDICATE_CHURN_THRESHOLD || warnedPredicates.has(source))
+    if (predicateWindows.size > 200 || warnedPredicates.has(source)) return;
+
+    const now =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const window = predicateWindows.get(source);
+    if (!window || now - window.start > PREDICATE_CHURN_WINDOW_MS) {
+      // A fresh window, not an increment. This is what makes a slow drip of
+      // legitimately-rebuilt predicates never accumulate to an accusation.
+      predicateWindows.set(source, { count: 1, start: now });
       return;
+    }
+    window.count++;
+    if (window.count < PREDICATE_CHURN_THRESHOLD) return;
+
     warnedPredicates.add(source);
+    const perSecond = Math.round(
+      (window.count / Math.max(now - window.start, 1)) * 1000
+    );
     console.warn(
-      `SignalTree: \`${method}()\` has been called ${seen} times with a NEW ` +
-        `function that has identical source. Results are memoised per predicate ` +
-        `IDENTITY, so an inline arrow misses the cache every time and re-scans ` +
-        `the collection — measured at 75x the cost of a hoisted predicate over ` +
-        `1,000 entities. Hoist it to a stable reference (a class field or module ` +
-        `constant) and call \`${method}(thePredicate)()\`. Source: ${source.slice(
-          0,
-          80
-        )} [ST2026]`
+      `SignalTree: \`${method}()\` received ${window.count} DIFFERENT functions ` +
+        `with identical source in ${Math.round(now - window.start)}ms ` +
+        `(~${perSecond}/second) — a rate only change detection produces. ` +
+        `Results are memoised per predicate IDENTITY, so an inline arrow misses ` +
+        `the cache every cycle and re-scans the collection: measured at 75x a ` +
+        `hoisted predicate over 1,000 entities. Hoist it to a stable reference ` +
+        `(a class field or module constant) and call ` +
+        `\`${method}(thePredicate)()\`. Source: ${source.slice(0, 80)} [ST2026]`
     );
   }
 
