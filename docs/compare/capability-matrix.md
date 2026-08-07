@@ -351,6 +351,104 @@ not ask for. Ours is O(1) by construction, not by discipline.
 
 ---
 
+## "Why not just put signals on elf?"
+
+You can, today, and it does not help — which is the most useful thing measured
+in this document.
+
+elf ships **no signal API** (its only peer dependency is `rxjs`), but
+`toSignal()` from `@angular/core/rxjs-interop` turns any observable into a
+signal, so "signals elf" is one wrapper away. Measured: 1,000 consumers over
+nested state, 200 writes.
+
+| | time | projections run per write |
+| --- | --- | --- |
+| SignalTree, native signals | **0.070 ms** | 1 / 1000 |
+| elf + `toSignal` | **20.332 ms** | **1000 / 1000** |
+
+290x, and the projection count is unchanged. **`toSignal` changes the
+CONSUMPTION api and nothing else.** The cost lives in elf's store and pipe
+layer: the write copies a slice of an immutable object, and every `select`
+projection re-runs because the store emitted. Wrapping the far end of that
+pipeline in a signal cannot make either go away.
+
+For elf to get these characteristics it would have to stop holding one immutable
+state object and start holding a signal per leaf, with plain accessors over
+them. That is not a signals adapter on elf; that is a different library with the
+same name, and it is the architecture this one already has. The observable-vs-
+signal question is a red herring — **the real difference is one immutable object
+versus many independent signals**, and it is upstream of how you consume it.
+
+## DX, with the same feature written twice
+
+A todo list: entity collection, a filter, a derived count, one editable row, and
+undo/redo. Every API below verified present in the installed packages.
+
+| | lines | imports | packages |
+| --- | --- | --- | --- |
+| SignalTree | **13** | **1** | **1** |
+| elf | 25 | 5 | 4 |
+
+The line count is the least of it. The shape differs in three ways that persist
+no matter how the code is written:
+
+1. **Every reactive read needs a `toSignal` wrapper.** Reading one row is
+   `tree.$.todos.byId(1)` against
+   `toSignal(store.pipe(selectEntity(1)), { initialValue: undefined })`. That is
+   per consumer, forever, in every component.
+2. **Writes go through reducer functions.** `store.update(updateEntities(1, {...}))`
+   against `tree.$.todos.updateOne(1, {...})` — a small thing that adds an import
+   per operation used.
+3. **Capabilities arrive as separate packages that must be wired together in
+   order.** `stateHistory(store)` has to be constructed after the store and held
+   somewhere; persistence is another package again. Ours are markers inside the
+   state shape, so a collection that persists is a declaration rather than an
+   assembly step.
+
+Against that, elf's DX advantages are real: fewer concepts to learn, a smaller
+surface (40 exports against our 154), and reducers that compose as plain data.
+
+## Why anyone picked NgRx over elf, given elf is smaller and faster
+
+Partly first-mover, but there is a harder reason visible in the manifests:
+
+| package | version | peer dependencies |
+| --- | --- | --- |
+| `@ngrx/store` | 21.1.1 | `@angular/core@^21.0.0`, rxjs |
+| `@ngrx/signals` | 21.1.1 | `@angular/core@^21.0.0`, rxjs |
+| `@ngneat/elf` | 2.5.1 | **rxjs only** |
+| `@ngneat/elf-entities` | 5.0.2 | elf, rxjs |
+| `@datorama/akita` | 8.0.1 | rxjs, tslib |
+
+**elf declares no relationship to Angular at all.** That is a deliberate design
+— it is framework-agnostic — and it cuts both ways. It never breaks on an
+Angular major, and it never moves with one either. NgRx's version tracks
+Angular's, which is precisely what an enterprise picking a dependency for a
+five-year application is buying: a guarantee that it is compatible now and will
+be maintained through the next major.
+
+Three further things a team weighs that no benchmark shows:
+
+- **Angular went signals-first and zoneless.** NgRx responded by shipping
+  `@ngrx/signals`, an entire second library. elf, being framework-agnostic,
+  structurally cannot: it has no way to depend on `signal()`. Its model is
+  drifting away from the framework rather than toward it, and `toSignal` does
+  not close that gap (see above).
+- **The same org shipped Akita, which is now unmaintained.** Choosing elf means
+  betting on a maintainer whose previous state library was abandoned. That is a
+  reasonable thing to weigh and it is not a technical argument at all.
+- **elf's versions are a loose constellation** — elf 2.5.1, elf-entities 5.0.2,
+  elf-state-history 1.4.0 — rather than a coordinated release train. Assembling
+  five packages at five independent versions is a supply-chain judgement an
+  architect makes once and lives with.
+
+**So elf being better on the axes measured here did not make it win, and would
+not have.** Libraries are chosen on maintenance guarantees, framework alignment,
+hiring pool and ecosystem as much as on throughput — which is worth remembering
+before treating any row of this document as a strategy.
+
+---
+
 ## Where we are ahead, and by how much
 
 - **Granular signals for arbitrary nested state.** Every other library here is
