@@ -281,9 +281,11 @@
         (external), so rxjs-based libraries (NgRx, NgXs, Akita, Elf) show their
         <em>marginal</em> cost assuming rxjs is already present — NgRx Store is
         ~10.6KB if it isn't. SignalTree numbers reflect a tree that actually uses
-        <code>entityMap</code> (~9.4KB); a bare tree is ~6.6KB. SignalTree does
-        not win on bundle size — it trades KB for built-in granularity, entity
-        maps, and depth-attached markers.
+        <code>entityMap</code> (~11.6KB); a bare store of a few fields is
+        ~5.7KB, and adding undo/redo takes it to ~11.0KB. SignalTree does not
+        win on bundle size — it is the largest library in this table, and it
+        trades those KB for built-in granularity, entity maps, and
+        depth-attached markers.
       </p>
     </div>
 
@@ -572,13 +574,6 @@
       </table>
       <p class="enhancers-note">
         {{ enhancerExplanation() }}
-        <br />
-        <small>
-          Enterprise variant adds the <code>enterprise</code> enhancer on top of
-          the above. That package is <strong>deprecated in 13.5.0</strong> and
-          measured slower than core in every workload &mdash; it is kept in the
-          comparison as an honest record, not as a recommendation.
-        </small>
       </p>
     </div>
     }
@@ -968,55 +963,14 @@
         <span
           class="library-badge"
           style="background: #3b82f6; position: static"
-          >Baseline</span
-        >
-        <span>SignalTree core (no enterprise enhancer)</span>
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.4rem">
-        <span class="library-badge enterprise" style="position: static"
-          >Enterprise</span
+          >SignalTree</span
         >
         <span
-          >SignalTree Enterprise (adds the diff engine &mdash; DEPRECATED in
-          13.5.0, and slower than core's
-          <code>tree.updateAndReport()</code>)</span
+          >SignalTree core. The per-scenario enhancers listed above are the only
+          thing applied &mdash; there is no second SignalTree variant in this
+          run.</span
         >
       </div>
-      <div style="display: flex; align-items: center; gap: 0.3rem">
-        <span class="enterprise-badge">Enterprise</span>
-        <span>Cell indicates enterprise variant for that library column.</span>
-      </div>
-    </div>
-
-    <!-- Enterprise Enhancer Explanation -->
-    <div
-      class="architectural-note"
-      style="
-        background: #f3e5f5;
-        border-left: 4px solid #9c27b0;
-        padding: 1rem 1.5rem;
-        margin: 1rem 0;
-        border-radius: 4px;
-      "
-    >
-      <h4 style="margin: 0 0 0.5rem 0; color: #7b1fa2; font-size: 1rem">
-        🏢 Enterprise Enhancer: Targeted Optimization
-      </h4>
-      <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-        In this benchmark set, the enterprise enhancer improves selected large
-        array scenarios through diff-based change detection, path indexing, and
-        batched patch application.
-      </p>
-      <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-        <strong>When to use:</strong> Apps with frequent bulk updates
-        (dashboards, real-time feeds), large arrays (1000+ items) updated
-        frequently, or need for update statistics/monitoring.
-      </p>
-      <p style="margin: 0.5rem 0 0 0; color: #424242; font-size: 0.9rem">
-        <strong>Bundle cost:</strong> +2.4KB gzipped |
-        <strong>Overall impact in this run:</strong> +1.7% weighted score
-        (targeted gains in specific scenarios)
-      </p>
     </div>
 
     <!-- Architectural Trade-off Explanation -->

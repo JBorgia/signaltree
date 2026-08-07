@@ -442,7 +442,7 @@ export class BenchmarkOrchestratorComponent
       color: '#3b82f6',
       selected: true,
       stats: {
-        bundleSize: '8.1KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs
+        bundleSize: '11.6KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs (14.0.0)
         githubStars: 2800,
       },
     },
@@ -2156,8 +2156,7 @@ export class BenchmarkOrchestratorComponent
   private async executeBenchmark(
     libraryId: string,
     scenarioId: string,
-    config: BenchmarkConfig,
-    options?: { overrideEnterprise?: boolean }
+    config: BenchmarkConfig
   ): Promise<number> {
     // Narrow potential service return shapes into a structured result we can inspect safely.
     const isStructuredResult = (
@@ -2257,15 +2256,11 @@ export class BenchmarkOrchestratorComponent
     // If we're about to run a SignalTree benchmark, expose the selected
     // enhancer set (or an override) on `window` so the SignalTree service can
     // apply the exact same enhancers.
-    if (libraryId === 'signaltree' || libraryId === 'signaltree-enterprise') {
+    if (libraryId === 'signaltree') {
       try {
         const enhancers = (this.activeEnhancers() || []).map(
           (e: { name: string }) => e.name
         );
-        // Add enterprise enhancer if the library ID is signaltree-enterprise
-        const useEnterprise =
-          options?.overrideEnterprise ?? libraryId === 'signaltree-enterprise';
-        if (useEnterprise) enhancers.push('enterprise');
         // Maintain backwards-compatible global name and typed variant
         try {
           // Legacy name used elsewhere in the codebase — write using a typed cast
@@ -2488,19 +2483,13 @@ export class BenchmarkOrchestratorComponent
   toggleLibrary(library: Library) {
     // Allow toggling all libraries, but ensure at least one SignalTree variant is selected
     const willBeSelected = !library.selected;
-    if (
-      !willBeSelected &&
-      (library.id === 'signaltree' || library.id === 'signaltree-enterprise')
-    ) {
-      // Check if the other SignalTree variant is selected
-      const otherSignalTreeId =
-        library.id === 'signaltree' ? 'signaltree-enterprise' : 'signaltree';
-      const otherSignalTree = this.availableLibraries.find(
-        (l) => l.id === otherSignalTreeId
-      );
-      if (!otherSignalTree?.selected) {
-        return; // Don't allow deselecting if no SignalTree variant would remain
-      }
+    // The baseline arm must stay selected — every comparison is against it.
+    // This used to look up "the other SignalTree variant" and allow deselecting
+    // if one remained; `signaltree-enterprise` was the only other variant and it
+    // went with the package in 14.0.0, so the lookup always missed and the guard
+    // reduced to exactly this by accident. Now it says so.
+    if (!willBeSelected && library.id === 'signaltree') {
+      return;
     }
     library.selected = !library.selected;
     this.selectionVersion.update((v) => v + 1);
@@ -2508,18 +2497,9 @@ export class BenchmarkOrchestratorComponent
 
   onLibraryCheckboxChange(library: Library, selected: boolean) {
     // Ensure at least one SignalTree variant remains selected
-    if (
-      !selected &&
-      (library.id === 'signaltree' || library.id === 'signaltree-enterprise')
-    ) {
-      const otherSignalTreeId =
-        library.id === 'signaltree' ? 'signaltree-enterprise' : 'signaltree';
-      const otherSignalTree = this.availableLibraries.find(
-        (l) => l.id === otherSignalTreeId
-      );
-      if (!otherSignalTree?.selected) {
-        return; // Don't allow deselecting if no SignalTree variant would remain
-      }
+    // Baseline arm stays selected — see toggleLibrary().
+    if (!selected && library.id === 'signaltree') {
+      return;
     }
     library.selected = selected;
     this.selectionVersion.update((v) => v + 1);
@@ -2663,7 +2643,7 @@ export class BenchmarkOrchestratorComponent
     library: Library,
     scenario: BenchmarkTestCase,
     config: BenchmarkConfig,
-    options?: { overrideEnterprise?: boolean; variantLabel?: string }
+    options?: { variantLabel?: string }
   ): Promise<BenchmarkResult> {
     const samples: number[] = [];
     // Capture heap usage before measurement runs for memory-efficiency scenario
@@ -2677,14 +2657,30 @@ export class BenchmarkOrchestratorComponent
         ? perfWithMem.memory.usedJSHeapSize
         : undefined;
 
-    // Warmup runs
+    // Budgets that keep a slow arm from locking the tab. See the measurement
+    // loop below for the measurements that motivated the numbers.
+    const ITERATION_BUDGET_MS = 15_000;
+    const WARMUP_BUDGET_MS = 5_000;
+    const SLOW_CALL_MS = 50;
+
+    // Warmup runs.
+    //
+    // Budgeted and yielding for the same reason the measurement loop below is:
+    // warmup runs FIRST and never yielded at all, so a 35s-per-call arm froze
+    // the tab for config.warmupRuns x 35s before a single sample was taken.
+    // Warmup exists to get the JIT warm, and an arm this slow is dominated by
+    // work the JIT cannot help with -- stopping early costs nothing real.
     let lastWarmup = 0;
+    let warmupSpent = 0;
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
-      lastWarmup = await this.executeBenchmark(library.id, scenario.id, config, {
-        overrideEnterprise: options?.overrideEnterprise,
-      });
+      lastWarmup = await this.executeBenchmark(library.id, scenario.id, config);
       this.currentIteration.set(i + 1);
+      if (lastWarmup > 0) warmupSpent += lastWarmup;
+      if (lastWarmup > SLOW_CALL_MS) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      if (warmupSpent > WARMUP_BUDGET_MS) break;
     }
 
     // Adaptive inner-loop calibration.
@@ -2707,9 +2703,7 @@ export class BenchmarkOrchestratorComponent
       INNER_OPS_CAP_BY_SCENARIO[scenario.id] ?? MAX_INNER_OPS;
     let probe = lastWarmup;
     if (probe <= 0) {
-      probe = await this.executeBenchmark(library.id, scenario.id, config, {
-        overrideEnterprise: options?.overrideEnterprise,
-      });
+      probe = await this.executeBenchmark(library.id, scenario.id, config);
     }
     if (probe === -1) {
       return {
@@ -2735,8 +2729,39 @@ export class BenchmarkOrchestratorComponent
       );
     }
 
+    // WALL-CLOCK BUDGET PER (library, scenario).
+    //
+    // Without this the page killed the browser tab, reproducibly. At the
+    // 20,000-key size this scenario used, `patchState` on an @ngrx/signals
+    // store is quadratic -- measured 6.8ms at 500 keys, 241ms at 2,000,
+    // 1,855ms at 5,000 and 34,716ms at 20,000. config.iterations is 100, so
+    // that arm alone asked for roughly an hour of synchronous main-thread
+    // work, and because the loop below only yielded every 10th iteration the
+    // tab went unresponsive for ~6 minutes at a stretch until Chrome killed
+    // the renderer. No error was logged: the process was gone.
+    //
+    // `probe` already knows the per-call cost before the loop starts, so the
+    // budget is generic -- it protects every library and scenario, including
+    // ones nobody has written yet, rather than special-casing the pair that
+    // happened to blow up. Fewer samples on a slow arm is the correct
+    // trade: it is still measured, and it is still reported honestly.
+    let iterations = config.iterations;
+    if (probe > 0) {
+      iterations = Math.max(
+        3,
+        Math.min(iterations, Math.floor(ITERATION_BUDGET_MS / (probe * innerOps)))
+      );
+    }
+    if (iterations < config.iterations) {
+      console.warn(
+        `[benchmark] ${library.id}/${scenario.id}: ${probe.toFixed(1)}ms per call — ` +
+          `reduced ${config.iterations} iterations to ${iterations} to stay inside ` +
+          `the ${ITERATION_BUDGET_MS / 1000}s budget.`
+      );
+    }
+
     // Measurement runs
-    for (let i = 0; i < config.iterations; i++) {
+    for (let i = 0; i < iterations; i++) {
       if (!this.isRunning()) break;
       this.currentIteration.set(i + 1);
 
@@ -2745,8 +2770,7 @@ export class BenchmarkOrchestratorComponent
         perCall = await this.executeBenchmark(
           library.id,
           scenario.id,
-          config,
-          { overrideEnterprise: options?.overrideEnterprise }
+          config
         );
         if (perCall === -1) {
           return {
@@ -2765,24 +2789,43 @@ export class BenchmarkOrchestratorComponent
           };
         }
       } else {
-        // Time the whole batch with one performance.now pair so the timer
-        // floor is amortized. Discard per-call durations from executeBenchmark
-        // here — wall-clock around the loop is more accurate.
-        const batchStart = performance.now();
+        // SUM THE ARMS' OWN CLOCKS. This used to wall-clock the whole batch
+        // with one performance.now pair, on the reasoning that amortizing the
+        // timer floor was more accurate. It measured the wrong thing.
+        //
+        // Every arm deliberately starts its clock AFTER building its store --
+        // constructing a 50k collection is setup, not the operation under
+        // test, and it is excluded on both sides. The batch wall-clock wraps
+        // `executeBenchmark`, so it puts that construction back IN.
+        //
+        // The bias is systematic and it targets the winner. innerOps is only
+        // >1 when an arm is FAST (probe < TARGET_SAMPLE_MS), so the quicker a
+        // library is, the more likely it is to be charged for setup its
+        // competitor never pays. Measured on large-array at 50k: SignalTree
+        // took innerOps=4 and reported 8.95ms; @ngrx/signals took innerOps=1,
+        // was charged nothing, and reported 9.10ms -- a dead heat at p=0.20 on
+        // a task where the arms' own clocks differ by roughly an order of
+        // magnitude. The construction cost simply swamped the measurement.
+        //
+        // Summing N individually-quantized samples costs some resolution
+        // (~0.05/sqrt(N) ms per call) but has no systematic term, which beats
+        // an unbiased-looking number carrying a fixed multi-millisecond
+        // penalty applied to one side only.
+        let armTotal = 0;
         let aborted = false;
         for (let k = 0; k < innerOps; k++) {
           const r = await this.executeBenchmark(
             library.id,
             scenario.id,
-            config,
-            { overrideEnterprise: options?.overrideEnterprise }
+            config
           );
           if (r === -1) {
             aborted = true;
             break;
           }
+          armTotal += r;
         }
-        const batchTotal = performance.now() - batchStart;
+        const batchTotal = armTotal;
         if (aborted) {
           return {
             libraryId: library.id,
@@ -2804,8 +2847,10 @@ export class BenchmarkOrchestratorComponent
 
       samples.push(perCall);
 
-      // Yield to UI
-      if (i % 10 === 0) {
+      // Yield to UI. Every 10th iteration is fine for sub-millisecond calls
+      // and catastrophic for slow ones -- 10 x 35s between yields is what took
+      // the tab down. Anything above SLOW_CALL_MS yields every iteration.
+      if (i % 10 === 0 || perCall > SLOW_CALL_MS) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
@@ -3750,7 +3795,6 @@ export class BenchmarkOrchestratorComponent
   private getBenchmarkService(libraryId: string): BenchmarkService | undefined {
     const svcMap: Record<string, BenchmarkService | undefined> = {
       signaltree: this.stBench,
-      'signaltree-enterprise': this.stBench,
       'raw-signals': this.rawSignalsBench,
       'ngrx-store': this.ngrxBench,
       'ngrx-signals': this.ngrxSignalsBench,
