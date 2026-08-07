@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+
 import { snapshotState } from '../../lib/utils';
 import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
@@ -25,7 +27,42 @@ export type { TimeTravelConfig, TimeTravelEntry };
  */
 class TimeTravelManager<T> {
   private history: TimeTravelEntry<T>[] = [];
-  private currentIndex = -1;
+
+  /**
+   * The undo/redo position is a SIGNAL, because `canUndo()` bound in a template
+   * has to update when it changes.
+   *
+   * It was a plain number, and `canUndo()`/`canRedo()` read it directly. Called
+   * imperatively they were always correct, so this survived; but a
+   * `computed(() => tree.canUndo())` evaluated once and cached `false` forever,
+   * because it took no dependency on anything. Under zone-based change
+   * detection the template re-read the method on every cycle and papered over
+   * it. Zoneless — which is what this library targets and what Angular 22
+   * defaults toward — has nothing to trigger that re-read, so the undo and redo
+   * buttons of a zoneless app never enabled.
+   *
+   * `historyVersion` covers the other half: `canRedo()` and `getHistory()`
+   * depend on the LENGTH of the history array, not just the position, and the
+   * array is mutated in place (push/shift/slice-assign). Every mutation bumps
+   * it, so a consumer reading history reactively sees entries appear.
+   *
+   * Found by comparing against elf, which exposes `hasPast$`/`hasFuture$` as
+   * observables for exactly this reason.
+   */
+  private readonly indexSignal = signal(-1);
+  private readonly historyVersion = signal(0);
+
+  private get currentIndex(): number {
+    return this.indexSignal();
+  }
+  private set currentIndex(value: number) {
+    this.indexSignal.set(value);
+  }
+  /** Call after any structural change to `this.history`. */
+  private bumpHistory(): void {
+    this.historyVersion.update((v) => v + 1);
+  }
+
   private maxHistorySize: number;
   private includePayload: boolean;
   private actionNames: Record<string, string>;
@@ -63,6 +100,7 @@ class TimeTravelManager<T> {
     // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
+      this.bumpHistory();
     }
 
     // A history entry IS the snapshot — no clone.
@@ -125,11 +163,13 @@ class TimeTravelManager<T> {
     }
 
     this.history.push(entry as TimeTravelEntry<T>);
+    this.bumpHistory();
     this.currentIndex = this.history.length - 1;
 
     // Enforce max history size
     if (this.history.length > this.maxHistorySize) {
       this.history.shift();
+      this.bumpHistory();
       this.currentIndex--;
     }
   }
@@ -194,12 +234,14 @@ class TimeTravelManager<T> {
     //
     // Snapshots are immutable by contract and frozen in dev, so the copy bought
     // nothing that the contract does not already give.
+    this.historyVersion();
     return this.history.map((entry) => ({ ...entry }));
   }
 
   resetHistory(): void {
     const currentState = this.tree();
     this.history = [];
+    this.bumpHistory();
     this.currentIndex = -1;
     this.addEntry('RESET', currentState);
   }
@@ -224,6 +266,10 @@ class TimeTravelManager<T> {
   }
 
   canRedo(): boolean {
+    // Reads historyVersion as well as the index: redo depends on the LENGTH of
+    // history, which changes without the index moving (a new entry pushed while
+    // sitting at the end).
+    this.historyVersion();
     return this.currentIndex < this.history.length - 1;
   }
 
