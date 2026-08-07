@@ -60,12 +60,6 @@ export class DocumentationComponent implements OnInit {
       readmePath: 'assets/docs/ng-forms/README.md',
     },
     {
-      id: 'enterprise',
-      name: '@signaltree/enterprise',
-      description: 'Enterprise-oriented diagnostics, scaling, and audit-related capabilities',
-      readmePath: 'assets/docs/enterprise/README.md',
-    },
-    {
       id: 'guardrails',
       name: '@signaltree/guardrails',
       description: 'Development-time guardrails for safer state usage patterns',

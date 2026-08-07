@@ -933,7 +933,7 @@ onTreeError((e) => Sentry.captureException(e.error, { extra: e }));
 These are the **only** separate packages in the SignalTree ecosystem:
 
 - **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
-- **`@signaltree/enterprise`** - _deprecated in 13.5.0;_ use `tree.updateAndReport()` in core
+- ~~**`@signaltree/enterprise`**~~ - **removed in 14.0.0** (deprecated 13.5.0); use `tree.updateAndReport()` in core
 
 #### Composition Patterns
 
@@ -2727,7 +2727,7 @@ Consider enhancers when you need:
 Consider separate packages when you need:
 
 - 📝 Angular forms integration (@signaltree/ng-forms)
-- 🏢 ~~Enterprise-scale optimizations (@signaltree/enterprise)~~ — deprecated in 13.5.0, now core
+- 🏢 ~~Enterprise-scale optimizations (@signaltree/enterprise)~~ — removed in 14.0.0, now core
 
 ## Migration from NgRx
 
@@ -3022,7 +3022,7 @@ class UserFormComponent {
 
 ---
 
-### 🏢 @signaltree/enterprise — DEPRECATED
+### 🏢 @signaltree/enterprise — REMOVED in 14.0.0
 
 **Deprecated in 13.5.0. Do not install it.** Its two useful capabilities now live in core:
 

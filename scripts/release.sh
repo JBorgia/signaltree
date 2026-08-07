@@ -45,7 +45,7 @@ PACKAGES=(
     "events"          # Event-driven architecture (BullMQ, NestJS, testing)
     "ng-forms"        # Angular forms integration
     "realtime"        # Real-time sync with Supabase/WebSocket
-    "enterprise"      # Enterprise-grade optimizations for large-scale apps
+         # Enterprise-grade optimizations for large-scale apps
     "guardrails"      # Dev-only performance guardrails (Rollup build)
     "schema"          # Schema-driven validation via StandardSchema (Zod, Valibot, …)
 )

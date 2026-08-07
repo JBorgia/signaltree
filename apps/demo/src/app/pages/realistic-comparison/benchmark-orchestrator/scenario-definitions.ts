@@ -365,7 +365,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose:
-      'Measures partial-state merge throughput when most incoming fields are ref-equal to current state. Exercises ref-equality short-circuiting in core and the diff engine in @signaltree/enterprise.',
+      'Measures partial-state merge throughput when most incoming fields are ref-equal to current state. Exercises ref-equality short-circuiting in core.',
     frequencyWeight: 1.6, // High - every CRUD app does this on every save/refresh
     realWorldFrequency:
       'High - REST/GraphQL responses, optimistic updates, websocket deltas',
@@ -373,9 +373,9 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       'Bulk merge favors libraries that can short-circuit unchanged fields. Implementations that always re-set every key pay O(N) regardless of churn; diff-aware implementations pay O(changed).',
     enhancers: {
       required: [],
-      optional: ['enterprise'],
+      optional: [],
       rationale:
-        'Core baseline benefits from ref-equality short-circuit added in 9.1. Enterprise variant routes through the diff engine + onPathChange listener. Other libraries fall back to their idiomatic partial-state merge API.',
+        'Core benefits from the ref-equality short-circuit added in 9.1 — a re-fetched payload identical to current state costs nothing. Other libraries fall back to their idiomatic partial-state merge API.',
     },
     dataRequirements: {
       minSize: 500,

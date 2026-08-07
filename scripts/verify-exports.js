@@ -4,7 +4,7 @@
  * Verify Package Exports
  * Ensures all package exports are valid and can be imported
  *
- * Note: ng-forms and enterprise are built during release (after core is published)
+ * Note: ng-forms is built during release (after core is published)
  * so they may not be present during pre-publish validation. Use --all to check all packages.
  */
 
@@ -18,8 +18,6 @@ const PUBLISHED_PACKAGES = [
   'events',
   'ng-forms',
   'realtime',
-  
-  'enterprise',
   'guardrails',
   'schema',
 ];

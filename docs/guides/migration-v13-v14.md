@@ -106,7 +106,45 @@ wildcard, so no consumer could reach them even deliberately. Use
 const tree = signalTree(state).with(serialization()).with(persistence({ key: 'app' }));
 ```
 
-## 6. Snapshot payload shape
+## 6. `@signaltree/enterprise` is no longer published
+
+```jsonc
+// package.json
+- "@signaltree/enterprise": "^13.5.0",
+```
+
+```ts
+// before
+const tree = signalTree(state).with(enterprise());
+const result = tree.updateOptimized(payload);
+if (result.changed) sync(result.changedPaths);
+
+// after — built into core, no enhancer
+const tree = signalTree(state);
+const changed = tree.updateAndReport(payload);
+if (changed.length) sync(changed);
+```
+
+Deprecated in 13.5.0 and removed here. The reason is measured rather than
+stylistic: `updateOptimized()`'s diff engine was **slower than the thing it was
+meant to beat** in every workload — roughly 7x at 2,000 leaves when 10 % of them
+change, and ~160x when all of them do. Core leaves are
+`signal(value, { equal })` with a reference-equality short-circuit, so "write
+only what actually changed" is already core behaviour and costs nothing; the
+diff engine walked the whole state to decide which writes to skip, and those
+writes were already no-ops. It also silently dropped writes targeting arrays,
+and that defect was never fixed.
+
+**13.x stays on npm** so existing lockfiles keep resolving, and is marked
+deprecated there. It will not receive a 14-compatible release: it imports
+`isBuiltInObject` and `isTraversableNode`, which moved to
+`@signaltree/core/authoring` in 14.0.0, so `enterprise@13.x` does not work
+against `core@14` at all.
+
+**There is no `onPathChange` replacement in core.** A change-notification design
+is still open; do not reach for a subscription API that does not exist.
+
+## 7. Snapshot payload shape
 
 Markers now declare what part of them is state, so a snapshot carries **values**
 and not machinery. If you persisted snapshots with 13.x and hydrate them with

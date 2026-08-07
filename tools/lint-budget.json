@@ -1,7 +1,6 @@
 {
   "counts": {
     "packages/core": 540,
-    "packages/enterprise": 0,
     "packages/ng-forms": 32,
     "packages/shared": 0,
     "packages/guardrails": 28,
@@ -13,5 +12,5 @@
     "scripts": 58
   },
   "total": 746,
-  "filesLinted": 563
+  "filesLinted": 561
 }

@@ -84,7 +84,7 @@ const GATES = [
       // `nx test demo` by hand. It is also the app the demo-coverage gate holds
       // up as proof every export is demonstrated — so it breaking silently would
       // undermine that gate too.
-      '--projects=core,enterprise,ng-forms,shared,guardrails,schema,events,realtime,demo',
+      '--projects=core,ng-forms,shared,guardrails,schema,events,realtime,demo',
       '--skip-nx-cache',
     ],
     slow: true,
@@ -268,9 +268,12 @@ const GATES = [
     // Four file-exists/contains greps. Largely redundant — if signal-tree.ts
     // went missing, typecheck, build and 1,500 tests would all fail long before
     // a string grep did — but it costs ~0.2s and it can now prove itself.
+    // Retargeted when @signaltree/enterprise was removed in 14.0.0 — the file
+    // this used to mutate no longer exists, and a missing anchor is a hard error
+    // rather than a silent skip, which is how it surfaced immediately.
     mutation: {
-      file: 'packages/enterprise/src/lib/enterprise-enhancer.ts',
-      generate: (original) => original.replace(/enterprise/g, 'renamedByGateSelfTest'),
+      file: 'packages/core/src/enhancers/batching/batching.ts',
+      generate: (original) => original.replace(/batching/g, 'renamedByGateSelfTest'),
     },
   },
   {

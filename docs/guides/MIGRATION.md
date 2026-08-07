@@ -22,6 +22,13 @@
   `{ injector }`.
 - **`enableSerialization` / `applyPersistence` / `deepCloneJSON` removed** —
   they were reachable from no entry point.
+- **`@signaltree/enterprise` is no longer published.** Deprecated in 13.5.0,
+  removed here. Use `tree.updateAndReport()` from core — built in, no enhancer,
+  and measured FASTER in every workload (`updateOptimized()` was ~7x slower at
+  2,000 leaves when 10% change, ~160x when all do, and silently dropped writes
+  targeting arrays). 13.x stays on npm, deprecated, for existing lockfiles; it
+  will not get a 14-compatible release because it imports symbols that moved to
+  `/authoring`. There is no `onPathChange` replacement in core.
 - **Snapshot payloads carry values, not machinery.** `tree({ rows: [...] })`
   with a bare array now applies rather than silently doing nothing.
 

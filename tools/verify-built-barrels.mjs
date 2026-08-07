@@ -26,7 +26,6 @@ import { build } from 'esbuild';
 
 const PKGS = [
   'core',
-  'enterprise',
   'events',
   'ng-forms',
   'realtime',

@@ -31,14 +31,6 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p = 'packages/enterprise/src/lib/enterprise-enhancer.ts';
-  const c = fileHas(p);
-  return c && c.includes('enterprise')
-    ? [true, 'enterprise package present']
-    : [false, `missing or incomplete ${p}`];
-});
-
-checks.push(() => {
   const p =
     'apps/demo/src/app/examples/features/fundamentals/pages/fundamentals-page/fundamentals-page.component.ts';
   const c = fileHas(p);

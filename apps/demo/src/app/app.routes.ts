@@ -364,13 +364,6 @@ export const appRoutes: Route[] = [
   },
   // Bundle Visualizer removed — Architecture page covers bundle data
   // Undo/Redo removed — Time Travel demo covers this with richer UX
-  {
-    path: 'enterprise-enhancer',
-    loadComponent: () =>
-      import('./pages/enterprise-enhancer/enterprise-enhancer.component').then(
-        (c) => c.EnterpriseEnhancerComponent
-      ),
-  },
 
   // Documentation
   {
@@ -382,7 +375,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Documentation',
       description:
-        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, enterprise, and schema packages.',
+        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, events, and schema packages.',
     },
   },
 

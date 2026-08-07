@@ -2,6 +2,21 @@
 
 ### BREAKING
 
+- **`@signaltree/enterprise` is no longer published.** Deprecated in 13.5.0 and
+  removed in 14.0.0. Its replacement is `tree.updateAndReport()` in core, which
+  needs no enhancer, adds no bundle, and measured faster in every workload — the
+  diff engine walked the whole state to decide which writes to skip, and core
+  leaves already short-circuit a reference-equal write, so those writes were
+  no-ops before it looked at them. It also silently dropped writes targeting
+  arrays, which was never fixed.
+
+  13.x remains on npm, marked deprecated, so existing lockfiles resolve. It will
+  not receive a 14-compatible release: it imports `isBuiltInObject` and
+  `isTraversableNode`, which moved to `@signaltree/core/authoring`, so
+  `enterprise@13.x` cannot work against `core@14`. The demo page, the benchmark
+  arm that ran `updateOptimized()`, and every pipeline entry are removed with it.
+
+
 - **25 symbols moved from `@signaltree/core` to `@signaltree/core/authoring`.**
   Nothing was deleted and nothing changed shape — the import path moves.
 

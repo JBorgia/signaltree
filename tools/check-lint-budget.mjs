@@ -47,7 +47,6 @@ const BASELINE = join(ROOT, 'tools', 'lint-budget.json');
 
 const PROJECTS = [
   'packages/core',
-  'packages/enterprise',
   'packages/ng-forms',
   'packages/shared',
   'packages/guardrails',

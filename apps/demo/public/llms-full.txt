@@ -1136,7 +1136,7 @@ session.pullFromSource();
 | `@signaltree/events` | Primarily a standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — the bus itself does NOT integrate with the signal tree. Exception (v13+): `@signaltree/events/angular`'s `entityEventHandler`/`applyOptimisticEntityChange` bridge event batches onto `@signaltree/core`'s `entityMap` batch ops | `createEventSchema()`, `EventBusModule`, `entityEventHandler()` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
 | `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
-| `@signaltree/enterprise` | **DEPRECATED (13.5.0) — do not use.** Superseded by `tree.updateAndReport()` in core (there is NO `onPathChange` in core — a subscription API is still being designed). Measured slower in every workload (~7x at 2,000 leaves when 10% change, ~160x when all do); silently drops writes targeting arrays. The enhancer was named `enterprise()`, never `optimized()`. | *(migrate to core)* |
+| ~~`@signaltree/enterprise`~~ | **REMOVED in 14.0.0 — no longer published.** Superseded by `tree.updateAndReport()` in core, which is built in, adds no bundle, and measured FASTER in every workload (`updateOptimized()` was ~7x slower at 2,000 leaves when 10% of leaves change and ~160x when all do, and silently dropped writes targeting arrays). There is NO `onPathChange` in core — a subscription API is still being designed. 13.x stays on npm, deprecated, for existing lockfiles. | *(removed — use core)* |
 
 ---
 

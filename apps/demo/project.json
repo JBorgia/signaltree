@@ -44,11 +44,6 @@
           },
           {
             "glob": "README.md",
-            "input": "packages/enterprise",
-            "output": "assets/docs/enterprise"
-          },
-          {
-            "glob": "README.md",
             "input": "packages/guardrails",
             "output": "assets/docs/guardrails"
           },

@@ -10,7 +10,6 @@ import { ENHANCER_META, resolveEnhancerOrder } from '@signaltree/core/authoring'
 
 const highPerformanceBatching = () =>
   batching({ enabled: true, notificationDelayMs: 0 });
-import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -142,10 +141,6 @@ export class SignalTreeBenchmarkService {
               break;
             case 'timeTravel':
               enhancers.push(timeTravel());
-              break;
-            case 'enterprise':
-              // Apply the enterprise enhancer for second-pass enterprise runs
-              enhancers.push(enterprise());
               break;
             default:
               // Unknown enhancer name — ignore to maintain robustness
@@ -460,14 +455,14 @@ export class SignalTreeBenchmarkService {
    * ref-equal. Both arms exercise the same churn ratio so the only
    * variable is the merge implementation.
    *
-   * - Core baseline: `tree(payload)` — relies on the 9.1 ref-equality
-   *   short-circuit in `recursiveUpdate` to skip unchanged signals.
-   * - Enterprise variant: `tree.updateOptimized(payload)` — runs the
-   *   diff engine + path index and notifies `onPathChange` listeners.
+   * `tree(payload)` relies on the 9.1 ref-equality short-circuit in
+   * `recursiveUpdate` to skip unchanged signals.
    *
-   * The enterprise variant is selected when the orchestrator includes
-   * `'enterprise'` in `__SIGNALTREE_ACTIVE_ENHANCERS__` (i.e. the
-   * `signaltree-enterprise` library row).
+   * There was a second arm here that ran `@signaltree/enterprise`'s
+   * `updateOptimized()` through its diff engine. That package was dropped in
+   * 14.0.0 — measured, the diff engine was SLOWER in every workload than the
+   * ref-equality short-circuit it was meant to beat, which is why it was
+   * deprecated and then removed rather than kept as a comparison arm.
    */
   async runServerPayloadSyncBenchmark(
     dataSize: number
@@ -492,11 +487,6 @@ export class SignalTreeBenchmarkService {
     const cache = this._serverPayloadCache;
     const { tree, initial, payload } = cache;
 
-    const useOptimized =
-      typeof tree.updateOptimized === 'function' &&
-      Array.isArray(window.__SIGNALTREE_ACTIVE_ENHANCERS__) &&
-      (window.__SIGNALTREE_ACTIVE_ENHANCERS__ as string[]).includes('enterprise');
-
     // Alternate between payload and initial so each call always has ~10% churn.
     // Without this, repeated tree(payload) calls would be all-ref-equal after
     // the first application and measure near-zero work.
@@ -504,19 +494,13 @@ export class SignalTreeBenchmarkService {
     cache.toggle = !cache.toggle;
 
     const start = performance.now();
-    if (useOptimized) {
-      tree.updateOptimized(nextState);
-    } else {
-      tree(nextState);
-    }
+    tree(nextState);
     const duration = performance.now() - start;
 
     return this.toResult(
       duration,
       undefined,
-      useOptimized
-        ? 'SignalTree server-payload sync (enterprise diff)'
-        : 'SignalTree server-payload sync (core ref-skip)'
+      'SignalTree server-payload sync (core ref-skip)'
     );
   }
 
