@@ -165,6 +165,32 @@
   turned a `Date` into a string, so `previousState` could never deep-equal the
   live state again and every poll reported a change, forever, out of nothing.
 
+- **ST2026 is rate-based, not count-based.** Byte-identical predicate source is
+  necessary but not sufficient: `v => v.x > threshold`, rebuilt when
+  `threshold` changes, looks the same. Counting distinct identities eventually
+  accused that shape too — during any long session — and the advice it gave
+  ("hoist it") was actively wrong for it, because the closure really does
+  differ. It now needs 12 distinct identities **within 2 seconds** (~6/second),
+  which is far above anything a user drives and far below a change-detection
+  loop. The rate is derivable from the data; the raw count never was.
+
+- **`@signaltree/guardrails` no longer speculates about change-blindness, and no
+  longer relies on a strategy that may see nothing.** PathNotifier is precise
+  but blind to plain-leaf writes unless devtools is attached — so it used to
+  warn every plain-object user that monitoring "is change-blind", whether or not
+  it was, and tell them to go disable it. A polling backstop now runs alongside
+  it and the warning fires only when the backstop has personally caught a change
+  the notifier missed. That backstop is affordable only because the change check
+  stopped cloning: 0.045µs per idle poll at 400 branches, against the 122.8µs
+  that made polling a "last resort" in the first place.
+
+- **`changeDetection: { strictImmutability: true }`** (guardrails, opt-in).
+  Freezes each snapshot so an in-place mutation throws a `TypeError` **on the
+  mutating line with a stack**, instead of being noticed up to a poll later with
+  its path inferred by diffing. Off by default because it makes dev diverge from
+  production — the same reason NgRx ships `strictStateImmutability` opt-in. With
+  it on, per-container copying is skipped entirely.
+
 - **ST2027** — the no-op copy write. The new value is a DIFFERENT object that
   deep-equals the current one, so the comparator walks the whole structure to
   conclude nothing changed and the write is discarded: ~2.8 ms on a 50,000
