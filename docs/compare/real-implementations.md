@@ -3,6 +3,15 @@
 **Status:** measurement, 14.0.0. Reproduce with
 `node --expose-gc tools/bench-compare.mjs`.
 
+> ⚠️ **elf is unmaintained.** The `ngneat` org removed all its repositories on
+> 2026-06-05 (verified: `public_repos: 0`), `github.com/ngneat/elf` 404s, and the
+> last release is February 2024. It stays in this harness because it is a
+> genuinely good implementation to measure against — the corrections that made
+> these numbers trustworthy all came from taking its results seriously — but the
+> comparison a reader should weigh is `@ngrx/signals`, which is live, tracks
+> Angular's version, and is what an Angular team is actually choosing between.
+> See [capability-matrix.md](./capability-matrix.md) for the verification.
+
 Every arm implements the **same capability** using that library's own entity
 API, not a simplified stand-in:
 
