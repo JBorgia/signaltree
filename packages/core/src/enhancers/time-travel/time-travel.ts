@@ -183,6 +183,13 @@ class TimeTravelManager<T> {
       this.tree.$
     );
 
+    if (
+      (typeof ngDevMode === 'undefined' || ngDevMode) &&
+      this.history.length % RETENTION_CHECK_INTERVAL === 0
+    ) {
+      checkHistoryRetention(this.tree.$, this.history.length);
+    }
+
     const entry: TimeTravelEntry<T> & { __provisional?: boolean } = {
       state: plain as T,
       timestamp: Date.now(),
@@ -401,23 +408,57 @@ class TimeTravelManager<T> {
  */
 
 
-/** @internal Rows above which capturing a collection into history is worth a word. */
-const HISTORY_COLLECTION_THRESHOLD = 1000;
+/**
+ * @internal Retained collection pointers above which history is worth a word.
+ *
+ * The unit is the one that actually costs memory: a history entry retains one
+ * POINTER per entity in every included collection, so retention is
+ * `entries x collection width`, not either alone. Calibrated against the RFC
+ * 0012 measurements, which come out at ~10 bytes per retained pointer:
+ *
+ *     1,000 rows x 50 entries =    50k pointers ->  0.76MB
+ *    10,000 rows x 50 entries =   500k pointers ->  5.08MB
+ *    50,000 rows x 50 entries = 2,500k pointers -> 24.73MB
+ *
+ * 500k is therefore ~5MB of history spent purely on collection arrays, which is
+ * where "silently heavier forever" stops being theoretical. Deriving the
+ * threshold from retention rather than from a row count also means a small
+ * collection with a long history and a big one with a short history are judged
+ * by the same standard — a row-count threshold gets both wrong.
+ */
+const HISTORY_RETAINED_POINTER_BUDGET = 500_000;
+
+/** @internal Records between retention checks. See `checkHistoryRetention`. */
+const RETENTION_CHECK_INTERVAL = 16;
+
+/** @internal One report per process. */
+let warnedHistoryRetention = false;
 
 /**
- * @internal One-time scan at `timeTravel()` attach for ST2029.
+ * @internal ST2029 — history retention from included collections.
  *
- * Shallow by design — it walks the tree's own nodes looking for entity
- * collections, and stops at the first report. A diagnostic about the cost of
- * capturing large state must not itself walk large state.
+ * Checked at RECORD time, not at attach. The first version of this checked once
+ * when the enhancer attached, and that is the one moment it cannot work: an app
+ * builds its tree, attaches `timeTravel()` in the same breath, and the rows
+ * arrive later from a fetch. At attach the collection is empty, every time. The
+ * check passed its own tests only because those tests populated the collection
+ * first — test order chosen to suit the implementation rather than to match
+ * what an app does.
+ *
+ * Sampled every `RETENTION_CHECK_INTERVAL` records so the walk is amortised to
+ * nothing: collection width moves slowly, and this is a warning about a trend,
+ * not a tripwire that must fire on an exact entry.
  */
-function warnLargeCollectionsInHistory(tree: unknown): void {
-  const root = (tree as { $?: Record<string, unknown> }).$;
-  if (!root || typeof root !== 'object') return;
+function checkHistoryRetention(root: unknown, entries: number): void {
+  if (warnedHistoryRetention || !root || typeof root !== 'object') return;
+
+  let widest = 0;
+  let widestPath = '';
+  let total = 0;
 
   const seen = new WeakSet<object>();
-  const visit = (node: Record<string, unknown>, path: string): boolean => {
-    if (seen.has(node)) return false;
+  const visit = (node: Record<string, unknown>, path: string): void => {
+    if (seen.has(node)) return;
     seen.add(node);
 
     for (const key of Object.keys(node)) {
@@ -431,6 +472,7 @@ function warnLargeCollectionsInHistory(tree: unknown): void {
         typeof (child as { setAll?: unknown }).setAll === 'function';
 
       if (isCollection) {
+        // An excluded collection is not retained, so it is not counted.
         if ((child as Record<symbol, unknown>)[HISTORY_EXCLUDED] === true) {
           continue;
         }
@@ -440,30 +482,38 @@ function warnLargeCollectionsInHistory(tree: unknown): void {
         } catch {
           continue;
         }
-        if (size >= HISTORY_COLLECTION_THRESHOLD) {
-          console.warn(
-            `SignalTree: timeTravel() is capturing "${childPath}", a collection ` +
-              `of ${size} entities, into every history entry — each entry ` +
-              `retains a fresh array of that width, so every write to it is now ` +
-              `O(collection). If this collection should persist but not be ` +
-              `undoable, pass entityMap({ history: false }); if it should be ` +
-              `neither, use transient: true. [ST2029]`
-          );
-          return true;
+        total += size;
+        if (size > widest) {
+          widest = size;
+          widestPath = childPath;
         }
         continue;
       }
 
-      if (visit(child, childPath)) return true;
+      visit(child, childPath);
     }
-    return false;
   };
 
   try {
-    visit(root, '');
+    visit(root as Record<string, unknown>, '');
   } catch {
-    // A diagnostic must never break construction.
+    return; // A diagnostic must never break a write.
   }
+
+  const retained = total * entries;
+  if (retained < HISTORY_RETAINED_POINTER_BUDGET) return;
+
+  warnedHistoryRetention = true;
+  console.warn(
+    `SignalTree: time travel is retaining roughly ${Math.round(
+      retained / 1000
+    )}k entity pointers — ${entries} history entries, each holding a fresh ` +
+      `array for every collection it captures (widest: "${widestPath}" at ` +
+      `${widest}). Every write to those collections is O(collection), and the ` +
+      `history only grows. If a collection should persist but not be undoable, ` +
+      `pass entityMap({ history: false }); if it should be neither, use ` +
+      `transient: true. [ST2029]`
+  );
 }
 
 export function timeTravel(
@@ -471,22 +521,6 @@ export function timeTravel(
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
   const { enabled = true } = config;
   const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
-    // ST2029 — a large collection is being captured into history by default.
-    //
-    // `entityMap`'s snapshot is an N-pointer array rebuilt on every collection
-    // change, and time travel records on every self-dirty flush. So attaching
-    // this enhancer to a tree holding a big collection makes every
-    // collection-mutating write O(collection width), permanently. MEASURED over
-    // 50 recorded writes at 50k rows: 24.73MB retained, against 5.61MB with
-    // `history: false`.
-    //
-    // The trap is silent and permanent — nothing breaks, the app is simply
-    // heavier forever — which is the ST2026 shape and the reason it earns a
-    // code. Checked ONCE at attach, not per write.
-    if (typeof ngDevMode === 'undefined' || ngDevMode) {
-      warnLargeCollectionsInHistory(tree);
-    }
-
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods<T> = {

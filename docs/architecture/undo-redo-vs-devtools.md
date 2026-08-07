@@ -120,10 +120,19 @@ The flag is opt-in for exactly that reason — the tree cannot tell those apart.
 If the collection should be in neither history nor the persisted snapshot, that
 is a different flag: `transient: true`.
 
-Leaving a 1,000+ row collection on the default with `timeTravel()` attached
-warns once at attach, as [ST2029](../errors/README.md). Like ST2026, nothing
-breaks — the app is simply heavier forever — which is why it needs saying out
-loud.
+Leaving a big collection on the default warns once as
+[ST2029](../errors/README.md), past roughly 500k retained pointers (~5MB). It
+is judged on `entries x width` rather than on a row count, because either
+number alone gets it wrong in one direction: a 20,000-row grid edited twice
+costs almost nothing, and a 50-row list edited for an hour costs almost
+nothing, and a row-count threshold cannot tell you that.
+
+It is checked when an entry is RECORDED, not when the enhancer attaches. The
+first version checked at attach and never fired in a real app: you attach
+`timeTravel()` where you build the tree, and the rows arrive later from a fetch,
+so the collection is empty at exactly the moment being inspected. It passed its
+own tests because those tests loaded the rows first — test order chosen to suit
+the implementation rather than to match what an app does.
 
 ---
 

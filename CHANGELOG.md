@@ -146,15 +146,24 @@
   a leak (the cache is a `WeakMap`), which is why it needed a diagnostic —
   nothing breaks, the app is just slow forever.
 
-- **ST2030** — `@signaltree/guardrails` could not snapshot state. It clones the
-  tree on every change so the next poll has a stable "before", and
-  `structuredClone` throws on a function or class instance. The JSON fallback
-  that used to catch that is REMOVED: JSON turns a `Date` into a string and a
-  `Set` into `{}`, so `previousState` could never deep-equal the live state
-  again and guardrails reported a change on every poll, forever, out of nothing
-  — a diagnostic fabricating the problem it exists to find. It now holds the
-  live snapshot by reference (valid, because `tree()` is immutable and
-  structurally shared), loses only in-place-mutation detection, and says so.
+- **`@signaltree/guardrails` no longer clones state to detect change**, and
+  **ST2030** changed meaning with it. `tree()` returns a memoised, structurally
+  shared snapshot — the identical object when nothing changed — so reference
+  identity answers "did anything change" exactly, in O(1). The clone was doing
+  that job at O(state), and it also destroyed the fast path in the two walks
+  that follow, because `deepEqual` and the path diff both short-circuit on
+  `a === b` and a clone shares nothing with the live snapshot. Measured on the
+  idle poll, which guardrails runs 20 times a second whether or not anything
+  happened: **32.5µs → 0.080µs at 100 branches, 122.8µs → 0.045µs at 400**.
+  Snapshot plus diff together: 189µs → 70.6µs at 300 branches.
+
+  In-place mutation — `tree.$.rows().push(x)`, which notifies nothing — is the
+  one thing reference identity cannot see, so each array/`Map`/`Set`/`Date` is
+  copied and re-checked instead of the whole tree. ST2030 now reports one
+  container that could not be copied, with its shape still watched, rather than
+  the whole snapshot degrading. The JSON fallback it used to take is GONE: JSON
+  turned a `Date` into a string, so `previousState` could never deep-equal the
+  live state again and every poll reported a change, forever, out of nothing.
 
 - **ST2027** — the no-op copy write. The new value is a DIFFERENT object that
   deep-equals the current one, so the comparator walks the whole structure to
@@ -180,8 +189,10 @@
   appears in `tree()` and still round-trips through `serialization()`; use
   `transient: true` to drop it from those too. **Undo becomes partial** for an
   excluded collection, which is a product decision the library cannot make for
-  you, which is why it is opt-in. ST2029 warns once at attach when a 1,000+ row
-  collection is left on the default.
+  you, which is why it is opt-in. ST2029 warns once past ~500k retained pointers
+  (~5MB), judged on `entries x width` rather than row count and checked at
+  RECORD time — an app attaches `timeTravel()` when it builds the tree and the
+  rows arrive later, so an attach-time check sees an empty collection.
 
 - **Newly exported types.** `persistence(config)` REQUIRED a `PersistenceConfig`
   and `serialization(config?)` accepts a `SerializationConfig`, and neither was

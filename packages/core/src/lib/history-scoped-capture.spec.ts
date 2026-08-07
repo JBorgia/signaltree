@@ -134,14 +134,15 @@ describe('history: false — undo is PARTIAL, by design', () => {
 });
 
 /**
- * ST2029 — the trap the flag exists to escape, reported at attach time.
+ * ST2029 — history retention from included collections.
  *
- * Attaching `timeTravel()` to a tree holding a large collection makes every
- * collection-mutating write O(collection width), permanently. Nothing breaks;
- * the app is simply heavier forever. That is the ST2026 shape, so it earns a
- * code rather than a docs paragraph.
+ * Every test here uses REAL APP ORDER: build the tree, attach the enhancer,
+ * THEN let the data arrive. The first version of this diagnostic checked once
+ * at enhancer attach, and passed a suite that populated the collection before
+ * attaching — an order chosen to suit the implementation. In app order it never
+ * fired at all, because at attach the collection is always empty.
  */
-describe('ST2029 — a large collection captured into history by default', () => {
+describe('ST2029 — history retention', () => {
   let warn: ReturnType<typeof vi.spyOn>;
   const msg = () => warn.mock.calls.map((c) => String(c[0])).join('\n');
 
@@ -152,39 +153,51 @@ describe('ST2029 — a large collection captured into history by default', () =>
   });
   afterEach(() => warn.mockRestore());
 
-  it('fires when a big collection is captured by default', () => {
+  /** Build, attach, THEN load — the order every app uses. */
+  async function appOrder(
+    config: Parameters<typeof entityMap<Row, number>>[0],
+    width: number,
+    writes: number
+  ) {
     const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id }),
-    });
-    tree.$.rows.setAll(rows(1500));
+      rows: entityMap<Row, number>(config),
+      n: 0,
+    }).with(timeTravel());
     warn.mockClear();
 
-    tree.with(timeTravel());
+    tree.$.rows.setAll(rows(width));
+    await flush();
+    for (let i = 1; i <= writes; i++) {
+      (tree as unknown as (v: object) => void)({ n: i });
+      await flush();
+    }
+    return tree;
+  }
+
+  it('fires when the rows arrive AFTER the enhancer is attached', async () => {
+    // 20,000 x ~35 entries = ~700k retained pointers, past the 500k budget.
+    await appOrder({ selectId: (r) => r.id }, 20_000, 34);
 
     expect(msg()).toContain('ST2029');
     expect(msg()).toContain('rows');
   });
 
-  it('does NOT fire once the collection opts out', () => {
-    const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id, history: false }),
-    });
-    tree.$.rows.setAll(rows(1500));
-    warn.mockClear();
-
-    tree.with(timeTravel());
+  it('does NOT fire once the collection opts out', async () => {
+    await appOrder({ selectId: (r) => r.id, history: false }, 20_000, 34);
 
     expect(msg()).not.toContain('ST2029');
   });
 
-  it('does NOT fire for a small collection — the cost is not worth a word', () => {
-    const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id }),
-    });
-    tree.$.rows.setAll(rows(10));
-    warn.mockClear();
+  it('does NOT fire for a big collection with a SHORT history', async () => {
+    // Retention is entries x width. A row-count threshold judges this wrong.
+    await appOrder({ selectId: (r) => r.id }, 20_000, 2);
 
-    tree.with(timeTravel());
+    expect(msg()).not.toContain('ST2029');
+  });
+
+  it('does NOT fire for a small collection with a LONG history', async () => {
+    // The other half of the same point.
+    await appOrder({ selectId: (r) => r.id }, 50, 34);
 
     expect(msg()).not.toContain('ST2029');
   });
