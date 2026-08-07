@@ -72,9 +72,17 @@ const GATES = [
     },
   },
   {
-    name: 'test:core',
-    covers: 'core behaviour, including every spec added for 14.0.0',
-    cmd: ['npx', 'nx', 'test', 'core', '--skip-nx-cache'],
+    name: 'test:all',
+    covers: 'behaviour across ALL 8 published packages, not just core',
+    // Was `nx test core`. The gate's own name said "core" and its summary line
+    // said "core behaviour", so it was honest about what it covered — and what
+    // it covered was one package of eight. The other seven have real suites
+    // (ng-forms alone has 44) and nothing in the gate suite ran them.
+    cmd: [
+      'npx', 'nx', 'run-many', '-t', 'test',
+      '--projects=core,enterprise,ng-forms,shared,guardrails,schema,events,realtime',
+      '--skip-nx-cache',
+    ],
     slow: true,
     // Breaking the memo makes the wrapper churn again — marker-snapshot-memo.spec
     // must catch it. Chosen over a trivially-broken function because it targets a
