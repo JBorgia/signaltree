@@ -183,8 +183,22 @@ const TARGETS = {
     // that matters for a phone this is 90 bytes of download against 31MB of
     // heap — see docs/architecture/size-structure-review.md for why retained
     // heap is weighted above gzip here.
-    devKB: 11.2,
-    prodKB: 8.7,
+    //
+    // Bumped 8.7 → 9.3 prod / 11.2 → 11.8 dev for the 14.0.0 RC. Measured 9.13
+    // and 11.56. Attributed: prepend (which re-orders the storage map rather
+    // than rebuilding every per-entity signal), active-entity tracking
+    // (activeId/activeEntity/setActiveId/clearActiveId), changeId, and the
+    // ST2026 predicate-churn diagnostic. Prod and dev grew by almost the same
+    // amount — 0.56 against 0.53 — which confirms the diagnostic is folding:
+    // its ~500 characters of message text are absent from the prod figure, and
+    // `check-devmode-foldable` passes.
+    //
+    // What it bought: three capabilities the audit found in elf and Akita and
+    // not here, and a diagnostic for a 75x cost (0.27ms hoisted against 20.54ms
+    // inline over 1,000 entities) that is otherwise symptomless — the cache is
+    // weak, so nothing leaks and nothing breaks; the app is just slow forever.
+    devKB: 11.8,
+    prodKB: 9.3,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
