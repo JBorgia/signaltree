@@ -194,6 +194,33 @@ The budget is now ~500k retained pointers (~5MB, at the ~10 bytes/pointer the
 RFC 0012 measurements imply). The dispatch key was derivable from the data the
 whole time; the row count was a proxy for it that gets both ends wrong.
 
+---
+
+## Open, and deliberately not done here
+
+**Guardrails prefers a strategy that may see nothing.** `startChangeDetection`
+tries PathNotifier first and, if a notifier exists at all, uses it — even for a
+plain-object tree, where the notifier only fires for entity collections or when
+devtools has installed its leaf interceptor. The code knows this: it warns and
+tells you to set `disablePathNotifier: true`. So the default can be
+change-blind, and the fallback that always works is third in line. Changing the
+ordering is a behavioural decision, not a fix, and it wants its own evidence.
+
+**Freezing beats polling for in-place mutation.** Everything above detects an
+in-place mutation up to 50ms later and infers its path by diffing. `Object.freeze`
+on snapshot values in dev makes the mutation throw *at the mutating line*, with
+a stack — strictly better information, and it enforces a contract the library
+already documents. NgRx ships exactly this as `strictStateImmutability`, opt-in,
+because it makes dev and prod behave differently. If it were added, the
+container-watch machinery becomes a fallback for people who decline the freeze.
+
+**The constructor gate and cross-realm objects.** RFC 0013 §5.1 records that a
+cross-realm `{}` no longer equals a local one. The obvious escape hatch —
+falling back to `constructor.name` — is declined: `name` collides across
+unrelated classes (two different `class Row`s), so it trades a false-UNEQUAL,
+which costs a redundant notification, for a false-EQUAL, which drops a write.
+That is the wrong direction on the only axis that matters here.
+
 ## What the survey is actually worth
 
 Two things, neither of them the thing it was launched to find:
