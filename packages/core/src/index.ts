@@ -184,6 +184,9 @@ export {
   type StoredMarker,
   type StoredSignal,
   type StoredOptions,
+  // The type of StoredOptions.migrate — a consumer declaring a migration
+  // function could not name it.
+  type MigrationFn,
   type StoredErrorContext,
   type StoredReloadResult,
 } from './lib/markers/stored';

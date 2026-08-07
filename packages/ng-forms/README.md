@@ -595,7 +595,7 @@ import { withFormHistory } from '@signaltree/ng-forms';
 
 const form = withFormHistory(createFormTree(initialValues), { capacity: 20 });
 
-form.setValue('profile.name', 'Ada');
+form.setValues({ profile: { name: 'Ada' } });
 form.undo();
 form.redo();
 form.history(); // signal with { past, present, future }

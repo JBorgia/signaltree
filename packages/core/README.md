@@ -899,25 +899,21 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Reactive Side Effects:**
 
-- `effects()` - **Deprecated (11.6.0)** — Angular `effect()`-based subscriptions on tree state with cleanup. Use native Angular `effect(() => tree.$.path())` instead: `tree.effect()`/`tree.subscribe()` call Angular's `effect()` without any injector handling, so calling them outside an injection context throws `NG0203` (native `effect()` lets you pass `{ injector }` explicitly to avoid this). Removal is planned for a future major release, not v12.
+`effects()` was **removed in 14.0.0**. Use Angular's own `effect()`:
 
 ```typescript
-import { signalTree, effects } from '@signaltree/core';
+import { effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
 
-// Deprecated — prefer native effect(() => tree.$.count()) (see "Reactive effects" below)
-const tree = signalTree({ count: 0, user: { name: 'Alice' } }).with(effects());
+const tree = signalTree({ count: 0, user: { name: 'Alice' } });
 
-// Subscribe with automatic cleanup on destroy
-const unsub = tree.subscribe((state) => {
-  console.log('State changed:', state.count);
-});
-
-// Effect with cleanup callback
-const cleanup = tree.effect((state) => {
-  console.log('Count:', state.count);
-  return () => console.log('Previous effect cleaned up');
-});
+effect(() => console.log('Count:', tree.$.count()));
 ```
+
+Native `effect()` accepts `{ injector }`, which is the reason for the removal:
+`tree.effect()` / `tree.subscribe()` called Angular's `effect()` with no injector
+handling, so using them outside an injection context threw `NG0203` with no way
+to opt out.
 
 **Development Tools:**
 
@@ -1235,6 +1231,8 @@ export const entityResolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
 ```
 
 ```typescript
+// @skip-lint — `AppTreeWithTier1` is the type the READER defines in the block
+// above; there is no such module to resolve here.
 // derived/tier-complex-logic.ts
 import { computed } from '@angular/core';
 import { derivedFrom } from '@signaltree/core';
@@ -2587,7 +2585,7 @@ async function handleLoadUsers() {
 
 ### Reactive effects
 
-Use Angular's built-in `effect()` to react to signal changes — this is the canonical approach, not the deprecated `effects()` enhancer below:
+Use Angular's built-in `effect()` to react to signal changes:
 
 ```typescript
 import { effect } from '@angular/core';
@@ -2598,17 +2596,10 @@ effect(() => {
 });
 ```
 
-**`effects()` enhancer — deprecated (11.6.0).** `tree.effect()`/`tree.subscribe()` call Angular's `effect()` without any injector handling, so calling them outside an injection context throws `NG0203` — a known limitation that will not be fixed. Prefer native `effect(() => tree.$.path())` (or pass `{ injector }` explicitly when calling outside an injection context). Removal is planned for a future major release, not v12:
-
-```typescript
-import { signalTree, effects } from '@signaltree/core';
-
-const tree = signalTree({ count: 0 }).with(effects());
-
-// Returns cleanup function
-const stop = tree.subscribe(state => console.log(state.count));
-// tree.destroy() also cleans up all registered effects
-```
+**`effects()` was removed in 14.0.0.** It called Angular's `effect()` with no
+injector handling, so using it outside an injection context threw `NG0203` with
+no way to opt out — native `effect()` accepts `{ injector }`, which is why this
+is a removal rather than a fix.
 
 > **Note:** `isSignal(tree.$.users.byId(id)?.name)` returns `true` (v9.3+). Entity field
 > properties are computed signals — they work with `toObservable()`, Angular DevTools, and
@@ -2886,7 +2877,7 @@ All enhancers are now consolidated in the core package. The following features a
 
 ### Reactive Side Effects
 
-- **effects()** - **Deprecated (11.6.0)** — use native Angular `effect(() => tree.$.path())`; removal planned for a future major, not v12
+- **effects()** — **removed in 14.0.0.** Use native Angular `effect(() => tree.$.path())`
 
 ### Quick Start with Extensions
 
@@ -2957,7 +2948,7 @@ readonly profile = signalForm(this.tree.$.profile);
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { bindFormToTree } from '@signaltree/ng-forms';
+import { formBridge } from '@signaltree/ng-forms';
 
 const tree = signalTree({
   user: { name: '', email: '', age: 0 },
@@ -2981,7 +2972,8 @@ class UserFormComponent {
 
   constructor() {
     // Automatically sync form with tree state
-    bindFormToTree(this.form, tree.$.user);
+    // `formBridge()` is an enhancer — see @signaltree/ng-forms for the
+    // full example; `createFormTree` is the other supported entry point.
   }
 }
 ```
@@ -3069,23 +3061,16 @@ const tree = signalTree({
 
 **Development Features:**
 
+`@signaltree/guardrails` exports `guardrails` and `rules`. Configure it as an
+enhancer; there is no separate metrics API:
+
 ```typescript
-import { getPerformanceMetrics, getHotPaths, checkMemoryLeaks } from '@signaltree/guardrails';
+import { signalTree } from '@signaltree/core';
+import { guardrails, rules } from '@signaltree/guardrails';
 
-// Get detailed performance metrics
-const metrics = getPerformanceMetrics();
-console.log('Update time:', metrics.avgUpdateTime);
-console.log('Signal count:', metrics.totalSignals);
-
-// Identify hot paths
-const hotPaths = getHotPaths();
-console.log('Most accessed signals:', hotPaths);
-
-// Check for memory leaks
-const leaks = checkMemoryLeaks();
-if (leaks.length > 0) {
-  console.warn('Potential memory leaks:', leaks);
-}
+const tree = signalTree({ count: 0 }).with(
+  guardrails({ rules: [rules.noLargeArrays({ max: 10_000 })] })
+);
 ```
 
 **Conditional Exports (Zero Production Overhead):**

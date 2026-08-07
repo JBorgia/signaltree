@@ -143,6 +143,20 @@ const GATES = [
     },
   },
   {
+    name: 'readme-apis',
+    covers: 'every @signaltree symbol named in a shipped README exists',
+    cmd: ['node', 'scripts/lint-readme-apis.mjs'],
+    needsBuild: true,
+    // READMEs ship inside the tarball. A user's first action is copying an
+    // import out of one, and nothing checked that the symbol existed: the first
+    // run found 13 dead references across four packages.
+    mutation: {
+      file: 'packages/core/README.md',
+      append:
+        "\n```ts\nimport { thisSymbolDoesNotExist } from '@signaltree/core';\n```\n",
+    },
+  },
+  {
     name: 'dead-exports',
     covers: 'no NEW export is unreachable from every entry point and every import',
     // Ratcheted to ZERO: the 42 leads were triaged to nothing, so any new

@@ -73,10 +73,4 @@ export function isDerivedMarker(
 // INTERNAL HELPERS
 // =============================================================================
 
-/**
- * Get the derived marker symbol for internal use.
- * @internal
- */
-export function getDerivedMarkerSymbol(): symbol {
-  return DERIVED_MARKER;
-}
+

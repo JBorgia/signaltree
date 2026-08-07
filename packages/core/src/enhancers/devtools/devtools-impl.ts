@@ -30,7 +30,7 @@ import { ENHANCER_META } from '../../lib/types';
 // Types
 // ============================================================================
 
-export interface ModuleMetadata {
+interface ModuleMetadata {
   name: string;
   methods: string[];
   addedAt: Date;
@@ -40,7 +40,7 @@ export interface ModuleMetadata {
   errorCount: number;
 }
 
-export interface ModularPerformanceMetrics {
+interface ModularPerformanceMetrics {
   totalUpdates: number;
   moduleUpdates: Record<string, number>;
   modulePerformance: Record<string, number>;
@@ -50,14 +50,14 @@ export interface ModularPerformanceMetrics {
   moduleCacheStats: Record<string, { hits: number; misses: number }>;
 }
 
-export interface ModuleActivityTracker {
+interface ModuleActivityTracker {
   trackMethodCall: (module: string, method: string, duration: number) => void;
   trackError: (module: string, error: Error, context?: string) => void;
   getModuleActivity: (module: string) => ModuleMetadata | undefined;
   getAllModules: () => ModuleMetadata[];
 }
 
-export interface CompositionLogger {
+interface CompositionLogger {
   logComposition: (modules: string[], action: 'with' | 'enhance') => void;
   logMethodExecution: (
     module: string,
@@ -85,7 +85,7 @@ export interface CompositionLogger {
   }>;
 }
 
-export interface ModularDevToolsInterface {
+interface ModularDevToolsInterface {
   activityTracker: ModuleActivityTracker;
   logger: CompositionLogger;
   metrics: Signal<ModularPerformanceMetrics>;

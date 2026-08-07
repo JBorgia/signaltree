@@ -22,11 +22,6 @@ import { ENHANCER_META } from '../../lib/types';
 // Preserve the public type surface that used to be declared in this file
 // (re-exported through ./index.ts via `export *`).
 export type {
-  ModuleMetadata,
-  ModularPerformanceMetrics,
-  ModuleActivityTracker,
-  CompositionLogger,
-  ModularDevToolsInterface,
 } from './devtools-impl';
 
 // Angular's compile-time dev flag. A production build defines it as false.

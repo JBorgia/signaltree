@@ -17,7 +17,6 @@
 // Derived state types (derived() function removed - use computed() directly)
 export {
   isDerivedMarker,
-  getDerivedMarkerSymbol,
   type DerivedMarker,
   type DerivedType,
 } from './derived';

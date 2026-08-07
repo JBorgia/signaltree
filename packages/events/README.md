@@ -323,26 +323,34 @@ describe('TradeService', () => {
 ### Event Factories
 
 ```typescript
-import { createTestEvent, createTestEventBatch } from '@signaltree/events/testing';
+import { createTestEvent, createTestEventFactory } from '@signaltree/events/testing';
 
 const event = createTestEvent('TradeProposalCreated', {
   tradeId: 'test-trade-123',
 });
 
-const events = createTestEventBatch('UserLoggedIn', 5, (index) => ({
-  userId: `user-${index}`,
-}));
+// A factory carries defaults across every event it makes.
+const factory = createTestEventFactory({
+  defaultActor: { id: 'test-user', type: 'user' },
+});
+const events = [0, 1, 2, 3, 4].map((index) =>
+  factory.create('UserLoggedIn', { userId: `user-${index}` })
+);
 ```
 
 ### Assertions
 
 ```typescript
-import { assertEventMatches, assertEventSequence } from '@signaltree/events/testing';
+import { createEventAssertions } from '@signaltree/events/testing';
 
-assertEventMatches(event, {
-  type: 'TradeProposalCreated',
-  payload: { tradeId: expect.any(String) },
-});
+const assertions = createEventAssertions(bus.getPublishedEvents());
+
+expect(assertions.toHavePublished('TradeProposalCreated').passed).toBe(true);
+expect(assertions.toHavePublishedCount(3).passed).toBe(true);
+expect(
+  assertions.toHavePublishedInOrder(['TradeProposalCreated', 'TradeAccepted'])
+    .passed
+).toBe(true);
 
 assertEventSequence(events, ['TradeProposalCreated', 'NotificationSent', 'AuditLogCreated']);
 ```
@@ -383,7 +391,7 @@ const check = await store.check(key);
 
 if (check.status === 'new') {
   await processEvent(event);
-  await store.markProcessed(key, { result: 'success' });
+  await store.markCompleted(key, { result: 'success' });
 } else if (check.status === 'processed') {
   // Already processed, return cached result
   return check.record.result;

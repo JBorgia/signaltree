@@ -169,12 +169,18 @@ for (const file of files) {
   importEdges.set(file, imps);
 }
 
-// Also treat any `export { x } from './y'` as importing x from y.
-for (const res of reExports.values()) {
-  for (const r of res) {
-    if (r.names !== '*') for (const n of r.names) importedNames.add(n);
-  }
-}
+// A re-export is NOT a use.
+//
+// This used to add every re-exported name to `importedNames`, which let an
+// intermediate barrel LAUNDER a dead export: `src/wizard/index.ts` re-exporting
+// `createWizardForm` made it look imported, while the package barrel exported
+// no `./wizard` at all and no consumer could reach it. It was documented in the
+// ng-forms README as a supported API and had been unreachable the whole time —
+// found by type-checking the README, not by this scan.
+//
+// Reachability from an entry point is already computed by `publicApi()`, which
+// follows these same edges. Counting them twice only made the answer wrong.
+void reExports;
 
 /** Names reachable from a package barrel, following re-export chains. */
 function publicApi(barrel) {
