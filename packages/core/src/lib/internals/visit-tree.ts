@@ -22,7 +22,7 @@ import { isTraversableNode } from '../utils';
  *
  * @internal
  */
-export interface VisitTreeOptions {
+interface VisitTreeOptions {
   /** Max recursion depth (default 32). Guards runaway / cyclic structures. */
   maxDepth?: number;
   /**
@@ -34,7 +34,7 @@ export interface VisitTreeOptions {
   skipKey?: (key: string) => boolean;
 }
 
-export type TreeVisitor = (
+type TreeVisitor = (
   node: unknown,
   path: string,
   key: string | null,

@@ -278,19 +278,4 @@ export function createEventRegistry(
   return new EventRegistry(config);
 }
 
-/**
- * Get schema for an event type from a registry
- */
-export function getEventSchema(
-  registry: EventRegistry,
-  type: string
-): ZodTypeAny | undefined {
-  return registry.getSchema(type);
-}
 
-/**
- * Get all registered event types from a registry
- */
-export function getAllEventTypes(registry: EventRegistry): string[] {
-  return registry.getAllTypes();
-}

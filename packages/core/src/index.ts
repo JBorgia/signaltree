@@ -123,6 +123,21 @@ export type {
 
 // Entity helpers (runtime)
 export { entityMap } from './lib/types';
+// `entityMap()` RETURNS these — a consumer could call the most-used API in the
+// library and not name what it gave them, which is the same gap the
+// serialization config types had.
+export type {
+  EntityMapBuilder,
+  LoadingEntityMapBuilder,
+  DefaultKey,
+  ComputedSliceConfig,
+  EntityMapComputedSlices,
+  EntitySignalWithSlices,
+  EntityMapMarkerWithSlices,
+} from './lib/markers/entity-map';
+// A type guard, alongside the isNodeAccessor / isAnySignal / isTraversableNode
+// family it belongs with.
+export { isSignalTree } from './lib/types';
 
 // Per-leaf equality (13.5.0)
 export { compared, byKeys } from './lib/markers/compared';

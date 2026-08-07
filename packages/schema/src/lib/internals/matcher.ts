@@ -27,7 +27,7 @@ export function compilePattern(pattern: string): PatternSegment[] {
  *
  * @internal
  */
-export function matchSpecificity(
+function matchSpecificity(
   pattern: ReadonlyArray<PatternSegment>,
   segs: ReadonlyArray<string>
 ): number {
@@ -195,7 +195,7 @@ function isLeafSignal(value: unknown): boolean {
  *
  * @internal
  */
-export function snapshotTreeNode(node: unknown): unknown {
+function snapshotTreeNode(node: unknown): unknown {
   if (node === null || node === undefined) return node;
 
   // Leaf signal: call to unwrap.

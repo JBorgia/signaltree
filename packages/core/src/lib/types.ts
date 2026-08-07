@@ -936,31 +936,10 @@ export interface EntitySignal<E, K extends string | number = string> {
  */
 // Legacy `EntityHelpers` removed — v6 uses `EntitySignal` via `tree.$.prop`.
 
-/**
- * Global enhancer configurations
- */
-export interface LoggingConfig {
-  name?: string;
-  filter?: (path: string) => boolean;
-  collapsed?: boolean;
-  onLog?: (entry: LogEntry) => void;
-}
-
-export interface LogEntry {
-  path: string;
-  prev: unknown;
-  value: unknown;
-  timestamp: number;
-}
-
-export interface ValidationConfig<T> {
-  validators: Array<{
-    match: (path: string) => boolean;
-    validate: (value: T, path: string) => void | never;
-  }>;
-  onError?: (error: Error, path: string) => void;
-}
-
+// LoggingConfig / LogEntry / ValidationConfig were removed in 14.0.0. They
+// described enhancers that do not exist on this surface, were reachable from no
+// entry point, and were referenced by nothing — de-exporting them is what let
+// eslint finally see they were dead.
 export interface PersistenceConfig {
   key: string;
   storage?: Storage;
@@ -1025,18 +1004,10 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, string | number>
-  ? E
-  : never;
-export type EntityKeyType<T> = T extends EntitySignal<
-  unknown,
-  infer K extends string | number
->
-  ? K
-  : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<unknown, string | number>
-  ? true
-  : false;
+// EntityType / EntityKeyType / IsEntityMap were removed in 14.0.0: unreachable
+// from every entry point and referenced by nothing, in either this repo or a
+// consumer's — the exports map has no wildcard, so no consumer could import
+// them even deliberately.
 
 /**
  * TreeNode augmented with entity signals
@@ -1104,9 +1075,9 @@ export type EntityAwareTreeNode<T> = {
  * This keeps the default common path fast while preserving power for
  * advanced users.
  */
-export type TypedSignalTree<T> = ISignalTree<T> & {
-  $: DeepEntityAwareTreeNode<T>;
-};
+// TypedSignalTree was removed in 14.0.0. A spec comment already described it as
+// "unexported" while it was in fact exported and reachable by nobody; it is now
+// simply gone, and the comment is true.
 
 /**
  * Internal path notifier interface
@@ -1118,9 +1089,9 @@ export interface PathNotifier {
   notify(path: string, value: unknown, prev: unknown): void;
 }
 
-export type PathHandler = (value: unknown, prev: unknown, path: string) => void;
+type PathHandler = (value: unknown, prev: unknown, path: string) => void;
 
-export type PathInterceptor = (
+type PathInterceptor = (
   ctx: {
     path: string;
     value: unknown;

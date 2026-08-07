@@ -137,17 +137,5 @@ export interface BaseEvent<TType extends string = string, TData = unknown> {
   };
 }
 
-/**
- * Type helper to extract event data type
- */
-export type EventData<T extends BaseEvent> = T['data'];
 
-/**
- * Type helper to extract event type string
- */
-export type EventType<T extends BaseEvent> = T['type'];
 
-/**
- * Union type of all registered events (to be extended by apps)
- */
-export type AnyEvent = BaseEvent<string, unknown>;

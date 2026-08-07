@@ -145,7 +145,9 @@ const GATES = [
   {
     name: 'dead-exports',
     covers: 'no NEW export is unreachable from every entry point and every import',
-    cmd: ['node', 'tools/find-dead-exports.mjs', '--max=42'],
+    // Ratcheted to ZERO: the 42 leads were triaged to nothing, so any new
+    // unreachable export is a regression rather than one more on a pile.
+    cmd: ['node', 'tools/find-dead-exports.mjs', '--max=0'],
     mutation: {
       file: 'packages/core/src/lib/utils.ts',
       append: '\nexport const __gateUnreachableExport = 1;\n',

@@ -16,6 +16,7 @@ export type {
 // Optimistic Updates
 export {
   OptimisticUpdateManager,
+  createOptimisticUpdateManager,
   applyOptimisticEntityChange,
 } from './optimistic-updates';
 export type {
@@ -30,6 +31,11 @@ export {
   createEventHandler,
   createTypedHandler,
   batchedHandler,
+  // Siblings of the three above, in the same module, unexported by oversight.
+  composeHandlers,
+  conditionalHandler,
+  createHandlerRegistry,
+  debouncedHandler,
 } from './handlers';
 export type { EventHandler, TypedEventHandler } from './handlers';
 

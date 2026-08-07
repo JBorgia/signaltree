@@ -15,7 +15,7 @@ export const EVENT_HANDLER_METADATA = 'EVENT_HANDLER_METADATA';
 /**
  * Event handler metadata
  */
-export interface EventHandlerMetadata {
+interface EventHandlerMetadata {
   /** Event type to handle */
   eventType: string;
   /** Queue to listen on (derived from priority if not specified) */

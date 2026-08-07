@@ -47,7 +47,7 @@ export const EventMetadataSchema = z
 /**
  * Schema for aggregate info
  */
-export const AggregateSchema = z
+const AggregateSchema = z
   .object({
     type: z.string().min(1),
     id: z.string().min(1),
@@ -235,20 +235,3 @@ export function validateBaseEvent(event: unknown): BaseEvent {
   return result.data as BaseEvent<string, unknown>;
 }
 
-/**
- * Check if value looks like a base event (duck typing)
- */
-export function isBaseEventLike(value: unknown): value is BaseEvent {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return (
-    typeof obj['id'] === 'string' &&
-    typeof obj['type'] === 'string' &&
-    typeof obj['timestamp'] === 'string' &&
-    typeof obj['correlationId'] === 'string' &&
-    typeof obj['actor'] === 'object' &&
-    typeof obj['metadata'] === 'object' &&
-    'data' in obj
-  );
-}

@@ -11,7 +11,7 @@ import type { WritableSignal } from '@angular/core';
 /**
  * Memory statistics for monitoring
  */
-export interface MemoryStats {
+interface MemoryStats {
   /** Total number of signals currently cached */
   cachedSignals: number;
 
@@ -31,7 +31,7 @@ export interface MemoryStats {
 /**
  * Configuration for MemoryManager
  */
-export interface MemoryManagerConfig {
+interface MemoryManagerConfig {
   /**
    * Enable automatic cleanup via FinalizationRegistry
    * @default true

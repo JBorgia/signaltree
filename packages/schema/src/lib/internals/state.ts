@@ -118,7 +118,7 @@ export interface Registry {
 /**
  * Allocate a fresh `PathState` with empty verdicts.
  */
-export function createPathState(): PathState {
+function createPathState(): PathState {
   return {
     version: 0,
     lastSettledError: null,

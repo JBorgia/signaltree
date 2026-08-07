@@ -51,7 +51,7 @@ import type { EntitySignal } from '../types';
  * walking `tree.$` — no global registry, so nothing to leak on tree teardown.
  * @internal
  */
-export const ENTITY_LOADER_SIGNAL = Symbol('ENTITY_LOADER_SIGNAL');
+const ENTITY_LOADER_SIGNAL = Symbol('ENTITY_LOADER_SIGNAL');
 
 // =============================================================================
 // TYPES

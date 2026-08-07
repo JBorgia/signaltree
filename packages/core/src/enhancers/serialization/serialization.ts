@@ -185,7 +185,7 @@ export interface SerializedState<T = unknown> {
 /**
  * Enhanced SignalTree interface with serialization capabilities
  */
-export interface SerializableSignalTree<T> extends ISignalTree<T> {
+interface SerializableSignalTree<T> extends ISignalTree<T> {
   /** Explicit reactive alias for state (helps TS resolution in tests) */
   // Use `any` here as a pragmatic escape hatch to avoid TS index-signature
   // access errors in tests (dot-access on dynamic keys). This will be

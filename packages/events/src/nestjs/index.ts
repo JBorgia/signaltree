@@ -29,6 +29,9 @@ export type {
 
 // DLQ
 export { DlqService } from './dlq.service';
+// The injection token that pairs with DlqService above — a NestJS consumer
+// injecting by token could not name it.
+export { DLQ_SERVICE } from './tokens';
 export type { DlqEntry, DlqQueryOptions, DlqStats } from './dlq.service';
 
 // Decorators

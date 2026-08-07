@@ -19,6 +19,12 @@ export { interceptLeafSignals } from './lib/internals/intercept-leaf-signals';
 // Global path-change notifier — the seam devtools/persistence enhancers
 // subscribe to.
 export { getPathNotifier } from './lib/path-notifier';
+// `PathNotifier.subscribe(pattern, handler)` is the seam this entry point
+// exists for, and the handler's type was not exportable.
+export type {
+  PathNotifierHandler,
+  PathNotifierInterceptor,
+} from './lib/path-notifier';
 
 // Custom-marker extensibility — register a processor for your own marker type
 // BEFORE any signalTree() is constructed.
