@@ -353,7 +353,22 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           }
 
           if (value === null || typeof value !== 'object') return;
-          const all = (value as { all?: unknown }).all;
+          // A BARE ARRAY is a valid payload, not a malformed one.
+          //
+          // `tree({ rows: [...] })` is what a person or an AI writes to seed or
+          // reset a collection, and it used to half-apply: sibling leaves in the
+          // same payload took their values while the collection silently kept
+          // its old contents. In dev that emitted ST2024; in production it did
+          // nothing at all, which is the worst version of this — a partial
+          // hydrate is harder to notice than a failed one, because the parts
+          // that DID apply make it look like it worked.
+          //
+          // Accepting it is unambiguous. An entityMap SNAPSHOT always emits
+          // `{ all: [...] }`, so a bare array can never be mistaken for the
+          // snapshot shape, and no other payload this processor accepts is an
+          // array. The `all` wrapper stays the canonical round-trip form; this
+          // only stops the hand-written form from being silently dropped.
+          const all = Array.isArray(value) ? value : (value as { all?: unknown }).all;
           if (Array.isArray(all)) {
             // DIFF FIRST, `setAll` only as a fallback.
             //
