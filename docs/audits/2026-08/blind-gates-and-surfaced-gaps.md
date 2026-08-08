@@ -975,3 +975,155 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > other published figures are ratios of two numbers where one is near timer
 > resolution? Run the generators several times and see which move. A number
 > that changes run to run is not a measurement, whatever its precision suggests.
+
+### Answers to Q29–Q36
+
+> **Q29 — the self-confirming measurement problem.** There is no mechanism.
+> The numeric-claims gate is a **provenance** gate, not a correctness gate: it
+> requires a section to name a generator, but nothing re-derives the quoted
+> number and diffs it against the tool's output. A benchmark wrong in the same
+> direction as the optimization passes trivially — the section names the tool,
+> the tool exists and runs, and `verify-gates` only proves the tool _runs_.
+> `check-numeric-claims.mjs --self-test` proves it can fail on "no generator
+> named", not on "generator output contradicts the prose". The defence that
+> exists is the discipline baked into the tools themselves — postconditions,
+> sentinels, one-process-per-arm — and it is the tools, not any gate, that
+> would catch a wrong-but-consistent benchmark. State it plainly: **nothing in
+> this repo detects a measurement that is wrong in the same direction as the
+> optimisation it validates.** The Q33/Q36 findings below are the proof — every
+> one of them passed the gates.
+>
+> **Q30 — does the warm-up trap still exist anywhere?** No — and the `refetch`
+> arm is the intended measurement, not ST2027 wearing new clothes. The write is
+> dropped on purpose and the label says so: "re-fetched: equivalent value, NEW
+> identity". That arm exists to price the cost of concluding "unchanged" — the
+> exact case `compared()` exists for (deepEqual must walk the whole object to
+> conclude equality; byKeys looks at two fields). ST2027's trap was a fixture
+> that _accidentally_ held its target value, so a benchmarker believed writes
+> landed. Here the write-dropping is the point, the changing arm is the control,
+> and the two arms share the same leaf shape. Verified:
+> - `changing(i) = {…base, version: i}` — `version` is monotonic, so every
+>   write lands under all three comparators (measured: deepEqual 88.1ns, byKeys
+>   28.0ns, Object.is 12.6ns).
+> - `refetch() = {…base}` — new identity, deep-equal content, every write
+>   dropped (deepEqual 79.1ns vs byKeys 28.8ns). That gap is the feature.
+> - `bench-compare.mjs` and `bench-state-scale.mjs` both predate the session and
+>   are the most defended tools in the repo: a SENTINEL written after warmup so
+>   the postcondition can only pass if the _measured_ loop ran, explicit `throw`
+>   postconditions (`readAll returned N`, `undo restored NOTHING`, `write did
+>   not land`), one process per arm, every arm asserts its write landed. No
+>   dropped-write arm exists in either.
+>
+> **Q31 — a column I chose not to publish.** Printing-with-a-caveat was the
+> right call, and the one risk it carries — a future doc-writer quoting the
+> number and dropping the caveat — is the same risk refusing would have
+> created on the other side (a re-runner with no "leaf" row can't tell what the
+> metric was). The convention held in practice: `docs/overview.md` quotes only
+> the root column and says explicitly "the tool reports it but declines to
+> quote it". **But the question has a sting: the column the tool chose to
+> publish has the same defect.** The root ratio (3.6x) swings 1.7x–4.1x across
+> runs (below, Q36) and the tool prints it alongside "linear in the path
+> walked, which is the expected shape" — an assertion the data barely supports.
+> The honest column was the one it refused; the published one is the quietly
+> unstable one.
+>
+> **Q32 — the inverted claim's blast radius.** The blast radius is **larger
+> than the audit recorded, and the correction reached only three of the six
+> surfaces that carry it.** The audit's table (above) says "measured 13.4 vs
+> 8.0" as though the inversion were handled. It was not — the corrected figures
+> live only on `llms.txt:127`, `llms-full.txt:768`, and `packages/core/
+> README.md:1938`. The inverted claim is **still live**, word-for-word, on:
+>
+> | surface | line | still says |
+> | ------- | ---- | ---------- |
+> | `docs/skills/using-signaltree/SKILL.md` | 149 | "measures 6.5ns against Object.is's 8.1ns … there is nothing to specialise" |
+> | `apps/demo/…/whats-new.component.html` | 233 | "beats Object.is 6.5ns to 8.1ns. There is nothing to specialise." |
+> | `packages/core/src/lib/markers/compared.ts` | 47 | "measures 6.5 ns against Object.is's 8.1 ns — the general function is _faster_" |
+> | `docs/architecture/optimisation-options.md` | 30, 263–265, 540–542 | "6.5 ns against 8.1 ns — the general function is _faster_" |
+> | `docs/architecture/design-thesis-and-benchmarking-rules.md` | 398–400 | "deepEqual is _faster_ than Object.is on a changed number (6.5 ns vs 8.1 ns)" |
+> | `CHANGELOG.md` | 645–646 | "6.5ns against 8.1ns — the general function is faster" (point-in-time, arguable) |
+>
+> That is the exact class §4/§6.5 warn about — a wrong number that supports
+> advice — and the advice it supports ("**Do NOT emit it for primitives**") is
+> now load-bearing in an agent-facing skill. **None of these six surfaces is in
+> the numeric-claims gate's SURFACES list** (`README.md`, `docs/overview.md`,
+> the two `llms*` files, `packages/*/README.md`, `docs/compare/*.md`,
+> `docs/performance/*.md`). SKILL.md, the demo template, the source comment,
+> and the architecture docs are all unfenced — which is the concrete, named
+> answer to Q29.
+>
+> **Q33 — my own measurement artifacts.** The third is in
+> `bench-leaf-equality.mjs` itself, at the primitive section. Lines 91 and 189
+> hardcode **"specialising here is a mistake"** — an unconditional header
+> asserting the OLD inverted claim — while the measurement printed directly
+> beneath it shows `Object.is` **7.1ns vs deepEqual 10.4ns, faster**. The
+> conditional at line 193–197 even encodes the old belief as its fallback:
+> `primObjectIs > primDeepEqual ? 'SLOWER — deepEqual short-circuits on
+> \`a === b\`' : 'faster'`. The tool was written believing deepEqual wins on
+> primitives, and the header states that belief no matter which direction the
+> data goes. It was found, like the other two, because the output looks wrong:
+> the header and its own data disagree in the same breath. Same class as the
+> caught pair — a hardcoded conclusion the tool's own measurement refutes.
+> (The `depth` tool's leaf column and the memo arm are clean by comparison;
+> the depth column self-refuses and the memo arm's 0.291µs unchanged read is
+> above resolution and stable.)
+>
+> **Q34 — what do the cross-library numbers actually compare?** No. The caveat
+> "matched by intent, not certified equivalent" lives **only** in
+> `tools/size-compare.mjs` (line 24 and its console output at line 182). Grep
+> of `docs/compare/*.md` for `matched by intent` / `not certified` /
+> `certified equivalent`: **zero hits.** `capability-matrix.md` names the tool
+> (`"node tools/size-compare.mjs — same capability, same esbuild + gzip
+> method"`, line 301) but that sentence is a *stronger* claim than "matched by
+> intent" — it asserts "same capability" while the tool's own header says the
+> capability rows are not certified equivalent (elf's `selectEntity` returns an
+> Observable, ours a signal; the consumer pays differently downstream). The
+> one place the docs get this right is the granularity discussion in
+> `real-implementations.md`, which is honest that its row "is not a benchmark
+> result". The size-capability table is not.
+>
+> **Q35 — the Angular axis, restated as a measurement question.** The
+> substitution is valid exactly for claims about the **data structure** and
+> **bundle**, and invalid for claims about **invalidation and rendering**.
+> - _Survives:_ per-leaf write cost (88→28ns; a signal write costs what it
+>   costs regardless of component boundary); depth-path walk latency; bundle
+>   sizes (esbuild+gzip is framework-agnostic); memory.
+> - _Does not survive:_ "granular updates beat NgRx" as a **time** claim. The
+>   repo's own attempt to price it in time **failed** — recorded in
+>   `real-implementations.md:237–244` — because a Node loop that reads every
+>   consumer erases the very property it measures. What survives is the
+>   invalidation **count** (1/1000 vs 1000/1000), which is architecture, not a
+>   benchmark, and the ~10µs-render extrapolation built on it, which is labeled
+>   arithmetic and depends on a constant no TestBed harness in this repo has
+>   ever measured. "Granular updates beat NgRx" is therefore a true claim that
+>   no measured evidence in this repo supports as a latency figure — the
+>   invalidation count is the evidence, and it is a count, not a benchmark.
+>
+> **Q36 — stability, not just accuracy.** Two live findings, one of them in the
+> published docs:
+> - **`docs/overview.md`'s own table contradicts its own prose.** The depth
+>   table (lines 59–64) implies 0.0048/0.0010 = **4.8x** depth-20-vs-5; the
+>   prose (line 67) says "~3.6x"; the tool today prints **3.5–3.7x**. The doc
+>   table is stale relative to the current generator, and the ratio it does
+>   quote is a single run's value treated as a conclusion.
+> - **The depth root-ratio is the live ST2018-class figure.** Across ~11 runs
+>   (today plus the earlier session): 1.7, 2.1, 3.3, 3.5, 3.6, 3.6, 3.7, 3.7,
+>   3.7, 3.7, 3.8, 4.1 — a **1.7x–4.1x spread (±45% around the quoted 3.6x)**,
+>   a ratio of two sub-microsecond absolutes, the same class the ST2018
+>   multiplier was dropped for. The tool prints it with "linear in the path
+>   walked, which is the expected shape", which is an assertion the data
+>   weakly supports. It does not look bad only because 3.6x ≈ 4x.
+> - **Stable:** the `compared()` ratios (deepEqual 88.1→28.0 = 3.1x; refetch
+>   79.1→28.8 = 2.7x today vs 3.4x/3.0x in the corrected `llms.txt` — same
+>   shape, ±10%); the memo unchanged-read (0.291µs, above resolution); the
+>   state-scale ratios (0.0082ms vs 20.6ms at 1024 flat; 0.199ms vs 94.5ms at
+>   5000 consumers — two orders of magnitude, no plausible run-to-run swing
+>   collapses that).
+>
+> **Net.** The performance section's own warning is understated: it was not
+> "most numbers turned out wrong" — it is that **the gate designed to catch
+> wrong numbers checks provenance, not correctness, and six surfaces carrying a
+> proven-inverted claim are outside even that check.** Q32's table is the
+> live debt; Q36's root-ratio and the stale overview.md table are the
+> unstable figures; Q33's header is the artifact that survives in the
+> generator itself.
