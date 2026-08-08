@@ -1286,3 +1286,52 @@ rather than asserted, and a claim that cannot be falsified is not a finding.
 > is real but smaller than "architecture is built" — it is "architecture
 > designed, integration absent". The rest are unfalsified hypotheses awaiting
 > a generator, which is the correct status for a challenge list.
+
+---
+
+## 12. C5 answered — "why not raw signals?", measured
+
+`tools/bench-raw-signals.mjs` (new, gated by `verify-gates` as `raw-signals`)
+implements the same small store — a session/workspace shape with six fields —
+twice: raw per-field `signal()`s, and a `signalTree`. Three workloads, both
+arms asserted to land via a sentinel written after warmup, arms INTERLEAVED
+round by round.
+
+**Measured on this machine (100k ops, median of 7, one warmup round discarded):**
+
+| workload | raw | signalTree | ratio |
+| --- | --- | --- | --- |
+| write, 0 consumers | ~7.5ns | ~11ns | ~1.4x |
+| write, 100 consumers | ~10.8µs | ~10.8µs | ~1.0x |
+| read whole store | ~250-290ns | ~260-280ns | ~1.0x |
+
+The verdict lines in the tool flip with the data from a stated 50ns threshold.
+
+**Two findings, one about the challenge and one about my own harness:**
+
+- **On a small store, raw signals and SignalTree are at parity.** The bare
+  write tax is ~3-4ns (under threshold); per-consumer invalidation is ~1ns;
+  the whole-state read is a wash. The `does-it-fit` page's "A few values in
+  one component" row is marked `n/a` — it can now be filled with a
+  measurement: raw signals are complete for that shape, and the number says
+  so. **The answer to "why not raw signals" is not granularity — it is
+  capability**: `entityMap` semantics, markers, `timeTravel`, serialization.
+  The container is a wash at small scale; the dependency's value begins where
+  the 50-line hand-roll stops being 50 lines.
+- **The first draft of THIS tool shipped the error this repo keeps catching.**
+  Measuring raw fully, then signalTree fully, produced a stable-looking
+  **~3000ns gap on the consumer workload** — which collapsed to **~130ns
+  (parity)** the moment the two arms were interleaved round by round. The gap
+  was arm-order JIT contamination: the second-measured arm ran in a different
+  V8 state. A single-arm-order benchmark would have "proven" raw signals win
+  the small store on a phantom that has nothing to do with the stores. The
+  tool now interleaves and the gate's mutation breaks a write to prove the
+  postcondition fires. This is the same defect as the bench-state-scale
+  warm-up rule and the bench-compare idle-arm bug, one more time, one level
+  down — and it is why the audit keeps saying a number needs a generator with
+  an asserted postcondition, not just a generator.
+
+So C5's hypothesis — "the honest answer is capabilities, not granularity" —
+survives measurement, with the caveat that this is the SMALL store. Whether
+granularity pays off at 10k-50k rows with OnPush/zoneless remains C1's
+measurement, which needs a render-pass harness that still does not exist.

@@ -467,6 +467,22 @@ const GATES = [
     },
   },
   {
+    name: 'raw-signals',
+    covers:
+      'the "why not raw signals" arms construct, interleave, and their postconditions fire',
+    cmd: ['node', 'tools/bench-raw-signals.mjs', '--writes', '5000', '--consumers', '10'],
+    needsBuild: true,
+    // Every arm asserts its write landed (SENTINEL). Breaking the raw write
+    // makes the postcondition fire — the guardrail against an idle arm, and
+    // against the arm-order contamination this tool's first draft shipped.
+    mutation: {
+      file: 'tools/bench-raw-signals.mjs',
+      find: '  for (let i = 0; i < WRITES; i++) field.set(i + round * WRITES);\n  const ns = Number(process.hrtime.bigint() - t) / WRITES;\n  sink += field();',
+      replace:
+        '  for (let i = 0; i < WRITES; i++) void (i + round * WRITES);\n  const ns = Number(process.hrtime.bigint() - t) / WRITES;\n  sink += field();',
+    },
+  },
+  {
     name: 'size-compare',
     covers: 'cross-library gzip cost is measurable for both libraries',
     cmd: ['node', 'tools/size-compare.mjs'],
