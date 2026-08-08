@@ -1,0 +1,17 @@
+{
+  "apps/demo/public/llms-full.txt": 21,
+  "apps/demo/public/llms.txt": 4,
+  "docs/compare/capability-matrix.md": 4,
+  "docs/compare/native-signals.md": 2,
+  "docs/compare/ngrx-signalstore.md": 16,
+  "docs/compare/real-implementations.md": 32,
+  "docs/performance/BENCHMARK_ANALYSIS.md": 9,
+  "docs/performance/bundle-optimization.md": 7,
+  "docs/performance/dropping-dev-code.md": 1,
+  "docs/performance/metrics.md": 15,
+  "docs/performance/TREE_SHAKING_OPTIMIZATION.md": 21,
+  "packages/core/README.md": 2,
+  "packages/guardrails/README.md": 4,
+  "packages/ng-forms/README.md": 1,
+  "README.md": 5
+}

@@ -1910,16 +1910,19 @@ const tree = signalTree({
 tree.$.user().name;
 ```
 
-**What it buys.** Measured, 2M writes to one leaf:
+**What it buys.** Reproduce with `node tools/bench-leaf-equality.mjs` —
+200,000 writes to one leaf, median of 7 rounds:
 
-| leaf                                 | `deepEqual` | comparator |           |
-| ------------------------------------ | ----------- | ---------- | --------- |
-| object `{id,name,email,version}`     | 53.8 ns     | 8.9 ns     | 6.0x      |
-| the same object re-fetched over HTTP | 110.3 ns    | 9.0 ns     | **12.2x** |
-| nested, 3 levels / 6 fields          | 60.5 ns     | 9.5 ns     | 6.4x      |
+| leaf                                 | `deepEqual` | `byKeys('id','version')` |          |
+| ------------------------------------ | ----------- | ------------------------ | -------- |
+| object `{id,name,email,version}`     | 104.0 ns    | 31.0 ns                  | 3.4x     |
+| the same object re-fetched over HTTP | 89.8 ns     | 30.1 ns                  | **3.0x** |
 
-The decisive property is not the speed: a comparator reaches the
-reference-equality floor (`Object.is` measures 8.6 ns) **while keeping re-fetch
+Both arms are `compared()` leaves so only the comparator differs — a bare object
+becomes a _branch_, not a leaf, so it cannot be the baseline.
+
+The decisive property is not the speed: a comparator approaches the
+reference-equality floor (`Object.is` measures 14.1 ns) **while keeping re-fetch
 correctness**. An HTTP response that rebuilds an equivalent object still compares
 equal, where `Object.is` would report a spurious change and notify every
 dependent. That is why defaulting leaves to reference equality stays wrong and
@@ -1932,10 +1935,11 @@ notified.
 
 **When NOT to use it.**
 
-- **Primitives.** `deepEqual`'s first line is `if (a === b) return true`, which is
-  already the whole fast path. On a changing number it measures 6.5 ns against
-  `Object.is`'s 8.1 ns — the general function is _faster_. There is nothing to
-  specialise.
+- **Primitives.** A changing number measures 13.4 ns under the default
+  `deepEqual` against 8.0 ns for `Object.is`, so specialising buys about 5 ns —
+  noise beside everything else a write does, and not worth a marker. (This
+  README previously had those two figures reversed and concluded `deepEqual` was
+  the faster of the two. It is not. The advice never depended on it.)
 - **Large collections.** A comparator over a 50,000-element array is still O(N),
   and it does nothing about the `slice()` that produced the new array — measured,
   the rebuild is ~38 ms and the equality walk another ~35 ms per 1,000 updates.

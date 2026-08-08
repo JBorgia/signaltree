@@ -340,6 +340,19 @@ const GATES = [
     },
   },
   {
+    name: 'numeric-claims',
+    covers:
+      'every measured figure on a live surface names a tool that produces it — ratcheted, so new ungenerated numbers cannot land',
+    cmd: ['node', 'tools/check-numeric-claims.mjs'],
+    provenBy: 'numeric-claims:self',
+  },
+  {
+    name: 'numeric-claims:self',
+    covers:
+      'the numeric-claims scanner detects a figure in a section that names no generator, and clears it once one is named',
+    cmd: ['node', 'tools/check-numeric-claims.mjs', '--self-test'],
+  },
+  {
     name: 'release-claims',
     covers:
       'every symbol/code ADDED since the last release tag reaches every surface that claims to describe the library',
