@@ -1158,9 +1158,13 @@ Ranked by how much the answer could change the product, not by effort.
 > title is "prove it or stop making it". The substance survives verification,
 > which is why the challenge stands: **no spec counts render passes.** There is
 > no `ngDoCheck`, `renderCount`, `ChangeDetectorRef` or `markForCheck` in any
-> spec in the repository, and the `detectChanges` density is ~1 call per test
-> (37 calls / 35 tests; 1 call / 11 tests) — render-once-and-assert smoke tests,
-> not re-render counting. So: the claim separating this library from raw signals
+> spec in the repository. [**One figure in this correction is itself wrong —
+> flagged by the auditor:** the density parenthetical read "37 calls / 35
+> tests; 1 call / 11 tests", which reproduces to neither. Measured: **68 call
+> sites over 152 tests ≈ 0.45 calls per test** — roughly one `detectChanges`
+> per two tests, i.e. render-once-and-assert smoke tests, not re-render
+> counting. The correction in the correction: the ratio is ~1:2, not ~1:11.]
+> So: the claim separating this library from raw signals
 > has never been **measured**, though components are rendered in tests.**]** Build a harness that counts component render passes per
 > write — SignalTree vs NgRx SignalStore vs raw `signal`/`computed` — at
 > realistic component counts, OnPush, zoneless. Report it like any other
