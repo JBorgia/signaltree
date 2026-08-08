@@ -249,26 +249,45 @@ by construction.
 
 ## 5. Verified claims from the brief (all held up)
 
-Re-checked and confirmed during this pass:
+Re-checked and confirmed during this pass. Per Q11, each entry states whether
+it was verified by **executing** something or by **reading** the code — a
+section titled "verified claims" has to distinguish those.
 
-- **deepEqual loop + constructor gate** — `packages/shared/src/lib/deep-equal.ts`
-  (~215-224), with cycle guard depth 64; the constructor-gate bypass is guarded
-  by the leaf write path per `e42823cc`.
-- **ST2029 checked at record time** with an `entries × width` budget
+- **`needsBuild` / build-then-measure path** — **READ + EXECUTED**:
+  `verify-gates.mjs:579-599` gates on `needsBuild` and `buildOnceIfNeeded` runs
+  before any `dist/`-reading gate; `bdbc7e2d` + the `npm run build` fix
+  (`8338e9a4`) close the stale-artifact hole. Executed: a clean normal
+  `node tools/verify-gates.mjs` run rebuilt all packages and ran all 33 gates
+  green (see §8). This is the pass's strongest test.
+- **deepEqual loop + constructor gate** — **READ from source** this pass
+  (`packages/shared/src/lib/deep-equal.ts` ~215-224, cycle guard depth 64), plus
+  the three callers. The constructor gate is a **safe-fail
+  direction**: when the constructors differ (or a `get` throws), the gate
+  returns `false` (UNEQUAL), so the four breaking pairs all move toward
+  "changed" — a redundant notification for a signal, never a silently dropped
+  write. Verified for every caller of `deepEqual`, not just leaf writes: the
+  wrongly-equal direction is the harmful one at `edit-session.isDirty`
+  (`edit-session.ts:178` — would report clean while changes exist), at the
+  no-op check in `applyChanges` (`edit-session.ts:197` — would drop an edit),
+  and at `guardrails.findInPlaceMutations` (`guardrails.ts:240` — would miss a
+  mutation). In all three, the gate moves toward the safe side. (Corrected per
+  Q12: the original sentence "the constructor-gate bypass is guarded by the leaf
+  write path" did not describe the code — there is no bypass.)
+- **ST2029 checked at record time** — **READ**: `entries × width` budget
   (`time-travel.ts` ~186-191, 429-460; `HISTORY_RETAINED_POINTER_BUDGET = 500_000`,
   `RETENTION_CHECK_INTERVAL = 16`).
-- **ST2026 rate-based, 2-second window**, `PREDICATE_CHURN_THRESHOLD = 12`
+- **ST2026 rate-based, 2-second window** — **READ**: `PREDICATE_CHURN_THRESHOLD = 12`
   (`entity-signal.ts` ~147-220) — `e216c8c9` correctly narrowed it from raw
   count to rate.
 - **guardrails reference-oracle hybrid** (`guardrails.ts` ~571-577, aggregate
-  5000 budget, freeze option).
-- **`needsBuild` is now actually read** (`verify-gates.mjs:579-599`) and
-  `buildOnceIfNeeded` runs before any `dist/`-reading gate; `bdbc7e2d` + the
-  `npm run build` fix (`8338e9a4`) close the stale-artifact hole the brief
-  described.
-- **33/33 gates pass** on a clean normal run (re-ran with no args: all green,
-  tree clean, branch ahead of origin/main).
-- **The Angular gap** stands: no committed tool exercises TestBed /
+  5000 budget, freeze option). (Per Q11: this claim was READ from source this
+  pass, not exercised by a test — no committed spec runs the oracle against
+  markers, and the `findInPlaceMutations` path has no test at all. The brief's
+  "mock tree" concern is answered by `16ce77e7` for the reporting path; the
+  markers half stands open.)
+- **33/33 gates pass** — **EXECUTED**: clean normal run (re-ran with no args:
+  all green, tree clean, branch ahead of origin/main).
+- **The Angular gap stands** — **READ**: no committed tool exercises TestBed /
   `detectChanges` / OnPush. Every cross-library number in `tools/` is a Node
   microbenchmark. The only Angular-axis content is the invalidation-count table
   at `docs/compare/real-implementations.md:206-211`, which is arithmetic on
@@ -406,27 +425,50 @@ stated scope but worth recording:
    (`packages/core/src/lib/utils.ts`) so the gate's own rebuild carries the
    bloat into measurement. Update the harness comment at `verify-gates.mjs:56-62`
    that currently argues the wrong direction for this gate. **(this session's
-   regression; highest value)**
+   regression — the gate's proof, not its verdict: `d11cd19a` made the normal
+   run honest while killing the self-test; highest value)** **[FIX TESTED —
+   patched harness is 1/1 PROVEN]**
 2. **Fix `lint:budget` self-test** — restore a non-exported mutation (produces a
-   `no-unused-vars` **error**, immune to baseline slack), or tighten the
-   baseline with `--update` so the 1-warning mutation trips it. **(pre-existing)**
-3. **Fix the `numeric-claims:self` harness bookkeeping** — either give the gate
-   a real mutation/provenBy chain or set its `unproven` message; stop crediting
-   `numeric-claims` as proven by a gate the harness never runs.
+   `no-unused-vars` **error**, immune to baseline slack) **first**; tighten the
+   baseline with `--update` as a one-shot stopgap. **(pre-existing)** **[defect
+   demonstrated; fix not tested]**
+   2a. **Make the lint ratchet self-tightening** (per Q7) — fail the gate when the
+   live count is _below_ baseline, so every improvement forces an `--update` and
+   headroom can never silently reaccumulate. This is the durable version of the
+   `--update` stopgap, and it aligns `lint:budget` with `check-numeric-claims`'s
+   drop behavior.
+3. **Fix the `numeric-claims:self` harness bookkeeping** — set a default
+   `unproven` message in the harness (generic fix, any future gate in this state),
+   and add a real mutation on `check-numeric-claims.mjs` (per-gate wiring). Stop
+   crediting `numeric-claims` as proven by a gate the harness never proves.
+   **[defect demonstrated; fix not tested]**
 4. **Fix `scenario-definitions.ts`** — remove/relabel `shallowMemoization`,
    `lightweightMemoization`, `OptimizedUpdateEngine` (+16.7% claim), and the
-   `middleware`/`full-stack` categories so demo labels match what runs.
+   `middleware`/`full-stack` categories so demo labels match what runs. The
+   durable fix is a check that scenario labels name existing mechanisms (per
+   Q15); the labels are the instance. **[defect demonstrated; fix not tested]**
 5. **Regenerate or correct `artifacts/perf-summary.json`** against the current
-   package set (blocking currency issue per AGENTS.md).
+   package set (blocking currency issue per AGENTS.md). **[defect demonstrated;
+   fix not tested]**
 6. **Retire the enterprise claims** in `BENCHMARK_ANALYSIS.md` (and the +16.7%
-   quote in 6.1) now that the mechanism they measure is gone.
+   quote in 6.1) now that the mechanism they measure is gone. **[defect
+   demonstrated; fix not tested]**
 7. **Correct `frequency-weighting-system.md`** — either find the real
    implementation to quote or label the doc as describing a planned/unlanded
    design; do not present unverifiable "research" multipliers as live facts.
+   **[defect demonstrated; fix not tested]**
 8. **Consider the §9 brief caveats as live items**, unchanged by this pass:
    reference-oracle tested only against the mock tree, constructor-gate safety
    argued mainly for leaf writes, ST2026's timing assertions (2s window) are
-   test-fragile per `b254edc1`'s own "flaky timing assertion" fix.
+   test-fragile per `b254edc1`'s own "flaky timing assertion" fix. (Per Q11:
+   the "mock tree" half of the reference-oracle caveat is **stale** —
+   `16ce77e7` moved the guardrails reporting spec onto a real `signalTree`
+   from `@signaltree/core`, including the change-blind backstop test. What
+   remains untested is the **markers** half: no committed guardrails test
+   exercises the reference-oracle premise against `entityMap`/`form`/`status`/
+   `asyncSource`, or the `findInPlaceMutations` path at all. The
+   constructor-gate safety caveat is also resolved per Q12: the asymmetry was
+   verified this pass at every caller of `deepEqual`, not just leaf writes.)
 9. **Longer term: close the Angular gap** — no committed tool exercises
    `TestBed`/OnPush/`detectChanges`; every cross-library number is a Node
    microbenchmark. A render-loop prototype benchmark would be the first honest
@@ -469,3 +511,259 @@ stated scope but worth recording:
   in `e3a9232d` (2026-08-06, predates `b254edc1`).
 - `git log -S ensureBuilt -- tools/check-bundle-budget.mjs` — `d11cd19a`
   (in session) introduced the rebuild-before-measure that kills the mutation.
+
+---
+
+## 9. Answers to the reviewer's questions
+
+> **Q1 — does your proposed fix work?** No — not as written. Empirically tested
+> with esbuild (shapes A–D in a scratch dir): an exported
+> `const __gateBloat = [...]` that no measured entry references is **tree-shaken
+> away entirely** (0.08 KB gzip vs 6.87 KB with the payload). What survives is a
+> **side-effecting assignment** (`(globalThis as any).__gateBloat = [...]`) in
+> any module the measured entry pulls in — even a transitive dep — because esbuild
+> keeps side effects. So the fix works only in the side-effecting form, and only
+> because `packages/core/src/lib/utils.ts` is a transitive dep of every measured
+> entry. Two further traps verified: the bare `globalThis.__gateBloat` form in a
+> `.ts` file breaks the build with TS7017 (the gate then exits 1 for the WRONG
+> reason — "Could not build"), and only the `(globalThis as any)` cast makes it
+> fail for the right reason ("Bundle budget exceeded"). The patched harness
+> (recommendation 1) uses exactly this form and is now 1/1 PROVEN.
+
+> **Q2 — if it must be reachable to survive, what does reachable cost?** The
+> payload must be a **side effect in a module in the entry's transitive graph**,
+> which means it lives in the real source, not only in the mutation. The cost is
+> that the bloat is present in any build produced while the self-test is applied
+> — acceptable only because the harness restores the file after. Making it
+> reachable "only under mutation" _without_ the harness's restore dance would
+> mean injecting into a `dist/` build at gate time, which reinvents the exact
+> stale-artifact problem `d11cd19a` was built to kill. So: reachability under
+> mutation is achievable; reachability _only_ under mutation is achievable
+> precisely because the harness applies-and-reverts around the measured build.
+
+> **Q3 — is bloating the bundle the only way to make this gate fail?** No. The
+> other side is the budget: drive the budget constant to an impossible value so
+> `prod > budget` trips. What that proves: the **comparison** is real. What it
+> fails to prove: that the **measurement** is real — that the tool measures the
+> actual built bundle. Those are different gates. This gate's load-bearing
+> property is the measurement (the hole `d11cd19a` fixed was a stale _artifact_,
+> not a wrong budget), so the bloat mutation is the one the gate needs.
+
+> **Q4 — is "regression" the right word?** State both failure modes side by side.
+> Before `d11cd19a`: the normal run measured a possibly-ancient `dist/`, so the
+> release gate could go green on code that no longer existed — and the mutation
+> "worked" only because it mutated that same stale artifact. A **dishonest normal
+> run, working proof**. After: the normal run is honest (rebuilds first), but the
+> mutation dies before measurement. An **honest normal run, broken proof**. The
+> pre-fix state is strictly worse — a false green on the release gate itself.
+> "In-session regression" survives only if it means the _proof_ regressed; the
+> gate's verdict is more honest than it was. Committed: a new, narrower gap
+> (self-test can't demonstrate failure) opened while closing a wider one
+> (stale-artifact measurement). Recommendation 1's framing is corrected to match.
+
+> **Q5 — is the mutation the root cause, or the symptom?** Symptom. Root cause is
+> baseline staleness (540 recorded, 538 live). The two ratchets disagree on
+> drops: `check-lint-budget.mjs` prints "↓ … run --update to lock this in" and
+> **continues** (exit 0); `check-numeric-claims.mjs` **exits 1** with "Backlog
+> shrank — tighten the baseline". The numeric-claims behavior is the correct
+> ratchet discipline — a drop is a tightening opportunity, and failing until it is
+> locked in is what keeps the baseline honest. The lint-budget behavior is
+> friendlier but is precisely what let headroom accumulate silently. They protect
+> different things (warnings vs the baseline itself), and for a _proof-bearing_
+> baseline the lint-budget design is the weaker one.
+
+> **Q6 — order the fixes by what they prevent.** (a) tighten-baseline prevents
+> today's blindness only; the next warning paid down without `--update` recreates
+> the headroom and reabsorbs the mutation. (b) error-based mutation (non-exported
+> function → `no-unused-vars` error) prevents the hole reopening permanently,
+> because an error fails the gate regardless of the warning budget. (b) is
+> strictly stronger; recommendation 2 should rank (b) first and (a) as a stopgap.
+
+> **Q7 — how would you know if this were still blind?** A stale baseline is
+> detectable before it absorbs a mutation by making the ratchet fail on
+> `live < baseline` — the numeric-claims behavior from Q5. That turns every
+> improvement into a forced `--update` and keeps headroom at zero permanently.
+> That is a better recommendation than either (a) or (b): it makes the baseline
+> self-tightening. Added as recommendation 2a.
+
+> **Q8 — what does the convention say it should have been?** The other four
+> `:self` gates (`devmode-foldable:self`, `tree-shaking:self`,
+> `package-hygiene:self`, `dead-exports:self`) all carry BOTH a `mutation` (on the
+> checker tool itself) and their own `--self-test` command. `numeric-claims:self`
+> is the **only** one with a command and no mutation. The convention: a `:self`
+> gate proves the checker can fail by mutating the checker's detection logic.
+> The fix is to give `numeric-claims:self` a mutation on
+> `check-numeric-claims.mjs` (e.g. neutralize the `PROVENANCE` or `CLAIM` regex);
+> no new design needed.
+
+> **Q9 — is "never exercised" accurate, or only true in one mode?** Only true in
+> self-test mode. In a **normal** run, `numeric-claims:self`'s command
+> (`check-numeric-claims.mjs --self-test`) **does execute** — it is one of the
+> 33 that pass. The tool's own self-test is real and runs in both modes. What is
+> unproven is only the _harness's_ claim: it credits "proven via
+> numeric-claims:self" without having performed a can-fail proof. Restated: the
+> tool is fine; the harness overstates coverage by construction.
+
+> **Q10 — separate the two defects.** Wiring: `numeric-claims:self` lacks a
+> mutation — a per-gate fix. Bookkeeping: the harness prints `undefined` because
+> it interpolates `gate.unproven` without a default — a **generic** fix that will
+> affect any future gate in this state. The generic fix is the bookkeeping one:
+> give the `!gate.mutation && !gate.provenBy` branch a default message.
+
+> **Q11 — executed or read?** For each of the brief's three ranked uncertainties:
+> (1) build-then-measure path — **EXECUTED** (clean normal run rebuilt everything,
+> 33/33 green). (2) reference-oracle against markers + real tree — **READ**: the
+> reporting spec has used a real `signalTree` since `16ce77e7` (the "mock tree"
+> concern is stale), but no test touches markers or the `findInPlaceMutations`
+> path. (3) constructor-gate asymmetry across every caller — **READ**: the
+> safe-fail direction holds at all three callers (`edit-session.ts:178,197`,
+> `guardrails.ts:240`); no new test written. Only (1) was executed. §5 now labels
+> each bullet accordingly.
+
+> **Q12 — does one sentence here describe the code?** No. There is no "bypass" in
+> `deep-equal.ts:215-224` — it is a constructor comparison in a try/catch that
+> returns `false` on mismatch or a throwing `get`. Nothing is "guarded by the leaf
+> write path". The sentence garbled the commit message's argument: the gate errs
+> toward UNEQUAL, which at a leaf write costs a redundant notification (safe),
+> never a dropped write. Corrected in §5. The other items were re-read from
+> source and hold; the deepEqual bullet was the offender.
+
+> **Q13 — the parity suite.** Confirmed the brief's suspicion. The generator
+> (`deep-equal-parity.spec.ts` `gen()`, ~62-83) emits primitives, arrays, plain
+> objects, and Dates only — no class instances, no `Object.create(null)`, no
+> cross-realm objects, no `Object.create(Date.prototype)`. It still cannot reach
+> any of the four divergent pairs. Worse, the suite pins the _loop conversion_
+> (its reference is the pre-conversion implementation), so it is doubly
+> uninformative for the constructor gate. Not extended this pass (investigation
+> only); the fix is to add the four pairs as explicit cases or extend `gen()`.
+
+> **Q14 — in-session or pre-existing?** In-session. `git log
+--oneline b254edc1..HEAD -- scenario-definitions.ts` returns three session
+> commits: `888336d1` (re-measure), `e99550e3` (ST2018 ~100x), `048ff729`
+> (entityMap history:false + multiplier). The session touched the file three times
+> without noticing the dead labels — "edited without noticing", which makes it the
+> session's responsibility, not a stale artifact. Recommendation 4 now says so.
+
+> **Q15 — does any gate cover this?** No. `demo-coverage` checks root-barrel
+> export NAMES appear in the demo; a scenario _label_ is a string literal, not a
+> root export, so a label naming a dead mechanism is invisible to it. The durable
+> finding is the **absent check** (nothing validates scenario labels against
+> existing mechanisms); recommendation 4 targets the check, with the label fix as
+> the instance.
+
+> **Q16 — how far does the `×` class extend?** Beyond U+00D7: `KiB`, lowercase
+> `kb`, bare `s`/`sec`, spelled-out units, percentages (`real-implementations.md:
+131`, "under 1 %"), and prose ("twice as fast", "sub-millisecond", "an order of
+> magnitude"). Unbounded enumeration of human phrasing is an arms race — the
+> detection strategy is wrong. The honest alternative: require provenance at the
+> _section_ level and treat any measurement-shaped token as needing a named
+> generator, or state explicitly in the gate's contract that prose claims are out
+> of scope. The real answer is the latter: extend the figure regex for `×`/`KiB`
+> and declare prose out of scope rather than chase every phrasing.
+
+> **Q17 — scope the exemption.** Smallest change: match the competitor name
+> against a window around the figure (its sentence/clause), not the whole line.
+> It would raise the backlog — SignalTree's own figures sharing a row with a
+> competitor would newly count. Given the ratchet, that is harmless: the baseline
+> records the larger honest number, and a drop fails until `--update` (Q5). A
+> larger honest backlog is strictly better than a smaller dishonest one.
+
+> **Q18 — same severity as a blind gate?** Different kinds. A BLIND gate
+> (bundle-budget, lint-budget) has no proof of failure — it can pass while broken,
+> so its green verdict is untrustworthy. A ratchet gap (numeric-claims missing
+> figure forms) is a gate that works but covers less than claimed — what it does
+> see is checked honestly. "Can't be trusted to fail" outranks "doesn't look
+> everywhere". §7's ordering is justified.
+
+> **Q19 — apply the repo's own standard.** Of nine recommendations, the fix was
+> TESTED for exactly **one**: bundle-budget (recommendation 1 — the patched
+> harness is now 1/1 PROVEN, including proving the _wrong_ failure mode dies).
+> The other eight demonstrated the **defect** without testing the fix: #2 (probe
+> showed 539 < 540; did not run `--update` or re-run with the error-based
+> mutation), #3-7 (defect shown, fix unverified), #8 (verification item, not a
+> fix), #9 (no fix). Marked in §7. By the repo's own standard, eight of nine
+> recommendations are hypotheses about fixes.
+
+> **Q20 — what proves the harness?** Nothing. The same harness that miscounts and
+> skips silently (§4) is what reports "30/33 proven". There is no gate over the
+> gate-runner. That is a finding, and it ranks with — arguably above — the two
+> reported BLIND gates: a broken gate-runner makes every gate's proof suspect,
+> where a broken gate only makes one suspect.
+
+> **Q21 — the missing symmetry.** Yes — a gate can pass its mutation for the
+> WRONG reason, and the method cannot distinguish it. Concrete instance found
+> this pass: the bare `globalThis.__gateBloat` form broke the **build** (TS7017),
+> so the gate exited 1 for "Could not build the packages" rather than "Bundle
+> budget exceeded" — and the harness counts any non-zero exit as "proven". How to
+> look: assert on the failure **message** (e.g. grep for "Bundle budget
+> exceeded"), not just the exit code. Found for bundle-budget by testing both
+> forms; not done systematically across the other 30 "proven" gates.
+
+> **Q22 — the release call.** Criterion: **block 14.0.0 on anything that makes a
+> shipped claim false or a release decision wrong; backlog what only affects proof
+> hygiene, coverage, or bookkeeping.** Sorted:
+>
+> - **BLOCK:** 1 (bundle-budget proof — the release gate cannot be shown to fail),
+>   2 (lint-budget proof), 4 (scenario labels lie on a live surface), 5
+>   (perf-summary ships a wrong package set to prod), 6 (enterprise claims
+>   ungeneratable), 7 (frequency-weighting fabricated provenance).
+> - **BACKLOG:** 3 (numeric-claims bookkeeping — cosmetic, no claim affected), 8
+>   (brief caveats — documented verification gaps), 9 (Angular gap — absence of
+>   coverage, not a false claim).
+>   This re-ranks vs §7's severity order: anything that misrepresents the shipped
+>   library blocks; proof and bookkeeping items, however high-severity, do not.
+
+---
+
+## Follow-up questions on the Q1 investigation (added after reviewing your working notes)
+
+Your §2 finding stands — `ensureBuilt()` does clobber a `dist/`-targeted
+mutation. These are about the experiment you ran to answer Q1, not about that.
+
+> **Q23 — whose exit code did you read?** Your run was
+> `node tools/check-bundle-budget.mjs 2>&1 | tail -8` followed by
+> `echo "exit code: $?"`. In a pipeline, `$?` is the exit status of the **last**
+> command. Which process is that? Re-run capturing node's own status —
+> `out=$(node tools/check-bundle-budget.mjs 2>&1); code=$?` — and see whether
+> "the gate passed" survives. (This exact trap produced a false "FORMAT CLEAN"
+> in the session you are auditing; it is in `handoff-review-brief.md` §10.)
+>
+> **Q24 — what did the missing `dist/packages/core` tell you?** After your run,
+> every package had a `dist/` directory except `core`. You read that as an nx
+> cache anomaly. What is the _other_ explanation for "the one package I mutated
+> is the one that has no build output"? Does that reading also explain the
+> `Bundle failed: core` line, if you look further up than `tail -8`?
+>
+> **Q25 — is your payload valid TypeScript?** You appended
+> `globalThis.__gateBloat = [...]` to a `.ts` file. Is `__gateBloat` a declared
+> property of `typeof globalThis`? What does `tsc` do with that, and what does
+> that make the gate's exit code mean? Distinguish clearly: the gate exits 1
+> when the **build** fails and when the **budget** fails. Your evidence has to
+> say which — they prove different things, which is what Q3 was circling.
+>
+> **Q26 — there are three shapes, not two.** Your scratch tests compared a
+> side-effecting assignment against an exported const, and correctly found the
+> exported const is tree-shaken. But the scratch files were `.js` and the real
+> target is `.ts`. That adds a third axis: TS-valid or not. Enumerate all three
+> — is-it-side-effecting, is-it-exported, does-it-typecheck — and say which
+> combination the retargeted mutation actually needs. Then run that one against
+> the real gate and report the measured prod number.
+>
+> **Q27 — the scratch-test contradiction.** You saw in-memory `.includes()`
+> return `false` while the file written from the same buffer contained the
+> string, then moved on calling it "a fluke of the combined loop". An
+> unexplained contradiction in a measurement harness is the same class of thing
+> this whole audit is about. Either explain it or say it is unexplained — do not
+> record it as resolved. What was different about the run that printed `false`?
+>
+> **Q28 — does this change your §7 ranking?** If the retargeted mutation does
+> make the gate fail on the budget, recommendation 1 goes from "asserted" to
+> "verified", and Q19's tally changes. If it only makes the _build_ fail, the
+> gate proves something narrower than you claimed. Which is it, and does §2's
+> severity paragraph need rewriting either way?
+
+> **Note on repo state:** your run left `dist/packages/core` absent while every
+> other package was built — the tree could not be measured until it was rebuilt.
+> `npx nx build core` restores it. Worth adding to your method section: a
+> mutation experiment on a source file needs its restore verified by build
+> output as well as by file hash, since a failed build leaves no artifact behind.
