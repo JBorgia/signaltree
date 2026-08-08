@@ -51,14 +51,31 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 - Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.79KB**; with `entityMap` **9.40KB**; with `form()` **7.90KB**. **Development** (default build, diagnostics included): **7.80 / 12.07 / 10.16KB** — defining `ngDevMode: false` reclaims **~1.8-2.4KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
-### Performance targets (Sept 2025)
+### Operation latency by depth
 
-| Metric                         | Target   | Current |
-| ------------------------------ | -------- | ------- |
-| Operation latency (5 levels)   | <0.050ms | 0.041ms |
-| Operation latency (10 levels)  | <0.080ms | 0.061ms |
-| Operation latency (15 levels)  | <0.120ms | 0.092ms |
-| Operation latency (20+ levels) | <0.150ms | 0.104ms |
+Reproduce with `node tools/bench-depth-latency.mjs`. Median of 9 batches of
+2,000 operations after a warm-up, on the built output.
+
+| depth | root update through the chain |
+| ----- | ----------------------------- |
+| 5     | 0.0010 ms                     |
+| 10    | 0.0023 ms                     |
+| 15    | 0.0034 ms                     |
+| 20    | 0.0048 ms                     |
+
+**Read the shape, not the absolutes** — those are hardware-specific. Depth 20
+costs ~3.6x depth 5 for 4x the depth: linear in the path actually walked. A
+direct leaf write (`tree.$.a.b.c.set(v)`) does not walk the path at all and
+measures at timer resolution, so the tool reports it but declines to quote it.
+
+> Replaced a "Performance targets (Sept 2025)" table for 14.0.0. It claimed
+> 0.041 / 0.061 / 0.092 / 0.104 ms at these depths and **nothing in the repo
+> produced those figures** — the same defect as the publishable-size rows below.
+> Worse, "operation" was never defined, and the two plausible readings differ by
+> three orders of magnitude, so the claim could be neither verified nor
+> falsified. Both were measured: every real figure is 10x-1000x SMALLER than
+> what was published. The numbers understated the library, which is the
+> forgiving direction, and were wrong all the same.
 
 ### Published package budgets (CI gates, not what apps pay)
 

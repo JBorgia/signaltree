@@ -12,8 +12,8 @@ replacing it with a plain loop carrying an inline reference check was a 3-4x win
 **50 more callback-iteration sites** in three packages that no measurement in
 this release had looked at: events (36), ng-forms (9), guardrails (5).
 
-The hypothesis under test: *the same idiom, in the same position, costs the same
-thing elsewhere.*
+The hypothesis under test: _the same idiom, in the same position, costs the same
+thing elsewhere._
 
 **It does not, anywhere.** The idiom was never the problem. The problem was the
 idiom **over a large collection on a per-write path**, and that conjunction does
@@ -29,13 +29,13 @@ helpers, factories. Test-time code over arrays of recorded events. Irrelevant.
 
 The remaining 10 split into:
 
-| location                  | what it iterates                | why it does not matter        |
-| ------------------------- | ------------------------------- | ----------------------------- |
-| `core/registry.ts`        | registered event definitions    | startup, once                 |
-| `core/validation.ts`      | Zod issues on a failed validate | only on the failure path      |
-| `nestjs/dlq.service.ts`   | dead-letter entries             | server-side admin query       |
-| `angular/handlers.ts:125` | the handler list, on unsubscribe | tens of entries, on teardown |
-| `angular/entity-events.ts:245` | ids in one remove batch    | bounded by the batch          |
+| location                       | what it iterates                 | why it does not matter       |
+| ------------------------------ | -------------------------------- | ---------------------------- |
+| `core/registry.ts`             | registered event definitions     | startup, once                |
+| `core/validation.ts`           | Zod issues on a failed validate  | only on the failure path     |
+| `nestjs/dlq.service.ts`        | dead-letter entries              | server-side admin query      |
+| `angular/handlers.ts:125`      | the handler list, on unsubscribe | tens of entries, on teardown |
+| `angular/entity-events.ts:245` | ids in one remove batch          | bounded by the batch         |
 
 **The actual dispatch loop already uses `for...of`** (`handlers.ts:133` and
 `:168`) — the one place a per-element callback would be paid per event is
@@ -104,16 +104,16 @@ That was the right instinct and the wrong stopping point — because it framed t
 question as keep-or-remove and never asked what the clone was actually competing
 against. Measured properly, the clone is worse on **three** axes, not one:
 
-| | with the clone | holding the reference |
-| --- | --- | --- |
-| making the snapshot | O(state), 87.9µs at 300 branches | free |
+|                        | with the clone                     | holding the reference                  |
+| ---------------------- | ---------------------------------- | -------------------------------------- |
+| making the snapshot    | O(state), 87.9µs at 300 branches   | free                                   |
 | `deepEqual(cur, prev)` | full walk — a clone shares nothing | short-circuits on every shared subtree |
-| `detectChangedPaths` | full walk, same reason | O(changed paths) |
-| retention | a full copy per change | shares with the live snapshot |
+| `detectChangedPaths`   | full walk, same reason             | O(changed paths)                       |
+| retention              | a full copy per change             | shares with the live snapshot          |
 
 Snapshot + diff together: **189µs cloned vs 70.6µs by reference** at 300
-branches, 3-4x. The clone was not just costly to make — it *destroyed the fast
-path in everything downstream of it*, because structural sharing is what makes
+branches, 3-4x. The clone was not just costly to make — it _destroyed the fast
+path in everything downstream of it_, because structural sharing is what makes
 those walks cheap and a copy shares nothing.
 
 ### The premise that changed the answer
@@ -128,10 +128,10 @@ reference after a no-op write, and blind only to in-place mutation.
 On the **idle poll** — which is what guardrails does 20 times a second whether
 or not anything happened, and therefore most of what it ever does:
 
-| | idle poll |
-| --- | --- |
-| clone + compare | 32.5µs @ 100 branches, 122.8µs @ 400 |
-| reference compare | **0.080µs / 0.045µs** |
+|                   | idle poll                            |
+| ----------------- | ------------------------------------ |
+| clone + compare   | 32.5µs @ 100 branches, 122.8µs @ 400 |
+| reference compare | **0.080µs / 0.045µs**                |
 
 ### What shipped
 
@@ -139,7 +139,7 @@ The dispatch key is derivable from the data, so this is a hybrid, not a choice:
 
 - **`cur !== prev`** → a signal-driven change. Diff the paths, which is now
   O(changed paths) because the previous snapshot shares its unchanged subtrees.
-- **`cur === prev`** → a signal-driven change is *impossible*. The only thing
+- **`cur === prev`** → a signal-driven change is _impossible_. The only thing
   that can have happened is an in-place mutation, so check the containers —
   and only then.
 
@@ -174,11 +174,11 @@ cannot work: an app builds its tree and attaches the enhancer in the same
 breath, and the rows arrive later from a fetch. At attach the collection is
 empty, every time.
 
-It passed three tests. All three populated the collection *before* attaching —
+It passed three tests. All three populated the collection _before_ attaching —
 an order chosen, without noticing, to suit the implementation rather than to
 match what an app does. This repo already had the lesson written down, in
-`undo-redo-vs-devtools.md`: *"a test that exercises two things at once can pass
-for the wrong one."* This is its sibling — **a test can encode the
+`undo-redo-vs-devtools.md`: _"a test that exercises two things at once can pass
+for the wrong one."_ This is its sibling — **a test can encode the
 implementation's assumptions instead of the requirement's, and then confirm
 them.** Every ST2029 test now builds, attaches, and only then loads.
 
@@ -196,30 +196,55 @@ whole time; the row count was a proxy for it that gets both ends wrong.
 
 ---
 
-## Open, and deliberately not done here
+## The three deferrals — all closed
 
-**Guardrails prefers a strategy that may see nothing.** `startChangeDetection`
-tries PathNotifier first and, if a notifier exists at all, uses it — even for a
-plain-object tree, where the notifier only fires for entity collections or when
-devtools has installed its leaf interceptor. The code knows this: it warns and
-tells you to set `disablePathNotifier: true`. So the default can be
-change-blind, and the fallback that always works is third in line. Changing the
-ordering is a behavioural decision, not a fix, and it wants its own evidence.
+Recorded here as open; all three were then done, and one of them turned out to
+be the largest finding of the audit.
 
-**Freezing beats polling for in-place mutation.** Everything above detects an
-in-place mutation up to 50ms later and infers its path by diffing. `Object.freeze`
-on snapshot values in dev makes the mutation throw *at the mutating line*, with
-a stack — strictly better information, and it enforces a contract the library
-already documents. NgRx ships exactly this as `strictStateImmutability`, opt-in,
-because it makes dev and prod behave differently. If it were added, the
-container-watch machinery becomes a fallback for people who decline the freeze.
+**Guardrails preferring a strategy that may see nothing — CLOSED.** A polling
+backstop now runs alongside PathNotifier, so nothing is missed, and the
+change-blind warning fires only when the backstop has actually caught a miss —
+a report rather than a guess. Affordable only because the change check stopped
+cloning: 0.045µs per idle poll against the 122.8µs that made polling a "last
+resort" in the first place.
 
-**The constructor gate and cross-realm objects.** RFC 0013 §5.1 records that a
-cross-realm `{}` no longer equals a local one. The obvious escape hatch —
-falling back to `constructor.name` — is declined: `name` collides across
-unrelated classes (two different `class Row`s), so it trades a false-UNEQUAL,
-which costs a redundant notification, for a false-EQUAL, which drops a write.
-That is the wrong direction on the only axis that matters here.
+**Freezing over polling — CLOSED.** `changeDetection: { strictImmutability:
+true }` freezes each snapshot, so an in-place mutation throws at the mutating
+line with a stack instead of being inferred from a diff a poll later. Opt-in,
+because it makes dev diverge from production. Documented as the recommended dev
+setting.
+
+**`constructor.name` for cross-realm equality — CLOSED as declined**, reason
+recorded in RFC 0013 §5.1: `name` collides across unrelated classes, trading a
+false-UNEQUAL (one redundant notification) for a false-EQUAL (a dropped write).
+
+---
+
+## The finding that came from finishing the list
+
+Chasing why a dev-only diagnostic appeared to have grown the production bundle
+produced the answer: it had not. **The measurement had moved.**
+
+`check-bundle-budget.mjs` measures `dist/`, not source, and never checked that
+the artifact matched the code it was run against. `npm run build` was
+separately broken — it named a project with no build target and exited 1 — so
+nothing rebuilt `dist/`. Every "within budget" verification in this audit was
+measuring code from before the change it was clearing.
+
+`verify-gates.mjs` was worse: **`needsBuild` was declared on 23 gates and read
+by nothing.** It looked like machinery and was documentation. `npm run gates`,
+the command that decides whether a release ships, ran all 23 against whatever
+was lying in `dist/`.
+
+Both fixed. Downstream, every published size claim was re-measured and every one
+was wrong — the two AI-priming files disagreed with _each other_ (5.70 vs 5.46KB
+for the same bare tree), which is what "never verified" looks like. Two rows in
+`overview.md` were deleted rather than corrected, because no tool produces them
+any more and re-deriving them under an invented methodology would have been
+worse than admitting they were unverifiable. A four-row performance table went
+the same way, except that one WAS re-measurable: every published figure was
+10x-1000x larger than reality, and "operation" had never been defined, so the
+claim could be neither verified nor falsified.
 
 ## What the survey is actually worth
 
@@ -243,7 +268,15 @@ Two things, neither of them the thing it was launched to find:
    of it. That only becomes visible once you measure the alternative rather than
    the thing in front of you.
 
-4. **Two of the three findings came from re-auditing decisions already made,
-   not from new code.** ST2029's attach-time check and the guardrails clone were
-   both shipped by this same release, both with passing tests, both reviewed at
-   the time. A survey aimed outward found its best material by turning around.
+4. **Almost every finding came from re-auditing decisions already made, not
+   from new code.** ST2029's attach-time check, the guardrails clone, and
+   edit-session's lossy fallback were all shipped by this same release, all with
+   passing tests, all reviewed at the time. A survey aimed outward found its
+   best material by turning around.
+
+5. **The tooling was reporting green throughout.** Gates passed, budgets passed,
+   claims-coverage passed — while the bundle gate measured stale output, 23
+   gates ran against an artifact nobody had rebuilt, and five published surfaces
+   carried numbers that had never been true. Every one of those was found by a
+   human question ("compared to what?"), not by a check. A green board is
+   evidence that the checks you have are satisfied, and nothing more.
