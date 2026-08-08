@@ -1207,3 +1207,82 @@ Ranked by how much the answer could change the product, not by effort.
 **Carry the discipline over.** Whatever you evaluate here, the standard from the
 previous rounds applies: a number needs a generator, a verdict must be derived
 rather than asserted, and a claim that cannot be falsified is not a finding.
+
+---
+
+## 11. Response to the fixes, and to §10
+
+> **On the two fixes (`b5d2dcfc`)** — both verified real, and both are the right
+> shape of fix, not just a relabel:
+>
+> - **`bench-depth-latency.mjs`** now runs 5 sweeps and prints the depth-20-vs-5
+>   ratio as a range within a single run — measured **3.6x–3.9x** on this
+>   machine, and the tool tells the reader to quote the SPREAD, not the midpoint.
+>   `docs/overview.md` now quotes no multiplier at all ("sublinear in depth")
+>   and states why in place. That is the discipline Q36 asked for, applied.
+> - **`bench-leaf-equality.mjs`** now derives the primitive verdict from a stated
+>   20ns threshold and flips with the data; it prints "the docs are wrong"
+>   above threshold. The hardcoded "specialising here is a mistake" header is
+>   gone. Verified in the current source and output.
+>
+> Both are exactly the "verdict derived, not asserted" standard §10 itself
+> asks to carry over.
+>
+> **On the §10 challenges** — scored by what can be checked now vs. what needs
+> a harness, because the list mixes both, and the audit's job is to say which
+> is which:
+>
+> **C1 — the central claim has never been measured in Angular.** Agreed it is
+> the important one, but the grounding is wrong as stated. "13 spec files
+> import TestBed; zero call detectChanges" is **packages-only**. Repo-wide,
+> **37 spec files** import TestBed (13 in `packages/`, 24 in `apps/demo/src`)
+> and **20 demo spec files call `fixture.detectChanges()`** — the marker-zoo,
+> signal-forms, forms, async demos and most `pages/*` specs render a component
+> and flush. What is TRUE, and survives the correction: those 20 calls are
+> smoke tests — create, render once, assert output. **None of the 37 counts
+> render passes per write, and none exercises OnPush invalidation or
+> zoneless.** So the claim to fix is "zero call detectChanges" → "no spec
+> counts render passes". The challenge itself is unchanged and correct; the
+> stated evidence was not.
+>
+> **C2 — enumerate every timer.** Verified: `POLLING_INTERVAL_MS = 50` in
+> `packages/guardrails/src/lib/guardrails.ts:308` is real (the 5000ms I first
+> read is the unrelated `memoryLeaks.checkInterval` default), and
+> `ng-forms`/`realtime`/`events` carry `setTimeout` for debounce, async
+> validation and reconnect. The challenge is well-founded. One refinement to
+> the platform-team framing: the guardrails poll is a **fallback** used only
+> "when reactive subscription is not available" — so the rejection risk is
+> conditional, not unconditional. Worth saying in the write-up so the pitch
+> is accurate.
+>
+> **C3 — SSR has zero integration, and the architecture is already built.**
+> The first half is verified: `grep TransferState|isPlatformServer|
+> provideServerRendering packages/` returns nothing. The second half is an
+> overstatement. `HydrateMode` and the marker `hydrate` contract exist, and
+> `docs/architecture/snapshot-rehydration.md` is 680 lines — but
+> `serialize()`/`deserialize()` live in the **`serialization` enhancer**, not
+> in core, so the "ten-line recipe" requires at least: enable the enhancer,
+> `serialize()` server-side, thread the string through TransferState, call
+> `deserialize()` client-side, and ensure the marker `hydrate` modes line up
+> across the boundary. The doc describes the mechanism thoroughly but contains
+> **no TransferState recipe and no SSR step**. So the gap is real and worth
+> more than a benchmark — but it is "architecture designed, integration
+> absent", not "architecture built". C3's value stands either way.
+>
+> **C4–C8 — hypotheses, not yet grounded, and correctly framed as such.** C4
+> (Signal Forms), C5 (hand-rolled equivalent, ~50 lines), C6 (eight-hour
+> retention), C7 (debuggability walk-through), C8 (package survival) are all
+> falsifiable but none is claimed as measured in the brief — they are
+> challenges, and the doc says so. C5 is the cheapest to turn into a
+> generator (write the hand-rolled store, run it on the state-scale
+> workloads) and directly tests C1's negative — if hand-rolled signals win,
+> the honest answer is capabilities, not granularity, exactly as suspected.
+> C6 is the one pass/fail item with no test at all.
+>
+> **Net for §10.** C1 survives its corrected grounding and is the right #1 —
+> but its falsifiable core is narrower than "no Angular measurement exists"
+> and is worth stating precisely: no repo test counts render passes, and the
+> demo's own benchmark page measures AI accuracy, not render cost. C3's gap
+> is real but smaller than "architecture is built" — it is "architecture
+> designed, integration absent". The rest are unfalsified hypotheses awaiting
+> a generator, which is the correct status for a challenge list.
