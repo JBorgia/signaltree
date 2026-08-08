@@ -423,11 +423,16 @@ stated scope but worth recording:
 
 1. **Fix `bundle-budget` self-test mutation** — retarget it to source
    (`packages/core/src/lib/utils.ts`) so the gate's own rebuild carries the
-   bloat into measurement. Update the harness comment at `verify-gates.mjs:56-62`
+   bloat into measurement, **and change the payload from the bare
+   `globalThis.__gateBloat` form to `(globalThis as any).__gateBloat`** — the
+   bare form is TS7017 in a `.ts` file and makes the gate fail on the build for
+   the wrong reason (verified: `error TS7017`, build fails, `dist/packages/core`
+   goes absent). Update the harness comment at `verify-gates.mjs:56-62`
    that currently argues the wrong direction for this gate. **(this session's
    regression — the gate's proof, not its verdict: `d11cd19a` made the normal
    run honest while killing the self-test; highest value)** **[FIX TESTED —
-   patched harness is 1/1 PROVEN]**
+   cast-form mutation measured 13.69/5.9KB prod, gate exits 1 "Bundle budget
+   exceeded"; exported-const and bare forms correctly shown to be non-fixes]**
 2. **Fix `lint:budget` self-test** — restore a non-exported mutation (produces a
    `no-unused-vars` **error**, immune to baseline slack) **first**; tighten the
    baseline with `--update` as a one-shot stopgap. **(pre-existing)** **[defect
@@ -527,8 +532,14 @@ stated scope but worth recording:
 > entry. Two further traps verified: the bare `globalThis.__gateBloat` form in a
 > `.ts` file breaks the build with TS7017 (the gate then exits 1 for the WRONG
 > reason — "Could not build"), and only the `(globalThis as any)` cast makes it
-> fail for the right reason ("Bundle budget exceeded"). The patched harness
-> (recommendation 1) uses exactly this form and is now 1/1 PROVEN.
+> fail for the right reason ("Bundle budget exceeded"). The retargeted harness
+> (recommendation 1) must therefore use **both** the source path AND the cast
+> form; the cast is not optional. **[Corrected per Q23–Q28: my original "1/1
+> > PROVEN" was obtained from an experiment with three defects — a piped `$?`,
+> > truncated output, and a bare-form payload that failed the build for the wrong
+> > reason. Re-run cleanly (out=$(…); code=$?; grep for which failure): cast form
+> > → exit 1 "Bundle budget exceeded" 13.69/5.9KB; exported const → exit 0
+> > (tree-shaken, invisible); bare form → exit 1 "Could not build".]**
 
 > **Q2 — if it must be reachable to survive, what does reachable cost?** The
 > payload must be a **side effect in a module in the entry's transitive graph**,
@@ -676,8 +687,10 @@ stated scope but worth recording:
 > everywhere". §7's ordering is justified.
 
 > **Q19 — apply the repo's own standard.** Of nine recommendations, the fix was
-> TESTED for exactly **one**: bundle-budget (recommendation 1 — the patched
-> harness is now 1/1 PROVEN, including proving the _wrong_ failure mode dies).
+> TESTED for exactly **one**: bundle-budget (recommendation 1 — the retargeted
+> mutation makes the gate fail on the budget: re-run exit 1, "Bundle budget
+> exceeded", measured 13.69/5.9KB; and the wrong failure mode — the bare form
+> breaking the build — was shown to be a _build_ failure, not a budget one).
 > The other eight demonstrated the **defect** without testing the fix: #2 (probe
 > showed 539 < 540; did not run `--update` or re-run with the error-based
 > mutation), #3-7 (defect shown, fix unverified), #8 (verification item, not a
@@ -797,3 +810,163 @@ One prompt for the same discipline applied to your own conclusions: **when a
 result surprises you, the harness is the first suspect, not the last.** §2 of
 this document is right precisely because you did not stop at "the gate passes".
 Q23-Q27 exist because the Q1 experiment did stop at its first plausible reading.
+
+---
+
+### Answers to Q23–Q28 (empirical, from the corrected re-run)
+
+The questions above were answered by re-running the experiment with the
+capture-then-read discipline (`out=$(node tools/check-bundle-budget.mjs 2>&1);
+code=$?`), against the real gate, mutating `packages/core/src/lib/utils.ts`,
+restoring from `/tmp/orig-utils.ts`, and verifying the restore with a fresh
+`npx nx build core` + `git diff` + `git status --porcelain`.
+
+> **Q23 — whose exit code did you read?** Real and confirmed. The original run
+> was `node tools/check-bundle-budget.mjs 2>&1 | tail -8; echo "exit code: $?"`
+> — `$?` was `tail`'s status, which was 0. The gate's own exit was never read.
+> The corrected re-run reads `code=$?` immediately after `$(...)` capture. Same
+> trap already documented in `handoff-review-brief.md` §10 (the false "FORMAT
+> CLEAN").
+>
+> **Q24 — what did the missing `dist/packages/core` tell you?** Real and
+> confirmed: a failed core build leaves `dist/packages/core/dist` **absent**.
+> Reproduced deliberately — mutate with the bare `globalThis.__gateBloat` form
+> (TS7017), build → exit 1, `dist/packages/core/dist/index.js` gone, every
+> other package still built. It was a **failed build**, not an nx cache anomaly.
+> The `Bundle failed: core` line existed but was above the `tail -8` cutoff — a
+> truncation artifact of the original run. Restoring the file and rebuilding
+> brings the dist back. Consequence for method: restore must be verified by
+> build output, not only file hash.
+>
+> **Q25 — is your payload valid TypeScript?** No. `__gateBloat` is not a
+> declared property of `typeof globalThis`, so the bare assignment form fails
+> `tsc` with **TS7017** (`Element implicitly has an 'any' type because type
+'typeof globalThis' has no index signature`). The gate then exits 1 because
+> the **build** failed — "Could not build the packages this gate measures" —
+> not because the budget was exceeded. The `(globalThis as any)` cast is
+> required to make it typecheck and reach the comparison. Measured on re-run:
+> cast form → exit 1, `❌ 13.69/5.9KB prod … Bundle budget exceeded`; bare form
+> → exit 1, `❌ Could not build the packages this gate measures` + TS7017. Same
+> exit code, opposite meaning — exactly what Q3 was circling.
+>
+> **Q26 — there are three shapes, not two.** Enumerated and run against the
+> real gate:
+>
+> | shape                                       | side-effecting | exported | typechecks      | measured result                  |
+> | ------------------------------------------- | -------------- | -------- | --------------- | -------------------------------- |
+> | A `(globalThis as any).__gateBloat = [...]` | yes            | no       | yes             | exit 1, **budget** `13.69/5.9KB` |
+> | B `export const __gateBloat = [...]`        | no             | yes      | yes             | exit 0, tree-shaken `5.79/5.9KB` |
+> | C `globalThis.__gateBloat = [...]`          | yes            | no       | **no** (TS7017) | exit 1, **build** failure        |
+>
+> The retargeted mutation needs A exactly: side-effecting (so it survives
+> tree-shaking into the measured entry) AND cast (so tsc accepts it). B is
+> invisible to the gate, C fails it for the wrong reason.
+>
+> **Q27 — the scratch-test contradiction.** Explained, not a fluke. The
+> `.includes()` returned `false` because the search string was a **closed
+> two-element array literal** (`["gateBloat_0_0","gateBloat_1_654435761"]`,
+> with the `]`) while the written file contained the **full 900-element array**
+> — the first `]` appears once, at position 22465 of 22468 bytes. The search
+> string was never a substring of the file, so `false` was _correct_ for the
+> string tested. Reproduced against the preserved scratch file: head as a
+> closed 2-element literal → `false`; the same two tokens in the open array →
+> `true`. The contradiction was between what the loop _searched for_ and what
+> it _wrote_, not between the buffer and the file. The lesson for the method:
+> `includes()` tests the exact substring — formatting (here, the closing
+> bracket) changes the answer, so a verification loop must assert on the same
+> representation it wrote.
+>
+> **Q28 — does this change your §7 ranking?** Yes, recommendation 1 goes from
+> "asserted" to **verified** — but only for the cast form (shape A), which
+> makes the gate fail on the budget as claimed. Shapes B and C are the two ways
+> the gate proves nothing (tree-shaken / build-died). Q19's tally is corrected
+> accordingly: the fix is tested for recommendation 1; the other eight remain
+> hypotheses. §2's severity paragraph needs no rewrite — the verdict the gate
+> delivers (budget comparison) is the same one the fix now provably trips.
+
+---
+
+## The performance work — the part you have not audited yet
+
+Your pass covered the gates. It did not cover the measurements those gates
+protect, and that is where this session's most surprising results came from.
+The short version: **nearly every performance number anyone looked at hard
+turned out to be wrong, unstable, or measuring something other than what it
+claimed** — including several I produced myself, in this session, and caught
+only on a second pass.
+
+That track record is the reason to audit them rather than accept them.
+
+### What was worked on, and what surprised us
+
+| area                                           | the surprise                                                                                                                                                                                                                                                      |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ST2018 multiplier** (`e99550e3`, `048ff729`) | The published "~300x" re-measured to ~100x, then the ratio itself proved unstable: 47x-183x across runs, because the `entityMap` side is sub-millisecond while the absolutes barely move. The multiplier was dropped entirely in favour of absolutes.             |
+| **The warm-up trap → ST2027** (`4f2757a5`)     | A benchmark warm-up left fixtures holding their target values, so the measured pass was 1,000 **no-op writes** — `deepEqual`'s worst case. 40.5ms vs 0.31ms fresh. This corrupted the repo's own benchmarks twice before anyone noticed, and became a diagnostic. |
+| **`deepEqual` constructor gate** (`e42823cc`)  | 17% off the object path. The informative arm was the LOSING one: comparing the two prototypes to each other measured 1% _slower_, which is what identified the cost as `getPrototypeOf`'s runtime calls rather than the shape of the test.                        |
+| **Guardrails clone** (`41b80b64`, `16ce77e7`)  | The clone did not merely cost 87.9µs to make — it destroyed the structural-sharing short-circuit in everything downstream, because a copy shares nothing. Idle poll 122.8µs → 0.045µs. The framing error ("keep or remove?") mattered more than the fix.          |
+| **Depth latency** (`97470b87`)                 | A published table claimed 0.041-0.104ms and had no generator. Both plausible readings measured 10x-1000x SMALLER. "Operation" was never defined, so the claim could be neither verified nor falsified.                                                            |
+| **Per-leaf equality** (`51c3d496`)             | ~50 published figures, no generator. Every one wrong. **One was inverted**: three surfaces claimed `deepEqual` (6.5ns) beats `Object.is` (8.1ns) on a primitive; measured 13.4 vs 8.0.                                                                            |
+| **Bundle sizes** (`d11cd19a`, `bdbc7e2d`)      | Measured against a `dist/` nobody had rebuilt. Two AI-priming files disagreed with each other about the same bare tree.                                                                                                                                           |
+
+Generators now exist for these: `tools/bench-depth-latency.mjs`,
+`tools/bench-leaf-equality.mjs`, plus the pre-existing `bench-compare.mjs`,
+`bench-state-scale.mjs`, `size-compare.mjs`, `measure-bundle-sizes.mjs`,
+`memory-compare.mjs`.
+
+### Questions
+
+> **Q29 — the self-confirming measurement problem.** Every new figure above was
+> produced by a tool written in the same session, often the same hour, as the
+> change it measures. If a benchmark were wrong in the same direction as the
+> optimisation it validates, what in this repo would catch it? Name the
+> mechanism, or state that there isn't one.
+>
+> **Q30 — does the warm-up trap still exist anywhere?** ST2027 exists because a
+> fixture left holding its target value turns the measured pass into no-op
+> writes. Read `tools/bench-leaf-equality.mjs`: the `refetch` arm writes a value
+> that deep-equals the current one, so **every write in that arm is dropped**.
+> Is that the intended measurement (the cost of concluding "unchanged"), or the
+> same trap wearing the right clothes? Then check the `changing` arm actually
+> changes on every iteration. Then apply the same read to `bench-compare.mjs`
+> and `bench-state-scale.mjs`, which predate this session.
+>
+> **Q31 — a column I chose not to publish.** `bench-depth-latency.mjs` prints
+> leaf write+read times that sit at timer resolution and get _faster_ with
+> depth, which is impossible; the tool prints them with a caveat saying not to
+> quote them. Is printing-with-a-caveat the right call, or should a tool refuse
+> to emit a number it has just declared meaningless? Which choice is more likely
+> to end up in a doc six months from now?
+>
+> **Q32 — the inverted claim's blast radius.** The primitive-equality figures
+> were not just stale, they were backwards, and the surrounding prose reasoned
+> _from_ them ("the general function is FASTER; there is nothing to
+> specialise"). The advice survived; the argument did not. Are there other
+> places in the docs where a conclusion is derived from a number rather than
+> merely quoting one? Those are the dangerous ones — a wrong number that
+> supports advice is harder to spot than a wrong number standing alone.
+>
+> **Q33 — my own measurement artifacts.** Two were caught before publishing: a
+> baseline using a bare object (which becomes a _branch_, so it has no `.set` at
+> all) and a memo timing that wrapped `tree()` in an `Object.keys` walk over
+> 1,000 branches, inflating an unchanged read from ~0.3µs to 15.8µs. Both were
+> found by the results looking wrong, not by review. Read
+> `bench-leaf-equality.mjs` and `bench-depth-latency.mjs` for a third.
+>
+> **Q34 — what do the cross-library numbers actually compare?** `size-compare.mjs`
+> says its rows are "matched by intent, not certified equivalent" — elf's
+> `selectEntity` returns an Observable, ours a signal, and the consumer pays
+> differently downstream. Does any published comparison state that caveat where
+> the number appears, rather than in the tool that generates it?
+>
+> **Q35 — the Angular axis, restated as a measurement question.** Your §5
+> already notes no tool exercises TestBed/OnPush/`detectChanges`. Sharpen it:
+> for which specific published claims does a Node microbenchmark actually
+> substitute for an Angular one, and for which does it not? "Per-leaf write
+> costs 31ns" survives the substitution. Does "granular updates beat NgRx"?
+>
+> **Q36 — stability, not just accuracy.** The ST2018 multiplier was dropped
+> because the _ratio_ swung 47x-183x while the absolutes barely moved. Which
+> other published figures are ratios of two numbers where one is near timer
+> resolution? Run the generators several times and see which move. A number
+> that changes run to run is not a measurement, whatever its precision suggests.
