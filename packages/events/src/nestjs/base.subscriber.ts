@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConnectionOptions, Job, Worker } from 'bullmq';
 
 import { ClassificationResult } from '../core/error-classification';
@@ -6,7 +12,11 @@ import { IdempotencyCheckResult, IdempotencyStore } from '../core/idempotency';
 import { BaseEvent, EventPriority } from '../core/types';
 import { DlqService } from './dlq.service';
 import { EventBusModuleConfig } from './event-bus.module';
-import { ERROR_CLASSIFIER, EVENT_BUS_CONFIG, IDEMPOTENCY_STORE } from './tokens';
+import {
+  ERROR_CLASSIFIER,
+  EVENT_BUS_CONFIG,
+  IDEMPOTENCY_STORE,
+} from './tokens';
 
 /**
  * Base Subscriber - Abstract class for event subscribers

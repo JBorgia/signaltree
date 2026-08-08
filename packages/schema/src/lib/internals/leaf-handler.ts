@@ -76,7 +76,9 @@ export function dispatchLeafRun(
   const state = ensurePathState(registry, path);
   const myVersion = ++state.version;
 
-  let result: StandardSchemaV1.Result<unknown> | Promise<StandardSchemaV1.Result<unknown>>;
+  let result:
+    | StandardSchemaV1.Result<unknown>
+    | Promise<StandardSchemaV1.Result<unknown>>;
   try {
     result = entry.schema['~standard'].validate(next);
   } catch (err) {
@@ -92,7 +94,11 @@ export function dispatchLeafRun(
       registry,
       state,
       path,
-      resultToMessage(result, path, registry.config.formatIssue ?? defaultFormatIssue)
+      resultToMessage(
+        result,
+        path,
+        registry.config.formatIssue ?? defaultFormatIssue
+      )
     );
     return;
   }
@@ -110,7 +116,11 @@ export function dispatchLeafRun(
         registry,
         state,
         path,
-        resultToMessage(settled, path, registry.config.formatIssue ?? defaultFormatIssue)
+        resultToMessage(
+          settled,
+          path,
+          registry.config.formatIssue ?? defaultFormatIssue
+        )
       );
       state.pendingSignal.set(false);
       removePendingPath(registry, path);
@@ -155,7 +165,9 @@ export function applyLeafVerdict(
 }
 
 function runtimeErrorMessage(err: unknown): string {
-  return `validation runtime error: ${String(err instanceof Error ? err.message : err)}`;
+  return `validation runtime error: ${String(
+    err instanceof Error ? err.message : err
+  )}`;
 }
 
 function defaultWarn(path: string, message: string): void {

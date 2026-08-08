@@ -199,13 +199,13 @@ Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`
 own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
 `node tools/check-bundle-budget.mjs`.
 
-- Bare `signalTree` (no markers/enhancers): **5.7 KB**
-- A tree using a plain `entityMap()`: **9.2 KB**
+- Bare `signalTree` (no markers/enhancers): **5.79 KB**
+- A tree using a plain `entityMap()`: **9.40 KB**
 
 ⚠️ The condition matters. The same code in a **development** build is ~1.8-2.4 KB
 larger per tree, because the dev diagnostics are guarded strings that fold away
-under `ngDevMode: false` — so a bare tree measures ~7.5 KB in dev and one using
-`entityMap()` measures ~11.6 KB. Neither number
+under `ngDevMode: false` — so a bare tree measures ~7.80 KB in dev and one using
+`entityMap()` measures ~12.07 KB. Neither number
 is wrong; quoting one without saying which invites someone to measure the other
 and conclude the docs lie.
 

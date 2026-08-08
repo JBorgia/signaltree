@@ -542,6 +542,49 @@ const selected = GATES.filter(
   (g) => (!only || only.includes(g.name)) && !(has('--fast') && g.slow)
 );
 
+/**
+ * Build once, before any gate that reads `dist/`.
+ *
+ * `needsBuild` was declared on 23 gates and READ BY NOTHING. It looked like
+ * machinery and was documentation, so every one of those gates ran against
+ * whatever happened to be in `dist/` — and `npm run build` was separately
+ * broken (it named a project with no build target and exited 1), so what
+ * happened to be there could be many commits old. `npm run gates`, the command
+ * that decides whether a release is ready, could pass green on an artifact
+ * nobody had rebuilt since before the work it was clearing.
+ *
+ * The flag now does what its name says. Nx caches, so a fresh tree costs a
+ * cache hit; a stale one costs the build, which is the correct price for a
+ * verdict about code.
+ *
+ * A build FAILURE is fatal rather than a skip: gates that read a missing or
+ * half-written `dist/` produce noise, and "the build is broken" is the finding,
+ * not a footnote to twenty-three other failures.
+ */
+const BUILD_PROJECTS = 'core,shared,ng-forms,guardrails,events,realtime,schema';
+
+function buildOnceIfNeeded() {
+  if (!selected.some((g) => g.needsBuild)) return;
+  const names = selected.filter((g) => g.needsBuild).length;
+  console.log(`\n· building packages — ${names} gate(s) read dist/`);
+  try {
+    execFileSync(
+      'npx',
+      ['nx', 'run-many', '-t', 'build', `--projects=${BUILD_PROJECTS}`],
+      { cwd: ROOT, stdio: 'pipe', env: process.env }
+    );
+  } catch (err) {
+    console.error(
+      `\n❌ Build failed. ${names} gate(s) read dist/, so running them now ` +
+        `would report on stale or missing output.\n\n` +
+        String(err.stdout ?? err.message).slice(-2000)
+    );
+    process.exit(1);
+  }
+}
+
+buildOnceIfNeeded();
+
 function run(gate) {
   try {
     execFileSync(gate.cmd[0], gate.cmd.slice(1), {

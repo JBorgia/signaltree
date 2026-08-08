@@ -48,7 +48,7 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 - Angular 20, 21, or 22 (see `peerDependencies`), TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.70KB**; with `entityMap` **9.17KB**; with `form()` **7.80KB**. **Development** (default build, diagnostics included): **7.45 / 11.60 / 9.81KB** — defining `ngDevMode: false` reclaims **~1.8-2.4KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
+- Tree-shakeable, own code only, gzip (measured, esbuild + minify, Angular/rxjs external). **Production** (`ngDevMode: false`, what you ship): bare tree **5.79KB**; with `entityMap` **9.40KB**; with `form()` **7.90KB**. **Development** (default build, diagnostics included): **7.80 / 12.07 / 10.16KB** — defining `ngDevMode: false` reclaims **~1.8-2.4KB per tree**, and every dev string folds (verified by `tools/check-devmode-foldable.mjs`). Both figures are enforced separately by `tools/check-bundle-budget.mjs`, which gates prod tightly and dev loosely — see [dropping dev code](performance/dropping-dev-code.md).
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)
@@ -62,12 +62,25 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 ### Published package budgets (CI gates, not what apps pay)
 
-These bound what's published to npm. Real apps tree-shake down to a fraction of these figures.
+These bound what's published to npm. Real apps tree-shake down to a fraction of
+these figures, which is why the numbers above — what a consumer actually ships
+— are the ones to quote.
 
-| Metric                      | Budget   | Current |
-| --------------------------- | -------- | ------- |
-| Core publishable (gzipped)  | <30.00KB | 25.64KB |
-| Total ecosystem publishable | <40.00KB | 36.32KB |
+| Metric                                              | Budget | Current |
+| --------------------------------------------------- | ------ | ------- |
+| minimal tree, no markers (prod, `ngDevMode: false`) | 6000 B | 5918 B  |
+| tree + `stored()` (prod, `ngDevMode: false`)        | 7400 B | 7246 B  |
+| core value exports                                  | 60     | 39      |
+
+Gated by `npm run validate:budget`. Raw unbundled `dist/` across every entry
+point is ~247KB, which is informational only — no consumer ships all of it.
+
+> Two rows were removed here for 14.0.0: "Core publishable (gzipped) 25.64KB"
+> and "Total ecosystem publishable 36.32KB". No tool in the repo produces either
+> number any more — they date from a v9-era methodology that no longer exists,
+> so they could not be re-verified and were quietly wrong rather than merely
+> old. They are replaced by figures a script actually emits, rather than
+> re-derived under a methodology invented to match them.
 
 ### Frequency weighting system
 

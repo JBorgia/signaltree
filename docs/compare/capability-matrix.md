@@ -302,9 +302,9 @@ The right question, and the grid above does not answer it. Three measurements do
 
 | capability                     | SignalTree | elf         |      |
 | ------------------------------ | ---------- | ----------- | ---- |
-| store + a few fields           | 5.69 KB    | **1.01 KB** | 5.6x |
-| entity collection, CRUD + read | 9.18 KB    | **2.38 KB** | 3.9x |
-| entity collection + undo/redo  | 11.02 KB   | **2.84 KB** | 3.9x |
+| store + a few fields           | 5.79 KB    | **1.01 KB** | 5.7x |
+| entity collection, CRUD + read | 9.41 KB    | **2.38 KB** | 4.0x |
+| entity collection + undo/redo  | 11.38 KB   | **2.84 KB** | 4.0x |
 
 With RxJS bundled — a signals-first app that would otherwise not carry it — elf's
 numbers become 4.24 / 5.54 / 5.94 KB, so the gap narrows to 1.3x–1.7x. It never
@@ -350,11 +350,11 @@ spread.
 
 **Write cost vs live consumers**, 100 fields fixed:
 
-| consumers | SignalTree | elf        |          |
-| --------- | ---------- | ---------- | -------- |
-| 100       | 0.020 ms   | 2.253 ms   | 110x     |
-| 1,000     | 0.045 ms   | 20.175 ms  | 449x     |
-| 5,000     | 0.195 ms   | 95.730 ms  | **491x** |
+| consumers | SignalTree | elf       |          |
+| --------- | ---------- | --------- | -------- |
+| 100       | 0.020 ms   | 2.253 ms  | 110x     |
+| 1,000     | 0.045 ms   | 20.175 ms | 449x     |
+| 5,000     | 0.195 ms   | 95.730 ms | **491x** |
 
 The mechanism, counted directly: with 1,000 selectors on nested state and one
 field changed, **elf executes 1,000 of 1,000 projection functions** and notifies

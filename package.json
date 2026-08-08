@@ -56,7 +56,7 @@
     "ship-skills": "node scripts/ship-skills.mjs",
     "lint:skills": "node scripts/lint-skills.mjs",
     "build:core": "nx build core",
-    "build:packages": "nx run-many -t build --projects=ng-forms,shared,guardrails",
+    "build:packages": "nx run-many -t build --projects=shared,ng-forms,guardrails,events,realtime,schema",
     "build:production": "nx run-many -t build --configuration=production --projects=core,ng-forms,shared,guardrails,events,realtime,schema && npm run ship-skills",
     "// Testing Scripts": "Comprehensive testing workflows",
     "test:all": "nx run-many -t test --projects=core,ng-forms,shared,guardrails,schema,events,realtime,demo --parallel=1",

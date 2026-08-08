@@ -104,9 +104,9 @@ describe('loader() feature', () => {
       }),
     });
     await tree.$.plants.load();
-    expect(
-      warn.mock.calls.some((c) => String(c[0]).includes('[ST2004]'))
-    ).toBe(false);
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('[ST2004]'))).toBe(
+      false
+    );
   });
 });
 

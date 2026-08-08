@@ -1,8 +1,20 @@
-import { computed, DestroyRef, inject, Injectable, OnDestroy, Signal, signal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  inject,
+  Injectable,
+  OnDestroy,
+  Signal,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { webSocket, WebSocketSubject, WebSocketSubjectConfig } from 'rxjs/webSocket';
+import {
+  webSocket,
+  WebSocketSubject,
+  WebSocketSubjectConfig,
+} from 'rxjs/webSocket';
 
 import { BaseEvent } from '../core/types';
 
