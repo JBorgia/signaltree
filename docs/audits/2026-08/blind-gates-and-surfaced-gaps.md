@@ -521,7 +521,12 @@ stated scope but worth recording:
 
 ## 9. Answers to the reviewer's questions
 
-> **Q1 — does your proposed fix work?** No — not as written. Empirically tested
+> **Q1 — does your proposed fix work?** Yes, in exactly one shape — the cast
+> side-effect. **[This answer reconciles with Q26: "No — not as written" was the
+> verdict on the ORIGINAL proposed form (an exported const); the correction is
+> not "the fix is unproven" but "the fix is proven in shape A only". §2's
+> severity paragraph and §7's ranking should be read as: recommendation 1's
+> defect is real, and the fix for it is now verified.]** Empirically tested
 > with esbuild (shapes A–D in a scratch dir): an exported
 > `const __gateBloat = [...]` that no measured entry references is **tree-shaken
 > away entirely** (0.08 KB gzip vs 6.87 KB with the payload). What survives is a
