@@ -767,3 +767,33 @@ mutation. These are about the experiment you ran to answer Q1, not about that.
 > `npx nx build core` restores it. Worth adding to your method section: a
 > mutation experiment on a source file needs its restore verified by build
 > output as well as by file hash, since a failed build leaves no artifact behind.
+
+### A harness for these experiments, since three of them have now gone wrong
+
+Not a conclusion — a shape that makes the above questions answer themselves.
+Each of Q23-Q26 is a different way the same experiment can lie to you, and all
+four are removed by never reading a piped `$?`, never truncating the output you
+judge on, and distinguishing _why_ a non-zero exit happened.
+
+```bash
+run_case () {                       # label, payload
+  cp /tmp/orig.ts "$F"              # always from a pristine copy, not a patch
+  # ...append payload to $F...
+  local out; out=$(node tools/check-bundle-budget.mjs 2>&1); local code=$?
+  #          ^^^^^^^^^^^^^^^^^^ capture, THEN read $? — never through a pipe
+  echo "$label  exit=$code"
+  echo "$out" | grep -E 'signaltree-bare|Bundle|Could not build|error TS'
+  #                      ^^^^^^^^^^^^^^^^ prove WHICH failure you got
+}
+cp /tmp/orig.ts "$F"; git diff --quiet -- "$F" && echo "restore OK"
+```
+
+Run it over all three payload shapes at once. The three exit codes side by side
+answer Q25, Q26 and Q28 together, and the `grep` line answers Q3 — because you
+will be able to see, per shape, whether the gate stopped at the build or reached
+the comparison.
+
+One prompt for the same discipline applied to your own conclusions: **when a
+result surprises you, the harness is the first suspect, not the last.** §2 of
+this document is right precisely because you did not stop at "the gate passes".
+Q23-Q27 exist because the Q1 experiment did stop at its first plausible reading.
