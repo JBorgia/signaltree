@@ -522,24 +522,25 @@ stated scope but worth recording:
 ## 9. Answers to the reviewer's questions
 
 > **Q1 — does your proposed fix work?** Yes, in exactly one shape — the cast
-> side-effect. **[This answer reconciles with Q26: "No — not as written" was the
+> side-effect. \*\*[This answer reconciles with Q26: "No — not as written" was the
+>
 > > verdict on the ORIGINAL proposed form (an exported const); the correction is
 > > not "the fix is unproven" but "the fix is proven in shape A only". §2's
 > > severity paragraph and §7's ranking should be read as: recommendation 1's
 > > defect is real, and the fix for it is now verified.]** Empirically tested
-> with esbuild (shapes A–D in a scratch dir): an exported
-> `const __gateBloat = [...]` that no measured entry references is **tree-shaken
-> away entirely** (0.08 KB gzip vs 6.87 KB with the payload). What survives is a
-> **side-effecting assignment** (`(globalThis as any).__gateBloat = [...]`) in
-> any module the measured entry pulls in — even a transitive dep — because esbuild
-> keeps side effects. So the fix works only in the side-effecting form, and only
-> because `packages/core/src/lib/utils.ts` is a transitive dep of every measured
-> entry. Two further traps verified: the bare `globalThis.__gateBloat` form in a
-> `.ts` file breaks the build with TS7017 (the gate then exits 1 for the WRONG
-> reason — "Could not build"), and only the `(globalThis as any)` cast makes it
-> fail for the right reason ("Bundle budget exceeded"). The retargeted harness
-> (recommendation 1) must therefore use **both** the source path AND the cast
-> form; the cast is not optional. \*\*[Corrected per Q23–Q28: my original "1/1
+> > with esbuild (shapes A–D in a scratch dir): an exported
+> > `const __gateBloat = [...]` that no measured entry references is **tree-shaken
+> > away entirely** (0.08 KB gzip vs 6.87 KB with the payload). What survives is a
+> > **side-effecting assignment** (`(globalThis as any).__gateBloat = [...]`) in
+> > any module the measured entry pulls in — even a transitive dep — because esbuild
+> > keeps side effects. So the fix works only in the side-effecting form, and only
+> > because `packages/core/src/lib/utils.ts` is a transitive dep of every measured
+> > entry. Two further traps verified: the bare `globalThis.__gateBloat` form in a
+> > `.ts` file breaks the build with TS7017 (the gate then exits 1 for the WRONG
+> > reason — "Could not build"), and only the `(globalThis as any)` cast makes it
+> > fail for the right reason ("Bundle budget exceeded"). The retargeted harness
+> > (recommendation 1) must therefore use **both\*\* the source path AND the cast
+> > form; the cast is not optional. \*\*[Corrected per Q23–Q28: my original "1/1
 >
 > > PROVEN" was obtained from an experiment with three defects — a piped `$?`,
 > > truncated output, and a bare-form payload that failed the build for the wrong
@@ -1147,10 +1148,20 @@ Ranked by how much the answer could change the product, not by effort.
 > **C1 — The central claim has never been measured in Angular. Prove it or stop
 > making it.** SignalTree's differentiator is per-leaf granularity, and
 > granularity is a _change-detection_ claim: fewer components re-render per
-> write. Every performance number in this repo is a Node microbenchmark. **13
-> spec files import `TestBed`; zero call `detectChanges`.** So the one claim
-> that separates this library from raw signals has never been observed in a
-> rendering application. Build a harness that counts component render passes per
+> write. Every performance number in this repo is a Node microbenchmark.
+>
+> **[CORRECTED — my grounding fact was wrong, caught by the auditor.** I wrote
+> "13 spec files import `TestBed`; zero call `detectChanges`" and had only
+> looked at `packages/`. Repo-wide: **37** spec files import `TestBed` and
+> **20** call `detectChanges`, across **68** call sites, all in `apps/demo`. I
+> stated a packages-scoped grep as a repo-wide fact — in the challenge whose
+> title is "prove it or stop making it". The substance survives verification,
+> which is why the challenge stands: **no spec counts render passes.** There is
+> no `ngDoCheck`, `renderCount`, `ChangeDetectorRef` or `markForCheck` in any
+> spec in the repository, and the `detectChanges` density is ~1 call per test
+> (37 calls / 35 tests; 1 call / 11 tests) — render-once-and-assert smoke tests,
+> not re-render counting. So: the claim separating this library from raw signals
+> has never been **measured**, though components are rendered in tests.**]** Build a harness that counts component render passes per
 > write — SignalTree vs NgRx SignalStore vs raw `signal`/`computed` — at
 > realistic component counts, OnPush, zoneless. Report it like any other
 > generator. **If SignalTree does not win that measurement, the positioning is
@@ -1158,7 +1169,10 @@ Ranked by how much the answer could change the product, not by effort.
 >
 > **C2 — Zoneless is where Angular is going. Enumerate every timer.** Anything
 > polling is a liability in a zoneless app. Grep found: guardrails polls every
-> 50ms, ng-forms debounces on `validationBatchMs`, several suites flush with
+> 50ms (`POLLING_INTERVAL_MS = 50` — verified by the auditor, who initially read
+> the `memoryLeaks.checkInterval` default of 5000 and then corrected himself;
+> note also that this poll is a FALLBACK for when a reactive subscription is
+> unavailable, which is worth separating in the answer), ng-forms debounces on `validationBatchMs`, several suites flush with
 > `setTimeout`. For each: does it survive zoneless, should it be `effect` /
 > `afterNextRender`, or is it dev-only and therefore fine? A single stray
 > interval in a library is a thing a platform team will reject it for.
@@ -1166,7 +1180,13 @@ Ranked by how much the answer could change the product, not by effort.
 > **C3 — SSR has zero integration, and the architecture is already built.** > `grep -rn "TransferState\|isPlatformServer\|provideServerRendering" packages/`
 > returns **nothing**. Yet there is a whole rehydration design — `HydrateMode`
 > of `merge`/`restore`/`rehydrate`, a marker `hydrate` contract,
-> `docs/architecture/snapshot-rehydration.md`. For a high-value app,
+> `docs/architecture/snapshot-rehydration.md`. **[Sharpened by the auditor:
+> > `serialize()`/`deserialize()` are not core — they live in the
+> > `serialization()` ENHANCER. So the recipe is not ten lines of plumbing; it is
+> > "attach an enhancer, then plumb `TransferState`", and the enhancer's bundle
+> > cost lands on every SSR app. That makes the question sharper, not softer: what
+> > is the smallest correct recipe, and does it want a first-class
+> > `provideSignalTreeServerState()` instead?]** For a high-value app,
 > server-rendered state that hydrates without a flash of empty grid is table
 > stakes. What is the ten-line recipe to move a server-built tree through
 > `TransferState` into the client? If there is not one, this gap is worth more
@@ -1257,7 +1277,7 @@ rather than asserted, and a claim that cannot be falsified is not a finding.
 >
 > **C3 — SSR has zero integration, and the architecture is already built.**
 > The first half is verified: `grep TransferState|isPlatformServer|
-> provideServerRendering packages/` returns nothing. The second half is an
+provideServerRendering packages/` returns nothing. The second half is an
 > overstatement. `HydrateMode` and the marker `hydrate` contract exist, and
 > `docs/architecture/snapshot-rehydration.md` is 680 lines — but
 > `serialize()`/`deserialize()` live in the **`serialization` enhancer**, not
@@ -1299,11 +1319,11 @@ round by round.
 
 **Measured on this machine (100k ops, median of 7, one warmup round discarded):**
 
-| workload | raw | signalTree | ratio |
-| --- | --- | --- | --- |
-| write, 0 consumers | ~7.5ns | ~11ns | ~1.4x |
-| write, 100 consumers | ~10.8µs | ~10.8µs | ~1.0x |
-| read whole store | ~250-290ns | ~260-280ns | ~1.0x |
+| workload             | raw        | signalTree | ratio |
+| -------------------- | ---------- | ---------- | ----- |
+| write, 0 consumers   | ~7.5ns     | ~11ns      | ~1.4x |
+| write, 100 consumers | ~10.8µs    | ~10.8µs    | ~1.0x |
+| read whole store     | ~250-290ns | ~260-280ns | ~1.0x |
 
 The verdict lines in the tool flip with the data from a stated 50ns threshold.
 
