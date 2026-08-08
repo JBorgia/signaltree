@@ -523,10 +523,10 @@ stated scope but worth recording:
 
 > **Q1 — does your proposed fix work?** Yes, in exactly one shape — the cast
 > side-effect. **[This answer reconciles with Q26: "No — not as written" was the
-> verdict on the ORIGINAL proposed form (an exported const); the correction is
-> not "the fix is unproven" but "the fix is proven in shape A only". §2's
-> severity paragraph and §7's ranking should be read as: recommendation 1's
-> defect is real, and the fix for it is now verified.]** Empirically tested
+> > verdict on the ORIGINAL proposed form (an exported const); the correction is
+> > not "the fix is unproven" but "the fix is proven in shape A only". §2's
+> > severity paragraph and §7's ranking should be read as: recommendation 1's
+> > defect is real, and the fix for it is now verified.]** Empirically tested
 > with esbuild (shapes A–D in a scratch dir): an exported
 > `const __gateBloat = [...]` that no measured entry references is **tree-shaken
 > away entirely** (0.08 KB gzip vs 6.87 KB with the payload). What survives is a
@@ -539,12 +539,13 @@ stated scope but worth recording:
 > reason — "Could not build"), and only the `(globalThis as any)` cast makes it
 > fail for the right reason ("Bundle budget exceeded"). The retargeted harness
 > (recommendation 1) must therefore use **both** the source path AND the cast
-> form; the cast is not optional. **[Corrected per Q23–Q28: my original "1/1
+> form; the cast is not optional. \*\*[Corrected per Q23–Q28: my original "1/1
+>
 > > PROVEN" was obtained from an experiment with three defects — a piped `$?`,
 > > truncated output, and a bare-form payload that failed the build for the wrong
 > > reason. Re-run cleanly (out=$(…); code=$?; grep for which failure): cast form
 > > → exit 1 "Bundle budget exceeded" 13.69/5.9KB; exported const → exit 0
-> > (tree-shaken, invisible); bare form → exit 1 "Could not build".]**
+> > (tree-shaken, invisible); bare form → exit 1 "Could not build".]\*\*
 
 > **Q2 — if it must be reachable to survive, what does reachable cost?** The
 > payload must be a **side effect in a module in the entry's transitive graph**,
@@ -1002,6 +1003,7 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > that _accidentally_ held its target value, so a benchmarker believed writes
 > landed. Here the write-dropping is the point, the changing arm is the control,
 > and the two arms share the same leaf shape. Verified:
+>
 > - `changing(i) = {…base, version: i}` — `version` is monotonic, so every
 >   write lands under all three comparators (measured: deepEqual 88.1ns, byKeys
 >   28.0ns, Object.is 12.6ns).
@@ -1011,7 +1013,7 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 >   are the most defended tools in the repo: a SENTINEL written after warmup so
 >   the postcondition can only pass if the _measured_ loop ran, explicit `throw`
 >   postconditions (`readAll returned N`, `undo restored NOTHING`, `write did
->   not land`), one process per arm, every arm asserts its write landed. No
+not land`), one process per arm, every arm asserts its write landed. No
 >   dropped-write arm exists in either.
 >
 > **Q31 — a column I chose not to publish.** Printing-with-a-caveat was the
@@ -1032,16 +1034,16 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > surfaces that carry it.** The audit's table (above) says "measured 13.4 vs
 > 8.0" as though the inversion were handled. It was not — the corrected figures
 > live only on `llms.txt:127`, `llms-full.txt:768`, and `packages/core/
-> README.md:1938`. The inverted claim is **still live**, word-for-word, on:
+README.md:1938`. The inverted claim is **still live**, word-for-word, on:
 >
-> | surface | line | still says |
-> | ------- | ---- | ---------- |
-> | `docs/skills/using-signaltree/SKILL.md` | 149 | "measures 6.5ns against Object.is's 8.1ns … there is nothing to specialise" |
-> | `apps/demo/…/whats-new.component.html` | 233 | "beats Object.is 6.5ns to 8.1ns. There is nothing to specialise." |
-> | `packages/core/src/lib/markers/compared.ts` | 47 | "measures 6.5 ns against Object.is's 8.1 ns — the general function is _faster_" |
-> | `docs/architecture/optimisation-options.md` | 30, 263–265, 540–542 | "6.5 ns against 8.1 ns — the general function is _faster_" |
-> | `docs/architecture/design-thesis-and-benchmarking-rules.md` | 398–400 | "deepEqual is _faster_ than Object.is on a changed number (6.5 ns vs 8.1 ns)" |
-> | `CHANGELOG.md` | 645–646 | "6.5ns against 8.1ns — the general function is faster" (point-in-time, arguable) |
+> | surface                                                     | line                 | still says                                                                       |
+> | ----------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
+> | `docs/skills/using-signaltree/SKILL.md`                     | 149                  | "measures 6.5ns against Object.is's 8.1ns … there is nothing to specialise"      |
+> | `apps/demo/…/whats-new.component.html`                      | 233                  | "beats Object.is 6.5ns to 8.1ns. There is nothing to specialise."                |
+> | `packages/core/src/lib/markers/compared.ts`                 | 47                   | "measures 6.5 ns against Object.is's 8.1 ns — the general function is _faster_"  |
+> | `docs/architecture/optimisation-options.md`                 | 30, 263–265, 540–542 | "6.5 ns against 8.1 ns — the general function is _faster_"                       |
+> | `docs/architecture/design-thesis-and-benchmarking-rules.md` | 398–400              | "deepEqual is _faster_ than Object.is on a changed number (6.5 ns vs 8.1 ns)"    |
+> | `CHANGELOG.md`                                              | 645–646              | "6.5ns against 8.1ns — the general function is faster" (point-in-time, arguable) |
 >
 > That is the exact class §4/§6.5 warn about — a wrong number that supports
 > advice — and the advice it supports ("**Do NOT emit it for primitives**") is
@@ -1059,12 +1061,12 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > beneath it shows `Object.is` **7.1ns vs deepEqual 10.4ns, faster**. The
 > conditional at line 193–197 even encodes the old belief as its fallback:
 > `primObjectIs > primDeepEqual ? 'SLOWER — deepEqual short-circuits on
-> \`a === b\`' : 'faster'`. The tool was written believing deepEqual wins on
-> primitives, and the header states that belief no matter which direction the
-> data goes. It was found, like the other two, because the output looks wrong:
-> the header and its own data disagree in the same breath. Same class as the
-> caught pair — a hardcoded conclusion the tool's own measurement refutes.
-> (The `depth` tool's leaf column and the memo arm are clean by comparison;
+\`a === b\`' : 'faster'`. The tool was written believing deepEqual wins on
+primitives, and the header states that belief no matter which direction the
+data goes. It was found, like the other two, because the output looks wrong:
+the header and its own data disagree in the same breath. Same class as the
+caught pair — a hardcoded conclusion the tool's own measurement refutes.
+(The `depth` tool's leaf column and the memo arm are clean by comparison;
 > the depth column self-refuses and the memo arm's 0.291µs unchanged read is
 > above resolution and stable.)
 >
@@ -1074,7 +1076,7 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > of `docs/compare/*.md` for `matched by intent` / `not certified` /
 > `certified equivalent`: **zero hits.** `capability-matrix.md` names the tool
 > (`"node tools/size-compare.mjs — same capability, same esbuild + gzip
-> method"`, line 301) but that sentence is a *stronger* claim than "matched by
+method"`, line 301) but that sentence is a _stronger_ claim than "matched by
 > intent" — it asserts "same capability" while the tool's own header says the
 > capability rows are not certified equivalent (elf's `selectEntity` returns an
 > Observable, ours a signal; the consumer pays differently downstream). The
@@ -1085,6 +1087,7 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > **Q35 — the Angular axis, restated as a measurement question.** The
 > substitution is valid exactly for claims about the **data structure** and
 > **bundle**, and invalid for claims about **invalidation and rendering**.
+>
 > - _Survives:_ per-leaf write cost (88→28ns; a signal write costs what it
 >   costs regardless of component boundary); depth-path walk latency; bundle
 >   sizes (esbuild+gzip is framework-agnostic); memory.
@@ -1101,6 +1104,7 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 >
 > **Q36 — stability, not just accuracy.** Two live findings, one of them in the
 > published docs:
+>
 > - **`docs/overview.md`'s own table contradicts its own prose.** The depth
 >   table (lines 59–64) implies 0.0048/0.0010 = **4.8x** depth-20-vs-5; the
 >   prose (line 67) says "~3.6x"; the tool today prints **3.5–3.7x**. The doc
@@ -1127,3 +1131,79 @@ Generators now exist for these: `tools/bench-depth-latency.mjs`,
 > live debt; Q36's root-ratio and the stale overview.md table are the
 > unstable figures; Q33's header is the artifact that survives in the
 > generator itself.
+
+---
+
+## 10. Next round — what would make SignalTree better for a high-value Angular app
+
+Your two passes audited **correctness of claims**. This round changes the
+criterion: _does this library make a large, long-lived, revenue-carrying Angular
+application better?_ Think a trading desk, a logistics console, a clinical
+grid — 10k-50k row collections, sustained real-time writes, complex forms,
+eight-hour sessions, OnPush everywhere, moving to zoneless.
+
+Ranked by how much the answer could change the product, not by effort.
+
+> **C1 — The central claim has never been measured in Angular. Prove it or stop
+> making it.** SignalTree's differentiator is per-leaf granularity, and
+> granularity is a _change-detection_ claim: fewer components re-render per
+> write. Every performance number in this repo is a Node microbenchmark. **13
+> spec files import `TestBed`; zero call `detectChanges`.** So the one claim
+> that separates this library from raw signals has never been observed in a
+> rendering application. Build a harness that counts component render passes per
+> write — SignalTree vs NgRx SignalStore vs raw `signal`/`computed` — at
+> realistic component counts, OnPush, zoneless. Report it like any other
+> generator. **If SignalTree does not win that measurement, the positioning is
+> wrong and the docs are the thing to change, not the benchmark.**
+>
+> **C2 — Zoneless is where Angular is going. Enumerate every timer.** Anything
+> polling is a liability in a zoneless app. Grep found: guardrails polls every
+> 50ms, ng-forms debounces on `validationBatchMs`, several suites flush with
+> `setTimeout`. For each: does it survive zoneless, should it be `effect` /
+> `afterNextRender`, or is it dev-only and therefore fine? A single stray
+> interval in a library is a thing a platform team will reject it for.
+>
+> **C3 — SSR has zero integration, and the architecture is already built.** > `grep -rn "TransferState\|isPlatformServer\|provideServerRendering" packages/`
+> returns **nothing**. Yet there is a whole rehydration design — `HydrateMode`
+> of `merge`/`restore`/`rehydrate`, a marker `hydrate` contract,
+> `docs/architecture/snapshot-rehydration.md`. For a high-value app,
+> server-rendered state that hydrates without a flash of empty grid is table
+> stakes. What is the ten-line recipe to move a server-built tree through
+> `TransferState` into the client? If there is not one, this gap is worth more
+> than any benchmark on this list.
+>
+> **C4 — Angular is shipping Signal Forms. Say what happens to `ng-forms`.**
+> Go capability by capability: which does the framework now do natively? Where
+> SignalTree adds nothing, the honest move is to deprecate and bridge. Where it
+> genuinely adds something — cross-field async validation, wizards, persistence,
+> the marker bridge — make _that_ the pitch instead of "forms". A package that
+> duplicates the framework is a line item a dependency review deletes.
+>
+> **C5 — Answer "why not raw signals?" with a measurement, not an argument.** A
+> staff engineer will ask what a dependency buys over
+> `signal`/`computed`/`linkedSignal`/`resource`. Write the hand-rolled
+> equivalent of a small SignalTree store — it is maybe 50 lines — and measure
+> both on the same workloads. Where hand-rolling wins, say so. My expectation is
+> that the honest answer is `entityMap` + markers + time travel, i.e.
+> _capabilities_, not granularity — but that is a hypothesis, and C1 tests it.
+>
+> **C6 — Eight-hour sessions.** Two retention defects were fixed this week
+> (time-travel capturing whole collections, guardrails cloning per change).
+> Neither was found by a long-running test, because there is none. Simulate a
+> sustained-write session and plot retention. Anything monotonically increasing
+> disqualifies the library from a desk that stays open all day, and that is a
+> pass/fail question, not a performance one.
+>
+> **C7 — Can a developer answer "why did this row change?"** At 50k rows with
+> time travel attached, what is the actual debugging workflow? `onTreeError`,
+> devtools and guardrails all exist; nobody has walked the path end to end.
+> Debuggability is what teams actually feel on day 400.
+>
+> **C8 — What is the one thing?** If you deleted every package except `core` and
+> one other, which survives? High-value teams adopt narrow, deep tools. Seven
+> packages may be diluting a pitch rather than broadening it — and each one is
+> surface that has to stay true, as this audit has just demonstrated at length.
+
+**Carry the discipline over.** Whatever you evaluate here, the standard from the
+previous rounds applies: a number needs a generator, a verdict must be derived
+rather than asserted, and a claim that cannot be falsified is not a finding.
