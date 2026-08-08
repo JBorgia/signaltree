@@ -53,19 +53,29 @@ dependency or runtime earns its own package; a within-tree mechanic lives in cor
 
 ### Operation latency by depth
 
-Reproduce with `node tools/bench-depth-latency.mjs`. Median of 9 batches of
-2,000 operations after a warm-up, on the built output.
+Reproduce with `node tools/bench-depth-latency.mjs`. Median across 5 sweeps,
+each 9 batches of 2,000 operations after a warm-up, on the built output.
 
 | depth | root update through the chain |
 | ----- | ----------------------------- |
 | 5     | 0.0010 ms                     |
-| 10    | 0.0023 ms                     |
-| 15    | 0.0034 ms                     |
-| 20    | 0.0048 ms                     |
+| 10    | 0.0019 ms                     |
+| 15    | 0.0028 ms                     |
+| 20    | 0.0038 ms                     |
 
-**Read the shape, not the absolutes** — those are hardware-specific. Depth 20
-costs ~3.6x depth 5 for 4x the depth: linear in the path actually walked. A
-direct leaf write (`tree.$.a.b.c.set(v)`) does not walk the path at all and
+**Read the shape, not the absolutes** — those are hardware-specific. Cost grows
+**sublinearly in depth**: 4x the depth costs less than 4x the time, because a
+write walks only the path it touches.
+
+**No multiplier is quoted here, deliberately.** An earlier version of this
+section said "~3.6x", and the table above it implied 4.8x — two numbers from two
+different runs, presented as one fact. The ratio is two sub-microsecond
+absolutes divided by each other, and it moves 3.2x-4.8x _within a single run_ of
+the generator while the absolutes barely shift. That is the same instability the
+ST2018 multiplier was deleted for; quoting a midpoint here would have repeated
+the mistake one section after documenting it. The tool prints the spread.
+
+A direct leaf write (`tree.$.a.b.c.set(v)`) does not walk the path at all and
 measures at timer resolution, so the tool reports it but declines to quote it.
 
 > Replaced a "Performance targets (Sept 2025)" table for 14.0.0. It claimed

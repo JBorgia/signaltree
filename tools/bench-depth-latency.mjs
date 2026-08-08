@@ -102,11 +102,41 @@ function measureRootUpdate(depth) {
   return median(perOp);
 }
 
-const results = DEPTHS.map((depth) => ({
+/**
+ * The sweep runs REPEATS times and the depth-20-vs-5 RATIO is reported as a
+ * RANGE, not a single number.
+ *
+ * It was a single run quoted as a conclusion, and an audit caught it: the ratio
+ * is two sub-microsecond absolutes divided by each other, and it drifted
+ * 1.7x-4.1x across runs on a loaded machine while the absolutes barely moved.
+ * That is exactly the shape the ST2018 multiplier was deleted for — a ratio
+ * whose denominator sits near the floor is not a stable figure however precise
+ * it looks. Deleting this one too would lose the only claim that matters
+ * (flatness in depth), so it now carries its own spread instead and the reader
+ * can judge whether it is worth anything.
+ */
+const REPEATS = 5;
+
+const sweeps = [];
+for (let r = 0; r < REPEATS; r++) {
+  sweeps.push(
+    DEPTHS.map((depth) => ({
+      depth,
+      ms: measure(depth),
+      rootMs: measureRootUpdate(depth),
+    }))
+  );
+}
+
+const results = DEPTHS.map((depth, i) => ({
   depth,
-  ms: measure(depth),
-  rootMs: measureRootUpdate(depth),
+  ms: median(sweeps.map((s) => s[i].ms)),
+  rootMs: median(sweeps.map((s) => s[i].rootMs)),
 }));
+
+const ratios = sweeps
+  .map((s) => s[s.length - 1].rootMs / s[0].rootMs)
+  .sort((a, b) => a - b);
 
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify({ results }, null, 2));
@@ -129,7 +159,14 @@ if (process.argv.includes('--json')) {
     `\n  Root update, depth 20 vs depth 5: ${rootRatio.toFixed(
       1
     )}x for 4x the\n` +
-      `  depth — linear in the path walked, which is the expected shape.\n` +
+      `  depth. Across ${REPEATS} sweeps in THIS run: ${ratios[0].toFixed(
+        1
+      )}x-${ratios[ratios.length - 1].toFixed(1)}x.\n` +
+      `\n  Quote the SPREAD, not the midpoint. This is a ratio of two\n` +
+      `  sub-microsecond absolutes, so it moves with machine load while the\n` +
+      `  absolutes above stay put — the same shape the ST2018 multiplier was\n` +
+      `  deleted for. The data supports "sublinear in depth". It does not\n` +
+      `  support any particular multiplier.\n` +
       `\n  The leaf column is AT TIMER RESOLUTION and is not a result: it does\n` +
       `  not order by depth (it often reads faster deeper), because a direct\n` +
       `  leaf write does not touch the path at all. Read it as "too small to\n` +

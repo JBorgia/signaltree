@@ -88,7 +88,14 @@ const comparedRefetch = perWrite(
   refetch
 );
 
-// ── 3. A primitive leaf — where specialising is a MISTAKE ────────────────────
+// ── 3. A primitive leaf ───────────────────────────────────────────────────────
+// The verdict here is DERIVED below, not asserted. This section was headed
+// "where specialising is a MISTAKE" and printed that unconditionally, while its
+// own measurement showed Object.is winning — the tool was written believing
+// deepEqual wins on primitives, and said so whichever way the data went. That
+// is the same defect as the docs it was built to correct, which had the two
+// figures reversed and reasoned FROM them. A tool that states its conclusion
+// before measuring cannot report a surprise.
 function perWritePrimitive(makeTree) {
   const times = [];
   for (let r = 0; r <= ROUNDS; r++) {
@@ -186,15 +193,28 @@ if (process.argv.includes('--json')) {
     `    byKeys('id','version')   ${ns(comparedRefetch)}   ` +
       `${x(deepEqualRefetch, comparedRefetch)} faster`
   );
-  console.log(`\n  PRIMITIVE leaf — specialising here is a mistake`);
+  // Derived verdict. WORTH_SPECIALISING_NS is the only judgement here, and it
+  // is stated as a threshold rather than baked into the prose: a saving smaller
+  // than this is noise beside everything else a write does.
+  const WORTH_SPECIALISING_NS = 20;
+  const primGain = primDeepEqual - primObjectIs;
+  console.log(`\n  PRIMITIVE leaf`);
   console.log(`    deepEqual (default)      ${ns(primDeepEqual)}`);
   console.log(
     `    Object.is                ${ns(primObjectIs)}   ` +
-      `${
-        primObjectIs > primDeepEqual
-          ? 'SLOWER — deepEqual short-circuits on `a === b`'
-          : 'faster'
-      }`
+      `${primGain > 0 ? 'faster' : 'SLOWER'} by ${ns(Math.abs(primGain))}`
+  );
+  console.log(
+    `    verdict: ${
+      Math.abs(primGain) < WORTH_SPECIALISING_NS
+        ? `specialising is NOT worth it — ${ns(
+            Math.abs(primGain)
+          )} is under the ${WORTH_SPECIALISING_NS}ns threshold`
+        : `specialising IS worth it — ${ns(
+            Math.abs(primGain)
+          )} exceeds the ${WORTH_SPECIALISING_NS}ns threshold. If you are` +
+          ` reading this, the docs saying otherwise are now wrong.`
+    }`
   );
   console.log(`\n  MATERIALISATION MEMO — read whole state, 10,000 leaves`);
   console.log(`    after a one-leaf write   ${memo.afterWrite.toFixed(1)}µs`);
