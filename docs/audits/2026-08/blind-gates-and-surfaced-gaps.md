@@ -1159,11 +1159,11 @@ Ranked by how much the answer could change the product, not by effort.
 > which is why the challenge stands: **no spec counts render passes.** There is
 > no `ngDoCheck`, `renderCount`, `ChangeDetectorRef` or `markForCheck` in any
 > spec in the repository. [**One figure in this correction is itself wrong —
-> flagged by the auditor:** the density parenthetical read "37 calls / 35
-> tests; 1 call / 11 tests", which reproduces to neither. Measured: **68 call
-> sites over 152 tests ≈ 0.45 calls per test** — roughly one `detectChanges`
-> per two tests, i.e. render-once-and-assert smoke tests, not re-render
-> counting. The correction in the correction: the ratio is ~1:2, not ~1:11.]
+> > flagged by the auditor:** the density parenthetical read "37 calls / 35
+> > tests; 1 call / 11 tests", which reproduces to neither. Measured: **68 call
+> > sites over 152 tests ≈ 0.45 calls per test** — roughly one `detectChanges`
+> > per two tests, i.e. render-once-and-assert smoke tests, not re-render
+> > counting. The correction in the correction: the ratio is ~1:2, not ~1:11.]
 > So: the claim separating this library from raw signals
 > has never been **measured**, though components are rendered in tests.**]** Build a harness that counts component render passes per
 > write — SignalTree vs NgRx SignalStore vs raw `signal`/`computed` — at
@@ -1184,17 +1184,18 @@ Ranked by how much the answer could change the product, not by effort.
 > **C3 — SSR has zero integration, and the architecture is already built.** > `grep -rn "TransferState\|isPlatformServer\|provideServerRendering" packages/`
 > returns **nothing**. Yet there is a whole rehydration design — `HydrateMode`
 > of `merge`/`restore`/`rehydrate`, a marker `hydrate` contract,
-> `docs/architecture/snapshot-rehydration.md`. **[Sharpened by the auditor:
+> `docs/architecture/snapshot-rehydration.md`. \*\*[Sharpened by the auditor:
+>
 > > `serialize()`/`deserialize()` are not core — they live in the
 > > `serialization()` ENHANCER. So the recipe is not ten lines of plumbing; it is
 > > "attach an enhancer, then plumb `TransferState`", and the enhancer's bundle
 > > cost lands on every SSR app. That makes the question sharper, not softer: what
 > > is the smallest correct recipe, and does it want a first-class
-> > `provideSignalTreeServerState()` instead?]** For a high-value app,
-> server-rendered state that hydrates without a flash of empty grid is table
-> stakes. What is the ten-line recipe to move a server-built tree through
-> `TransferState` into the client? If there is not one, this gap is worth more
-> than any benchmark on this list.
+> > `provideSignalTreeServerState()` instead?]\*\* For a high-value app,
+> > server-rendered state that hydrates without a flash of empty grid is table
+> > stakes. What is the ten-line recipe to move a server-built tree through
+> > `TransferState` into the client? If there is not one, this gap is worth more
+> > than any benchmark on this list.
 >
 > **C4 — Angular is shipping Signal Forms. Say what happens to `ng-forms`.**
 > Go capability by capability: which does the framework now do natively? Where
@@ -1359,3 +1360,53 @@ So C5's hypothesis — "the honest answer is capabilities, not granularity" —
 survives measurement, with the caveat that this is the SMALL store. Whether
 granularity pays off at 10k-50k rows with OnPush/zoneless remains C1's
 measurement, which needs a render-pass harness that still does not exist.
+
+---
+
+## C5 in flight — stop before this lands
+
+You are about to write "raw per-field signals win the small store" into a tool
+verdict, on a ~31ns/consumer gap. I tried to reproduce it and could not. Before
+you publish it, three questions — the first is the one that matters.
+
+> **Q37 — are your two arms measured under the same JIT and GC state?** > `bench-raw-signals.mjs` measures each arm in its own `probe()` call, with its
+> own warmup, one after the other. Re-measure ALTERNATING — `raw, tree, raw,
+tree, …` a dozen times — and report the **within-arm spread** beside the
+> between-arm gap. My run, same arms, same 100 consumers, identical consumer
+> bodies:
+>
+> |                              |                                                |
+> | ---------------------------- | ---------------------------------------------- |
+> | median gap                   | 367ns over 100 consumers = **3.67ns/consumer** |
+> | within-arm spread, raw alone | **3138ns** (7773 → 10911)                      |
+>
+> The noise inside one arm is roughly eight times the difference between arms,
+> and the first raw run is a 7773ns outlier against a 10102ns median — a
+> textbook first-run JIT effect that a per-arm warmup does not remove, because
+> it is the ARM ORDER that carries it. Note also that 3138ns is very close to
+> the gap your tool reported. Is your effect the signal, or is it your raw arm's
+> own variance?
+>
+> **Q38 — depth is not the discriminator, so what was the root-vs-nested
+> result?** You concluded nested-leaf writes are the expensive path from a root
+> probe reading ONE signal against a nested probe reading TWO. With the consumer
+> body held identical I measure root 32.4ns/consumer, 1-deep 31.1ns, 3-deep
+> 30.9ns — flat. Depth does nothing. That removes the mechanism you had, which
+> matters even if Q37 dissolves the effect entirely.
+>
+> **Q39 — which of your three numbers survive?** Measured separately and
+> repeatably, two do: a bare leaf write is **18.99ns raw vs 24.39ns tree**
+> (+5.4ns) and an untracked leaf read is **1.84ns vs 4.39ns** (+2.55ns). Those
+> are consistent across designs. Neither is close to 31ns/consumer, and a
+> consumer's recompute does exactly two reads — so even taken at face value they
+> account for ~5ns of it. When the parts do not sum to the whole, which do you
+> trust?
+>
+> **What I think the honest C5 answer is, for you to confirm or refute:** on a
+> small store the two are **within noise of each other**, the bare write tax is
+> real but ~5ns, and the case for the dependency is capabilities — `entityMap`,
+> markers, `timeTravel`, serialization — exactly as the hypothesis in C5 said,
+> but for a better reason than "raw wins": raw does not win. It ties. A tie is a
+> stronger argument for the container than a loss, and publishing a loss you
+> cannot reproduce would be the same defect this audit has been chasing for
+> three days.
