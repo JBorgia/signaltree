@@ -1,5 +1,9 @@
-
-import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   entityMap,
@@ -108,12 +112,14 @@ export class TimeTravelDemoComponent {
     this.markerCanUndo.set(this.markerTT.canUndo());
     this.markerCanRedo.set(this.markerTT.canRedo());
     if (action) {
-      this.markerLog.update((l) => [
-        `${action} → ${this.peopleCount()} people, job=${this.jobState()}, name="${
-          this.profileValues().name
-        }"`,
-        ...l,
-      ].slice(0, 8));
+      this.markerLog.update((l) =>
+        [
+          `${action} → ${this.peopleCount()} people, job=${this.jobState()}, name="${
+            this.profileValues().name
+          }"`,
+          ...l,
+        ].slice(0, 8)
+      );
     }
   }
 
@@ -143,7 +149,10 @@ export class TimeTravelDemoComponent {
 
   editProfile() {
     const n = this.people().length;
-    this.markerTree.$.profile.patch({ name: `Editor ${n}`, email: `e${n}@x.io` });
+    this.markerTree.$.profile.patch({
+      name: `Editor ${n}`,
+      email: `e${n}@x.io`,
+    });
     this.refreshMarkerState('edit profile');
   }
 
@@ -207,6 +216,22 @@ export class TimeTravelDemoComponent {
 
   historyLength = computed(() => this.history().length);
   currentState = computed(() => this.history()[this.currentIndex()]);
+
+  /**
+   * How many frames you can actually travel, each way.
+   *
+   * `canUndo()`/`canRedo()` answer "is there anything?" — a disabled button.
+   * They do not answer "how far?", which is the question you have when you are
+   * hunting for a state you passed three actions ago.
+   *
+   * Both fall straight out of the position: `canUndo()` is `index > 0`, so the
+   * number of steps back is the index itself, and the steps forward are whatever
+   * sits after it. Clamped because an empty history parks the index at -1.
+   */
+  undosAvailable = computed(() => Math.max(0, this.currentIndex()));
+  redosAvailable = computed(() =>
+    Math.max(0, this.historyLength() - 1 - this.currentIndex())
+  );
 
   // Counter actions
   increment() {

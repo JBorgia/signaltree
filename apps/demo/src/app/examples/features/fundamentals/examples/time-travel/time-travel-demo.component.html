@@ -36,133 +36,157 @@
     </div>
 
     <div class="demo-grid">
-    <div class="card actions-card">
-      <h2>Make State Changes</h2>
-      <p class="card-description">
-        Each action below creates a new entry in history. Click "Generate Sample
-        Actions" to quickly populate history, then use Undo/Redo to navigate!
-      </p>
-
-      <div class="control-section">
-        <h3>Counter: {{ counter() }}</h3>
-        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0">
-          Increment or decrement to add history entries
+      <div class="card actions-card">
+        <h2>Make State Changes</h2>
+        <p class="card-description">
+          Each action below creates a new entry in history. Click "Generate
+          Sample Actions" to quickly populate history, then use Undo/Redo to
+          navigate!
         </p>
-        <div class="button-group">
-          <button (click)="increment()" class="btn-primary btn-sm">
-            +1 Increment
-          </button>
-          <button (click)="decrement()" class="btn-danger btn-sm">
-            -1 Decrement
-          </button>
-          <button (click)="reset()" class="btn-secondary btn-sm">
-            Reset to 0
-          </button>
+
+        <div class="control-section">
+          <h3>Counter: {{ counter() }}</h3>
+          <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0">
+            Increment or decrement to add history entries
+          </p>
+          <div class="button-group">
+            <button (click)="increment()" class="btn-primary btn-sm">
+              +1 Increment
+            </button>
+            <button (click)="decrement()" class="btn-danger btn-sm">
+              -1 Decrement
+            </button>
+            <button (click)="reset()" class="btn-secondary btn-sm">
+              Reset to 0
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div class="control-section">
-        <h3>Message</h3>
-        <input
-          type="text"
-          [value]="message()"
-          (input)="updateMessage($any($event.target).value)"
-          class="form-input"
-        />
-      </div>
-
-      <div class="control-section">
-        <h3>Todos</h3>
-        <div class="input-group">
+        <div class="control-section">
+          <h3>Message</h3>
           <input
             type="text"
-            [(ngModel)]="newTodoText"
-            (keyup.enter)="addTodo()"
-            placeholder="Add a todo..."
+            [value]="message()"
+            (input)="updateMessage($any($event.target).value)"
             class="form-input"
           />
+        </div>
+
+        <div class="control-section">
+          <h3>Todos</h3>
+          <div class="input-group">
+            <input
+              type="text"
+              [(ngModel)]="newTodoText"
+              (keyup.enter)="addTodo()"
+              placeholder="Add a todo..."
+              class="form-input"
+            />
+            <button
+              (click)="addTodo()"
+              [disabled]="!newTodoText.trim()"
+              class="btn-primary btn-sm"
+            >
+              Add
+            </button>
+          </div>
+          <div class="todos-list">
+            @for (todo of todos(); track todo.id) {
+            <div class="todo-item" [class.completed]="todo.completed">
+              <input
+                type="checkbox"
+                [checked]="todo.completed"
+                (change)="toggleTodo(todo.id)"
+              />
+              <span>{{ todo.title }}</span>
+              <button (click)="deleteTodo(todo.id)" class="btn-delete">
+                X
+              </button>
+            </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="card time-travel-card">
+        <h2>Time Travel Controls</h2>
+        <p class="card-description">Navigate through state history</p>
+
+        <div class="tt-controls">
           <button
-            (click)="addTodo()"
-            [disabled]="!newTodoText.trim()"
-            class="btn-primary btn-sm"
+            (click)="undo()"
+            [disabled]="!canUndo()"
+            class="btn-warning"
+            [attr.aria-label]="'Undo, ' + undosAvailable() + ' available'"
           >
-            Add
+            Undo @if (undosAvailable() > 0) {
+            <span class="tt-count">({{ undosAvailable() }})</span>
+            }
+          </button>
+          <button
+            (click)="redo()"
+            [disabled]="!canRedo()"
+            class="btn-success"
+            [attr.aria-label]="'Redo, ' + redosAvailable() + ' available'"
+          >
+            Redo @if (redosAvailable() > 0) {
+            <span class="tt-count">({{ redosAvailable() }})</span>
+            }
+          </button>
+          <button (click)="generateSampleActions()" class="btn-primary btn-sm">
+            🎬 Generate Sample Actions
+          </button>
+          <button (click)="clearHistory()" class="btn-danger btn-sm">
+            Clear History
           </button>
         </div>
-        <div class="todos-list">
-          @for (todo of todos(); track todo.id) {
-          <div class="todo-item" [class.completed]="todo.completed">
-            <input
-              type="checkbox"
-              [checked]="todo.completed"
-              (change)="toggleTodo(todo.id)"
-            />
-            <span>{{ todo.title }}</span>
-            <button (click)="deleteTodo(todo.id)" class="btn-delete">X</button>
+
+        <div class="history-info">
+          <div class="info-item">
+            <span class="label">History Length:</span>
+            <span class="value">{{ historyLength() }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Current Position:</span>
+            <span class="value"
+              >{{ currentIndex() + 1 }} / {{ historyLength() }}</span
+            >
+          </div>
+          <div class="info-item">
+            <span class="label">Frames Available:</span>
+            <span class="value"
+              >⏴ {{ undosAvailable() }} undo · {{ redosAvailable() }} redo
+              ⏵</span
+            >
+          </div>
+        </div>
+
+        <div class="history-list">
+          <h3>State History</h3>
+          @for (state of history(); track $index) {
+          <div
+            class="history-item"
+            [class.active]="$index === currentIndex()"
+            (click)="goToState($index)"
+            tabindex="0"
+            (keyup)="onHistoryItemKeyup($event, $index)"
+            role="button"
+            [attr.aria-pressed]="$index === currentIndex()"
+          >
+            <div class="history-index">{{ $index + 1 }}</div>
+            <div class="history-content">
+              <div class="history-time">
+                {{ formatTimestamp(state.timestamp) }}
+              </div>
+              <div class="history-preview">
+                {{ getStatePreview(state.state) }}
+              </div>
+            </div>
           </div>
           }
         </div>
       </div>
     </div>
-
-    <div class="card time-travel-card">
-      <h2>Time Travel Controls</h2>
-      <p class="card-description">Navigate through state history</p>
-
-      <div class="tt-controls">
-        <button (click)="undo()" [disabled]="!canUndo()" class="btn-warning">
-          Undo
-        </button>
-        <button (click)="redo()" [disabled]="!canRedo()" class="btn-success">
-          Redo
-        </button>
-        <button (click)="generateSampleActions()" class="btn-primary btn-sm">
-          🎬 Generate Sample Actions
-        </button>
-        <button (click)="clearHistory()" class="btn-danger btn-sm">
-          Clear History
-        </button>
-      </div>
-
-      <div class="history-info">
-        <div class="info-item">
-          <span class="label">History Length:</span>
-          <span class="value">{{ historyLength() }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Current Position:</span>
-          <span class="value"
-            >{{ currentIndex() + 1 }} / {{ historyLength() }}</span
-          >
-        </div>
-      </div>
-
-      <div class="history-list">
-        <h3>State History</h3>
-        @for (state of history(); track $index) {
-        <div
-          class="history-item"
-          [class.active]="$index === currentIndex()"
-          (click)="goToState($index)"
-          tabindex="0"
-          (keyup)="onHistoryItemKeyup($event, $index)"
-          role="button"
-          [attr.aria-pressed]="$index === currentIndex()"
-        >
-          <div class="history-index">{{ $index + 1 }}</div>
-          <div class="history-content">
-            <div class="history-time">
-              {{ formatTimestamp(state.timestamp) }}
-            </div>
-            <div class="history-preview">
-              {{ getStatePreview(state.state) }}
-            </div>
-          </div>
-        </div>
-        }
-      </div>
-    </div>
-  </div>
   </st-example>
 
   <st-example heading="Undo/redo across MARKERS (new in 14.0.0)">
@@ -170,8 +194,8 @@
       <p class="intro-text">
         Everything above is plain leaves, and undo has always worked for those.
         <strong>Markers were a different story.</strong>
-        Until 14.0.0 a snapshot captured a marker&#39;s API surface instead of its
-        state, so an undo left the marker at its
+        Until 14.0.0 a snapshot captured a marker&#39;s API surface instead of
+        its state, so an undo left the marker at its
         <em>post-change</em>
         value and reported success — landing you in a state that never existed.
       </p>
@@ -180,9 +204,9 @@
         <code>n=3 rows=3</code>
         → undo →
         <code>n=2 rows=3</code>
-        . The counter rolled back; the collection did not; nothing said so.
-        Add people, change the job status, edit the profile, then undo — all
-        three roll back together now.
+        . The counter rolled back; the collection did not; nothing said so. Add
+        people, change the job status, edit the profile, then undo — all three
+        roll back together now.
       </p>
     </div>
 
@@ -249,7 +273,9 @@
         } @else {
         <ol>
           @for (line of markerLog(); track $index) {
-          <li><code>{{ line }}</code></li>
+          <li>
+            <code>{{ line }}</code>
+          </li>
           }
         </ol>
         }

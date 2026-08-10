@@ -1,0 +1,310 @@
+- generic [ref=e3]:
+    - banner [ref=e4]:
+        - link "SignalTree Logo SignalTree Reactive JSON" [ref=e5] [cursor=pointer]:
+            - /url: /
+            - img "SignalTree Logo" [ref=e6]
+            - generic [ref=e7]:
+                - generic [ref=e8]: SignalTree
+                - generic [ref=e9]: Reactive JSON
+        - navigation "External links" [ref=e10]:
+            - generic [ref=e11]: '@signaltree/core v14.0.0'
+            - link "🔗 GitHub" [ref=e12] [cursor=pointer]:
+                - /url: https://github.com/JBorgia/signaltree
+            - link "📦 npm" [ref=e13] [cursor=pointer]:
+                - /url: https://www.npmjs.com/org/signaltree
+    - complementary "Main navigation" [ref=e15]:
+        - navigation "Site sections" [ref=e16]:
+            - generic [ref=e17]:
+                - paragraph [ref=e18]: 🚀 Learn
+                - link "What's new in 14.0.0" [ref=e19] [cursor=pointer]:
+                    - /url: /whats-new-14
+                - link "Does SignalTree fit?" [ref=e20] [cursor=pointer]:
+                    - /url: /does-it-fit
+                - link "Documentation" [ref=e21] [cursor=pointer]:
+                    - /url: /docs
+                - link "Fundamentals" [ref=e22] [cursor=pointer]:
+                    - /url: /examples/fundamentals
+                - link "Recommended Architecture" [ref=e23] [cursor=pointer]:
+                    - /url: /examples/fundamentals/recommended-architecture
+                - link "Migration Recipe" [ref=e24] [cursor=pointer]:
+                    - /url: /examples/fundamentals/migration-recipe
+                - link "Callable Syntax" [ref=e25] [cursor=pointer]:
+                    - /url: /callable-syntax
+                - link "Built for AI coding agents" [ref=e26] [cursor=pointer]:
+                    - /url: /built-for-ai
+                - link "AI-codegen benchmark scorecard" [ref=e27] [cursor=pointer]:
+                    - /url: /benchmark
+            - generic [ref=e28]:
+                - paragraph [ref=e29]: 📦 Reference
+                - link "Core Package" [ref=e30] [cursor=pointer]:
+                    - /url: /docs?package=core
+                - link "Events" [ref=e31] [cursor=pointer]:
+                    - /url: /docs?package=events
+                - link "Realtime" [ref=e32] [cursor=pointer]:
+                    - /url: /docs?package=realtime
+                - link "Angular Forms" [ref=e33] [cursor=pointer]:
+                    - /url: /docs?package=ng-forms
+            - generic [ref=e34]:
+                - paragraph [ref=e35]: 🧪 Examples
+                - link "Form Marker" [ref=e36] [cursor=pointer]:
+                    - /url: /form-marker
+                - link "Signal Forms" [ref=e37] [cursor=pointer]:
+                    - /url: /signal-forms
+                - link "Batching" [ref=e38] [cursor=pointer]:
+                    - /url: /batching
+                - link "Entities" [ref=e39] [cursor=pointer]:
+                    - /url: /entities
+                - link "Persistence" [ref=e40] [cursor=pointer]:
+                    - /url: /persistence
+                - link "Serialization" [ref=e41] [cursor=pointer]:
+                    - /url: /serialization
+                - link "Time Travel" [ref=e42] [cursor=pointer]:
+                    - /url: /time-travel
+                - link "Async markers (asyncSource & asyncQuery)" [ref=e43] [cursor=pointer]:
+                    - /url: /async
+                - link "Marker zoo (all 6 markers, 4 depths)" [ref=e44] [cursor=pointer]:
+                    - /url: /marker-zoo
+                - link "entityMap cache-aware loading (v11.2)" [ref=e45] [cursor=pointer]:
+                    - /url: /entity-collection
+                - link "DevTools" [ref=e46] [cursor=pointer]:
+                    - /url: /devtools
+            - generic [ref=e47]:
+                - paragraph [ref=e48]: 🔧 Advanced
+                - link "Custom Markers & Enhancers" [ref=e49] [cursor=pointer]:
+                    - /url: /custom-extensions
+                - link "Markers" [ref=e50] [cursor=pointer]:
+                    - /url: /markers
+                - link "Guardrails" [ref=e51] [cursor=pointer]:
+                    - /url: /guardrails
+                - link "Extreme Depth" [ref=e52] [cursor=pointer]:
+                    - /url: /extreme-depth
+            - generic [ref=e53]:
+                - paragraph [ref=e54]: 📊 Benchmarks
+                - link "Library Comparison" [ref=e55] [cursor=pointer]:
+                    - /url: /benchmarks
+                - link "Benchmark History" [ref=e56] [cursor=pointer]:
+                    - /url: /realistic-benchmark-history
+    - main [ref=e57]:
+        - generic [ref=e59]:
+            - generic [ref=e61]:
+                - generic [ref=e62]: Reactive JSON for Angular
+                - img "SignalTree Logo" [ref=e64]
+                - heading "Model nested state as data — not reducers, selectors, and ceremony." [level=1] [ref=e65]
+                - paragraph [ref=e66]: SignalTree gives Angular apps a path-based, type-safe state model that stays readable as your data gets deeper and your app gets bigger.
+                - paragraph [ref=e67]: Reactive JSON means your state still looks like data. Keep one runtime tree, compose typed slices, and add DevTools, time travel, persistence, forms, realtime, and events when you need them.
+                - paragraph [ref=e68]:
+                    - strong [ref=e69]: SignalTree is not @ngrx/signals.
+                    - text: Different library, different package (
+                    - code [ref=e70]: '@signaltree/core'
+                    - text: ) — no
+                    - code [ref=e71]: withState
+                    - text: /
+                    - code [ref=e72]: withMethods
+                    - text: 'wrappers, no actions, no reducers. Your state literal is the API: read and write any path directly, at any depth.'
+                - generic [ref=e73]:
+                    - link "Take the 5-minute tour" [ref=e74] [cursor=pointer]:
+                        - /url: /start
+                    - link "Read the docs" [ref=e75] [cursor=pointer]:
+                        - /url: /docs
+                    - link "See benchmarks" [ref=e76] [cursor=pointer]:
+                        - /url: /benchmarks
+                - generic [ref=e77]:
+                    - generic [ref=e78]: Angular signals
+                    - generic [ref=e79]: Type-safe paths
+                    - generic [ref=e80]: One runtime tree
+                    - generic [ref=e81]: DevTools + time travel
+            - generic [ref=e82]:
+                - heading "Use SignalTree if you need" [level=2] [ref=e83]
+                - list [ref=e84]:
+                    - listitem [ref=e85]:
+                        - text: Optimistic UI with rollback (
+                        - code [ref=e86]: updateAndReport
+                        - text: )
+                    - listitem [ref=e87]:
+                        - text: Undo / redo (
+                        - code [ref=e88]: timeTravel
+                        - text: enhancer)
+                    - listitem [ref=e89]:
+                        - text: Typed normalized collections with O(1) lookups (
+                        - code [ref=e90]: entityMap
+                        - text: )
+                    - listitem [ref=e91]:
+                        - text: Reactive forms with validation, wizards, and persistence (
+                        - code [ref=e92]: form()
+                        - text: marker)
+                    - listitem [ref=e93]:
+                        - text: localStorage autosave with migrations (
+                        - code [ref=e94]: stored()
+                        - text: marker)
+                    - listitem [ref=e95]: State that mirrors your data shape, not Redux ceremony
+            - generic [ref=e96]:
+                - heading "Start here" [level=2] [ref=e97]
+                - paragraph [ref=e98]: The fastest way to evaluate SignalTree is to learn the model, inspect the architecture, read the package docs, and then use benchmarks as proof.
+                - generic [ref=e99]:
+                    - article [ref=e100]:
+                        - heading "Learn the model" [level=3] [ref=e101]
+                        - paragraph [ref=e102]: Start with the fundamentals page to see how SignalTree models nested state as data, not reducers and selectors.
+                        - link "Open fundamentals →" [ref=e103] [cursor=pointer]:
+                            - /url: /examples/fundamentals
+                    - article [ref=e104]:
+                        - heading "Check the architecture" [level=3] [ref=e105]
+                        - paragraph [ref=e106]: See the recommended “one runtime tree, typed slices, root-level enhancers” architecture in context.
+                        - link "View recommended architecture →" [ref=e107] [cursor=pointer]:
+                            - /url: /examples/fundamentals/recommended-architecture
+                    - article [ref=e108]:
+                        - heading "Read package docs" [level=3] [ref=e109]
+                        - paragraph [ref=e110]: Browse the core package first, then optional packages like realtime, events, and forms.
+                        - link "Browse documentation →" [ref=e111] [cursor=pointer]:
+                            - /url: /docs
+                    - article [ref=e112]:
+                        - heading "Inspect proof points" [level=3] [ref=e113]
+                        - paragraph [ref=e114]: Use benchmarks, DevTools, and bundle visualisation as proof—not as the first thing you have to believe.
+                        - link "Review benchmarks →" [ref=e115] [cursor=pointer]:
+                            - /url: /benchmarks
+                    - article [ref=e116]:
+                        - heading "Migrating from another store?" [level=3] [ref=e117]
+                        - paragraph [ref=e118]: Concept maps and side-by-side examples for @ngrx/signals, classic NgRx, NGXS, Elf/Akita, ComponentStore, @rx-angular/state, and BehaviorSubject services — plus an AI-assistable playbook.
+                        - link "Open migration guide →" [ref=e119] [cursor=pointer]:
+                            - /url: /migrate
+            - generic [ref=e120]:
+                - generic [ref=e121]:
+                    - heading "Why this feels simpler" [level=2] [ref=e122]
+                    - paragraph [ref=e123]: The point is not that SignalTree introduces a new abstraction to learn. The point is that your state continues to look like your data.
+                - generic [ref=e124]:
+                    - article [ref=e125]:
+                        - heading "Typical ceremony" [level=3] [ref=e126]
+                        - generic [ref=e129]:
+                            - button "Copy before.ts" [ref=e130] [cursor=pointer]: Copy
+                            - code [ref=e132]: "// Typical nested-state ceremony const displayName = selectUserDisplayName(state); dispatch(updateUserProfile({ id: userId, changes: { name: 'Grace Hopper' } }));"
+                    - article [ref=e133]:
+                        - heading "SignalTree" [level=3] [ref=e134]
+                        - generic [ref=e137]:
+                            - button "Copy after.ts" [ref=e138] [cursor=pointer]: Copy
+                            - code [ref=e140]: // SignalTree const displayName = appTree.$.user.profile.name(); appTree.$.user.profile.name.set('Grace Hopper');
+            - generic [ref=e141]:
+                - heading "Quick start" [level=2] [ref=e142]
+                - paragraph [ref=e143]: Start with the core package. In production, the recommended shape is one root tree with typed branches for domain slices.
+                - generic [ref=e145]:
+                    - tablist [ref=e146]:
+                        - tab "install.sh" [selected] [ref=e147] [cursor=pointer]
+                        - tab "quick-start.ts" [ref=e148] [cursor=pointer]
+                    - generic [ref=e149]:
+                        - button "Copy install.sh" [ref=e150] [cursor=pointer]: Copy
+                        - code [ref=e152]: '# Install the core package npm install @signaltree/core # Optional packages npm install @signaltree/ng-forms npm install @signaltree/realtime npm install @signaltree/events'
+            - generic [ref=e153]:
+                - heading "What you get" [level=2] [ref=e154]
+                - generic [ref=e155]:
+                    - article [ref=e156]:
+                        - heading "State stays data-shaped" [level=3] [ref=e157]
+                        - paragraph [ref=e158]: Model nested state as plain data, then let SignalTree layer reactivity on top.
+                    - article [ref=e159]:
+                        - heading "Dot-notation access" [level=3] [ref=e160]
+                        - paragraph [ref=e161]: '`tree.$.user.profile.name()` stays direct, type-safe, and IDE-discoverable.'
+                    - article [ref=e162]:
+                        - heading "One runtime tree" [level=3] [ref=e163]
+                        - paragraph [ref=e164]: The recommended architecture is one runtime tree with typed slices and root-level enhancers.
+                    - article [ref=e165]:
+                        - heading "Invisible reactivity" [level=3] [ref=e166]
+                        - paragraph [ref=e167]: Think in data paths instead of subscriptions and state-management ceremony.
+                    - article [ref=e168]:
+                        - heading "Optional power, not required ceremony" [level=3] [ref=e169]
+                        - paragraph [ref=e170]: Add DevTools, time travel, persistence, forms, realtime, or events only when you need them.
+                    - article [ref=e171]:
+                        - heading "Proof you can inspect" [level=3] [ref=e172]
+                        - paragraph [ref=e173]: Benchmarks, DevTools, and bundle tooling support evaluation instead of replacing it.
+            - generic [ref=e174]:
+                - heading "Who it’s for" [level=2] [ref=e175]
+                - generic [ref=e176]:
+                    - article [ref=e177]:
+                        - heading "Great fit for" [level=3] [ref=e178]
+                        - list [ref=e179]:
+                            - listitem [ref=e180]: Angular apps with deep or evolving nested state
+                            - listitem [ref=e181]: Teams that want state to look like data, not framework ceremony
+                            - listitem [ref=e182]: Apps that benefit from root-level DevTools, time travel, persistence, and entity maps
+                    - article [ref=e183]:
+                        - heading "Probably not the point" [level=3] [ref=e184]
+                        - list [ref=e185]:
+                            - listitem [ref=e186]: Very small apps with shallow local state only
+                            - listitem [ref=e187]: Teams that explicitly want action/reducer workflows as the primary abstraction
+                            - listitem [ref=e188]: Use cases where the benchmark story matters more than the day-to-day modeling ergonomics
+            - generic [ref=e189]:
+                - heading "Package entry points" [level=2] [ref=e190]
+                - generic [ref=e191]:
+                    - article [ref=e192]:
+                        - heading "@signaltree/core" [level=3] [ref=e193]
+                        - paragraph [ref=e194]: 'The main package: state tree, entity maps, batching, DevTools, time travel, persistence, and serialization.'
+                        - link "Read core docs →" [ref=e195] [cursor=pointer]:
+                            - /url: /docs?package=core
+                    - article [ref=e196]:
+                        - heading "@signaltree/events" [level=3] [ref=e197]
+                        - paragraph [ref=e198]: Event-oriented helpers for reacting to state changes without abandoning the data-first tree model.
+                        - link "Read events docs →" [ref=e199] [cursor=pointer]:
+                            - /url: /docs?package=events
+                    - article [ref=e200]:
+                        - heading "@signaltree/realtime" [level=3] [ref=e201]
+                        - paragraph [ref=e202]: Keep entity maps in sync with live data sources while preserving SignalTree’s path-based ergonomics.
+                        - link "Read realtime docs →" [ref=e203] [cursor=pointer]:
+                            - /url: /docs?package=realtime
+                    - article [ref=e204]:
+                        - heading "@signaltree/ng-forms" [level=3] [ref=e205]
+                        - paragraph [ref=e206]: Angular forms integration for reactive form state, validation, and persistence patterns.
+                        - link "Read forms docs →" [ref=e207] [cursor=pointer]:
+                            - /url: /docs?package=ng-forms
+            - generic [ref=e208]:
+                - generic [ref=e209]:
+                    - heading "Deep typing still matters" [level=2] [ref=e210]
+                    - paragraph [ref=e211]: SignalTree’s model stays readable even when the object graph gets deep. The extreme-depth demo is a proof point, not the primary pitch.
+                    - generic [ref=e212]:
+                        - generic [ref=e213]:
+                            - generic [ref=e214]: 15+
+                            - generic [ref=e215]: Nested levels
+                        - generic [ref=e216]:
+                            - generic [ref=e217]: 0.036ms
+                            - generic [ref=e218]: Example deep-access result
+                        - generic [ref=e219]:
+                            - generic [ref=e220]: '0'
+                            - generic [ref=e221]: Selectors needed at any depth
+                - generic [ref=e224]:
+                    - button "Copy extreme-depth.ts" [ref=e225] [cursor=pointer]: Copy
+                    - code [ref=e227]: "import { signalTree } from '@signaltree/core'; // Deep nested state with strong type inference const extremeDepth = signalTree({ enterprise: { divisions: { technology: { departments: { engineering: { teams: { frontend: { projects: { signaltree: { releases: { v1: { features: { recursiveTyping: { validation: { tests: { extreme: { status: 'passing', depth: 15, performance: 'sub-millisecond' } } } } } } } } } } } } } } } } }); // Type inference still holds at this depth const status = extremeDepth.$.enterprise.divisions.technology .departments.engineering.teams.frontend.projects.signaltree .releases.v1.features.recursiveTyping.validation.tests .extreme.status(); // TypeScript knows this is a string signal // Update at extreme depth with full type safety extremeDepth.$.enterprise.divisions.technology.departments .engineering.teams.frontend.projects.signaltree.releases.v1 .features.recursiveTyping.validation.tests.extreme.depth.set(20);"
+            - generic [ref=e228]:
+                - heading "More to explore" [level=2] [ref=e229]
+                - generic [ref=e230]:
+                    - article [ref=e231]:
+                        - heading "SignalTree-native async markers" [level=3] [ref=e232]
+                        - paragraph [ref=e233]: '`asyncSource` and `asyncQuery` — SignalTree-native async primitives that compose with `entityMap` (including its cache-aware loading form), `status`, `stored`, and `form`. Path-attached, auto-cleanup, no boilerplate.'
+                        - link "Try async markers →" [ref=e234] [cursor=pointer]:
+                            - /url: /async
+                    - article [ref=e235]:
+                        - heading "Persistence & Serialization" [level=3] [ref=e236]
+                        - paragraph [ref=e237]: Store and restore state deliberately with local persistence and import/export support.
+                        - link "Explore persistence →" [ref=e238] [cursor=pointer]:
+                            - /url: /persistence
+                    - article [ref=e239]:
+                        - heading "Custom Markers & Enhancers" [level=3] [ref=e240]
+                        - paragraph [ref=e241]: 'Learn the extension story without leaving the path-first, data-first model. Build your own markers and enhancers via `registerMarkerProcessor()` and `.with()` chains.'
+                        - link "Explore custom extensions →" [ref=e242] [cursor=pointer]:
+                            - /url: /custom-extensions
+                    - article [ref=e243]:
+                        - heading "Guardrails & Undo/Redo" [level=3] [ref=e244]
+                        - paragraph [ref=e245]: Explore development guardrails, history workflows, and related advanced examples.
+                        - link "Explore guardrails →" [ref=e246] [cursor=pointer]:
+                            - /url: /guardrails
+            - generic [ref=e247]:
+                - heading "Proof and inspection" [level=2] [ref=e248]
+                - generic [ref=e249]:
+                    - article [ref=e250]:
+                        - heading "DevTools" [level=3] [ref=e251]
+                        - paragraph [ref=e252]: Inspect state changes, path-based actions, and time-travel support through the Redux DevTools integration.
+                        - link "Open DevTools demo →" [ref=e253] [cursor=pointer]:
+                            - /url: /devtools
+                    - article [ref=e254]:
+                        - heading "Benchmarks" [level=3] [ref=e255]
+                        - paragraph [ref=e256]: Compare SignalTree against other Angular state approaches, with current version metadata shown in the UI and methodology visible in the app.
+                        - link "Review benchmarks →" [ref=e257] [cursor=pointer]:
+                            - /url: /benchmarks
+                    - article [ref=e258]:
+                        - heading "Extreme Depth" [level=3] [ref=e259]
+                        - paragraph [ref=e260]: Stress-test deep typing and path access to see where SignalTree’s model remains readable and precise.
+                        - link "See deep typing demo →" [ref=e261] [cursor=pointer]:
+                            - /url: /extreme-depth

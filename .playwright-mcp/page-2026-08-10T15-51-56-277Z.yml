@@ -1,0 +1,87 @@
+- generic [ref=f1e3]:
+    - banner [ref=f1e4]:
+        - link "SignalTree Logo SignalTree Reactive JSON" [ref=f1e5] [cursor=pointer]:
+            - /url: /
+            - img "SignalTree Logo" [ref=f1e6]
+            - generic [ref=f1e7]:
+                - generic [ref=f1e8]: SignalTree
+                - generic [ref=f1e9]: Reactive JSON
+        - navigation "External links" [ref=f1e10]:
+            - generic [ref=f1e11]: '@signaltree/core v14.0.0'
+            - link "🔗 GitHub" [ref=f1e12] [cursor=pointer]:
+                - /url: https://github.com/JBorgia/signaltree
+            - link "📦 npm" [ref=f1e13] [cursor=pointer]:
+                - /url: https://www.npmjs.com/org/signaltree
+    - complementary "Main navigation" [ref=f1e15]:
+        - navigation "Site sections" [ref=f1e16]:
+            - generic [ref=f1e17]:
+                - paragraph [ref=f1e18]: 🚀 Learn
+                - link "What's new in 14.0.0" [ref=f1e19] [cursor=pointer]:
+                    - /url: /whats-new-14
+                - link "Does SignalTree fit?" [ref=f1e20] [cursor=pointer]:
+                    - /url: /does-it-fit
+                - link "Documentation" [ref=f1e21] [cursor=pointer]:
+                    - /url: /docs
+                - link "Fundamentals" [ref=f1e22] [cursor=pointer]:
+                    - /url: /examples/fundamentals
+                - link "Recommended Architecture" [ref=f1e23] [cursor=pointer]:
+                    - /url: /examples/fundamentals/recommended-architecture
+                - link "Migration Recipe" [ref=f1e24] [cursor=pointer]:
+                    - /url: /examples/fundamentals/migration-recipe
+                - link "Callable Syntax" [ref=f1e25] [cursor=pointer]:
+                    - /url: /callable-syntax
+                - link "Built for AI coding agents" [ref=f1e26] [cursor=pointer]:
+                    - /url: /built-for-ai
+                - link "AI-codegen benchmark scorecard" [ref=f1e27] [cursor=pointer]:
+                    - /url: /benchmark
+            - generic [ref=f1e28]:
+                - paragraph [ref=f1e29]: 📦 Reference
+                - link "Core Package" [ref=f1e30] [cursor=pointer]:
+                    - /url: /docs?package=core
+                - link "Events" [ref=f1e31] [cursor=pointer]:
+                    - /url: /docs?package=events
+                - link "Realtime" [ref=f1e32] [cursor=pointer]:
+                    - /url: /docs?package=realtime
+                - link "Angular Forms" [ref=f1e33] [cursor=pointer]:
+                    - /url: /docs?package=ng-forms
+            - generic [ref=f1e34]:
+                - paragraph [ref=f1e35]: 🧪 Examples
+                - link "Form Marker" [ref=f1e36] [cursor=pointer]:
+                    - /url: /form-marker
+                - link "Signal Forms" [ref=f1e37] [cursor=pointer]:
+                    - /url: /signal-forms
+                - link "Batching" [ref=f1e38] [cursor=pointer]:
+                    - /url: /batching
+                - link "Entities" [ref=f1e39] [cursor=pointer]:
+                    - /url: /entities
+                - link "Persistence" [ref=f1e40] [cursor=pointer]:
+                    - /url: /persistence
+                - link "Serialization" [ref=f1e41] [cursor=pointer]:
+                    - /url: /serialization
+                - link "Time Travel" [ref=f1e42] [cursor=pointer]:
+                    - /url: /time-travel
+                - link "Async markers (asyncSource & asyncQuery)" [ref=f1e43] [cursor=pointer]:
+                    - /url: /async
+                - link "Marker zoo (all 6 markers, 4 depths)" [ref=f1e44] [cursor=pointer]:
+                    - /url: /marker-zoo
+                - link "entityMap cache-aware loading (v11.2)" [ref=f1e45] [cursor=pointer]:
+                    - /url: /entity-collection
+                - link "DevTools" [ref=f1e46] [cursor=pointer]:
+                    - /url: /devtools
+            - generic [ref=f1e47]:
+                - paragraph [ref=f1e48]: 🔧 Advanced
+                - link "Custom Markers & Enhancers" [ref=f1e49] [cursor=pointer]:
+                    - /url: /custom-extensions
+                - link "Markers" [ref=f1e50] [cursor=pointer]:
+                    - /url: /markers
+                - link "Guardrails" [ref=f1e51] [cursor=pointer]:
+                    - /url: /guardrails
+                - link "Extreme Depth" [ref=f1e52] [cursor=pointer]:
+                    - /url: /extreme-depth
+            - generic [ref=f1e53]:
+                - paragraph [ref=f1e54]: 📊 Benchmarks
+                - link "Library Comparison" [ref=f1e55] [cursor=pointer]:
+                    - /url: /benchmarks
+                - link "Benchmark History" [ref=f1e56] [cursor=pointer]:
+                    - /url: /realistic-benchmark-history
+    - main [ref=f1e57]
