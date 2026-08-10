@@ -110,6 +110,8 @@ const tree = signalTree(state)
 
 ## 6. `@signaltree/enterprise` is no longer published
 
+<!-- measured: benchmarked against @signaltree/enterprise before its removal in 14.0.0. The package is unpublished and imports symbols that moved to /authoring, so this cannot be re-run. Context: docs/archive/BENCHMARK_ANALYSIS-enterprise-era.md -->
+
 ```jsonc
 // package.json
 - "@signaltree/enterprise": "^13.5.0",

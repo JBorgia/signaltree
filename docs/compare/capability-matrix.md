@@ -374,7 +374,8 @@ collection-shaped, when writes are frequent, when many components observe
 different parts of it, or when you want signals rather than observables in a
 zoneless app. The advantage is not a constant factor — it is that our cost does
 not grow with the size of your state and elf's does. At 100 fields the difference
-is 5x and irrelevant. At 10,000 it is ~185x and decides whether the app is usable.
+is ~6x and irrelevant. At 10,000 it is ~170x and decides whether the app is
+usable. (`node tools/bench-state-scale.mjs`)
 
 **And elf makes you manage that.** Its cost is proportional to the copied slice,
 so an elf app stays fast by being carefully partitioned into small stores and
@@ -393,12 +394,17 @@ elf ships **no signal API** (its only peer dependency is `rxjs`), but
 signal, so "signals elf" is one wrapper away. Measured: 1,000 consumers over
 nested state, 200 writes.
 
+Reproduce with `node tools/bench-state-scale.mjs` (axis 2, 1000 consumers):
+
 |                            | time          | projections run per write |
 | -------------------------- | ------------- | ------------------------- |
-| SignalTree, native signals | **0.070 ms**  | 1 / 1000                  |
-| elf + `toSignal`           | **20.332 ms** | **1000 / 1000**           |
+| SignalTree, native signals | **0.047 ms**  | 1 / 1000                  |
+| elf + `toSignal`           | **19.252 ms** | **1000 / 1000**           |
 
-290x, and the projection count is unchanged. **`toSignal` changes the
+Hundreds of times, and the projection count is unchanged. The exact multiplier
+is not stable — SignalTree's arm is near the timer floor, so it has read
+anywhere from 290x to 413x across runs while both absolutes hold. The
+projection count is the durable claim. **`toSignal` changes the
 CONSUMPTION api and nothing else.** The cost lives in elf's store and pipe
 layer: the write copies a slice of an immutable object, and every `select`
 projection re-runs because the store emitted. Wrapping the far end of that

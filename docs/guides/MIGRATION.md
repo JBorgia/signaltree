@@ -21,7 +21,9 @@
 - **`effects()` removed** — use Angular's `effect()`, which accepts
   `{ injector }`.
 - **`enableSerialization` / `applyPersistence` / `deepCloneJSON` removed** —
-  they were reachable from no entry point.
+they were reachable from no entry point.
+<!-- measured: the updateOptimized() figures below were benchmarked before @signaltree/enterprise was removed in 14.0.0. The package is unpublished, so they cannot be re-run. Context: docs/archive/BENCHMARK_ANALYSIS-enterprise-era.md -->
+
 - **`@signaltree/enterprise` is no longer published.** Deprecated in 13.5.0,
   removed here. Use `tree.updateAndReport()` from core — built in, no enhancer,
   and measured FASTER in every workload (`updateOptimized()` was ~7x slower at
@@ -109,6 +111,8 @@ aligned).
 
 ### 1. `security` config must be wrapped with `security()`
 
+<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
+
 The `security` option used to take a raw `SecurityValidatorConfig`. Because `signalTree()` statically referenced the `SecurityValidator` class, the validator (~1KB gzip) shipped in **every** bundle even when no app used it — the opposite of what the `@signaltree/core/security` subpath was meant to achieve. In v11 the validator is **injected**: `signalTree` only calls an opt-in feature, so the validator is tree-shaken out unless you import it.
 
 **Before (≤10.x):**
@@ -145,6 +149,8 @@ signalTree(state, { security: security(SecurityPresets.strict().getConfig()) });
 The config shape, validation behavior, and construction-time timing are **unchanged** — only the wrapper and import path differ. TypeScript will flag every call site that needs updating (the option's type changed from `SecurityValidatorConfig` to `SecurityFeature`).
 
 ### 2. Lazy signals are now opt-in via `lazy()`
+
+<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
 
 Lazy signal creation used to switch on automatically for large state (>50 estimated nodes). Because `signalTree()` statically imported the lazy Proxy machinery + `SignalMemoryManager` to do that, ~2.6KB shipped in **every** bundle — even trees that never went lazy. In v11 lazy is injected, so it tree-shakes out unless you opt in.
 
@@ -185,6 +191,8 @@ tree.$.user.name();
 For a non-reactive full snapshot, call `tree()` (unchanged).
 
 ### Also in 11.0.0 (no action required)
+
+<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
 
 - **New `defineStore()`** — wrap a tree factory in an injectable Angular service: `export const CounterStore = defineStore(() => signalTree({ count: 0 }))`, then `inject(CounterStore)`. The idiomatic DI entry point (comparable to NgRx SignalStore's `signalStore()`); `destroy()` is tied to the injector's `DestroyRef`. Purely additive — existing tree usage is unchanged.
 - **New `linked()`** — derived-but-writable signal for `.derived()`, comparable to NgRx `withLinkedState` (wraps Angular's `linkedSignal`). `linked({ source: () => $.options(), computation: (opts, prev): Opt | undefined => ... })` gives a value that derives from a source, is user-writable (`.set()`), and re-derives on source change (sticky selection). Purely additive.
@@ -490,6 +498,8 @@ echo "sed -i '' 's/@signaltree\\/batching/@signaltree\\/core/g' your-file.ts"
 ## Benefits of Migration
 
 ### 1. Smaller Bundle Size
+
+<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
 
 **16.2% reduction** when using multiple enhancers:
 

@@ -6,7 +6,18 @@ writes, and dropped derived values. They're advisory: useful while writing code,
 useless at runtime in production.
 
 **By default they ship to production anyway.** One line in your build config
-removes them, worth **~0.8–1.2 KB gzip** of SignalTree's own code.
+removes them, worth **~2.0–2.7 KB gzip** of SignalTree's own code, depending on
+what the tree uses:
+
+| scenario          | dev      | prod    | dropped     |
+| ----------------- | -------- | ------- | ----------- |
+| bare `signalTree` | 7.80 KB  | 5.79 KB | **2.01 KB** |
+| + `entityMap`     | 12.07 KB | 9.40 KB | **2.67 KB** |
+| + `form()`        | 10.17 KB | 7.90 KB | **2.27 KB** |
+
+Reproduce with `node tools/check-bundle-budget.mjs`, which measures both
+columns. This section previously said 0.8–1.2 KB, which understated it by
+roughly half and named no generator.
 
 ## Why they don't drop on their own
 

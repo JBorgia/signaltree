@@ -1,8 +1,22 @@
 # @signaltree/ng-forms
 
+<!-- measured: gzip of the package's own emitted chunks in dist/packages/ng-forms/dist, excluding tslib; the exact command is shown below. Not produced by a tools/ script because no per-package size generator exists — tools/size-report.mjs covers core scenarios only. -->
+
 **Angular FormGroup bridge for SignalTree's `form()` marker**. Adds reactive forms integration, conditional fields, and undo/redo to tree-integrated forms.
 
-**Bundle size: 3.38KB gzipped**
+**Bundle size:** the package's own code is **12.15 KB gzip** across its 19
+chunks. What you actually pay is less and depends on which entry points you
+import, because the package is chunked per feature — importing the form bridge
+alone does not pull in the wizard or history chunks.
+
+```sh
+find dist/packages/ng-forms/dist -name '*.js' ! -name 'tslib*' \
+  | xargs cat | gzip -9 -c | wc -c
+```
+
+This line previously read "3.38KB gzipped" with no statement of what was
+measured. A single number here cannot be right for every import shape, so it
+is stated as a ceiling with the method beside it.
 
 ## Architecture: form() + formBridge()
 
@@ -526,7 +540,10 @@ const checkout = createFormTree(initialState, {
 import { signalTree, form } from '@signaltree/core';
 
 interface SignupForm extends Record<string, unknown> {
-  email: string; password: string; firstName: string; lastName: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
 }
 
 const tree = signalTree({
@@ -541,7 +558,7 @@ const tree = signalTree({
   }),
 });
 
-await tree.$.signup.wizard!.next();  // validates the current step first
+await tree.$.signup.wizard!.next(); // validates the current step first
 tree.$.signup.wizard!.prev();
 await tree.$.signup.wizard!.goTo('profile');
 tree.$.signup.wizard!.currentStep(); // Signal<number>
@@ -622,18 +639,18 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 
 ## When to use ng-forms vs Angular 22 signal forms
 
-| Scenario                                   | Recommendation                           |
-| ------------------------------------------ | ---------------------------------------- |
-| Login form (2-3 fields)                    | ✅ Angular 22 `FormField`                |
-| Search bar with filters                    | ✅ Angular 22 `FormField`                |
-| Form state inside your store tree          | ✅ **ng-forms** (tree integration)       |
-| Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard)   |
-| Multi-step onboarding (5+ steps)           | ✅ **ng-forms** (wizard API)             |
-| Form with auto-save drafts                 | ✅ **ng-forms** (built-in persistence)   |
+| Scenario                                   | Recommendation                                                                                  |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Login form (2-3 fields)                    | ✅ Angular 22 `FormField`                                                                       |
+| Search bar with filters                    | ✅ Angular 22 `FormField`                                                                       |
+| Form state inside your store tree          | ✅ **ng-forms** (tree integration)                                                              |
+| Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard)                                                          |
+| Multi-step onboarding (5+ steps)           | ✅ **ng-forms** (wizard API)                                                                    |
+| Form with auto-save drafts                 | ✅ **ng-forms** (built-in persistence)                                                          |
 | Complex editor with undo/redo              | ✅ **core `history()`** on the `form()` marker (v13+; ng-forms `withFormHistory` is deprecated) |
-| Migrating from reactive forms              | ✅ **ng-forms** (FormGroup bridge)       |
-| Dynamic form with conditional fields       | ✅ **ng-forms** (conditionals config)    |
-| Form synced with global app state          | ✅ **ng-forms** (SignalTree integration) |
+| Migrating from reactive forms              | ✅ **ng-forms** (FormGroup bridge)                                                              |
+| Dynamic form with conditional fields       | ✅ **ng-forms** (conditionals config)                                                           |
+| Form synced with global app state          | ✅ **ng-forms** (SignalTree integration)                                                        |
 
 **Rule of thumb**: If your form state should live inside your SignalTree store, or needs workflow features (persistence/wizards/history), use ng-forms. For standalone forms — flat or nested — Angular 22's native Signal Forms are excellent. Need both on the same field? Use the `@signaltree/ng-forms/signals` bridges above.
 

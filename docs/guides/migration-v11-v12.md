@@ -7,6 +7,8 @@ of the items below. Every removed API has a direct, mechanical replacement.
 
 ## 1. `entityMap` loaders now use `loader()` (breaking)
 
+<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
+
 The raw `entityMap({ load: fn, staleTime, … })` form is removed. Wrap the fetch
 with the `loader()` helper and move the loader-family options into it. This is
 what makes the loader machinery tree-shakeable — a plain `entityMap()` no longer

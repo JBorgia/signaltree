@@ -42,6 +42,8 @@ What native signals do **not** provide (and won't — they're primitives, not a 
 
 ## Axis-by-axis
 
+<!-- measured: node tools/size-report.mjs (bundle row) -->
+
 | Axis                                        | Raw signals                                       | SignalTree                                            |
 | ------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
 | Single value / derived / writable-derived   | ✅ `signal`/`computed`/`linkedSignal`             | ✅ leaves + `.derived()` (heavier for this)           |
@@ -50,7 +52,7 @@ What native signals do **not** provide (and won't — they're primitives, not a 
 | **Entity CRUD**                             | ❌ hand-rolled                                    | ✅ `entityMap`                                        |
 | **Forms / persistence / undo / DevTools**   | ❌ none                                           | ✅ markers + enhancers, **at any depth**              |
 | Recursive deep typing of the whole state    | ⚠️ you type each signal                           | ✅ inferred across the tree                           |
-| Dependency / bundle                         | ✅ zero (framework)                               | ⚠️ ~8.5 KB gz core (tree-shaken)                      |
+| Dependency / bundle                         | ✅ zero (framework)                               | ⚠️ 5.79 KB gz bare, 9.40 KB with `entityMap`          |
 | Future-proofing                             | ✅ it _is_ the framework                          | ⚠️ a dependency to maintain                           |
 | AI-codegen familiarity                      | ✅ agents know native signals cold                | ⚠️ niche; relies on llms.txt priming                  |
 
@@ -75,7 +77,8 @@ Outside that niche, raw signals are the better engineering choice — and Signal
 
 - Your state fits in one or two `signal()`s. (Use them.)
 - You need exactly one async fetch. (Use `resource`.)
-- You can't justify an ~8.5 KB dependency for the batteries you'd actually use.
+- You can't justify a 5.79-9.40 KB dependency for the batteries you'd actually
+  use (`node tools/size-report.mjs`).
 - You value zero-dependency longevity over the boilerplate savings.
 
 ---

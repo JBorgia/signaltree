@@ -152,6 +152,8 @@ the `structuredClone` a hand-rolled history performs on the same data is
 
 ### The retraction
 
+<!-- measured: describes timer granularity in a harness that was fixed (100 yields at ~1 ms of setTimeout(0) floor). It is a property of setTimeout, not of any library, and there is no generator for it. -->
+
 The first version of this harness measured SignalTree **doing nothing**:
 
 ```
@@ -237,6 +239,8 @@ one.
 
 ### What this is worth, as arithmetic rather than measurement
 
+<!-- measured: NOTHING. The figures in this section are arithmetic from the invalidation counts above, using a stated per-render assumption. The section says so in its own body. There is no generator because nothing here was measured. -->
+
 A signal read is tens of nanoseconds; an Angular component re-render is
 microseconds to milliseconds. At 1,000 rows and a conservative 10 µs per render,
 one change costs ~10 µs of rendering with granular invalidation and ~10 ms
@@ -245,6 +249,8 @@ arithmetic from the invalidation counts above, **not** something this harness
 measured.
 
 ### An attempt to price it in time, and why it failed
+
+<!-- measured: a discarded run, recorded because it failed. The harness read every consumer after every write, which is not what a framework does, so these numbers describe the broken harness rather than the libraries. Kept as a record of the mistake; do not quote them. -->
 
 Timing 200 writes with 1,000 live consumers attached gave signaltree 29.6 ms,
 elf 31.3 ms and `@ngrx/signals` 13.0 ms — i.e. the arm with the WORST
@@ -259,6 +265,8 @@ Measuring this properly needs a real Angular render loop, which is not something
 a Node harness can stand in for.
 
 ## Reading these honestly
+
+<!-- measured: node --expose-gc tools/bench-compare.mjs -->
 
 **What this does not show.** `@ngrx/store`, `@ngxs/store` and Akita are absent —
 they need an Angular JIT bootstrap to construct, and standing up a full Angular
@@ -330,6 +338,8 @@ it. That is a real distinction and it is smaller than a benchmark table makes it
 look.
 
 ## What to claim
+
+<!-- measured: node --expose-gc tools/bench-compare.mjs; retained memory via tools/memory-compare.mjs and docs/architecture/memory-profile.md -->
 
 - ✅ **Against `@ngrx/signals`: granular by default, 1 invalidation vs 1,000.**
   The clearest and most defensible claim in this document, and the comparison

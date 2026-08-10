@@ -98,6 +98,8 @@ The backstop is affordable because the change check is a snapshot REFERENCE
 comparison. `tree()` returns the identical object when nothing changed and a
 new one when something did, so "did anything happen" is O(1) and exact:
 
+<!-- measured: point-in-time, when the clone-and-diff was replaced. The "before" arm no longer exists in the codebase, so this cannot be re-run without reconstructing it; the reference-compare column is the shipping behaviour. Recorded as the justification for the change, not as a live benchmark. -->
+
 |                                  | idle poll                             |
 | -------------------------------- | ------------------------------------- |
 | the clone-and-diff this replaced | 32.5µs (100 branches) · 122.8µs (400) |
