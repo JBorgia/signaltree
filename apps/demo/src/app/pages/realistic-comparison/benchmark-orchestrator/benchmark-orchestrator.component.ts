@@ -686,34 +686,37 @@ export class BenchmarkOrchestratorComponent
   });
 
   // Mapping of test scenarios to the enhancers the benchmark service actually
-  // applies. It claims to reflect the service, so it has to — and it did not.
-  // It named four enhancers a consumer cannot use, in two different ways:
+  // applies. It claims to reflect the service, so it has to. Keep it in step
+  // with the switch in `signaltree-benchmark.service.ts` — the two are
+  // duplicated data and have drifted apart before.
   //
-  //   memoization / shallowMemoization / lightweightMemoization
-  //       Do not exist at all. The tiers were unified and then removed in
-  //       9.0.0/9.0.1; core memoises materialisation itself now.
-  //   highPerformanceBatching
-  //       DOES exist — `packages/core/src/enhancers/batching/batching.ts:413`
-  //       — but reaches no published entry point: not the root barrel, not any
-  //       of the six subpaths in package.json exports. Exported in source,
-  //       unreachable from outside. `dead-exports` does not flag it because an
-  //       internal import counts as reachability there.
+  // The service handles four names: batching, highPerformanceBatching,
+  // serialization, timeTravel. An unrecognised name falls through the switch
+  // silently, which is how three dead ones survived here: `memoization`,
+  // `shallowMemoization` and `lightweightMemoization`, whose tiers were unified
+  // and then removed in 9.0.0/9.0.1 when core took over memoising
+  // materialisation. Those are gone from this map.
   //
-  // `signaltree-benchmark.service.ts` applies exactly three: batching(),
-  // serialization(), timeTravel(). Anything else here would be advertising an
-  // import that fails.
+  // `highPerformanceBatching` is NOT one of them — it is real and the service
+  // does apply it. Note where it comes from: the service defines it locally as
+  // `batching({ enabled: true, notificationDelayMs: 0 })`, because core exports
+  // the function (`enhancers/batching/batching.ts:413`) but does not put it on
+  // the root barrel or any of the six subpaths in package.json exports. A demo
+  // that has to re-implement a preset core already has is the visible symptom
+  // of that gap; `dead-exports` cannot see it, because an internal import
+  // satisfies its reachability test.
   private scenarioEnhancerMap: Record<string, string[]> = {
     // Core performance benchmarks
     'deep-nested': ['batching'],
-    'large-array': ['batching'],
+    'large-array': ['highPerformanceBatching'],
     'computed-chains': ['batching'],
-    'batch-updates': ['batching'],
+    'batch-updates': ['highPerformanceBatching'],
     'selector-memoization': [],
-    serialization: ['serialization', 'batching'],
+    serialization: ['serialization', 'highPerformanceBatching'],
     'concurrent-updates': ['batching'],
     'memory-efficiency': ['batching'],
     'data-fetching': ['batching'],
-    'real-time-updates': ['batching'],
+    'real-time-updates': ['highPerformanceBatching'],
     'state-size-scaling': ['batching'],
 
     // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
