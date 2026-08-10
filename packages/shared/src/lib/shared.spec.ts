@@ -1,5 +1,5 @@
 import { deepClone } from './deep-clone.js';
-import { deepEqual, equal } from './deep-equal.js';
+import { deepEqual } from './deep-equal.js';
 import { isBuiltInObject } from './is-built-in-object.js';
 import { LRUCache } from './lru-cache.js';
 import {
@@ -52,13 +52,12 @@ describe('Shared utilities', () => {
     });
   });
 
-  describe('deepEqual / equal', () => {
+  describe('deepEqual', () => {
     it('returns true for deeply equal structures', () => {
       const a = { foo: ['bar', { baz: 42 }], date: new Date('2020-01-01') };
       const b = { foo: ['bar', { baz: 42 }], date: new Date('2020-01-01') };
 
       expect(deepEqual(a, b)).toBe(true);
-      expect(equal(a, b)).toBe(true);
     });
 
     it('returns false when nested values differ', () => {

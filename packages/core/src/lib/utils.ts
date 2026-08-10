@@ -120,7 +120,11 @@ function pruneUncached<T>(snapshot: T, liveNode: unknown): T {
     // Recurse only into branches — a leaf's value cannot carry the mark.
     if (isNodeAccessor(liveChild) || isTraversableNode(liveChild)) {
       const child = (snapshot as Record<string, unknown>)[key];
-      if (child !== null && typeof child === 'object' && !Array.isArray(child)) {
+      if (
+        child !== null &&
+        typeof child === 'object' &&
+        !Array.isArray(child)
+      ) {
         const pruned = pruneUncached(child, liveChild);
         if (pruned !== child) {
           copy ??= { ...(snapshot as Record<string, unknown>) };
@@ -142,7 +146,9 @@ const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
  */
 
 export { deepEqual };
-export { deepEqual as equal };
+// `export { deepEqual as equal }` was REMOVED in 15.0.0. See
+// shared/src/lib/deep-equal.ts for why: `equal` is the OPTION key throughout the
+// library and cannot also be a function export.
 export { isBuiltInObject };
 export { parsePath };
 

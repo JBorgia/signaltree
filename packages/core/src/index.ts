@@ -269,10 +269,7 @@ export {
 // branded `LoaderFeature` it returns is the only static reference to `attachLoader`.
 export { loader, type LoaderOptions } from './lib/markers/loader';
 export type { LoaderFeature } from './lib/types';
-export type {
-  LoadingEntityMapMarker,
-  LoadingEntitySignal,
-} from './lib/types';
+export type { LoadingEntityMapMarker, LoadingEntitySignal } from './lib/types';
 
 // Async-stream marker — DELETED in 14.0.0, along with its implementation and
 // tests. It sat here unexported for several releases while the API question (a
@@ -295,9 +292,8 @@ export type {
 
 export {
   // Core utilities - Primary helper functions
-  equal,
+  // `equal` (an alias of `deepEqual`) was removed in 15.0.0 — see deep-equal.ts.
   deepEqual,
-
   toWritableSignal,
   // isNodeAccessor / isAnySignal / isTraversableNode / isBuiltInObject /
   // parsePath moved to '@signaltree/core/authoring' in 14.0.0 — you reach for a
@@ -444,4 +440,3 @@ export { isDev } from './lib/constants';
  * store.$.users.addOne({ id: 1, name: 'Alice' });
  * ```
  */
-

@@ -124,7 +124,9 @@ function loadEntryPointExports() {
     entries[subpath] = parseDtsExports(fs.readFileSync(dtsPath, 'utf8'));
   }
   if (!entries['']) {
-    console.error('Could not resolve the root entry point from dist package.json.');
+    console.error(
+      'Could not resolve the root entry point from dist package.json.'
+    );
     process.exit(2);
   }
   return entries;
@@ -212,7 +214,10 @@ const GOLDEN_API = [
   { name: 'timeTravel', entry: '' },
   { name: 'persistence', entry: '' },
   { name: 'serialization', entry: '' },
-  { name: 'equal', entry: '' },
+  // `equal` was an ALIAS of `deepEqual` and was removed in 15.0.0 — one
+  // operation, one name, and `equal` is the OPTION key throughout the library
+  // (`linked({ equal })`, `compared(value, equal)`, `entityMap({ equal })`).
+  { name: 'deepEqual', entry: '' },
   { name: 'LoadingState', entry: '' },
   // documented subpaths
   { name: 'security', entry: '/security' },
@@ -271,14 +276,18 @@ function selfTest(entryExports) {
   };
 
   // Parser sanity — if these fail the whole gate is measuring nothing.
-  expect("root barrel exports 'signalTree'", entryExports[''].has('signalTree'));
+  expect(
+    "root barrel exports 'signalTree'",
+    entryExports[''].has('signalTree')
+  );
   expect(
     "root barrel does NOT export 'createIndexedDBAdapter' (it lives at /storage)",
     !entryExports[''].has('createIndexedDBAdapter')
   );
   expect(
     "/storage barrel exports 'createIndexedDBAdapter'",
-    entryExports['/storage'] && entryExports['/storage'].has('createIndexedDBAdapter')
+    entryExports['/storage'] &&
+      entryExports['/storage'].has('createIndexedDBAdapter')
   );
 
   // Canonical historical bug, reintroduced in a fixture (NOT the real file):
@@ -297,14 +306,20 @@ function selfTest(entryExports) {
     "```typescript\nimport { createQuantumAdapter } from '@signaltree/core';\n```",
     entryExports
   );
-  expect('reverse diff flags a phantom import', phantom.violations.length === 1);
+  expect(
+    'reverse diff flags a phantom import',
+    phantom.violations.length === 1
+  );
 
   // Non-existent subpath.
   const badSubpath = auditImportClaims(
     "```typescript\nimport { signalTree } from '@signaltree/core/quantum';\n```",
     entryExports
   );
-  expect('reverse diff flags a non-existent subpath', badSubpath.violations.length === 1);
+  expect(
+    'reverse diff flags a non-existent subpath',
+    badSubpath.violations.length === 1
+  );
 
   // Control: a correct import must NOT be flagged.
   const control = auditImportClaims(
@@ -337,7 +352,9 @@ function selfTest(entryExports) {
   );
 
   if (failed > 0) {
-    console.error(`\n❌ SELF-TEST FAILED (${failed}) — the gate cannot be trusted`);
+    console.error(
+      `\n❌ SELF-TEST FAILED (${failed}) — the gate cannot be trusted`
+    );
     process.exit(1);
   }
   console.log('\n✅ Self-test passed — gate demonstrably able to fail');
@@ -352,7 +369,9 @@ function main() {
   const entryExports = loadEntryPointExports();
 
   if (process.argv.includes('--self-test')) {
-    console.log('🧪 verify-taught-symbols --self-test (negative test, RFC 0004 §5 rule 2)\n');
+    console.log(
+      '🧪 verify-taught-symbols --self-test (negative test, RFC 0004 §5 rule 2)\n'
+    );
     selfTest(entryExports);
     return;
   }
@@ -363,7 +382,9 @@ function main() {
   }
   const docText = fs.readFileSync(LLMS_FULL, 'utf8');
 
-  console.log('🔍 Verifying taught symbols against built @signaltree/core d.ts\n');
+  console.log(
+    '🔍 Verifying taught symbols against built @signaltree/core d.ts\n'
+  );
 
   const imports = auditImportClaims(docText, entryExports);
   console.log(
@@ -379,7 +400,9 @@ function main() {
 
   const total = imports.violations.length + golden.length;
   if (total > 0) {
-    console.error(`\n❌ TAUGHT-SYMBOL VERIFICATION FAILED (${total} violation(s))`);
+    console.error(
+      `\n❌ TAUGHT-SYMBOL VERIFICATION FAILED (${total} violation(s))`
+    );
     console.error(
       'Either the doc teaches an API that does not exist (fix llms-full.txt) ' +
         'or an API was removed/moved without a doc pass (fix the docs or the export).'
@@ -392,7 +415,9 @@ function main() {
         'KNOWN_UNSHIPPED — burn these down in the RFC 0004 step-8 doc pass.'
     );
   }
-  console.log('\n✅ All taught symbols exist; all golden symbols exported AND taught');
+  console.log(
+    '\n✅ All taught symbols exist; all golden symbols exported AND taught'
+  );
   process.exit(0);
 }
 

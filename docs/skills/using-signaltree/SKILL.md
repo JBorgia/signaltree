@@ -91,7 +91,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 
 <!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
 
-`@signaltree/core` has **34 symbols**. `@signaltree/core/authoring` has **39**, grouped as: reader allowlists (8), marker brands (3), marker type guards (6), other type guards (5), marker authoring (4), enhancer authoring (4), write-path plumbing (4), observation hooks (2), constants (2), other (1).
+`@signaltree/core` has **33 symbols**. `@signaltree/core/authoring` has **39**, grouped as: reader allowlists (8), marker brands (3), marker type guards (6), other type guards (5), marker authoring (4), enhancer authoring (4), write-path plumbing (4), observation hooks (2), constants (2), other (1).
 
 <!-- END GENERATED: api-entry-points -->
 

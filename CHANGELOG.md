@@ -17,6 +17,15 @@
 - **`removeAll()` is removed from `entityMap`.** It was a pure alias — its body was
   `api.clear()`. Use `clear()`. One operation, one name.
 
+- **`equal` is removed from `@signaltree/core` and `@signaltree/shared`.** It was a
+  literal alias — `shared/src/lib/deep-equal.ts` read `export const equal = deepEqual;`
+  and the two were the identical function object. Import `deepEqual`.
+
+  Removed rather than kept because the word was doing two jobs: `equal` is also the
+  OPTION key throughout the library — `linked({ equal })`, `compared(value, equal)`,
+  `entityMap({ load, equal })` — where it means "your comparator," not "deep equality."
+  One word cannot mean both.
+
 ### Added
 
 - **`replaceOne(id, entity)`** on `entityMap` — the missing half of `updateOne`.

@@ -15,7 +15,7 @@ import { hydrateMarkerNode } from './internals/materialize-markers';
 import { getActiveWriteContext } from './write-context';
 import { getPathNotifier } from './path-notifier';
 import {
-  equal,
+  deepEqual,
   isBuiltInObject,
   isTraversableNode,
   markTreeStore,
@@ -89,7 +89,7 @@ function isEntityMapMarker(
 // =============================================================================
 
 function createEqualityFn(useShallowComparison: boolean) {
-  return useShallowComparison ? Object.is : equal;
+  return useShallowComparison ? Object.is : deepEqual;
 }
 
 function estimateObjectSize(

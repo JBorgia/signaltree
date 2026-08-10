@@ -203,7 +203,7 @@ Published entry points (from `package.json` `exports`): `@signaltree/core` plus 
 
 <!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
 
-- `@signaltree/core` — **34 symbols** (the app surface)
+- `@signaltree/core` — **33 symbols** (the app surface)
 - `@signaltree/core/authoring` — **39 symbols**:
 
   - reader allowlists (8): `ASYNC_QUERY_READERS`, `ASYNC_SOURCE_READERS`, `ENTITY_LOADER_READERS`, `ENTITY_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STATUS_READERS`, `STORED_READERS`
@@ -217,9 +217,9 @@ Published entry points (from `package.json` `exports`): `@signaltree/core` plus 
   - constants (2): `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`
   - other (1): `parsePath`
     <!-- END GENERATED: api-entry-points -->
-    **Measured impact.** All figures are a **production build** (`ngDevMode: false`),
-    own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
-    `node tools/check-bundle-budget.mjs`.
+        **Measured impact.** All figures are a **production build** (`ngDevMode: false`),
+        own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
+        `node tools/check-bundle-budget.mjs`.
 
 - Bare `signalTree` (no markers/enhancers): **5.79 KB**
 - A tree using a plain `entityMap()`: **9.40 KB**
