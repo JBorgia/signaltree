@@ -58,6 +58,10 @@ export class WhatsNew14Component {
   readonly tree = signalTree({
     rows: entityMap<Row, string>({ selectId: (r) => r.id }),
     note: 'edit me',
+    // Sealing counter. A collection mutation does NOT create a history entry —
+    // only a tree/branch write does — so a bulk import needs a root write after
+    // it to record one entry holding the finished result.
+    imports: 0,
   }).with(
     timeTravel({
       maxHistorySize: 50,
@@ -140,7 +144,22 @@ export class WhatsNew14Component {
     this.tree.$.rows.changeId(first.id, `srv-${first.id}`);
   }
 
-  /** A bulk import should be ONE undo step, not a hundred. */
+  /**
+   * A bulk import should be ONE undo step, not a hundred — and pausing ALONE
+   * does not achieve that. It achieves zero.
+   *
+   * This method used to pause, add all 25, and resume. Nothing was recorded, so
+   * the newest history entry still described the state BEFORE the import:
+   * `undo()` stepped back past it to the state before THAT, and the 25 rows
+   * became unreachable with `canRedo()` false. The comment above it claimed the
+   * opposite, and the page shipped that way.
+   *
+   * The seal is a ROOT write after `resumeRecording()`, which records one entry
+   * holding the finished import. It cannot be another `addOne`: collection
+   * mutations do not create history entries at all — only tree/branch writes do.
+   * Snapshots still CARRY collections, so the recorded entry holds all 25 rows
+   * and undo/redo round-trips them.
+   */
   bulkImport(): void {
     this.tree.pauseRecording();
     for (let i = 0; i < 25; i++) {
@@ -151,6 +170,10 @@ export class WhatsNew14Component {
       });
     }
     this.tree.resumeRecording();
+    // The sealing write must be a ROOT write. Sealing with another `addOne`
+    // does not work: collection mutations never record an entry, which is the
+    // same reason pausing was not the whole story.
+    this.tree({ imports: this.tree.$.imports() + 1 });
   }
 
   undo(): void {
