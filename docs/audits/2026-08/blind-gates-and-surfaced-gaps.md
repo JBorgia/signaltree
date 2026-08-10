@@ -21,6 +21,11 @@ restore), git archaeology (`git log -L`, `merge-base --is-ancestor`), a full
 
 ## 1. Headline: two gates are BLIND, and one of them was blinded by this session's own fix
 
+**RESOLVED by `04138f73` — the self-test now reports 34/34 gates proven able
+to fail.** The history below records the original finding and how each blind
+gate was closed; the current state is verified in §12's resolution notes. As
+written at the time:
+
 The self-test (`node tools/verify-gates.mjs --self-test`) reports
 **30/33 gates proven able to fail, 2 BLIND, 1 unproven.** The two BLIND gates
 are not cosmetic:
@@ -435,13 +440,32 @@ stated scope but worth recording:
    exceeded"; exported-const and bare forms correctly shown to be non-fixes]**
 2. **Fix `lint:budget` self-test** — restore a non-exported mutation (produces a
    `no-unused-vars` **error**, immune to baseline slack) **first**; tighten the
-   baseline with `--update` as a one-shot stopgap. **(pre-existing)** **[defect
-   demonstrated; fix not tested]**
+   baseline with `--update` as a one-shot stopgap. **(pre-existing)** **[FIX
+   TESTED — `04138f73` committed a `debugger` statement as the mutation
+   (1 ERROR, name-independent); the `no-unused-vars` route also fires — see the
+   confound note below]**
    2a. **Make the lint ratchet self-tightening** (per Q7) — fail the gate when the
    live count is _below_ baseline, so every improvement forces an `--update` and
    headroom can never silently reaccumulate. This is the durable version of the
    `--update` stopgap, and it aligns `lint:budget` with `check-numeric-claims`'s
    drop behavior.
+
+   **`04138f73`'s "no-unused-vars does not fire" claim was itself confounded —
+   do not record it as fact.** The collaborator's tests used underscore-prefixed
+   names (`__gateMutation`), and `eslint.config.mjs` configures
+   `@typescript-eslint/no-unused-vars` as an **error** with
+   `varsIgnorePattern: '^_'` (the documented escape convention, ~line 152). Any
+   `^_` name is invisible to the rule. Measured against the real `utils.ts`
+   (baseline: 10 warnings / 0 errors):
+   - non-exported **underscore** fn (`__gateMutation`) → **0 errors** (ignored
+     via `^_`) — this is what the collaborator saw;
+   - non-exported **non-underscore** fn (`gateMutation`) → **1 ERROR**
+     (`no-unused-vars`) — this is what §7.2's original recommendation produces.
+   So the recommendation was right as written; the original mutation was doubly
+   broken (exported, so "public API" and not unused, **and** underscore-prefixed).
+   The committed `debugger` fix is the better one — it fires on any name and is
+    immune to a future rename — but its *reasoning* must not be read back as "the
+    rule does not fire". The rule fires; `^_` is the escape hatch.
 3. **Fix the `numeric-claims:self` harness bookkeeping** — set a default
    `unproven` message in the harness (generic fix, any future gate in this state),
    and add a real mutation on `check-numeric-claims.mjs` (per-gate wiring). Stop
@@ -1363,11 +1387,17 @@ measurement, which needs a render-pass harness that still does not exist.
 
 ---
 
-## C5 in flight — stop before this lands
+## C5 in flight — RESOLVED, and the confound is confirmed
 
-You are about to write "raw per-field signals win the small store" into a tool
-verdict, on a ~31ns/consumer gap. I tried to reproduce it and could not. Before
-you publish it, three questions — the first is the one that matters.
+This section was written as an open challenge to the collaborator before a ~31ns
+verdict landed. The collaborator has since **accepted it wholesale** (`04138f73`):
+independent re-measurement on their side converged to the same alternating
+result, and their commit message records "C5: we independently converged — the
+tool interleaves, the verdict is parity (tie)." The section stays verbatim
+because the Q37-Q39 questions are what produced the convergence; this header
+replaces the stop-the-line warning with the recorded outcome.
+
+The three questions, answered:
 
 > **Q37 — are your two arms measured under the same JIT and GC state?** > `bench-raw-signals.mjs` measures each arm in its own `probe()` call, with its
 > own warmup, one after the other. Re-measure ALTERNATING — `raw, tree, raw,
