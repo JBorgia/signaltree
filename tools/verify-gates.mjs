@@ -593,6 +593,15 @@ const GATES = [
     covers:
       'the catalogue checker detects a removed code AND reports the catalogue in sync without the probe',
     cmd: ['node', 'tools/check-error-codes.mjs', '--self-test'],
+    // Blind the code pattern. The scanner then finds no codes at all, so its
+    // self-test cannot notice the one it deletes from the catalogue — a
+    // `:self` gate with no mutation is skipped, and the harness would credit
+    // `error-codes` as "proven via error-codes:self" on a proof that never ran.
+    mutation: {
+      file: 'tools/check-error-codes.mjs',
+      find: 'const CODE =',
+      replace: 'const CODE = /(?!)/g; const __unusedCode =',
+    },
   },
   {
     name: 'api-surface',
@@ -631,6 +640,14 @@ const GATES = [
     covers:
       'the link checker flags a missing target AND reports the repo clean without one',
     cmd: ['node', 'tools/check-doc-links.mjs', '--self-test'],
+    // Make every target look resolvable. The self-test then plants a link to a
+    // missing file and sees nothing wrong, which is exactly the failure a
+    // `:self` gate exists to rule out.
+    mutation: {
+      file: 'tools/check-doc-links.mjs',
+      find: 'ok: existsSync(resolved),',
+      replace: 'ok: true,',
+    },
   },
   {
     name: 'publish-artifacts',

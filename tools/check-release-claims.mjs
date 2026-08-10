@@ -86,7 +86,29 @@ function resolveBase() {
     .split('\n')
     .map((t) => t.trim())
     .filter((t) => /^v\d+\.\d+\.\d+/.test(t));
-  const base = tags.find((t) => t !== `v${current}`);
+
+  /**
+   * A STABLE release diffs against the last STABLE tag, not against its own
+   * release candidate.
+   *
+   * The rule used to be "the highest tag that is not the current version",
+   * which for 14.0.0 resolved to v14.0.0-rc.1. Everything in 14.0.0 had already
+   * shipped in that rc, so the delta was empty and this gate — the only one that
+   * runs API -> claim — covered NOTHING at the exact moment it mattered most.
+   * `verify-gates --self-test` caught that honestly: it reported the gate BLIND
+   * because deleting a shipped capability from the priming file no longer failed
+   * it.
+   *
+   * The question a release gate should answer is "what reaches a user upgrading
+   * from the last version they could install", so prereleases OF THE CURRENT
+   * VERSION are skipped. A prerelease still diffs against whatever came before
+   * it, which is correct for an rc.
+   */
+  const isPrerelease = /-/.test(current);
+  const candidates = isPrerelease
+    ? tags.filter((t) => t !== `v${current}`)
+    : tags.filter((t) => t !== `v${current}` && !t.startsWith(`v${current}-`));
+  const base = candidates[0];
   if (!base) {
     console.error('No prior version tag found to diff against.');
     process.exit(1);
