@@ -54,14 +54,21 @@ that exists, these stay labelled as estimates.
 
 ### Weight categories
 
-| Weight Range  | Usage Frequency           | Examples                                          |
-| ------------- | ------------------------- | ------------------------------------------------- |
-| **2.5 - 3.0** | Very High (80%+ apps)     | Selectors, deep nested updates, production setups |
-| **2.0 - 2.4** | High (65-80% apps)        | Computed chains, async workflows, batch updates   |
-| **1.5 - 1.9** | Medium-High (50-65% apps) | Large arrays, memory efficiency                   |
-| **1.0 - 1.4** | Normal (30-50% apps)      | Single middleware, basic operations               |
-| **0.5 - 0.9** | Low (15-30% apps)         | Serialization, multiple middleware                |
-| **0.1 - 0.4** | Rare (5-15% apps)         | Time-travel, advanced debugging                   |
+| Weight Range  | Judged frequency | Examples                                          |
+| ------------- | ---------------- | ------------------------------------------------- |
+| **2.5 - 3.0** | Very high        | Selectors, deep nested updates, production setups |
+| **2.0 - 2.4** | High             | Computed chains, async workflows, batch updates   |
+| **1.5 - 1.9** | Medium-high      | Large arrays, memory efficiency                   |
+| **1.0 - 1.4** | Normal           | Basic operations                                  |
+| **0.5 - 0.9** | Low              | Serialization                                     |
+| **0.1 - 0.4** | Rare             | Time-travel, advanced debugging                   |
+
+The bands are ordinal, not quantitative. This column previously read "80%+
+apps", "65-80% apps" and so on down to "5-15% apps" — prevalence figures precise
+to five percentage points, sourced from the analysis described above that does
+not exist. Removing the citation while keeping the percentages would have been
+worse than leaving both, so the percentages went too. The middleware examples
+went with them: middleware was removed in 14.0.0.
 
 ## 🏗️ Implementation Architecture
 
