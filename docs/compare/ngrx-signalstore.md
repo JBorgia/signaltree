@@ -263,27 +263,51 @@ measured a 7.5x phantom that moved when an _unrelated_ arm was added). Each
 library uses its own best idiom for the same user-facing outcome, `@ngrx/signals`
 21.1, Node 24.3:
 
-| Task                                   | SignalTree | SignalStore |                  |
-| -------------------------------------- | ---------- | ----------- | ---------------- |
-| Write one field 10 levels deep         | 0.02 µs    | 1.22 µs     | **65.9x faster** |
-| Update 1 row of 50k + dependent read   | 1.97 µs    | 44.81 µs    | **22.8x faster** |
-| Write, then read whole state 10x       | 1.68 µs    | 0.71 µs     | **2.4x slower**  |
-| 50 writes with undo history (50k rows) | 1.34 µs    | —           | no equivalent    |
+Reproduce with `node tools/bench-vs-signalstore.mjs`.
+
+| Task                                 | SignalTree | SignalStore |                                    |
+| ------------------------------------ | ---------- | ----------- | ---------------------------------- |
+| Write one field 10 levels deep       | 0.011 µs   | 1.219 µs    | ~100x faster                       |
+| Update 1 row of 50k + dependent read | 0.51 µs    | 743 µs      | a SHAPE, not a ratio — see below   |
+| Write, then read whole state 10x     | 0.73 µs    | 2.60 µs     | **NOISE — spread exceeds the gap** |
+| 50 writes with undo history          | 0.34 µs    | 295 µs      | no history primitive exists        |
 
 The shape of this is the architecture, not tuning. SignalTree writes one leaf and
 rebuilds nothing above it; SignalStore rebuilds the object graph along the path to
 the change and hands you a whole new state value.
 
-That trade wins the write and gives back a little on the whole-state read — a
-POJO store returns its state **by reference**, which SignalTree cannot, because no
-plain object exists until one is built. At ~1 µs per write-then-read cycle on a
-50,000-row tree it is not a number to design around; `tree()` is memoised since
-13.5.0, so repeated reads between writes are free and only the root rebuild
-remains.
+### The single-entity row is a complexity difference, so no ratio describes it
+
+| collection | SignalStore `updateEntity` | SignalTree `updateOne` |
+| ---------- | -------------------------- | ---------------------- |
+| 1,000      | 8.6 µs                     | 0.44 µs                |
+| 10,000     | 75.2 µs                    | 0.30 µs                |
+| 50,000     | 908 µs                     | 0.35 µs                |
+
+SignalStore is **linear** — `updateEntity` rebuilds the entity map, which is
+O(keys), and this uses `@ngrx/signals/entities`, its own best idiom, not a naive
+`.map()`. SignalTree is **flat**: one signal per entity, so a write touches one.
+
+Quote that. A multiplier here is a statement about the fixture — it runs from
+~15x at 1,000 rows to ~1,900x at 50,000 — and picking one is the mistake ST2018
+was corrected for elsewhere in this repo.
+
+### The row we used to concede, and now cannot
+
+The table above previously reported the whole-state read as **2.4x slower** for
+SignalTree, and reasoned from it: a POJO store returns state by reference, which
+SignalTree cannot, because no plain object exists until one is built. The
+reasoning is still sound. The measurement is not — re-run with interleaved arms
+it comes out as **noise**, with the SignalStore arm's own round-to-round spread
+(±6.2 µs) larger than the gap between the two.
+
+That is not a SignalTree win. It is an absence of a result, and it is recorded
+here rather than quietly deleted, because a concession that turns out to be
+unmeasured is exactly as wrong as a boast that does.
 
 **The collection result depends entirely on using `entityMap`.** Modelling the
 same collection as a plain array leaf measures 49.80 ms against SignalStore's
-46.56 ms — parity, not 22.8x. Core warns about that shape at construction
+46.56 ms — parity, not orders of magnitude. Core warns about that shape at construction
 (ST2018), because nothing in the code makes it look like a 30x decision.
 
 Do not quote a benchmark that forces SignalTree to perform an immutable array
