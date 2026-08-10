@@ -146,10 +146,124 @@ steps.
 
 ---
 
-## What this audit did NOT cover
+## Pass 2 — the other packages
 
-Scoped to `@signaltree/core`'s tree and `entityMap` surfaces, which is where the
-duplication was expected. **Not examined:** the other seven packages' public surfaces,
-option/config key names (only `history` came up, and only because a defect led there),
-and type/interface names. If the naming pass is meant to be exhaustive, those are the
-remaining thirds.
+Extended 2026-08-10 on request. Method: import each built barrel and enumerate it;
+where the barrel could not be imported (unresolved `@signaltree/core` in
+`node_modules`, which links to source rather than `dist`), read the package's
+`src/index.ts` directly.
+
+### A correction to this document's own method
+
+Pass 2 initially grepped `export function|const|class|…` across every source file in
+each package and reported the results as public surface. **That over-reported badly.**
+`schema` looked like it leaked ~18 internals (`addBoundPath`, `dispatchLeafRun`,
+`routeWrite`, `collectOwnedLeaves`…) and `guardrails` like it exported seven
+`create*Tree` presets. Both barrels are in fact tiny:
+
+```
+schema/src/index.ts     → export { schemas } + types
+guardrails/src/index.ts → export { guardrails, rules } + types
+```
+
+A file-level `export` is not a public export. The corrected findings below come from
+barrels only. Recording the error because the same shortcut would misreport any
+package here.
+
+### Fixed: `equal` was an alias of `deepEqual`, in TWO packages
+
+`shared/src/lib/deep-equal.ts:266` read `export const equal = deepEqual;` — verified
+the identical function object (`core.equal === core.deepEqual` → `true`), re-exported
+by both core and shared.
+
+Removed, and the reason is stronger than "it is an alias": **the word was doing two
+jobs.** `equal` is the option key throughout the library —
+
+| Site                         | Meaning of `equal`                     |
+| ---------------------------- | -------------------------------------- |
+| `linked({ equal })`          | your comparator                        |
+| `compared(value, equal)`     | your comparator                        |
+| `entityMap({ load, equal })` | your scope comparator                  |
+| `export { equal }`           | **deep equality, a specific function** |
+
+One word, two meanings, and the option meaning has dozens of call sites. The export
+lost.
+
+One internal consumer existed that the first grep missed, because the pattern required
+`from '@signaltree` and the import was relative (`signal-tree.ts:18`). The build caught
+it. Worth noting as a method lesson: **a removal grep has to cover relative imports.**
+
+### `@signaltree/events` — the sharpest finding in the pass
+
+The package re-exports Zod as `z` and then **inverts Zod's own naming.** MEASURED
+against the built barrel with a real schema:
+
+|                     | valid input               | invalid input                     |
+| ------------------- | ------------------------- | --------------------------------- |
+| `validateEvent`     | returns the data          | **THROWS** `EventValidationError` |
+| `parseEvent`        | returns `{success, data}` | returns `{success:false, error}`  |
+| `isValidEvent`      | `true`                    | `false`                           |
+| _Zod's `parse`_     | _returns_                 | **_THROWS_**                      |
+| _Zod's `safeParse`_ | _returns a result_        | _returns a result_                |
+
+So `parseEvent` is the **safe** one and `validateEvent` is the **throwing** one —
+exactly backwards from `parse`/`safeParse` in the library it re-exports. A developer
+who knows Zod, which is the whole audience for a Zod-based event package, will predict
+the wrong behaviour from both names. All three take `(schema, event)` and wrap
+`safeParse`, so the three names are three return contracts over one operation.
+
+**Recommendation:** follow Zod. `parseEvent` throws, `safeParseEvent` returns a result,
+`isValidEvent` stays as the type guard. That is a breaking rename of two symbols and it
+removes a whole class of mistake.
+
+### `@signaltree/events` — `Id` vs `Key`, used interchangeably
+
+Four generators in the barrel, two suffixes, no rule:
+
+```
+generateEventId    generateCorrelationId
+generateIdempotencyKey    generateCorrelationKey
+```
+
+`generateCorrelationId` and `generateCorrelationKey` are the sharp pair — same noun,
+two suffixes, both public. Pick one suffix for "opaque generated string" and apply it
+to all four.
+
+### Cross-package name collisions
+
+| Name               | Where                                                                                          | Same thing?                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `deepEqual`        | core, shared                                                                                   | Yes — core re-exports shared's. Fine, and intentional.                                        |
+| `equal`            | core, shared                                                                                   | **Was an alias. Removed.**                                                                    |
+| `ConnectionState`  | `events/angular/websocket.service.ts:35` (a union type), `realtime/types.ts:22` (an interface) | **No — two different shapes, one name, both public**                                          |
+| `ConnectionStatus` | `realtime/types.ts:6` (an enum)                                                                | Sits beside realtime's own `ConnectionState`, so realtime has two connection nouns of its own |
+
+The `ConnectionState` collision is the one to fix: an app using both `@signaltree/events/angular`
+and `@signaltree/realtime` imports two incompatible types with one name.
+
+### `packages/enterprise/` is a dead directory
+
+Contains one file, `signaltree.code-workspace`. No `package.json`, no source, no build
+target. `@signaltree/enterprise` was REMOVED in 14.0.0 and this is the leftover. Delete
+it, or move the workspace file to the repo root where it would be found.
+
+---
+
+## Still not covered
+
+Pass 2 covered **public barrels and exported symbol names** across all seven packages.
+Two categories remain:
+
+1. **Config/option key names**, systematically. Three came up incidentally and all three
+   were problems — `history` (opt-in vs opt-out), `equal` (collided with an export),
+   `batchUpdates` (a config flag whose name matches the `batchUpdate` method it does not
+   control). That hit rate suggests a dedicated pass is worth it.
+2. **Type and interface names**, beyond the collisions above. `events` alone exports
+   ~70 types.
+
+   One lead was chased and **cleared**: `ErrorClassification` / `ClassificationResult`
+   looked like the same concept twice and is not — `ErrorClassification` is the category
+   union (`'transient' | 'permanent' | 'poison' | 'unknown'`) and `ClassificationResult`
+   wraps one of those with `retryConfig`, `sendToDlq` and `reason`
+   (`error-classification.ts:14,39`). Two concepts, two names, correct. Noted so the
+   next pass does not re-open it.

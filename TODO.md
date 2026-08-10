@@ -368,9 +368,32 @@ Still to do, in order:
 7. **`__timeTravel`** — enumerable on the public tree object, so serialisation, devtools
    and `{ ...tree }` all see it.
 
-**Not covered by that audit:** the other seven packages, config/option key names, and
-type/interface names. That is the remaining two thirds if the pass is meant to be
-exhaustive.
+### Pass 2 — the other packages (done; findings below are the work left)
+
+8. **`@signaltree/events` inverts Zod's naming, and re-exports Zod.** MEASURED:
+   `validateEvent` THROWS, `parseEvent` returns a result — backwards from `parse` /
+   `safeParse` in the library it ships as `z`. Rename: `parseEvent` throws,
+   `safeParseEvent` returns, `isValidEvent` unchanged.
+9. **`@signaltree/events` mixes `Id` and `Key`** for the same concept —
+   `generateCorrelationId` AND `generateCorrelationKey` are both public, beside
+   `generateEventId` and `generateIdempotencyKey`. Pick one suffix.
+10. **`ConnectionState` is two different public types.** A union in
+    `events/angular/websocket.service.ts:35`, an interface in `realtime/types.ts:22`.
+    An app using both packages imports one name for two incompatible shapes. Realtime
+    also has its own `ConnectionStatus` enum beside it.
+11. **`packages/enterprise/` is dead** — one stray `signaltree.code-workspace`, no
+    package.json, no source. `@signaltree/enterprise` was removed in 14.0.0. Delete the
+    directory or move the workspace file to the repo root.
+
+### Still uncovered
+
+- **Config/option key names**, systematically. Three surfaced incidentally and all
+  three were problems (`history` opt-in/opt-out, `equal` colliding with an export,
+  `batchUpdates` naming a flag that does not control `batchUpdate`). That hit rate
+  argues for a dedicated pass.
+- **Type/interface names** beyond the collisions above (~70 in `events` alone). One
+  lead was chased and cleared — `ErrorClassification`/`ClassificationResult` are two
+  real concepts, not a duplicate.
 
 ## 6. Re-score the 32-case time-travel audit — now for the opposite reason
 
