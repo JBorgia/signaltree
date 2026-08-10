@@ -1,6 +1,6 @@
 {
   "apps/demo/public/llms-full.txt": 21,
-  "apps/demo/public/llms.txt": 4,
+  "apps/demo/public/llms.txt": 2,
   "docs/compare/capability-matrix.md": 4,
   "docs/compare/native-signals.md": 2,
   "docs/compare/ngrx-signalstore.md": 16,

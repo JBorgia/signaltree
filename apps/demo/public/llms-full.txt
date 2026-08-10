@@ -1520,6 +1520,37 @@ Every warning carries a stable `[ST####]` code; full map in
   a shopping cart. Use `transient: true` to drop it from persistence too.
 - **[ST2030]** `@signaltree/guardrails` could not copy a container in state. Guardrails answers "did anything change" from snapshot REFERENCE identity — exact and O(1), because `tree()` returns the identical object when nothing changed. The one thing that escapes it is a container mutated IN PLACE (`tree.$.rows().push(x)` notifies nothing), so it copies each array/`Map`/`Set`/`Date` and re-checks those. `structuredClone` throws on a function or class instance, so a container holding one keeps its SHAPE watched (length/size changes still caught) but not its contents. Scoped to that container; nothing else is affected. Contents watching is budgeted in aggregate (5,000 elements tree-wide), not per container, because what costs time per poll is the sum.
 
+### SSR and `TransferState` — `deserialize(json, { transfer: true })` (14.0.0+)
+
+Server state reaches the client through the `serialization()` enhancer
+(+1.84KB gzip). Server: `ts.set(KEY, tree.serialize())`. Client, during
+bootstrap and BEFORE first render:
+`tree.deserialize(ts.get(KEY, '{}'), { transfer: true })`.
+
+The flag decides whether the payload is kept. A marker that owns a live source —
+`asyncSource`, or an `entityMap` with a `loader()` — has to judge whose data is
+fresher, and that depends on where the payload came from. Both cross a process
+boundary:
+
+- `localStorage`: hours or days old, the local loader will fetch better → decline.
+- the server: milliseconds old, the local loader has NOT run → **accept**.
+
+Without the flag `deserialize()` assumes storage and declines, so the bytes
+travel into the HTML and the client refetches: **54.3KB shipped for nothing on a
+500-row collection** (`node tools/bench-ssr-payload.mjs`). If you also restore
+from storage, call THAT one without the flag — different payloads, different
+answers.
+
+What `transfer` deliberately does not change: an in-flight `LOADING` status is
+still normalised to `NotLoaded` (nothing is running in this process, and
+believing otherwise deadlocks every idle-gated guard), and a form's `touched` is
+still not restored (that objection is half-restoration, not staleness).
+Freshness is an argument about DATA.
+
+Payload is inlined into the page and linear: 100/1,000/10,000 rows =
+11/109/1120KB. Transfer a first page, or mark the collection `transient: true`.
+Full recipe and caveats: `docs/guides/ssr-and-hydration.md`, RFC 0014.
+
 ## Resources
 
 - Repo: https://github.com/JBorgia/signaltree

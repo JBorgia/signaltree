@@ -2,6 +2,26 @@
 
 ### BREAKING
 
+- **`HydrateMode` gains a fourth value, `transfer`**, and `deserialize()` gains
+  `{ transfer: true }`. Additive at runtime, but listed here because anyone who
+  switches on `HydrateMode` exhaustively now has a case to handle.
+
+  `rehydrate` covered two situations that want OPPOSITE answers. A
+  `localStorage` payload may be days old and the local loader will fetch
+  something better, so a source-owning marker is right to decline it. A server
+  payload was fetched milliseconds ago and the local loader has NOT run, so
+  declining it ships the bytes into the page and refetches anyway — measured at
+  **54.3KB wasted on a 500-row collection**
+  (`node tools/bench-ssr-payload.mjs`). `asyncSource` and loader-backed
+  `entityMap` now ACCEPT under `transfer` and still decline under `rehydrate`.
+
+  Deliberately unchanged under `transfer`: an in-flight `LOADING` status is
+  still normalised, and a form's `touched` is still not restored. Freshness is
+  an argument about DATA — not about believing a request is in flight in a
+  process where nothing runs, nor about resurrecting interaction state without
+  the focus and cursor that gave it meaning. RFC 0014;
+  `docs/guides/ssr-and-hydration.md`.
+
 - **`deepEqual` is stricter about object identity.** The default leaf
   comparator now gates on `a.constructor !== b.constructor` instead of
   comparing prototypes and `Object.prototype.toString` tags. Four pairs that

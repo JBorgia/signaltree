@@ -322,7 +322,28 @@ for (const dir of pkgDirs) {
 // otherwise dump every field it has ever had into the delta as "new" — the
 // members did not change, the type's visibility did, and the type name is
 // already in the diff at the right granularity.
+/**
+ * Members are compared only for types present in BOTH revisions.
+ *
+ * For a type that is NEW this release every member is trivially new, so
+ * enumerating them would bury the report — that part is deliberate. The
+ * CONSEQUENCE was not: a member added to a newly-exported type stays invisible
+ * for the whole release cycle, because the type sits outside `stableTypes`
+ * until the next tag.
+ *
+ * Not hypothetical. `SerializationConfig` became exported in 14.0.0, so
+ * `transfer` — a new public option, the flag deciding whether SSR payloads are
+ * kept or thrown away — was added to it and reached ZERO priming surfaces while
+ * this gate reported full coverage.
+ *
+ * The blind spot stays (the alternative is a flooded report) but it is now
+ * PRINTED. A gate that cannot see something has to say so, or its green reads
+ * as a stronger claim than it is.
+ */
 const stableTypes = new Set([...after.keys()].filter((n) => before.has(n)));
+const newlyExportedTypes = [...after.keys()].filter(
+  (n) => !before.has(n) && /^[A-Z]/.test(n)
+);
 const membersBefore = membersAt(BASE, stableTypes);
 const membersAfter = membersAt(HEAD, stableTypes);
 
@@ -422,3 +443,17 @@ if (gaps.length) {
 console.log(
   '✅ every added symbol reaches every surface that should carry it.\n'
 );
+
+// A gate that cannot see something has to say so, or its green is read as a
+// stronger claim than it is. See the note on `stableTypes`.
+if (newlyExportedTypes.length) {
+  console.log(
+    `   ⚠ NOT CHECKED: members of ${newlyExportedTypes.length} newly-exported ` +
+      `type(s) —\n     ${newlyExportedTypes.slice(0, 8).join(', ')}` +
+      `${newlyExportedTypes.length > 8 ? ', …' : ''}.\n` +
+      `     A member added to a type that became exported THIS release is\n` +
+      `     invisible to this gate until the next tag. Check those by hand:\n` +
+      `     that is how \`SerializationConfig.transfer\` reached zero surfaces\n` +
+      `     while this line said full coverage.\n`
+  );
+}
