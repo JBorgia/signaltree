@@ -1,4 +1,4 @@
-## 14.0.0-rc.1 (unreleased)
+## 14.0.0 (2026-08-10)
 
 ### BREAKING
 
@@ -386,6 +386,57 @@
 - The core typing harness did not compile. Deleting `asyncStream` cut two rows
   out of the middle of a type-level tuple, so `npm run typecheck` was red on
   main; the nested-marker assertion it also removed is restored.
+
+### Documentation
+
+- **A fabricated research bibliography is removed from six surfaces**, including
+  `packages/core/README.md`, which ships to npm. The benchmark orchestrator's
+  frequency weights were documented as derived from State of JS 2023 survey data
+  covering 40,000+ developers, automated analysis of 10,000+ GitHub
+  repositories, enterprise profiling studies and aggregated React DevTools
+  Profiler data, and cited three academic papers with no author, venue or DOI.
+  None of it exists — the doc and its bibliography arrived together in one
+  commit in September 2025 with no supporting artifact, and none was ever added.
+  State of JS could not have supported it in any case: it measures library
+  awareness and sentiment, not per-operation frequency.
+
+  The weights are kept and relabelled as maintainer estimates, which is what
+  they always were. The docs now also disclose that they are not neutral — they
+  feed `weightedTotalScore`, which ranks SignalTree against other libraries, so
+  the `equal` preset (all weights 1.0) is documented as the setting to use for
+  any comparison you intend to rely on. A further 20 invented app-prevalence
+  figures ("89% of apps", precise to the point) went with it.
+
+- **Every measured figure on every live surface now names the tool that
+  produces it.** The `numeric-claims` gate was ratcheted, not clean: 69
+  published numbers named no generator, grandfathered in when the gate was
+  written. Paying them off found four that were simply wrong:
+
+  - `docs/performance/bundle-optimization.md` claimed the core package alone
+    compresses to 25.63KB against a real bare tree of 5.79 KB, plus a 36.31KB
+    ecosystem total and a breakdown naming the removed `enterprise` package.
+  - `docs/performance/dropping-dev-code.md` understated the dev-code saving by
+    about half — it is 2.0-2.7 KB, not 0.8-1.2 KB.
+  - `packages/ng-forms/README.md` headlined "3.38KB gzipped" with no statement
+    of what was measured; the package's own code is 12.15 KB across 19 chunks.
+  - The ST2018 comparison table reported NgRx SignalStore at 46.56 ms, within
+    noise of the array-leaf figure beside it. Measured with
+    `@ngrx/signals/entities`, its own best idiom, it is 745 ms at that fixture —
+    sixteen times the array leaf, not parity with it.
+
+- **Two new generators**, for the figures that justify a runtime diagnostic and
+  so should never have been folklore: `tools/bench-array-leaf.mjs` (ST2018) and
+  `tools/bench-predicate-memo.mjs` (ST2026). Both interleave arms, rebuild the
+  fixture each round, and refuse to print a ratio when the gap falls inside the
+  round-to-round spread. ST2026's published "75x" is replaced by absolutes —
+  0.30 ms hoisted against 33.8 ms inline over 5,000 reads of a 1,000-entity
+  collection — because the ratio reads anywhere from 104x to 112x across runs
+  while both absolutes hold steady.
+
+- Known blind spots in the gates are recorded in `tools/GATES.md` rather than
+  discovered later, including the two found here: the numeric-claims detector
+  matches performance figures, not provenance claims, and its surface list
+  omitted `docs/performance/**` and `apps/demo/README.md`.
 
 ### Changed
 

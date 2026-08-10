@@ -1,6 +1,6 @@
 # Capability matrix — what the others have that we do not
 
-**Status:** audit, 14.0.0-rc.1.
+**Status:** audit, 14.0.0.
 
 ## How this was built, and why that matters
 
@@ -8,16 +8,16 @@ Every row is read from the **installed `.d.ts` of the shipped package**, not fro
 a README or from memory of a library's marketing. Reproduce it with
 `node tools/api-surface.mjs`. Versions audited:
 
-| library                     | version     | unique exports  | entry points              |
-| --------------------------- | ----------- | --------------- | ------------------------- |
-| `@signaltree/core`          | 14.0.0-rc.1 | 191 (root: 154) | 6                         |
-| `@ngrx/signals`             | 21.1.1      | 73              | 5                         |
-| `@ngrx/store`               | 21.1.1      | 79              | 2                         |
-| `@ngneat/elf`               | 2.5.1       | 40              | 1                         |
-| `@ngneat/elf-entities`      | 5.0.2       | 61              | 1                         |
-| `@ngneat/elf-state-history` | 1.4.0       | 2               | 1                         |
-| `@ngxs/store`               | 20.1.0      | 131             | 6                         |
-| `@datorama/akita`           | 8.0.1       | 186             | 1 (unmaintained upstream) |
+| library                     | version | unique exports  | entry points              |
+| --------------------------- | ------- | --------------- | ------------------------- |
+| `@signaltree/core`          | 14.0.0  | 191 (root: 154) | 6                         |
+| `@ngrx/signals`             | 21.1.1  | 73              | 5                         |
+| `@ngrx/store`               | 21.1.1  | 79              | 2                         |
+| `@ngneat/elf`               | 2.5.1   | 40              | 1                         |
+| `@ngneat/elf-entities`      | 5.0.2   | 61              | 1                         |
+| `@ngneat/elf-state-history` | 1.4.0   | 2               | 1                         |
+| `@ngxs/store`               | 20.1.0  | 131             | 6                         |
+| `@datorama/akita`           | 8.0.1   | 186             | 1 (unmaintained upstream) |
 
 Counts are the UNION across every subpath in each package's exports map, types
 included — surface area, not features.
