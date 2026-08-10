@@ -1,10 +1,12 @@
-
-import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { patchState, signalState } from '@ngrx/signals';
 import {
-  batching,
-  signalTree,
-} from '@signaltree/core';
+  Component,
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import { patchState, signalState } from '@ngrx/signals';
+import { batching, signalTree } from '@signaltree/core';
 
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
@@ -17,7 +19,19 @@ interface BenchmarkResult {
   min: number;
   max: number;
   samples: number[];
-  renderCount: number;
+  /**
+   * Re-evaluations of the benchmark's `computed()` body — NOT Angular render
+   * passes. It was called `renderCount`, which claimed a thing it does not
+   * measure: these benchmarks mount no component and never run change
+   * detection, so a "render" count here could only ever have been zero.
+   *
+   * Nothing displays it. Kept because the recompute count is the honest
+   * companion to the timings (it shows fan-out, which is what SignalTree
+   * actually changes), and renamed so a future reader does not wire it into
+   * the UI under a "renders" label. Doing that would repeat a confound this
+   * repo has already shipped twice.
+   */
+  computedRecomputes: number;
   timestamp: string;
 }
 
@@ -90,17 +104,17 @@ interface DeepNestedState {
         <code>batching()</code> enabled — the recommended production
         configuration in v9+. Derived values use Angular's
         <code>computed()</code> directly; SignalTree no longer ships a
-        memoization enhancer because <code>computed()</code> provides
-        equivalent caching at zero extra cost. NgRx SignalStore benchmarks
-        use the library's built-in immutable update model with
+        memoization enhancer because <code>computed()</code> provides equivalent
+        caching at zero extra cost. NgRx SignalStore benchmarks use the
+        library's built-in immutable update model with
         <code>patchState()</code>. Both libraries run identical
         <code>computed()</code> work per iteration so only write-path overhead
         differs. The Large Array Update scenario is a deliberate paradigm
         comparison: SignalTree uses O(1) in-place mutation inside
         <code>.update()</code>, while NgRx SignalStore's immutable model
-        requires an O(n) <code>users.map()</code> to produce a new array —
-        this is not an implementation shortcut, it is the architectural cost
-        being measured.
+        requires an O(n) <code>users.map()</code> to produce a new array — this
+        is not an implementation shortcut, it is the architectural cost being
+        measured.
       </p>
 
       <div class="benchmarks">
@@ -149,26 +163,54 @@ interface DeepNestedState {
       </div>
       }
 
-      <div class="architecture-explanation" style="margin-top: 1.5rem; padding: 1rem; background: var(--surface-2, #f5f5f5); border-radius: 8px;">
-        <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Architectural Differences</h3>
+      <div
+        class="architecture-explanation"
+        style="margin-top: 1.5rem; padding: 1rem; background: var(--surface-2, #f5f5f5); border-radius: 8px;"
+      >
+        <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">
+          Architectural Differences
+        </h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div>
-            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">SignalTree — 3-Pillar Pattern</h4>
-            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
-              <li><strong>READ</strong> — derived state via Angular <code>computed()</code>; no separate memoization layer needed</li>
-              <li><strong>WRITE</strong> — Ops services: direct mutation + async only</li>
-              <li><strong>REACT</strong> — native Angular <code>effect(() =&gt; tree.$.path())</code>: reads drive reactions</li>
+            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">
+              SignalTree — 3-Pillar Pattern
+            </h4>
+            <ul
+              style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;"
+            >
+              <li>
+                <strong>READ</strong> — derived state via Angular
+                <code>computed()</code>; no separate memoization layer needed
+              </li>
+              <li>
+                <strong>WRITE</strong> — Ops services: direct mutation + async
+                only
+              </li>
+              <li>
+                <strong>REACT</strong> — native Angular
+                <code>effect(() =&gt; tree.$.path())</code>: reads drive
+                reactions
+              </li>
               <li>One tree, all domains — no per-feature store files</li>
-              <li>Change detection batched via <code>batching()</code> enhancer</li>
+              <li>
+                Change detection batched via <code>batching()</code> enhancer
+              </li>
             </ul>
           </div>
           <div>
-            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">NgRx SignalStore</h4>
-            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
+            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">
+              NgRx SignalStore
+            </h4>
+            <ul
+              style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;"
+            >
               <li>State via <code>withState()</code></li>
               <li>Computed via <code>withComputed()</code></li>
               <li>Write methods via <code>withMethods()</code></li>
-              <li>Async/reactive via <code>rxMethod()</code> inside <code>withMethods()</code></li>
+              <li>
+                Async/reactive via <code>rxMethod()</code> inside
+                <code>withMethods()</code>
+              </li>
               <li>Entity management via <code>withEntities()</code></li>
               <li>Redux DevTools integration</li>
               <li>One store file per feature/domain</li>
@@ -490,12 +532,13 @@ export class SignalTreeVsNgrxSignalsComponent {
     const tree = signalTree(initialState).with(batching());
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
-    // Setup reactive computation to track renders
+    // Counts re-evaluations of the computed BODY. Not renders: no component
+    // is mounted here and change detection never runs. See the field comment.
     const computation = computed(() => {
       const counter = tree.$.level1.level2.level3.level4.level5.counter();
-      renderCount++;
+      computedRecomputes++;
       return counter;
     });
 
@@ -504,7 +547,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       tree.$.level1.level2.level3.level4.level5.counter.set(i);
       computation(); // Trigger computation
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark with multiple operations per iteration
     for (let i = 0; i < iterations; i++) {
@@ -540,7 +583,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
@@ -554,12 +597,13 @@ export class SignalTreeVsNgrxSignalsComponent {
     const state = signalState(initialState);
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
-    // Setup reactive computation to track renders
+    // Counts re-evaluations of the computed BODY. Not renders: no component
+    // is mounted here and change detection never runs. See the field comment.
     const computation = computed(() => {
       const counter = state.level1().level2.level3.level4.level5.counter;
-      renderCount++;
+      computedRecomputes++;
       return counter;
     });
 
@@ -586,7 +630,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       }));
       computation(); // Trigger computation
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark with multiple operations per iteration
     for (let i = 0; i < iterations; i++) {
@@ -640,7 +684,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
@@ -700,14 +744,16 @@ export class SignalTreeVsNgrxSignalsComponent {
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     // Array Updates scenario mapping: high-performance batching only
-    const tree = signalTree(initialState).with(batching({ enabled: true, notificationDelayMs: 0 }));
+    const tree = signalTree(initialState).with(
+      batching({ enabled: true, notificationDelayMs: 0 })
+    );
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
     const computation = computed(() => {
       const userCount = tree.$.users().length;
-      renderCount++;
+      computedRecomputes++;
       return userCount;
     });
 
@@ -723,7 +769,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       );
       computation();
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark array updates with multiple operations per iteration
     for (let i = 0; i < iterations; i++) {
@@ -781,7 +827,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
@@ -795,11 +841,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     const state = signalState(initialState);
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
     const computation = computed(() => {
       const userCount = state.users().length;
-      renderCount++;
+      computedRecomputes++;
       return userCount;
     });
 
@@ -813,7 +859,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       }));
       computation();
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark array updates with multiple operations per iteration
     for (let i = 0; i < iterations; i++) {
@@ -867,7 +913,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
@@ -951,11 +997,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     const tree = signalTree(initialState).with(batching());
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
     // Complex computed that depends on multiple nested properties
     const complexComputed = computed(() => {
-      renderCount++;
+      computedRecomputes++;
       const users = tree.$.users();
       const metadata = tree.$.metadata; // metadata is the object, not a function
       const counter = tree.$.level1.level2.level3.level4.level5.counter();
@@ -974,7 +1020,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       tree.$.level1.level2.level3.level4.level5.counter.set(i);
       complexComputed();
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark computed performance
     for (let i = 0; i < iterations; i++) {
@@ -1010,7 +1056,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
@@ -1024,11 +1070,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     const state = signalState(initialState);
 
     const samples: number[] = [];
-    let renderCount = 0;
+    let computedRecomputes = 0;
 
     // Complex computed that depends on multiple nested properties
     const complexComputed = computed(() => {
-      renderCount++;
+      computedRecomputes++;
       const users = state.users();
       const metadata = state.metadata();
       const counter = state.level1().level2.level3.level4.level5.counter;
@@ -1065,7 +1111,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       }));
       complexComputed();
     }
-    renderCount = 0;
+    computedRecomputes = 0;
 
     // Benchmark computed performance
     for (let i = 0; i < iterations; i++) {
@@ -1125,7 +1171,7 @@ export class SignalTreeVsNgrxSignalsComponent {
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
-      renderCount,
+      computedRecomputes,
       timestamp: new Date().toISOString(),
     };
   }
