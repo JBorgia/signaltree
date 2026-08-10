@@ -44,7 +44,7 @@ function warnApplyStateOverwrite(key: string, target: unknown): void {
 /**
  * Marks a materialised node as excluded from TIME-TRAVEL capture only.
  *
- * Set by `entityMap({ history: false })`. Every other snapshot consumer —
+ * Set by `entityMap({ recordHistory: false })`. Every other snapshot consumer —
  * `serialization()`, `persistence()`, devtools, audit — still sees the node in
  * full; only `timeTravel()` prunes it from the entry it records. See RFC 0012
  * for why the two needed separating: `transient: true` opted out of BOTH, so a
@@ -94,7 +94,7 @@ export function pruneHistoryExcluded<T>(snapshot: T, liveNode: unknown): T {
 /**
  * @internal Are two PRUNED snapshots the same observable state?
  *
- * Exists because `history: false` produced PHANTOM undo steps. The dedupe in
+ * Exists because `recordHistory: false` produced PHANTOM undo steps. The dedupe in
  * `addEntry` is `last.state === entry.state`, which is exact for unpruned
  * snapshots — structural sharing hands back the identical object when nothing
  * changed. Pruning breaks that identity: a write to an EXCLUDED collection still
@@ -103,7 +103,7 @@ export function pruneHistoryExcluded<T>(snapshot: T, liveNode: unknown): T {
  * as structurally identical but referentially distinct objects. The `===` missed
  * them and each one became an entry.
  *
- * MEASURED before this: five writes to an `entityMap({ history: false })` produced
+ * MEASURED before this: five writes to an `entityMap({ recordHistory: false })` produced
  * five entries with `canUndo() === true`, and the undo changed nothing a user could
  * see — a dead Ctrl+Z, which is worse than no undo because it spends a step the
  * user believes they had.

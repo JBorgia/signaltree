@@ -266,7 +266,7 @@ two of the three already exist and are already correct.
 
 | Layer                    | Question it answers                                        | Status                                                                                                 |
 | ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Marker** (positional)  | Is this state _eligible_ for history?                      | Exists and is right — `history: false`, `transient: true`. Do **not** add an action marker.            |
+| **Marker** (positional)  | Is this state _eligible_ for history?                      | Exists and is right — `recordHistory: false`, `transient: true`. Do **not** add an action marker.      |
 | **Enhancer** (tree-wide) | The log, and navigating it                                 | Exists and is right — recording, retention, read-time `shouldSkip`, devtools scrubbing                 |
 | **Transaction** (new)    | What was the user doing, and which writes were part of it? | Missing. Delivered _by_ the enhancer (it needs write-path visibility), but scoped as a call-site value |
 
@@ -332,7 +332,7 @@ defect report in this repo.
 | 3   | A delete returns **in place**, without a `sortComparer`                                                    | UX 2 · G3                   |
 | 4   | A server write is never reachable by user undo, including in the same microtask as a user write            | UX 9 · G1                   |
 | 5   | `undo()` in one scope provably cannot alter state in another                                               | UX 9 · G4                   |
-| 6   | No step exists that changes nothing observable (the `history: false` phantom defect)                       | spike §1.9                  |
+| 6   | No step exists that changes nothing observable (the `recordHistory: false` phantom defect)                 | spike §1.9                  |
 | 7   | Retention is bounded in **turns**, never in entries — entry count is O(state)                              | G6 · spike §1.7             |
 | 8   | Retained memory is flat in collection width                                                                | spike §1.7                  |
 | 9   | Structure-shaped workloads move from ❌ to ✅ in the §8 split                                              | use-cases §8                |

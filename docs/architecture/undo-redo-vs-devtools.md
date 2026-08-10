@@ -99,13 +99,13 @@ whenever the collection changes. So attaching `timeTravel()` to a tree holding
 a large collection makes every collection-mutating write O(collection width),
 permanently. MEASURED over 50 recorded writes:
 
-| rows   | default | `history: false` |
-| ------ | ------- | ---------------- |
-| 1,000  | 0.76MB  | 0.18MB           |
-| 10,000 | 5.08MB  | 1.25MB           |
-| 50,000 | 24.73MB | 5.61MB           |
+| rows   | default | `recordHistory: false` |
+| ------ | ------- | ---------------------- |
+| 1,000  | 0.76MB  | 0.18MB                 |
+| 10,000 | 5.08MB  | 1.25MB                 |
+| 50,000 | 24.73MB | 5.61MB                 |
 
-`entityMap({ history: false })` takes the collection out of history capture.
+`entityMap({ recordHistory: false })` takes the collection out of history capture.
 Everything else about it is unchanged — it still appears in `tree()`, it still
 round-trips through `serialization()`, it is still persisted. The flag scopes
 one thing: what `undo()` can reach.

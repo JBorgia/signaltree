@@ -706,6 +706,18 @@ export interface EntityConfig<E, K extends string | number = string> {
    * Exclude this collection from `timeTravel()` history while keeping it in
    * every OTHER snapshot — `serialization()`, `persistence()`, devtools, audit.
    *
+   * **Named `recordHistory`, not `history`, since 15.0.0.** The old name collided
+   * with `form({ history: history() })` — and the two are DIFFERENT questions, so
+   * unifying them (the first plan) would have been wrong:
+   *
+   * - `form({ history: history() })` — this form OWNS a scoped undo stack. Opt IN
+   *   to a new, independent history that cannot see the rest of the tree.
+   * - `entityMap({ recordHistory: false })` — participation in the AMBIENT
+   *   `timeTravel()` stack. Opt OUT of a history someone else owns.
+   *
+   * One word for "own a history" and "be recorded into a history" is the collision.
+   * Two concepts, two names.
+   *
    * Why the two need separating: `entityMap`'s snapshot is `{ all: node.all() }`,
    * an N-pointer array rebuilt whenever the collection changes. Time travel
    * records on every self-dirty flush, so attaching `timeTravel()` to a tree
@@ -723,9 +735,9 @@ export interface EntityConfig<E, K extends string | number = string> {
    *
    * @default true
    * @example
-   * entityMap<Row, number>({ selectId: (r) => r.id, history: false })
+   * entityMap<Row, number>({ selectId: (r) => r.id, recordHistory: false })
    */
-  history?: boolean;
+  recordHistory?: boolean;
 
   /**
    * Entity-level hooks (run before collection hooks)

@@ -6,7 +6,7 @@ import { timeTravel } from '../enhancers/time-travel/time-travel';
 import { serialization } from '../enhancers/serialization/serialization';
 
 /**
- * RFC 0012 — `entityMap({ history: false })`.
+ * RFC 0012 — `entityMap({ recordHistory: false })`.
  *
  * `entityMap`'s snapshot is `{ all: node.all() }`, an N-pointer array rebuilt
  * whenever the collection changes. Time travel records on every self-dirty
@@ -29,10 +29,13 @@ const rows = (n: number): Row[] =>
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 
-describe('history: false — excluded from time travel', () => {
+describe('recordHistory: false — excluded from time travel', () => {
   it('keeps the collection out of recorded history entries', async () => {
     const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id, history: false }),
+      rows: entityMap<Row, number>({
+        selectId: (r) => r.id,
+        recordHistory: false,
+      }),
       n: 0,
     }).with(timeTravel());
     tree.$.rows.setAll(rows(5));
@@ -81,10 +84,13 @@ describe('history: false — excluded from time travel', () => {
   });
 });
 
-describe('history: false — present everywhere ELSE', () => {
+describe('recordHistory: false — present everywhere ELSE', () => {
   it('still appears in tree()', () => {
     const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id, history: false }),
+      rows: entityMap<Row, number>({
+        selectId: (r) => r.id,
+        recordHistory: false,
+      }),
     });
     tree.$.rows.setAll(rows(3));
 
@@ -112,14 +118,17 @@ describe('history: false — present everywhere ELSE', () => {
   });
 });
 
-describe('history: false — undo is PARTIAL, by design', () => {
+describe('recordHistory: false — undo is PARTIAL, by design', () => {
   it('undo reverts other state but NOT the excluded collection', async () => {
     // The documented trade, pinned so it can never become an accidental
     // regression: "a partial restore is worse than a failed one" is a lesson
     // this codebase already paid for, so the partiality must be deliberate,
     // opt-in, and tested.
     const tree = signalTree({
-      rows: entityMap<Row, number>({ selectId: (r) => r.id, history: false }),
+      rows: entityMap<Row, number>({
+        selectId: (r) => r.id,
+        recordHistory: false,
+      }),
       n: 0,
     }).with(timeTravel());
     tree.$.rows.setAll(rows(3));
@@ -191,7 +200,7 @@ describe('ST2029 — history retention', () => {
   });
 
   it('does NOT fire once the collection opts out', async () => {
-    await appOrder({ selectId: (r) => r.id, history: false }, 20_000, 34);
+    await appOrder({ selectId: (r) => r.id, recordHistory: false }, 20_000, 34);
 
     expect(msg()).not.toContain('ST2029');
   });
@@ -211,7 +220,7 @@ describe('ST2029 — history retention', () => {
   });
 });
 
-describe('entityMap({ history: false }) — no PHANTOM undo steps (15.0.0)', () => {
+describe('entityMap({ recordHistory: false }) — no PHANTOM undo steps (15.0.0)', () => {
   const tick = () => new Promise((r) => setTimeout(r, 0));
 
   // Before the fix: five excluded-only writes produced FIVE entries with
@@ -224,7 +233,7 @@ describe('entityMap({ history: false }) — no PHANTOM undo steps (15.0.0)', () 
   // referentially distinct. `last.state === entry.state` missed them.
   it('excluded-only writes create NO entries', async () => {
     const tree = signalTree({
-      rows: entityMap<{ id: string; n: number }>({ history: false }),
+      rows: entityMap<{ id: string; n: number }>({ recordHistory: false }),
       draft: '',
     }).with(timeTravel());
     tree.$.rows.addMany([{ id: 'a', n: 0 }]);
@@ -242,7 +251,7 @@ describe('entityMap({ history: false }) — no PHANTOM undo steps (15.0.0)', () 
 
   it('an excluded write does not shift where undo lands', async () => {
     const tree = signalTree({
-      rows: entityMap<{ id: string; n: number }>({ history: false }),
+      rows: entityMap<{ id: string; n: number }>({ recordHistory: false }),
       draft: '',
     }).with(timeTravel());
     tree.$.rows.addMany([{ id: 'a', n: 0 }]);
@@ -267,7 +276,7 @@ describe('entityMap({ history: false }) — no PHANTOM undo steps (15.0.0)', () 
   it('works when the excluded collection is NESTED', async () => {
     const tree = signalTree({
       box: {
-        rows: entityMap<{ id: string; n: number }>({ history: false }),
+        rows: entityMap<{ id: string; n: number }>({ recordHistory: false }),
         label: 'x',
       },
     }).with(timeTravel());

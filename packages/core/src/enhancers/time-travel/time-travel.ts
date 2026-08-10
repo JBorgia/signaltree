@@ -164,13 +164,13 @@ class TimeTravelManager<T> {
     // Prune history-excluded nodes AFTER building, not by snapshotting
     // differently. The memo stays untouched — one snapshot, one cell, sharing
     // preserved — and the entry simply does not retain what it dropped. A tree
-    // with no `history: false` anywhere gets the identical object back, so it
+    // with no `recordHistory: false` anywhere gets the identical object back, so it
     // pays one shallow walk and allocates nothing. See RFC 0012 option B.
     const rawSnapshot = snapshotState(this.tree.$ as unknown as TreeNode<T>);
     const plain = pruneHistoryExcluded(rawSnapshot, this.tree.$);
     // `pruneHistoryExcluded` returns the IDENTICAL object when nothing was
     // excluded, so this is an exact O(1) test for "does this tree use
-    // `history: false` at all" — and it keeps the structural-equality walk below
+    // `recordHistory: false` at all" — and it keeps the structural-equality walk below
     // off the hot path for every tree that does not.
     const didPrune = plain !== rawSnapshot;
 
@@ -548,7 +548,7 @@ function checkHistoryRetention(root: unknown, entries: number): void {
       `array for every collection it captures (widest: "${widestPath}" at ` +
       `${widest}). Every write to those collections is O(collection), and the ` +
       `history only grows. If a collection should persist but not be undoable, ` +
-      `pass entityMap({ history: false }); if it should be neither, use ` +
+      `pass entityMap({ recordHistory: false }); if it should be neither, use ` +
       `transient: true. [ST2029]`
   );
 }

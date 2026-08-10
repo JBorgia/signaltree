@@ -95,7 +95,7 @@ signalTree(state).with(timeTravel({ maxHistorySize: 50 }));
 Verified: 20 writes against `maxHistorySize: 5` leaves a history of 5. This is
 your direct control over the `entries` half of `entries x width`.
 
-### 2. Scope what is recorded — `history: false`
+### 2. Scope what is recorded — `recordHistory: false`
 
 The lever no other Angular store has. A collection can persist and serialise
 while staying **out of the undo stack**:
@@ -103,13 +103,13 @@ while staying **out of the undo stack**:
 ```ts
 signalTree({
   // 50,000 server-owned rows: saved and restored, never undone
-  rows: entityMap({ selectId: (r) => r.id, history: false }),
+  rows: entityMap({ selectId: (r) => r.id, recordHistory: false }),
   // the small editable state the user actually undoes
   draft: { title: '', tags: [] as string[] },
 }).with(timeTravel({ maxHistorySize: 50 }));
 ```
 
-Verified: with `history: false`, two undos reverted the scalar state to its
+Verified: with `recordHistory: false`, two undos reverted the scalar state to its
 initial value and left the collection's contents untouched.
 
 ⚠️ **That is the tradeoff, stated plainly: `undo()` will not revert an excluded
@@ -174,8 +174,8 @@ whole-state deep compare here undoes the saving.
 | --------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------ |
 | Editor undo over a small document             | `maxHistorySize` + `shouldSkip` for caret/selection                         | Yes                                  |
 | Bulk-edit grid with cancel                    | `createEditSession` (`@signaltree/core/edit-session`) — commit or discard   | Yes, and independent of `timeTravel` |
-| Undo one panel, not the whole app             | `history: false` on everything outside the panel                            | Yes                                  |
-| Large server collection + small editable form | `entityMap({ history: false })` beside an undoable branch                   | Yes — the headline pattern           |
+| Undo one panel, not the whole app             | `recordHistory: false` on everything outside the panel                      | Yes                                  |
+| Large server collection + small editable form | `entityMap({ recordHistory: false })` beside an undoable branch             | Yes — the headline pattern           |
 | Optimistic write, roll back on error          | `undo()` in the error path, or `jumpTo(getCurrentIndex() - 1)`              | Yes                                  |
 | Import/generate, then one undo                | `pauseRecording()` / `resumeRecording()` **+ a sealing write**              | Yes — read the warning               |
 | Audit trail rather than undo                  | `createAuditTracker()` / `createAuditCallback()`, or `getHistory()`         | Yes — no `timeTravel` needed         |
@@ -195,7 +195,7 @@ button looks dead, that is the bug.
 
 ```ts
 export const appTree = signalTree({
-  rows: entityMap({ selectId: (r: Row) => r.id, history: false }),
+  rows: entityMap({ selectId: (r: Row) => r.id, recordHistory: false }),
   draft: { title: '', body: '' },
   ui: { cursor: 0, hovered: null as string | null },
 }).with(

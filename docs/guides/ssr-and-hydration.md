@@ -121,7 +121,7 @@ SignalTree — any SSR state transfer pays it — but a library that supports
 the move**. Transfer the first page and load the rest on the client, or mark the
 collection `transient: true` to keep it out of the payload entirely.
 
-(`history: false` from RFC 0012 does not help here. That flag scopes what
+(`recordHistory: false` from RFC 0012 does not help here. That flag scopes what
 `undo()` can reach, not what `serialize()` emits.)
 
 ---

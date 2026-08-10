@@ -14,6 +14,21 @@
   Migrating: if you relied on the merge, call `updateOne(id, changes)`, which is
   unchanged and is the patch half of the surface.
 
+- **`entityMap({ history })` is RENAMED to `entityMap({ recordHistory })`.**
+
+  The old name collided with `form({ history: history() })`, and the first plan here was
+  to unify them under one spelling. **That was wrong** — they answer different questions:
+
+  | Option                                | Question                                                                                   |
+  | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+  | `form({ history: history() })`        | this form OWNS a scoped stack — opt IN to a new history                                    |
+  | `entityMap({ recordHistory: false })` | participation in the AMBIENT `timeTravel()` stack — opt OUT of a history someone else owns |
+
+  One word for "own a history" and "be recorded into a history" _is_ the collision. Two
+  concepts, two names. Behaviour is unchanged: the collection stays out of `timeTravel()`
+  and remains in every other snapshot — `serialization()`, `persistence()`, devtools,
+  audit.
+
 - **`removeAll()` is removed from `entityMap`.** It was a pure alias — its body was
   `api.clear()`. Use `clear()`. One operation, one name.
 

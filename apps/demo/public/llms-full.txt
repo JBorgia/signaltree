@@ -1560,7 +1560,7 @@ Every warning carries a stable `[ST####]` code; full map in
 
   ```typescript
   // Persisted and serialised as always, but out of undo's reach.
-  entityMap<Row, number>({ selectId: (r) => r.id, history: false });
+  entityMap<Row, number>({ selectId: (r) => r.id, recordHistory: false });
   ```
 
   The tradeoff is real and only you can make it: `undo()` will NOT revert an

@@ -199,3 +199,24 @@ undo level, which makes it a minor at the earliest.
   the O(N) rather than removing it.
 - That the serialisation round-trip is byte-identical with the flag on, since
   the flag must not reach `serialize()`.
+
+---
+
+## 15.0.0 — the option was RENAMED to `recordHistory`
+
+This RFC proposed the flag as `history: false` and it shipped under that name in 14.0.0.
+Renamed in 15.0.0 because it collided with `form({ history: history() })`, and the two are
+**different questions**:
+
+- `form({ history: history() })` — this form OWNS a scoped stack. Opt IN to a new history.
+- `entityMap({ recordHistory: false })` — participation in the AMBIENT `timeTravel()`
+  stack. Opt OUT of a history someone else owns.
+
+The first plan was to unify them under one spelling. That was wrong: one word for "own a
+history" and "be recorded into a history" IS the collision. Two concepts, two names.
+
+The rename also came with the fix for a defect this RFC's flag introduced — excluded
+collections still produced history entries, so `canUndo()` was true and the undo changed
+nothing visible. See the 15.0.0 CHANGELOG.
+
+The text above is left as written, as the record of the original decision.
