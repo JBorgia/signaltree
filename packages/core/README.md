@@ -190,7 +190,11 @@ Modern bundlers (Vite, esbuild, Rollup, webpack 5+) **automatically tree-shake b
 import { signalTree, batching } from '@signaltree/core';
 ```
 
-Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`, `./storage`, `./lazy`, `./authoring`. Enhancers are NOT a published subpath — they live in the main barrel and are tree-shaken from there.
+<!-- BEGIN GENERATED: api-subpaths — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+
+Published entry points (from `package.json` `exports`): `@signaltree/core` plus `@signaltree/core/authoring`, `@signaltree/core/edit-session`, `@signaltree/core/lazy`, `@signaltree/core/security`, `@signaltree/core/storage`. Enhancers are NOT a subpath — they live in the main barrel and are tree-shaken from there.
+
+<!-- END GENERATED: api-subpaths -->
 
 - `@signaltree/core/lazy` — the `lazy()` helper for deferring marker/enhancer materialization.
 - `@signaltree/core/authoring` — enhancer- and marker-author plumbing. The
@@ -3213,11 +3217,15 @@ In production builds, all guardrails functions become no-ops with zero runtime c
 
 **Add companion packages when you need:**
 
-| Package                       | When to Add                        | Bundle Impact    |
-| ----------------------------- | ---------------------------------- | ---------------- |
-| `@signaltree/ng-forms`        | Angular Reactive Forms integration | ~10KB gzipped    |
-| `@signaltree/enterprise`      | 500+ signals, large-scale apps     | ~8KB gzipped     |
-| `@signaltree/guardrails`      | Development performance monitoring | 0KB (dev-only)   |
+<!-- BEGIN GENERATED: companion-packages — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+| Package | When to add |
+| ------- | ----------- |
+| `@signaltree/events` | Typed event/command bus over the tree |
+| `@signaltree/guardrails` | Development performance monitoring (dev-only) |
+| `@signaltree/ng-forms` | Angular Reactive Forms integration |
+| `@signaltree/realtime` | Keep entity maps in sync with WebSocket / SSE |
+| `@signaltree/schema` | Standard Schema validation (Zod, Valibot, ArkType) |
+<!-- END GENERATED: companion-packages -->
 
 **Typical Installation Patterns:**
 
@@ -3228,11 +3236,8 @@ npm install @signaltree/core
 # Application with forms
 npm install @signaltree/core @signaltree/ng-forms
 
-# Large enterprise application
-npm install @signaltree/core @signaltree/enterprise
-
 # Development with all tools
-npm install @signaltree/core @signaltree/enterprise @signaltree/ng-forms
+npm install @signaltree/core @signaltree/ng-forms
 npm install --save-dev @signaltree/guardrails
 ```
 

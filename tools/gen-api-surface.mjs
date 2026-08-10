@@ -44,7 +44,7 @@
  *   node tools/gen-api-surface.mjs           # write the regions
  *   node tools/gen-api-surface.mjs --check   # fail if any region is stale
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,6 +76,54 @@ const names = (m) =>
     .sort();
 const rootNames = names(rootMod);
 const authNames = names(authMod);
+
+/**
+ * Declared subpaths, from the SOURCE manifest — that is the file npm reads.
+ * v9.0.0 moved four features behind subpaths, and a subpath list is exactly the
+ * kind of short, rarely-touched fact that goes stale precisely because it is
+ * short and rarely touched.
+ */
+const subpaths = Object.keys(
+  JSON.parse(readFileSync(join(ROOT, 'packages/core/package.json'), 'utf8'))
+    .exports ?? {}
+)
+  .filter((k) => k !== './package.json')
+  .sort((a, b) => (a === '.' ? -1 : b === '.' ? 1 : a.localeCompare(b)));
+
+/**
+ * The companion packages that are actually PUBLISHABLE.
+ *
+ * `@signaltree/shared` is `private: true` and has never been on the registry
+ * (404), so it is not a companion anyone can install — release.sh publishes six
+ * packages, not seven. And `@signaltree/enterprise` was removed in 14.0.0 while
+ * `packages/core/README.md` — the npm front page — still carried a table row for
+ * it and two `npm install` lines naming it. Anyone following those got a resolve
+ * failure. `readme-apis` cannot catch that: a package name is not a symbol.
+ *
+ * Purpose text is NOT generated. "When to add" is editorial judgement that no
+ * manifest knows; only the SET of installable packages is owned here.
+ */
+const PURPOSE = {
+  'ng-forms': 'Angular Reactive Forms integration',
+  guardrails: 'Development performance monitoring (dev-only)',
+  events: 'Typed event/command bus over the tree',
+  realtime: 'Keep entity maps in sync with WebSocket / SSE',
+  schema: 'Standard Schema validation (Zod, Valibot, ArkType)',
+};
+const companions = readdirSync(join(ROOT, 'packages'), { withFileTypes: true })
+  // Directories only, and only those that actually carry a manifest — a stray
+  // `.DS_Store` crashed the first version of this.
+  .filter((e) => e.isDirectory() && e.name !== 'core')
+  .map((e) => e.name)
+  .filter((d) => existsSync(join(ROOT, 'packages', d, 'package.json')))
+  .map((d) => ({
+    dir: d,
+    manifest: JSON.parse(
+      readFileSync(join(ROOT, 'packages', d, 'package.json'), 'utf8')
+    ),
+  }))
+  .filter((p) => !p.manifest.private)
+  .sort((a, b) => a.dir.localeCompare(b.dir));
 
 /**
  * Group `/authoring` by pattern, not by a hand-written list — a new symbol
@@ -149,6 +197,31 @@ const renderers = {
     ];
     return lines.join('\n');
   },
+  /** The published entry points, as declared in package.json `exports`. */
+  subpaths() {
+    const named = subpaths.filter((p) => p !== '.');
+    return (
+      `Published entry points (from \`package.json\` \`exports\`): ` +
+      `\`@signaltree/core\` plus ` +
+      named.map((p) => `\`@signaltree/core${p.slice(1)}\``).join(', ') +
+      `. Enhancers are NOT a subpath — they live in the main barrel and are ` +
+      `tree-shaken from there.`
+    );
+  },
+
+  /** The installable companion packages, from their manifests. */
+  companions() {
+    const rows = companions.map((c) => {
+      const why = PURPOSE[c.dir] ?? '—';
+      return `| \`${c.manifest.name}\` | ${why} |`;
+    });
+    return [
+      '| Package | When to add |',
+      '| ------- | ----------- |',
+      ...rows,
+    ].join('\n');
+  },
+
   /** Terse — the SKILL is a short instruction file. */
   terse() {
     return (
@@ -176,6 +249,16 @@ const SURFACES = [
     file: 'packages/core/README.md',
     id: 'api-entry-points',
     style: 'list',
+  },
+  {
+    file: 'packages/core/README.md',
+    id: 'api-subpaths',
+    style: 'subpaths',
+  },
+  {
+    file: 'packages/core/README.md',
+    id: 'companion-packages',
+    style: 'companions',
   },
 ];
 
