@@ -18,7 +18,10 @@ export interface BenchmarkTestCase {
   signalTreeOnly?: boolean; // True if this scenario is only supported by SignalTree
   disabledReason?: string; // Optional explanation why a scenario was auto-disabled
   partialUnsupportedBy?: string[]; // Libraries that partially support the scenario
-  category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
+  // 'middleware' and 'full-stack' were removed with the middleware and
+  // enterprise features; no scenario used either, so they were dead options
+  // that still advertised cut capabilities in the type.
+  category: 'core' | 'async' | 'time-travel';
   purpose: string; // What this test specifically measures
   frequencyWeight?: number; // Multiplier for real-world frequency (0.1 = very rare, 3.0 = very common)
   realWorldFrequency?: string; // Human-readable frequency description
@@ -59,9 +62,9 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       'Direct mutation excels with deep updates vs immutable rebuilding',
     enhancers: {
       required: ['batching'],
-      optional: ['shallowMemoization'],
+      optional: [],
       rationale:
-        'Batching prevents excessive notifications; shallow memoization helps with object updates',
+        'Batching prevents excessive notifications. The memoization enhancers this scenario used to recommend were removed in 9.0.0; per-node materialisation is memoised in core since 13.5.0, so there is nothing to opt into.',
     },
     dataRequirements: {
       minSize: 100,
@@ -90,7 +93,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: ['highPerformanceBatching'],
       optional: [],
       rationale:
-        'High-performance batching essential for rapid array updates; memoization counterproductive (adds cache mgmt overhead without repeated reads). Enterprise variant uses OptimizedUpdateEngine for +16.7% gain. Lazy array coalescing may be conditionally injected for very large datasets (>5k) by the benchmark service but is benchmark-only and therefore not listed here.',
+        'High-performance batching essential for rapid array updates; memoization counterproductive (adds cache mgmt overhead without repeated reads). Lazy array coalescing may be conditionally injected for very large datasets (>5k) by the benchmark service but is benchmark-only and therefore not listed here.',
     },
     dataRequirements: {
       minSize: 1000,
@@ -115,10 +118,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Granular reactivity prevents unnecessary recalculations vs coarse invalidation',
     enhancers: {
-      required: ['batching', 'shallowMemoization'],
+      required: ['batching'],
       optional: [],
       rationale:
-        'Batching reduces cascading updates; shallow memoization chosen over full to minimize cache layers while still skipping unchanged branch recalculations. Full memoization removed to avoid overstating win vs selector-focused libraries.',
+        'Batching reduces cascading updates. The memoization tiers this scenario used to select between were removed in 9.0.0 — materialisation is memoised in core, and unchanged subtrees come back by reference, so there is no tier to choose.',
     },
     dataRequirements: {
       minSize: 100,
@@ -169,10 +172,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Memoization prevents expensive recalculations vs memory overhead',
     enhancers: {
-      required: ['lightweightMemoization'],
+      required: [],
       optional: ['batching'],
       rationale:
-        'Testing memoization system using lightweight tier for realistic selector access cost (shallower caches, lower memory). Shallow/full tiers intentionally excluded to avoid unfair amplification versus NgRx Store selector memoization.',
+        'Measures selector-style repeated reads. The lightweight/shallow/full memoization tiers this scenario selected between were removed in 9.0.0; core memoises materialisation itself, so a read that follows no write is served from the same object. Nothing to enable.',
     },
     dataRequirements: {
       minSize: 500,

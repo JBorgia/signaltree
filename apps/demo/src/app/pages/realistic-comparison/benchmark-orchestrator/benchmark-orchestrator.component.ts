@@ -1,10 +1,25 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, effect, ElementRef, inject, isDevMode, OnDestroy, signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  isDevMode,
+  OnDestroy,
+  signal,
+  ViewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { BenchmarkComparison } from './services/benchmark-runner';
@@ -2749,12 +2764,17 @@ export class BenchmarkOrchestratorComponent
     if (probe > 0) {
       iterations = Math.max(
         3,
-        Math.min(iterations, Math.floor(ITERATION_BUDGET_MS / (probe * innerOps)))
+        Math.min(
+          iterations,
+          Math.floor(ITERATION_BUDGET_MS / (probe * innerOps))
+        )
       );
     }
     if (iterations < config.iterations) {
       console.warn(
-        `[benchmark] ${library.id}/${scenario.id}: ${probe.toFixed(1)}ms per call — ` +
+        `[benchmark] ${library.id}/${scenario.id}: ${probe.toFixed(
+          1
+        )}ms per call — ` +
           `reduced ${config.iterations} iterations to ${iterations} to stay inside ` +
           `the ${ITERATION_BUDGET_MS / 1000}s budget.`
       );
@@ -2767,11 +2787,7 @@ export class BenchmarkOrchestratorComponent
 
       let perCall: number;
       if (innerOps === 1) {
-        perCall = await this.executeBenchmark(
-          library.id,
-          scenario.id,
-          config
-        );
+        perCall = await this.executeBenchmark(library.id, scenario.id, config);
         if (perCall === -1) {
           return {
             libraryId: library.id,
@@ -3481,7 +3497,6 @@ export class BenchmarkOrchestratorComponent
     }
   }
 
-
   private isDevToolsOpen(): boolean {
     const widthThreshold = window.outerWidth - window.innerWidth > 160;
     const heightThreshold = window.outerHeight - window.innerHeight > 160;
@@ -3691,12 +3706,10 @@ export class BenchmarkOrchestratorComponent
       if (categoryDistribution['core'] > 0.5 && testCase.category === 'core') {
         baseWeight *= 1.1; // 10% boost for core operations in core-heavy workloads
       }
-      if (
-        categoryDistribution['middleware'] > 0.3 &&
-        testCase.category === 'middleware'
-      ) {
-        baseWeight *= 1.2; // 20% boost for middleware (including async) in middleware-heavy workloads
-      }
+      // A 'middleware' boost used to sit here. No scenario has ever carried
+      // that category — it went with the middleware feature — so the branch
+      // could not fire, and narrowing the union to what is actually used made
+      // TypeScript say so (TS2367).
       if (
         categoryDistribution['time-travel'] > 0.2 &&
         testCase.category === 'time-travel'
