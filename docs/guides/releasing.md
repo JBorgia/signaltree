@@ -18,7 +18,7 @@
    release.
 4. Actions → "Publish to npm (CI)" → Run workflow with the tag. This runs
    `publish.yml`, which **reruns the same full gate set against the tag**,
-   builds production, and publishes all 8 packages with `NPM_TOKEN`
+   builds production, and publishes all **6** publishable packages with `NPM_TOKEN`
    (`scripts/ci-publish.sh`, provenance enabled). Re-runs are safe:
    already-published versions are skipped. (Note: releases created by
    `release.yml` do not auto-trigger `publish.yml` — `GITHUB_TOKEN` events
@@ -48,3 +48,27 @@ publish → push).
   still run and still block. There is no flag that skips them.
 - `npm run publish:all` now runs the full `npm run validate` suite first —
   no publish path dodges the gates.
+
+### What the emergency path costs you
+
+**Provenance.** `ci-publish.sh` passes `--provenance` only when
+`GITHUB_ACTIONS` is set, so a local publish produces no npm attestation and it
+cannot be added to that version afterwards. 14.0.0 shipped this way, from a
+laptop, because the dispatch in step 4 needs **admin** rights on the repository
+and a `repo`+`workflow` token gets `HTTP 403`. If provenance matters for a
+release, the dispatch has to be done by someone with admin.
+
+The rest of the safety did survive: `ci-publish.sh` is the same script CI runs,
+so it still refused to start without `NPM_TOKEN`, resolved the `workspace:*`
+specs npm will not rewrite, verified every declared `files` entry, checked
+tarball hygiene, and derived the dist-tag from the version string rather than
+letting `npm publish` default a prerelease onto `latest`.
+
+### Tags are required, not optional
+
+`release-claims` diffs the public API against the last **stable** version tag,
+so the checkout must have tags. `validate.yml` and `publish.yml` both use
+`fetch-depth: 0` with `fetch-tags: true`. Without them the gate exits 1 with
+"No prior version tag found" — a failure that reproduces on no developer machine,
+which is how it went unnoticed while `Validate` sat red for twelve consecutive
+commits.
