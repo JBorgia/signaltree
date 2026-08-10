@@ -351,9 +351,19 @@ console.log(
 );
 
 console.log(
-  '\n  Why elf is in this file at all: it is the immutable-root design, and its\n' +
-    '  cost curve is what makes the O(1)-write thesis legible. It is a REFERENCE,\n' +
-    '  not the rival — @ngrx/signals is what a team actually chooses between, and\n' +
-    '  NGXS after it. A headline quoted off the elf column is comparing against a\n' +
-    '  library almost nobody is choosing.'
+  '\n  Why BOTH columns, and why elf is not the soft option.\n' +
+    '\n  elf is the FASTEST competitor in this repo\x27s benchmarks, not a weak\n' +
+    '  reference. bench-compare.mjs has it at 1.80 ms against @ngrx/signals\x27 15.95\n' +
+    '  on the collection task (8.9x) and 3.05 ms against 301.28 on undo (99x) — and\n' +
+    '  it beats SignalTree on both. So it stays: a write-cost thesis tested against\n' +
+    '  the fastest opponent means something, and dropping it for the slower one\n' +
+    '  would be ducking.\n' +
+    '\n  @ngrx/signals is here because it is what teams actually choose between, and\n' +
+    '  a fan-out figure against it was simply missing. The two disagree in both\n' +
+    '  directions: elf is far cheaper at 0-100 consumers, and far more expensive at\n' +
+    '  5,000, because its select/pipe model re-projects per consumer while\n' +
+    '  patchState pays state width regardless of who listens.\n' +
+    '\n  Positioning is a separate question from measurement. For "which should I\n' +
+    '  pick", lead with @ngrx/signals then NGXS — elf is not in most decision sets.\n' +
+    '  For "is the thesis true", quote the hardest arm.'
 );

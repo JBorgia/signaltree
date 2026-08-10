@@ -77,10 +77,19 @@ export class DoesItFitComponent {
    * Axis 2 of tools/bench-state-scale.mjs — flat(100) state, varying consumers.
    *
    * The comparison column is `@ngrx/signals`, not elf. It used to be elf, and the
-   * headline read "469x at 1,000 live consumers" — an elf number, presented as the
-   * flagship claim against a library almost nobody is choosing between. elf is a
-   * REFERENCE in that harness (it is the immutable-root design, and its curve is
-   * what makes the O(1)-write thesis legible), not the rival.
+   * headline read "469x at 1,000 live consumers" — an elf number used as the
+   * flagship claim against a library that is not in most decision sets.
+   *
+   * That is a POSITIONING fix, not a claim that elf is slow. elf is the fastest
+   * competitor measured in this repo: 1.80 ms against @ngrx/signals' 15.95 on the
+   * collection task, 3.05 ms against 301.28 on undo — and it beats SignalTree on
+   * both, which docs/compare/real-implementations.md concedes. It stays in the
+   * harness precisely because it is the hardest arm.
+   *
+   * The two competitors disagree in both directions here: elf is far cheaper at
+   * 0-100 consumers and far more expensive at 5,000, because its select/pipe model
+   * re-projects per consumer while `patchState` pays state width regardless of who
+   * is listening.
    *
    * Every pair below takes the LEAST favourable of two full runs, because the
    * SignalTree column sits near the timer floor and moves 2-4x run to run while
