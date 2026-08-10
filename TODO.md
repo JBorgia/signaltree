@@ -336,6 +336,42 @@ rather than a wrong claim.
 
 There is no collection limitation to state. Retracted with item 4.
 
+## 5b. Naming: finish the pass
+
+[api-naming-audit.md](docs/audits/2026-08/api-naming-audit.md) — run against the BUILT
+surface, since an `as any` attachment is invisible to a type-level read and one finding
+is exactly that.
+
+Done: `removeAll()` deleted (pure alias of `clear()`), and the `coalesce()`/`update()`
+data-loss defect it surfaced.
+
+Still to do, in order:
+
+1. **`batchUpdate`** — a third grouping name, attached via `as any`, absent from
+   `types.ts`, and publicly documented at `packages/core/README.md:2136`. It is a
+   composition (`batch(() => tree(partial))`), not a capability. Spans `signal-tree.ts`,
+   `builder-types.ts`, `batching.ts` and two shipped docs, so it wants its own change.
+2. **Document `batch` vs `coalesce`.** Not duplicates — MEASURED, a mid-callback read
+   inside `coalesce` sees the OLD value because `coalesce` defers the WRITE, while
+   `batch` defers only notification. Neither docstring says so, and both currently imply
+   the same end state reached two ways.
+3. **`getHistory()` / `getCurrentIndex()`** — the only `get`-prefixed accessors in a
+   library of bare nouns (`all()`, `count()`, `canUndo()`). Both move to the devtools
+   surface anyway; rename once, there.
+4. **`resetHistory()` vs `clear()`** — check whether it empties or restores-to-initial
+   first, because those are different operations wearing similar words.
+5. **`byIdOrFail()`** — an `OrFail` suffix unique in the API, for a "strict variant"
+   concept that recurs without it (`removeMany`, `addMany` both throw).
+6. **`map()` on `entityMap`** — returns `ReadonlyMap`, but reads as a projection next to
+   `all()`. `asMap()`/`byIdMap()`. The `WRONG_ENTITY_METHODS` table exists for this class
+   of mistake already.
+7. **`__timeTravel`** — enumerable on the public tree object, so serialisation, devtools
+   and `{ ...tree }` all see it.
+
+**Not covered by that audit:** the other seven packages, config/option key names, and
+type/interface names. That is the remaining two thirds if the pass is meant to be
+exhaustive.
+
 ## 6. Re-score the 32-case time-travel audit — now for the opposite reason
 
 [time-travel-use-case-audit.md](docs/audits/2026-08/time-travel-use-case-audit.md)
