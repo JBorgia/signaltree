@@ -73,31 +73,50 @@ interface CapabilityGroup {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DoesItFitComponent {
-  /** Axis 2 of tools/bench-state-scale.mjs — 100 fixed fields, varying consumers. */
+  /**
+   * Axis 2 of tools/bench-state-scale.mjs — flat(100) state, varying consumers.
+   *
+   * The comparison column is `@ngrx/signals`, not elf. It used to be elf, and the
+   * headline read "469x at 1,000 live consumers" — an elf number, presented as the
+   * flagship claim against a library almost nobody is choosing between. elf is a
+   * REFERENCE in that harness (it is the immutable-root design, and its curve is
+   * what makes the O(1)-write thesis legible), not the rival.
+   *
+   * Every pair below takes the LEAST favourable of two full runs, because the
+   * SignalTree column sits near the timer floor and moves 2-4x run to run while
+   * the `@ngrx/signals` column barely moves at all. Ratios are shown for shape
+   * only — at 1,000 consumers two runs read 169x and 256x, so the ratio is not
+   * the claim. The absolutes and their trend are.
+   *
+   * ⚠️ flat(100) is one hundred SIBLING keys, which is the worst case for a store
+   * that patches at the level you wrote to. `patchState` measures ~220 µs/write
+   * here and ~1 µs on the deep-but-narrow shape in bench-vs-signalstore.mjs. Both
+   * are real; the cost tracks keys at the patched level, not total state size.
+   */
   protected readonly fanout: FanoutRow[] = [
     {
       consumers: '0',
-      signaltree: '0.007 ms',
-      immutable: '0.373 ms',
-      ratio: '53x',
+      signaltree: '0.018 ms',
+      immutable: '33.08 ms',
+      ratio: '~1800x',
     },
     {
       consumers: '100',
-      signaltree: '0.020 ms',
-      immutable: '2.401 ms',
-      ratio: '118x',
+      signaltree: '0.059 ms',
+      immutable: '31.67 ms',
+      ratio: '~540x',
     },
     {
       consumers: '1,000',
-      signaltree: '0.046 ms',
-      immutable: '21.425 ms',
-      ratio: '469x',
+      signaltree: '0.229 ms',
+      immutable: '32.75 ms',
+      ratio: '~140x',
     },
     {
       consumers: '5,000',
-      signaltree: '0.194 ms',
-      immutable: '106.503 ms',
-      ratio: '549x',
+      signaltree: '1.148 ms',
+      immutable: '46.37 ms',
+      ratio: '~40x',
     },
   ];
 
@@ -465,7 +484,7 @@ export class DoesItFitComponent {
       domains:
         'Fleet & logistics, grid/SCADA ops, telecom NOC, manufacturing MES, airline & rail ops, trading blotters',
       fit: 'signaltree',
-      best: 'SignalTree, decisively — 469x at 1,000 live consumers',
+      best: 'SignalTree — 0.23 ms against 32.75 ms at 1,000 live consumers (@ngrx/signals, flat-100 shape)',
       usual: 'SignalTree',
     },
     {
