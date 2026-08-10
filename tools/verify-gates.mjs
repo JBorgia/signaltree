@@ -575,6 +575,26 @@ const GATES = [
     },
   },
   {
+    name: 'error-codes',
+    covers:
+      'every diagnostic code the packages can emit is in docs/errors/README.md, and the catalogue invents none',
+    cmd: ['node', 'tools/check-error-codes.mjs'],
+    // Was short by two when written: ST1031 and ST1032 were emittable and
+    // documented nowhere. The earlier sweep missed them because it compared
+    // COUNTS on the ST2xxx series (27 vs 27) instead of comparing the sets.
+    mutation: {
+      file: 'docs/errors/README.md',
+      find: '| ST1031 |',
+      replace: '| ST9999 |',
+    },
+  },
+  {
+    name: 'error-codes:self',
+    covers:
+      'the catalogue checker detects a removed code AND reports the catalogue in sync without the probe',
+    cmd: ['node', 'tools/check-error-codes.mjs', '--self-test'],
+  },
+  {
     name: 'api-surface',
     covers:
       'the entry-point inventory in llms.txt, llms-full.txt, the SKILL and core README matches the BUILT barrels',

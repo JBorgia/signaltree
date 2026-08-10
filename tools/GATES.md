@@ -53,7 +53,50 @@ node tools/verify-gates.mjs --release    # + measurement harnesses, before publi
 node tools/verify-gates.mjs --self-test  # prove each gate can fail — pre-release, not per-change
 ```
 
-## One gate was added after this policy, and why
+## Three gates were added after this policy, and why
+
+`doc-links`, `api-surface` and `error-codes` (each with its `:self` proof) landed
+after the "do not add gates" line above. The exceptions are recorded rather than
+quietly taken, and each one met the bar at the bottom of this section.
+
+The policy exists to stop gate work becoming its own project. It was never meant
+to protect a class of defect that is actively shipping — and these three are the
+measured cause of the recurrence this repo has been paying for. 74 commits over
+twelve months fix a doc that had gone stale or was never true; the same files
+recur (`packages/core/README.md` 8x, `llms-full.txt` 7x, `llms.txt` 4x,
+`docs/errors/README.md` 6x, the SKILL 4x). Five hand-written surfaces describe
+the API in ~43,000 words with 97 symbols described independently in 3+ of them,
+and nothing generated any of it.
+
+What each one found before it existed:
+
+- `doc-links` — 28 broken relative links, five in files that ship in the npm
+  tarballs, one pointing at a package deleted in the same release, one claiming a
+  file "already exists in this repo" under a gitignored directory.
+- `api-surface` — six `/authoring` exports documented on no surface at all; a
+  SKILL that said "25 symbols MOVED there" and enumerated roughly fifteen; a
+  README promising a deprecation removal three majors after it had happened.
+- `error-codes` — ST1031 and ST1032 emittable at runtime and documented nowhere.
+
+**The bar for any future gate**, which these met and a speculative gate will not:
+it found real defects before it was written, it cost about one file, and it
+proves it can fail. If a proposal cannot say all three, do not add it.
+
+### The limit of all of them
+
+Every gate here checks a property that is mechanically decidable — a symbol
+exists, a path resolves, a figure names its generator, a code is catalogued.
+**None can check whether a sentence is still true.** Myth 9 in
+`docs/myths-and-misconceptions.md` contradicted itself for five versions with
+every gate green: it said `rxMethod` was removed in 9.6.0 and then, three lines
+later, showed how to import it.
+
+So do not read a green board as "the docs are correct". It means the decidable
+subset is correct. The remaining exposure is the ~43,000 words of hand-written
+prose, and the only real fix for that is fewer independent copies of the same
+claim — which is what `api-surface` starts and does not finish.
+
+## The first gate added after this policy, and why
 
 `doc-links` (plus its `:self` proof) landed after the "do not add gates" line
 above. The exception is recorded rather than quietly taken.
