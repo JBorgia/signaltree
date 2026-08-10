@@ -122,44 +122,37 @@ serialisation. Use it for genuinely derived or secret state.
 Arbitrary branches cannot be scoped yet — only markers. That is
 [RFC 0012](../rfcs/0012-history-scoped-marker-capture.md), accepted and deferred.
 
-### 3. Make bulk work one step — `pauseRecording()`
+### 3. ~~Make bulk work one step — `pauseRecording()`~~ — REMOVED in 15.0.0
 
-A 200-row import should be one undo step, not two hundred. `maxHistorySize`
-bounds memory but does nothing for whether undo _means_ anything.
+**This lever is gone, and it should never have been one.** `pauseRecording()`,
+`resumeRecording()` and `isRecordingPaused()` were deleted rather than deprecated.
 
-⚠️ **Pausing alone is not enough, and getting this wrong loses data.** An earlier
-revision of this guide showed only the pause/resume pair. Measured, that is
-destructive:
+It could not express "one undo step" — only "record nothing". `addEntry` bailed on a
+single boolean, so pausing alone was **destructive**: nothing recorded, the newest entry
+still described the state BEFORE the bulk, `undo()` stepped back past it, and the result
+became unreachable with `canRedo()` false. Verified: n went 1 → (bulk to 5) → undo → **0**,
+redo → 1, and 5 was unreachable. An earlier revision of this very guide shipped that
+recipe.
 
-```ts
-// WRONG — the bulk result becomes unreachable
-tree.pauseRecording();
-for (const row of imported) tree.$.rows.addOne(row);
-tree.resumeRecording();
-```
+The documented fix was a synthetic "sealing" write — meaning an undo API that required
+you to add a field to your domain model so history had somewhere to land, after which
+the entry was identified by a timestamp rather than by what the user did.
 
-Nothing was recorded, so the newest entry still describes the state BEFORE the
-import. `undo()` therefore steps back past it — to the state before _that_ — and
-`redo()` can only return to the pre-import state. The imported result is gone from
-history permanently, with `canRedo()` false. Verified: n went 1 → (bulk to 5) →
-undo → **0**, redo → 1, and 5 was unreachable.
+And it was a **global** mode. `pausedSignal` was one flag on one manager and `addEntry`
+returned early for every writer, so correctness required sole ownership of the tree for
+the window's duration. Verified: an unrelated `tree.$.rev.set(999)` inside a paused window
+was suppressed too. A synchronous `for` loop has sole ownership by construction; a
+multi-second `mergeMap` over N HTTP requests does not.
 
-Seal the batch with one recorded write:
+**What to do instead, today:** nothing. Writes that share a microtask are already one
+entry — a 25-row import in a synchronous loop records one step and `undo()`/`redo()`
+round-trips it. Verified after removal: 25 `addOne` calls → 1 entry, undo → 3 rows,
+redo → 28.
 
-```ts
-tree.pauseRecording();
-for (const row of imported) tree.$.rows.addOne(row);
-tree.resumeRecording();
-tree({ importedAt: Date.now() }); // ONE entry, capturing the post-import state
-```
-
-Verified: undo returns to the pre-import state and redo returns to the imported
-result — one logical step in each direction, instead of 200 or none.
-
-`isRecordingPaused()` is a signal, so a "recording paused" indicator can bind to
-it. Note the sealing write needs somewhere to land: a revision counter, a
-`lastImportAt` stamp, or any field whose change is meaningful. If nothing in your
-state changes, there is nothing to record.
+**What is coming:** that microtask boundary is decided by whether a caller happens to
+`await`, which is an accident rather than a design. Intent-scoped grouping is a
+transaction handle — see
+[history-the-greenfield-target.md](../architecture/history-the-greenfield-target.md).
 
 ### 4. Drop uninteresting transitions — `shouldSkip`
 

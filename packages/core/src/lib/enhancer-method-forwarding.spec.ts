@@ -23,7 +23,7 @@ import { signalTree } from '../index';
 const ENHANCERS: Array<[string, () => (t: never) => never]> = [
   ['timeTravel', () => timeTravel() as never],
   ['batching', () => batching() as never],
-  ['devTools', () => devTools({ treeName: 'x' }) as never],
+  ['devTools', () => devTools({ name: 'x' }) as never],
 ];
 
 describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => {
@@ -48,7 +48,6 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     expect(tree.$.count()).toBe(3);
   });
 
-
   it('destroy() still runs registered cleanups and flips destroyed()', () => {
     // The suite passed with `destroy`/`registerCleanup`/`destroyed` dropped from
     // the copy — and that is NOT harmless: with `destroy` missing the builder
@@ -56,16 +55,16 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     // batching timers and persistence subscriptions all leak, silently.
     const tree = signalTree({ count: 0 }).with(make() as never);
     let ran = 0;
-    (tree as unknown as { registerCleanup: (f: () => void) => void }).registerCleanup(
-      () => ran++
-    );
+    (
+      tree as unknown as { registerCleanup: (f: () => void) => void }
+    ).registerCleanup(() => ran++);
 
     (tree as unknown as { destroy: () => void }).destroy();
 
     expect(ran).toBe(1);
-    expect(
-      (tree as unknown as { destroyed: () => boolean }).destroyed()
-    ).toBe(true);
+    expect((tree as unknown as { destroyed: () => boolean }).destroyed()).toBe(
+      true
+    );
   });
 
   it('keeps $ identity, so leaf refs held across the enhancer still work', () => {
@@ -74,7 +73,9 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     const tree = base.with(make() as never);
 
     expect((tree as unknown as { $: unknown }).$).toBe(base.$);
-    expect((tree as unknown as { $: { count: unknown } }).$.count).toBe(baseLeaf);
+    expect((tree as unknown as { $: { count: unknown } }).$.count).toBe(
+      baseLeaf
+    );
 
     // A write through the PRE-enhancer leaf reference must be visible through
     // the enhanced tree.
@@ -84,7 +85,9 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
 
   it('bind() survives and still writes', () => {
     const tree = signalTree({ count: 0 }).with(make() as never);
-    const bound = (tree as unknown as { bind: () => (v?: unknown) => unknown }).bind();
+    const bound = (
+      tree as unknown as { bind: () => (v?: unknown) => unknown }
+    ).bind();
 
     expect(typeof bound).toBe('function');
     (bound as (v: unknown) => void)({ count: 6 });

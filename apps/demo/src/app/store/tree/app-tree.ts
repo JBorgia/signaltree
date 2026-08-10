@@ -1,9 +1,4 @@
-import {
-  batching,
-  devTools,
-  signalTree,
-  WithDerived,
-} from '@signaltree/core';
+import { batching, devTools, signalTree, WithDerived } from '@signaltree/core';
 
 import { tier1Derived, tier2Derived, tier3Derived } from './derived';
 import { postsState, uiState, usersState } from './state';
@@ -76,7 +71,7 @@ function createBaseState() {
  */
 export function createAppTree() {
   return signalTree(createBaseState())
-    .with(devTools({ treeName: STORE_NAME }))
+    .with(devTools({ name: STORE_NAME }))
     .with(batching())
     .derived(tier1Derived)
     .derived(tier2Derived)

@@ -399,7 +399,7 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                                                                                                                                                                                                                                      |
 | `updateEntity({ id, changes })`                | `tree.$.items.updateOne(id, changes)`                                                                                                                                                                                                                                                                                                          |
 | `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                                                                                                                                                                                                                                                                                                   |
-| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                                                                                                                                                                                                                                        |
+| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ name: name }))` on the tree — remove the provider                                                                                                                                                                                                                                                                            |
 
 ## Goal-state architectural patterns
 
@@ -497,7 +497,7 @@ export function createAppTree(initial: {
   /* ... */
 }) {
   return signalTree(createBaseState(initial))
-    .with(devTools({ treeName: 'AppTree' }))
+    .with(devTools({ name: 'AppTree' }))
     .with(batching())
     .derived(entityResolutionDerived) // tier 1: id → entity
     .derived(complexLogicDerived); // tier 2+: depends on tier 1
@@ -952,7 +952,7 @@ A migration is **not done** when the build is green. See [`optimal-implementatio
 - `grep -rln '@ngrx/signals' src/app/` returns nothing in the migrated app.
 - `@ngrx/signals` (and any related toolkit packages) removed from `package.json` (or tracked for removal if a shared lib elsewhere still uses them).
 - All adapter facades either deleted or carrying a deletion-deadline comment + tracking issue.
-- Test suite green; lint clean; DevTools shows the tree under its `treeName`.
+- Test suite green; lint clean; DevTools shows the tree under its `name`.
 
 ### Architectural self-check (run on your own diff before declaring done)
 

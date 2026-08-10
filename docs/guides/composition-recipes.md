@@ -29,13 +29,13 @@ import { batching, devTools } from '@signaltree/core';
 import type { Enhancer, SignalTreeBuilder, TreeNode } from '@signaltree/core';
 
 export interface StandardEnhancerOptions {
-  treeName: string;
+  name: string;
   /** Extra enhancers the CALLER constructed — see the tree-shaking note. */
   extra?: Array<Enhancer<unknown>>;
 }
 
 export function withStandardEnhancers<T extends object>(tree: SignalTreeBuilder<T, TreeNode<T>>, { treeName, extra = [] }: StandardEnhancerOptions) {
-  const base = tree.with(batching()).with(devTools({ treeName }));
+  const base = tree.with(batching()).with(devTools({ name }));
   return extra.reduce((acc, enhancer) => acc.with(enhancer), base);
 }
 ```
@@ -63,12 +63,12 @@ is wanted, so a production entry point never references it:
 ```typescript
 // dev entry point
 withStandardEnhancers(signalTree(state), {
-  treeName: 'MyApp Dev',
+  name: 'MyApp Dev',
   extra: [timeTravel()], // import lives in the dev-only file
 });
 
 // production entry point — no timeTravel import anywhere in this graph
-withStandardEnhancers(signalTree(state), { treeName: 'MyApp' });
+withStandardEnhancers(signalTree(state), { name: 'MyApp' });
 ```
 
 With Angular, `fileReplacements` in `angular.json` is the natural seam.

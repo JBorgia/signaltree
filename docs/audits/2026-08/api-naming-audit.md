@@ -270,8 +270,9 @@ are what the rename would touch.
 
 `DevToolsConfig` declares both, with the source saying so — `/** Alias for name (legacy
 support) */` — and `devtools-impl.ts:1096` resolves `const displayName = name ?? treeName;`.
-So `name` wins and `treeName` is the fallback. Same class as `removeAll` and `equal`;
-delete it.
+So `name` wins and `treeName` is the fallback. Same class as `removeAll` and `equal`.
+**Removed in 15.0.0** — including from every doc code block, which the `lint:skills`
+gate caught by type-checking them.
 
 ### Confirmed dead option: `TreeConfig.enableTimeTravel`
 

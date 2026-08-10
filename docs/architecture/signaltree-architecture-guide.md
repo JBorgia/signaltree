@@ -568,7 +568,7 @@ const DEVTOOLS_GROUP_NAME = 'MyApp SignalTree';
 const ordersTree = signalTree({ orders: entityMap<Order>() })
   .with(batching())
   .with(devTools({
-    treeName: 'orders-store',
+    name: 'orders-store',
     aggregatedReduxInstance: {
       id: DEVTOOLS_GROUP_ID,
       name: DEVTOOLS_GROUP_NAME,
@@ -579,7 +579,7 @@ const ordersTree = signalTree({ orders: entityMap<Order>() })
 const productsTree = signalTree({ products: entityMap<Product>() })
   .with(batching())
   .with(devTools({
-    treeName: 'products-store',
+    name: 'products-store',
     aggregatedReduxInstance: {
       id: DEVTOOLS_GROUP_ID,
       name: DEVTOOLS_GROUP_NAME,
@@ -587,7 +587,7 @@ const productsTree = signalTree({ products: entityMap<Product>() })
   }));
 ````
 
-All trees sharing the same `aggregatedReduxInstance.id` will appear under a **single Redux DevTools instance** (named by `aggregatedReduxInstance.name`), with each tree's state nested under its `treeName` key. Trees can be dynamically registered/unregistered as lazy-loaded modules come and go — the shared DevTools instance is created on first registration and cleaned up when the last tree disconnects.
+All trees sharing the same `aggregatedReduxInstance.id` will appear under a **single Redux DevTools instance** (named by `aggregatedReduxInstance.name`), with each tree's state nested under its `name` key. Trees can be dynamically registered/unregistered as lazy-loaded modules come and go — the shared DevTools instance is created on first registration and cleaned up when the last tree disconnects.
 
 PathNotifier events are **filtered by tree ownership** in both standalone and aggregated modes. Each tree only processes paths that start with its top-level keys, and DevTools only sends an action when the tree's state actually changed. This prevents phantom actions even when multiple trees share the same property names.
 

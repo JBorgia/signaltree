@@ -21,8 +21,7 @@ import { ENHANCER_META } from '../../lib/types';
 
 // Preserve the public type surface that used to be declared in this file
 // (re-exported through ./index.ts via `export *`).
-export type {
-} from './devtools-impl';
+export type {} from './devtools-impl';
 
 // Angular's compile-time dev flag. A production build defines it as false.
 declare const ngDevMode: boolean | undefined;
@@ -85,19 +84,19 @@ export function devTools(
  * Enable devtools with default settings
  */
 export function enableDevTools(
-  treeName = 'SignalTree'
+  name = 'SignalTree'
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
-  return devTools({ treeName, enabled: true });
+  return devTools({ name, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
 export function fullDevTools(
-  treeName = 'SignalTree'
+  name = 'SignalTree'
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   return devTools({
-    treeName,
+    name,
     enabled: true,
     enableBrowserDevTools: true,
     enableLogging: true,

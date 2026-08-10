@@ -82,7 +82,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 - Group CD notifications → `batching()` from `@signaltree/core`.
 - Persist tree to `localStorage` → `persistence({ key, autoSave, autoLoad, debounceMs })` from `@signaltree/core`. Single leaf → `stored()` marker.
 - `computed()` running too often → use Angular's `computed()` — it already memoizes by reference. SignalTree no longer ships a `memoization` enhancer (removed in 9.0.1); for deep-equality cache keys, derive via your own `computed()` with explicit comparison.
-- Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`. **v14:** `canUndo()`/`canRedo()`/`getHistory()` are REACTIVE — bind them directly (`@if (tree.canUndo())`); before 14.0.0 they read plain values, so a zoneless app's undo button never enabled. `pauseRecording()`/`resumeRecording()` make a bulk import ONE undo step instead of a hundred (writes still apply while paused), and `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on every recorded write, so compare only the fields you mean.
+- Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ name })` from `@signaltree/core`. **v14:** `canUndo()`/`canRedo()`/`getHistory()` are REACTIVE — bind them directly (`@if (tree.canUndo())`); before 14.0.0 they read plain values, so a zoneless app's undo button never enabled. **v15:** `pauseRecording`/`resumeRecording`/`isRecordingPaused` are REMOVED (they could not express "one undo step", only "record nothing", and pause was global). `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on every recorded write, so compare only the fields you mean.
 - Report every error the library catches to Sentry/telemetry → `onTreeError` from **`@signaltree/core/authoring`**. Additive: markers still handle their own errors; this cannot swallow or retry.
 - **⚠️ Two entry points since 14.0.0.** `@signaltree/core` is the APP surface;
   `@signaltree/core/authoring` is enhancer/marker/tooling plumbing. Emitting an
@@ -113,7 +113,7 @@ interface AppState {
 
 const tree = signalTree<AppState>({ counter: 0, ui: { theme: 'light' } })
   .with(batching({ enabled: true, notificationDelayMs: 0 }))
-  .with(devTools({ treeName: 'AppStore' }));
+  .with(devTools({ name: 'AppStore' }));
 ```
 
 Cross-package enhancers (`guardrails()`, `formBridge()`, `supabaseRealtime(...)`) slot into same chain.
@@ -189,6 +189,6 @@ Operating rules:
   - **`entityMap<T, K>()` for any keyed collection** (anything with `id`/key lookup, membership tests, or cross-references). Plain `T[]` is only correct for ordered, append-only, non-keyed lists.
   - **Per-domain state files** (`tree/state/<domain>.state.ts`) once the tree has more than two domains. Don't keep all state in one `app-tree.ts`.
   - **Multi-tier `.derived()` chains in named files** (`tree/derived/tier-<concern>.derived.ts`) once you have ≥ 3 derived concerns or any cross-tier dependency. See [`reference/patterns.md`](reference/patterns.md#splitting-derived-tiers-into-separate-files).
-  - **Enhancer baseline for production trees**: `devTools({ treeName }) + batching() + timeTravel()` minimum. Tests skip enhancers; production does not. (`memoization` was removed in 9.0.1 — use Angular `computed()`.)
+  - **Enhancer baseline for production trees**: `devTools({ name }) + batching() + timeTravel()` minimum. Tests skip enhancers; production does not. (`memoization` was removed in 9.0.1 — use Angular `computed()`.)
   - **Cross-domain orchestration belongs on `AppStore`**, not on any one Ops class. Single-domain methods belong on Ops; methods that touch ≥ 2 domains belong on `AppStore`.
-- **Definition of done for a migration:** (1) zero imports of the legacy package in the migrated app, (2) legacy package removed from `package.json` (or, if other apps still use it, a tracking ticket exists for removal), (3) test suite green, (4) DevTools shows the new tree under the chosen `treeName`. The full checklist is in [`reference/optimal-implementation.md`](reference/optimal-implementation.md#definition-of-done).
+- **Definition of done for a migration:** (1) zero imports of the legacy package in the migrated app, (2) legacy package removed from `package.json` (or, if other apps still use it, a tracking ticket exists for removal), (3) test suite green, (4) DevTools shows the new tree under the chosen `name`. The full checklist is in [`reference/optimal-implementation.md`](reference/optimal-implementation.md#definition-of-done).

@@ -5,31 +5,30 @@
     Six progressively more complex feature implementations, each shown
     side-by-side: <strong>SignalTree on the left</strong>, the comparison
     library you pick on the right. Each example targets the same
-    <em>capability checklist</em>, and within an example both panes are
-    written at the same architectural level &mdash; a compact single-file
-    service compares against a compact single-file store; a multi-file
-    <code>AppTree</code>/<code>Ops</code>/<code>AppStore</code> layout
-    compares against the equivalent multi-store + facade layout.
+    <em>capability checklist</em>, and within an example both panes are written
+    at the same architectural level &mdash; a compact single-file service
+    compares against a compact single-file store; a multi-file
+    <code>AppTree</code>/<code>Ops</code>/<code>AppStore</code> layout compares
+    against the equivalent multi-store + facade layout.
   </p>
 
   <p class="callout">
     <strong>What we don't claim:</strong> that the libraries' internals are
     equivalent. SignalTree's <code>status()</code>, <code>entityMap()</code>,
-    <code>stored()</code>, <code>batching()</code>, <code>devTools()</code>,
-    and <code>timeTravel()</code> primitives encapsulate behavior that other
-    libraries reconstruct from primitives in app code. That's the point of
-    the comparison &mdash; not "look how much shorter SignalTree is" but
-    "look at what each library asks <em>your</em> code to express."
+    <code>stored()</code>, <code>batching()</code>, <code>devTools()</code>, and
+    <code>timeTravel()</code> primitives encapsulate behavior that other
+    libraries reconstruct from primitives in app code. That's the point of the
+    comparison &mdash; not "look how much shorter SignalTree is" but "look at
+    what each library asks <em>your</em> code to express."
   </p>
 
   <p class="callout">
-    <strong>One more honest note:</strong> SignalTree can be as small as
-    you want it to be. The
-    <code>APP_TREE</code> + <code>provideAppTree()</code> +
+    <strong>One more honest note:</strong> SignalTree can be as small as you
+    want it to be. The <code>APP_TREE</code> + <code>provideAppTree()</code> +
     <code>AppStore</code> + per-domain <code>Ops</code> layout shown in
     <a href="#ex-6">Example 6</a> is a <em>recommended</em> architecture for
-    multi-domain apps &mdash; it is not mandatory. Examples 1&ndash;5 use
-    plain <code>&#64;Injectable</code> services owning a
+    multi-domain apps &mdash; it is not mandatory. Examples 1&ndash;5 use plain
+    <code>&#64;Injectable</code> services owning a
     <code>signalTree</code> directly, which is the same scale as a
     <code>signalStore</code> or a single <code>BehaviorSubject</code>
     service. Pick the architecture that fits your app's complexity.
@@ -42,23 +41,23 @@
     <strong>Compare SignalTree against:</strong>
     <div class="chips">
       @for (opt of options; track opt.id) {
-        <button
-          type="button"
-          role="radio"
-          [attr.aria-checked]="compareLib() === opt.id"
-          [class.active]="compareLib() === opt.id"
-          (click)="compareLib.set(opt.id)"
-          [title]="'Available in examples: ' + opt.available.join(', ')"
-        >
-          {{ opt.label }}
-          <span class="chip-count">{{ opt.available.length }}</span>
-        </button>
+      <button
+        type="button"
+        role="radio"
+        [attr.aria-checked]="compareLib() === opt.id"
+        [class.active]="compareLib() === opt.id"
+        (click)="compareLib.set(opt.id)"
+        [title]="'Available in examples: ' + opt.available.join(', ')"
+      >
+        {{ opt.label }}
+        <span class="chip-count">{{ opt.available.length }}</span>
+      </button>
       }
     </div>
     <p class="picker-note">
-      Showing <strong>{{ selectedLabel() }}</strong>. Available in examples
-      {{ examplesFor(compareLib()).join(', ') }}. Other examples will show a
-      pointer to the closest covered library.
+      Showing <strong>{{ selectedLabel() }}</strong
+      >. Available in examples {{ examplesFor(compareLib()).join(', ') }}. Other
+      examples will show a pointer to the closest covered library.
     </p>
   </div>
 
@@ -85,8 +84,8 @@
 
     <p>
       The smallest possible feature. One number, one derived value
-      (<code>doubled</code>), one increment method. This is where the
-      mechanical overhead of each library is most visible.
+      (<code>doubled</code>), one increment method. This is where the mechanical
+      overhead of each library is most visible.
     </p>
 
     <div class="callout">
@@ -95,7 +94,10 @@
         <li><code>count: number</code> state</li>
         <li><code>doubled: number</code> derived value</li>
         <li><code>increment()</code> mutation</li>
-        <li>Component reads <code>count</code> + <code>doubled</code> as signals and calls <code>increment()</code></li>
+        <li>
+          Component reads <code>count</code> + <code>doubled</code> as signals
+          and calls <code>increment()</code>
+        </li>
       </ul>
     </div>
 
@@ -134,10 +136,9 @@ export class CounterComponent &#123;
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('signals') {
-            <h3 class="pane-title">Plain Angular signals</h3>
-            <pre ngNonBindable><code>// counter.service.ts
+        @switch (compareLib()) { @case ('signals') {
+        <h3 class="pane-title">Plain Angular signals</h3>
+        <pre ngNonBindable><code>// counter.service.ts
 import &#123; Injectable, signal, computed &#125; from '&#64;angular/core';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
@@ -168,10 +169,9 @@ import &#123; CounterService &#125; from './counter.service';
 export class CounterComponent &#123;
   svc = inject(CounterService);
 &#125;</code></pre>
-          }
-          @case ('behavior') {
-            <h3 class="pane-title">BehaviorSubject service</h3>
-            <pre ngNonBindable><code>// counter.service.ts
+        } @case ('behavior') {
+        <h3 class="pane-title">BehaviorSubject service</h3>
+        <pre ngNonBindable><code>// counter.service.ts
 import &#123; Injectable &#125; from '&#64;angular/core';
 import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
 import &#123; BehaviorSubject &#125; from 'rxjs';
@@ -208,10 +208,9 @@ import &#123; CounterService &#125; from './counter.service';
 export class CounterComponent &#123;
   svc = inject(CounterService);
 &#125;</code></pre>
-          }
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
-            <pre ngNonBindable><code>// counter.store.ts
+        } @case ('ngrx-signals') {
+        <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
+        <pre ngNonBindable><code>// counter.store.ts
 import &#123; computed &#125; from '&#64;angular/core';
 import &#123;
   patchState, signalStore, withComputed, withMethods, withState,
@@ -246,23 +245,20 @@ import &#123; CounterStore &#125; from './counter.store';
 export class CounterComponent &#123;
   store = inject(CounterStore);
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
-      <strong>Takeaway:</strong> at this size, the leading options are within
-      a line or two of each other. SignalTree's edge starts to show as soon
-      as the state shape grows beyond a single primitive &mdash; see the
-      next example.
+      <strong>Takeaway:</strong> at this size, the leading options are within a
+      line or two of each other. SignalTree's edge starts to show as soon as the
+      state shape grows beyond a single primitive &mdash; see the next example.
     </p>
   </section>
 
@@ -282,11 +278,17 @@ export class CounterComponent &#123;
     <div class="callout">
       <strong>Capability checklist:</strong>
       <ul>
-        <li><code>items: CartItem[]</code> state (each item has <code>id</code>, <code>price</code>, <code>qty</code>)</li>
+        <li>
+          <code>items: CartItem[]</code> state (each item has <code>id</code>,
+          <code>price</code>, <code>qty</code>)
+        </li>
         <li><code>count</code> derived = total quantity</li>
         <li><code>total</code> derived = price &times; quantity sum</li>
         <li><code>add(item)</code>, <code>remove(id)</code> mutations</li>
-        <li>Component reads <code>items</code>, <code>count</code>, <code>total</code></li>
+        <li>
+          Component reads <code>items</code>, <code>count</code>,
+          <code>total</code>
+        </li>
       </ul>
     </div>
 
@@ -326,10 +328,9 @@ export class CartComponent &#123;
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('signals') {
-            <h3 class="pane-title">Plain Angular signals</h3>
-            <pre ngNonBindable><code>// cart.types.ts
+        @switch (compareLib()) { @case ('signals') {
+        <h3 class="pane-title">Plain Angular signals</h3>
+        <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.service.ts
@@ -352,10 +353,9 @@ export class CartService &#123;
     this._items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
   &#125;
 &#125;</code></pre>
-          }
-          @case ('behavior') {
-            <h3 class="pane-title">BehaviorSubject service</h3>
-            <pre ngNonBindable><code>// cart.types.ts
+        } @case ('behavior') {
+        <h3 class="pane-title">BehaviorSubject service</h3>
+        <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.service.ts
@@ -387,10 +387,9 @@ export class CartService &#123;
     this._items$.next(this._items$.value.filter((x) =&gt; x.id !== id));
   &#125;
 &#125;</code></pre>
-          }
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
-            <pre ngNonBindable><code>// cart.types.ts
+        } @case ('ngrx-signals') {
+        <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
+        <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.store.ts
@@ -420,10 +419,9 @@ export const CartStore = signalStore(
     &#125;,
   &#125;))
 );</code></pre>
-          }
-          @case ('ngxs') {
-            <h3 class="pane-title">NGXS</h3>
-            <pre ngNonBindable><code>// cart.types.ts
+        } @case ('ngxs') {
+        <h3 class="pane-title">NGXS</h3>
+        <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.actions.ts
@@ -500,24 +498,22 @@ export class CartComponent &#123;
   add(item: CartItem) &#123; this.store.dispatch(new AddToCart(item)); &#125;
   remove(id: string) &#123; this.store.dispatch(new RemoveFromCart(id)); &#125;
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> SignalTree, plain signals, and
       <code>&#64;ngrx/signals</code> are all roughly one file. NGXS already
-      requires four (actions, state, app-config registration, component) for
-      the same feature &mdash; and that's before any async or persistence
-      concerns enter the picture.
+      requires four (actions, state, app-config registration, component) for the
+      same feature &mdash; and that's before any async or persistence concerns
+      enter the picture.
     </p>
   </section>
 
@@ -530,16 +526,18 @@ export class CartComponent &#123;
     <h2>3. Async data &mdash; loading / error / data</h2>
 
     <p>
-      Fetch a user profile from an API. Track loading state and errors,
-      expose data, allow retry. This is the smallest realistic
-      single-resource async feature.
+      Fetch a user profile from an API. Track loading state and errors, expose
+      data, allow retry. This is the smallest realistic single-resource async
+      feature.
     </p>
 
     <div class="callout">
       <strong>Capability checklist:</strong>
       <ul>
         <li><code>profile: Profile | null</code></li>
-        <li><code>isLoading: boolean</code>, <code>error: string | null</code></li>
+        <li>
+          <code>isLoading: boolean</code>, <code>error: string | null</code>
+        </li>
         <li><code>load()</code> async fetch</li>
         <li><code>retry()</code> re-runs the load</li>
       </ul>
@@ -547,7 +545,9 @@ export class CartComponent &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (using the <code>asyncSource()</code> marker)</h3>
+        <h3 class="pane-title pane-signaltree">
+          SignalTree (using the <code>asyncSource()</code> marker)
+        </h3>
         <pre ngNonBindable><code>// profile.service.ts
 import &#123; Injectable, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
@@ -577,10 +577,11 @@ export class ProfileService &#123;
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals (with <code>rxMethod</code>)</h3>
-            <pre ngNonBindable><code>// profile.types.ts
+        @switch (compareLib()) { @case ('ngrx-signals') {
+        <h3 class="pane-title">
+          &#64;ngrx/signals (with <code>rxMethod</code>)
+        </h3>
+        <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.store.ts
@@ -622,10 +623,9 @@ export const ProfileStore = signalStore(
     retry() &#123; (this as unknown as &#123; load(v: void): void &#125;).load(); &#125;,
   &#125;))
 );</code></pre>
-          }
-          @case ('component-store') {
-            <h3 class="pane-title">&#64;ngrx/component-store</h3>
-            <pre ngNonBindable><code>// profile.types.ts
+        } @case ('component-store') {
+        <h3 class="pane-title">&#64;ngrx/component-store</h3>
+        <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.store.ts
@@ -678,10 +678,9 @@ export class ProfileStore extends ComponentStore&lt;State&gt; &#123;
 
   retry() &#123; this.load(); &#125;
 &#125;</code></pre>
-          }
-          @case ('behavior') {
-            <h3 class="pane-title">BehaviorSubject service</h3>
-            <pre ngNonBindable><code>// profile.types.ts
+        } @case ('behavior') {
+        <h3 class="pane-title">BehaviorSubject service</h3>
+        <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.service.ts
@@ -718,25 +717,25 @@ export class ProfileService &#123;
 
   retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> the <code>status()</code> marker collapses
-      three correlated booleans (<code>isLoading</code>, <code>error</code>,
-      and the implied "is loaded") into one slice with typed transitions
-      (<code>start</code> / <code>success</code> / <code>fail</code>). The
-      other libraries are functionally identical but reconstruct that pattern
-      from primitives every time.
+      three correlated booleans (<code>isLoading</code>, <code>error</code>, and
+      the implied "is loaded") into one slice with typed transitions (<code
+        >start</code
+      >
+      / <code>success</code> / <code>fail</code>). The other libraries are
+      functionally identical but reconstruct that pattern from primitives every
+      time.
     </p>
   </section>
 
@@ -749,9 +748,9 @@ export class ProfileService &#123;
     <h2>4. CRUD entity collection with filter</h2>
 
     <p>
-      The production pattern: a normalized collection of tickets, a text
-      filter, loading/error tracking, async load, optimistic update with
-      rollback on failure, and a derived <code>visible</code> list.
+      The production pattern: a normalized collection of tickets, a text filter,
+      loading/error tracking, async load, optimistic update with rollback on
+      failure, and a derived <code>visible</code> list.
     </p>
 
     <div class="callout">
@@ -762,7 +761,10 @@ export class ProfileService &#123;
         <li><code>visible</code> = entities filtered by <code>filter</code></li>
         <li>Loading + error tracking</li>
         <li>Async <code>load()</code></li>
-        <li>Optimistic <code>updateTitle(id, title)</code> with rollback on failure</li>
+        <li>
+          Optimistic <code>updateTitle(id, title)</code> with rollback on
+          failure
+        </li>
       </ul>
     </div>
 
@@ -838,10 +840,12 @@ export class TicketsListComponent implements OnInit &#123;
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals (with <code>withEntities</code> + <code>rxMethod</code>)</h3>
-            <pre ngNonBindable><code>// tickets.types.ts
+        @switch (compareLib()) { @case ('ngrx-signals') {
+        <h3 class="pane-title">
+          &#64;ngrx/signals (with <code>withEntities</code> +
+          <code>rxMethod</code>)
+        </h3>
+        <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.store.ts
@@ -932,10 +936,12 @@ export class TicketsListComponent implements OnInit &#123;
 
   ngOnInit() &#123; this.store.load(); &#125;
 &#125;</code></pre>
-          }
-          @case ('ngrx-classic') {
-            <h3 class="pane-title">Classic NgRx (<code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>)</h3>
-            <pre ngNonBindable><code>// tickets.types.ts
+        } @case ('ngrx-classic') {
+        <h3 class="pane-title">
+          Classic NgRx (<code>&#64;ngrx/store</code> +
+          <code>&#64;ngrx/effects</code>)
+        </h3>
+        <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.actions.ts
@@ -1092,10 +1098,9 @@ export class TicketsListComponent implements OnInit &#123;
 
   retry() &#123; this.store.dispatch(TicketsActions.load()); &#125;
 &#125;</code></pre>
-          }
-          @case ('elf') {
-            <h3 class="pane-title">Elf (&#64;ngneat/elf with entities)</h3>
-            <pre ngNonBindable><code>// tickets.types.ts
+        } @case ('elf') {
+        <h3 class="pane-title">Elf (&#64;ngneat/elf with entities)</h3>
+        <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.repository.ts
@@ -1171,28 +1176,26 @@ export class TicketsRepository &#123;
 
   retry() &#123; return this.load(); &#125;
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> at single-domain scale, SignalTree,
-      <code>&#64;ngrx/signals</code>, and Elf all fit in one service file
-      with comparable line counts. Classic NgRx requires roughly the same
-      logic distributed across <em>five</em> files: actions, reducer,
-      selectors, effects, and the registration in <code>app.config.ts</code>.
-      The interesting divergence shows up in the multi-domain case
-      (<a href="#ex-6">Example 6</a>), where SignalTree composes one tree
-      and one facade while the alternatives compose multiple stores or
-      multiple feature reducers.
+      <code>&#64;ngrx/signals</code>, and Elf all fit in one service file with
+      comparable line counts. Classic NgRx requires roughly the same logic
+      distributed across <em>five</em> files: actions, reducer, selectors,
+      effects, and the registration in <code>app.config.ts</code>. The
+      interesting divergence shows up in the multi-domain case (<a href="#ex-6"
+        >Example 6</a
+      >), where SignalTree composes one tree and one facade while the
+      alternatives compose multiple stores or multiple feature reducers.
     </p>
   </section>
 
@@ -1205,16 +1208,18 @@ export class TicketsRepository &#123;
     <h2>5. Reactive cross-domain effect &mdash; selection drives a fetch</h2>
 
     <p>
-      When <code>selectedUserId</code> changes, fetch that user's orders.
-      Cancel any in-flight request for the previous user. Clear orders when
-      the selection becomes <code>null</code>.
+      When <code>selectedUserId</code> changes, fetch that user's orders. Cancel
+      any in-flight request for the previous user. Clear orders when the
+      selection becomes <code>null</code>.
     </p>
 
     <div class="callout">
       <strong>Capability checklist:</strong>
       <ul>
         <li>Shared <code>selectedUserId: string | null</code></li>
-        <li><code>orders: Order[]</code>, <code>ordersLoading: boolean</code></li>
+        <li>
+          <code>orders: Order[]</code>, <code>ordersLoading: boolean</code>
+        </li>
         <li>Selection change cancels prior request (no race)</li>
         <li>Selection of <code>null</code> clears orders</li>
       </ul>
@@ -1222,7 +1227,9 @@ export class TicketsRepository &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree &mdash; <code>toObservable</code> + <code>switchMap</code></h3>
+        <h3 class="pane-title pane-signaltree">
+          SignalTree &mdash; <code>toObservable</code> + <code>switchMap</code>
+        </h3>
         <pre ngNonBindable><code>// users.service.ts
 import &#123; Injectable, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
@@ -1260,19 +1267,19 @@ export class UsersService &#123;
   selectUser(id: string | null) &#123; this.$.selectedUserId.set(id); &#125;
 &#125;</code></pre>
         <p class="picker-note">
-          The <code>APP_TREE</code> + <code>Ops</code> + <code>AppStore</code>
-          layout shown in <a href="#ex-6">Example 6</a> is the recommended
-          architecture for multi-domain apps &mdash; it is not required.
-          For a single domain, a plain <code>&#64;Injectable</code> service
-          owning a <code>signalTree</code> is perfectly fine.
+          The <code>APP_TREE</code> + <code>Ops</code> +
+          <code>AppStore</code> layout shown in <a href="#ex-6">Example 6</a> is
+          the recommended architecture for multi-domain apps &mdash; it is not
+          required. For a single domain, a plain
+          <code>&#64;Injectable</code> service owning a
+          <code>signalTree</code> is perfectly fine.
         </p>
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals (rxMethod + switchMap)</h3>
-            <pre ngNonBindable><code>// orders.types.ts
+        @switch (compareLib()) { @case ('ngrx-signals') {
+        <h3 class="pane-title">&#64;ngrx/signals (rxMethod + switchMap)</h3>
+        <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.store.ts
@@ -1329,10 +1336,11 @@ export const UsersStore = signalStore(
     &#125;,
   &#125;),
 );</code></pre>
-          }
-          @case ('ngrx-classic') {
-            <h3 class="pane-title">Classic NgRx (action triggers effect with switchMap)</h3>
-            <pre ngNonBindable><code>// orders.types.ts
+        } @case ('ngrx-classic') {
+        <h3 class="pane-title">
+          Classic NgRx (action triggers effect with switchMap)
+        </h3>
+        <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.actions.ts
@@ -1440,26 +1448,23 @@ export class UsersComponent &#123;
     this.store.dispatch(UsersActions.selectUser(&#123; userId: id &#125;));
   &#125;
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
-      <strong>Takeaway:</strong> all three approaches model the same
-      "selection drives a fetch with cancellation" pattern. SignalTree
-      attaches the reaction to the shared state graph (via
-      <code>toObservable()</code> + <code>switchMap</code> over the tree);
-      <code>&#64;ngrx/signals</code> uses <code>rxMethod</code> +
-      <code>switchMap</code>; classic NgRx routes
-      it through actions and an effects class.
+      <strong>Takeaway:</strong> all three approaches model the same "selection
+      drives a fetch with cancellation" pattern. SignalTree attaches the
+      reaction to the shared state graph (via <code>toObservable()</code> +
+      <code>switchMap</code> over the tree); <code>&#64;ngrx/signals</code> uses
+      <code>rxMethod</code> + <code>switchMap</code>; classic NgRx routes it
+      through actions and an effects class.
     </p>
   </section>
 
@@ -1474,9 +1479,9 @@ export class UsersComponent &#123;
     <p>
       A realistic application with three domains &mdash;
       <code>identity</code>, <code>tickets</code>, <code>settings</code> &mdash;
-      and a single <code>logout()</code> orchestration that touches all
-      three. This is where SignalTree's "one tree per app, one Ops per
-      domain, one <code>AppStore</code> facade" pattern earns its keep.
+      and a single <code>logout()</code> orchestration that touches all three.
+      This is where SignalTree's "one tree per app, one Ops per domain, one
+      <code>AppStore</code> facade" pattern earns its keep.
     </p>
 
     <div class="compare-grid example-grid">
@@ -1525,7 +1530,7 @@ export function createBaseState() &#123;
 
 export function createAppTree() &#123;
   return signalTree(createBaseState())
-    .with(devTools(&#123; treeName: 'AppTree' &#125;))
+    .with(devTools(&#123; name: 'AppTree' &#125;))
     .with(batching())
     .with(timeTravel())
     // Tier 1: entity resolution
@@ -1668,10 +1673,11 @@ export class ShellComponent &#123;
       </div>
 
       <div class="lib-pane">
-        @switch (compareLib()) {
-          @case ('ngrx-signals') {
-            <h3 class="pane-title">&#64;ngrx/signals &mdash; equivalent multi-store composition</h3>
-            <pre ngNonBindable><code>// identity.store.ts
+        @switch (compareLib()) { @case ('ngrx-signals') {
+        <h3 class="pane-title">
+          &#64;ngrx/signals &mdash; equivalent multi-store composition
+        </h3>
+        <pre ngNonBindable><code>// identity.store.ts
 import &#123; computed &#125; from '&#64;angular/core';
 import &#123;
   patchState, signalStore, withComputed, withMethods, withState,
@@ -1839,30 +1845,27 @@ export class ShellComponent &#123;
   openTickets      = this.store.openTicketsForUser;
   logout()         &#123; this.store.logout(); &#125;
 &#125;</code></pre>
-          }
-          @default {
-            <h3 class="pane-title">{{ selectedLabel() }}</h3>
-            <p class="callout">
-              Not shown for this example. {{ selectedLabel() }} appears in
-              examples {{ examplesFor(compareLib()).join(', ') }}. The
-              full-stack multi-domain comparison is currently authored only
-              for <code>&#64;ngrx/signals</code> &mdash; PRs welcome to extend
-              coverage.
-            </p>
-          }
-        }
+        } @default {
+        <h3 class="pane-title">{{ selectedLabel() }}</h3>
+        <p class="callout">
+          Not shown for this example. {{ selectedLabel() }} appears in examples
+          {{ examplesFor(compareLib()).join(', ') }}. The full-stack
+          multi-domain comparison is currently authored only for
+          <code>&#64;ngrx/signals</code> &mdash; PRs welcome to extend coverage.
+        </p>
+        } }
       </div>
     </div>
 
     <p class="callout">
-      <strong>Takeaway:</strong> SignalTree composes one tree from
-      domain-state factories, derives <em>across</em> domains in one place,
-      and gets cross-cutting concerns (DevTools, batching, time travel,
-      persistence) on the whole tree with one <code>.with(...)</code> call
-      per concern. <code>&#64;ngrx/signals</code> delivers the same
-      capabilities domain-by-domain, but you re-implement persistence in
-      every store, derive-across-stores happens on the facade rather than the
-      data graph, and there's no first-class batching across stores.
+      <strong>Takeaway:</strong> SignalTree composes one tree from domain-state
+      factories, derives <em>across</em> domains in one place, and gets
+      cross-cutting concerns (DevTools, batching, time travel, persistence) on
+      the whole tree with one <code>.with(...)</code> call per concern.
+      <code>&#64;ngrx/signals</code> delivers the same capabilities
+      domain-by-domain, but you re-implement persistence in every store,
+      derive-across-stores happens on the facade rather than the data graph, and
+      there's no first-class batching across stores.
     </p>
   </section>
 
@@ -1878,11 +1881,10 @@ export class ShellComponent &#123;
       SignalTree ships a vendor-neutral <strong>Agent Skill</strong> at
       <code>node_modules/&#64;signaltree/core/skills/using-signaltree/</code>.
       It works with Cursor, Claude Code, GitHub Copilot, or any
-      <code>SKILL.md</code>-aware AI assistant. The skill is what an agent
-      reads to learn SignalTree's mental model, the canonical
-      <code>AppTree</code> + <code>AppStore</code> + <code>Ops</code> shape,
-      and the playbook for migrating an existing codebase off another state
-      library.
+      <code>SKILL.md</code>-aware AI assistant. The skill is what an agent reads
+      to learn SignalTree's mental model, the canonical <code>AppTree</code> +
+      <code>AppStore</code> + <code>Ops</code> shape, and the playbook for
+      migrating an existing codebase off another state library.
     </p>
 
     <h3>One-time install per repo</h3>
@@ -1919,21 +1921,24 @@ cp -r node_modules/&#64;signaltree/core/skills/using-signaltree \
         crosses ~3 domains.
       </li>
       <li>
-        <strong>Migration playbook.</strong> Big-bang is the default
-        (delete the legacy package in the same PR). The hybrid legacy-facade
-        pattern is a <em>temporary</em> fallback that must ship with a
+        <strong>Migration playbook.</strong> Big-bang is the default (delete the
+        legacy package in the same PR). The hybrid legacy-facade pattern is a
+        <em>temporary</em> fallback that must ship with a
         <code>// TODO(legacy-facade): remove by &lt;date&gt;</code> and a
         tracking issue.
       </li>
       <li>
-        <strong>Dedicated mechanical-mapping guides for both NgRx flavors.</strong>
+        <strong
+          >Dedicated mechanical-mapping guides for both NgRx flavors.</strong
+        >
         <code>&#64;ngrx/signals</code> (<code>signalStore</code> /
         <code>withState</code> / <code>rxMethod</code>) &rarr;
         <code>reference/migration-from-ngrx-signals.md</code>, the most
-        battle-tested path. Classic <code>&#64;ngrx/store</code>
-        (<code>createAction</code> / <code>createReducer</code> /
-        <code>createSelector</code> / <code>createEffect</code> +
-        <code>&#64;ngrx/entity</code>) &rarr;
+        battle-tested path. Classic <code>&#64;ngrx/store</code> (<code
+          >createAction</code
+        >
+        / <code>createReducer</code> / <code>createSelector</code> /
+        <code>createEffect</code> + <code>&#64;ngrx/entity</code>) &rarr;
         <code>reference/migration-from-ngrx-store.md</code> &mdash; actions
         become <code>Ops</code> methods, reducers become signal writes,
         selectors become <code>computed()</code> / derived tiers, and the
@@ -1945,32 +1950,31 @@ cp -r node_modules/&#64;signaltree/core/skills/using-signaltree \
       <li>
         <strong>Definition of done.</strong> (1) Zero imports of the legacy
         package in the migrated app. (2) Legacy package removed from
-        <code>package.json</code> (or tracked for removal). (3) Test suite
-        green &mdash; <em>not just build-green</em>. (4) DevTools shows the
-        new tree under the chosen <code>treeName</code>.
+        <code>package.json</code> (or tracked for removal). (3) Test suite green
+        &mdash; <em>not just build-green</em>. (4) DevTools shows the new tree
+        under the chosen <code>treeName</code>.
       </li>
       <li>
         <strong>Anti-pattern catalog.</strong> Multiple competing trees,
-        root-injected <code>Ops</code> with eager side-effects in
-        constructors, mocking <code>AppStore</code> in tests instead of
-        providing <code>APP_TREE</code>, etc.
+        root-injected <code>Ops</code> with eager side-effects in constructors,
+        mocking <code>AppStore</code> in tests instead of providing
+        <code>APP_TREE</code>, etc.
       </li>
       <li>
         <strong>Orchestration mode.</strong> A separate playbook
         (<code>reference/orchestrating-a-migration.md</code>) for an
-        orchestrator agent driving phased rollout across multiple
-        implementer subagents. Load when the work spans more than ~5 files
-        or when one agent will exhaust its context window.
+        orchestrator agent driving phased rollout across multiple implementer
+        subagents. Load when the work spans more than ~5 files or when one agent
+        will exhaust its context window.
       </li>
     </ul>
 
     <p class="callout callout-primary">
-      <strong>Workflow:</strong> point your AI assistant at the skill, give
-      it a target store to migrate, and it will follow the playbook end-to-end
+      <strong>Workflow:</strong> point your AI assistant at the skill, give it a
+      target store to migrate, and it will follow the playbook end-to-end
       &mdash; including running <code>build</code>, <code>test</code>,
       <code>lint</code>, and asserting the legacy import is gone from
-      application code and <code>package.json</code> before declaring done.
-      See
+      application code and <code>package.json</code> before declaring done. See
       <a
         href="https://github.com/JBorgia/signaltree#using-signaltree-with-ai-agents"
         target="_blank"

@@ -107,7 +107,6 @@ export class WhatsNew14Component {
   readonly activeRow = computed(() => this.tree.$.rows.activeEntity());
   readonly canUndo = computed(() => this.tree.canUndo());
   readonly canRedo = computed(() => this.tree.canRedo());
-  readonly paused = computed(() => this.tree.isRecordingPaused());
 
   prepend(): void {
     this.tree.$.rows.prependOne({
@@ -145,23 +144,26 @@ export class WhatsNew14Component {
   }
 
   /**
-   * A bulk import should be ONE undo step, not a hundred — and pausing ALONE
-   * does not achieve that. It achieves zero.
+   * A bulk import is ONE undo step, and it needs no ceremony at all.
    *
-   * This method used to pause, add all 25, and resume. Nothing was recorded, so
-   * the newest history entry still described the state BEFORE the import:
-   * `undo()` stepped back past it to the state before THAT, and the 25 rows
-   * became unreachable with `canRedo()` false. The comment above it claimed the
-   * opposite, and the page shipped that way.
+   * This method used to pause recording, add 25 rows, resume, then perform a
+   * synthetic "sealing" root write. Every part of that was wrong:
    *
-   * The seal is a ROOT write after `resumeRecording()`, which records one entry
-   * holding the finished import. It cannot be another `addOne`: collection
-   * mutations do not create history entries at all — only tree/branch writes do.
-   * Snapshots still CARRY collections, so the recorded entry holds all 25 rows
-   * and undo/redo round-trips them.
+   * - `pauseRecording()` was REMOVED in 15.0.0. It could only express "record
+   *   nothing", never "one step", and it was a global mute that suppressed
+   *   unrelated writers too.
+   * - The comment justifying the seal claimed "collection mutations do not
+   *   create history entries at all". That was RETRACTED — it came from
+   *   asserting `getHistory().length` in the same tick as a `queueMicrotask`
+   *   flush, without ever calling `undo()`. Collection mutations record fine.
+   *
+   * What actually makes this one step is that all 25 writes land in ONE
+   * microtask, and history granularity is currently per-microtask. Which is
+   * also the thing that needs fixing — that boundary is decided by whether a
+   * caller happens to `await`, not by intent. See
+   * docs/architecture/history-the-greenfield-target.md §4.
    */
   bulkImport(): void {
-    this.tree.pauseRecording();
     for (let i = 0; i < 25; i++) {
       this.tree.$.rows.addOne({
         id: nextId(),
@@ -169,11 +171,6 @@ export class WhatsNew14Component {
         done: false,
       });
     }
-    this.tree.resumeRecording();
-    // The sealing write must be a ROOT write. Sealing with another `addOne`
-    // does not work: collection mutations never record an entry, which is the
-    // same reason pausing was not the whole story.
-    this.tree({ imports: this.tree.$.imports() + 1 });
   }
 
   undo(): void {

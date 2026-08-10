@@ -299,7 +299,7 @@ import {
 } from '@signaltree/core';
 
 const store = signalTree({ ... })
-  .with(devTools({ treeName: 'AppStore' }))  // Redux DevTools integration
+  .with(devTools({ name: 'AppStore' }))  // Redux DevTools integration
   .with(batching())                           // Batch multiple updates
   .with(timeTravel({ maxHistorySize: 50 })); // Undo/redo support
 ```

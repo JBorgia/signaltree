@@ -55,8 +55,6 @@ class TimeTravelManager<T> {
    */
   private readonly indexSignal = signal(-1);
   private readonly historyVersion = signal(0);
-  /** Signal, not a boolean, so a "recording paused" indicator can bind to it. */
-  private readonly pausedSignal = signal(false);
 
   private get currentIndex(): number {
     return this.indexSignal();
@@ -92,23 +90,8 @@ class TimeTravelManager<T> {
   }
 
   /**
-   * Add a new entry to the history
-   * If `provisional` is true, mark the entry so it can be finalized
-   * later (coalesced / updated) rather than creating multiple history
-   * entries for rapid updates.
+   * Add a new entry to the history.
    */
-  pause(): void {
-    this.pausedSignal.set(true);
-  }
-
-  resume(): void {
-    this.pausedSignal.set(false);
-  }
-
-  isPaused(): boolean {
-    return this.pausedSignal();
-  }
-
   // NOTE: there is deliberately NO `state` parameter.
   //
   // There used to be one, and it was a lie: every caller computed a snapshot to
@@ -120,12 +103,16 @@ class TimeTravelManager<T> {
   // something else.
   //
   // Recomputing here is the behaviour we actually want, so the parameter is
-  // gone rather than wired up. `finalizeProvisional` DOES take a state and does
-  // use it — that one is real.
-  addEntry(action: string, payload?: unknown, provisional = false): void {
-    // Paused: the write still applies, it just does not become an undo step.
-    // Checked before any snapshot work, so pausing also costs nothing.
-    if (this.pausedSignal()) return;
+  // gone rather than wired up.
+  //
+  // The `provisional` parameter and `finalizeProvisional()` went with it in
+  // 15.0.0: a half-built coalescing scheme with no caller anywhere in
+  // `packages/*/src`. Deferred entry completion IS a real requirement — it is
+  // what a transaction's `commit()` needs — but that one has to close a
+  // path-scoped delta spanning concurrent writers, which is not what this was
+  // built for. Rebuilding ~20 lines beats reasoning about which of its
+  // assumptions still hold. See docs/architecture/history-the-greenfield-target.md.
+  addEntry(action: string, payload?: unknown): void {
     // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
@@ -190,14 +177,12 @@ class TimeTravelManager<T> {
       checkHistoryRetention(this.tree.$, this.history.length);
     }
 
-    const entry: TimeTravelEntry<T> & { __provisional?: boolean } = {
+    const entry: TimeTravelEntry<T> = {
       state: plain as T,
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
     };
-
-    if (provisional) (entry as any).__provisional = true;
 
     // Dedupe by REFERENCE. `tree()` returns the identical object when nothing
     // changed, so this is exact for the case that matters and O(1) — the
@@ -210,7 +195,6 @@ class TimeTravelManager<T> {
     // separate flushes — which is arguably two user actions and two entries.
     const last = this.history[this.history.length - 1];
     if (last && last.state === entry.state) {
-      if ((last as any).__provisional) delete (last as any).__provisional;
       return; // skip duplicate
     }
 
@@ -300,32 +284,6 @@ class TimeTravelManager<T> {
       j++;
     }
     return j;
-  }
-
-  /**
-   * Finalize a previously provisional entry (coalesced updates)
-   */
-  finalizeProvisional(state: T): void {
-    const last = this.history[this.history.length - 1] as
-      | (TimeTravelEntry<T> & { __provisional?: boolean })
-      | undefined;
-    if (last && (last as any).__provisional) {
-      // If identical, just clear provisional marker. Reference compare for the
-      // same reason as addEntry: snapshots are memoised and immutable.
-      if (last.state === state) {
-        delete (last as any).__provisional;
-        return;
-      }
-      // Replace state and clear provisional flag. No clone — the snapshot is
-      // already an immutable, structurally-shared value.
-      last.state = state;
-      last.timestamp = Date.now();
-      delete (last as any).__provisional;
-      return;
-    }
-
-    // No provisional entry to finalize - fall back to adding a new entry
-    this.addEntry('update');
   }
 
   redo(): boolean {
@@ -608,17 +566,6 @@ export function timeTravel(
         getCurrentIndex(): number {
           return -1;
         },
-        pauseRecording(): void {
-          /* disabled */
-        },
-        resumeRecording(): void {
-          /* disabled */
-        },
-        isRecordingPaused(): boolean {
-          // Disabled means nothing is recorded, which is what a caller asking
-          // this wants to know — reporting `false` would say the opposite.
-          return true;
-        },
       };
 
       return Object.assign(tree, noopMethods) as unknown as ISignalTree<T> &
@@ -804,13 +751,6 @@ export function timeTravel(
       timeTravelManager.canRedo();
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getCurrentIndex'] =
       () => timeTravelManager.getCurrentIndex();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['pauseRecording'] =
-      () => timeTravelManager.pause();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['resumeRecording'] =
-      () => timeTravelManager.resume();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)[
-      'isRecordingPaused'
-    ] = () => timeTravelManager.isPaused();
 
     // Expose internal manager for advanced tooling / demo usage
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =

@@ -1022,7 +1022,7 @@ function create<T extends object>(
    * const fullyEnhanced = tree
    *   .with(batching())
    *   .with(timeTravel({ maxHistorySize: 100 }))
-   *   .with(devTools({ treeName: 'MyTree' }));
+   *   .with(devTools({ name: 'MyTree' }));
    * ```
    *
    * Supported enhancers and their options:
@@ -1038,7 +1038,7 @@ function create<T extends object>(
    *
    * - `devTools(config?: DevToolsConfig)`
    *   - Integrates with browser devtools and logs state changes.
-   *   - Options: `treeName`, `enableBrowserDevTools`, `enableLogging`, `performanceThreshold`, `enabled`.
+   *   - Options: `name`, `enableBrowserDevTools`, `enableLogging`, `performanceThreshold`, `enabled`.
    *
    * - `serialization(config?: SerializationConfig)`
    *   - Adds state serialization and persistence helpers.

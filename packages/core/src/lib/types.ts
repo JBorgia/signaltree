@@ -412,18 +412,17 @@ export interface TimeTravelMethods<T = unknown> {
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
-  /**
-   * Stop recording. Writes still apply; they just do not become undo steps.
-   *
-   * Without this a bulk import writes a hundred entries and the user's next
-   * undo reverts one row of it. `maxHistorySize` bounds the memory that costs
-   * but does nothing for whether undo means anything to a person.
-   */
-  pauseRecording(): void;
-  /** Resume recording. Nothing that happened while paused is backfilled. */
-  resumeRecording(): void;
-  /** Reactive, so a "recording" indicator can bind to it. */
-  isRecordingPaused(): boolean;
+  // `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` were
+  // REMOVED in 15.0.0. They could not express "one undo step", only "record
+  // nothing" — so the documented recipe needed a synthetic sealing write landing
+  // on an invented domain field, and an earlier revision of that guide shipped
+  // the destructive version without it. Worse, pause was a GLOBAL mode: an
+  // unrelated write inside the window was suppressed too, so correctness needed
+  // sole ownership of the tree for its duration. A `for` loop has that; a
+  // multi-second `mergeMap` over N requests does not.
+  //
+  // The replacement is a transaction handle — see
+  // docs/architecture/history-the-greenfield-target.md.
   /** Internal time-travel manager exposed for advanced tooling/debugging */
   readonly __timeTravel?: {
     undo(): void;
@@ -438,7 +437,7 @@ export interface TimeTravelMethods<T = unknown> {
 }
 
 export interface DevToolsMethods {
-  connectDevTools(treeName?: string): void;
+  connectDevTools(name?: string): void;
   disconnectDevTools(): void;
 }
 
@@ -486,7 +485,10 @@ export interface TimeTravelEntry<T> {
 
 export interface TreeConfig {
   batchUpdates?: boolean;
-  enableTimeTravel?: boolean;
+  // `enableTimeTravel` was REMOVED here in 15.0.0: it had ZERO consumers in
+  // signal-tree.ts and silently did nothing, while a working flag of the same
+  // name lives on `DevToolsConfig`. The one a user reached for first was the
+  // dead one. Attach `timeTravel()` as an enhancer instead.
 
   /**
    * Force lazy (`true`) or eager (`false`) signal creation, overriding the
@@ -501,7 +503,8 @@ export interface TreeConfig {
   useShallowComparison?: boolean;
   maxCacheSize?: number;
   trackPerformance?: boolean;
-  treeName?: string;
+  /** Name shown in devtools. Was also spelled `treeName` on DevToolsConfig; that alias is gone in 15.0.0. */
+  name?: string;
   enableDevTools?: boolean;
   debugMode?: boolean;
   useStructuralSharing?: boolean;
@@ -995,10 +998,13 @@ export interface DevToolsConfig {
   performanceThreshold?: number;
   /** Enable Redux DevTools time-travel integration */
   enableTimeTravel?: boolean;
-  /** Name shown in Redux DevTools */
+  /**
+   * Name shown in Redux DevTools.
+   *
+   * The `treeName` alias was REMOVED in 15.0.0 — the source called it "legacy
+   * support" and `name ?? treeName` meant `name` always won anyway.
+   */
   name?: string;
-  /** Alias for name (legacy support) */
-  treeName?: string;
   /** Enable/disable devtools connection */
   enabled?: boolean;
   /** Log actions to console */

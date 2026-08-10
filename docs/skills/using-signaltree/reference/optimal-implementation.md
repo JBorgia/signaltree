@@ -72,7 +72,7 @@ export function createBaseState(initial: AppTreeBootstrap = DEFAULT_BOOTSTRAP) {
 
 export function createAppTree(initial: AppTreeBootstrap = DEFAULT_BOOTSTRAP) {
   return signalTree(createBaseState(initial))
-    .with(devTools({ treeName: STORE_NAME }))
+    .with(devTools({ name: STORE_NAME }))
     .with(batching())
     .with(timeTravel())
     .derived(entityResolutionDerived)
@@ -126,7 +126,7 @@ Once you have ≥ 3 derived concerns, or any derived value that depends on anoth
 ### Enhancer baseline for production
 
 ```ts skip
-.with(devTools({ treeName: 'AppTree' }))   // always
+.with(devTools({ name: 'AppTree' }))   // always
 .with(batching())                          // always
 .with(timeTravel())                        // always (cheap; turn off in prod via config if needed)
 .with(persistence({ key, autoSave, ... })) // when you need it
@@ -184,7 +184,7 @@ A SignalTree migration is **not done** until every box is checked.
 
 ### DevX
 
-- [ ] DevTools shows the tree under the chosen `treeName`.
+- [ ] DevTools shows the tree under the chosen `name`.
 - [ ] `tree.$.<domain>` autocompletes correctly through `AppStore.$` in the IDE.
 
 ### Sign-off

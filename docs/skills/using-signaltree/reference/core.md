@@ -350,7 +350,7 @@ const tree = signalTree({ count: 0 })
       actionNames: { update: 'x/update', set: 'x/set' },
     })
   )
-  .with(devTools({ treeName: 'Counter' }))
+  .with(devTools({ name: 'Counter' }))
   .with(
     persistence({
       key: 'counter.v1',
@@ -367,7 +367,7 @@ above (on `TimeTravelConfig`) rewrites the category labels (`update`, `set`,
 `batch`) globally. If you need finer-grained DevTools labels, use an Angular
 `effect()` to emit a tagged action as state mirrors the interesting change, or
 split hot domains into separately-labeled trees with their own
-`devTools({ treeName })`.
+`devTools({ name })`.
 
 Built-in enhancers exported from `@signaltree/core`:
 

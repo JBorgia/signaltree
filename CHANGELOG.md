@@ -17,6 +17,32 @@
 - **`removeAll()` is removed from `entityMap`.** It was a pure alias — its body was
   `api.clear()`. Use `clear()`. One operation, one name.
 
+- **`pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` are REMOVED.**
+  Deleted rather than deprecated: the API was a silent-data-loss footgun, so a
+  deprecation window is a window in which more call sites acquire it.
+
+  It could express "record nothing", never "one undo step". Pausing alone was
+  destructive — nothing recorded, so `undo()` stepped back PAST the bulk and its result
+  became unreachable — and the documented fix was a synthetic sealing write landing on a
+  field you had to invent. It was also a GLOBAL mode: an unrelated write inside the
+  window was suppressed too, so correctness required sole ownership of the tree for its
+  whole duration.
+
+  Nothing replaces it yet, and nothing needs to for the common case: writes sharing a
+  microtask are already one entry. Verified after removal — 25 `addOne` calls in one
+  loop record 1 entry, `undo()` returns to 3 rows, `redo()` returns to 28.
+
+- **`__provisional` / `finalizeProvisional()` are REMOVED**, along with `addEntry`'s
+  third parameter. A half-built coalescing scheme with no caller anywhere in
+  `packages/*/src`.
+
+- **`treeName` is REMOVED from `DevToolsConfig`.** It was an alias the source itself
+  labelled "legacy support", and `name ?? treeName` meant `name` always won. Use `name`.
+
+- **`TreeConfig.enableTimeTravel` is REMOVED.** It had zero consumers and silently did
+  nothing, while a working flag of the same name lives on `DevToolsConfig` — so the one
+  a user reached for first was the dead one. Attach `timeTravel()` as an enhancer.
+
 - **`equal` is removed from `@signaltree/core` and `@signaltree/shared`.** It was a
   literal alias — `shared/src/lib/deep-equal.ts` read `export const equal = deepEqual;`
   and the two were the identical function object. Import `deepEqual`.

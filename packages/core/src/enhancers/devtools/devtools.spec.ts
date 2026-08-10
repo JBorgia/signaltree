@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { devTools, enableDevTools, fullDevTools, productionDevTools } from './devtools';
+import {
+  devTools,
+  enableDevTools,
+  fullDevTools,
+  productionDevTools,
+} from './devtools';
 import { getPathNotifier, resetPathNotifier } from '../../lib/path-notifier';
 import { signalTree } from '../../lib/signal-tree';
 
@@ -422,14 +427,14 @@ describe('devTools enhancer (v6 API)', () => {
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'A',
+        name: 'A',
         aggregatedReduxInstance: { id: 'group-1', name: 'Group 1' },
       })(treeA);
 
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'B',
+        name: 'B',
         aggregatedReduxInstance: { id: 'group-1', name: 'Group 1' },
       })(treeB);
 
@@ -438,7 +443,9 @@ describe('devTools enhancer (v6 API)', () => {
       // There should be at least one send containing both A and B.
       const sentStates = send.mock.calls.map((c) => c[1]);
       expect(
-        sentStates.some((s) => s && typeof s === 'object' && 'A' in s && 'B' in s)
+        sentStates.some(
+          (s) => s && typeof s === 'object' && 'A' in s && 'B' in s
+        )
       ).toBe(true);
 
       await Promise.resolve();
@@ -473,14 +480,14 @@ describe('devTools enhancer (v6 API)', () => {
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'A',
+        name: 'A',
         aggregatedReduxInstance: { id: 'group-2', name: 'Group 2' },
       })(treeA);
 
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'B',
+        name: 'B',
         aggregatedReduxInstance: { id: 'group-2', name: 'Group 2' },
       })(treeB);
 
@@ -522,14 +529,14 @@ describe('devTools enhancer (v6 API)', () => {
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'A',
+        name: 'A',
         aggregatedReduxInstance: { id: 'group-bleed', name: 'Group Bleed' },
       })(treeA);
 
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'B',
+        name: 'B',
         aggregatedReduxInstance: { id: 'group-bleed', name: 'Group Bleed' },
       })(treeB);
 
@@ -553,9 +560,9 @@ describe('devTools enhancer (v6 API)', () => {
           timestamp: expect.any(Number),
         },
       });
-      expect((action as any).meta.paths.some((p: string) => p.startsWith('B.'))).toBe(
-        false
-      );
+      expect(
+        (action as any).meta.paths.some((p: string) => p.startsWith('B.'))
+      ).toBe(false);
     } finally {
       (globalThis as any).window = originalWindow;
     }
@@ -586,14 +593,14 @@ describe('devTools enhancer (v6 API)', () => {
       const enhancedA = devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'A',
+        name: 'A',
         aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
       })(treeA);
 
       const enhancedB = devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'B',
+        name: 'B',
         aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
       })(treeB);
 
@@ -607,7 +614,7 @@ describe('devTools enhancer (v6 API)', () => {
       devTools({
         enabled: true,
         enableBrowserDevTools: true,
-        treeName: 'C',
+        name: 'C',
         aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
       })(treeC);
 

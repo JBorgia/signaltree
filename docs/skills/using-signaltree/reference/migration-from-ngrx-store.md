@@ -152,7 +152,7 @@ The headline reference. Left column is what you'll `grep` for; right column is w
 | Nested immutable spread `{ ...s, nested: { ...s.nested, x } }` | `this._$.domain.nested({ x })` — path-targeted partial write, no manual spreading                                                                                                        |
 | `ActionReducerMap` / `combineReducers`                         | The single `createBaseState()` object composing every domain factory.                                                                                                                    |
 | `MetaReducer` (localStorage sync)                              | `stored(key, default)` markers (see [Pattern #4](./migration-from-ngrx-signals.md#4-persisted-state--stored-slices-not-constructor-localstorage-reads)) or the `persistence()` enhancer. |
-| `MetaReducer` (logging / devtools)                             | `devTools({ treeName })` enhancer.                                                                                                                                                       |
+| `MetaReducer` (logging / devtools)                             | `devTools({ name })` enhancer.                                                                                                                                                           |
 
 ### Selectors → reads & derived
 
@@ -209,7 +209,7 @@ The headline reference. Left column is what you'll `grep` for; right column is w
 | `StoreModule.forRoot(reducers)` / `provideStore(reducers)`               | `provideAppTree()` in `app.config.ts`                                                                                                                                                                       |
 | `StoreModule.forFeature('foo', fooReducer)` / `provideState(fooFeature)` | Deleted — the `foo` slice is already in the single tree                                                                                                                                                     |
 | `EffectsModule.forRoot([...])` / `provideEffects(...)`                   | Deleted — `Ops` services need no registration                                                                                                                                                               |
-| `StoreDevtoolsModule.instrument()` / `provideStoreDevtools()`            | `.with(devTools({ treeName: 'AppStore' }))` on the tree                                                                                                                                                     |
+| `StoreDevtoolsModule.instrument()` / `provideStoreDevtools()`            | `.with(devTools({ name: 'AppStore' }))` on the tree                                                                                                                                                         |
 | `@ngrx/router-store` (`provideRouterStore`, router selectors)            | **Not replaced by SignalTree** — keep it, or read router state via `inject(ActivatedRoute)` / `Router` events and mirror what you need into a tree slice. Decide per app; don't silently drop router state. |
 
 ## Worked example: a full feature (actions + reducer + selectors + effects + entity)
@@ -391,6 +391,6 @@ Same gates as the [Signal Store DoD](./migration-from-ngrx-signals.md#definition
 - `grep -rln "from '@ngrx/store'" <app-src>/` returns nothing (repeat for `@ngrx/effects`, `@ngrx/entity` if used).
 - `grep -rln 'createReducer(\|createEffect(\|createSelector(\|createAction' <app-src>/` returns nothing.
 - Every NgRx package you set out to remove is gone from `package.json` (or tracked for removal if a shared lib elsewhere still uses it). `@ngrx/router-store`, if intentionally kept, is documented as a deliberate exception.
-- Test suite green; lint clean; DevTools shows the tree under its `treeName`.
+- Test suite green; lint clean; DevTools shows the tree under its `name`.
 
 Run the [architectural self-check](./migration-from-ngrx-signals.md#architectural-self-check-run-on-your-own-diff-before-declaring-done) against your diff — selection placement, load+error siblings, derived tiers, orchestration boundary, `AppStore` injection style. Green build is necessary, not sufficient.

@@ -1,4 +1,3 @@
-
 import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { devTools, signalTree } from '@signaltree/core';
@@ -60,7 +59,7 @@ const store = signalTree<DevtoolsState>({
   todos: [],
 }).with(
   devTools({
-    treeName: 'DevTools Demo',
+    name: 'DevTools Demo',
     enableLogging: true,
     enableBrowserDevTools: true,
   })
@@ -100,7 +99,7 @@ export class DevtoolsDemoComponent {
     todos: [],
   }).with(
     devTools({
-      treeName: 'DevTools Demo',
+      name: 'DevTools Demo',
       enableLogging: true,
       enableBrowserDevTools: true,
     })
@@ -119,7 +118,11 @@ export class DevtoolsDemoComponent {
 
   // Source tabs for the st-example code viewer.
   readonly codeFiles: CodeFile[] = [
-    { label: 'devtools-store.ts', language: 'typescript', source: STORE_SOURCE },
+    {
+      label: 'devtools-store.ts',
+      language: 'typescript',
+      source: STORE_SOURCE,
+    },
   ];
 
   // Counter actions

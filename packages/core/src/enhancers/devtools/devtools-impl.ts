@@ -20,11 +20,9 @@ import type {
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
-
 // Heavy devtools implementation. Imported by ./devtools.ts ONLY past its
 // ngDevMode prod-strip guard, so a production build (ngDevMode=false) drops the
 // dead import and this whole module (~12KB gzip) tree-shakes out.
-
 
 // ============================================================================
 // Types
@@ -120,7 +118,9 @@ type DevToolsAction = {
 // Helpers
 // ============================================================================
 
-function createActivityTracker(options?: { enableConsole?: boolean }): ModuleActivityTracker {
+function createActivityTracker(options?: {
+  enableConsole?: boolean;
+}): ModuleActivityTracker {
   const modules = new Map<string, ModuleMetadata>();
   const enableConsole = options?.enableConsole === true;
 
@@ -166,7 +166,9 @@ function createActivityTracker(options?: { enableConsole?: boolean }): ModuleAct
   };
 }
 
-function createCompositionLogger(options?: { enableConsole?: boolean }): CompositionLogger {
+function createCompositionLogger(options?: {
+  enableConsole?: boolean;
+}): CompositionLogger {
   const logs: Array<{
     timestamp: Date;
     module: string;
@@ -340,7 +342,12 @@ function computeChangedPaths(
     return output;
   }
 
-  if (prev === null || next === null || prev === undefined || next === undefined) {
+  if (
+    prev === null ||
+    next === null ||
+    prev === undefined ||
+    next === undefined
+  ) {
     if (path) output.push(path);
     return output;
   }
@@ -377,7 +384,10 @@ function computeChangedPaths(
 
   const prevObj = prev as Record<string, unknown>;
   const nextObj = next as Record<string, unknown>;
-  const keys = new Set<string>([...Object.keys(prevObj), ...Object.keys(nextObj)]);
+  const keys = new Set<string>([
+    ...Object.keys(prevObj),
+    ...Object.keys(nextObj),
+  ]);
   if (keys.size === 0) {
     if (path) output.push(path);
     return output;
@@ -622,7 +632,6 @@ function getOrCreateDevToolsGroup(
     lastSerialized.clear();
   };
 
-
   const updateRateLimit = () => {
     sendRateLimitMs = 0;
     for (const tree of trees.values()) {
@@ -637,7 +646,7 @@ function getOrCreateDevToolsGroup(
     for (const [treeKey, tree] of trees) {
       const snapshot = tree.readSnapshot();
       const lastSnapshot = lastSnapshots.get(treeKey);
-      
+
       let serialized: unknown;
       if (lastSnapshot === snapshot && lastSerialized.has(treeKey)) {
         serialized = lastSerialized.get(treeKey);
@@ -646,7 +655,7 @@ function getOrCreateDevToolsGroup(
         serialized = tree.buildSerializedState(snapshot);
         lastSerialized.set(treeKey, serialized);
       }
-      
+
       aggregated[treeKey] = serialized;
     }
     return aggregated;
@@ -750,7 +759,6 @@ function getOrCreateDevToolsGroup(
   };
 
   const initBrowserDevTools = () => {
-
     if (isConnected) return;
 
     if (
@@ -852,7 +860,8 @@ function getOrCreateDevToolsGroup(
       }
     }
 
-    const hasMeta = pendingSource !== undefined || pendingDuration !== undefined;
+    const hasMeta =
+      pendingSource !== undefined || pendingDuration !== undefined;
     if (allFormattedPaths.length === 0 && !pendingExplicitAction && !hasMeta) {
       pendingAction = null;
       pendingExplicitAction = false;
@@ -867,13 +876,13 @@ function getOrCreateDevToolsGroup(
       pendingExplicitAction && pendingAction
         ? pendingAction
         : allFormattedPaths.length === 1
-          ? buildDevToolsAction(
+        ? buildDevToolsAction(
             `SignalTree/${allFormattedPaths[0]}`,
             allFormattedPaths[0]
           )
-          : allFormattedPaths.length > 1
-            ? buildDevToolsAction('SignalTree/update', allFormattedPaths)
-            : buildDevToolsAction('SignalTree/update');
+        : allFormattedPaths.length > 1
+        ? buildDevToolsAction('SignalTree/update', allFormattedPaths)
+        : buildDevToolsAction('SignalTree/update');
 
     const actionMeta: DevToolsActionMeta = {
       timestamp: Date.now(),
@@ -1075,8 +1084,7 @@ export function createDevToolsEnhancer(
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   const {
     enabled = true,
-    treeName = 'SignalTree',
-    name,
+    name = 'SignalTree',
     enableBrowserDevTools = true,
     enableTimeTravel = true,
     enableLogging = false,
@@ -1093,7 +1101,7 @@ export function createDevToolsEnhancer(
     aggregatedReduxInstance,
   } = config;
 
-  const displayName = name ?? treeName;
+  const displayName = name;
   const groupId = aggregatedReduxInstance?.id ?? displayName;
   const pathInclude = toArray(includePaths);
   const pathExclude = toArray(excludePaths);
@@ -1103,7 +1111,9 @@ export function createDevToolsEnhancer(
       : rateLimitMs ?? 0;
   const formatPathFn = formatPath ?? defaultFormatPath;
 
-  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
+  const enhancerFn = <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & DevToolsMethods => {
     // ========================================================================
     // Disabled path
     // ========================================================================
@@ -1123,7 +1133,9 @@ export function createDevToolsEnhancer(
     // ========================================================================
     // Enabled path
     // ========================================================================
-    const activityTracker = createActivityTracker({ enableConsole: enableLogging });
+    const activityTracker = createActivityTracker({
+      enableConsole: enableLogging,
+    });
     const logger = enableLogging
       ? createCompositionLogger({ enableConsole: true })
       : createNoopLogger();
@@ -1144,17 +1156,13 @@ export function createDevToolsEnhancer(
     // Browser DevTools integration
     let browserDevToolsConnection: {
       send: (action: unknown, state: unknown) => void;
-      subscribe?: (
-        listener: (message: unknown) => void
-      ) => void | (() => void);
+      subscribe?: (listener: (message: unknown) => void) => void | (() => void);
       disconnect?: () => void;
       unsubscribe?: () => void;
     } | null = null;
     let browserDevTools: {
       send: (action: unknown, state: unknown) => void;
-      subscribe?: (
-        listener: (message: unknown) => void
-      ) => void | (() => void);
+      subscribe?: (listener: (message: unknown) => void) => void | (() => void);
     } | null = null;
     let isConnected = false;
     let isApplyingExternalState = false;
@@ -1275,15 +1283,17 @@ export function createDevToolsEnhancer(
         pendingAllowedPaths.length > 0
           ? Array.from(new Set(pendingAllowedPaths))
           : lastSnapshot === undefined
-            ? []
-            : computeChangedPaths(
-                lastSnapshot,
-                currentSnapshot,
-                maxDepth,
-                maxArrayLength
-              ).filter((path) => path && isPathAllowed(path));
+          ? []
+          : computeChangedPaths(
+              lastSnapshot,
+              currentSnapshot,
+              maxDepth,
+              maxArrayLength
+            ).filter((path) => path && isPathAllowed(path));
 
-      const formattedPaths = rawPathsForNaming.map((path) => formatPathFn(path));
+      const formattedPaths = rawPathsForNaming.map((path) =>
+        formatPathFn(path)
+      );
 
       if (
         pathInclude.length > 0 &&
@@ -1514,7 +1524,10 @@ export function createDevToolsEnhancer(
           typeof lifted?.currentStateIndex === 'number'
             ? lifted.currentStateIndex
             : computedStates.length - 1;
-        const index = Math.max(0, Math.min(indexRaw, computedStates.length - 1));
+        const index = Math.max(
+          0,
+          Math.min(indexRaw, computedStates.length - 1)
+        );
         const entry = computedStates[index] as any;
         const nextState = parseDevToolsState(entry?.state);
         applyExternalState(nextState);
@@ -1532,7 +1545,7 @@ export function createDevToolsEnhancer(
           aggregatedReduxInstance.name ?? displayName
         );
         if (!groupUnregister) {
-          groupUnregister = group.registerTree(treeName, {
+          groupUnregister = group.registerTree(displayName, {
             readSnapshot,
             buildSerializedState,
             applyExternalState,
@@ -1589,7 +1602,9 @@ export function createDevToolsEnhancer(
           subscribe: connection.subscribe,
         };
         if (browserDevTools.subscribe && !unsubscribeDevTools) {
-          const maybeUnsubscribe = browserDevTools.subscribe(handleDevToolsMessage);
+          const maybeUnsubscribe = browserDevTools.subscribe(
+            handleDevToolsMessage
+          );
           if (typeof maybeUnsubscribe === 'function') {
             unsubscribeDevTools = maybeUnsubscribe;
           } else {
@@ -1675,7 +1690,7 @@ export function createDevToolsEnhancer(
       if (aggregatedReduxInstance) {
         const group = devToolsGroups.get(aggregatedReduxInstance.id);
         if (group) {
-          group.enqueue(treeName, [], undefined, {
+          group.enqueue(displayName, [], undefined, {
             timestamp: Date.now(),
             source: 'tree.update',
             duration,
@@ -1825,12 +1840,15 @@ export function createDevToolsEnhancer(
     let unsubscribePathNotifier: (() => void) | null = null;
     let unsubscribePathFlush: (() => void) | null = null;
 
-    unsubscribePathNotifier = notifier.subscribe('**', (_value, _prev, path) => {
-      if (isApplyingExternalState) return;
-      if (!isPathOwnedByTree(path)) return;
-      if (!isPathAllowed(path)) return;
-      pendingPaths.push(path);
-    });
+    unsubscribePathNotifier = notifier.subscribe(
+      '**',
+      (_value, _prev, path) => {
+        if (isApplyingExternalState) return;
+        if (!isPathOwnedByTree(path)) return;
+        if (!isPathAllowed(path)) return;
+        pendingPaths.push(path);
+      }
+    );
 
     // PathNotifier flush handler. For aggregated mode this triggers group sends.
     // For standalone mode this is a fallback when Angular effect() is unavailable
@@ -1843,7 +1861,7 @@ export function createDevToolsEnhancer(
       if (aggregatedReduxInstance) {
         const group = devToolsGroups.get(aggregatedReduxInstance.id);
         if (group) {
-          group.enqueue(treeName, pendingPaths, undefined, {
+          group.enqueue(displayName, pendingPaths, undefined, {
             timestamp: Date.now(),
             source: 'path-notifier',
           });
@@ -1913,9 +1931,21 @@ export function createDevToolsEnhancer(
               // ignore
             }
           }
-          try { unsubscribeDevTools?.(); } catch { /* ignore */ }
-          try { browserDevToolsConnection?.unsubscribe?.(); } catch { /* ignore */ }
-          try { browserDevToolsConnection?.disconnect?.(); } catch { /* ignore */ }
+          try {
+            unsubscribeDevTools?.();
+          } catch {
+            /* ignore */
+          }
+          try {
+            browserDevToolsConnection?.unsubscribe?.();
+          } catch {
+            /* ignore */
+          }
+          try {
+            browserDevToolsConnection?.disconnect?.();
+          } catch {
+            /* ignore */
+          }
           browserDevToolsConnection = null;
           browserDevTools = null;
           isConnected = false;

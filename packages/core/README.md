@@ -971,7 +971,7 @@ import { isSignalTree } from '@signaltree/core/authoring';
 if (isSignalTree(candidate)) candidate.destroy();
 ```
 
-- `timeTravel(config?)` - Undo/redo. `canUndo()`, `canRedo()` and `getHistory()` are **reactive** as of 14.0.0 — before that they read plain values, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled. Also new in 14.0.0: `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` (writes still apply while paused; they just stop becoming undo steps, so a bulk import is one step instead of a hundred) and `timeTravel({ shouldSkip: (prev, next) => … })` to drop uninteresting transitions — it runs on **every** recorded write, so compare only the fields you mean.
+- `timeTravel(config?)` - Undo/redo. `canUndo()`, `canRedo()` and `getHistory()` are **reactive** as of 14.0.0 — before that they read plain values, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled. **Removed in 15.0.0:** `pauseRecording()`/`resumeRecording()`/`isRecordingPaused()` — they could only express "record nothing", never "one undo step", so the documented recipe needed a synthetic sealing write, and pause was a global mute that suppressed unrelated writers. `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on **every** recorded write, so compare only the fields you mean.
 
 #### Additional Packages
 

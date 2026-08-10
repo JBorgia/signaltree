@@ -1,4 +1,3 @@
-
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -212,7 +211,8 @@ export class HomeComponent {
     },
     {
       name: 'Proof you can inspect',
-      description: 'Benchmarks, DevTools, and bundle tooling support evaluation instead of replacing it.',
+      description:
+        'Benchmarks, DevTools, and bundle tooling support evaluation instead of replacing it.',
     },
   ];
 
@@ -274,7 +274,7 @@ const appTree = signalTree({
   }
 })
   .with(batching())
-  .with(devTools({ treeName: 'App State' }))
+  .with(devTools({ name: 'App State' }))
   .with(timeTravel());
 
 // Read nested values directly

@@ -97,7 +97,7 @@ function createBaseState() {
 export function createAppTree() {
   return (
     signalTree(createBaseState())
-      .with(devTools({ treeName: 'AppTree' }))
+      .with(devTools({ name: 'AppTree' }))
       .with(batching())
       .with(timeTravel())
       // Tier 1: entity resolution off raw state.
@@ -830,7 +830,7 @@ export const appTree = signalTree<AppState>({
   ui: { theme: 'light', sidebarOpen: false },
 })
   .with(batching({ enabled: true, notificationDelayMs: 0 }))
-  .with(devTools({ treeName: 'AppTree' }))
+  .with(devTools({ name: 'AppTree' }))
   .with(
     persistence({
       key: 'app.v1',

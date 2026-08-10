@@ -64,11 +64,17 @@
   <section id="history" class="section section-alt">
     <h2 class="section-title">Time travel</h2>
     <p class="section-intro">
-      Without pause, a bulk import writes a hundred history entries and the
-      user's next undo reverts one row of it. <strong>Bulk import</strong> adds
-      25 rows inside <code>pauseRecording()</code> /
-      <code>resumeRecording()</code>
-      — one step, not twenty-five.
+      <strong>Bulk import</strong> adds 25 rows and is <strong>one</strong> undo
+      step. This page used to claim that took <code>pauseRecording()</code> /
+      <code>resumeRecording()</code>; both were REMOVED in 15.0.0. They could
+      only express &ldquo;record nothing&rdquo;, never &ldquo;one step&rdquo;,
+      and pause was a global mute that suppressed unrelated writers too.
+    </p>
+    <p class="section-intro">
+      What makes it one step is that all 25 writes land in one microtask, and
+      history granularity is currently per-microtask. That is also the part that
+      needs fixing: the boundary is decided by whether a caller happens to
+      <code>await</code>, not by what the user meant to do.
     </p>
     <p class="section-intro">
       <code>canUndo()</code> is <strong>reactive</strong> as of this release. It
@@ -80,7 +86,7 @@
 
     <div class="controls">
       <button type="button" (click)="bulkImport()">
-        Bulk import 25 (paused)
+        Bulk import 25 (one step)
       </button>
       <button type="button" [disabled]="!canUndo()" (click)="undo()">
         Undo
@@ -91,8 +97,7 @@
     </div>
     <p class="state-line">
       canUndo: <strong>{{ canUndo() }}</strong> · canRedo:
-      <strong>{{ canRedo() }}</strong> · isRecordingPaused:
-      <strong>{{ paused() }}</strong>
+      <strong>{{ canRedo() }}</strong>
     </p>
   </section>
 

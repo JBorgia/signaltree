@@ -46,7 +46,7 @@ tree.$.theme.set('dark'); // Auto-saves to localStorage
 import { effect } from '@angular/core';
 
 const tree = signalTree({ count: 0 })
-  .with(devTools({ treeName: 'MyApp' }))
+  .with(devTools({ name: 'MyApp' }))
   .with(batching());
 
 // Now the tree has devtools + batching capabilities

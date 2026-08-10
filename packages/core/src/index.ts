@@ -435,7 +435,7 @@ export { isDev } from './lib/constants';
  *
  * const store = signalTree({ users: entityMap<User, number>() })
  *   .with(batching())
- *   .with(devTools({ treeName: 'MyStore' }));
+ *   .with(devTools({ name: 'MyStore' }));
  *
  * store.$.users.addOne({ id: 1, name: 'Alice' });
  * ```
