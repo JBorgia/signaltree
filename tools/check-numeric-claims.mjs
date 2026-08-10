@@ -49,6 +49,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  */
 const SURFACES = [
   'README.md',
+  // Primes Cursor/Copilot code generation, so a wrong number here becomes wrong
+  // numbers in other people's repositories. It was outside this scan entirely
+  // until August 2026, and was carrying a bundle table for `@signaltree/enterprise`
+  // — a package deleted in 14.0.0 — plus a core size of 15KB against a real 5.79.
+  '.cursorrules',
+  'AGENTS.md',
   'docs/overview.md',
   'apps/demo/public/llms.txt',
   'apps/demo/public/llms-full.txt',

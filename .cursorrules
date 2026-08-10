@@ -2,6 +2,16 @@
 
 This file provides comprehensive context for AI assistants working on the SignalTree codebase.
 
+## Numbers in this file
+
+Every measured figure here names the tool that regenerates it. If you are about
+to state a size or a timing that is not in this file, run the generator — do not
+recall it, and do not read it from `artifacts/*.json`, which is gitignored local
+scratch that has already put stale figures into published docs. See AGENTS.md.
+
+This file primes code generation, so a wrong number here becomes wrong numbers
+in other people's repositories.
+
 ## Repository Overview
 
 **SignalTree: Reactive JSON for Angular.** JSON branches, reactive leaves.
@@ -33,7 +43,6 @@ signaltree/
 ├── packages/              # All npm packages
 │   ├── core/             # Main package with recursive typing
 │   ├── ng-forms/         # Angular forms integration
-│   ├── enterprise/       # Enterprise optimizations
 │   ├── guardrails/       # Dev-only performance monitoring (Rollup build)
 │   ├── shared/           # Internal shared utilities (PRIVATE - not published)
 │   ├── types/            # Internal TypeScript types (PRIVATE)
@@ -51,7 +60,6 @@ signaltree/
 
 - `@signaltree/core` - Main package, no external deps
 - `@signaltree/ng-forms` - Depends on `@signaltree/core` (peerDep)
-- `@signaltree/enterprise` - Depends on `@signaltree/core` (peerDep)
 - `@signaltree/guardrails` - Dev-only, conditional exports (noop.js for prod)
 
 **Private Packages** (internal only):
@@ -66,7 +74,7 @@ signaltree/
 
 ### Package Build Systems
 
-1. **Core, ng-forms, enterprise**: Nx + Rollup
+1. **Core, ng-forms, and the rest**: Nx + Rollup
 
    - Entry: `src/index.ts`
   - Output: `dist/` with preserved-module ESM and type definitions
@@ -171,20 +179,27 @@ If validation fails, the release script **automatically**:
 
 **CRITICAL**: These are enforced in validation:
 
-| Package         | Max Size | Max Gzipped |
-| --------------- | -------- | ----------- |
-| core            | 15KB     | 5KB         |
-| ng-forms        | 10KB     | 4KB         |
-| enterprise      | 8KB      | 3KB         |
-| guardrails      | 12KB     | 4KB         |
+What is enforced is **per-SCENARIO**, not per-package — what a consumer's
+bundle actually costs for a given shape of tree, prod and dev separately:
 
-Check sizes: `npm run analyze:bundle`
+| scenario            | prod (ships) | dev (diagnostics) |
+| ------------------- | ------------ | ----------------- |
+| bare `signalTree`   | 5.9 KB       | 8.1 KB            |
+| + `entityMap`       | 9.5 KB       | 12.1 KB           |
+| + `form()`          | 8.0 KB       | 10.5 KB           |
+
+Measured today: 5.79 / 9.40 / 7.90 prod. Check with
+`node tools/check-bundle-budget.mjs`; per-feature deltas with
+`node tools/size-report.mjs`.
+
+Prod and dev are budgeted separately because dev diagnostics fold away under
+`ngDevMode: false` — the `devmode-foldable` gate proves they do.
 
 ## Common Issues & Solutions
 
 ### 1. Build Failures
 
-**Issue**: `@signaltree/core` module not found during build for enterprise/ng-forms
+**Issue**: `@signaltree/core` module not found during build for ng-forms
 
 **Solution**:
 
@@ -551,7 +566,10 @@ tree.$.user.profile.settings.theme(); // Fully typed!
 ### Lazy Signal Creation
 
 - Signals created on-demand via Proxies
-- 85% memory reduction vs eager creation
+- Retains ~79% less than a hand-rolled map of signals — 1.29 MB against
+  6.16 MB over 10,000 entities (`node --expose-gc tools/bench-compare.mjs
+  --n 10000`, forced GC). NOT "85% vs eager creation": no eager variant
+  exists to measure against, so that number never had a methodology.
 - Core architectural principle
 
 ### Conditional Exports (Guardrails)
@@ -623,15 +641,25 @@ npm deprecate @signaltree/core@4.0.X "Critical bug, use 4.0.Y instead"
 
 ### Bundle Sizes (Current)
 
-- Total ecosystem: ~27-28KB
-- Core: ~7KB
-- All packages under limits (see bundle size table above)
+- Bare tree: **5.79 KB** gzip prod. With `entityMap`: **9.40 KB**.
+- Do NOT pitch SignalTree on bundle size. Measured against the field it sits
+  near the TOP of the range — NgRx SignalStore is ~1.9 KB, Elf ~2.1 KB. The
+  trade is capability per KB, not KB.
+- Regenerate with `node tools/size-report.mjs`, never from memory or from
+  `artifacts/*.json` (gitignored, stale — see AGENTS.md).
 
 ### Operations
 
-- State updates: < 0.1ms average
-- Deep nesting: < 0.2ms average
-- Memory: 85% less than eager signal creation
+Measured with `node tools/bench-depth-latency.mjs` — a root update walking the
+whole chain: 0.0010 ms at depth 5, 0.0038 ms at depth 20. Cost is SUBLINEAR in
+depth; a direct leaf write does not walk the path at all and sits at timer
+resolution.
+
+Quote the shape, not a multiplier. The depth-20-vs-5 ratio moves 3.2x-4.8x
+within a single run of the generator, because it divides two sub-microsecond
+absolutes.
+- Memory: 1.29 MB against a hand-rolled 6.16 MB over 10,000 entities
+  (`node --expose-gc tools/bench-compare.mjs --n 10000`)
 
 ### Coverage
 
