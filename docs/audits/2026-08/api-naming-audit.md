@@ -249,21 +249,68 @@ it, or move the workspace file to the repo root where it would be found.
 
 ---
 
+## Pass 3 — config and option keys
+
+Method: parse every `export interface|type *Config|*Options|*Opts` across all packages,
+collect their keys, and rank by how many distinct config objects share a key name.
+
+### Suffix convention: `Config` vs `Options`, 37 to 19, no rule
+
+Both suffixes are in use and nothing distinguishes them. `AddOptions`/`AddManyOptions`
+sit beside `EntityConfig`; `StoredOptions` beside `PersistenceConfig`; ng-forms uses
+`AngularFormsConfig` _and_ `FormTreeOptions` _and_ `SignalFormOptions` for overlapping
+things. No `*Opts` or `*Settings` — that much is at least consistent.
+
+A defensible rule, if one is wanted: **`Config` for construction-time configuration of a
+long-lived thing** (a tree, an enhancer, a marker) and **`Options` for per-call
+arguments** (`addOne(entity, opts)`). Several current names already fit it; the outliers
+are what the rename would touch.
+
+### Confirmed alias: `treeName` is a legacy alias for `name`
+
+`DevToolsConfig` declares both, with the source saying so — `/** Alias for name (legacy
+support) */` — and `devtools-impl.ts:1096` resolves `const displayName = name ?? treeName;`.
+So `name` wins and `treeName` is the fallback. Same class as `removeAll` and `equal`;
+delete it.
+
+### Confirmed dead option: `TreeConfig.enableTimeTravel`
+
+Declared at `types.ts:489`. **Zero consumers in `signal-tree.ts`.** A second
+`enableTimeTravel` exists on `DevToolsConfig` (`types.ts:997`) and that one IS live
+(`devtools-impl.ts:666,705`). So the flag a user is most likely to reach for — the one on
+the tree's own config — silently does nothing, while the one that works is on the
+enhancer. Delete the dead one.
+
+### `equal` in three config interfaces
+
+`AsyncQueryConfig`, `EntityLoadOptions`, `LinkedOptions` — which is the evidence that
+removing the `equal` **export** was right rather than merely tidy. The option meaning is
+load-bearing and outnumbers the export three to nothing.
+
+### `history` in exactly two, with opposite meanings
+
+`EntityConfig` (opt out) and `FormConfig` (opt in). Already filed; pass 3 confirms the
+blast radius is exactly two interfaces, so unifying them is a small change.
+
+### ng-forms has four overlapping form-config types
+
+`FormConfig`(core), `FormTreeOptions`, `AngularFormsConfig`, `SignalFormOptions` share
+`validators`, `asyncValidators`, `storage`, `debounceMs`, `destroyRef`, `fieldConfigs`,
+`conditionals`, `injector`, `persistDebounceMs`, `validationBatchMs` between them in
+varying subsets. Not a naming bug on its own, but four config shapes for one concept is
+the kind of thing that produces one — flagged as structural, needing a design pass rather
+than a rename.
+
+---
+
 ## Still not covered
 
-Pass 2 covered **public barrels and exported symbol names** across all seven packages.
-Two categories remain:
+**Type/interface names beyond the collisions found.** `events` alone exports ~70. One
+lead was chased and **cleared**: `ErrorClassification` / `ClassificationResult` looked
+like the same concept twice and is not — `ErrorClassification` is the category union
+(`'transient' | 'permanent' | 'poison' | 'unknown'`) and `ClassificationResult` wraps one
+with `retryConfig`, `sendToDlq` and `reason` (`error-classification.ts:14,39`). Two
+concepts, two names, correct. Noted so the next pass does not re-open it.
 
-1. **Config/option key names**, systematically. Three came up incidentally and all three
-   were problems — `history` (opt-in vs opt-out), `equal` (collided with an export),
-   `batchUpdates` (a config flag whose name matches the `batchUpdate` method it does not
-   control). That hit rate suggests a dedicated pass is worth it.
-2. **Type and interface names**, beyond the collisions above. `events` alone exports
-   ~70 types.
-
-   One lead was chased and **cleared**: `ErrorClassification` / `ClassificationResult`
-   looked like the same concept twice and is not — `ErrorClassification` is the category
-   union (`'transient' | 'permanent' | 'poison' | 'unknown'`) and `ClassificationResult`
-   wraps one of those with `retryConfig`, `sendToDlq` and `reason`
-   (`error-classification.ts:14,39`). Two concepts, two names, correct. Noted so the
-   next pass does not re-open it.
+That is the only category left. Passes 1-3 covered: core's tree and `entityMap` surfaces,
+all seven packages' public barrels, and every `*Config`/`*Options` interface's keys.

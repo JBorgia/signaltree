@@ -385,6 +385,30 @@ Still to do, in order:
     package.json, no source. `@signaltree/enterprise` was removed in 14.0.0. Delete the
     directory or move the workspace file to the repo root.
 
+### Pass 3 — config and option keys (done; work left below)
+
+12. **`treeName` is a legacy alias for `name`** — the source says so verbatim
+    (`/** Alias for name (legacy support) */`) and `devtools-impl.ts:1096` resolves
+    `name ?? treeName`. Same class as `removeAll` and `equal`. Delete it.
+13. **`TreeConfig.enableTimeTravel` is DEAD** (`types.ts:489`) — zero consumers in
+    `signal-tree.ts`. A second, LIVE `enableTimeTravel` exists on `DevToolsConfig`
+    (`types.ts:997`, used at `devtools-impl.ts:666,705`). So the flag a user is most
+    likely to reach for silently does nothing while the working one is elsewhere.
+    Delete the dead one.
+14. **`Config` vs `Options` has no rule** — 37 vs 19, no distinction. Proposed rule:
+    `Config` for construction-time config of a long-lived thing, `Options` for per-call
+    arguments. Several names already fit; the outliers are the rename.
+15. **ng-forms has four overlapping form-config types** — `FormConfig`(core),
+    `FormTreeOptions`, `AngularFormsConfig`, `SignalFormOptions` share `validators`,
+    `asyncValidators`, `storage`, `debounceMs`, `destroyRef`, `fieldConfigs`,
+    `conditionals`, `injector` in varying subsets. Structural, needs a design pass
+    rather than a rename.
+
+Pass 3 also confirmed two things already filed: `equal` appears as an option key in
+THREE interfaces (which is why removing the export was right, not merely tidy), and
+`history`'s opt-in/opt-out collision spans exactly two interfaces — so unifying it is
+small.
+
 ### Still uncovered
 
 - **Config/option key names**, systematically. Three surfaced incidentally and all
