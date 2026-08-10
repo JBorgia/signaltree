@@ -281,8 +281,22 @@ const TARGETS = {
     // clone. Dev outgrows prod roughly 2:1, which is the expected shape when
     // most of what landed is diagnostic text that folds — `ngDevMode: false`
     // reclaims it (see check-devmode-foldable).
-    devKB: 12.1,
-    prodKB: 9.5,
+    // Bumped for ST2031 — the changeId held-node diagnostic. Measured cost:
+    // 9.40 -> 9.69 prod, 12.07 -> 12.36 dev, all of it in entity-signal.ts, so
+    // `signaltree-bare` and `signaltree-form` are unmoved.
+    //
+    // The cost is a `Map<K,K>` of retired ids plus a `Set` of already-reported
+    // ones. Those are DATA, not strings, so they do not fold away under
+    // `ngDevMode: false` the way the message does — which is why the dev and prod
+    // deltas are the same 0.29KB rather than dev-only.
+    //
+    // Paid deliberately: `changeId` drops the old per-entity signal on purpose,
+    // so a node held across a rekey reads `undefined` forever with nothing said.
+    // 0.29KB to convert a permanent silent failure into a named one is the trade
+    // this library's diagnostics exist to make. If it needs reclaiming, the Map
+    // is the thing to make dev-only, not the message.
+    devKB: 12.4,
+    prodKB: 9.75,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });

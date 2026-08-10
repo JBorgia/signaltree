@@ -219,6 +219,33 @@ export function createEntitySignal<
     );
   }
 
+  /**
+   * ids retired by `changeId`, mapped to their replacement. Dev-only, and the
+   * ONLY reason it exists is ST2031: without it a node held across a rekey
+   * cannot distinguish "removed" from "renamed", and the two want different
+   * advice. Never read in production — the write is cheap and unconditional
+   * because a `Map.set` per `changeId` call is not a hot path.
+   */
+  const rekeyed = new Map<K, K>();
+  const rekeyReported = new Set<K>();
+
+  /** @internal ST2031. Reported once per retired id. */
+  function reportRekeyedRead(from: K, to: K): void {
+    if (rekeyReported.has(from)) return;
+    rekeyReported.add(from);
+    console.warn(
+      `SignalTree: reading a node held from byId(${String(from)}) after ` +
+        `changeId(${String(from)}, ${String(
+          to
+        )}) — it resolves undefined and ` +
+        `always will. changeId drops the old per-entity signal on purpose: ` +
+        `aliasing it would share one signal with a future addOne({ id: ` +
+        `${String(from)} }), which is a worse failure than this one. Re-read ` +
+        `with byId(${String(to)}), or hold the id and call byId(id()) at the ` +
+        `point of use rather than holding the node across a rekey. [ST2031]`
+    );
+  }
+
   /** Active-entity selection. See the `activeId`/`activeEntity` accessors. */
   const activeIdSignal = signal<K | undefined>(undefined);
   let cachedActiveEntity: Signal<E | undefined> | undefined;
@@ -381,8 +408,28 @@ export function createEntitySignal<
   function createEntityNode(id: K, entity: E): EntityNode<E> {
     // Entity-level callable:
     //   node()           → reads current entity (reactive via mapSignal)
-    //   node(value)      → full entity replace via updateOne (throws if entity removed)
-    //   node(updater)    → updater-based replace via updateOne (throws if entity removed)
+    //   node(value)      → full entity REPLACE (throws if entity removed)
+    //   node(updater)    → replace with the updater's return (throws if removed)
+    //
+    // These replace, and they always claimed to. Until 15.0.0 they delegated to
+    // `updateOne`, which spreads (`{ ...entity, ...changes }`) — so the docs said
+    // replace and the code merged. The updater form was the worse half: the
+    // updater returns a full `E`, it was spread as `Partial<E>`, so an updater
+    // that REMOVED a key left the old value in place and nothing said so.
+    //
+    // Fixed by changing the CODE, not the comment, and the updater form is why
+    // there was no other choice: an updater returns a full `E`, so under merge
+    // semantics it is IMPOSSIBLE to express removing a key — the spread puts the
+    // old value straight back. Merge cannot host this signature. Either the
+    // callable replaces or the updater form has to be deleted.
+    //
+    // Not `setOne(entity)`: that would derive the key via `selectId(entity)`, and
+    // `changeId` can leave `entity.id` disagreeing with the storage key, so it has
+    // a silent wrong-slot write built in. The explicit form is `replaceOne(id, next)`,
+    // which is public and is what this delegates to.
+    //
+    // MERGE is still available and still positional: `updateOne(id, changes)` for
+    // a patch, or `byId(id).field.set(v)` for one field.
     // Resolve the per-entity signal on EVERY read rather than capturing it
     // once. Capturing it made a held node reference permanently dead across a
     // remove -> re-add of the same id: `removeEntitySignal` deletes the signal
@@ -395,7 +442,24 @@ export function createEntitySignal<
     // `getEntitySignal` re-materialises from storage when absent, so a node
     // held across a removal reads `undefined` while the entity is gone and
     // starts reading again the moment it comes back.
-    const entitySig = () => getEntitySignal(id)();
+    const entitySig = () => {
+      const value = getEntitySignal(id)();
+      // ST2031 — a node held across `changeId` resolves undefined forever, and
+      // silently. `changeId` deliberately drops the old per-entity signal rather
+      // than aliasing it (aliasing would be shared with a future
+      // `addOne({ id: from })`, a worse failure) — so this is correct behaviour
+      // that is impossible to debug from the call site. A long-lived
+      // `selectById(tempId)` closing over the pre-server id is the shape that
+      // hits it.
+      if (
+        value === undefined &&
+        (typeof ngDevMode === 'undefined' || ngDevMode) &&
+        rekeyed.has(id)
+      ) {
+        reportRekeyedRead(id, rekeyed.get(id) as K);
+      }
+      return value;
+    };
 
     const node = ((valueOrUpdater?: E | ((current: E) => E)): E | undefined => {
       if (valueOrUpdater === undefined) {
@@ -405,14 +469,11 @@ export function createEntitySignal<
       if (current === undefined) {
         throw new Error(`Entity with id ${String(id)} not found`);
       }
-      if (typeof valueOrUpdater === 'function') {
-        api.updateOne(
-          id,
-          (valueOrUpdater as (c: E) => E)(current) as Partial<E>
-        );
-      } else {
-        api.updateOne(id, valueOrUpdater as Partial<E>);
-      }
+      const next =
+        typeof valueOrUpdater === 'function'
+          ? (valueOrUpdater as (c: E) => E)(current)
+          : (valueOrUpdater as E);
+      api.replaceOne(id, next);
       return undefined;
     }) as unknown as EntityNode<E>;
 
@@ -768,6 +829,8 @@ export function createEntitySignal<
       nodeCache.delete(from);
       nodeCache.delete(to);
       if (activeIdSignal() === from) activeIdSignal.set(to);
+      // ST2031's evidence. Dev-only in effect: nothing reads it in production.
+      rekeyed.set(from, to);
 
       syncEntitySignal(to);
       updateSignals();
@@ -884,6 +947,52 @@ export function createEntitySignal<
       // Run tap handlers
       for (const handler of tapHandlers) {
         handler.onUpdate?.(id, transformedChanges, finalUpdated);
+      }
+    },
+
+    /**
+     * Replace, not merge — and the write path behind `byId(id)(next)`.
+     *
+     * Identical to `updateOne` except the one line that matters: assign the whole
+     * entity instead of spreading it over the current one. That single difference
+     * is the only way to REMOVE a key, which `updateOne` cannot express at all.
+     *
+     * **Why `replaceOne(id, entity)` and not `setOne(entity)`.** The id comes from
+     * the caller on purpose. A `setOne` deriving it via `selectId(entity)` writes
+     * to whatever slot the entity's own id field names — and `changeId` can leave
+     * `entity.id` disagreeing with the storage key, so that form has a silent
+     * wrong-slot write built into it. This one cannot drift.
+     */
+    replaceOne(id: K, entity: E): void {
+      const prev = storage.get(id);
+      if (!prev) {
+        throw new Error(`Entity with id ${String(id)} not found`);
+      }
+
+      let next = entity;
+      for (const handler of interceptHandlers) {
+        const ctx: InterceptContext<Partial<E>> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot replace entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: Partial<E>) => {
+            next = value as E;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onUpdate?.(id, entity as Partial<E>, ctx);
+      }
+
+      storage.set(id, next);
+      nodeCache.delete(id);
+      syncEntitySignal(id);
+      updateSignals();
+      pathNotifier.notify(`${basePath}.${String(id)}`, next, prev);
+      for (const handler of tapHandlers) {
+        handler.onUpdate?.(id, next as Partial<E>, next);
       }
     },
 

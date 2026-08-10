@@ -919,7 +919,21 @@ export interface EntitySignal<E, K extends string | number = string> {
    * breaks any UI state keyed by the old id.
    */
   changeId(from: K, to: K): void;
+  /** Merge `changes` into the entity at `id`. The patch half of the write surface. */
   updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void;
+  /**
+   * REPLACE the entity at `id` outright — the missing half of `updateOne`.
+   *
+   * `updateOne` spreads (`{ ...entity, ...changes }`), so it cannot REMOVE a key.
+   * Before this existed the only replace was `setAll(all().map(...))`: whole-collection
+   * work to change one row, which is the anti-pattern the library exists to avoid.
+   * This is O(1) and position-preserving.
+   *
+   * Takes the id explicitly and deliberately. A `setOne(entity)` that derived the
+   * key via `selectId` would write to the wrong slot whenever `changeId` has left
+   * `entity.id` disagreeing with the storage key — the caller's id cannot drift.
+   */
+  replaceOne(id: K, entity: E, opts?: MutationOptions): void;
   updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void;
   updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number;
   upsertOne(entity: E, opts?: AddOptions<E, K>): K;

@@ -235,3 +235,83 @@ describe('.empty (canonical bare-name predicate)', () => {
     expect(isSignal(api.empty)).toBe(true);
   });
 });
+
+describe('replaceOne / node-callable REPLACE semantics (15.0.0)', () => {
+  type Row = { id: number; name: string; note?: string };
+
+  function makeApi() {
+    return createEntitySignal<Row, number>(
+      { selectId: (r) => r.id },
+      pathNotifier,
+      'rows'
+    );
+  }
+
+  // The whole reason replace exists: `updateOne` spreads, so it CANNOT remove a
+  // key. Assert the observable state, not that a method was reachable.
+  it('replaceOne REMOVES a key that updateOne cannot', () => {
+    const api = makeApi();
+    api.addOne({ id: 1, name: 'a', note: 'keep me' });
+
+    api.updateOne(1, { name: 'b' } as Partial<Row>);
+    expect(api.byId(1)()).toEqual({ id: 1, name: 'b', note: 'keep me' });
+
+    api.replaceOne(1, { id: 1, name: 'c' });
+    expect(api.byId(1)()).toEqual({ id: 1, name: 'c' });
+    expect('note' in (api.byId(1)() as Row)).toBe(false);
+  });
+
+  it('replaceOne preserves list position', () => {
+    const api = makeApi();
+    api.addMany([
+      { id: 1, name: 'a' },
+      { id: 2, name: 'b' },
+      { id: 3, name: 'c' },
+    ]);
+    api.replaceOne(2, { id: 2, name: 'REPLACED' });
+    expect(api.all().map((r) => r.id)).toEqual([1, 2, 3]);
+    expect(api.all().map((r) => r.name)).toEqual(['a', 'REPLACED', 'c']);
+  });
+
+  it('replaceOne throws on a missing id rather than inserting', () => {
+    const api = makeApi();
+    expect(() => api.replaceOne(99, { id: 99, name: 'x' })).toThrow(
+      /not found/
+    );
+    expect(api.count()).toBe(0);
+  });
+
+  // The updater form is the argument for replace: it returns a full `E`, so under
+  // merge semantics removing a key was silently impossible.
+  it('node(updater) REPLACES, so an updater that drops a key drops it', () => {
+    const api = makeApi();
+    api.addOne({ id: 1, name: 'a', note: 'gone after this' });
+    const node = api.byId(1);
+
+    node((current) => ({ id: current.id, name: current.name.toUpperCase() }));
+
+    expect(api.byId(1)()).toEqual({ id: 1, name: 'A' });
+    expect('note' in (api.byId(1)() as Row)).toBe(false);
+  });
+
+  it('node(value) REPLACES rather than merging', () => {
+    const api = makeApi();
+    api.addOne({ id: 1, name: 'a', note: 'x' });
+    api.byId(1)({ id: 1, name: 'z' } as Row);
+    expect(api.byId(1)()).toEqual({ id: 1, name: 'z' });
+  });
+
+  // `setOne(entity)` was rejected because it would derive the key from the entity.
+  // This is the drift it would have written into: after changeId the entity's own
+  // id field and the storage key disagree.
+  it('changeId can leave entity.id disagreeing with the storage key', () => {
+    const api = makeApi();
+    api.addOne({ id: 1, name: 'temp' });
+    api.changeId(1, 42);
+
+    expect(api.ids()).toEqual([42]);
+    // The stored entity still reports its OLD id — this is the drift a
+    // `setOne(entity)` would have keyed off.
+    expect(api.byId(42)()?.id).toBe(1);
+  });
+});
