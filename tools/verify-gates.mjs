@@ -126,13 +126,28 @@ const GATES = [
     // added warning landed inside that headroom and the gate passed while
     // broken. An audit caught it.
     //
-    // Dropping `export` was the obvious fix and does NOT work: measured against
-    // this file, an unused module-scope function adds a warning and no error —
-    // `@typescript-eslint/no-unused-vars` is severity 2 here but does not fire
-    // for it. `no-debugger` does: 10 warnings/0 errors becomes 10 warnings/1
-    // error. `check-lint-budget.mjs`'s own header already said so ("a
-    // `debugger` statement in utils.ts does fail it"); the mutation just never
-    // used it.
+    // `no-debugger` does the job: 0 errors/10 warnings becomes 1 error/10.
+    //
+    // Dropping `export` — the obvious fix — appeared not to work, and the
+    // reason is worth more than the fix. Measured:
+    //
+    //     function __gateMutation(x: any) { … }   0 errors, 11 warnings
+    //     function gateMutation(x: any)   { … }   1 ERROR,  11 warnings
+    //     const    gateBloat: any = 1;            1 ERROR,  11 warnings
+    //
+    // `no-unused-vars` is severity 2 and fires perfectly well. It ignored the
+    // mutation because this harness names its mutations `__gate*` and the rule
+    // is configured with `varsIgnorePattern: '^_'`. THE MUTATION NAMING
+    // CONVENTION SILENTLY DISABLED THE RULE THAT WOULD HAVE CAUGHT IT. A first
+    // pass concluded from that "the rule does not fire for unused declarations"
+    // — a general claim drawn from a fixture carrying an invisible confound,
+    // which is the same defect this harness exists to catch, committed while
+    // fixing this harness. Corrected by the independent auditor.
+    //
+    // `debugger` is still the better mutation, but for a different reason than
+    // first stated: it is NAME-INDEPENDENT, so no ignore-pattern can absorb it.
+    // `check-lint-budget.mjs`'s own header already said "a `debugger` statement
+    // in utils.ts does fail it"; the mutation just never used it.
     //
     // The general rule, and the reason this was blind for two days: a proof
     // that depends on a RECORDED NUMBER staying current is only as good as the
