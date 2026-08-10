@@ -1,5 +1,24 @@
 # Benchmark Analysis & Recommendations
 
+> **ARCHIVED — it analyses a package that no longer exists.**
+>
+> Last edited January 2026. Its subject is `@signaltree/enterprise` and
+> `tree.updateOptimized()`, both **removed in 14.0.0** (`be8460b5`). Every
+> figure here — the 95.7-vs-94.1 scoring, the "+16.7% gain", the component
+> breakdown — measures a mechanism that cannot be built today, so none of it is
+> reproducible even in principle.
+>
+> Why enterprise went, from the 14.0.0 changelog: `tree.updateAndReport()` in
+> core needs no enhancer, adds no bundle, and measured faster in every workload
+> — the diff engine walked the whole state to decide which writes to skip, and
+> core leaves already short-circuit a reference-equal write, so those writes
+> were no-ops before it looked at them. It also silently dropped writes
+> targeting arrays, which was never fixed.
+>
+> For current figures use the generators: `tools/bench-compare.mjs`,
+> `tools/bench-vs-signalstore.mjs`, `tools/size-report.mjs`. Nothing in this
+> file should be quoted.
+
 ## Investigation Results
 
 ### 1. Enterprise Variant Performance (95.7 vs 94.1 pts)

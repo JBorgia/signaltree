@@ -42,13 +42,13 @@ pnpm nx build demo --configuration=production
 
 ### Bundle size limits (enforced in validation)
 
-| Package           | Max size | Max gzipped |
-| ----------------- | -------- | ----------- |
-| `core`            | 15 KB    | 5.8 KB      |
-| `ng-forms`        | 10 KB    | 4 KB        |
-| `enterprise`      | 8 KB     | 3 KB        |
-| `guardrails`      | 12 KB    | 4 KB        |
-| `schema`          | 16 KB    | 6 KB        |
+| Package      | Max size | Max gzipped |
+| ------------ | -------- | ----------- |
+| `core`       | 15 KB    | 5.8 KB      |
+| `ng-forms`   | 10 KB    | 4 KB        |
+| `enterprise` | 8 KB     | 3 KB        |
+| `guardrails` | 12 KB    | 4 KB        |
+| `schema`     | 16 KB    | 6 KB        |
 
 The authoritative gzip gate is [`tools/check-bundle-budget.mjs`](tools/check-bundle-budget.mjs) — the single source of truth for library size claims; every other doc's numbers must trace back to it. Current measured (own-code only; `@angular`/`rxjs`/`tslib` external): bare `signalTree` **5.46 KB** (budget 5.8), a tree using a plain `entityMap()` **8.39 KB** (budget 8.6). A cache-aware `entityMap({ load: loader(...) })` pulls the loader machinery on top; a plain `entityMap()` tree-shakes it out entirely (v12, RFC 0005 §6). Check with `node tools/check-bundle-budget.mjs`.
 
@@ -64,7 +64,26 @@ Runs the 13-step pre-publish pipeline: clean tree, frozen lockfile install, tsco
 
 Before signing off any release or size/perf change:
 
-- Refresh README files, docs, and published metrics against the latest `artifacts/*.json`.
+- **Refresh published metrics from the GENERATORS, never from `artifacts/*.json`.**
+  Every figure in a doc must name the tool that produces it — `tools/size-report.mjs`
+  (per-feature bundle deltas), `tools/check-bundle-budget.mjs` (enforced ceilings),
+  `tools/bench-compare.mjs` (cross-library collection and undo/redo),
+  `tools/bench-vs-signalstore.mjs` (task-level vs `@ngrx/signals`),
+  `tools/bench-depth-latency.mjs`, `tools/bench-leaf-equality.mjs`,
+  `tools/bench-ssr-payload.mjs`. `tools/check-numeric-claims.mjs` enforces this
+  and ratchets the backlog.
+
+  This line used to say "against the latest `artifacts/*.json`", and that was
+  the instruction-level cause of a whole class of wrong published numbers.
+  `artifacts/` is **gitignored** — untracked local scratch that varies per
+  machine, is often absent, and goes stale silently. The copy on this machine
+  in August 2026 still listed `enterprise`, a package dropped in 14.0.0, and put
+  core at 489 bytes gzip where the real figure is ~5,900 because
+  `scripts/perf-suite.js` measures the re-export barrel rather than what a
+  consumer ships. Sourcing docs from it propagated all three.
+
+  Read `artifacts/*.json` for exploration if you like. Do not publish from it.
+
 - Rebuild the demo (`pnpm nx build demo --configuration=production`) against the current workspace.
 - Flag mismatches or failures — treat them as blocking.
 
@@ -124,7 +143,6 @@ false positives while it was being written:
 type-checks them. Narrowing that exclusion is worth doing; do it a directory at
 a time rather than in one sweep.
 
-
 ## Publishing to npm
 
 Gates that run immediately before `npm publish`, in this order — all three
@@ -159,23 +177,23 @@ subpath — but the same package also ships an Angular subpath, so a package-lev
 **`--strict-libs` on the consumer gate is RED and not gated.** Run
 `node tools/verify-consumer-typecheck.mjs --strict-libs` to see it.
 
-*Effect (measured):* the emitted per-file `.d.ts` reference several names they
+_Effect (measured):_ the emitted per-file `.d.ts` reference several names they
 never declare — `DefaultKey`, `EntityMapComputedSlices`,
 `EntityMapMarkerWithSlices`, `PathNotifierHandler`, `HydrateMode` — and
 `index.d.ts` re-exports `isDev` from `lib/constants`, whose emitted declaration
 does not contain it. A consumer compiling with `skipLibCheck: false` sees
 `TS2304`/`TS2305`.
 
-*Cause:* `@nx/rollup:rollup` bundles declarations per ENTRY POINT (there are six:
+_Cause:_ `@nx/rollup:rollup` bundles declarations per ENTRY POINT (there are six:
 the barrel plus `security`, `lazy`, `edit-session`, `storage`, `authoring`) and
 omits declarations it judges unreachable from those exports — while the per-file
 `.d.ts` it also emits still reference them.
 
-*Impact:* none for `skipLibCheck: true`, which is the Angular CLI default and
+_Impact:_ none for `skipLibCheck: true`, which is the Angular CLI default and
 effectively universal. That is the configuration the gate enforces.
 
-*Two fixes that DO NOT work — both tried, both reverted, recorded so the next
-person does not spend the afternoon I did:*
+_Two fixes that DO NOT work — both tried, both reverted, recorded so the next
+person does not spend the afternoon I did:_
 
 1. **Re-exporting the missing names from the barrel makes it WORSE.** The barrel
    then points at declarations that still are not emitted, turning five `TS2304`s
