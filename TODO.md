@@ -73,36 +73,22 @@ nobody has measured.
 
 Derivation: [undo-business-and-ux-cases.md](docs/audits/2026-08/undo-business-and-ux-cases.md)
 
-## 1b. `setOne()` — and fix the docstring that already promises it
+## ~~1b. `setOne()` / replace path~~ — DONE, shipped as `replaceOne`
 
-`entity-signal.ts:384-385` documents the entity-node callable as "full entity
-replace via updateOne". `:414` calls `updateOne`, which merges at `:875`
-(`{ ...entity, ...transformedChanges }`). **The doc promises replace; the code
-merges.** The updater form is worse — the updater returns a full `E`, spread as
-`Partial<E>`, so an updater that REMOVES a key leaves the old value in place
-silently.
+Resolved and committed (`80f41e94`). The entity-node callable now REPLACES, and
+`replaceOne(id, entity)` is public.
 
-The docstring/code disagreement is a real defect and the fix is unambiguous. **What is
-NOT decided is the API.** There is no replace path anywhere today, so the only
-workaround is `setAll(all().map(...))` per single-entity write — full-collection work to
-change one row, the anti-pattern verbatim. That much is settled; a replace path must
-exist.
+**The deciding argument was neither of the ones this item used to carry.** Not the
+withdrawn `@signaltree/callable-syntax` analogy (that was a dev-only build transform for
+leaf signals and has no bearing on merge-vs-replace), and not branch-callable
+consistency. It is that **the updater form is unfixable under merge**: `node(cur => …)`
+returns a full `E`, so a spread puts any dropped key straight back. Merge cannot host
+that signature — either the callable replaces or `node(updater)` gets deleted.
 
-**Open: whether replace arrives as a named `setOne(entity)` or as the entity-node
-callable's semantics.** This flip-flopped three times. The argument I used to settle it
-last — that making the node callable replace would repeat the `@signaltree/callable-syntax`
-mistake — was **factually wrong** and is withdrawn: callable-syntax was a dev-only build
-transform giving leaf signals the same callable shape as nodes, compiling away entirely.
-It has no bearing on merge-vs-replace.
-
-Decide on the real grounds, which are: a branch callable merges, so does an entity-node
-callable differing from that help or confuse? Breaking changes are free, so back-compat is
-not an input. **`packages/core/src/lib/entity-signal.ts` is currently uncommitted carrying
-the node-callable-replace change with no surviving justification — resolve it before it
-ships by accident.**
-
-Raised by the v3 team; screened in
-[v3-requests-against-the-ethos.md](docs/audits/2026-08/v3-requests-against-the-ethos.md).
+**`setOne(entity)` was rejected on correctness, not style.** It would derive the key via
+`selectId(entity)`, and `changeId` can leave `entity.id` disagreeing with the storage
+key — a silent wrong-slot write. `replaceOne(id, entity)` takes the caller's id and
+cannot drift. A test pins that drift so the reason outlives this note.
 
 ## 1c. A diagnostic for `changeId` + held nodes
 
