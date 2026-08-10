@@ -593,7 +593,7 @@ cp -r node_modules/@signaltree/core/skills/using-signaltree .cursor/skills/
 cp -r node_modules/@signaltree/core/skills/using-signaltree .claude/skills/
 ```
 
-(A pointer shim at [`.claude/skills/using-signaltree/SKILL.md`](.claude/skills/using-signaltree/SKILL.md) already exists in this repo for local development.)
+(`.claude/` is gitignored, so this repo ships no Claude-specific shim — the copy above is the whole setup. The canonical skill lives at [`docs/skills/using-signaltree/SKILL.md`](docs/skills/using-signaltree/SKILL.md).)
 
 **Generic harnesses** — any tool that can point at a directory of `SKILL.md` files can read `docs/skills/` directly (either from a git checkout or from the `skills/` folder shipped inside each published `@signaltree/*` tarball). No harness-specific phrasing lives inside the skill bodies.
 

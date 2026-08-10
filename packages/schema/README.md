@@ -13,7 +13,7 @@ const tree = signalTree({ user: { email: '', age: 0 } }).with(
       'user.email': z.string().email(),
       'user.age': z.number().int().min(0),
     },
-  }),
+  })
 );
 
 tree.$.user.email.set('not-an-email');
@@ -62,20 +62,20 @@ interface SchemaConfig {
 
 ### `tree.schemas.*` (after `.with(schemas({...}))`)
 
-| Member | Type | Purpose |
-|---|---|---|
-| `errors` | `Signal<Record<path, string \| null>>` | Path → last-settled error message (or null) |
-| `errorList` | `Signal<readonly string[]>` | Flat list of current error messages |
-| `isValid` | `Signal<boolean>` | True iff every path's last-settled verdict is valid. **O(1) per read.** |
-| `pending` | `Signal<boolean>` | True iff any path has an in-flight async run |
-| `pendingPaths` | `Signal<readonly string[]>` | Paths with in-flight async runs |
-| `errorsAt(path)` | `Signal<string \| null>` | Memoized per-path error signal |
-| `isValidAt(path)` | `Signal<boolean>` | Memoized per-path validity |
-| `isPendingAt(path)` | `Signal<boolean>` | Memoized per-path pending state |
-| `validate()` | `Promise<boolean>` | Re-run all schemas, resolve to current `isValid()` |
-| `validatePath(path)` | `Promise<boolean>` | Re-run schemas for one path |
-| `compact()` | `void` | Manual GC — evict bound paths that no longer resolve |
-| `boundPaths` | `Signal<readonly string[]>` | All currently-bound leaf paths (reactive) |
+| Member               | Type                                   | Purpose                                                                 |
+| -------------------- | -------------------------------------- | ----------------------------------------------------------------------- |
+| `errors`             | `Signal<Record<path, string \| null>>` | Path → last-settled error message (or null)                             |
+| `errorList`          | `Signal<readonly string[]>`            | Flat list of current error messages                                     |
+| `isValid`            | `Signal<boolean>`                      | True iff every path's last-settled verdict is valid. **O(1) per read.** |
+| `pending`            | `Signal<boolean>`                      | True iff any path has an in-flight async run                            |
+| `pendingPaths`       | `Signal<readonly string[]>`            | Paths with in-flight async runs                                         |
+| `errorsAt(path)`     | `Signal<string \| null>`               | Memoized per-path error signal                                          |
+| `isValidAt(path)`    | `Signal<boolean>`                      | Memoized per-path validity                                              |
+| `isPendingAt(path)`  | `Signal<boolean>`                      | Memoized per-path pending state                                         |
+| `validate()`         | `Promise<boolean>`                     | Re-run all schemas, resolve to current `isValid()`                      |
+| `validatePath(path)` | `Promise<boolean>`                     | Re-run schemas for one path                                             |
+| `compact()`          | `void`                                 | Manual GC — evict bound paths that no longer resolve                    |
+| `boundPaths`         | `Signal<readonly string[]>`            | All currently-bound leaf paths (reactive)                               |
 
 ## Entity collections — register at fields, not the collection root
 
@@ -95,7 +95,7 @@ schemas({
 // not an array of users. Your Zod array schema will fail.
 schemas({
   schemas: {
-    users: z.array(userSchema),  // gets the entityMap value, not the user array
+    users: z.array(userSchema), // gets the entityMap value, not the user array
   },
 });
 ```
@@ -109,15 +109,16 @@ Use `*` segments to match entity collections:
 ```ts
 schemas({
   schemas: {
-    'user.email': z.string().email(),         // specific leaf
-    'users.*.email': z.string().email(),      // wildcard — every users entity
+    'user.email': z.string().email(), // specific leaf
+    'users.*.email': z.string().email(), // wildcard — every users entity
     'orders.*.items.*.qty': z.number().int(), // nested wildcards
-    'profile': profileSchema,                 // ancestor schema (whole subtree)
+    profile: profileSchema, // ancestor schema (whole subtree)
   },
 });
 ```
 
 **Precedence** (D4 in the architecture plan):
+
 - **Specific > wildcard > ancestor.** A schema at `users.42.email` always wins over `users.*.email`, which always wins over a `users` ancestor.
 - Each leaf has exactly one owner. The owner is chosen at first-match time and cached.
 
@@ -137,7 +138,7 @@ schemas({
 
 tree.$.user.email.set('bad');
 tree.schemas.errorsAt('user.email')(); // 'Invalid email'
-tree.schemas.errorsAt('user.age')();   // depends on current age value
+tree.schemas.errorsAt('user.age')(); // depends on current age value
 ```
 
 Issues from ancestor schemas use the leaf's nearest-match path via `issueToLeafPath`. The per-leaf staleness guard ensures slow ancestor runs can't clobber faster leaf writes that happened mid-flight.
@@ -190,7 +191,7 @@ tree.schemas.compact();
 Some readers reach for `mode: 'reject'`. We don't offer it. Reasons:
 
 1. **Async schemas can't gate synchronously.** A Promise-returning schema means the write has already notified subscribers before the verdict arrives. "Reject" would mean silently rolling back state subscribers already saw.
-2. **Sync schemas don't save it either.** The enhancer observes writes via `interceptLeafSignals` — *after* the underlying signal has updated. There's no pre-write hook.
+2. **Sync schemas don't save it either.** The enhancer observes writes via `interceptLeafSignals` — _after_ the underlying signal has updated. There's no pre-write hook.
 3. **It's not a validation problem.** The right place to gate input is the form layer (Signal Forms' field validators, ReactiveForms' validators). The store edge is a reporter, not a gate.
 
 If you genuinely need to refuse a write: gate it in the form, in a guardrails rule, or in a wrapper around your write site.
@@ -213,6 +214,6 @@ import type { UpdateMetadata } from '@signaltree/core';
 
 ## See also
 
-- [Architecture plan](../../docs/architecture/validation-enhancer-plan.md) — design decisions and trade-offs
+- [Architecture plan](../../docs/architecture/schema-enhancer-plan.md) — design decisions and trade-offs
 - [`@signaltree/core`](../core) — base library
 - [`@signaltree/guardrails`](../guardrails) — performance and anti-pattern detection (different concern)

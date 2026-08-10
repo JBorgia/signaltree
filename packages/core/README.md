@@ -3079,8 +3079,8 @@ leaves, ~7x when a tenth of them change and ~160x when all of them do. Core leav
 short-circuit, so "only write what changed" is core behaviour for free — the
 diff engine pays O(state) to skip writes that were already no-ops.
 
-See the [migration table](../enterprise/README.md) to move an existing
-dependency off it.
+See [migration-v13-v14.md §6](../../docs/guides/migration-v13-v14.md) to move an
+existing dependency off it.
 
 ---
 

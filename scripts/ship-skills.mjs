@@ -24,7 +24,15 @@
 
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { access, cp, mkdir, readdir, rm, stat } from 'node:fs/promises';
+import {
+  access,
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  stat,
+} from 'node:fs/promises';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -77,10 +85,7 @@ async function assertCanonicalSkillsExist() {
   const primary = path.join(SKILLS_SRC, 'SKILL.md');
   if (!(await pathExists(primary))) {
     logError(
-      `Canonical skill source not found: ${path.relative(
-        REPO_ROOT,
-        primary
-      )}`
+      `Canonical skill source not found: ${path.relative(REPO_ROOT, primary)}`
     );
     logError(
       'Expected docs/skills/using-signaltree/SKILL.md to exist. ' +
@@ -122,11 +127,7 @@ async function shipToPackage(pkg) {
     return { pkg: pkg.name, status: 'skipped' };
   }
 
-  const pkgSkillsRoot = path.join(
-    pkgDistRoot,
-    'skills',
-    'using-signaltree'
-  );
+  const pkgSkillsRoot = path.join(pkgDistRoot, 'skills', 'using-signaltree');
 
   // Idempotent: wipe and rewrite.
   await rm(pkgSkillsRoot, { recursive: true, force: true });
@@ -185,9 +186,7 @@ async function countFiles(dir) {
 }
 
 async function main() {
-  logInfo(
-    `Canonical skills source: ${path.relative(REPO_ROOT, SKILLS_SRC)}`
-  );
+  logInfo(`Canonical skills source: ${path.relative(REPO_ROOT, SKILLS_SRC)}`);
 
   if (!(await pathExists(SKILLS_SRC))) {
     logError(
@@ -206,7 +205,40 @@ async function main() {
 
   if (!(await pathExists(DIST_ROOT))) {
     logError(
-      `dist root missing: ${path.relative(REPO_ROOT, DIST_ROOT)} — build the packages first (e.g. \`npm run build:all\`).`
+      `dist root missing: ${path.relative(
+        REPO_ROOT,
+        DIST_ROOT
+      )} — build the packages first (e.g. \`npm run build:all\`).`
+    );
+    process.exit(1);
+  }
+
+  // A package can only ship what its manifest declares. Shipping skills into a
+  // dist that never lists `skills/**/*` in `files` produces a tarball without
+  // them, silently — npm does not warn about a glob that matches nothing, and
+  // it does not warn about a file that no glob matches either.
+  //
+  // verify-publish-artifacts checks the FORWARD direction: every declared entry
+  // resolves. It cannot catch this, which is the REVERSE: an artifact produced
+  // and never declared. @signaltree/schema shipped that way — it has a
+  // sub-skill, ship-skills copied it, and `files` did not list it, so every
+  // consumer of that package got no skill while every other package's shipped.
+  const undeclared = [];
+  for (const pkg of PACKAGES) {
+    const manifest = path.join(DIST_ROOT, pkg.name, 'package.json');
+    if (!(await pathExists(manifest))) continue;
+    const files = JSON.parse(await readFile(manifest, 'utf8')).files;
+    if (Array.isArray(files) && !files.some((f) => f.includes('skills'))) {
+      undeclared.push(pkg.name);
+    }
+  }
+  if (undeclared.length > 0) {
+    logError(
+      `ship-skills targets these package(s), but their \`files\` does not ` +
+        `declare a skills glob, so the tarball would omit what was just ` +
+        `copied: ${undeclared.join(', ')}. Add \`skills/**/*\` to \`files\` ` +
+        `in packages/<name>/package.json, or remove the package from ` +
+        `PACKAGES here.`
     );
     process.exit(1);
   }
@@ -220,9 +252,7 @@ async function main() {
   const skipped = results.filter((r) => r.status === 'skipped');
 
   console.log('');
-  logInfo(
-    `Done. ${ok.length} package(s) shipped, ${skipped.length} skipped.`
-  );
+  logInfo(`Done. ${ok.length} package(s) shipped, ${skipped.length} skipped.`);
 
   if (skipped.length > 0) {
     logWarn(
