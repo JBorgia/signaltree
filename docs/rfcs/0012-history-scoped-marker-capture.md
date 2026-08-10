@@ -1,12 +1,32 @@
 # RFC 0012 — letting a marker decline HISTORY capture without declining SERIALISATION
 
-**Status:** **Accepted as the design, deferred out of 14.0.0** — closed 2026-08-10.
-§5 is the decision: `history?: boolean` on `entityMap` first, plus a dev
-diagnostic for the silent trap. It does not ship in 14.0.0 because it changes
-what a history entry contains, which is behavioural at the undo level even
-though it is additive at the type level — a minor at the earliest. Blocked on
-the three measurements in §6; none has been taken, and the retention figure in
-particular is meaningless without forced GC.
+**Status:** **IMPLEMENTED in 14.0.0** — corrected 2026-08-10. All three items of
+§5 shipped, despite §5's own "Not for 14.0.0" line and despite an earlier version
+of this status block that repeated it:
+
+1. `history?: boolean` on `entityMap` config — shipped, `@default true`, in
+   `packages/core/src/lib/types.ts`.
+2. The dev diagnostic — shipped as **ST2029**, in an evolved form. §5 asked for an
+   attach-time check on collection size; that was built and did not work, because
+   an app attaches `timeTravel()` when it builds the tree and the rows arrive later
+   from a fetch, so an attach-time check sees an empty collection every time. It is
+   now a RECORD-time check judged on retention (`entries x width`) rather than row
+   count, sampled every 16 entries.
+3. The docs requirement — the `history?: boolean` JSDoc states that undo becomes
+   partial for an excluded collection, in the terms §5 asked for.
+
+The §6 measurements were **not** taken as a precondition. That is a real gap in
+the record rather than a formality: the feature shipped on the strength of the
+ST2029 retention model instead. If the three figures matter, they matter now, not
+before a landing that already happened.
+
+⚠️ **What did NOT ship is Option B's harder half** — a per-purpose snapshot, so a
+marker could be captured for serialisation and skipped for history _within the same
+tree_. `history: false` is all-or-nothing per marker: excluded from history AND
+still serialised, which is the common case, but there is no way to have one
+collection with its own scoped undo stack. §3 explains why that is hard, and it
+constrains any proposal to give `entityMap` its own history — see
+`docs/audits/2026-08/undo-business-and-ux-cases.md` §4b.
 **Prompted by:** the fit review — the one architectural gap that survived the
 14.0.0 audit with no workaround better than "call `pauseRecording()` yourself".
 

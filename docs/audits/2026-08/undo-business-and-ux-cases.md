@@ -216,6 +216,43 @@ declared rather than global.
 `history: false` then becomes unnecessary rather than wrong: if collections opt IN
 to their own history, there is nothing global to opt out of.
 
+### What RFC 0012 already settled, and the part it says is hard
+
+[RFC 0012](../../rfcs/0012-history-scoped-marker-capture.md) asked this exact
+question a release earlier and reached the same answer in one line: **"the
+declarative version belongs on the marker."** `pauseRecording()` is named there as
+the imperative form — "correct, and it puts the burden on every call site that
+writes the collection."
+
+Its §2 states the target case precisely: a 10,000-row operational grid that
+**persists** (survives reload, participates in `serialization()`/`stored()`) and
+**is not in the undo stack** (the user undoes their form edit, not the feed).
+Before 14.0.0 the only opt-out was `transient: true`, which opted out of _both_ —
+so the grid was either fully captured with O(N) writes, or absent from every
+snapshot and non-durable. No third answer.
+
+**All three items of RFC 0012 §5 shipped in 14.0.0**, which its own status block
+denied until this audit corrected it: `history?: boolean`, the dev diagnostic (as
+ST2029, moved from an attach-time size check to a record-time retention check
+because attach-time always saw an empty collection), and the docs requirement.
+
+**But §3 is why my proposal above is not a small change.** Time travel, devtools
+and serialisation all share one snapshot path — `snapshotState()` → `unwrap()` →
+`snapshotMarkerNode()` — memoised per node in a `WeakMap`. That memo is what makes
+structural sharing work: a clean marker returns the identical object across
+snapshots, so a history entry costs O(depth) instead of O(state).
+
+So a _purpose-dependent_ snapshot cannot just branch inside `snapshot()` — the memo
+would cache whichever purpose asked first and serve it to the other. Keying by
+purpose fixes correctness and costs the thing the memo exists for: two cells per
+node, and the two purposes stop sharing structure.
+
+Which means `entityMap({ history: history() })` — a per-collection undo stack — is
+**not** the same size of change as `history: false` was. It needs a design that
+records collection mutations into a scoped stack _without_ forking the shared
+snapshot path. That is the real content of §5 item 1 in this document, and it is
+why it is RFC material rather than a patch.
+
 ### What that leaves `timeTravel()` for
 
 Devtools. Whole-tree rewind and fast-forward, unbounded history, full fidelity —
