@@ -575,6 +575,23 @@ const GATES = [
     },
   },
   {
+    name: 'api-surface',
+    covers:
+      'the entry-point inventory in llms.txt, llms-full.txt, the SKILL and core README matches the BUILT barrels',
+    cmd: ['node', 'tools/gen-api-surface.mjs', '--check'],
+    needsBuild: true,
+    // The inventory used to be hand-written in four places. It drifted: the
+    // SKILL claimed "25 symbols MOVED there" and then enumerated fewer, and six
+    // /authoring exports were documented on no surface at all. Editing a managed
+    // region by hand must fail, because that is the drift returning.
+    mutation: {
+      file: 'docs/skills/using-signaltree/SKILL.md',
+      find: '<!-- END GENERATED: api-entry-points -->',
+      replace:
+        'and one more symbol nobody added.\n<!-- END GENERATED: api-entry-points -->',
+    },
+  },
+  {
     name: 'doc-links',
     covers:
       'every relative link on a live doc surface resolves (archive/CHANGELOG excluded as point-in-time)',

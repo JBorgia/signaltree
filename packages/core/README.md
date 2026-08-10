@@ -193,11 +193,29 @@ import { signalTree, batching } from '@signaltree/core';
 Published subpaths (in `package.json` `exports`): `./security`, `./edit-session`, `./storage`, `./lazy`, `./authoring`. Enhancers are NOT a published subpath — they live in the main barrel and are tree-shaken from there.
 
 - `@signaltree/core/lazy` — the `lazy()` helper for deferring marker/enhancer materialization.
-- `@signaltree/core/authoring` — enhancer- and marker-author plumbing (`getPathNotifier`, `registerMarkerProcessor`, `withWriteContext`, `createEnhancer`, …). This is also the migration target for the deprecated root-barrel re-exports of `getPathNotifier` and `registerMarkerProcessor` (see below).
+- `@signaltree/core/authoring` — enhancer- and marker-author plumbing. The
+  root-barrel re-exports of `getPathNotifier` and `registerMarkerProcessor`,
+  deprecated in 11.6.0, are **gone as of 14.0.0** — import them from here.
 
-**Measured impact.** All figures are a **production build** (`ngDevMode: false`),
-own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
-`node tools/check-bundle-budget.mjs`.
+<!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+
+- `@signaltree/core` — **34 symbols** (the app surface)
+- `@signaltree/core/authoring` — **39 symbols**:
+
+  - reader allowlists (8): `ASYNC_QUERY_READERS`, `ASYNC_SOURCE_READERS`, `ENTITY_LOADER_READERS`, `ENTITY_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STATUS_READERS`, `STORED_READERS`
+  - marker brands (3): `ASYNC_QUERY_MARKER`, `ASYNC_SOURCE_MARKER`, `FORM_MARKER`
+  - marker type guards (6): `isAsyncQueryMarker`, `isAsyncSourceMarker`, `isDerivedMarker`, `isFormMarker`, `isStatusMarker`, `isStoredMarker`
+  - other type guards (5): `isAnySignal`, `isBuiltInObject`, `isNodeAccessor`, `isSignalTree`, `isTraversableNode`
+  - marker authoring (4): `createAsyncQuerySignal`, `createAsyncSourceSignal`, `createFormSignal`, `registerMarkerProcessor`
+  - enhancer authoring (4): `ENHANCER_META`, `composeEnhancers`, `createEnhancer`, `resolveEnhancerOrder`
+  - write-path plumbing (4): `getActiveWriteContext`, `getPathNotifier`, `interceptLeafSignals`, `withWriteContext`
+  - observation hooks (2): `onHydrateDecision`, `onTreeError`
+  - constants (2): `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`
+  - other (1): `parsePath`
+    <!-- END GENERATED: api-entry-points -->
+    **Measured impact.** All figures are a **production build** (`ngDevMode: false`),
+    own code only (Angular/rxjs/tslib external), gzipped. Reproduce with
+    `node tools/check-bundle-budget.mjs`.
 
 - Bare `signalTree` (no markers/enhancers): **5.79 KB**
 - A tree using a plain `entityMap()`: **9.40 KB**
@@ -336,7 +354,11 @@ for it:
 entityMap<Plant, string>({
   selectId: (p) => p.url,
   load: loader(() => api.list$(), {
-    persist: { adapter: createIndexedDBAdapter(), key: 'plants', hydrateThenRevalidate: true },
+    persist: {
+      adapter: createIndexedDBAdapter(),
+      key: 'plants',
+      hydrateThenRevalidate: true,
+    },
   }),
 });
 ```
@@ -438,7 +460,7 @@ tree.$.form.submitted.set(true);
 
 When tests need synchronous notification delivery, use `flushSync()`:
 
-> **Deprecated root-barrel re-export:** `getPathNotifier` from `@signaltree/core` is deprecated (11.6.0) — it moved to `@signaltree/core/authoring` as part of enhancer-author plumbing. The root re-export will be removed in the next major; import it from `@signaltree/core/authoring` instead.
+> **Removed root-barrel re-export:** `getPathNotifier` was deprecated on the root barrel in 11.6.0 and **removed in 14.0.0**. It is only importable from `@signaltree/core/authoring`. This note said "will be removed in the next major" for three majors after the removal had already happened.
 
 ```typescript
 import { getPathNotifier } from '@signaltree/core/authoring';
@@ -1636,7 +1658,12 @@ tree.$.contact.$.email();
 
 // Form-level operations
 tree.$.contact(); // Get all values: ContactForm
-tree.$.contact.set({ name: 'Jane', email: 'jane@example.com', phone: '', message: '' });
+tree.$.contact.set({
+  name: 'Jane',
+  email: 'jane@example.com',
+  phone: '',
+  message: '',
+});
 tree.$.contact.patch({ name: 'Updated' }); // Partial update
 tree.$.contact.reset(); // Reset to initial values
 tree.$.contact.clear(); // Clear all values
@@ -1685,7 +1712,13 @@ validators: {
 ```typescript
 const tree = signalTree({
   listing: form<ListingDraft>({
-    initial: { title: '', description: '', photos: [], price: null, location: '' },
+    initial: {
+      title: '',
+      description: '',
+      photos: [],
+      price: null,
+      location: '',
+    },
     validators: {
       title: validators.required('Title is required'),
       price: [validators.required('Price required'), validators.min(0, 'Must be positive')],

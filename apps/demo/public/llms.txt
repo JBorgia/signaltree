@@ -115,7 +115,15 @@ Genuine boundaries, not hedging — SignalTree is a fine default for structured 
 
 ## Key API surface
 
-- **⚠️ TWO entry points as of 14.0.0 — app API vs authoring plumbing.** `@signaltree/core` is the app surface (34 symbols, every one of them demonstrated in the demo app). **`@signaltree/core/authoring`** holds what only an enhancer/marker/tooling author needs, and 25 symbols MOVED there in 14.0.0: the eight `*_READERS` allowlists, `FORM_MARKER`/`ASYNC_SOURCE_MARKER`/`ASYNC_QUERY_MARKER`, the six `is*Marker` guards, `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`, `parsePath`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` — plus `registerMarkerProcessor`, `onHydrateDecision`, `onTreeError`, `createEnhancer`, `composeEnhancers`, `getPathNotifier`, `withWriteContext`, `ENHANCER_META`, `HydrateMode`/`HydrateReason`. **Emitting any of those from `@signaltree/core` is a compile error.** `isDev` and `withKind` stayed on the root.
+- **⚠️ TWO entry points as of 14.0.0 — app API vs authoring plumbing.**
+  `@signaltree/core` is the app surface, every symbol demonstrated in the demo
+  app. `@signaltree/core/authoring` holds what only an enhancer, marker or
+  tooling author needs. **Emitting an authoring symbol from `@signaltree/core`
+  is a compile error.** `isDev` and `withKind` stayed on the root.
+
+  <!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+`@signaltree/core` exports **34 symbols**; `@signaltree/core/authoring` exports **39**: 8 reader allowlists (`ASYNC_QUERY_READERS`, `ASYNC_SOURCE_READERS`, `ENTITY_LOADER_READERS`, `ENTITY_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STATUS_READERS`, `STORED_READERS`); 3 marker brands (`ASYNC_QUERY_MARKER`, `ASYNC_SOURCE_MARKER`, `FORM_MARKER`); 6 marker type guards (`isAsyncQueryMarker`, `isAsyncSourceMarker`, `isDerivedMarker`, `isFormMarker`, `isStatusMarker`, `isStoredMarker`); 5 other type guards (`isAnySignal`, `isBuiltInObject`, `isNodeAccessor`, `isSignalTree`, `isTraversableNode`); 4 marker authoring (`createAsyncQuerySignal`, `createAsyncSourceSignal`, `createFormSignal`, `registerMarkerProcessor`); 4 enhancer authoring (`ENHANCER_META`, `composeEnhancers`, `createEnhancer`, `resolveEnhancerOrder`); 4 write-path plumbing (`getActiveWriteContext`, `getPathNotifier`, `interceptLeafSignals`, `withWriteContext`); 2 observation hooks (`onHydrateDecision`, `onTreeError`); 2 constants (`SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`); 1 other (`parsePath`).
+<!-- END GENERATED: api-entry-points -->
 - **Create:** `signalTree(initialState, config?)` → tree with `.$` accessor
 - **Read leaf:** `tree.$.path.to.leaf()` — returns the value
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`. A leaf is a real Angular signal, so **calling it with an argument is a compile error** (14.0.0; it was a silent no-op before). `@signaltree/callable-syntax` promised that shorthand via a build transform and was DELETED in 14.0.0 — the transform could never run inside an Angular app

@@ -1014,7 +1014,25 @@ import { isNodeAccessor, registerMarkerProcessor, onTreeError } from '@signaltre
 
 `@signaltree/core` publishes six entry points: `.`, `./security`, `./lazy`, `./edit-session`, `./storage`, `./authoring`.
 
-⚠️ **As of 14.0.0 the main barrel no longer re-exports everything.** The root is the APP surface — 34 symbols, every one demonstrated in the demo app. `./authoring` is the plumbing an enhancer, marker or tooling author needs, and **25 symbols moved there** in 14.0.0:
+⚠️ **As of 14.0.0 the main barrel no longer re-exports everything.** The root
+is the APP surface, every symbol demonstrated in the demo app. `./authoring` is
+the plumbing an enhancer, marker or tooling author needs. Emitting an authoring
+symbol from `@signaltree/core` is a compile error.
+
+<!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+- `@signaltree/core` — **34 symbols** (the app surface)
+- `@signaltree/core/authoring` — **39 symbols**:
+  - reader allowlists (8): `ASYNC_QUERY_READERS`, `ASYNC_SOURCE_READERS`, `ENTITY_LOADER_READERS`, `ENTITY_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STATUS_READERS`, `STORED_READERS`
+  - marker brands (3): `ASYNC_QUERY_MARKER`, `ASYNC_SOURCE_MARKER`, `FORM_MARKER`
+  - marker type guards (6): `isAsyncQueryMarker`, `isAsyncSourceMarker`, `isDerivedMarker`, `isFormMarker`, `isStatusMarker`, `isStoredMarker`
+  - other type guards (5): `isAnySignal`, `isBuiltInObject`, `isNodeAccessor`, `isSignalTree`, `isTraversableNode`
+  - marker authoring (4): `createAsyncQuerySignal`, `createAsyncSourceSignal`, `createFormSignal`, `registerMarkerProcessor`
+  - enhancer authoring (4): `ENHANCER_META`, `composeEnhancers`, `createEnhancer`, `resolveEnhancerOrder`
+  - write-path plumbing (4): `getActiveWriteContext`, `getPathNotifier`, `interceptLeafSignals`, `withWriteContext`
+  - observation hooks (2): `onHydrateDecision`, `onTreeError`
+  - constants (2): `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`
+  - other (1): `parsePath`
+<!-- END GENERATED: api-entry-points -->
 
 | group | symbols |
 | --- | --- |

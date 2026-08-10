@@ -66,7 +66,10 @@ See [`reference/install.md`](reference/install.md) for optional packages and pee
 
 ```ts
 import { signalTree } from '@signaltree/core';
-const tree = signalTree({ counter: 0, user: { name: 'Ada', email: 'ada@example.com' } });
+const tree = signalTree({
+  counter: 0,
+  user: { name: 'Ada', email: 'ada@example.com' },
+});
 tree.$.user.name(); // read
 tree.$.counter.set(1); // write leaf
 tree.$.user({ name: 'Grace', email: 'grace@example.com' }); // write branch
@@ -81,7 +84,17 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 - `computed()` running too often → use Angular's `computed()` — it already memoizes by reference. SignalTree no longer ships a `memoization` enhancer (removed in 9.0.1); for deep-equality cache keys, derive via your own `computed()` with explicit comparison.
 - Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`. **v14:** `canUndo()`/`canRedo()`/`getHistory()` are REACTIVE — bind them directly (`@if (tree.canUndo())`); before 14.0.0 they read plain values, so a zoneless app's undo button never enabled. `pauseRecording()`/`resumeRecording()` make a bulk import ONE undo step instead of a hundred (writes still apply while paused), and `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on every recorded write, so compare only the fields you mean.
 - Report every error the library catches to Sentry/telemetry → `onTreeError` from **`@signaltree/core/authoring`**. Additive: markers still handle their own errors; this cannot swallow or retry.
-- **⚠️ Two entry points since 14.0.0.** `@signaltree/core` is the APP surface. `@signaltree/core/authoring` holds enhancer/marker/tooling plumbing, and 25 symbols MOVED there: the `*_READERS` allowlists, `FORM_MARKER`/`ASYNC_SOURCE_MARKER`/`ASYNC_QUERY_MARKER`, the `is*Marker` guards, `isNodeAccessor`, `isAnySignal`, `isTraversableNode`, `isBuiltInObject`, `isSignalTree`, `parsePath`, `SIGNAL_TREE_CONSTANTS`/`_MESSAGES`. Emitting any of them from `@signaltree/core` is a compile error. `isDev` and `withKind` stayed on the root.
+- **⚠️ Two entry points since 14.0.0.** `@signaltree/core` is the APP surface;
+  `@signaltree/core/authoring` is enhancer/marker/tooling plumbing. Emitting an
+  authoring symbol from `@signaltree/core` is a compile error. `isDev` and
+  `withKind` stayed on the root.
+
+<!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
+
+`@signaltree/core` has **34 symbols**. `@signaltree/core/authoring` has **39**, grouped as: reader allowlists (8), marker brands (3), marker type guards (6), other type guards (5), marker authoring (4), enhancer authoring (4), write-path plumbing (4), observation hooks (2), constants (2), other (1).
+
+<!-- END GENERATED: api-entry-points -->
+
 - Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)`, built into `@signaltree/core`. There is NO `onPathChange`/subscription API in core — do not emit one. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and **removed in 14.0.0** (no longer published). It was measurably slower than the core method that replaced it. To migrate an existing dependency off it, see [`docs/guides/migration-v13-v14.md`](../../guides/migration-v13-v14.md) §6.
 - Reactive forms (validation, dirty/touched, wizards, FormGroup interop) → add `@signaltree/ng-forms`; on Angular 22+ the same package bridges to **Signal Forms** via `signalForm` from `@signaltree/ng-forms/signals`. Read [`ng-forms/SKILL.md`](ng-forms/SKILL.md).
 - Dev-time perf budgets, memory-leak detection, anti-pattern warnings → add `@signaltree/guardrails` (dev-only; noop in production). Read [`guardrails/SKILL.md`](guardrails/SKILL.md).
