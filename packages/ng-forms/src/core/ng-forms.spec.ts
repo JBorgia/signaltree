@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-const { toObservable } = require('../rxjs/rxjs-bridge');
 const { unique } = require('./async-validators');
 const {
   createFormTree,
@@ -229,13 +228,6 @@ describe('NgForms', () => {
 
       expect(await uniqueValidator('available')).toBe(null);
       expect(await uniqueValidator('taken')).toBe('Already exists');
-    });
-  });
-
-  describe('toObservable', () => {
-    it('should convert signal to observable', () => {
-      // This would need proper Angular testing setup for full test
-      expect(typeof toObservable).toBe('function');
     });
   });
 });

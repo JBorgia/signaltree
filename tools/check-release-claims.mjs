@@ -110,7 +110,14 @@ function resolveBase() {
     : tags.filter((t) => t !== `v${current}` && !t.startsWith(`v${current}-`));
   const base = candidates[0];
   if (!base) {
-    console.error('No prior version tag found to diff against.');
+    console.error(
+      'No prior version tag found to diff against.\n' +
+        '  This gate diffs the public API against the last STABLE version tag,\n' +
+        '  so it needs tags. In CI that means `fetch-depth: 0` and\n' +
+        '  `fetch-tags: true` on actions/checkout — a shallow clone has none, and\n' +
+        '  the failure then reproduces on no developer machine.\n' +
+        '  Locally: `git fetch --tags`. Or pass --base=<ref> explicitly.'
+    );
     process.exit(1);
   }
   return base;

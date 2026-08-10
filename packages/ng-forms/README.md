@@ -625,7 +625,12 @@ History tracking works at the FormGroup level so it plays nicely with external u
 
 - `validators` / `asyncValidators`: Lightweight factories for common rules (required, email, minLength, unique, etc.)
 - `createVirtualFormArray`: Virtualize huge `FormArray`s by only instantiating the visible window
-- `toObservable(signal)`: Convert any Angular signal to an RxJS `Observable`
+- To convert a signal to an RxJS `Observable`, use Angular's own
+  [`toObservable`](https://angular.dev/ecosystem/rxjs-interop) from
+  `@angular/core/rxjs-interop`. This package used to ship its own copy; it was
+  never exported from any entry point, so the import this line advertised could
+  not resolve, and its no-injection-context fallback silently degraded a live
+  stream to a single emission. Removed in 14.0.0.
 - `SIGNAL_FORM_DIRECTIVES`: Re-export of `SignalValueDirective` for template-driven helpers
 - `FormValidationError`: Error thrown from `submit` when validation fails, containing sync & async errors
 

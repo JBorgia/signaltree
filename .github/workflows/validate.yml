@@ -17,6 +17,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # `fetch-tags` + full depth: release-claims diffs the public API
+          # against the last STABLE version tag. A shallow, tagless checkout made
+          # it exit 1 with "No prior version tag found" — a CI-only failure that
+          # passed on every laptop, which is the worst shape a gate failure can
+          # have.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
@@ -47,6 +55,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # `fetch-tags` + full depth: release-claims diffs the public API
+          # against the last STABLE version tag. A shallow, tagless checkout made
+          # it exit 1 with "No prior version tag found" — a CI-only failure that
+          # passed on every laptop, which is the worst shape a gate failure can
+          # have.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
