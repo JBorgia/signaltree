@@ -614,7 +614,7 @@ const GATES = [
   {
     name: 'doc-links',
     covers:
-      'every relative link on a live doc surface resolves (archive/CHANGELOG excluded as point-in-time)',
+      'every relative link resolves AND every install instruction names a publishable package (archive/CHANGELOG excluded as point-in-time)',
     cmd: ['node', 'tools/check-doc-links.mjs'],
     // A link is a claim about the repository. 28 were broken when this landed,
     // five of them in files that ship inside the npm tarballs — where a README

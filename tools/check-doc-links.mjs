@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Every relative link on a live documentation surface must resolve.
+ * Every reference a live doc makes must resolve — paths, and package names in
+ * install instructions.
  *
  * ## Why this exists
  *
@@ -38,6 +39,20 @@
  * false-positive rate. External URLs are not fetched: this gate must not depend
  * on the network.
  *
+ * ## Install instructions
+ *
+ * A second check, same principle. `packages/core/README.md` — the page npm
+ * renders, immutable once published — told readers to run
+ * `npm install @signaltree/core @signaltree/enterprise` for a package removed in
+ * 14.0.0 and unpublished for 14.x. It survived the removal commit and a manual
+ * sweep of the npm-facing surfaces. `readme-apis` cannot catch it, because a
+ * package name is not a symbol.
+ *
+ * So every `@signaltree/*` named in an `npm install` line on a live surface must
+ * be a directory under `packages/` whose manifest is not `private`. That rules
+ * out both a removed package and `@signaltree/shared`, which is private and has
+ * never been on the registry.
+ *
  *   node tools/check-doc-links.mjs
  *   node tools/check-doc-links.mjs --list        # every link it can see
  *   node tools/check-doc-links.mjs --self-test   # prove it can fail
@@ -65,6 +80,50 @@ function walk(dir, out = []) {
     else if (/\.(md|txt)$/.test(entry.name)) out.push(abs);
   }
   return out;
+}
+
+/** Publishable `@signaltree/*` names, from the manifests npm reads. */
+function publishable() {
+  const out = new Set();
+  for (const e of readdirSync(join(ROOT, 'packages'), {
+    withFileTypes: true,
+  })) {
+    if (!e.isDirectory()) continue;
+    const m = join(ROOT, 'packages', e.name, 'package.json');
+    if (!existsSync(m)) continue;
+    const j = JSON.parse(readFileSync(m, 'utf8'));
+    if (!j.private && j.name) out.add(j.name);
+  }
+  return out;
+}
+
+/** `@signaltree/*` names in install instructions that cannot be installed. */
+export function scanInstalls() {
+  const ok = publishable();
+  const bad = [];
+  for (const abs of walk(ROOT)) {
+    const rel = relative(ROOT, abs);
+    if (SKIP_FILE.test(rel)) continue;
+    const lines = readFileSync(abs, 'utf8').split('\n');
+    // Only inside fenced code — that is where an instruction a reader will COPY
+    // lives. Prose that mentions a bad install in order to describe it is not an
+    // instruction, and flagging it makes the gate unusable in its own docs: the
+    // first version failed on tools/GATES.md, where the enterprise defect is
+    // written up as an example.
+    let inFence = false;
+    lines.forEach((line, i) => {
+      if (/^\s*```/.test(line)) {
+        inFence = !inFence;
+        return;
+      }
+      if (!inFence) return;
+      if (!/\b(npm|pnpm|yarn|bun)\s+(install|add)\b/.test(line)) return;
+      for (const m of line.matchAll(/@signaltree\/[a-z0-9-]+/g)) {
+        if (!ok.has(m[0])) bad.push({ file: rel, line: i + 1, pkg: m[0] });
+      }
+    });
+  }
+  return bad;
 }
 
 export function scan() {
@@ -113,7 +172,7 @@ if (argv.includes('--self-test')) {
     const { unlinkSync } = await import('node:fs');
     unlinkSync(probeFile);
   }
-  const clean = scan().every((l) => l.ok);
+  const clean = scan().every((l) => l.ok) && scanInstalls().length === 0;
   if (!caught) {
     console.error('❌ self-test: the gate did NOT flag a broken link.');
     process.exit(1);
@@ -134,6 +193,7 @@ if (argv.includes('--self-test')) {
 
 const links = scan();
 const broken = links.filter((l) => !l.ok);
+const badInstalls = scanInstalls();
 
 if (argv.includes('--list')) {
   for (const l of links) {
@@ -150,13 +210,28 @@ console.log(
     `${links.length - broken.length} resolve.`
 );
 
-if (broken.length === 0) {
+if (broken.length === 0 && badInstalls.length === 0) {
   console.log(
-    '✅ every relative link on a live surface resolves. ' +
-      '(docs/archive/** and CHANGELOG.md are point-in-time and excluded.)'
+    '✅ every relative link resolves and every install instruction names a ' +
+      'publishable package. (docs/archive/** and CHANGELOG.md are ' +
+      'point-in-time and excluded.)'
   );
   process.exit(0);
 }
+
+if (badInstalls.length > 0) {
+  console.error(
+    `\n❌ ${badInstalls.length} install instruction(s) name a package that ` +
+      `cannot be installed:\n`
+  );
+  for (const b of badInstalls)
+    console.error(`   ${b.file}:${b.line}  ->  ${b.pkg}`);
+  console.error(
+    `\n   Either the package was removed (drop the instruction) or it is ` +
+      `private and was never published.\n`
+  );
+}
+if (broken.length === 0) process.exit(1);
 
 console.error(`\n❌ ${broken.length} broken link(s):\n`);
 const byFile = new Map();

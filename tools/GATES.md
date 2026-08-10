@@ -72,7 +72,10 @@ What each one found before it existed:
 
 - `doc-links` — 28 broken relative links, five in files that ship in the npm
   tarballs, one pointing at a package deleted in the same release, one claiming a
-  file "already exists in this repo" under a gitignored directory.
+  file "already exists in this repo" under a gitignored directory. Its
+  install-instruction half then caught `packages/core/README.md` — the page npm
+  renders — telling readers to `npm install @signaltree/enterprise`, removed in
+  14.0.0 and unpublished for 14.x.
 - `api-surface` — six `/authoring` exports documented on no surface at all; a
   SKILL that said "25 symbols MOVED there" and enumerated roughly fifteen; a
   README promising a deprecation removal three majors after it had happened.
