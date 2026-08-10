@@ -366,8 +366,15 @@ export function form<T extends Record<string, unknown>>(
         // not carry `touched`, so a form reopened tomorrow showing yesterday's
         // red is surprising, and restoring `touched` without focus, scroll or
         // cursor is a half-restoration that can read worse than none.
+        // `transfer` (SSR) is treated as `rehydrate` here, NOT as an in-process
+        // restore. The objection to carrying `touched` across a boundary is not
+        // staleness — it is that `touched` without focus, scroll and cursor is
+        // a half-restoration — and that holds however fresh the payload is.
+        // Freshness is why `transfer` accepts DATA; it is not a reason to
+        // resurrect interaction state. [RFC 0014]
         if (
           mode !== 'rehydrate' &&
+          mode !== 'transfer' &&
           touched !== null &&
           typeof touched === 'object'
         ) {
@@ -462,9 +469,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // `recordHistory` is a hoisted declaration so the field accessors and
   // mutators (defined above/below) can call it before the binding is set;
   // it is only ever invoked at runtime, after attachment.
-  let historyBinding:
-    | ReturnType<HistoryFeature<T>['attach']>
-    | undefined;
+  let historyBinding: ReturnType<HistoryFeature<T>['attach']> | undefined;
   function recordHistory(): void {
     historyBinding?.record();
   }
@@ -501,10 +506,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
       ? fieldValidators
       : [fieldValidators];
     for (const validator of list) {
-      const error = validator(
-        values[field],
-        values as Record<string, unknown>
-      );
+      const error = validator(values[field], values as Record<string, unknown>);
       if (error) return error;
     }
     return null;

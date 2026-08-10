@@ -1,4 +1,5 @@
 declare const ngDevMode: boolean | undefined;
+import type { HydrateMode } from '../../lib/internals/materialize-markers';
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { hydrateMarkerNode } from '../../lib/internals/materialize-markers';
@@ -8,7 +9,6 @@ import type { EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
 import type { StorageAdapter } from './storage-adapters';
-
 
 /**
  * SignalTree Serialization Module
@@ -73,6 +73,34 @@ const SNAPSHOT_FORMAT_VERSION = '2.0.0';
  * Serialization configuration options
  */
 export interface SerializationConfig {
+  /**
+   * Treat a `deserialize()` payload as an SSR TRANSFER rather than a storage
+   * restore. Only meaningful on `deserialize`; ignored by `serialize`.
+   *
+   * Both cross a process boundary, so both used to be `rehydrate` — and they
+   * want OPPOSITE answers from any marker that owns a live source. A payload
+   * from `localStorage` may be days old and the local loader will fetch
+   * something better, so declining it is right. A payload from the server was
+   * fetched milliseconds ago and the local loader has NOT run, so declining it
+   * ships the bytes into the page and then refetches: measured at 54.3KB
+   * wasted for a 500-row collection.
+   *
+   * ```ts
+   * // client bootstrap
+   * const ts = inject(TransferState);
+   * if (ts.hasKey(KEY)) tree.deserialize(ts.get(KEY, '{}'), { transfer: true });
+   * ```
+   *
+   * What it changes: `asyncSource` and loader-backed `entityMap` ACCEPT the
+   * payload instead of declining. What it deliberately does NOT change: an
+   * in-flight `LOADING` status is still normalised (a request in flight on the
+   * server is not in flight here), and a form's `touched` is still not
+   * restored (that objection is half-restoration, not staleness). RFC 0014.
+   *
+   * @default false
+   */
+  transfer?: boolean;
+
   /**
    * Whether to include metadata (timestamps, version, etc.)
    * @default true
@@ -246,6 +274,7 @@ const DEFAULT_CONFIG: Required<
   Omit<SerializationConfig, 'replacer' | 'reviver'>
 > &
   Pick<SerializationConfig, 'replacer' | 'reviver'> = {
+  transfer: false,
   includeMetadata: true,
   replacer: undefined,
   reviver: undefined,
@@ -253,7 +282,6 @@ const DEFAULT_CONFIG: Required<
   maxDepth: 50,
   handleCircular: true,
 };
-
 
 /**
  * Detects circular references in an object
@@ -414,8 +442,24 @@ function resolveCircularReferences(
 export function serialization(
   defaultConfig: SerializationConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SerializationMethods {
-  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & SerializationMethods => {
+  const enhancerFn = <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & SerializationMethods => {
     const enhanced = tree as ISignalTree<T> & SerializationMethods;
+
+    /**
+     * Which HydrateMode the current `deserialize`/`fromJSON` pass is running
+     * under. `rehydrate` unless a caller asked for `transfer`.
+     *
+     * Closure state rather than a parameter because the mode has to reach
+     * `updateSignals`, which is nested inside `fromJSON`, and `fromJSON` is
+     * PUBLIC API — widening its signature to carry an internal detail would put
+     * a mode argument in front of every caller who has no opinion about it.
+     * Safe because the whole path is synchronous: `deserialize` sets it, calls
+     * `fromJSON`, and restores it in a `finally` before returning, so no two
+     * passes can interleave. RFC 0014.
+     */
+    let hydrateMode: HydrateMode = 'rehydrate';
     /**
      * Get plain object representation
      */
@@ -540,7 +584,7 @@ export function serialization(
           // `rehydrate`, not `restore`: deserialize crosses a process boundary,
           // so nothing is in flight and transient state must be normalised
           // rather than believed. See docs/architecture/undo-redo-vs-devtools.md.
-          if (hydrateMarkerNode(direct, sourceValue, 'rehydrate')) continue;
+          if (hydrateMarkerNode(direct, sourceValue, hydrateMode)) continue;
 
           // Prefer the real signal if present; otherwise resolve from root alias
           const targetSignal = isSignal(direct)
@@ -645,7 +689,7 @@ export function serialization(
               // hydrated it properly, leaving BOTH: `{name:'Ada', values:{…},
               // touched:{…}}`. Two writers, same key, and the wrong one ran
               // first.
-              if (!hydrateMarkerNode(node, current, 'rehydrate')) {
+              if (!hydrateMarkerNode(node, current, hydrateMode)) {
                 (node as unknown as WritableSignal<unknown>).set(current);
               }
             } catch {
@@ -833,10 +877,18 @@ export function serialization(
         }
 
         // Apply parsed data to the tree; fromJSON will handle type restoration
-        enhanced.fromJSON(
-          data as T,
-          metadata as SerializedState<T>['metadata']
-        );
+        // `transfer` opts this payload out of the loader-owns-source declines.
+        // Restored in `finally` so a throw cannot leave the next pass — or
+        // `restore()`, which shares `fromJSON` — running in the wrong mode.
+        hydrateMode = fullConfig.transfer ? 'transfer' : 'rehydrate';
+        try {
+          enhanced.fromJSON(
+            data as T,
+            metadata as SerializedState<T>['metadata']
+          );
+        } finally {
+          hydrateMode = 'rehydrate';
+        }
 
         // Log restoration if in debug mode
         if (
@@ -903,14 +955,16 @@ export function serialization(
     return enhanced as unknown as ISignalTree<T> & SerializationMethods;
   };
 
-  const meta: EnhancerMeta = { name: 'serialization', provides: ['serialization'] };
+  const meta: EnhancerMeta = {
+    name: 'serialization',
+    provides: ['serialization'],
+  };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
   return enhancerFn;
 }
 
 // v12: removed the deprecated `withSerialization` alias — use `serialization()`.
-
 
 // Storage adapters live in ./storage-adapters (so '@signaltree/core/storage'
 // doesn't enter through this enhancer module); re-exported here to keep this
@@ -1021,10 +1075,16 @@ export function persistence(
           await Promise.resolve(storageAdapter.setItem(key, serialized));
           lastCacheKey = cacheKey;
 
-          if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
+          if (
+            (typeof ngDevMode === 'undefined' || ngDevMode) &&
+            (tree as SignalTreeWithConfig).__config?.debugMode
+          ) {
             console.log(`[SignalTree] State saved to storage key: ${key}`);
           }
-        } else if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
+        } else if (
+          (typeof ngDevMode === 'undefined' || ngDevMode) &&
+          (tree as SignalTreeWithConfig).__config?.debugMode
+        ) {
           console.log(
             `[SignalTree] State unchanged, skipping storage write for key: ${key}`
           );
@@ -1049,7 +1109,10 @@ export function persistence(
             includeMetadata: false,
           });
 
-          if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
+          if (
+            (typeof ngDevMode === 'undefined' || ngDevMode) &&
+            (tree as SignalTreeWithConfig).__config?.debugMode
+          ) {
             console.log(`[SignalTree] State loaded from storage key: ${key}`);
           }
         }
@@ -1067,7 +1130,10 @@ export function persistence(
         await Promise.resolve(storageAdapter.removeItem(key));
         lastCacheKey = null;
 
-        if ((typeof ngDevMode === 'undefined' || ngDevMode) && (tree as SignalTreeWithConfig).__config?.debugMode) {
+        if (
+          (typeof ngDevMode === 'undefined' || ngDevMode) &&
+          (tree as SignalTreeWithConfig).__config?.debugMode
+        ) {
           console.log(`[SignalTree] State cleared from storage key: ${key}`);
         }
       } catch (error) {
@@ -1183,9 +1249,14 @@ export function persistence(
       PersistenceMethods;
   };
 
-  const meta: EnhancerMeta = { name: 'persistence', provides: ['persistence', 'serialization'], requires: [] };
+  const meta: EnhancerMeta = {
+    name: 'persistence',
+    provides: ['persistence', 'serialization'],
+    requires: [],
+  };
   (persistenceFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
-  (persistenceFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  (persistenceFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] =
+    meta;
   return persistenceFn;
 }
 
@@ -1212,4 +1283,3 @@ export function applySerialization<T extends Record<string, unknown>>(
 ): ISignalTree<T> & SerializationMethods {
   return serialization()(tree as any) as ISignalTree<T> & SerializationMethods;
 }
-

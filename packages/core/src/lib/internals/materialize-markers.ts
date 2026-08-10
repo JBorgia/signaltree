@@ -38,11 +38,20 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
  * - `restore`   — `timeTravel` undo/redo/jumpTo. Same process; an in-flight
  *                 request may genuinely still be running, so transient state is
  *                 restored VERBATIM.
- * - `rehydrate` — `deserialize`, SSR transfer, localStorage. A process boundary
+ * - `rehydrate` — `deserialize` from storage. A process boundary was crossed and
+ *                 the payload may be OLD, so a marker that owns a live source
+ *                 is entitled to prefer its own fresher result.
+ * - `transfer`  — SSR/`TransferState`. A process boundary was crossed and the
+ *                 payload is FRESHER than anything here, because nothing in
+ *                 this process has run yet. RFC 0014: `rehydrate` used to cover
+ *                 both, and the two want OPPOSITE answers — `asyncSource`
+ *                 correctly declines a day-old localStorage payload and
+ *                 wrongly declined a server payload from milliseconds ago,
+ *                 shipping 54.3KB into the page and then refetching anyway.
  *                 was crossed, so nothing is in flight and transient state must
  *                 be normalised rather than believed.
  */
-export type HydrateMode = 'merge' | 'restore' | 'rehydrate';
+export type HydrateMode = 'merge' | 'restore' | 'rehydrate' | 'transfer';
 
 interface MarkerProcessor {
   check: (value: unknown) => boolean;
@@ -88,9 +97,7 @@ const PROCESSOR_STAMP = Symbol.for('SignalTree:MarkerProcessor');
 /** @internal Returns the processor that materialised this node, if any. */
 export function getNodeProcessor(node: unknown): MarkerProcessor | undefined {
   if (!isTraversableNode(node)) return undefined;
-  return (node as Record<symbol, MarkerProcessor | undefined>)[
-    PROCESSOR_STAMP
-  ];
+  return (node as Record<symbol, MarkerProcessor | undefined>)[PROCESSOR_STAMP];
 }
 
 /**
@@ -145,7 +152,6 @@ export function hydrateMarkerNode(
   proc.hydrate(node, value, mode);
   return true;
 }
-
 
 // =============================================================================
 // HYDRATION DECISIONS — §5.5
@@ -637,4 +643,3 @@ export function materializeMarkers(
     }
   }
 }
-

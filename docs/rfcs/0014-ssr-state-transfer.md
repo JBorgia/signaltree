@@ -1,6 +1,7 @@
 # RFC 0014 — SSR state transfer: what works, what does not, and the one thing to change
 
-**Status:** research complete, one proposal.
+**Status:** IMPLEMENTED. `{ transfer: true }` ships; 11 tests in
+`packages/core/src/lib/ssr-transfer.spec.ts`.
 **Date:** 2026-08-09.
 **Prompted by:** audit challenge C3, whose premise ("SSR has zero integration")
 turned out to be wrong. Everything below is measured, and the reproductions are
@@ -166,6 +167,46 @@ entirely.
    save two, and it would add permanent public surface for that. Recorded as
    declined-with-a-reason rather than left dangling.
 
+## 5b. Implemented
+
+`HydrateMode` gains a fourth value and `deserialize` gains one config flag:
+
+```ts
+client.deserialize(ts.get(KEY, '{}'), { transfer: true });
+```
+
+Behaviour, all pinned by test:
+
+|                            | `deserialize()`    | `deserialize(_, { transfer: true })` |
+| -------------------------- | ------------------ | ------------------------------------ |
+| `asyncSource` server value | dropped, refetched | **delivered**                        |
+| in-flight `LOADING` status | normalised         | **normalised** (unchanged)           |
+| form `touched`             | not restored       | **not restored** (unchanged)         |
+| plain state, `entityMap`   | transferred        | transferred                          |
+
+The two "unchanged" rows are the ones worth defending. `transfer` says the
+payload is FRESHER, and freshness is an argument about DATA. It is not an
+argument for believing a request is still in flight in a process where nothing
+is running, nor for resurrecting interaction state without the focus, scroll and
+cursor that made it meaningful. Data transfers; in-flight-ness and interaction
+state do not.
+
+`hydrateMode` is closure state on the enhancer, set by `deserialize` and
+restored in a `finally`, because the mode must reach `updateSignals` (nested
+inside `fromJSON`) and `fromJSON` is public API — widening its signature would
+put a mode argument in front of every caller who has no opinion about it. The
+whole path is synchronous, and a test asserts the mode does not leak into the
+next `deserialize`.
+
+**Loader-backed `entityMap` is reasoned but NOT TESTED.** It carried the same
+`mode === 'rehydrate'` decline and now falls through to accept under `transfer`.
+The argument is identical to `asyncSource`'s and the code change is one comment
+plus an unchanged condition — but no test exercises a loader-backed collection
+across the boundary, so it is a claim, not a result. Marked here rather than
+counted as done.
+
+---
+
 ## 6. What this investigation got wrong on the way
 
 Worth keeping, because it is the same shape as everything else this week.
@@ -184,3 +225,17 @@ Worth keeping, because it is the same shape as everything else this week.
   on a `console.warn` spy that captured nothing while the warning was plainly on
   stdout, because the report routes through a listener. Asserting the observable
   outcome is both stronger and not hostage to delivery.
+- **The headline finding was right BY LUCK.** Every `asyncSource` assertion used
+  `.value?.()`, and an `asyncSource` node has no `.value` — it is callable.
+  `.value?.()` is `undefined` whether hydration worked or not, so "the client
+  does NOT receive it" passed without testing anything. The finding survived
+  re-measurement with `node()`, which is fortunate rather than creditable: a
+  test that cannot fail is not evidence, and this one was published before
+  anyone checked it could.
+- **Then the fix "failed" against a stale `dist`.** The first check of
+  `{ transfer: true }` imported from `dist/` after editing only source, so it
+  measured code that predated the fix and reported it broken. Third time this
+  session that stale build output produced a wrong answer — and the reason the
+  bundle gate now rebuilds for itself. A one-line probe inside `hydrate` showed
+  `mode=transfer`, the right payload, and the right result, which is what
+  separated "the fix is wrong" from "the check is wrong".

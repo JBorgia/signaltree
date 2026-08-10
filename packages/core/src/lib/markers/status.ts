@@ -1,6 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
-import { registerBuiltinMarkerProcessor ,
+import {
+  registerBuiltinMarkerProcessor,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
 
@@ -196,10 +197,19 @@ export function status<E = Error>(
         // idle-gated fetch, `settled()` false blocks anything awaiting
         // settlement, and nothing is running to change any of them.
         //
-        // Normalised only under `rehydrate`. Under `restore` (an in-process
-        // undo) the request may genuinely still be running, so `Loading` is
-        // kept verbatim — that is the whole reason `mode` exists.
-        if (mode === 'rehydrate' && state === LoadingState.Loading) {
+        // Normalised under `rehydrate` AND `transfer`. Under `restore` (an
+        // in-process undo) the request may genuinely still be running, so
+        // `Loading` is kept verbatim — that is the whole reason `mode` exists.
+        //
+        // `transfer` (SSR) normalises too, and deliberately: the freshness
+        // argument that makes `transfer` accept DATA does not apply to a
+        // REQUEST. A fetch that was in flight on the server is not in flight
+        // here whatever the payload's age, and believing it deadlocks every
+        // `idle`-gated guard. Data transfers; in-flight-ness does not. [RFC 0014]
+        if (
+          (mode === 'rehydrate' || mode === 'transfer') &&
+          state === LoadingState.Loading
+        ) {
           node.setNotLoaded();
           reportHydrateDecision({
             marker: 'status',
@@ -245,7 +255,9 @@ export function status<E = Error>(
             if (typeof ngDevMode === 'undefined' || ngDevMode) {
               console.warn(
                 `SignalTree: status() hydrate ignored an unrecognised state ` +
-                  `"${String(state)}". The node was left unchanged. This is a ` +
+                  `"${String(
+                    state
+                  )}". The node was left unchanged. This is a ` +
                   `PAYLOAD problem, not a registration one — the snapshot was ` +
                   `written by an incompatible version, or hand-built. [ST2024]`
               );

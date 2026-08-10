@@ -10,7 +10,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
 import { reportTreeError } from '../internals/error-reporter';
-import { registerBuiltinMarkerProcessor ,
+import {
+  registerBuiltinMarkerProcessor,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
 
@@ -147,40 +148,51 @@ export function asyncSource<T>(
 ): AsyncSourceMarker<T> {
   if (!asyncSourceRegistered) {
     asyncSourceRegistered = true;
-    registerBuiltinMarkerProcessor(isAsyncSourceMarker, createAsyncSourceSignal, {
-      // A marker that OWNS A SOURCE, and can also be written directly.
-      //
-      // The value is CAPTURED always. Stripping it at snapshot time would make
-      // undo/redo and devtools replay show whatever the loader decides now
-      // rather than what was on screen then, which is not a rewind. Capture
-      // always; decide on the way back in.
-      //
-      // On `rehydrate` the payload is stale by definition — the tree was
-      // rebuilt in a new process and the loader has already re-run, so the
-      // fresh result wins. On `restore`/`merge` the recorded value is written
-      // back, because that is what undo means.
-      snapshot: (node) => ({ value: node() }),
+    registerBuiltinMarkerProcessor(
+      isAsyncSourceMarker,
+      createAsyncSourceSignal,
+      {
+        // A marker that OWNS A SOURCE, and can also be written directly.
+        //
+        // The value is CAPTURED always. Stripping it at snapshot time would make
+        // undo/redo and devtools replay show whatever the loader decides now
+        // rather than what was on screen then, which is not a rewind. Capture
+        // always; decide on the way back in.
+        //
+        // On `rehydrate` the payload is stale by definition — the tree was
+        // rebuilt in a new process and the loader has already re-run, so the
+        // fresh result wins. On `restore`/`merge` the recorded value is written
+        // back, because that is what undo means.
+        //
+        // `transfer` is the SSR case and takes the OPPOSITE branch: the payload
+        // came from a server that fetched it milliseconds ago and this process's
+        // loader has NOT run yet, so the payload is the freshest thing available.
+        // Declining it shipped the bytes into the page and refetched anyway —
+        // measured at 54.3KB wasted for 500 rows. See RFC 0014.
+        snapshot: (node) => ({ value: node() }),
 
-      hydrate: (node, value, mode) => {
-        if (mode === 'rehydrate') {
-          // The loader has already re-run; its result is newer than any payload.
-          reportHydrateDecision({
-            marker: 'asyncSource',
-            decision: 'declined',
-            mode,
-            reason: 'loader-owns-source',
-            detail:
-              typeof ngDevMode === 'undefined' || ngDevMode
-                ? 'it owns a loader, which has already re-run — its result ' +
-                  'is newer than anything a snapshot can carry.'
-                : undefined,
-          });
-          return;
-        }
-        if (value === null || typeof value !== 'object') return;
-        node.set((value as { value?: unknown }).value as never);
-      },
-    });
+        hydrate: (node, value, mode) => {
+          if (mode === 'rehydrate') {
+            // Storage payload of unknown age; the loader has already re-run and
+            // its result is newer. NOT `transfer` — see the note above.
+            reportHydrateDecision({
+              marker: 'asyncSource',
+              decision: 'declined',
+              mode,
+              reason: 'loader-owns-source',
+              detail:
+                typeof ngDevMode === 'undefined' || ngDevMode
+                  ? 'it owns a loader, which has already re-run — its result ' +
+                    'is newer than anything a snapshot can carry.'
+                  : undefined,
+            });
+            return;
+          }
+          if (value === null || typeof value !== 'object') return;
+          node.set((value as { value?: unknown }).value as never);
+        },
+      }
+    );
   }
   return {
     [ASYNC_SOURCE_MARKER]: true,
@@ -251,7 +263,11 @@ export function createAsyncSourceSignal<T>(
     } catch (err) {
       loadingSignal.set(false);
       errorSignal.set(err);
-      reportTreeError({ error: err, source: 'async-source', operation: 'load' });
+      reportTreeError({
+        error: err,
+        source: 'async-source',
+        operation: 'load',
+      });
       return;
     }
 

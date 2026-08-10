@@ -1,7 +1,8 @@
 import { computed, Signal } from '@angular/core';
 
 import { createEntitySignal } from '../entity-signal';
-import { registerBuiltinMarkerProcessor ,
+import {
+  registerBuiltinMarkerProcessor,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
 import { isEntityMapMarker, isLoaderFeature } from '../utils';
@@ -330,6 +331,12 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           // not competing with the loader's persistence.
           // `load` is attached by the loader feature, so it is absent from the
           // base EntitySignal type — presence at runtime IS the discriminator.
+          // `rehydrate` only — `transfer` falls through and ACCEPTS. A
+          // loader-backed collection had exactly the asyncSource defect: an SSR
+          // payload the server had just fetched was declined because the local
+          // loader "owns" the source, so the rows shipped inside the page and
+          // were then fetched again. Under `transfer` the local loader has not
+          // run, so the payload is the freshest thing available. [RFC 0014]
           if (
             mode === 'rehydrate' &&
             typeof (node as { load?: unknown }).load === 'function'
@@ -368,7 +375,9 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           // snapshot shape, and no other payload this processor accepts is an
           // array. The `all` wrapper stays the canonical round-trip form; this
           // only stops the hand-written form from being silently dropped.
-          const all = Array.isArray(value) ? value : (value as { all?: unknown }).all;
+          const all = Array.isArray(value)
+            ? value
+            : (value as { all?: unknown }).all;
           if (Array.isArray(all)) {
             // DIFF FIRST, `setAll` only as a fallback.
             //
@@ -401,8 +410,7 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
                 if (current[i] !== incoming[i]) changed.push(incoming[i]);
               }
               if (changed.length < incoming.length) {
-                for (const entity of changed)
-                  node.upsertOne(entity as never);
+                for (const entity of changed) node.upsertOne(entity as never);
                 // Guard against id divergence: if any incoming entity carried a
                 // DIFFERENT id than the row it replaced, upsert added rather
                 // than replaced and the count moved. Repair with the full
