@@ -1,6 +1,9 @@
 # RFC 0010 — Retiring `@signaltree/enterprise`
 
-- **Status:** Accepted
+- **Status:** **EXECUTED — enterprise removed in 14.0.0** (`be8460b5`).
+  `packages/enterprise` is gone from the repo, the package is unpublished for 14.x,
+  and 13.5.0 carries a deprecation notice on npm naming `tree.updateAndReport()`
+  as the replacement. A historical record, not a request for comment.
 - **Date:** 2026-08-05
 - **Ships in:** 13.5.0
 - **Supersedes:** the "fix `updateOptimized`" track in RFC 0008 §open-items
