@@ -60,9 +60,13 @@ node tools/verify-gates.mjs --self-test  # prove each gate can fail — pre-rele
   enumerating them would bury the report. It now prints which types are in that
   state. This is how `SerializationConfig.transfer` reached zero surfaces with
   the gate green.
-- `check-numeric-claims.mjs` matches ASCII `x` ratios, not U+00D7 `×`, skips
-  fenced code, and exempts a whole line when it names a competitor. Its backlog
-  is **ratcheted, not clean**: 69 published figures still name no generator.
+- `check-numeric-claims.mjs` matches ASCII `x` ratios, not U+00D7 `×`, and skips
+  fenced code. Its backlog is now **zero** — every measured figure on every live
+  surface names a generator, or carries a `<!-- measured: -->` marker saying why
+  none can exist. A new unbacked figure fails immediately; there is no backlog
+  left to hide in. Paying the last 69 off found four figures that were simply
+  wrong, which is the argument against grandfathering: a number nothing can
+  re-derive is a number nothing can catch.
 - `check-numeric-claims.mjs` sees performance figures, not provenance. It looks
   for KB / ms / % / ratios, so a sourcing claim like "40,000+ developer surveys"
   or "10,000+ GitHub repositories" is not a figure to it. Its `SURFACES` list

@@ -1,5 +1,13 @@
 # RFC 0013 — Bounded equality, and a speculative snapshot
 
+**Status:** **Both proposals declined — closed 2026-08-10.** §2 resolves to
+option 1 (do nothing: the array leaf is already discouraged, `entityMap` is the
+answer, `compared()` is the escape hatch) and §3 to option 1 (do not build the
+speculative snapshot). Nothing here ships in 14.0.0 or is scheduled after it.
+The document is kept for the measurements and for the two **⚠️ Trap** notes,
+which name the attractive-looking options and why they are wrong — that is the
+part that should not have to be re-derived.
+
 Two proposals that came out of the 14.0.0 performance evaluation. Neither is a
 bug fix and neither belongs in the RC: both change observable semantics, and one
 adds public API. They are here because the analysis exists and should not have
@@ -229,8 +237,8 @@ not only a faster one. Measured, both halves.
 **The gain.** Over 1,000-row entity arrays, 2,000 object-node comparisons, min
 of four alternating rounds in one process:
 
-| gate                                        | time    | vs current  |
-| ------------------------------------------- | ------- | ----------- |
+| gate                                         | time    | vs current  |
+| -------------------------------------------- | ------- | ----------- |
 | `getPrototypeOf` ×2 + `toString` ×2 (before) | 168.5µs | —           |
 | `a.constructor !== b.constructor`            | 139.7µs | **17% off** |
 | the same, wrapped in `try`                   | 140.0µs | 17% off     |
@@ -245,12 +253,12 @@ inline those.
 **The blast radius.** Four pairs change verdict, and every one flips from equal
 to NOT equal:
 
-| pair                                          | before | after |
-| --------------------------------------------- | ------ | ----- |
-| class instance vs plain object, same fields   | true   | false |
-| `Object.create(null)` vs `{}`, same keys      | true   | false |
-| cross-realm `{}` vs local `{}`                | true   | false |
-| `Object.create(Date.prototype)` vs `{}`       | true   | false |
+| pair                                        | before | after |
+| ------------------------------------------- | ------ | ----- |
+| class instance vs plain object, same fields | true   | false |
+| `Object.create(null)` vs `{}`, same keys    | true   | false |
+| cross-realm `{}` vs local `{}`              | true   | false |
+| `Object.create(Date.prototype)` vs `{}`     | true   | false |
 
 That direction is the whole argument. This comparator is a signal's `equal`, so
 a wrongly-EQUAL verdict does not produce a wrong comparison, it **drops the
@@ -299,4 +307,3 @@ is ever built, option 3 in §2 remains the shape.
 
 Recording both declines rather than letting them lapse: an unresolved
 recommendation reads as an oversight later, and a decline with a reason does not.
-

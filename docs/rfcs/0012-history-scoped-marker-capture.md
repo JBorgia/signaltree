@@ -1,6 +1,12 @@
 # RFC 0012 — letting a marker decline HISTORY capture without declining SERIALISATION
 
-**Status:** proposed, post-14.0.0-rc.1
+**Status:** **Accepted as the design, deferred out of 14.0.0** — closed 2026-08-10.
+§5 is the decision: `history?: boolean` on `entityMap` first, plus a dev
+diagnostic for the silent trap. It does not ship in 14.0.0 because it changes
+what a history entry contains, which is behavioural at the undo level even
+though it is additive at the type level — a minor at the earliest. Blocked on
+the three measurements in §6; none has been taken, and the retention figure in
+particular is meaningless without forced GC.
 **Prompted by:** the fit review — the one architectural gap that survived the
 14.0.0 audit with no workaround better than "call `pauseRecording()` yourself".
 
