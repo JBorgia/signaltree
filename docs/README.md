@@ -43,14 +43,14 @@ Use this index to navigate the documentation.
 
 ## ⚡ Performance
 
-| Document                                                              | Description                         |
-| --------------------------------------------------------------------- | ----------------------------------- |
-| [Metrics](performance/metrics.md)                                     | Performance metrics and methodology |
-| [Benchmark Analysis](performance/BENCHMARK_ANALYSIS.md)               | Enterprise vs Core benchmarks       |
-| [Tree-Shaking Optimization](performance/TREE_SHAKING_OPTIMIZATION.md) | Bundle optimization strategies      |
-| [Bundle Optimization](performance/bundle-optimization.md)             | Bundle size optimization            |
-| [Performance Patterns](performance/performance-patterns.md)           | Common performance patterns         |
-| [Hosting Guide](performance/performance-hosting-guide.md)             | Performance hosting considerations  |
+| Document                                                    | Description                                  |
+| ----------------------------------------------------------- | -------------------------------------------- |
+| [Benchmarks](../tools/) — `bench-*.mjs`                     | Current performance figures, with generators |
+| [Benchmark Analysis](performance/BENCHMARK_ANALYSIS.md)     | Enterprise vs Core benchmarks                |
+| [Dropping dev code](performance/dropping-dev-code.md)       | What `ngDevMode: false` reclaims, measured   |
+| [Bundle Optimization](performance/bundle-optimization.md)   | Bundle size optimization                     |
+| [Performance Patterns](performance/performance-patterns.md) | Common performance patterns                  |
+| [Hosting Guide](performance/performance-hosting-guide.md)   | Performance hosting considerations           |
 
 ---
 

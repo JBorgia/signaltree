@@ -1,5 +1,24 @@
 # Tree-Shaking Optimization Guide
 
+> **ARCHIVED — planning notes from the 9.0.1 era, kept as a record.**
+>
+> Last substantively edited April 2026 against 9.0.1; the library is now 14.0.0.
+> Its "Potential: -1-2 KB" figures were always estimates of work that might be
+> done, not measurements, and they were never revisited.
+>
+> What has happened since:
+>
+> - **Opportunity 1 (production console removal) is DONE** and enforced —
+>   dev diagnostics fold under `ngDevMode: false`, checked by the
+>   `devmode-foldable` gate on every run.
+> - **"Core-only apps: ~8.5 KB gzipped" is wrong today.** Measured with
+>   `node tools/size-report.mjs`: a bare tree is **5.79 KB** gzip and a tree
+>   using `entityMap` is **9.40 KB**.
+>
+> For current numbers use the generators — `tools/size-report.mjs` for
+> per-feature deltas, `tools/check-bundle-budget.mjs` for the enforced ceilings.
+> Nothing in this file should be quoted.
+
 ## Current Status ✅
 
 Tree-shaking **already works effectively** for @signaltree/core:

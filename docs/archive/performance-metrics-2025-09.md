@@ -1,5 +1,18 @@
 # Performance Metrics and Methodology
 
+> **ARCHIVED — a dated snapshot, kept as a record.**
+>
+> The document says so itself: the data is from **September 2025**, and it was
+> last touched in November 2025. Several majors have shipped since, including
+> the 13.5.0 materialisation memo and the 14.0.0 equality work, both of which
+> moved these numbers.
+>
+> For current figures use the generators: `tools/bench-compare.mjs` (cross-library
+> collection and undo/redo), `tools/bench-depth-latency.mjs` (cost by depth),
+> `tools/bench-leaf-equality.mjs` (per-leaf equality and the materialisation
+> memo), `tools/bench-vs-signalstore.mjs` (task-level vs `@ngrx/signals`).
+> Nothing in this file should be quoted.
+
 This document consolidates performance metrics and deep-nesting test results (September 2025).
 
 ## Summary (averaged)

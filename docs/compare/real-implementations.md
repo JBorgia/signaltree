@@ -21,6 +21,8 @@ each workload isolates one thing.
 
 ## Collection — build 10,000, 200 single-entity updates, read all
 
+Reproduce with `node --expose-gc tools/bench-compare.mjs --n 10000`.
+
 | arm            | median      | retained |
 | -------------- | ----------- | -------- |
 | elf            | **1.43 ms** | 0.92 MB  |
@@ -42,6 +44,8 @@ both were correctness or memory fixes that happened to be on the hot path.
 
 ## Undo/redo — 50 recorded writes, then 50 undos, over 10,000 entities
 
+Reproduce with `node --expose-gc tools/bench-compare.mjs --n 10000`.
+
 > ⚠️ **An earlier revision of this file published the opposite result.** It
 > claimed SignalTree was 20× faster than elf. It was not measuring undo/redo at
 > all — see "The retraction" below. These numbers are the corrected ones, and
@@ -53,6 +57,10 @@ both were correctness or memory fixes that happened to be on the hot path.
 | signaltree   | **3.67 ms** | 5.25 MB  | built-in `timeTravel()`      |
 | ngrx-signals | 179.84 ms   | 0.94 MB  | hand-rolled                  |
 | raw-signals  | 278.44 ms   | 6.16 MB  | hand-rolled                  |
+
+Re-measured on a later run: elf 1.29 / signaltree 3.58 / ngrx-signals 176.97 /
+raw-signals 260.04 ms — every arm within noise of the table above, which is the
+first time these figures have been checkable at all.
 
 **SignalTree is ~3× behind elf and ~49× ahead of a hand-rolled history.** That
 is after fixing a real defect the retraction exposed — see "What the correction
@@ -106,6 +114,8 @@ silently corrupt a restore.
 > same ordering, same ratio, ordinary run-to-run spread.
 
 ### Where the remaining undo cost actually is, and what is NOT worth optimising
+
+Figures from `node --expose-gc tools/bench-compare.mjs --n 10000`.
 
 The obvious next optimisation was to have restore write the snapshot's entity
 objects in DIRECTLY, since it already holds them — `upsertOne` routes to
@@ -275,6 +285,9 @@ Separating the workloads changed the collection ordering.
 ---
 
 ## The comparison that should be made: `@ngrx/signals`
+
+Task-level figures: `node tools/bench-vs-signalstore.mjs`. Collection and
+undo/redo figures: `node --expose-gc tools/bench-compare.mjs --n 10000`.
 
 Everything above ranks four libraries on every axis, which is the honest way to
 measure and the wrong way to decide. Almost nobody is choosing between SignalTree
