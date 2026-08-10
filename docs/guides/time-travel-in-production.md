@@ -127,16 +127,39 @@ Arbitrary branches cannot be scoped yet — only markers. That is
 A 200-row import should be one undo step, not two hundred. `maxHistorySize`
 bounds memory but does nothing for whether undo _means_ anything.
 
+⚠️ **Pausing alone is not enough, and getting this wrong loses data.** An earlier
+revision of this guide showed only the pause/resume pair. Measured, that is
+destructive:
+
+```ts
+// WRONG — the bulk result becomes unreachable
+tree.pauseRecording();
+for (const row of imported) tree.$.rows.addOne(row);
+tree.resumeRecording();
+```
+
+Nothing was recorded, so the newest entry still describes the state BEFORE the
+import. `undo()` therefore steps back past it — to the state before _that_ — and
+`redo()` can only return to the pre-import state. The imported result is gone from
+history permanently, with `canRedo()` false. Verified: n went 1 → (bulk to 5) →
+undo → **0**, redo → 1, and 5 was unreachable.
+
+Seal the batch with one recorded write:
+
 ```ts
 tree.pauseRecording();
 for (const row of imported) tree.$.rows.addOne(row);
 tree.resumeRecording();
-// one logical step, not 200
+tree({ importedAt: Date.now() }); // ONE entry, capturing the post-import state
 ```
 
-Verified: 49 writes while paused applied in full (final value 50) and added
-**zero** history entries. `isRecordingPaused()` is a signal, so a "recording
-paused" indicator can bind to it.
+Verified: undo returns to the pre-import state and redo returns to the imported
+result — one logical step in each direction, instead of 200 or none.
+
+`isRecordingPaused()` is a signal, so a "recording paused" indicator can bind to
+it. Note the sealing write needs somewhere to land: a revision counter, a
+`lastImportAt` stamp, or any field whose change is meaningful. If nothing in your
+state changes, there is nothing to record.
 
 ### 4. Drop uninteresting transitions — `shouldSkip`
 
@@ -161,7 +184,7 @@ whole-state deep compare here undoes the saving.
 | Undo one panel, not the whole app             | `history: false` on everything outside the panel                            | Yes                                  |
 | Large server collection + small editable form | `entityMap({ history: false })` beside an undoable branch                   | Yes — the headline pattern           |
 | Optimistic write, roll back on error          | `undo()` in the error path, or `jumpTo(getCurrentIndex() - 1)`              | Yes                                  |
-| Import/generate, then one undo                | `pauseRecording()` / `resumeRecording()`                                    | Yes                                  |
+| Import/generate, then one undo                | `pauseRecording()` / `resumeRecording()` **+ a sealing write**              | Yes — read the warning               |
 | Audit trail rather than undo                  | `createAuditTracker()` / `createAuditCallback()`, or `getHistory()`         | Yes — no `timeTravel` needed         |
 | Show the user how far they can go             | `getCurrentIndex()` back, `getHistory().length - 1 - getCurrentIndex()` fwd | Yes — reactive since 14.0.0          |
 | Undo per entity, independently                | —                                                                           | **No.** elf has this; we do not      |
