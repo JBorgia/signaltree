@@ -181,8 +181,8 @@ const persistentDemo = signalTree({
 
 Use the **Benchmark Orchestrator** page to select libraries, scenarios, and complexity. The app calibrates the environment and computes robust metrics (median, p95/p99, stddev, t-tests) with **real-world frequency weighting**:
 
-- **Research-Based Weighting**: Applies frequency multipliers based on analysis of 40,000+ developer surveys and 10,000+ GitHub repositories
-- **Smart Weight Adjustment**: One-click application of weights derived from State of JS 2023 data and React DevTools Profiler analysis
+- **Frequency weighting**: maintainer-estimated multipliers, not survey findings — see [the disclosure](../../docs/performance/frequency-weighting-system.md#where-these-numbers-come-from)
+- **Neutral comparison available**: the `equal` preset sets every weight to 1.0, which is the setting to use when comparing libraries
 - **Real-World Relevance**: Weighted results reflect actual application usage patterns
 - **Comprehensive Analysis**: Reports ranking changes and weight impact analysis
 

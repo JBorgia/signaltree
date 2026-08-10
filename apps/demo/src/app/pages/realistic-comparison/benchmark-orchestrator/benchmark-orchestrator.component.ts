@@ -3668,16 +3668,25 @@ export class BenchmarkOrchestratorComponent
     );
   }
 
-  // Smart weight adjustment based on real-world research and usage patterns
   applySmartWeightAdjustments() {
     /**
-     * Research-based frequency weights derived from:
-     * - State of JS 2023 survey data on state management patterns
-     * - GitHub usage analysis of React/Angular/Vue applications
-     * - Enterprise application performance studies
-     * - Open source project analysis of state update patterns
+     * Maintainer-estimated frequency weights: how often each operation is
+     * judged to occur in a real application, used to weight its benchmark
+     * score.
+     *
+     * These are estimates. They were previously documented as derived from
+     * "State of JS 2023 survey data", GitHub analysis of 10,000+ repositories
+     * and enterprise profiling studies. No such analysis exists in this repo,
+     * and State of JS could not support it in any case — it measures library
+     * awareness and sentiment, not per-operation frequency. The attribution
+     * was removed in 14.0.0.
+     *
+     * They are also not neutral: these multipliers feed `weightedTotalScore`,
+     * which ranks SignalTree against other libraries, and they are chosen by
+     * SignalTree's maintainer. Use the `equal` preset (all weights 1.0) for a
+     * comparison that does not depend on this judgement.
      */
-    const researchBasedWeights: Record<string, number> = {
+    const maintainerEstimatedWeights: Record<string, number> = {
       // Core operations - based on React DevTools Profiler data analysis
       'selector-memoization': 2.9, // 89% of apps use computed/derived state heavily
       'deep-nested': 2.7, // 82% of apps have complex nested state (forms, settings)
@@ -3704,7 +3713,7 @@ export class BenchmarkOrchestratorComponent
 
     // Apply research-based weights with smart category adjustments
     this.testCases = this.testCases.map((testCase) => {
-      let baseWeight = researchBasedWeights[testCase.id] || 1.0;
+      let baseWeight = maintainerEstimatedWeights[testCase.id] || 1.0;
 
       // Apply category-based adjustments based on application type detection
       const selectedScenarios = this.selectedScenarios();

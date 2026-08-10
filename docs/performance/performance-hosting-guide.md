@@ -66,7 +66,7 @@ class ReliableBenchmark {
 #### Features
 
 - Live benchmark runner with real-time charts and **frequency weighting**
-- **Research-Based Weighting**: Applies multipliers based on real-world usage patterns from 40,000+ developer surveys
+- **Frequency weighting**: maintainer-estimated multipliers, not survey findings — see [the disclosure](frequency-weighting-system.md#where-these-numbers-come-from)
 - Environment fingerprinting and warnings
 - Export results as CSV/JSON with weighted and unweighted metrics
 - Historical trending (store in Supabase)

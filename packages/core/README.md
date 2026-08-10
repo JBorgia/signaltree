@@ -350,7 +350,7 @@ freshness.
 
 Performance and bundle size vary by app shape, build tooling, device, and runtime. To get meaningful results for your environment:
 
-- Use the **Benchmark Orchestrator** in the demo app to run calibrated, scenario-based benchmarks across supported libraries with **real-world frequency weighting**. It applies research-based multipliers derived from 40,000+ developer surveys and GitHub analysis, reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
+- Use the **Benchmark Orchestrator** in the demo app to run calibrated, scenario-based benchmarks across supported libraries with **real-world frequency weighting**. It can apply frequency multipliers that weight each scenario by how often the maintainer judges that operation to occur in real applications — these are estimates, not survey findings, and the `equal` preset turns them off for a neutral comparison. It reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
 - Use the bundle analysis scripts in `scripts/` to measure your min+gz sizes. Sizes are approximate and depend on tree-shaking and configuration.
 
 ## Best Practices (SignalTree-First)

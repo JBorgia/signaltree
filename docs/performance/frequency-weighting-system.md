@@ -2,7 +2,7 @@
 
 ## Overview
 
-The SignalTree Benchmark Orchestrator includes a sophisticated frequency weighting system that applies real-world usage patterns to performance benchmark results. This system ensures that benchmark comparisons reflect actual application scenarios rather than raw, unweighted performance metrics.
+The SignalTree Benchmark Orchestrator includes a frequency weighting system that scales each benchmark score by how often the maintainer judges that operation to occur in a real application.
 
 ## 🎯 Purpose
 
@@ -14,18 +14,45 @@ Traditional performance benchmarks often treat all operations equally, but in re
 
 The frequency weighting system addresses this by applying research-based multipliers to each test scenario, providing **real-world weighted performance scores** that better reflect how libraries perform in typical applications.
 
-## 📊 Research Foundation
+## Where these numbers come from
 
-### Data Sources
+**They are the maintainer's estimates.** Someone sat down and judged how often
+each operation shows up in a real application. That is all they are.
 
-Frequency weights are derived from comprehensive analysis of:
+This section used to say something else. It claimed the weights were derived
+from State of JS 2023 survey data covering 40,000+ developers, automated
+analysis of 10,000+ GitHub repositories, enterprise profiling studies, and
+aggregated React DevTools Profiler data, and it carried a bibliography of three
+academic papers. None of that is true. No such analysis exists in this
+repository or ever did — the doc and its bibliography arrived together in a
+single commit (`05f278ef`, "update documentation", 2025-09-13) with no
+supporting artifact, and nothing was ever added.
 
-1. **State of JS 2023 Survey Data**: Usage patterns across 40,000+ developers
-2. **GitHub Repository Analysis**: Automated analysis of 10,000+ React/Angular/Vue applications
-3. **Enterprise Application Studies**: Performance profiling of production applications
-4. **React DevTools Profiler Data**: Real-world operation frequency analysis
+The State of JS citation could not have worked even if the survey run had been
+done. That survey measures library awareness, usage and satisfaction. It does
+not ask how frequently developers perform deep nested updates versus array
+updates, so it cannot produce a table mapping operations to "% of apps". The
+same goes for React DevTools Profiler data in an Angular library's benchmark.
 
-### Research-Based Weight Categories
+### These weights are not neutral, and they pick a winner
+
+The multipliers feed `weightedTotalScore` in the orchestrator, which produces
+the per-library ranking. So the weights that decide how SignalTree scores
+against NgRx, Akita, Elf and the rest are chosen by SignalTree's maintainer.
+
+That is a conflict, and it is why the honest framing matters more here than in
+an ordinary doc. **Use the `equal` preset — every weight 1.0 — for any
+comparison you intend to rely on.** The weighted view is useful for reasoning
+about your own application's mix; it is not evidence about the libraries.
+
+### What would make these empirical
+
+Nothing here is unmeasurable in principle. A real version would instrument a
+corpus of open-source Angular applications, count state operations by kind, and
+publish both the corpus and the counting script so the numbers regenerate. Until
+that exists, these stay labelled as estimates.
+
+### Weight categories
 
 | Weight Range  | Usage Frequency           | Examples                                          |
 | ------------- | ------------------------- | ------------------------------------------------- |
@@ -224,20 +251,14 @@ Focus on:
 - **Ranking changes** for architectural decision insights
 - **Per-scenario breakdown** for detailed performance understanding
 
-## 📚 Research References
+## References
 
-### Academic Sources
+None. See [Where these numbers come from](#where-these-numbers-come-from).
 
-- "State Management Patterns in Modern Web Applications" (2023)
-- "Performance Characteristics of Reactive Programming Libraries" (2023)
-- "Real-World Usage Patterns in JavaScript State Management" (2024)
-
-### Industry Data
-
-- State of JS 2023 Survey (40,000+ responses)
-- GitHub Repository Analysis (10,000+ applications)
-- React DevTools Profiler Aggregated Data (2023-2024)
-- Enterprise Application Performance Studies (Fortune 500 companies)
+This heading previously listed three academic papers — none with an author, a
+venue, or a DOI — alongside "Fortune 500" enterprise studies and aggregated
+React DevTools data. They were removed in 14.0.0 rather than corrected, because
+there was no underlying source to correct them to.
 
 ## 🚀 Future Enhancements
 
