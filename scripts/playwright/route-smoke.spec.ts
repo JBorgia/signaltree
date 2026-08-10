@@ -37,7 +37,6 @@ const ROUTES = [
   '/callable-syntax', // what is callable and what is not (repurposed in 14.0.0)
   '/serialization', // snapshot payload shape (changed in 14.0.0)
   '/persistence', // persistence() enhancer
-  '/enterprise-enhancer', // deprecated package (see content assertion below)
 ];
 
 // Noise that is not a product bug and would make the gate flaky.
@@ -138,24 +137,21 @@ test('/guardrails hot-path panel populates after the scenario runs', async ({
 });
 
 /**
- * The enterprise page teaches an API that should no longer be adopted, so the
- * deprecation banner is the page's most important content. A unit spec already
- * asserts it renders; this checks it survives the production build and the
- * route actually resolves, which the unit spec cannot see.
+ * The `/enterprise-enhancer` route smoke test and its deprecation-banner
+ * assertion stood here.
+ *
+ * The page and the route were deleted in 14.0.0 (`be8460b5`) along with
+ * `@signaltree/enterprise` itself, and these two tests were not. They asked
+ * Playwright to load a route that no longer resolves and to find a banner on a
+ * component that no longer exists, so they failed on every commit from that
+ * point on — and `Validate` is the workflow `publish.yml` reuses, so the release
+ * was blocked by a test for a page nobody could visit.
+ *
+ * There is nothing to re-point them at: a deprecation banner for a package that
+ * is no longer published has no page to live on. The migration path is prose now
+ * — `docs/guides/migration-v13-v14.md` §6 — and `doc-links` keeps that link
+ * honest.
  */
-test('/enterprise-enhancer shows the deprecation banner and the core replacement', async ({
-  page,
-}) => {
-  await page.goto('/enterprise-enhancer', { waitUntil: 'load' });
-
-  const banner = page.locator('.deprecation-banner');
-  await expect(banner).toBeVisible({ timeout: 20_000 });
-  await expect(banner).toContainText(/deprecated/i);
-  // The replacement must be named — a banner that says "deprecated" without
-  // saying what to use instead just strands the reader.
-  await expect(banner).toContainText('updateAndReport');
-
-});
 
 /**
  * INTERACTION under OnPush.
@@ -185,9 +181,7 @@ test('/time-travel: a leaf write re-renders under OnPush', async ({ page }) => {
   };
   const before = await readCounter();
   await inc.click();
-  await expect
-    .poll(readCounter, { timeout: 10_000 })
-    .not.toBe(before);
+  await expect.poll(readCounter, { timeout: 10_000 }).not.toBe(before);
 });
 
 test('/time-travel: a MARKER write re-renders under OnPush', async ({
