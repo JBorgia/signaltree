@@ -155,7 +155,7 @@ back to an O(1) size check.
 
 ## Configuration
 
-See [docs/guardrails](../../docs/guardrails) for complete documentation.
+See [the guardrails skill](../../docs/skills/using-signaltree/guardrails/SKILL.md) for complete documentation.
 
 ## License
 

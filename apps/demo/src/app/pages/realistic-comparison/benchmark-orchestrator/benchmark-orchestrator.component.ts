@@ -697,39 +697,31 @@ export class BenchmarkOrchestratorComponent
   // and then removed in 9.0.0/9.0.1 when core took over memoising
   // materialisation. Those are gone from this map.
   //
-  // `highPerformanceBatching` is NOT one of them — it is real and the service
-  // does apply it. Note where it comes from: the service defines it locally as
-  // `batching({ enabled: true, notificationDelayMs: 0 })`, because core exports
-  // the function (`enhancers/batching/batching.ts:413`) but does not put it on
-  // the root barrel or any of the six subpaths in package.json exports. A demo
-  // that has to re-implement a preset core already has is the visible symptom
-  // of that gap; `dead-exports` cannot see it, because an internal import
-  // satisfies its reachability test.
-  private scenarioEnhancerMap: Record<string, string[]> = {
-    // Core performance benchmarks
-    'deep-nested': ['batching'],
-    'large-array': ['highPerformanceBatching'],
-    'computed-chains': ['batching'],
-    'batch-updates': ['highPerformanceBatching'],
-    'selector-memoization': [],
-    serialization: ['serialization', 'highPerformanceBatching'],
-    'concurrent-updates': ['batching'],
-    'memory-efficiency': ['batching'],
-    'data-fetching': ['batching'],
-    'real-time-updates': ['highPerformanceBatching'],
-    'state-size-scaling': ['batching'],
-
-    // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
-
-    // Time travel - now use timeTravel enhancer
-    'undo-redo': ['timeTravel'],
-    'history-size': ['timeTravel'],
-    'jump-to-state': ['timeTravel'],
-
-    // Middleware - currently use no enhancers in implementation
-
-    // Full stack benchmarks
-  };
+  // `highPerformanceBatching` is NOT one of them — the service applies it, from
+  // a local two-line definition: `batching({ notificationDelayMs: 0 })`. Core
+  // used to export a function by that name, v9.0.0 removed the export as an
+  // alias and left the body unreachable, and 14.0.0 deleted the body. Nothing
+  // is missing; the preset is its config.
+  /**
+   * DERIVED from `ENHANCED_TEST_CASES`, not duplicated from it.
+   *
+   * This was a hand-maintained literal, and the two copies had drifted apart in
+   * both directions at once. Four keys named scenarios that no longer existed
+   * (`memory-efficiency`, `data-fetching`, `real-time-updates`,
+   * `state-size-scaling`), and two real scenarios were missing entirely
+   * (`subscriber-scaling`, `server-payload-sync`) — so the UI reported those two
+   * as using no enhancers at all, because the lookup below fell through
+   * `?? []` without complaint.
+   *
+   * It also still listed enhancers removed in 9.0.0, which is what made the
+   * drift visible. A second copy of data that claims to mirror a first copy has
+   * no way to stay honest; deriving it means there is nothing left to drift.
+   */
+  private get scenarioEnhancerMap(): Record<string, string[]> {
+    return Object.fromEntries(
+      ENHANCED_TEST_CASES.map((tc) => [tc.id, tc.enhancers.required])
+    );
+  }
 
   activeEnhancers = computed(() => {
     const selectedScenarios = this.selectedScenarios();
@@ -3066,7 +3058,9 @@ export class BenchmarkOrchestratorComponent
     const scenarios = this.selectedScenarios();
     const map: Array<{ id: string; name: string; enhancers: string[] }> = [];
     scenarios.forEach((s) => {
-      const enh = this.scenarioEnhancerMap[s.id] || [];
+      // Cannot miss now that the map is derived from the same array the
+      // scenarios come from; kept defensive for a scenario built elsewhere.
+      const enh = this.scenarioEnhancerMap[s.id] ?? [];
       map.push({ id: s.id, name: s.name, enhancers: enh });
     });
     return map;

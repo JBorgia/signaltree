@@ -374,7 +374,7 @@ Auto-loads on first `tree.$` access (like other markers) unless `loader()`'s `la
 
 ### entityMap — scoped cache-aware form (v11.4+)
 
-Add a third type param `P` and give the wrapped loader function a parameter to parameterize the collection by scope (region, customer, tenant, …) — see [RFC 0003](../rfcs/0003-keyed-entity-collection.md). The loader function now takes the scope params; a loader that **declares a parameter** makes the collection **SCOPED**.
+Add a third type param `P` and give the wrapped loader function a parameter to parameterize the collection by scope (region, customer, tenant, …) — see RFC 0003 (`docs/rfcs/0003-keyed-entity-collection.md` in the repo). The loader function now takes the scope params; a loader that **declares a parameter** makes the collection **SCOPED**.
 
 ```typescript
 customers: entityMap<Customer, string, { regionUrl: string }>({

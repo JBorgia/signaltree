@@ -193,7 +193,7 @@ tree.schemas.compact();
 
 - **Does not block writes.** No `mode: 'reject'` — async schemas can't gate synchronously. Use the form layer for gate-style validation.
 - **Does not replace `@signaltree/guardrails`.** Guardrails = performance budgets, hot-path detection, memory leaks. Schema = data-shape conformance. Different concerns.
-- **Does not integrate with Angular Signal Forms yet.** Signal Forms isn't shipped in stable Angular. Use `errorsAt(path)` manually in your template; revisit when Signal Forms ships. See [PR3 spike result](../../../packages/ng-forms/spike/signal-form-bridge-spike.md).
+- **Does not integrate with Angular Signal Forms yet.** Signal Forms isn't shipped in stable Angular. Use `errorsAt(path)` manually in your template; revisit when Signal Forms ships. See [PR3 spike result](../../../../packages/ng-forms/spike/signal-form-bridge-spike.md).
 
 ## Bundle
 
@@ -201,7 +201,7 @@ tree.schemas.compact();
 
 ## Architecture reference
 
-Full design in [docs/architecture/validation-enhancer-plan.md](../../../docs/architecture/validation-enhancer-plan.md).
+Full design in [docs/architecture/validation-enhancer-plan.md](../../../architecture/schema-enhancer-plan.md).
 
 ## Common pitfalls
 

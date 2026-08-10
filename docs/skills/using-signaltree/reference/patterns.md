@@ -916,7 +916,7 @@ appTree.$.banner.visible(); // false
 ```
 
 For authoring larger enhancers (custom markers, scheduler hooks, async
-middleware), see [`../../guides/custom-markers-enhancers.md`](../../guides/custom-markers-enhancers.md).
+middleware), see [`../../guides/custom-markers-enhancers.md`](../../../guides/custom-markers-enhancers.md).
 
 ## Porting `signalStoreFeature` patterns
 

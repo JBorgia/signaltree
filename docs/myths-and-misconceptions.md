@@ -138,7 +138,7 @@ const store = signalTree({
 }).with(persistence({ adapter: createIndexedDBAdapter('app-state') })); // tree-wide
 ```
 
-**Source:** [`packages/core/src/lib/markers/stored.ts`](../packages/core/src/lib/markers/stored.ts), [`packages/core/src/enhancers/persistence/`](../packages/core/src/enhancers/persistence/).
+**Source:** [`packages/core/src/lib/markers/stored.ts`](../packages/core/src/lib/markers/stored.ts), [`packages/core/src/enhancers/serialization/`](../packages/core/src/enhancers/serialization/).
 
 **Doc-side action:** The "Optional Packages" table in the root README clearly does _not_ list a `@signaltree/storage` package, so the hallucination is unfounded. No doc change needed.
 
@@ -239,37 +239,18 @@ For **migrating from NgRx `rxMethod`**: map `rxMethod<void>(pipeline)` doing a l
 
 **Historical note:** A `rxMethod` 1:1 alias briefly shipped in 9.5.0-9.5.2 at `@signaltree/core/rxjs-interop`. It was **removed in 9.6.0** because keeping it created two parallel async stories and an API surface that didn't fit SignalTree's design philosophy. Anyone who shipped against 9.5.x's `rxMethod` should migrate to `asyncSource` / `asyncQuery` (most cases) or a plain Observable method (orchestration cases) when upgrading to 9.6.0+.
 
-```typescript
-import { rxMethod } from '@signaltree/core/rxjs-interop';
-
-@Injectable({ providedIn: 'root' })
-export class UserOps {
-  private readonly _$ = inject(APP_TREE).$;
-  private readonly _api = inject(UserService);
-
-  readonly loadUsers = rxMethod<void>((input$) =>
-    input$.pipe(
-      tap(() => this._$.users.loading.setLoading()),
-      switchMap(() =>
-        this._api.list$().pipe(
-          tap((users) => this._$.users.entities.setAll(users)),
-          tap(() => this._$.users.loading.setLoaded()),
-          catchError((err) => {
-            this._$.users.loading.setError(err);
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-}
-```
-
-The previous documented "Ops method returning Observable" pattern still works and remains valid for cases where you want the consumer to subscribe explicitly (e.g., chaining or composing with effects). Use `rxMethod` when you want NgRx-symmetric ergonomics and auto-subscribe semantics; use the explicit Observable pattern when the caller needs to see and control the subscription.
-
-**Source:** [`packages/core/src/lib/rxjs-interop/rx-method.ts`](../packages/core/src/lib/rxjs-interop/rx-method.ts).
-
-**Doc-side action:** Done — `rxMethod` shipped in `@signaltree/core/rxjs-interop` and is documented in the root README, `llms-full.txt`, and the comparison doc.
+> **Removed content.** A worked `rxMethod` example stood here, importing from
+> `@signaltree/core/rxjs-interop`, followed by guidance on when to prefer it and
+> a `**Source:**` link to `packages/core/src/lib/rxjs-interop/rx-method.ts`.
+>
+> All of it dated from 9.5.0-9.5.2 and survived the 9.6.0 removal, so this
+> section stated that the alias was **removed in 9.6.0** and then, three lines
+> later, showed you how to import and use it. The source file it linked does not
+> exist; neither does the subpath. `rxMethod` appears in no package source.
+>
+> The head of this myth was correct the whole time, which is why nothing caught
+> it: no gate reads a doc for self-contradiction, and this file is not one of the
+> surfaces `readme-apis` or `taught-symbols` check.
 
 ---
 
@@ -285,7 +266,7 @@ For write encapsulation, the documented options are:
 - Use `@signaltree/events` for typed unidirectional command flow.
 - Use `@signaltree/guardrails` for runtime invariant checks on writes.
 
-**Source:** [`packages/core/src/lib/edit-session/`](../packages/core/src/lib/edit-session/) — the actual API. [`docs/architecture/signaltree-architecture-guide.md`](architecture/signaltree-architecture-guide.md) — encapsulation patterns.
+**Source:** [`packages/core/src/edit-session.ts`](../packages/core/src/edit-session.ts) — the actual API. [`docs/architecture/signaltree-architecture-guide.md`](architecture/signaltree-architecture-guide.md) — encapsulation patterns.
 
 **Doc-side action:** Replaces the previously-overstated "subpath isolation" framing in marketing copy. (Future README review pass.)
 

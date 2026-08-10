@@ -40,7 +40,9 @@ export function batching(
   const enabled = config.enabled ?? true;
   const notificationDelayMs = config.notificationDelayMs ?? 0;
 
-  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods => {
+  const enhancerFn = <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & BatchingMethods => {
     // ========================================
     // DISABLED PATH - passthrough
     // ========================================
@@ -314,7 +316,10 @@ export function batching(
     // `enumerable: false`. They were silently dropped, so the builder that
     // wraps this enhanced tree found no method to forward to and returned an
     // empty result — `updateAndReport({count:1})` returned [] and never wrote.
-    copyTreeProperties(tree as unknown as object, enhancedTree as unknown as object);
+    copyTreeProperties(
+      tree as unknown as object,
+      enhancedTree as unknown as object
+    );
 
     // Copy non-enumerable properties
     try {
@@ -368,7 +373,10 @@ export function batching(
         Object.entries(updates).forEach(([key, value]) => {
           // Own-property read: `updates` is caller-supplied, so `$[key]` with
           // key === '__proto__' would walk off the tree.
-          const $ = (enhancedTree as ISignalTree<T>).$ as Record<string, unknown>;
+          const $ = (enhancedTree as ISignalTree<T>).$ as Record<
+            string,
+            unknown
+          >;
           if (!Object.prototype.hasOwnProperty.call($, key)) return;
           const property = $[key] as
             | { set?: (v: unknown) => void }
@@ -406,18 +414,24 @@ export function batching(
   return enhancerFn;
 }
 
-/**
- * High performance batching preset.
- * Uses microtask-based notifications for minimal latency.
- */
-export function highPerformanceBatching(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & BatchingMethods {
-  return batching({
-    enabled: true,
-    notificationDelayMs: 0,
-  });
-}
+// `highPerformanceBatching()` used to live here — a two-line preset returning
+// `batching({ enabled: true, notificationDelayMs: 0 })`.
+//
+// v9.0.0 (`566a0065`) removed it from the public barrel as one of "~37
+// deprecated/alias exports". The export went; the function body did not, so for
+// five majors core carried an exported symbol that reached no entry point — not
+// the root barrel, not any of the six subpaths in `exports`. `dead-exports`
+// never flagged it, because its own spec imported it and an internal import
+// satisfies that gate's reachability test.
+//
+// The cost was not the dead code. It was that the demo's benchmark service
+// needed the preset, could not import it, and re-implemented it locally — while
+// a reader checking the barrel would conclude the name was fictional. One did.
+//
+// Deleted rather than re-exported: re-exporting would reverse a deliberate
+// v9.0.0 breaking change. Callers write the config, which is the whole preset:
+//
+//     batching({ enabled: true, notificationDelayMs: 0 })
 
 // ========================================
 // DEPRECATED EXPORTS (for backwards compat)

@@ -6,8 +6,20 @@ import {
   signalTree,
   timeTravel,
 } from '@signaltree/core';
-import { ENHANCER_META, resolveEnhancerOrder } from '@signaltree/core/authoring';
+import {
+  ENHANCER_META,
+  resolveEnhancerOrder,
+} from '@signaltree/core/authoring';
 
+/**
+ * The zero-delay batching preset, local to this benchmark.
+ *
+ * Core had a `highPerformanceBatching()` returning exactly this, but v9.0.0
+ * removed its export as an alias and left the body behind unreachable; 14.0.0
+ * deleted the body too. This is the whole preset, so there is nothing to import
+ * and nothing missing — it is spelled out here rather than hidden behind a name
+ * that used to exist.
+ */
 const highPerformanceBatching = () =>
   batching({ enabled: true, notificationDelayMs: 0 });
 
@@ -83,7 +95,7 @@ export class SignalTreeBenchmarkService {
   private _serverPayloadCache?: {
     dataSize: number;
     initial: Record<string, number>;
-    payload: Record<string, number>;  // 10% mutated from initial
+    payload: Record<string, number>; // 10% mutated from initial
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tree: any;
     toggle: boolean;
@@ -329,8 +341,7 @@ export class SignalTreeBenchmarkService {
     const compute = computed(() => {
       const v = tree.$.value();
       let acc = 0;
-      for (const f of tree.$.factors())
-        acc += Math.sin(v * f) * Math.cos(f);
+      for (const f of tree.$.factors()) acc += Math.sin(v * f) * Math.cos(f);
       return acc;
     });
 
@@ -469,7 +480,10 @@ export class SignalTreeBenchmarkService {
   ): Promise<number | BenchmarkResult> {
     const size = Math.max(500, Math.min(20000, dataSize));
 
-    if (!this._serverPayloadCache || this._serverPayloadCache.dataSize !== size) {
+    if (
+      !this._serverPayloadCache ||
+      this._serverPayloadCache.dataSize !== size
+    ) {
       const churn = Math.max(1, Math.floor(size * 0.1));
       const initial: Record<string, number> = {};
       const payload: Record<string, number> = {};
@@ -481,7 +495,13 @@ export class SignalTreeBenchmarkService {
       }
       const base: any = signalTree(initial);
       const tree: any = this.applyConfiguredEnhancers(base, []);
-      this._serverPayloadCache = { dataSize: size, initial, payload, tree, toggle: false };
+      this._serverPayloadCache = {
+        dataSize: size,
+        initial,
+        payload,
+        tree,
+        toggle: false,
+      };
     }
 
     const cache = this._serverPayloadCache;
@@ -605,9 +625,15 @@ export class SignalTreeBenchmarkService {
         // available to either library here. Keeping the shape identical is the
         // point; using a per-index API on one side only would measure the
         // benchmark, not the library.
-        (tree.$ as unknown as { counters: { update: (f: (a: Array<{ value: number }>) => Array<{ value: number }>) => void } })[
-          'counters'
-        ].update((arr) =>
+        (
+          tree.$ as unknown as {
+            counters: {
+              update: (
+                f: (a: Array<{ value: number }>) => Array<{ value: number }>
+              ) => void;
+            };
+          }
+        )['counters'].update((arr) =>
           arr.map((c, i) => (i === target ? { value: (c.value + 1) | 0 } : c))
         );
       }
@@ -749,13 +775,11 @@ export class SignalTreeBenchmarkService {
       tree.$.filters.category.set(`cat${i % 5}`);
 
       // Trigger computed-like operations
-      const filteredItems = tree.$
-        .items()
-        .filter(
-          (item: any) =>
-            item.title.includes(tree.$.filters.search()) ||
-            item.tags.includes(tree.$.filters.category())
-        );
+      const filteredItems = tree.$.items().filter(
+        (item: any) =>
+          item.title.includes(tree.$.filters.search()) ||
+          item.tags.includes(tree.$.filters.category())
+      );
 
       // Update pagination based on filtered results
       tree.$.pagination.total.set(filteredItems.length);
@@ -787,7 +811,9 @@ export class SignalTreeBenchmarkService {
       alerts: [] as any[],
     });
     // Default enhancers only — no benchmark-only withLazyArrays injection.
-    const tree = this.applyConfiguredEnhancers(base, [highPerformanceBatching()]);
+    const tree = this.applyConfiguredEnhancers(base, [
+      highPerformanceBatching(),
+    ]);
 
     // Simulate real-time updates (like WebSocket messages)
     const updateFrequency = Math.min(

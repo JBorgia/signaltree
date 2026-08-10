@@ -30,7 +30,7 @@ All `.instructions.md` files in this directory define **required** processes and
 
 ---
 
-### 2. [nx.instructions.md](./nx.instructions.md)
+### 2. [rollup-entry-points.instructions.md](./rollup-entry-points.instructions.md)
 
 **Purpose**: Defines how to work with the Nx workspace and use Nx MCP server tools.
 
@@ -108,7 +108,7 @@ All `.instructions.md` files in this directory define **required** processes and
 
 #### Adding New Package
 
-→ **MUST** follow both `build-pipeline.instructions.md` AND `nx.instructions.md`
+→ **MUST** follow both `build-pipeline.instructions.md` AND `rollup-entry-points.instructions.md`
 
 #### Troubleshooting Type Errors
 

@@ -53,6 +53,23 @@ node tools/verify-gates.mjs --release    # + measurement harnesses, before publi
 node tools/verify-gates.mjs --self-test  # prove each gate can fail — pre-release, not per-change
 ```
 
+## One gate was added after this policy, and why
+
+`doc-links` (plus its `:self` proof) landed after the "do not add gates" line
+above. The exception is recorded rather than quietly taken.
+
+The class had already gone red — manually. 28 relative links were broken, 22
+outside `docs/archive/`, and five sat in files that ship inside the npm
+tarballs, where a README is immutable for the life of a published version. One
+pointed at `packages/enterprise/README.md`, deleted in the same release. Another
+claimed a file "already exists in this repo" at a path under `.claude/`, which is
+gitignored and therefore could never hold it.
+
+The policy exists to stop gate work becoming its own project, not to protect a
+class of defect that is actively shipping. The test it should be held to: it
+found real bugs before it was written, it cost one file, and it proves it can
+fail. If a proposed gate cannot say all three, it should not be added.
+
 ## Known blind spots, stated rather than discovered
 
 - `check-release-claims.mjs` does not compare members of types that became

@@ -39,7 +39,7 @@ If pre-commit hook fails:
 
 1. Run `npm run size:report` for detailed analysis
 2. Check [Bundle Optimization Guide](../docs/performance/bundle-optimization.md)
-3. Use [Optimization Checklist](../docs/OPTIMIZATION-CHECKLIST.md)
+3. Use the [bundle optimization guide](../docs/performance/bundle-optimization.md)
 4. Fix size issues and commit again
 
 ## CI/CD Integration

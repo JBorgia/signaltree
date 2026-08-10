@@ -692,7 +692,7 @@ After PR2 lands, run `pnpm bundle-size` (or equivalent) on `@signaltree/schema`.
 
 Before any plan ink dries on the bridge shape, confirm the _actual_ unknown: **does Angular Signal Forms permit binding a `FieldTree` leaf to an externally-owned `WritableSignal`** (or supplying one as the node's source), rather than owning the whole model object?
 
-**Spike artifact:** [packages/ng-forms/spike/signal-form-per-field.spec.ts](../../packages/ng-forms/spike/signal-form-per-field.spec.ts) (new file, deleted after the spike concludes). Repro:
+**Spike artifact:** `packages/ng-forms/spike/signal-form-per-field.spec.ts` — deliberately deleted when the spike concluded, so this is deliberately not a link. Repro:
 
 1. Create a `WritableSignal<string>` externally.
 2. Build a `form()` whose `email` field is sourced from that external signal (not from an object property).

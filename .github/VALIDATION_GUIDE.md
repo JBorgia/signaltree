@@ -85,6 +85,7 @@ npm run release:major
 ### If Something Fails
 
 The release script **automatically rolls back**:
+
 - Restores original versions
 - Cleans build artifacts
 - Removes git tags
@@ -95,60 +96,72 @@ The release script **automatically rolls back**:
 ## Validation Pipeline Details
 
 ### 1. Clean Working Directory ✅
+
 **Check**: `git status --porcelain`  
 **Purpose**: Ensures no uncommitted changes  
 **Severity**: Error (blocks release)
 
 ### 2. Dependencies ✅
+
 **Check**: `pnpm install --frozen-lockfile`  
 **Purpose**: Verifies lockfile consistency  
 **Severity**: Error (blocks release)
 
 ### 3. TypeScript Configs ✅
+
 **Check**: Verify tsconfig.json files exist  
 **Purpose**: Ensures type checking configuration  
 **Severity**: Error (blocks release)
 
 ### 4. Linting ✅
+
 **Check**: `npm run lint:all`  
 **Purpose**: Code quality and standards  
 **Severity**: Error (blocks release)
 
 ### 5. Unit Tests ✅
+
 **Check**: `npm run test:all`  
 **Purpose**: All tests must pass  
 **Severity**: Error (blocks release)
 
 ### 6. Test Coverage ✅
+
 **Check**: `bash scripts/test-coverage.sh`  
 **Purpose**: Coverage meets thresholds  
 **Severity**: Error (blocks release)  
 **Thresholds**:
+
 - Statements: 80%
 - Branches: 75%
 - Functions: 80%
 - Lines: 80%
 
 ### 7. Build ✅
+
 **Check**: `npm run build:all`  
 **Purpose**: Production builds succeed  
 **Severity**: Error (blocks release)
 
 ### 8. Package Verification ✅
+
 **Check**: `bash scripts/verify-packages.sh`  
 **Purpose**: package.json validation  
 **Severity**: Error (blocks release)
 
 ### 9. Distribution Files ✅
+
 **Check**: `bash scripts/verify-dist.sh`  
 **Purpose**: All expected files exist  
 **Severity**: Error (blocks release)
 
 ### 10. Bundle Analysis ✅
+
 **Check**: `node scripts/consolidated-bundle-analysis.js`  
 **Purpose**: Bundle sizes within limits  
 **Severity**: Error (blocks release)  
 **Limits**:
+
 - core: 15KB (5KB gzipped)
 - ng-forms: 10KB (4KB gzipped)
 - callable-syntax: 5KB (2KB gzipped)
@@ -156,16 +169,19 @@ The release script **automatically rolls back**:
 - guardrails: 12KB (4KB gzipped)
 
 ### 11. Sanity Checks ✅
+
 **Check**: `node scripts/sanity-checks.js`  
 **Purpose**: Build output validation  
 **Severity**: Error (blocks release)
 
 ### 12. Performance Benchmarks ⚠️
+
 **Check**: `node scripts/perf-suite.js`  
 **Purpose**: Performance metrics  
 **Severity**: Warning (logs only)
 
 ### 13. Documentation ⚠️
+
 **Check**: `bash scripts/validate-docs.sh`  
 **Purpose**: Documentation completeness  
 **Severity**: Warning (logs only)
@@ -255,20 +271,24 @@ pnpm install
 ## Best Practices
 
 1. **Always validate before releasing**
+
    ```bash
    npm run validate
    ```
 
 2. **Keep CHANGELOG.md updated**
+
    - Add entries before releasing
    - Include version and date
 
 3. **Run validation after major changes**
+
    ```bash
    npm run quality:check
    ```
 
 4. **Test in clean environment periodically**
+
    ```bash
    rm -rf node_modules pnpm-lock.yaml
    pnpm install
@@ -282,7 +302,7 @@ pnpm install
 
 ## Need Help?
 
-- Check [RELEASE_PROCESS.md](../../RELEASE_PROCESS.md) for detailed documentation
+- Check [RELEASE_PROCESS.md](../RELEASE_PROCESS.md) for detailed documentation
 - Review script output for specific error messages
 - Check logs in `/tmp/` directory for detailed output
 - Open an issue on GitHub if stuck
@@ -290,6 +310,7 @@ pnpm install
 ## Emergency Contacts
 
 For critical release issues:
+
 1. Check recent commits for similar issues
 2. Review GitHub Actions logs
 3. Verify npm authentication
@@ -299,4 +320,3 @@ For critical release issues:
 
 **Last Updated**: 2024-11-13  
 **Version**: 1.0.0
-

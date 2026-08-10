@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-    batching,
-    batchingWithConfig,
-    highPerformanceBatching,
-} from './batching';
+import { batching, batchingWithConfig } from './batching';
 
 // Helper to create a basic mock tree for unit tests
 function createMockTree() {
@@ -62,7 +58,6 @@ describe('batching enhancer', () => {
     it('exports factory functions and helpers', () => {
       expect(typeof batching).toBe('function');
       expect(typeof batchingWithConfig).toBe('function');
-      expect(typeof highPerformanceBatching).toBe('function');
       expect(typeof batching()).toBe('function');
     });
   });
@@ -371,9 +366,16 @@ describe('batching enhancer', () => {
     // hasPendingUpdates / getBatchQueueSize — use the tree's
     // flushNotifications() / hasPendingNotifications() instead.)
 
-    it('highPerformanceBatching should return a batching enhancer', () => {
+    // Was `highPerformanceBatching()`, deleted in 14.0.0 — v9.0.0 had already
+    // removed its export and left the body behind. The preset it wrapped is
+    // just this config, so the test now asserts the config works rather than
+    // that a wrapper around it exists.
+    it('the zero-delay batching config returns a batching enhancer', () => {
       const tree = createMockTree();
-      const enhanced = highPerformanceBatching()(tree) as any;
+      const enhanced = batching({
+        enabled: true,
+        notificationDelayMs: 0,
+      })(tree) as any;
 
       expect(typeof enhanced.batch).toBe('function');
       expect(typeof enhanced.coalesce).toBe('function');

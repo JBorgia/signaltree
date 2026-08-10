@@ -41,7 +41,7 @@ Adds `@angular/forms ^20.0.0 || ^21.0.0 || ^22.0.0` and `rxjs ^7.0.0` as peers. 
 
 ### `@signaltree/enterprise` — DEPRECATED, do not install
 
-Deprecated in 13.5.0 and **removed in 14.0.0** — no longer published. Superseded by `tree.updateAndReport()`, built into `@signaltree/core` (there is NO `onPathChange` in core). It was measurably slower than the core method that replaced it and had an unfixed array data-loss defect. To migrate an existing dependency off it, see [`../../guides/migration-v13-v14.md`](../../guides/migration-v13-v14.md) §6.
+Deprecated in 13.5.0 and **removed in 14.0.0** — no longer published. Superseded by `tree.updateAndReport()`, built into `@signaltree/core` (there is NO `onPathChange` in core). It was measurably slower than the core method that replaced it and had an unfixed array data-loss defect. To migrate an existing dependency off it, see [`../../guides/migration-v13-v14.md`](../../../guides/migration-v13-v14.md) §6.
 
 ### `@signaltree/callable-syntax` — DELETED in 14.0.0, do not install
 

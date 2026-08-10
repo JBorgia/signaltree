@@ -317,7 +317,7 @@ node scripts/consolidated-bundle-analysis.js
 
 - **[Main Documentation](../../README.md)**: Complete SignalTree overview
 - **[Overview & Specifications](../../docs/overview.md)**: Consolidated feature and spec documentation
-- **[Performance Metrics](../../docs/performance/metrics.md)**: Methodology and benchmark results
+- **[Performance methodology](../../docs/performance/methodology.md)**: how the benchmarks are run and read
 - **[Frequency Weighting System](../../docs/performance/frequency-weighting-system.md)**: where the weights come from, and why they are estimates
 - **[Bundle Optimization](../../docs/performance/bundle-optimization.md)**: Analysis and optimization strategies
 
