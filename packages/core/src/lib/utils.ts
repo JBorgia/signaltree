@@ -91,6 +91,62 @@ export function pruneHistoryExcluded<T>(snapshot: T, liveNode: unknown): T {
   return result;
 }
 
+/**
+ * @internal Are two PRUNED snapshots the same observable state?
+ *
+ * Exists because `history: false` produced PHANTOM undo steps. The dedupe in
+ * `addEntry` is `last.state === entry.state`, which is exact for unpruned
+ * snapshots — structural sharing hands back the identical object when nothing
+ * changed. Pruning breaks that identity: a write to an EXCLUDED collection still
+ * makes a new root, and `pruneUncached` copies every node on the path down to the
+ * excluded key, so two snapshots that differ only inside excluded state come back
+ * as structurally identical but referentially distinct objects. The `===` missed
+ * them and each one became an entry.
+ *
+ * MEASURED before this: five writes to an `entityMap({ history: false })` produced
+ * five entries with `canUndo() === true`, and the undo changed nothing a user could
+ * see — a dead Ctrl+Z, which is worse than no undo because it spends a step the
+ * user believes they had.
+ *
+ * NOT a deep equal. Reference identity short-circuits at every level, and recursion
+ * happens ONLY where both sides are plain objects whose references already differ —
+ * which, given structural sharing, is exactly the copied path that pruning created.
+ * A tree with no exclusions never gets here at all (the `===` fast path in
+ * `addEntry` catches it), and a real change short-circuits false on the first
+ * differing reference.
+ */
+export function prunedEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (
+    a === null ||
+    b === null ||
+    typeof a !== 'object' ||
+    typeof b !== 'object'
+  ) {
+    return false;
+  }
+  // Arrays and built-ins are LEAF values here: a differing reference means a
+  // differing value. Only plain objects are on a pruned copy path.
+  if (Array.isArray(a) || Array.isArray(b)) return false;
+  if (isBuiltInObject(a) || isBuiltInObject(b)) return false;
+
+  const ka = Object.keys(a as Record<string, unknown>);
+  const kb = Object.keys(b as Record<string, unknown>);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) {
+    if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+    if (
+      !prunedEqual(
+        (a as Record<string, unknown>)[k],
+        (b as Record<string, unknown>)[k]
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function pruneUncached<T>(snapshot: T, liveNode: unknown): T {
   if (
     snapshot === null ||

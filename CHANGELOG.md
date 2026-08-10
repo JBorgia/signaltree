@@ -72,6 +72,30 @@
 
 ### Fixed
 
+- **`entityMap({ history: false })` no longer produces PHANTOM undo steps.** Five
+  excluded-only writes produced five history entries with `canUndo() === true`, and the
+  undo changed nothing a user could see — a dead Ctrl+Z, which is worse than no undo
+  because it spends a step the user believes they had.
+
+  Cause: the dedupe was `last.state === entry.state`, exact for unpruned snapshots
+  because structural sharing returns the identical object when nothing changed. Pruning
+  breaks that identity — a write to an excluded collection still makes a new root, and
+  pruning copies every node on the path down to the excluded key, so two snapshots
+  differing only inside excluded state come back structurally identical and
+  referentially distinct.
+
+  Fixed with `prunedEqual`, a reference-short-circuiting structural compare, **guarded
+  behind an O(1) test for whether anything was pruned at all** (`pruneHistoryExcluded`
+  returns the identical object when it prunes nothing). So a tree without exclusions
+  still runs only the `===`, and where the walk does run it runs once per recorded
+  entry rather than per write. MEASURED: per-flush cost is indistinguishable between
+  the exclusion and no-exclusion arms at 1,000 and 10,000 rows and at 4 and 20 root
+  keys (1.18–1.26 ms, medians of 9).
+
+  Verified by outcome, including the nested case a shallow compare would miss: an
+  excluded collection under a branch produces 0 entries, while a sibling write to that
+  same branch still produces 1.
+
 - **`coalesce()` no longer silently drops `.update()` calls.** Updaters were deferred
   under the key `` `${path}:update:${Date.now()}` ``, so two in the SAME millisecond
   collided on that key and one was discarded. Three `+1` updaters inside one

@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 
 import {
   HISTORY_EXCLUDED,
+  prunedEqual,
   pruneHistoryExcluded,
   snapshotState,
 } from '../../lib/utils';
@@ -165,10 +166,13 @@ class TimeTravelManager<T> {
     // preserved — and the entry simply does not retain what it dropped. A tree
     // with no `history: false` anywhere gets the identical object back, so it
     // pays one shallow walk and allocates nothing. See RFC 0012 option B.
-    const plain = pruneHistoryExcluded(
-      snapshotState(this.tree.$ as unknown as TreeNode<T>),
-      this.tree.$
-    );
+    const rawSnapshot = snapshotState(this.tree.$ as unknown as TreeNode<T>);
+    const plain = pruneHistoryExcluded(rawSnapshot, this.tree.$);
+    // `pruneHistoryExcluded` returns the IDENTICAL object when nothing was
+    // excluded, so this is an exact O(1) test for "does this tree use
+    // `history: false` at all" — and it keeps the structural-equality walk below
+    // off the hot path for every tree that does not.
+    const didPrune = plain !== rawSnapshot;
 
     if (
       (typeof ngDevMode === 'undefined' || ngDevMode) &&
@@ -193,8 +197,25 @@ class TimeTravelManager<T> {
     // but referentially distinct are no longer collapsed. That needs a write
     // that changed something and a later write that changed it back, in
     // separate flushes — which is arguably two user actions and two entries.
+    //
+    // The `===` stays FIRST and stays the only check for trees without
+    // exclusions. `prunedEqual` runs ONLY when something was actually pruned,
+    // because it is a walk and the write path is the hot path — putting an
+    // unconditional walk here would repeat the mistake that read-time
+    // `shouldSkip` was introduced to fix.
+    //
+    // Why the extra check is needed at all: a write to an EXCLUDED collection
+    // still makes a new root, and pruning copies every node on the path down to
+    // the excluded key — so two snapshots differing only inside excluded state
+    // are structurally identical and referentially distinct. The `===` missed
+    // them and each became a PHANTOM entry: `canUndo()` true, undo changes
+    // nothing visible, and the user spends a step they never had.
     const last = this.history[this.history.length - 1];
-    if (last && last.state === entry.state) {
+    if (
+      last &&
+      (last.state === entry.state ||
+        (didPrune && prunedEqual(last.state, entry.state)))
+    ) {
       return; // skip duplicate
     }
 

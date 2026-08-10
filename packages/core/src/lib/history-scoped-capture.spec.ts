@@ -43,9 +43,13 @@ describe('history: false — excluded from time travel', () => {
 
     const entry = (
       tree as unknown as {
-        __timeTravel: { getHistory(): Array<{ state: Record<string, unknown> }> };
+        __timeTravel: {
+          getHistory(): Array<{ state: Record<string, unknown> }>;
+        };
       }
-    ).__timeTravel.getHistory().at(-1);
+    ).__timeTravel
+      .getHistory()
+      .at(-1);
 
     expect(entry?.state).toBeDefined();
     expect('rows' in (entry?.state ?? {})).toBe(false);
@@ -65,9 +69,13 @@ describe('history: false — excluded from time travel', () => {
 
     const entry = (
       tree as unknown as {
-        __timeTravel: { getHistory(): Array<{ state: Record<string, unknown> }> };
+        __timeTravel: {
+          getHistory(): Array<{ state: Record<string, unknown> }>;
+        };
       }
-    ).__timeTravel.getHistory().at(-1);
+    ).__timeTravel
+      .getHistory()
+      .at(-1);
 
     expect('rows' in (entry?.state ?? {})).toBe(true);
   });
@@ -200,5 +208,96 @@ describe('ST2029 — history retention', () => {
     await appOrder({ selectId: (r) => r.id }, 50, 34);
 
     expect(msg()).not.toContain('ST2029');
+  });
+});
+
+describe('entityMap({ history: false }) — no PHANTOM undo steps (15.0.0)', () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  // Before the fix: five excluded-only writes produced FIVE entries with
+  // canUndo() true, and the undo changed nothing a user could see. A dead
+  // Ctrl+Z is worse than no undo — it spends a step the user believes they had.
+  //
+  // Cause: structural sharing makes a new root per write, and pruning copies
+  // every node on the path down to the excluded key, so two snapshots differing
+  // only inside excluded state came back structurally identical but
+  // referentially distinct. `last.state === entry.state` missed them.
+  it('excluded-only writes create NO entries', async () => {
+    const tree = signalTree({
+      rows: entityMap<{ id: string; n: number }>({ history: false }),
+      draft: '',
+    }).with(timeTravel());
+    tree.$.rows.addMany([{ id: 'a', n: 0 }]);
+    await tick();
+
+    const base = tree.getHistory().length;
+    for (let i = 1; i <= 5; i++) {
+      tree.$.rows.updateOne('a', { n: i });
+      await tick();
+    }
+
+    expect(tree.getHistory().length - base).toBe(0);
+    expect(tree.canUndo()).toBe(false);
+  });
+
+  it('an excluded write does not shift where undo lands', async () => {
+    const tree = signalTree({
+      rows: entityMap<{ id: string; n: number }>({ history: false }),
+      draft: '',
+    }).with(timeTravel());
+    tree.$.rows.addMany([{ id: 'a', n: 0 }]);
+    await tick();
+
+    tree.$.draft.set('hello');
+    await tick();
+    tree.$.rows.updateOne('a', { n: 9 }); // excluded — must not become a step
+    await tick();
+    tree.$.draft.set('world');
+    await tick();
+
+    tree.undo();
+    expect(tree.$.draft()).toBe('hello');
+    // ...and undo must not roll the excluded collection back either.
+    expect(tree.$.rows.all()[0].n).toBe(9);
+  });
+
+  // The case a SHALLOW reference compare would miss: pruning copies the
+  // intermediate `box` node too, so the root's `box` reference differs even
+  // though nothing observable changed.
+  it('works when the excluded collection is NESTED', async () => {
+    const tree = signalTree({
+      box: {
+        rows: entityMap<{ id: string; n: number }>({ history: false }),
+        label: 'x',
+      },
+    }).with(timeTravel());
+    tree.$.box.rows.addMany([{ id: 'a', n: 0 }]);
+    await tick();
+
+    const base = tree.getHistory().length;
+    for (let i = 1; i <= 4; i++) {
+      tree.$.box.rows.updateOne('a', { n: i });
+      await tick();
+    }
+    expect(tree.getHistory().length - base).toBe(0);
+
+    // A real sibling write still records.
+    tree.$.box.label.set('y');
+    await tick();
+    expect(tree.getHistory().length - base).toBe(1);
+  });
+
+  it('does not suppress ordinary writes when nothing is excluded', async () => {
+    const tree = signalTree({ n: 0 }).with(timeTravel());
+    await tick();
+    const base = tree.getHistory().length;
+    tree.$.n.set(1);
+    await tick();
+    tree.$.n.set(2);
+    await tick();
+
+    expect(tree.getHistory().length - base).toBe(2);
+    tree.undo();
+    expect(tree.$.n()).toBe(1);
   });
 });
