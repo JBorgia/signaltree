@@ -1,4 +1,4 @@
-# Review brief — 14.0.0 hardening session, 2026-08-07
+Che# Review brief — 14.0.0 hardening session, 2026-08-07
 
 **For:** a reviewing agent, independent of the one that did the work.
 **Range:** `b254edc1..HEAD` — 26 commits, 113 files, +11,859 / −3,982.

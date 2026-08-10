@@ -52,6 +52,17 @@ deliberate declines, and the analysis below says which and why.
 
 ✅ built in · 🟡 partial / requires assembly · ❌ absent
 
+**†** marks a row ANY of these libraries can reach with a few lines of
+composition. Those rows measure which library shipped sugar for it, not what you
+can build, so they should not decide anything — they are kept because deleting
+them would hide information. The unmarked rows are **architectural**: they follow
+from the design and a consumer cannot add them. Read the unmarked rows.
+
+Pagination used to be a row and was deleted outright rather than marked: it was ❌
+for four of five libraries and every one of them can hold a page index and slice a
+collection. A row where the honest answer is "everyone, by composition" is not a
+comparison, it is noise.
+
 ### Collections
 
 | capability                                              |  SignalTree   | `@ngrx/signals` | elf | Akita | NGXS |
@@ -59,15 +70,15 @@ deliberate declines, and the analysis below says which and why.
 | CRUD (add/update/remove/upsert/setAll)                  |      ✅       |       ✅        | ✅  |  ✅   |  🟡  |
 | **O(1) per-entity read that invalidates only that row** |      ✅       |       ❌        | ✅  |  🟡   |  ❌  |
 | Predicate update / remove                               |      ✅       |       ✅        | ✅  |  ✅   |  🟡  |
-| Predicate **select / count**                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
+| Predicate **select / count** †                          |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
 | `prepend`                                               | ✅ _(14.0.0)_ |       ✅        | ✅  |  ✅   |  ✅  |
 | **Active-entity tracking**                              | ✅ _(14.0.0)_ |       ❌        | ✅  |  ✅   |  ❌  |
-| **Per-entity UI state, kept off the domain entity**     |      🟡       |       ❌        | ✅  |  ✅   |  ❌  |
+| **Per-entity UI state, kept off the domain entity** †   |      🟡       |       ❌        | ✅  |  ✅   |  ❌  |
 | **Id migration (temp id → server id)**                  | ✅ _(14.0.0)_ |       ❌        | ✅  |  🟡   |  ❌  |
-| Reorder / move                                          |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
-| Bounded / FIFO collection                               |      ❌       |       ❌        | ✅  |  ❌   |  ❌  |
-| Union / merge two collections                           |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
-| First / last                                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
+| Reorder / move †                                        |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
+| Bounded / FIFO collection †                             |      ❌       |       ❌        | ✅  |  ❌   |  ❌  |
+| Union / merge two collections †                         |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
+| First / last †                                          |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
 | Multiple named collections in one store                 |      ✅       |       ✅        | ✅  |  ❌   |  ✅  |
 
 ### History, async, forms
@@ -86,7 +97,7 @@ deliberate declines, and the analysis below says which and why.
 | Optimistic updates                           |  🟡 _(events pkg)_   |       ❌        | ❌  |  🟡   |  ❌  |
 | Form model + validators                      |          ✅          |       ❌        | ❌  |  🟡   |  ❌  |
 | Form wizard                                  |          ✅          |       ❌        | ❌  |  ❌   |  ❌  |
-| **Dirty checking**                           |  🟡 _(forms only)_   |       ❌        | ❌  |  ✅   |  ❌  |
+| **Dirty checking** †                         |  🟡 _(forms only)_   |       ❌        | ❌  |  ✅   |  ❌  |
 
 ### Infrastructure
 
@@ -150,17 +161,30 @@ capability nobody else built. Six of those, all verified in source here and
 these rows has not been done, and inventing the cells is exactly the failure this
 file already has a track record of:
 
-| SignalTree capability                                        | What it is                                                                                                                                        |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scoped history** — `entityMap({ history: false })`         | A collection persists and serialises but stays out of the undo stack. See [time-travel-in-production.md](../guides/time-travel-in-production.md). |
-| **Per-leaf equality** — `compared()` / `byKeys()`            | One position gets its own comparator without changing the tree's type                                                                             |
-| **Changed-path reporting** — `tree.updateAndReport(partial)` | Returns the dot-paths of leaves that ACTUALLY changed; a deep-equal re-fetch reports `[]`                                                         |
-| **Type-only read-only view** — `asReadonly(tree)`            | Same object, narrower type. Zero runtime cost                                                                                                     |
-| **Structural sharing as a change oracle**                    | `tree()` returns the identical object when nothing changed, so `prev !== next` is a meaningful check                                              |
-| **Diagnostics scoped by retention, not count** — ST2029      | Warns on `entries x width`, so a wide-short and a narrow-long history are judged the same                                                         |
+Now audited against the installed declarations of `@ngrx/signals` 21.1.1, elf
+2.5.1 / elf-state-history 1.4.0 and `@ngxs/store` 20.1.0: **none of them ships any
+of these.**
 
-`defineStore()` is a seventh, but `@ngrx/signals` has `signalStore()`, so that one
-belongs in the graded table once both are audited.
+| SignalTree capability                                        | Others | What it is                                                                                                                                        |
+| ------------------------------------------------------------ | :----: | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scoped history** — `entityMap({ history: false })`         |   ❌   | A collection persists and serialises but stays out of the undo stack. See [time-travel-in-production.md](../guides/time-travel-in-production.md). |
+| **Per-leaf equality** — `compared()` / `byKeys()`            |   ❌   | One position gets its own comparator without changing the tree's type                                                                             |
+| **Changed-path reporting** — `tree.updateAndReport(partial)` |   ❌   | Returns the dot-paths of leaves that ACTUALLY changed; a deep-equal re-fetch reports `[]`                                                         |
+| **Type-only read-only view** — `asReadonly(tree)`            |   ❌   | Same object, narrower type. Zero runtime cost                                                                                                     |
+| **Structural sharing as a change oracle**                    |   ❌   | `tree()` returns the identical object when nothing changed, so `prev !== next` is a meaningful check                                              |
+| **Diagnostics scoped by retention, not count** — ST2029      |   ❌   | Warns on `entries x width`, so a wide-short and a narrow-long history are judged the same                                                         |
+
+**How these were graded.** Each was probed against every competitor's `.d.ts`:
+`equal|comparator|equalityFn`, `changedPaths|affectedPaths`,
+`asReadonly|declare function *Readonly*`, `structural|sameReference`, and
+`excludeFromHistory|skipHistory`. One hit: elf-state-history's
+`comparatorFn: (prevState, currentState) => boolean` — which is our `shouldSkip`,
+already graded ✅ for elf in the history table, not per-leaf equality. No
+competitor exports a readonly-view function; the `Readonly<` occurrences in
+`@ngrx/signals` and `@ngxs/store` are internal type usage.
+
+`defineStore()` is deliberately NOT listed — `@ngrx/signals` has `signalStore()`,
+so it belongs in the graded tables above.
 
 **SSR / transfer state, and why it is 🟡 rather than ✅ or ❌.** This row read ❌
 for SignalTree until 14.0.0 had already shipped the thing it denies. `HydrateMode`
