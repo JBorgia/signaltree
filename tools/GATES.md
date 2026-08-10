@@ -62,7 +62,16 @@ node tools/verify-gates.mjs --self-test  # prove each gate can fail — pre-rele
   the gate green.
 - `check-numeric-claims.mjs` matches ASCII `x` ratios, not U+00D7 `×`, skips
   fenced code, and exempts a whole line when it names a competitor. Its backlog
-  is **ratcheted, not clean**: 169 published figures still name no generator.
+  is **ratcheted, not clean**: 69 published figures still name no generator.
+- `check-numeric-claims.mjs` sees performance figures, not provenance. It looks
+  for KB / ms / % / ratios, so a sourcing claim like "40,000+ developer surveys"
+  or "10,000+ GitHub repositories" is not a figure to it. Its `SURFACES` list
+  also omits `docs/performance/**` and `apps/demo/README.md`. Both gaps were
+  found together: a fabricated research bibliography sat on six surfaces,
+  including the npm-facing `packages/core/README.md`, and the backlog read 69
+  before its removal and 69 after. Deliberately not widened — see the policy
+  above; a detector for invented citations is a different gate, and the thing
+  that actually caught this was reading the doc.
 - `verify-gates.mjs` counts any non-zero exit as "caught it", so a mutation that
   breaks the BUILD proves the build runs, not the thing the gate covers. Prefer
   a mutation that fails the gate's actual comparison.
