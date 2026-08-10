@@ -685,21 +685,36 @@ export class BenchmarkOrchestratorComponent
     this.scenarioSelectionVersion.update((v) => v + 1);
   });
 
-  // Computed enhancer configuration based on selected scenarios
-  // Mapping of test scenarios to the exact enhancers used in SignalTree benchmark service
+  // Mapping of test scenarios to the enhancers the benchmark service actually
+  // applies. It claims to reflect the service, so it has to — and it did not.
+  // It named four enhancers a consumer cannot use, in two different ways:
+  //
+  //   memoization / shallowMemoization / lightweightMemoization
+  //       Do not exist at all. The tiers were unified and then removed in
+  //       9.0.0/9.0.1; core memoises materialisation itself now.
+  //   highPerformanceBatching
+  //       DOES exist — `packages/core/src/enhancers/batching/batching.ts:413`
+  //       — but reaches no published entry point: not the root barrel, not any
+  //       of the six subpaths in package.json exports. Exported in source,
+  //       unreachable from outside. `dead-exports` does not flag it because an
+  //       internal import counts as reachability there.
+  //
+  // `signaltree-benchmark.service.ts` applies exactly three: batching(),
+  // serialization(), timeTravel(). Anything else here would be advertising an
+  // import that fails.
   private scenarioEnhancerMap: Record<string, string[]> = {
     // Core performance benchmarks
-    'deep-nested': ['batching', 'shallowMemoization'],
-    'large-array': ['highPerformanceBatching'],
-    'computed-chains': ['batching', 'shallowMemoization'],
-    'batch-updates': ['highPerformanceBatching'],
-    'selector-memoization': ['lightweightMemoization'],
-    serialization: ['memoization', 'highPerformanceBatching'],
+    'deep-nested': ['batching'],
+    'large-array': ['batching'],
+    'computed-chains': ['batching'],
+    'batch-updates': ['batching'],
+    'selector-memoization': [],
+    serialization: ['serialization', 'batching'],
     'concurrent-updates': ['batching'],
-    'memory-efficiency': ['lightweightMemoization', 'batching'],
-    'data-fetching': ['batching', 'shallowMemoization'],
-    'real-time-updates': ['highPerformanceBatching', 'lightweightMemoization'],
-    'state-size-scaling': ['lightweightMemoization', 'batching'],
+    'memory-efficiency': ['batching'],
+    'data-fetching': ['batching'],
+    'real-time-updates': ['batching'],
+    'state-size-scaling': ['batching'],
 
     // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
 
@@ -783,12 +798,6 @@ export class BenchmarkOrchestratorComponent
 
     const enhancerDescriptions: Record<string, string> = {
       batching: 'groups multiple state updates for better performance',
-      highPerformanceBatching:
-        'optimized batching for high-frequency operations',
-      memoization: 'full memoization with deep equality checks',
-      shallowMemoization: 'lightweight memoization for object structures',
-      lightweightMemoization:
-        'minimal caching overhead for intensive workloads',
       serialization: 'state persistence and snapshot capabilities',
       timeTravel: 'undo/redo functionality with history management',
       // async removed — async behavior handled by middleware helpers

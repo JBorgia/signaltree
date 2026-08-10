@@ -90,7 +90,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Each library uses its own best idiom for the same task. Immutable stores must rebuild the collection on every change; SignalTree uses entityMap, which owns each entity separately and writes one in O(1). Modelling the same collection as a plain array leaf in SignalTree measures two orders of magnitude slower (~40ms against ~0.3ms on 1000 updates to 50k rows) and lands roughly level with an immutable store rather than ahead of one — core warns about that shape at construction (ST2018).',
     enhancers: {
-      required: ['highPerformanceBatching'],
+      required: ['batching'],
       optional: [],
       rationale:
         'High-performance batching essential for rapid array updates; memoization counterproductive (adds cache mgmt overhead without repeated reads). Lazy array coalescing may be conditionally injected for very large datasets (>5k) by the benchmark service but is benchmark-only and therefore not listed here.',
@@ -145,7 +145,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Batching reduces render thrashing vs individual update overhead',
     enhancers: {
-      required: ['highPerformanceBatching'],
+      required: ['batching'],
       optional: [],
       rationale:
         'Core batching functionality being tested - no other enhancers needed',
@@ -199,7 +199,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Direct JSON serialization vs complex immutable structure traversal',
     enhancers: {
-      required: ['serialization', 'memoization', 'highPerformanceBatching'],
+      required: ['serialization', 'memoization', 'batching'],
       optional: [],
       rationale:
         "Testing serialization feature; memoization and batching stabilize signal read patterns before snapshot. Serialization enhancer performs unwrap + JSON conversion; memoization ensures dependent computed signals aren't re-evaluated spuriously.",
