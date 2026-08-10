@@ -62,14 +62,13 @@ deliberate declines, and the analysis below says which and why.
 | Predicate **select / count**                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
 | `prepend`                                               | ✅ _(14.0.0)_ |       ✅        | ✅  |  ✅   |  ✅  |
 | **Active-entity tracking**                              | ✅ _(14.0.0)_ |       ❌        | ✅  |  ✅   |  ❌  |
-| **Per-entity UI state, kept off the domain entity**     |      ❌       |       ❌        | ✅  |  ✅   |  ❌  |
+| **Per-entity UI state, kept off the domain entity**     |      🟡       |       ❌        | ✅  |  ✅   |  ❌  |
 | **Id migration (temp id → server id)**                  | ✅ _(14.0.0)_ |       ❌        | ✅  |  🟡   |  ❌  |
-| Reorder / move                                          |      ❌       |       ❌        | ✅  |  🟡   |  ❌  |
+| Reorder / move                                          |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
 | Bounded / FIFO collection                               |      ❌       |       ❌        | ✅  |  ❌   |  ❌  |
 | Union / merge two collections                           |      🟡       |       ❌        | ✅  |  🟡   |  ❌  |
 | First / last                                            |      🟡       |       ❌        | ✅  |  ✅   |  🟡  |
 | Multiple named collections in one store                 |      ✅       |       ✅        | ✅  |  ❌   |  ✅  |
-| **Pagination**                                          |      ❌       |       ❌        | ❌  |  ✅   |  ❌  |
 
 ### History, async, forms
 
@@ -103,6 +102,65 @@ deliberate declines, and the analysis below says which and why.
 | SSR / transfer state                            | 🟡 _(14.0.0)_ |       ❌        | ❌  |  ❌   |  🟡  |
 | Diagnostics with stable codes                   |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
 | **Granular signals for arbitrary NESTED state** |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
+
+### ⚠️ Composition vs. capability — this grid conflates them
+
+A row only earns its place if the answer is determined by the library's
+ARCHITECTURE. If any of these libraries can get there with a few lines of
+composition, the row is measuring **which library shipped sugar for it**, not
+what you can build. That inflates whoever ships more convenience API and
+penalises a library that composes cleanly — us.
+
+**Pagination was deleted for exactly this reason.** It sat as ❌ for four of five
+libraries, and every one of them can hold a page index and slice a collection.
+That is a page-state handler, not a capability.
+
+The same objection applies, to varying degrees, to these rows — flagged rather
+than removed, because the audit has not been done:
+
+| Row                       | Composable in any of them?                                              |
+| ------------------------- | ----------------------------------------------------------------------- |
+| Bounded / FIFO collection | Yes — a size check on add                                               |
+| Union / merge collections | Yes — a `computed` over two collections                                 |
+| First / last              | Yes — `all()[0]` / `all().at(-1)`                                       |
+| Predicate **count**       | Yes — `where(p)().length`                                               |
+| Per-entity UI state       | Yes — a sibling collection keyed by the same id                         |
+| Reorder / move            | Yes — an `order` field plus `sortComparer` (see below)                  |
+| Dirty checking            | Yes, cheaply here — structural sharing makes `prev !== next` meaningful |
+
+And these rows are NOT composable — they follow from the design and cannot be
+added by a consumer:
+
+O(1) per-entity read that invalidates only that row · granular signals for
+arbitrary nested state · structural sharing as a change oracle · reactive
+`canUndo`/`canRedo` · per-entity undo · scoped history · SSR transfer mode ·
+diagnostics with stable codes.
+
+**That second list is the real comparison.** The next revision of this file should
+split the grid on that line, because a reader deciding between libraries needs to
+know which differences they can close themselves and which they cannot.
+
+### Capabilities this matrix could not show
+
+Everything above enumerates something a COMPETITOR ships, because this file was
+written as the input to 14.0.0's gap-closing work. That gives it a structural
+bias: it can show SignalTree losing or drawing, and it has no row for a
+capability nobody else built. Six of those, all verified in source here and
+**deliberately not scored for the other libraries** — auditing their `.d.ts` for
+these rows has not been done, and inventing the cells is exactly the failure this
+file already has a track record of:
+
+| SignalTree capability                                        | What it is                                                                                                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scoped history** — `entityMap({ history: false })`         | A collection persists and serialises but stays out of the undo stack. See [time-travel-in-production.md](../guides/time-travel-in-production.md). |
+| **Per-leaf equality** — `compared()` / `byKeys()`            | One position gets its own comparator without changing the tree's type                                                                             |
+| **Changed-path reporting** — `tree.updateAndReport(partial)` | Returns the dot-paths of leaves that ACTUALLY changed; a deep-equal re-fetch reports `[]`                                                         |
+| **Type-only read-only view** — `asReadonly(tree)`            | Same object, narrower type. Zero runtime cost                                                                                                     |
+| **Structural sharing as a change oracle**                    | `tree()` returns the identical object when nothing changed, so `prev !== next` is a meaningful check                                              |
+| **Diagnostics scoped by retention, not count** — ST2029      | Warns on `entries x width`, so a wide-short and a narrow-long history are judged the same                                                         |
+
+`defineStore()` is a seventh, but `@ngrx/signals` has `signalStore()`, so that one
+belongs in the graded table once both are audited.
 
 **SSR / transfer state, and why it is 🟡 rather than ✅ or ❌.** This row read ❌
 for SignalTree until 14.0.0 had already shipped the thing it denies. `HydrateMode`
@@ -243,17 +301,6 @@ The cost IS stated, in the config's own doc comment. `isRecordingPaused` is
 reactive — the `canUndo` lesson applied before shipping rather than after.
 `pauseRecording` is checked before any snapshot work, so pausing costs nothing.
 
-### 5. Pagination — Akita only
-
-`PaginatorPlugin`: page cache, `hasPage`, prefetch, invalidation.
-
-**Trade-off:** pagination is genuinely coupled to the data source, and Akita's
-plugin is the largest single feature in that library. Most apps now use a server
-cursor and a query library.
-
-**Verdict: decline for core.** Revisit only if it can be expressed as a marker
-composed from `asyncQuery()` + `entityMap()` rather than a new subsystem.
-
 ### 6. Action lifecycle observability — NGXS, and now `@ngrx/signals` too
 
 `ofActionDispatched / Successful / Errored / Canceled / Completed` in NGXS.
@@ -308,6 +355,45 @@ O(collection) and rebuilds the id index; a prepend is neither.
 **Verdict: SHIPPED in 14.0.0-rc.1** (`62af19d8`) as `prependOne` / `prependMany`.
 Reordering touches only the storage map's iteration order, so no per-entity signal
 is invalidated — prepending does not dirty any row's consumers.
+
+---
+
+## Reorder / move — 🟡, and why that is not a dodge
+
+This row read ❌ until the pattern was actually tried. It is 🟡 — "requires
+assembly" — and the assembly is three lines.
+
+`ids` is a `Signal<K[]>` with no mutator, and there is no `move(id, index)`. What
+exists is `sortComparer`, so order becomes DATA on the entity:
+
+```ts
+const tree = signalTree({
+  rows: entityMap({ selectId: (r: Row) => r.id, sortComparer: (a, b) => a.order - b.order }),
+});
+
+// Move one row. One entity write.
+tree.$.rows.updateOne(id, { order: newOrder });
+```
+
+Verified against the built package: three successive moves over `[A,B,C]` gave
+`CAB`, then `CBA`, then `BCA`, and updating one row's order **left the other
+rows' per-entity nodes identical**. So a reorder has a fan-out of 1, where
+`setAll(reordered)` would rebuild every per-entity signal in the collection.
+
+Two things this buys that a built-in `move()` would not:
+
+- **Order survives everything.** It is a field, so it persists, serialises,
+  transfers and time-travels with no extra machinery. An ids-array splice is view
+  state that has to be saved separately.
+- **Order is server-authoritative for free.** Drag-and-drop that must round-trip
+  is already sending the field the server owns.
+
+What it costs, stated honestly: you carry an `order` field, you need sparse or
+fractional values to insert between neighbours without renumbering, and
+`sortComparer` sorts `all()`/`ids()` while `map()` stays insertion-order. For a
+drag board — a workload the fit page claims — that is the right trade. For a
+collection where order is genuinely incidental, elf's built-in `move` is less
+work.
 
 ---
 

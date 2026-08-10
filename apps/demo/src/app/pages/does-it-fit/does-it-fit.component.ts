@@ -251,13 +251,6 @@ export class DoesItFitComponent {
           ngxs: 'no',
         },
         {
-          capability: 'Pagination',
-          signaltree: 'no',
-          ngrxSignals: 'no',
-          elf: 'no',
-          ngxs: 'no',
-        },
-        {
           capability: 'Multiple named collections in one store',
           signaltree: 'yes',
           ngrxSignals: 'yes',
