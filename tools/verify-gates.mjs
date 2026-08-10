@@ -116,9 +116,31 @@ const GATES = [
     // actual 746, while check-lint-budget.mjs's own comment said 684).
     cmd: ['node', 'tools/check-lint-budget.mjs'],
     slow: true,
+    // A `debugger` statement, because it is an eslint ERROR and errors fail this
+    // gate regardless of the warning budget.
+    //
+    // The mutation was `export function __gateMutation(x: any)`, which adds
+    // exactly one `no-explicit-any` WARNING — and a ratchet only fails when a
+    // project EXCEEDS its baseline. Two warnings had been paid down without
+    // running `--update`, leaving 540 recorded against 538 live, so the single
+    // added warning landed inside that headroom and the gate passed while
+    // broken. An audit caught it.
+    //
+    // Dropping `export` was the obvious fix and does NOT work: measured against
+    // this file, an unused module-scope function adds a warning and no error —
+    // `@typescript-eslint/no-unused-vars` is severity 2 here but does not fire
+    // for it. `no-debugger` does: 10 warnings/0 errors becomes 10 warnings/1
+    // error. `check-lint-budget.mjs`'s own header already said so ("a
+    // `debugger` statement in utils.ts does fail it"); the mutation just never
+    // used it.
+    //
+    // The general rule, and the reason this was blind for two days: a proof
+    // that depends on a RECORDED NUMBER staying current is only as good as the
+    // discipline of whoever last paid a warning down. An error-based mutation
+    // cannot be absorbed by slack.
     mutation: {
       file: 'packages/core/src/lib/utils.ts',
-      append: '\nexport function __gateMutation(x: any) { return x; }\n',
+      append: '\nfunction __gateMutation() {\n  debugger;\n}\n',
     },
   },
   {
@@ -351,6 +373,17 @@ const GATES = [
     covers:
       'the numeric-claims scanner detects a figure in a section that names no generator, and clears it once one is named',
     cmd: ['node', 'tools/check-numeric-claims.mjs', '--self-test'],
+    // Every other `:self` gate mutates its own CHECKER; this one shipped with no
+    // mutation at all, so the harness marked it `unproven` and SKIPPED it — and
+    // then credited `numeric-claims` as "proven via numeric-claims:self", a
+    // proof by a gate that never ran. Blinding the CLAIM pattern makes the
+    // scanner see no figures, so its self-test can no longer detect the
+    // ungenerated one it plants.
+    mutation: {
+      file: 'tools/check-numeric-claims.mjs',
+      find: 'const CLAIM =',
+      replace: 'const CLAIM = /(?!)/g; const __unusedClaim =',
+    },
   },
   {
     name: 'release-claims',
@@ -470,7 +503,14 @@ const GATES = [
     name: 'raw-signals',
     covers:
       'the "why not raw signals" arms construct, interleave, and their postconditions fire',
-    cmd: ['node', 'tools/bench-raw-signals.mjs', '--writes', '5000', '--consumers', '10'],
+    cmd: [
+      'node',
+      'tools/bench-raw-signals.mjs',
+      '--writes',
+      '5000',
+      '--consumers',
+      '10',
+    ],
     needsBuild: true,
     // Every arm asserts its write landed (SENTINEL). Breaking the raw write
     // makes the postcondition fire — the guardrail against an idle arm, and
@@ -530,18 +570,38 @@ const GATES = [
     covers: 'built package sizes stay inside their budgets',
     cmd: ['node', 'tools/check-bundle-budget.mjs'],
     needsBuild: true,
-    // Appends statically-reachable, incompressible code to the built barrel.
-    // Reachable, because a tree-shaken bundle drops anything else; incompressible,
-    // because gzip flattens a repeated string to nothing and the budget would
-    // not move. Assigning through globalThis is what defeats the shaker.
+    // Appends statically-reachable, incompressible code to a SOURCE file that
+    // every measured entry pulls in transitively.
+    //
+    // It targeted the BUILT barrel (`dist/.../index.js`) and was BLIND: the gate
+    // gained an `ensureBuilt()` that rebuilds `dist/` before measuring, so it
+    // erased its own mutation and then measured a clean bundle. The gate passed
+    // while its target was broken — found by an independent audit.
+    //
+    // Three properties, and the mutation needs all three. MEASURED, each shape
+    // run against the real gate:
+    //
+    //   (globalThis as any).__gateBloat = [...]   exit 1, BUDGET  13.69/5.9KB  ✅
+    //   export const __gateBloat = [...]          exit 0, tree-shaken away     ❌
+    //   globalThis.__gateBloat = [...]            exit 1, BUILD fails (TS7017) ❌
+    //
+    // - SIDE-EFFECTING, not an export: esbuild keeps a top-level assignment and
+    //   drops an unreferenced export entirely.
+    // - INCOMPRESSIBLE: gzip flattens a repeated string and the budget would not
+    //   move.
+    // - VALID TYPESCRIPT: `globalThis.__gateBloat` is TS7017 in a `.ts` file, so
+    //   the bare form fails the BUILD instead of the BUDGET. That still exits 1,
+    //   and this harness counts any non-zero exit as proven — which would have
+    //   left the gate "proven" by a check of the compiler, not of the budget.
+    //   The cast is what makes the proof mean what it says.
     mutation: {
-      file: 'dist/packages/core/dist/index.js',
+      file: 'packages/core/src/lib/utils.ts',
       generate: (original) => {
         const parts = [];
         for (let i = 0; i < 900; i++) {
           parts.push(`gateBloat_${i.toString(36)}_${(i * 2654435761) % 1e9}`);
         }
-        return `${original}\nglobalThis.__gateBloat = ${JSON.stringify(
+        return `${original}\n(globalThis as any).__gateBloat = ${JSON.stringify(
           parts
         )};\n`;
       },
