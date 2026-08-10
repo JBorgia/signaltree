@@ -1,8 +1,9 @@
 import { TransferState, makeStateKey } from '@angular/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { entityMap } from './types';
 import { status } from './markers/status';
+import { asyncSource } from './markers/async-source';
 import { signalTree } from './signal-tree';
 import { serialization } from '../enhancers/serialization/serialization';
 
@@ -77,5 +78,67 @@ describe('C3 — server → TransferState → client', () => {
     const json = server.serialize();
     expect(typeof json).toBe('string');
     expect(() => JSON.parse(json)).not.toThrow();
+  });
+});
+
+/**
+ * The gap this investigation found — pinned so it cannot change silently.
+ *
+ * SSR exists to ship SERVER-FETCHED data to the client so the user does not
+ * watch a spinner for something the server already had. `asyncSource` is where
+ * fetched data lives, and it is the one thing that does NOT cross.
+ *
+ * Its `snapshot` captures always (correct — undo must replay what was on
+ * screen), but its `hydrate` DECLINES `rehydrate`, reasoning that "the loader
+ * has already re-run, so the fresh result wins". That is right for a
+ * localStorage restore hours later. It is false at SSR hydration: the payload
+ * is milliseconds old and the client's loader has not run yet.
+ *
+ * The cost is paid twice — the bytes ship AND the client refetches. See
+ * RFC 0014.
+ */
+describe('C3 gap — asyncSource ships its payload and then drops it', () => {
+  const make = () => ({
+    feed: asyncSource<string[]>(() => Promise.resolve([])),
+    n: 0,
+  });
+
+  it('the server value IS serialised into the payload', () => {
+    const server = signalTree(make()).with(serialization());
+    (server.$.feed as unknown as { set(v: unknown): void }).set(['SERVER']);
+    expect(server.serialize()).toContain('SERVER');
+  });
+
+  it('...and the client does NOT receive it', () => {
+    // The decline is also reported through the hydrate-decision channel, but
+    // this asserts the BEHAVIOUR rather than the message: a console spy here
+    // captured nothing while the warning was plainly on stdout, because the
+    // report routes through a listener. Asserting on the observable outcome is
+    // both stronger and not hostage to how the report is delivered.
+    const server = signalTree(make()).with(serialization());
+    (server.$.feed as unknown as { set(v: unknown): void }).set(['SERVER']);
+    const payload = server.serialize();
+    expect(payload).toContain('SERVER'); // the bytes were shipped
+
+    const client = signalTree(make()).with(serialization());
+    client.deserialize(payload);
+
+    // ...and dropped on arrival.
+    expect(
+      (client.$.feed as unknown as { value?(): unknown }).value?.()
+    ).toBeUndefined();
+  });
+
+  it('entityMap, given the same job, DOES transfer — the contrast', () => {
+    const mk = () => ({
+      rows: entityMap<Row, number>({ selectId: (r) => r.id }),
+    });
+    const server = signalTree(mk()).with(serialization());
+    server.$.rows.setAll([{ id: 1, name: 'a' }]);
+
+    const client = signalTree(mk()).with(serialization());
+    client.deserialize(server.serialize());
+
+    expect(client.$.rows.all()).toHaveLength(1);
   });
 });
