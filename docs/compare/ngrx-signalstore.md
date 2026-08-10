@@ -278,6 +278,8 @@ the change and hands you a whole new state value.
 
 ### The single-entity row is a complexity difference, so no ratio describes it
 
+Reproduce with `node tools/bench-vs-signalstore.mjs`.
+
 | collection | SignalStore `updateEntity` | SignalTree `updateOne` |
 | ---------- | -------------------------- | ---------------------- |
 | 1,000      | 8.6 µs                     | 0.44 µs                |

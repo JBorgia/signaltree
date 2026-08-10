@@ -1,9 +1,9 @@
 {
-  "apps/demo/public/llms-full.txt": 8,
+  "apps/demo/public/llms-full.txt": 2,
   "apps/demo/public/llms.txt": 2,
   "docs/compare/capability-matrix.md": 4,
   "docs/compare/native-signals.md": 2,
-  "docs/compare/ngrx-signalstore.md": 12,
+  "docs/compare/ngrx-signalstore.md": 4,
   "docs/compare/real-implementations.md": 8,
   "docs/guides/entity-collection-cookbook.md": 6,
   "docs/guides/migration-v11-v12.md": 1,

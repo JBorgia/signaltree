@@ -1510,6 +1510,10 @@ For migrations exceeding a single agent's context window, see `docs/skills/using
 
 ## Dev-mode diagnostics added in 14.0.0
 
+Figures in this section are reproducible: `node tools/bench-leaf-equality.mjs`
+(equality and materialisation), `node tools/bench-ssr-payload.mjs` (payload and
+retention), `node --expose-gc tools/bench-compare.mjs --n 10000` (collections).
+
 Every warning carries a stable `[ST####]` code; full map in
 [`docs/errors/README.md`](https://github.com/JBorgia/signaltree/blob/main/docs/errors/README.md).
 
