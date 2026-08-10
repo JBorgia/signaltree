@@ -2,6 +2,19 @@
 
 Guidance for AI agents working with this repository. Two audiences: contributors changing SignalTree source, and agents consuming `@signaltree/*` packages in downstream apps.
 
+## Do not write RFCs
+
+We make the change. `TODO.md` is where decided-but-not-done work lives; put it
+there and go do it.
+
+`docs/rfcs/` is an ARCHIVE of decisions already taken, kept for the options that
+were **rejected** and why — that is what stops them being re-proposed. An RFC is
+what an OUTSIDE contributor writes to propose something. Creating
+`docs/rfcs/00NN-my-idea.md` for internal work produces a document that reads as
+pending when the work has shipped: four RFC statuses said "proposed" or "Accepted"
+for work already in a release, and 0012 claimed it had not shipped when all three
+of its items had.
+
 ## For Contributors
 
 Quick-reference distilled from [`.cursorrules`](.cursorrules). That file remains the full rulebook — read it before non-trivial changes.
