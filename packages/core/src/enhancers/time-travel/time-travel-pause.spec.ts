@@ -115,7 +115,15 @@ describe('pause / resume', () => {
 });
 
 describe('shouldSkip comparator', () => {
-  it('skips the transitions it says to skip', async () => {
+  /**
+   * These two specs used to assert the OPPOSITE: that a skipped transition was
+   * never recorded (`getHistory().length` unchanged). That was the write-side
+   * contract, and it was the wrong one — see `skipsBackward()` for the five
+   * reasons. They now assert the read-side contract, and they assert the OUTCOME
+   * a user sees rather than the mechanism, because the mechanism is what was
+   * wrong before.
+   */
+  it('retains skipped transitions instead of discarding them', async () => {
     const tree = signalTree({ n: 0, cursor: 0 }).with(
       timeTravel({
         maxHistorySize: 50,
@@ -130,10 +138,46 @@ describe('shouldSkip comparator', () => {
       await flush();
     }
 
-    expect(tree.getHistory().length).toBe(before);
+    // Retained, not dropped: history is complete, filtering happens on read.
+    expect(tree.getHistory().length).toBe(before + 5);
   });
 
-  it('still records the transitions it does not skip', async () => {
+  it('undo lands on the last state the user would recognise', async () => {
+    const tree = signalTree({ n: 0, cursor: 0 }).with(
+      timeTravel({
+        maxHistorySize: 50,
+        shouldSkip: (prev, next) =>
+          (prev as { n: number }).n === (next as { n: number }).n,
+      })
+    );
+
+    tree.$.n.set(1);
+    await flush();
+    for (let i = 1; i <= 5; i++) {
+      tree.$.cursor.set(i);
+      await flush();
+    }
+    tree.$.n.set(2);
+    await flush();
+
+    // One undo crosses all five cursor entries, because none of them is a state
+    // the user distinguishes from its predecessor.
+    // The tree-level undo()/redo() return void, so assert the state — which is
+    // the outcome a user sees, and the only thing worth pinning.
+    tree.undo();
+    expect(tree.$.n()).toBe(1);
+
+    tree.undo();
+    expect(tree.$.n()).toBe(0);
+
+    // ...and redo mirrors it.
+    tree.redo();
+    expect(tree.$.n()).toBe(1);
+    tree.redo();
+    expect(tree.$.n()).toBe(2);
+  });
+
+  it('records the transitions it does not skip', async () => {
     const tree = signalTree({ n: 0, cursor: 0 }).with(
       timeTravel({
         maxHistorySize: 50,
@@ -148,7 +192,23 @@ describe('shouldSkip comparator', () => {
     tree.$.n.set(7);
     await flush();
 
-    expect(tree.getHistory().length).toBe(before + 1);
+    expect(tree.getHistory().length).toBe(before + 2);
+  });
+
+  it('never skips past index 0, so undo always moves', async () => {
+    const tree = signalTree({ n: 0, cursor: 0 }).with(
+      timeTravel({ maxHistorySize: 50, shouldSkip: () => true })
+    );
+
+    tree.$.cursor.set(1);
+    await flush();
+    tree.$.cursor.set(2);
+    await flush();
+
+    // Every transition is skippable, so without the index-0 floor undo would
+    // have nowhere legal to land.
+    tree.undo();
+    expect(tree.getCurrentIndex()).toBe(0);
   });
 
   it('skipped writes still apply', async () => {

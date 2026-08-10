@@ -214,11 +214,11 @@ class TimeTravelManager<T> {
       return; // skip duplicate
     }
 
-    // App-supplied skip, checked AFTER reference-dedup so the cheap exact test
-    // runs first and the comparator only sees transitions that really differ.
-    if (last && this.config.shouldSkip?.(last.state, entry.state)) {
-      return;
-    }
+    // `shouldSkip` is NOT consulted here. It used to be, and the entry was
+    // discarded — see `skipsBackward()` for why that moved to read time.
+    //
+    // The reference-dedup above stays: it is O(1), structural rather than
+    // semantic, and collapsing an identical snapshot loses nothing.
 
     this.history.push(entry as TimeTravelEntry<T>);
     this.bumpHistory();
@@ -237,10 +237,69 @@ class TimeTravelManager<T> {
       return false;
     }
 
-    this.currentIndex--;
+    this.currentIndex = this.skipsBackward(this.currentIndex);
     const entry = this.history[this.currentIndex];
     this.restoreState(entry.state);
     return true;
+  }
+
+  /**
+   * Where `undo()` should land, given `shouldSkip`.
+   *
+   * ## Why the comparator runs HERE and not at record time
+   *
+   * It used to run in `addEntry` and `return` early, so the entry was never
+   * pushed. Five problems, one cause — the cost and the decision were on the
+   * wrong operation:
+   *
+   * 1. **The cost was on the hot path.** A write happens per keystroke and per
+   *    telemetry frame; `undo()` is a human gesture. Recording an entry is
+   *    O(depth) and nearly free since structural sharing landed (50 writes over
+   *    10,000 rows: 0.04 ms). The comparator is the expensive part, so a
+   *    potentially O(state) predicate ran per write to avoid something that
+   *    costs almost nothing.
+   * 2. **It was irreversible.** A skipped entry never existed. A wrong predicate
+   *    lost history permanently. Filtering at read time is a view over complete
+   *    data — change the predicate, get different navigation, lose nothing.
+   * 3. **One policy for every consumer.** An undo button, a devtools panel and an
+   *    audit view had to share a single filter fixed at record time.
+   * 4. **It was a documented foot-gun.** "A careless comparator is an O(state)
+   *    walk per write" is no longer expressible: a careless predicate now costs
+   *    one slow `undo()`, not a slow app.
+   * 5. **Coalescing was impossible.** Merging keystrokes into one word needs a RUN
+   *    of entries, and at write N you cannot know N+1 is coming. Discarding at
+   *    write time forecloses it by construction.
+   *
+   * ## The rule
+   *
+   * Walk back while the transition INTO the state being left is uninteresting.
+   * If `E2 -> E3` is skippable then E2 and E3 are the same state to the user, so
+   * undoing from E3 must not land on E2 — it lands on the first state the user
+   * would recognise as different.
+   *
+   * Index 0 is never skipped past: the initial state is always a valid
+   * destination, or undo could refuse to move at all.
+   */
+  private skipsBackward(from: number): number {
+    const skip = this.config.shouldSkip;
+    let j = from - 1;
+    if (!skip) return j;
+    while (j > 0 && skip(this.history[j].state, this.history[j + 1].state)) {
+      j--;
+    }
+    return j;
+  }
+
+  /** Mirror of `skipsBackward` for `redo()`. */
+  private skipsForward(from: number): number {
+    const skip = this.config.shouldSkip;
+    const last = this.history.length - 1;
+    let j = from + 1;
+    if (!skip) return j;
+    while (j < last && skip(this.history[j - 1].state, this.history[j].state)) {
+      j++;
+    }
+    return j;
   }
 
   /**
@@ -274,7 +333,7 @@ class TimeTravelManager<T> {
       return false;
     }
 
-    this.currentIndex++;
+    this.currentIndex = this.skipsForward(this.currentIndex);
     const entry = this.history[this.currentIndex];
     this.restoreState(entry.state);
     return true;
@@ -407,7 +466,6 @@ class TimeTravelManager<T> {
  * ```
  */
 
-
 /**
  * @internal Retained collection pointers above which history is worth a word.
  *
@@ -520,7 +578,9 @@ export function timeTravel(
   config: TimeTravelConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
   const { enabled = true } = config;
-  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
+  const enhancerFn = <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & TimeTravelMethods<T> => {
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods<T> = {
@@ -693,7 +753,10 @@ export function timeTravel(
     // `enumerable: false`. They were silently dropped, so the builder that
     // wraps this enhanced tree found no method to forward to and returned an
     // empty result — `updateAndReport({count:1})` returned [] and never wrote.
-    copyTreeProperties(tree as unknown as object, enhancedTree as unknown as object);
+    copyTreeProperties(
+      tree as unknown as object,
+      enhancedTree as unknown as object
+    );
 
     // Define new .with() method that passes enhancedTree (not the original tree)
     // to subsequent enhancers. This is critical for preserving the enhancer chain.
@@ -745,8 +808,9 @@ export function timeTravel(
       () => timeTravelManager.pause();
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['resumeRecording'] =
       () => timeTravelManager.resume();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['isRecordingPaused'] =
-      () => timeTravelManager.isPaused();
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)[
+      'isRecordingPaused'
+    ] = () => timeTravelManager.isPaused();
 
     // Expose internal manager for advanced tooling / demo usage
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =

@@ -13,7 +13,20 @@ is in the linked audits.
 
 ---
 
-## 1. Move semantic history filtering from write-time to read-time
+## ~~1. Move semantic history filtering from write-time to read-time~~ — DONE
+
+Implemented. `shouldSkip` no longer runs in `addEntry`; entries are retained and
+`undo()`/`redo()` skip via `skipsBackward()`/`skipsForward()`. The O(1) reference
+dedup stays on the write path. 1,087 core tests pass, 32/32 gates.
+
+**What still follows from it**, and is not done: labelling and coalescing are now
+_possible_ — a complete history with changed-path metadata is what they need — but
+neither is built. `transaction(label, fn)` should be designed against the new shape
+rather than the old one.
+
+Original reasoning, kept because it is the argument for the next two:
+
+### 1. Move semantic history filtering from write-time to read-time
 
 **The change.** The write path keeps only the O(1) reference-identity dedup it
 already has. Everything semantic — skip, group, label, coalesce — moves to read
