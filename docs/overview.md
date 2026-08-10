@@ -111,7 +111,7 @@ point is ~247KB, which is informational only — no consumer ships all of it.
 
 ### Frequency weighting system
 
-Performance benchmarks use research-based frequency weighting to reflect real-world usage patterns:
+Performance benchmarks can weight each scenario by how often the maintainer judges that operation to occur:
 
 - **Maintainer-estimated multipliers**: hand-chosen judgement calls, not survey findings — see [the disclosure](performance/frequency-weighting-system.md#where-these-numbers-come-from)
 - **Neutral comparison available**: the `equal` preset sets every weight to 1.0, which is the setting to use when comparing libraries

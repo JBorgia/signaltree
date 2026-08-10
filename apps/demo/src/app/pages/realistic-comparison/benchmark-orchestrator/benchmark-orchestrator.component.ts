@@ -3711,7 +3711,7 @@ export class BenchmarkOrchestratorComponent
       // Production configurations
     };
 
-    // Apply research-based weights with smart category adjustments
+    // Apply the maintainer-estimated weights, with category adjustments
     this.testCases = this.testCases.map((testCase) => {
       let baseWeight = maintainerEstimatedWeights[testCase.id] || 1.0;
 

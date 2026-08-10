@@ -279,7 +279,7 @@ pnpm nx serve demo --port 4200
 
 ### 3. Compare with Other Frameworks
 
-- Use the **Benchmark Orchestrator** page to run calibrated, device-dependent comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf) with **research-based frequency weighting**. Export CSV/JSON for sharing instead of quoting fixed numbers.
+- Use the **Benchmark Orchestrator** page to run calibrated, device-dependent comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf) with optional **frequency weighting** (maintainer estimates — use the `equal` preset for a neutral comparison). Export CSV/JSON for sharing instead of quoting fixed numbers.
 
 ## 🔍 Code Quality & Testing
 
@@ -318,7 +318,7 @@ node scripts/consolidated-bundle-analysis.js
 - **[Main Documentation](../../README.md)**: Complete SignalTree overview
 - **[Overview & Specifications](../../docs/overview.md)**: Consolidated feature and spec documentation
 - **[Performance Metrics](../../docs/performance/metrics.md)**: Methodology and benchmark results
-- **[Frequency Weighting System](../../docs/performance/frequency-weighting-system.md)**: Research-based weight methodology and implementation
+- **[Frequency Weighting System](../../docs/performance/frequency-weighting-system.md)**: where the weights come from, and why they are estimates
 - **[Bundle Optimization](../../docs/performance/bundle-optimization.md)**: Analysis and optimization strategies
 
 ## 🎉 What You'll Experience

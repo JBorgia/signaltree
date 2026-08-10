@@ -12,7 +12,7 @@ Traditional performance benchmarks often treat all operations equally, but in re
 - Others (like time-travel debugging) are used rarely
 - Production setups are different from development configurations
 
-The frequency weighting system addresses this by applying research-based multipliers to each test scenario, providing **real-world weighted performance scores** that better reflect how libraries perform in typical applications.
+The frequency weighting system addresses this by applying maintainer-estimated multipliers to each test scenario. These are judgement calls, not measurements — read [Where these numbers come from](#where-these-numbers-come-from) before quoting any weighted score.
 
 ## Where these numbers come from
 
@@ -190,9 +190,9 @@ Visual representation of active frequency weights:
 
 ### 2. **Smart Weight Tools**
 
-One-click research-based weight application:
+One-click preset application:
 
-- **🧠 Apply Research-Based Weights** button
+- **🧠 Apply Suggested Weights** button, captioned in the UI as "Based on the weighting assumptions used by this page"
 - Automatic category-based adjustments
 - Transparency about weight sources
 
@@ -246,7 +246,7 @@ All weights are:
 ### Running Weighted Benchmarks
 
 1. **Select Test Scenarios**: Choose relevant test cases for your use case
-2. **Apply Weight Preset**: Use research-based weights or manual adjustment
+2. **Apply Weight Preset**: Use the suggested weights, `equal` for a neutral comparison, or adjust by hand
 3. **Run Benchmarks**: Execute performance tests with calibrated environment
 4. **Analyze Weighted Results**: Review impact analysis and ranking changes
 5. **Export Results**: Save weighted analysis for team discussion
