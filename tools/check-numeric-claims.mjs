@@ -55,6 +55,12 @@ const SURFACES = [
   ...expandDir('packages', (d) => join('packages', d, 'README.md')),
   ...expandDir('docs/compare', null, 'docs/compare'),
   ...expandDir('docs/performance', null, 'docs/performance'),
+  // Added when a new guide carrying measured figures turned out not to be
+  // scanned at all. Widening it surfaced 27 pre-existing ungenerated figures
+  // across six other guides — a whole surface directory nothing was checking.
+  // The backlog went 144 -> 171 and that is the honest number: a larger honest
+  // backlog beats a smaller dishonest one, and the ratchet stops it growing.
+  ...expandDir('docs/guides', null, 'docs/guides'),
 ];
 
 function expandDir(dir, mapper, listDir) {

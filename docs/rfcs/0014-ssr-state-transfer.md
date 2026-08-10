@@ -198,12 +198,13 @@ put a mode argument in front of every caller who has no opinion about it. The
 whole path is synchronous, and a test asserts the mode does not leak into the
 next `deserialize`.
 
-**Loader-backed `entityMap` is reasoned but NOT TESTED.** It carried the same
-`mode === 'rehydrate'` decline and now falls through to accept under `transfer`.
-The argument is identical to `asyncSource`'s and the code change is one comment
-plus an unchanged condition — but no test exercises a loader-backed collection
-across the boundary, so it is a claim, not a result. Marked here rather than
-counted as done.
+**Loader-backed `entityMap` — now TESTED, no longer a claim.** It carried the
+same `mode === 'rehydrate'` decline and now accepts under `transfer`. Pinned in
+`hydrate-decisions.spec.ts` alongside the existing decline tests: a
+loader-backed collection whose own loader has already produced 1 row accepts a
+2-row `transfer` payload and reports no decline, while the same payload under
+`rehydrate` is still refused and the row count stays at 1. The contrast is
+asserted in a third test so neither half can drift alone.
 
 ---
 

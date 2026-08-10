@@ -214,3 +214,71 @@ describe('reason ships, detail folds', () => {
     expect(events[0].reason).toBeDefined();
   });
 });
+
+/**
+ * RFC 0014 — the same two markers under `transfer`.
+ *
+ * `rehydrate` and `transfer` both cross a process boundary. They differ in
+ * whether the payload is OLDER or NEWER than whatever this process can produce,
+ * and a marker that owns a live source has to answer them differently. These
+ * are the accept-side counterparts of the declines above.
+ */
+describe('RFC 0014 — `transfer` accepts what `rehydrate` declines', () => {
+  it('a loader-backed entityMap ACCEPTS a server payload', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const tree = signalTree({
+      r: entityMap<{ id: number }, number>({
+        selectId: (x) => x.id,
+        load: loader(async () => [{ id: 9 }]),
+      }),
+    });
+    void tree.$.r;
+    await settle();
+    expect(tree.$.r.count()).toBe(1); // the local loader ran
+
+    const { events, off } = collect();
+    hydrateMarkerNode(tree.$.r, { all: [{ id: 1 }, { id: 2 }] }, 'transfer');
+    off();
+
+    // Accepted: no decline reported, and the rows actually landed.
+    expect(events.filter((e) => e.decision === 'declined')).toHaveLength(0);
+    expect(tree.$.r.count()).toBe(2);
+  });
+
+  it('asyncSource ACCEPTS a server payload', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const tree = signalTree({ s: asyncSource({ load: async () => 'SOURCE' }) });
+    void tree.$.s;
+    await settle();
+
+    const { events, off } = collect();
+    hydrateMarkerNode(tree.$.s, { value: 'FROM SERVER' }, 'transfer');
+    off();
+
+    expect(events.filter((e) => e.decision === 'declined')).toHaveLength(0);
+    expect((tree.$.s as unknown as () => unknown)()).toBe('FROM SERVER');
+  });
+
+  it('...and `rehydrate` still declines both — the contrast is the point', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const tree = signalTree({
+      r: entityMap<{ id: number }, number>({
+        selectId: (x) => x.id,
+        load: loader(async () => [{ id: 9 }]),
+      }),
+      s: asyncSource({ load: async () => 'SOURCE' }),
+    });
+    void tree.$.r;
+    void tree.$.s;
+    await settle();
+
+    const { events, off } = collect();
+    hydrateMarkerNode(tree.$.r, { all: [{ id: 1 }, { id: 2 }] }, 'rehydrate');
+    hydrateMarkerNode(tree.$.s, { value: 'FROM STORAGE' }, 'rehydrate');
+    off();
+
+    expect(events.filter((e) => e.decision === 'declined')).toHaveLength(2);
+    expect(tree.$.r.count()).toBe(1);
+    expect((tree.$.s as unknown as () => unknown)()).toBe('SOURCE');
+  });
+});
