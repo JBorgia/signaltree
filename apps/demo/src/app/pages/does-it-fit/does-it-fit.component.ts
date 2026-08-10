@@ -387,7 +387,12 @@ export class DoesItFitComponent {
         },
         {
           capability: 'SSR / transfer state',
-          signaltree: 'no',
+          // 14.0.0: `HydrateMode` gained `transfer` and `deserialize()` gained
+          // `{ transfer: true }`, so a server payload is applied instead of
+          // being declined by markers that (correctly) distrust a `rehydrate`.
+          // Partial, not full: you still wire Angular's `TransferState`
+          // yourself — nothing here ships an automatic SSR bridge.
+          signaltree: 'partial',
           ngrxSignals: 'no',
           elf: 'no',
           ngxs: 'partial',

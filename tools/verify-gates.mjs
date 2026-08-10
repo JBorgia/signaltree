@@ -506,7 +506,8 @@ const GATES = [
   {
     name: 'state-scale',
     releaseOnly: true,
-    covers: 'the O(1)-write thesis, measured against elf on both axes',
+    covers:
+      'the O(1)-write thesis, measured against @ngrx/signals and elf on both axes',
     cmd: ['node', 'tools/bench-state-scale.mjs', '--quick'],
     needsBuild: true,
     // Every arm asserts its write landed. Breaking the signaltree write makes

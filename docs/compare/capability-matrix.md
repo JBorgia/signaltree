@@ -100,9 +100,28 @@ deliberate declines, and the analysis below says which and why.
 | **Plugin architecture with a public contract**  |      🟡       |       ✅        | ✅  |  ✅   |  ✅  |
 | **Global unhandled-error hook**                 | ✅ _(14.0.0)_ |       ❌        | ❌  |  ❌   |  ✅  |
 | Testing utilities                               |      🟡       |       🟡        | 🟡  |  ✅   |  ✅  |
-| SSR / transfer state                            |      ❌       |       ❌        | ❌  |  ❌   |  🟡  |
+| SSR / transfer state                            | 🟡 _(14.0.0)_ |       ❌        | ❌  |  ❌   |  🟡  |
 | Diagnostics with stable codes                   |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
 | **Granular signals for arbitrary NESTED state** |      ✅       |       ❌        | ❌  |  ❌   |  ❌  |
+
+**SSR / transfer state, and why it is 🟡 rather than ✅ or ❌.** This row read ❌
+for SignalTree until 14.0.0 had already shipped the thing it denies. `HydrateMode`
+gained a fourth value, `transfer`, and `deserialize()` gained `{ transfer: true }`,
+because `rehydrate` was covering two situations that want opposite answers: a
+`localStorage` payload may be days old and a marker is right to decline it, while
+a payload that crossed a process boundary this request is exactly what you want
+applied. Only the call site knows which happened, so the mode is passed in.
+
+It stays 🟡 because you still wire Angular's `TransferState` yourself — the mode
+and the recipe ship, an automatic SSR bridge does not. See
+[ssr-and-hydration.md](../guides/ssr-and-hydration.md); the payload figures come
+from `node tools/bench-ssr-payload.mjs`.
+
+The correction is recorded rather than quietly applied because it is the second
+time this file has denied a shipped capability. `check-release-claims.mjs` exists
+because an earlier revision carried ❌ for five capabilities the same release had
+shipped, and it had been edited twice after they landed. A cell that understates
+is not the safe direction — it is simply the direction nobody audits.
 
 ---
 
