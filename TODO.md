@@ -65,6 +65,31 @@ nobody has measured.
 
 Derivation: [undo-business-and-ux-cases.md](docs/audits/2026-08/undo-business-and-ux-cases.md)
 
+## 1b. `setOne()` — and fix the docstring that already promises it
+
+`entity-signal.ts:384-385` documents the entity-node callable as "full entity
+replace via updateOne". `:414` calls `updateOne`, which merges at `:875`
+(`{ ...entity, ...transformedChanges }`). **The doc promises replace; the code
+merges.** The updater form is worse — the updater returns a full `E`, spread as
+`Partial<E>`, so an updater that REMOVES a key leaves the old value in place
+silently.
+
+Fix the docstring, then add `setOne(entity)`: O(1), replace-not-merge,
+position-preserving. There is no replace path anywhere today, so the only
+workaround is `setAll(all().map(...))` per single-entity write — full-collection
+work to change one row, which is the anti-pattern verbatim.
+
+Raised by the v3 team; screened in
+[v3-requests-against-the-ethos.md](docs/audits/2026-08/v3-requests-against-the-ethos.md).
+
+## 1c. A diagnostic for `changeId` + held nodes
+
+`changeId` drops the old per-entity signal (`entity-signal.ts:768-770`) — correct,
+and deliberately so — but nothing warns, and a held node just resolves `undefined`.
+A long-lived `selectById(id)` closing over the old id breaks silently. Cheapest of
+the v3 asks, and it protects "diagnostics with stable codes", which is one of the
+six capabilities no competitor has.
+
 ## 2. Record collection mutations
 
 `addOne` / `updateOne` / `removeOne` create no history entry. Verified: three
