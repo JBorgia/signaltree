@@ -1,5 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  OnDestroy,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
 
@@ -376,7 +382,7 @@ export class RealtimeDemoComponent implements OnDestroy {
   }
 
   clearMessages() {
-    this.store.$.messages.removeAll();
+    this.store.$.messages.clear();
     this.logEvent('Cleared all messages');
   }
 

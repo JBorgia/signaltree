@@ -48,9 +48,9 @@ import { asReadonly } from './readonly';
 import type { ISignalTree } from './types';
 
 // --- compile-time assertion helpers -----------------------------------------
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <
-  T
->() => T extends B ? 1 : 2
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
+  ? 1
+  : 2
   ? true
   : false;
 type Expect<T extends true> = T;
@@ -72,13 +72,20 @@ const tree = signalTree({
   selectedId: null as number | null,
   branch: { leaf: 'x', deep: { n: 1 } },
   users: entityMap<User, number>(),
-  cached: entityMap<User, number>({ load: loader(() => Promise.resolve([] as User[])) }),
+  cached: entityMap<User, number>({
+    load: loader(() => Promise.resolve([] as User[])),
+  }),
   // M3 fixture shape: loading entityMap that a later .derived() merges INTO.
-  plants: entityMap<User, number>({ load: loader(() => Promise.resolve([] as User[])) }),
+  plants: entityMap<User, number>({
+    load: loader(() => Promise.resolve([] as User[])),
+  }),
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
   profile: form<Profile>({ initial: { name: '', email: '' } }),
-  reports: asyncSource<User[]>({ initial: [], load: () => Promise.resolve([]) }),
+  reports: asyncSource<User[]>({
+    initial: [],
+    load: () => Promise.resolve([]),
+  }),
   search: asyncQuery<string, User[]>({
     initialResult: [],
     query: () => Promise.resolve([]),
@@ -124,7 +131,9 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<RO$['count'], 'update'>>,
   // Branch accessor keeps only the zero-arg read call signature…
   Expect<Equal<Parameters<RO$['branch']>, []>>,
-  Expect<Equal<ReturnType<RO$['branch']>, { leaf: string; deep: { n: number } }>>,
+  Expect<
+    Equal<ReturnType<RO$['branch']>, { leaf: string; deep: { n: number } }>
+  >,
   // …and its children recurse into the readonly view.
   Expect<Equal<RO$['branch']['leaf'], Signal<string>>>,
   Expect<Equal<RO$['branch']['deep']['n'], Signal<number>>>,
@@ -146,13 +155,15 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROUsers, 'addOne'>>,
   Expect<NotOffered<ROUsers, 'upsertOne'>>,
   Expect<NotOffered<ROUsers, 'updateWhere'>>,
-  Expect<NotOffered<ROUsers, 'removeAll'>>,
+  Expect<NotOffered<ROUsers, 'clear'>>,
   Expect<NotOffered<ROUsers, 'setAll'>>,
   Expect<NotOffered<ROUsers, 'clear'>>,
   Expect<NotOffered<ROUsers, 'tap'>>,
   Expect<NotOffered<ROUsers, 'intercept'>>,
   // byId: same node at runtime, re-signed without write reachability.
-  Expect<Equal<ReturnType<ROUsers['byId']>, ReadonlyEntityNode<User> | undefined>>,
+  Expect<
+    Equal<ReturnType<ROUsers['byId']>, ReadonlyEntityNode<User> | undefined>
+  >,
   Expect<Equal<ROEntityNode['name'], Signal<string>>>,
   Expect<Equal<ROEntityNode['tags'], Signal<string[]>>>, // arrays stay atomic
   Expect<Equal<ROEntityNode['address']['city'], Signal<string>>>,
@@ -198,7 +209,12 @@ export type _ReadonlyViewChecks = [
   Expect<Equal<ReturnType<ROForm['data']>, Profile>>,
   Expect<Equal<ReturnType<ROForm>, Profile>>, // callable read kept
   Expect<Equal<ROForm['valid'], Signal<boolean>>>,
-  Expect<Equal<ROForm['errors'], Signal<Partial<Record<keyof Profile, string | null>>>>>,
+  Expect<
+    Equal<
+      ROForm['errors'],
+      Signal<Partial<Record<keyof Profile, string | null>>>
+    >
+  >,
   Expect<NotOffered<ROForm, 'set'>>,
   Expect<NotOffered<ROForm, 'patch'>>,
   Expect<NotOffered<ROForm, 'submit'>>,
@@ -230,8 +246,7 @@ export type _ReadonlyViewChecks = [
   // input is a WritableSignal on the full surface — demoted here.
   Expect<Equal<ROQuery['input'], Signal<string | undefined>>>,
   Expect<NotOffered<ROQuery, 'rerun'>>,
-  Expect<NotOffered<ROQuery, 'reset'>>,
-
+  Expect<NotOffered<ROQuery, 'reset'>>
 ];
 
 // `asReadonly` also accepts the minimal `ISignalTree`/`SignalTree` shape

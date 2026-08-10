@@ -98,7 +98,7 @@ export class MarkersDemoComponent {
   }
 
   resetUsers() {
-    this.store.$.users.entities.removeAll();
+    this.store.$.users.entities.clear();
     this.store.$.users.status.reset();
   }
 

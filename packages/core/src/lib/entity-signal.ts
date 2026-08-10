@@ -1310,10 +1310,6 @@ export function createEntitySignal<
       updateSignals();
     },
 
-    removeAll(): void {
-      api.clear();
-    },
-
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
       // Clear storage without triggering intermediate signal updates
       storage.clear();

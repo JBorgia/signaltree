@@ -1,3 +1,54 @@
+## 15.0.0 (unreleased)
+
+### BREAKING
+
+- **The entity-node callable REPLACES instead of merging.** `byId(id)(value)` and
+  `byId(id)(updater)` now assign the whole entity. They always documented replace —
+  `entity-signal.ts` said "full entity replace via updateOne" while the code called
+  `updateOne`, which spreads — so the code changed to match the contract.
+
+  The updater form is why there was no alternative: an updater returns a full `E`, so
+  under merge semantics REMOVING a key is impossible to express, because the spread
+  puts the old value straight back. Merge cannot host that signature.
+
+  Migrating: if you relied on the merge, call `updateOne(id, changes)`, which is
+  unchanged and is the patch half of the surface.
+
+- **`removeAll()` is removed from `entityMap`.** It was a pure alias — its body was
+  `api.clear()`. Use `clear()`. One operation, one name.
+
+### Added
+
+- **`replaceOne(id, entity)`** on `entityMap` — the missing half of `updateOne`.
+  `updateOne` spreads and therefore cannot remove a key; before this the only replace
+  path was `setAll(all().map(...))`, whole-collection work to change one row.
+  `replaceOne` is O(1) and position-preserving.
+
+  It takes the id explicitly and deliberately: a `setOne(entity)` deriving the key via
+  `selectId(entity)` would write to whatever slot the entity's own id field names, and
+  `changeId` can leave `entity.id` disagreeing with the storage key — a silent
+  wrong-slot write. A test pins that drift so the reason survives.
+
+- **[ST2031]** — a node held from `byId(id)` and read after `changeId` retired that id
+  resolves `undefined` and always will. `changeId` drops the old per-entity signal on
+  purpose (aliasing would share one signal with a future `addOne` of the retired id, a
+  worse failure), so this is correct behaviour that was impossible to debug from the
+  call site. Dev-only, once per retired id.
+
+### Fixed
+
+- **`coalesce()` no longer silently drops `.update()` calls.** Updaters were deferred
+  under the key `` `${path}:update:${Date.now()}` ``, so two in the SAME millisecond
+  collided on that key and one was discarded. Three `+1` updaters inside one
+  `coalesce()` produced `n = 1` when they ran fast and `n = 3` when spaced 2 ms apart —
+  same code, result decided by machine speed.
+
+  An updater is a read-modify-write and cannot be coalesced at all: keeping only the
+  last of three `+1`s means `+1`. Updaters now apply immediately, after draining any
+  pending coalesced `set` on the same path so they read the value a caller expects.
+  `set` still coalesces, which is sound because the last value wins and none of them
+  read the previous one.
+
 ## 14.0.0 (2026-08-10)
 
 ### BREAKING

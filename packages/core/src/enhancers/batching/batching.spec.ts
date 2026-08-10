@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { signalTree } from '../../lib/signal-tree';
 import { batching, batchingWithConfig } from './batching';
 
 // Helper to create a basic mock tree for unit tests
@@ -397,5 +398,59 @@ describe('batching enhancer', () => {
       // This is implementation-dependent
       expect(enhanced.$ === tree.$).toBe(true);
     });
+  });
+});
+
+describe('coalesce() + update() — no wall-clock data loss (15.0.0)', () => {
+  // BEFORE the fix, updaters were deferred under the key
+  // `${path}:update:${Date.now()}`, so two in the same millisecond collided and
+  // one was silently dropped. Three `+1`s gave n = 1 when fast and n = 3 when
+  // spaced 2ms apart — same code, answer decided by machine speed.
+  it('three +1 updaters in one coalesce apply all three', () => {
+    const tree = signalTree({ n: 0 }).with(batching());
+    tree.coalesce(() => {
+      tree.$.n.update((v) => v + 1);
+      tree.$.n.update((v) => v + 1);
+      tree.$.n.update((v) => v + 1);
+    });
+    expect(tree.$.n()).toBe(3);
+  });
+
+  it('is independent of wall-clock spacing', () => {
+    const spin = (ms: number) => {
+      const start = performance.now();
+      while (performance.now() - start < ms) {
+        /* busy */
+      }
+    };
+    const tree = signalTree({ n: 0 }).with(batching());
+    tree.coalesce(() => {
+      tree.$.n.update((v) => v + 1);
+      spin(2);
+      tree.$.n.update((v) => v + 1);
+    });
+    expect(tree.$.n()).toBe(2);
+  });
+
+  // `set` IS coalescable — last value wins, and none of them read the previous.
+  it('set still coalesces to the final value', () => {
+    const tree = signalTree({ q: '' }).with(batching());
+    tree.coalesce(() => {
+      tree.$.q.set('h');
+      tree.$.q.set('he');
+      tree.$.q.set('hel');
+    });
+    expect(tree.$.q()).toBe('hel');
+  });
+
+  // An updater must see a pending coalesced `set` on its own path, not a stale
+  // value — otherwise mixing the two silently discards the set.
+  it('an updater observes a pending coalesced set on the same path', () => {
+    const tree = signalTree({ n: 0 }).with(batching());
+    tree.coalesce(() => {
+      tree.$.n.set(10);
+      tree.$.n.update((v) => v + 1);
+    });
+    expect(tree.$.n()).toBe(11);
   });
 });

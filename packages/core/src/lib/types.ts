@@ -198,9 +198,7 @@ type ApplyComputedSlices<TMarker, TBase> = TMarker extends {
   ? [LiteralKeys<NonNullable<S>>] extends [never]
     ? TBase
     : TBase & {
-        readonly [P in LiteralKeys<NonNullable<S>>]: Signal<
-          NonNullable<S>[P]
-        >;
+        readonly [P in LiteralKeys<NonNullable<S>>]: Signal<NonNullable<S>[P]>;
       }
   : TBase;
 
@@ -213,7 +211,11 @@ type ApplyComputedSlices<TMarker, TBase> = TMarker extends {
 // Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<
+    infer LE,
+    infer LK,
+    infer LP
+  >
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
@@ -316,7 +318,6 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
 
 /** Cleanup function returned or registered by enhancers. */
 export type EnhancerCleanup = () => void;
-
 
 // Method interfaces
 export interface EffectsMethods<T> {
@@ -765,11 +766,8 @@ export interface EntityMapMarker<E, K extends string | number> {
  *
  * @typeParam P - scope/params type (`void` for the global, parameterless form).
  */
-export interface LoadingEntityMapMarker<
-  E,
-  K extends string | number,
-  P = void
-> extends EntityMapMarker<E, K> {
+export interface LoadingEntityMapMarker<E, K extends string | number, P = void>
+  extends EntityMapMarker<E, K> {
   readonly __hasLoad: true;
   readonly __loadParams?: P;
 }
@@ -941,8 +939,8 @@ export interface EntitySignal<E, K extends string | number = string> {
   removeOne(id: K, opts?: MutationOptions): void;
   removeMany(ids: K[], opts?: MutationOptions): void;
   removeWhere(predicate: (entity: E) => boolean): number;
+  /** Empty the collection. There is no `removeAll` alias — this is the one name. */
   clear(): void;
-  removeAll(): void;
   setAll(entities: E[], opts?: AddOptions<E, K>): void;
 
   // Hooks
@@ -1059,7 +1057,11 @@ export interface DevToolsConfig {
  * the full deep inference.
  */
 export type DeepEntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<
+    infer LE,
+    infer LK,
+    infer LP
+  >
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
@@ -1086,7 +1088,11 @@ export type DeepEntityAwareTreeNode<T> = {
  * `TypedSignalTree<T>` (see below) or use `DeepEntityAwareTreeNode`.
  */
 export type EntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<
+    infer LE,
+    infer LK,
+    infer LP
+  >
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>

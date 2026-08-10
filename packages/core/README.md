@@ -1364,9 +1364,23 @@ tree.$.products.byId(1)?.name.set('New');    // update single field (interceptor
 tree.$.products.byId(1)?.name.update(n => n.toUpperCase()); // updater
 tree.$.products.byId(1)?.name.asReadonly();  // Signal<string> — read-only view
 
-// Entity-level write via callable (replaces entire entity)
+// MERGE vs REPLACE — two operations, two names (v15)
+tree.$.products.updateOne(1, { price: 899 });   // MERGE: cannot REMOVE a key
+tree.$.products.replaceOne(1, {                  // REPLACE: the only way to remove one
+  id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true,
+});
+tree.$.products.clear();                         // `removeAll()` alias removed in v15
+
+// `replaceOne` takes the id explicitly on purpose. A `setOne(entity)` that derived
+// the key via selectId would write to the wrong slot whenever `changeId` has left
+// `entity.id` disagreeing with the storage key.
+
+// Entity-level write via callable — REPLACES (v15 breaking: it used to merge)
 const node = tree.$.products.byId(1);
 node?.({ id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true });
+node?.((current) => ({ id: current.id, name: current.name.toUpperCase() }));
+// ^ the updater form is WHY this replaces: it returns a full entity, so under merge
+//   semantics dropping a key was impossible to express — the spread put it back.
 
 // Note: writes on a stale node (entity removed) throw "Entity with id X not found"
 // This is consistent with updateOne() and the rest of the mutation API.

@@ -185,13 +185,31 @@ export function batching(
             const originalUpdate = node.update.bind(node);
 
             node.update = (updater: any) => {
+              // An updater is a read-modify-write, so it CANNOT be coalesced:
+              // `update(v => v + 1)` three times means +3, and keeping only the
+              // last one means +1. Coalescing is sound for `set` (last value wins
+              // and none of them read the previous) and unsound for `update` by
+              // construction.
+              //
+              // This used to defer updaters into `coalescedUpdates` under the key
+              // `${path}:update:${Date.now()}`, which lost data on a wall-clock
+              // coin flip: two updaters in the SAME millisecond collided on that
+              // key and one was silently discarded. MEASURED before the fix —
+              // three `+1` updates inside one `coalesce()` produced n = 1 when
+              // they ran fast and n = 3 when spaced 2 ms apart. Same code, answer
+              // decided by machine speed.
+              //
+              // Apply immediately instead, after draining any pending coalesced
+              // `set` for this same path so the updater reads the value a caller
+              // would expect rather than a stale one.
               if (inCoalesce) {
-                coalescedUpdates.set(`${path}:update:${Date.now()}`, () =>
-                  originalUpdate(updater)
-                );
-              } else {
-                originalUpdate(updater);
+                const pendingSet = coalescedUpdates.get(path);
+                if (pendingSet) {
+                  coalescedUpdates.delete(path);
+                  pendingSet();
+                }
               }
+              originalUpdate(updater);
               if (!inBatch) {
                 scheduleNotification();
               }

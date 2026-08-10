@@ -60,7 +60,9 @@ describe('addMany', () => {
 
   it('a duplicate id throws in the default strict mode', () => {
     const t = mk();
-    expect(() => t.$.r.addMany([{ id: 2, name: 'dup', done: false }])).toThrow();
+    expect(() =>
+      t.$.r.addMany([{ id: 2, name: 'dup', done: false }])
+    ).toThrow();
   });
 
   it('leaves existing rows untouched — a held node survives', () => {
@@ -165,14 +167,20 @@ describe('removeMany / removeWhere / removeOne', () => {
     expect(kept?.().name).toBe('b');
   });
 
-  it('clear and removeAll both empty the collection', () => {
+  it('clear empties the collection', () => {
     const a = mk();
+    expect(a.$.r.count()).toBeGreaterThan(0);
     a.$.r.clear();
     expect(a.$.r.count()).toBe(0);
+    expect(a.$.r.all()).toEqual([]);
+    expect(a.$.r.empty()).toBe(true);
+  });
 
-    const b = mk();
-    b.$.r.removeAll();
-    expect(b.$.r.count()).toBe(0);
+  // `removeAll()` was a pure alias — its body was `api.clear()`. Removed in
+  // 15.0.0: one operation, one name.
+  it('removeAll no longer exists', () => {
+    const a = mk() as unknown as { $: { r: Record<string, unknown> } };
+    expect(a.$.r['removeAll']).toBeUndefined();
   });
 });
 
