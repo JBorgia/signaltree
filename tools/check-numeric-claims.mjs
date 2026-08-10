@@ -112,6 +112,26 @@ const EXEMPT = [
     reason:
       'a platform version, not a measurement. version-claims gates these.',
   },
+  {
+    match: /updateOptimized|@signaltree\/enterprise|enterprise` is no longer/,
+    reason:
+      'measured against @signaltree/enterprise before it was removed in ' +
+      '14.0.0. The package is unpublished and imports symbols that moved to ' +
+      '/authoring, so the benchmark cannot be re-run and NO generator can ' +
+      'back these — they are the historical justification for a removal, not ' +
+      'a live claim. Kept because deleting the numbers would leave "we removed ' +
+      'it because it was slower" with nothing behind it. Context: ' +
+      'docs/archive/BENCHMARK_ANALYSIS-enterprise-era.md.',
+  },
+  {
+    match: /debounceMs|default(s to)? \d+ ?ms|\d+ ?ms poll|updateTime:|Warn if updates take/,
+    reason:
+      'a documented default or a configured threshold, not a measurement. No ' +
+      'generator can produce it because nothing measured it — the value IS ' +
+      'the contract, and changing it changes behaviour rather than correcting ' +
+      'a figure. Gating these would train readers to add a fake citation to a ' +
+      'constant.',
+  },
 ];
 
 const files = SURFACES.filter((f) => existsSync(join(ROOT, f)));

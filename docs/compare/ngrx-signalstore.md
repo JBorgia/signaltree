@@ -296,21 +296,38 @@ was corrected for elsewhere in this repo.
 
 ### The row we used to concede, and now cannot
 
+Reproduce this section with `node tools/bench-vs-signalstore.mjs`.
+
 The table above previously reported the whole-state read as **2.4x slower** for
 SignalTree, and reasoned from it: a POJO store returns state by reference, which
 SignalTree cannot, because no plain object exists until one is built. The
 reasoning is still sound. The measurement is not — re-run with interleaved arms
-it comes out as **noise**, with the SignalStore arm's own round-to-round spread
-(±6.2 µs) larger than the gap between the two.
+it comes out as **noise**, with each arm's own round-to-round spread larger than
+the gap between them. The harness prints `NOISE` for that row rather than a
+ratio, so it cannot be quoted by accident.
 
 That is not a SignalTree win. It is an absence of a result, and it is recorded
 here rather than quietly deleted, because a concession that turns out to be
 unmeasured is exactly as wrong as a boast that does.
 
 **The collection result depends entirely on using `entityMap`.** Modelling the
-same collection as a plain array leaf measures 49.80 ms against SignalStore's
-46.56 ms — parity, not orders of magnitude. Core warns about that shape at construction
-(ST2018), because nothing in the code makes it look like a 30x decision.
+same collection as a plain array leaf costs two orders of magnitude more than
+`entityMap` — 46.02 ms against 0.45 ms over 1000 updates to a 50,000-row
+collection (`node tools/bench-array-leaf.mjs --n 50000 --updates 1000`). Core
+warns about that shape at construction (ST2018), because nothing in the code
+makes it look like a hundred-fold decision.
+
+> This paragraph used to say the array leaf reached **parity** with SignalStore,
+> at 49.80 ms against 46.56 ms. It does not. Measured with
+> `@ngrx/signals/entities`, SignalStore is 734.87 ms at that fixture — sixteen
+> times the array leaf, because `updateEntity` spreads a 50,000-key object per
+> write. The 46.56 ms figure is within noise of the array-leaf number it was
+> being compared against, which is what a naive `.map()` arm measures; that arm
+> was corrected in `bench-vs-signalstore.mjs` and this paragraph was not.
+> Correcting it happens to favour SignalTree, which is the direction that
+> deserves more scrutiny, not less — so the number was cross-checked against
+> `bench-vs-signalstore.mjs`, which independently measures SignalStore at
+> ~720 µs per single update at 50,000 rows and agrees.
 
 Do not quote a benchmark that forces SignalTree to perform an immutable array
 rebuild "for fairness" — that measures SignalTree impersonating SignalStore,

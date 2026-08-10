@@ -275,21 +275,38 @@ failure (see [RFC 0004](../rfcs/0004-v12-optimal-iteration.md) §3 V-P4).
 ## Why not just use an array? (ST2018)
 
 This is the most expensive mistake available here, and it does not look like a
-mistake — `rows: Row[]` is the obvious thing to write. Same task, 1000 updates
-to a 50,000-row collection with a dependent read, measured in isolated
-processes:
+mistake — `rows: Row[]` is the obvious thing to write.
 
-|                               | time        |
-| ----------------------------- | ----------- |
-| `entityMap`                   | **1.63 ms** |
-| plain array leaf              | 49.80 ms    |
-| NgRx SignalStore `patchState` | 46.56 ms    |
+Reproduce with `node tools/bench-array-leaf.mjs --n 50000 --updates 1000`:
+1000 single-row updates over a 50,000-row collection, arms interleaved, median
+of 9, fixture rebuilt every round.
 
-An array leaf lands at **parity with the immutable store** SignalTree otherwise
-beats by ~28x, because every update rebuilds the array (`slice()` alone is
-~41 ms of that 49.80 ms) and every equality check walks it. `entityMap` owns
-each entity separately: the write is O(1) and `byId(id)` is a per-entity signal
-with a fan-out of exactly 1.
+|                                 | time        | vs `entityMap` |
+| ------------------------------- | ----------- | -------------- |
+| `entityMap`                     | **0.45 ms** | —              |
+| plain array leaf                | 46.02 ms    | ~103x          |
+| — of which `slice()` + spread   | 43.20 ms    |                |
+| NgRx SignalStore `updateEntity` | 734.87 ms   | ~1640x         |
+
+An array leaf costs **two orders of magnitude** more than `entityMap`, and
+almost all of it is the copy: `slice()` plus the object spread is 43.20 ms of
+the 46.02 ms. Every update rebuilds the array and every equality check walks it.
+`entityMap` owns each entity separately — the write is O(1) and `byId(id)` is a
+per-entity signal with a fan-out of exactly 1.
+
+Quote the absolutes and the collection size, never the multiplier alone: both
+rebuilding arms are quadratic in N, so the ratio is a fact about the fixture.
+
+> **This table previously claimed the array leaf reached "parity with the
+> immutable store", at 49.80 ms against SignalStore's 46.56 ms.** The array-leaf
+> half reproduces; the SignalStore half does not. Measured with
+> `@ngrx/signals/entities` — its own best idiom — SignalStore is 734.87 ms here,
+> sixteen times the array leaf, because `updateEntity` spreads a 50,000-key
+> object per write while `slice()` copies a dense array. The old 46.56 ms sits
+> within noise of the array-leaf figure beside it, which is what a naive
+> `.map()` arm measures; that arm was corrected in `bench-vs-signalstore.mjs`
+> and this table was never updated to match. It also had no generator, which is
+> why nothing caught it. `tools/bench-array-leaf.mjs` now exists so it can.
 
 Since 13.5.0 core warns about this at construction (**ST2018**) when a leaf
 holds 32+ objects with a stable `id`. It is deliberately quiet otherwise — small
@@ -312,7 +329,8 @@ const tree = signalTree({
 ## Anti-patterns
 
 - **Don't** model a per-entity-updated collection as a plain array leaf — see
-  ST2018 above. This is the one that costs 30x.
+  ST2018 above. At 50,000 rows that is ~103x (`node tools/bench-array-leaf.mjs
+--n 50000 --updates 1000`), and it grows with the collection.
 - **Don't** stack TanStack Query / a second document cache alongside `entityMap` — you'd get the
   triple-cache duplication `entityMap`'s cache-aware loading exists to remove.
 - **Don't** put conditional-GET logic in the loader (see §3).
