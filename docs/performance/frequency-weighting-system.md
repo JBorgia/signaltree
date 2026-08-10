@@ -91,20 +91,23 @@ export interface BenchmarkTestCase {
 
 #### 2. **Smart Weight Adjustment** (`benchmark-orchestrator.component.ts`)
 
-Research-based automatic weight application:
+How the presets are applied:
 
 ```typescript
 applySmartWeightAdjustments() {
-  const researchBasedWeights: Record<string, number> = {
-    'selector-memoization': 2.9, // 89% of apps use computed/derived state heavily
-    'deep-nested': 2.7, // 82% of apps have complex nested state
-  'async-via-middleware': 2.3, // 74% of apps heavily use async operations (handled via middleware)
-    'production-setup': 3.0, // 100% of apps eventually go to production
-    'concurrent-updates': 0.6, // 18% of apps need high-frequency updates
-    // ... complete research-based mappings
+  const maintainerEstimatedWeights: Record<string, number> = {
+    'selector-memoization': 2.9, // derived state is judged near-universal
+    'deep-nested': 2.7,          // forms and settings trees
+    'production-setup': 3.0,     // every app ships eventually
+    'concurrent-updates': 0.6,   // real-time and gaming specific
+    // ...
   };
 }
 ```
+
+Each comment used to carry a percentage of applications — "89% of apps", "82%
+of apps" — matching the tables below. They came from the same absent research.
+The `async-via-middleware` entry is gone with middleware itself in 14.0.0.
 
 #### 3. **Weighted Results Analysis** (`weightedResultsAnalysis` computed)
 
@@ -115,41 +118,48 @@ Comprehensive impact analysis showing:
 - Per-scenario weight impact
 - Statistical significance of weighting
 
-## 📈 Real-World Frequency Weights
+## The weights
 
-### Core Operations (Very High Usage)
+Weights only. The tables below used to carry a "Frequency" column giving each
+scenario a share of applications to the percentage point — 89%, 82%, 74%, 9%,
+6% — and a "Research Basis" column. Those percentages were produced by nothing;
+see [Where these numbers come from](#where-these-numbers-come-from). The weight
+is the maintainer's estimate and the rationale is the reasoning behind it, which
+is all there ever was.
 
-| Scenario                   | Weight | Frequency    | Research Basis                                                      |
-| -------------------------- | ------ | ------------ | ------------------------------------------------------------------- |
-| **Selector/Memoization**   | 2.8    | 89% of apps  | Computed values fundamental to reactive apps                        |
-| **Deep Nested Updates**    | 2.5    | 82% of apps  | Forms, settings, complex UI state                                   |
-| **Production Setup**       | 3.0    | 100% of apps | All apps eventually reach production                                |
-| **Async (via Middleware)** | 2.3    | 74% of apps  | API calls, data loading ubiquitous (handled via middleware helpers) |
-| **Computed Chains**        | 2.2    | 76% of apps  | Reactive computations core pattern                                  |
+### Judged very high
 
-### Common Operations (High Usage)
+| Scenario                 | Weight | Rationale                                    |
+| ------------------------ | ------ | -------------------------------------------- |
+| **Selector/Memoization** | 2.8    | Computed values fundamental to reactive apps |
+| **Deep Nested Updates**  | 2.5    | Forms, settings, complex UI state            |
+| **Production Setup**     | 3.0    | All apps eventually reach production         |
+| **Async workflows**      | 2.3    | API calls and data loading are ubiquitous    |
+| **Computed Chains**      | 2.2    | Reactive computations core pattern           |
 
-| Scenario              | Weight | Frequency   | Research Basis                    |
-| --------------------- | ------ | ----------- | --------------------------------- |
-| **Batch Updates**     | 2.0    | 65% of apps | Form submissions, bulk operations |
-| **Large Arrays**      | 1.8    | 68% of apps | Lists, tables, data grids common  |
-| **Memory Efficiency** | 1.5    | 58% of apps | Mobile/constrained environments   |
+### Judged high
 
-### Specialized Operations (Low Usage)
+| Scenario              | Weight | Rationale                         |
+| --------------------- | ------ | --------------------------------- |
+| **Batch Updates**     | 2.0    | Form submissions, bulk operations |
+| **Large Arrays**      | 1.8    | Lists, tables, data grids common  |
+| **Memory Efficiency** | 1.5    | Mobile/constrained environments   |
 
-| Scenario               | Weight | Frequency   | Research Basis                   |
-| ---------------------- | ------ | ----------- | -------------------------------- |
-| **Serialization**      | 0.8    | 28% of apps | Persistence, SSR, debugging only |
-| **Undo/Redo**          | 0.6    | 25% of apps | Editors, design tools primarily  |
-| **Concurrent Updates** | 0.4    | 18% of apps | Gaming, real-time data specific  |
+### Judged low
 
-### Development Operations (Very Low Usage)
+| Scenario               | Weight | Rationale                        |
+| ---------------------- | ------ | -------------------------------- |
+| **Serialization**      | 0.8    | Persistence, SSR, debugging only |
+| **Undo/Redo**          | 0.6    | Editors, design tools primarily  |
+| **Concurrent Updates** | 0.4    | Gaming, real-time data specific  |
 
-| Scenario                 | Weight | Frequency  | Research Basis                  |
-| ------------------------ | ------ | ---------- | ------------------------------- |
-| **All Features Enabled** | 0.3    | 9% of apps | Development/demo environments   |
-| **History Size**         | 0.3    | 9% of apps | Advanced debugging scenarios    |
-| **Jump to State**        | 0.2    | 6% of apps | Sophisticated development tools |
+### Judged very low
+
+| Scenario                 | Weight | Rationale                       |
+| ------------------------ | ------ | ------------------------------- |
+| **All Features Enabled** | 0.3    | Development/demo environments   |
+| **History Size**         | 0.3    | Advanced debugging scenarios    |
+| **Jump to State**        | 0.2    | Sophisticated development tools |
 
 ## 🔬 Weight Impact Analysis
 
