@@ -38,6 +38,7 @@
  *   node tools/verify-gates.mjs               # run every gate, fail on any failure
  *   node tools/verify-gates.mjs --self-test   # prove each gate can fail
  *   node tools/verify-gates.mjs --fast        # skip gates marked slow
+ *   node tools/verify-gates.mjs --release     # include the measurement harnesses
  *   node tools/verify-gates.mjs --only=name,name
  *   node tools/verify-gates.mjs --list
  *
@@ -456,6 +457,7 @@ const GATES = [
   // (1.5s rather than minutes); the published numbers come from a full run.
   {
     name: 'bench-harness',
+    releaseOnly: true,
     covers:
       'all 4 benchmark arms construct, run, and satisfy their postconditions',
     cmd: ['node', '--expose-gc', 'tools/bench-compare.mjs', '--n', '200'],
@@ -471,6 +473,7 @@ const GATES = [
   },
   {
     name: 'memory-harness',
+    releaseOnly: true,
     covers:
       'every memory scenario runs under forced GC and reports collectability',
     cmd: ['node', '--expose-gc', 'tools/memory-report.mjs'],
@@ -485,6 +488,7 @@ const GATES = [
   },
   {
     name: 'memory-compare',
+    releaseOnly: true,
     covers:
       'all 4 cross-library memory arms construct and measure a marginal slope',
     cmd: ['node', '--expose-gc', 'tools/memory-compare.mjs', '--n', '1000'],
@@ -501,6 +505,7 @@ const GATES = [
   },
   {
     name: 'state-scale',
+    releaseOnly: true,
     covers: 'the O(1)-write thesis, measured against elf on both axes',
     cmd: ['node', 'tools/bench-state-scale.mjs', '--quick'],
     needsBuild: true,
@@ -516,6 +521,7 @@ const GATES = [
   },
   {
     name: 'raw-signals',
+    releaseOnly: true,
     covers:
       'the "why not raw signals" arms construct, interleave, and their postconditions fire',
     cmd: [
@@ -539,6 +545,7 @@ const GATES = [
   },
   {
     name: 'size-compare',
+    releaseOnly: true,
     covers: 'cross-library gzip cost is measurable for both libraries',
     cmd: ['node', 'tools/size-compare.mjs'],
     needsBuild: true,
@@ -554,6 +561,7 @@ const GATES = [
   },
   {
     name: 'size-report',
+    releaseOnly: true,
     covers:
       'every published package builds and its tree-shaken size is measurable',
     cmd: ['node', 'tools/size-report.mjs'],
@@ -642,8 +650,29 @@ if (has('--list')) {
   process.exit(0);
 }
 
+/**
+ * `releaseOnly` gates are skipped by default.
+ *
+ * Every gate here answers one question: would a USER be hurt if this broke? For
+ * most of them the answer is yes — a missing export, a bundle regression, dev
+ * code shipping to production, a tarball that will not install.
+ *
+ * The seven measurement harnesses answer no. They verify that BENCHMARKS RUN —
+ * that the arms construct and produce a number. Nobody consuming this library
+ * is harmed if `bench-compare.mjs` stops working; the harm is that a published
+ * figure becomes unregenerable, which matters at release and not before. They
+ * cost 7s of every run to protect against that, so they now run with
+ * `--release` and are skipped otherwise.
+ *
+ * Read the same way if you are tempted to add a gate: a gate that cannot name
+ * the user it protects is overhead, and overhead in a checking system is worse
+ * than overhead elsewhere, because it dilutes the meaning of a green board.
+ */
 const selected = GATES.filter(
-  (g) => (!only || only.includes(g.name)) && !(has('--fast') && g.slow)
+  (g) =>
+    (!only || only.includes(g.name)) &&
+    !(has('--fast') && g.slow) &&
+    !(!has('--release') && !only && g.releaseOnly)
 );
 
 /**
@@ -867,6 +896,12 @@ if (has('--self-test')) {
       `${count('fail')} failed, ${count('known')} known-red.`
   );
   if (has('--fast')) {
+    const heldBack = GATES.filter((g) => g.releaseOnly).map((g) => g.name);
+    if (!has('--release') && heldBack.length) {
+      console.log(
+        `  release-only (run with --release): ${heldBack.join(', ')}`
+      );
+    }
     const skipped = GATES.filter((g) => g.slow).map((g) => g.name);
     console.log(
       `  --fast SKIPPED: ${skipped.join(', ')} — this run did not cover them.`
