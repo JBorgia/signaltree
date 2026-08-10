@@ -8,8 +8,13 @@ of decisions already taken, kept for the options that were REJECTED and why. If
 you are about to create `docs/rfcs/00NN-my-idea.md` for something we decided
 internally, put it here instead and go do it.
 
+**Target release: 15.0.0.** The two behavioural changes — `undo()` traversal (done)
+and collection recording (item 2) — arrive together under a major, so semantics
+change once with permission rather than twice by surprise.
+
 Ordered by what unblocks the most. Reasoning is compressed — the full derivation
-is in the linked audits.
+is in the linked audits. What went wrong in 14.0.0, including what I broke myself,
+is in [14.0.0-what-actually-happened.md](docs/audits/2026-08/14.0.0-what-actually-happened.md).
 
 ---
 
