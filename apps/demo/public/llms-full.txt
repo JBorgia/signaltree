@@ -1526,7 +1526,7 @@ Every warning carries a stable `[ST####]` code; full map in
 - **[ST2026]** `where(pred)` / `find(pred)` called repeatedly with a NEW function of identical source. Results memoise per predicate **identity**, so an inline arrow in a template allocates a fresh one every change-detection cycle, misses the cache and re-filters the whole collection — measured **0.27 ms hoisted against 20.54 ms inline** over 1,000 entities. It is not a leak (the cache is a `WeakMap`), which is exactly why it needs a diagnostic: nothing grows, nothing errors, the app is just permanently slow. Detected by source text **and rate** — 12 distinct identities within 2 seconds — because `v => v.x > threshold` rebuilt when `threshold` changes has identical source too, and "hoist it" is the wrong advice for that shape.
 
   ```typescript
-  // ❌ 75x slower — a new arrow every CD cycle
+  // ❌ ~100x slower — a new arrow every CD cycle
   @for (row of tree.$.rows.where(r => !r.done)(); track row.id) {}
 
   // ✅ hoist to a stable reference

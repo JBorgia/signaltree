@@ -185,11 +185,19 @@ around this in 13.x by polling or by forcing change detection, you can stop:
 
 `where(predicate)` and `find(predicate)` memoise per predicate **identity**. An
 inline arrow in a template allocates a new one every change-detection cycle,
-misses the cache, and re-filters the collection — measured at 0.27 ms hoisted
-against 20.54 ms inline over 1,000 entities. 14.0.0 warns about it (**ST2026**).
+misses the cache, and re-filters the collection — **0.30 ms hoisted against
+33.8 ms inline** over 5,000 reads of a 1,000-entity collection
+(`node tools/bench-predicate-memo.mjs --reads 5000`). 14.0.0 warns about it
+(**ST2026**).
+
+Quote those absolutes and the fixture, not a multiplier: the hoisted arm sits
+near the timer floor, so the ratio moves between 104x and 112x across runs
+while both absolutes stay put. The published figure used to be "75x" over an
+unstated number of reads.
 
 ```ts
-// ❌ 75x slower, and correct, which is why it needed a diagnostic
+// ❌ two orders of magnitude slower, and correct — which is why it
+// needed a diagnostic rather than a type error
 @for (row of tree.$.rows.where(r => !r.done)(); track row.id) {}
 
 // ✅ hoist it

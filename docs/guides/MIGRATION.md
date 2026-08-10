@@ -34,8 +34,9 @@
 
 **Worth knowing (not breaking):** `canUndo()`/`canRedo()`/`getHistory()` are
 reactive now — an undo button in a zoneless app previously never enabled. And
-ST2026 warns when an inline predicate defeats the `where()`/`find()` memo, which
-measured 75x.
+ST2026 warns when an inline predicate defeats the `where()`/`find()` memo:
+0.30 ms hoisted against 33.8 ms inline over 5,000 reads of a 1,000-entity
+collection (`node tools/bench-predicate-memo.mjs --reads 5000`).
 
 ## 13.2.0 (unreleased)
 
