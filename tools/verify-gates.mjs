@@ -744,6 +744,34 @@ function withMutation(mutation, fn) {
       );
       process.exit(2);
     }
+    // Restoring the SOURCE is not enough when the gate rebuilt from it.
+    //
+    // `check-bundle-budget.mjs` builds before it measures, so mutating a source
+    // file makes it write the mutation INTO `dist/` — and the hash check above
+    // only ever looked at the file it wrote. dist stayed poisoned: after one
+    // self-test run, `size-report.mjs` measured the bare tree at 13.69KB
+    // against a true 5.79KB, because 8KB of mutation payload was still sitting
+    // in the built artifact.
+    //
+    // That is the ORIGINAL stale-dist bug wearing new clothes — dist no longer
+    // matching source, with nothing noticing — reintroduced by the fix for it.
+    // A mutation harness has to restore DERIVED artifacts too, not just the
+    // files it edited.
+    if (mutation.file.startsWith('packages/')) {
+      try {
+        execFileSync(
+          'npx',
+          ['nx', 'run-many', '-t', 'build', `--projects=${BUILD_PROJECTS}`],
+          { cwd: ROOT, stdio: 'pipe', env: process.env }
+        );
+      } catch {
+        console.error(
+          `\n  FATAL: restored ${mutation.file} but could not rebuild dist/. ` +
+            `Built output still contains the mutation — run \`npm run build\`.`
+        );
+        process.exit(2);
+      }
+    }
   }
 }
 
