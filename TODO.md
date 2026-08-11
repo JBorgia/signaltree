@@ -163,7 +163,30 @@ A long-lived `selectById(id)` closing over the old id breaks silently. Cheapest 
 the v3 asks, and it protects "diagnostics with stable codes", which is one of the
 six capabilities no competitor has.
 
-## 2. Settle the history REPRESENTATION — decision pending, do not pre-empt
+## 2. Position-attributed transactional history — SEE THE PLAN
+
+**The representation decision is MADE.** The plan of record is
+[PLAN-position-attributed-history.md](docs/architecture/PLAN-position-attributed-history.md)
+on branch `feat/position-attributed-history`, targeting **16.0.0**. It supersedes the
+phase ordering below and carries 22 settled decisions, invariants A–I with required
+mutation proofs, and a falsification gate per phase.
+
+Three things changed from what this section used to say:
+
+1. **The objective is optimistic rollback, not undo.** "Make multi-position optimistic
+   operations safely reversible without caller-authored compensation. User undo/redo is
+   a second consumer of the same mechanism." Evidence: v3's `bulkPatch$` deliberately
+   declined optimistic writes for want of reversal.
+2. **`commit()` splits into `seal()` and `confirm()`.** That is what dissolves the
+   rollback/prefix-closure collision — prefix closure describes CONFIRMED history, and a
+   sealed-but-unconfirmed turn was never subject to it.
+3. **Phase 0 is two parallel spikes** — 0A ownership attribution, 0B speculative
+   rollback — and **collection anchors moved into 0B**, because value snapshots cannot
+   compensate a structural mutation after a concurrent reorder.
+
+Everything below in this section is retained as the derivation, not the plan.
+
+### Original framing, kept for the argument rather than the ordering
 
 **The goal is
 [history-the-greenfield-target.md](docs/architecture/history-the-greenfield-target.md):
