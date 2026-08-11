@@ -5,7 +5,7 @@ live tree and a live `entityMap`), not against the source, because an `as any`
 attachment is invisible to a type-level read and one of the findings below is exactly
 that.
 
-15.0.0 is a clean break, so an alias kept for compatibility is an alias kept for no
+14.1.0 is a clean break, so an alias kept for compatibility is an alias kept for no
 reason. The rule applied throughout: **one operation, one name** — and where two names
 survive, the audit has to say what observably differs between them.
 
@@ -82,7 +82,7 @@ measurement said otherwise.
 ### `updateOne` vs `replaceOne` — merge vs replace
 
 `updateOne` spreads, so it **cannot remove a key**. `replaceOne` assigns. Genuinely
-two operations. Added in 15.0.0.
+two operations. Added in 14.1.0.
 
 ### `batch` vs `coalesce` — and the difference is undocumented
 
@@ -155,7 +155,7 @@ completeness rather than as a recommendation.
 ### 7. `pauseRecording`/`resumeRecording`/`isRecordingPaused` vs `pause`/`resume`/`isPaused`
 
 The public methods carry a `Recording` suffix; the manager's own methods do not. Moot —
-all three public ones are being **deleted** in 15.0.0, so this resolves itself.
+all three public ones are being **deleted** in 14.1.0, so this resolves itself.
 
 ### 8. `history` — one option name, two opposite meanings
 
@@ -232,7 +232,7 @@ who knows Zod, which is the whole audience for a Zod-based event package, will p
 the wrong behaviour from both names. All three take `(schema, event)` and wrap
 `safeParse`, so the three names are three return contracts over one operation.
 
-**DONE in 15.0.0** — follows Zod now: `parseEvent` throws, `safeParseEvent` returns a
+**DONE in 14.1.0** — follows Zod now: `parseEvent` throws, `safeParseEvent` returns a
 result, `isValidEvent` unchanged. `validateEvent` is gone. Verified by execution against
 the built barrel. The return types differ enough (`z.infer<T>` vs `SafeParseReturnType`)
 that a caller who had the old `parseEvent` gets a compile error rather than a silent
@@ -268,7 +268,7 @@ documents intent at the call site and the two could diverge in format later.
 | `ConnectionState`  | `events/angular/websocket.service.ts:35` (a union type), `realtime/types.ts:22` (an interface) | **No — two different shapes, one name, both public**                                          |
 | `ConnectionStatus` | `realtime/types.ts:6` (an enum)                                                                | Sits beside realtime's own `ConnectionState`, so realtime has two connection nouns of its own |
 
-**DONE in 15.0.0**: events' type is now `WebSocketConnectionState`, which also matches its
+**DONE in 14.1.0**: events' type is now `WebSocketConnectionState`, which also matches its
 siblings there (`WebSocketConfig`, `WebSocketMessage`, `WebSocketService`). Realtime keeps
 `ConnectionState` (the signal bag) and `ConnectionStatus` (the status enum) — those two are
 distinct concepts and both names are right.
@@ -303,7 +303,7 @@ are what the rename would touch.
 `DevToolsConfig` declares both, with the source saying so — `/** Alias for name (legacy
 support) */` — and `devtools-impl.ts:1096` resolves `const displayName = name ?? treeName;`.
 So `name` wins and `treeName` is the fallback. Same class as `removeAll` and `equal`.
-**Removed in 15.0.0** — including from every doc code block, which the `lint:skills`
+**Removed in 14.1.0** — including from every doc code block, which the `lint:skills`
 gate caught by type-checking them.
 
 ### Confirmed dead option: `TreeConfig.enableTimeTravel`

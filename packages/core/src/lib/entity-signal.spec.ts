@@ -236,7 +236,7 @@ describe('.empty (canonical bare-name predicate)', () => {
   });
 });
 
-describe('replaceOne / node-callable REPLACE semantics (15.0.0)', () => {
+describe('replaceOne / node-callable REPLACE semantics (14.1.0)', () => {
   type Row = { id: number; name: string; note?: string };
 
   function makeApi() {

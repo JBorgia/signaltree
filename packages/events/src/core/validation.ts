@@ -170,7 +170,7 @@ export class EventValidationError extends Error {
 /**
  * Parse an event against a schema, THROWING `EventValidationError` on failure.
  *
- * Named to match Zod, which this package re-exports as `z`. Until 15.0.0 the
+ * Named to match Zod, which this package re-exports as `z`. Until 14.1.0 the
  * names were INVERTED: `validateEvent` threw and `parseEvent` returned a result —
  * the opposite of `z.parse` / `z.safeParse`. The audience for a Zod-based event
  * package is people who know Zod, so both names mispredicted for exactly the

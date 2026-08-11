@@ -623,7 +623,7 @@ export class TradeRealtimeService {
 - `safeParseEvent(schema, event)` - Parse and **return** `{ success, data | error }` (matches `z.safeParse`)
 - `isValidEvent(schema, event)` - Type guard
 
-  Before 15.0.0 these were inverted: `validateEvent` threw and `parseEvent` returned a
+  Before 14.1.0 these were inverted: `validateEvent` threw and `parseEvent` returned a
   result, the opposite of the Zod names this package re-exports as `z`.
 
 - `EventValidationError` - Validation error class

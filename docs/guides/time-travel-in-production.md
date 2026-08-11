@@ -177,7 +177,7 @@ as TODO 6a — the fix belongs to the history representation decision, because m
 the snapshot walker descend into form markers rebuilds the whole-tree-snapshot
 problem that decision exists to remove.
 
-### 3. ~~Make bulk work one step — `pauseRecording()`~~ — REMOVED in 15.0.0
+### 3. ~~Make bulk work one step — `pauseRecording()`~~ — REMOVED in 14.1.0
 
 **This lever is gone, and it should never have been one.** `pauseRecording()`,
 `resumeRecording()` and `isRecordingPaused()` were deleted rather than deprecated.
@@ -236,7 +236,7 @@ whole-state deep compare here undoes the saving.
 | Large server collection + small editable **branch**   | `entityMap({ recordHistory: false })` beside an undoable branch                      | Yes — the headline pattern                                                                           |
 | Large server collection + small editable **`form()`** | `entityMap({ recordHistory: false })` beside `form({ history: history() })`          | Yes, but **`timeTravel()` does not cover the form** — see below                                      |
 | Optimistic write, roll back on error                  | `undo()` in the error path, or `jumpTo(getCurrentIndex() - 1)`                       | Yes — only if nothing else recorded in between                                                       |
-| Import/generate, then one undo                        | —                                                                                    | **No.** `pauseRecording()` was removed in 15.0.0 (see lever 3) and has no replacement                |
+| Import/generate, then one undo                        | —                                                                                    | **No.** `pauseRecording()` was removed in 14.1.0 (see lever 3) and has no replacement                |
 | Audit trail rather than undo                          | `createAuditCallback()` or `getHistory()`                                            | Yes. **Not `createAuditTracker()`** — it samples on a 100 ms timer and drops write-then-revert pairs |
 | Show the user how far they can go                     | `getCurrentIndex()` back, `getHistory().length - 1 - getCurrentIndex()` fwd          | Yes — reactive since 14.0.0                                                                          |
 | Undo per entity, independently                        | —                                                                                    | **No.** elf has this; we do not                                                                      |

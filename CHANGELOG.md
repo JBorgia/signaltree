@@ -1,4 +1,26 @@
-## 15.0.0 (2026-08-11)
+## 14.1.0 (2026-08-11)
+
+> **Why a MINOR version carries a BREAKING section, stated plainly because it is a
+> semver anomaly and not an accident.**
+>
+> **14.0.0 was published on 2026-08-10 and has been unpublished.** It was never meant
+> to be more than a release candidate: it shipped while the audit that produced this
+> release was still generating findings, and several of the things it published were
+> wrong (see
+> [docs/audits/2026-08/14.0.0-what-actually-happened.md](docs/audits/2026-08/14.0.0-what-actually-happened.md)).
+> `14.0.0-rc.1` remains on npm under the `rc` tag.
+>
+> So the breaking changes below are relative to **14.0.0, a version that no longer
+> exists**. Measured against the last version anyone could install and keep,
+> **13.5.0**, this release removes 25 barrel exports plus `map()` and `removeAll()` —
+> genuinely major-scale, and `13.x -> 14.1.0` crosses the major boundary, so no
+> `^13.5.0` range resolves to it and nobody is auto-updated into a break.
+>
+> The only affected users are those who installed 14.0.0 during its ~24 hours on the
+> registry. For them the delta is: `equal` removed (use `deepEqual`), `map()` ->
+> `asMap()`, `removeAll()` -> `clear()`, and
+> `pauseRecording()`/`resumeRecording()`/`isRecordingPaused()` removed with no
+> replacement.
 
 ### BREAKING
 
@@ -71,7 +93,7 @@
   `parseEvent` to `safeParseEvent`.** The names were INVERTED relative to Zod, which this
   package re-exports as `z`:
 
-  |                    | before 15.0.0   | now                                       |
+  |                    | before 14.1.0   | now                                       |
   | ------------------ | --------------- | ----------------------------------------- |
   | throws on failure  | `validateEvent` | **`parseEvent`** (like `z.parse`)         |
   | returns a result   | `parseEvent`    | **`safeParseEvent`** (like `z.safeParse`) |

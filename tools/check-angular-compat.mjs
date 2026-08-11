@@ -73,7 +73,13 @@ function reachableFrom(entry) {
     if (seen.has(file) || !existsSync(file)) continue;
     seen.add(file);
     const text = readFileSync(file, 'utf8');
-    for (const m of text.matchAll(/from '(\.[^']*)'/g)) {
+    // Both quote styles, and no required whitespace after `from`. The built
+    // output is MINIFIED — `import{a,b}from"./core/ng-forms.js"` — so a
+    // single-quote-only pattern matched nothing at all and this walk never left
+    // the entry file. The gate advertised itself as TRANSITIVE while checking
+    // exactly one file per entry point, and `--self-test` reported it BLIND:
+    // appending a Signal Forms value-import to a reachable file did not fail it.
+    for (const m of text.matchAll(/from\s*['"](\.[^'"]*)['"]/g)) {
       let target = resolve(dirname(file), m[1]);
       if (!target.endsWith('.js')) target += '.js';
       stack.push(target);

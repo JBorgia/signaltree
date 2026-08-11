@@ -1,6 +1,6 @@
 # Time-travel use cases, ranked, and what SignalTree actually supports
 
-**Status:** RE-SCORED 2026-08-10 against `main` (15.0.0-dev), superseding the
+**Status:** RE-SCORED 2026-08-10 against `main` (14.1.0-dev), superseding the
 14.0.0 scoring. Every verdict below was produced by executing against the **built**
 package in `dist/packages/core`.
 
@@ -43,7 +43,7 @@ from a retracted premise rather than only auditing the passes.
 
 | Case                                | Was  | Now | Why                                                                                                      |
 | ----------------------------------- | ---- | --- | -------------------------------------------------------------------------------------------------------- |
-| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 15.0.0. No replacement yet.                    |
+| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 14.1.0. No replacement yet.                    |
 | 8. Undo scoped to a draft           | ✅\* | ✅  | Phantom-step defect **fixed**; option renamed `history` → `recordHistory`.                               |
 | 9. Discarding an in-progress edit   | ✅   | ✅  | Passes, but the audit named the **wrong function** — see the doc defect below.                           |
 | 15. An audit trail rather than undo | ✅   | 🟡  | `createAuditTracker` is a 100 ms **polling sampler** that can miss changes entirely.                     |
@@ -103,7 +103,7 @@ a mechanism that no longer exists; the outcome is what still holds.
 ### 7. A bulk operation as ONE undo step ❌
 
 **Downgraded from 🟡.** The recipe this audit documented — `pauseRecording()` /
-`resumeRecording()` plus a sealing write — was deleted in 15.0.0 (`258b2c2b`) as a
+`resumeRecording()` plus a sealing write — was deleted in 14.1.0 (`258b2c2b`) as a
 silent-data-loss footgun. `typeof tree.pauseRecording === 'undefined'` on the built
 tree. There is no replacement.
 

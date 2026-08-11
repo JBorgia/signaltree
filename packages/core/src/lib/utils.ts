@@ -202,7 +202,7 @@ const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
  */
 
 export { deepEqual };
-// `export { deepEqual as equal }` was REMOVED in 15.0.0. See
+// `export { deepEqual as equal }` was REMOVED in 14.1.0. See
 // shared/src/lib/deep-equal.ts for why: `equal` is the OPTION key throughout the
 // library and cannot also be a function export.
 export { isBuiltInObject };

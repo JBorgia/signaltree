@@ -416,9 +416,18 @@ const GATES = [
     // Deleting a shipped capability from the priming file must fail. Chosen
     // over a synthetic export because it reproduces the ACTUAL defect: the API
     // is fine, the claim surface is the thing that went stale.
+    // The mutation must name a symbol that is IN THE CURRENT DELTA, or it proves
+    // nothing: the gate only inspects what this release added, so blanking a
+    // symbol from an older release is invisible to it. `prependOne` shipped in
+    // 14.0.0 and the base tag is now v14.0.0, so the previous mutation targeted
+    // a symbol outside the window and the harness correctly reported this gate
+    // BLIND. `asMap` is in the delta and appears exactly once in llms.txt —
+    // occurrence count matters, because the harness uses String.replace, which
+    // substitutes only the FIRST match and would leave the symbol still present.
+    // Re-check this target whenever the base tag moves: `--list` prints the delta.
     mutation: {
       file: 'apps/demo/public/llms.txt',
-      find: 'prependOne',
+      find: 'asMap',
       replace: '__gateRemovedFromPriming',
     },
   },
@@ -583,7 +592,7 @@ const GATES = [
     slow: true,
     // The concrete escape this closes: `entityMap({ selectId, history })` in
     // history-scoped-capture.spec.ts, where `history` had been renamed to
-    // `recordHistory` in 15.0.0. tsconfig.typecheck-all.json excludes
+    // `recordHistory` in 14.1.0. tsconfig.typecheck-all.json excludes
     // `**/*.spec.ts` and core's typecheck config covers only *.typing.spec.ts,
     // so nothing typechecked it; esbuild strips types without checking. Both
     // arms of the test built an identical default tree and its equality

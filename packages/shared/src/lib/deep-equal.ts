@@ -263,7 +263,7 @@ function equalsInner(
 }
 
 // Backwards compatible alias expected by existing imports.
-// `equal` was an alias for `deepEqual` and was REMOVED in 15.0.0. One
+// `equal` was an alias for `deepEqual` and was REMOVED in 14.1.0. One
 // operation, one name — and `equal` is the OPTION key everywhere else in the
 // library (`linked({ equal })`, `compared(value, equal)`, `entityMap({ equal })`),
 // where it means "your comparator", not "deep equality". One word cannot mean

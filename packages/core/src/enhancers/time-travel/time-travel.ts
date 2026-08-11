@@ -144,7 +144,7 @@ class TimeTravelManager<T> {
   // gone rather than wired up.
   //
   // The `provisional` parameter and `finalizeProvisional()` went with it in
-  // 15.0.0: a half-built coalescing scheme with no caller anywhere in
+  // 14.1.0: a half-built coalescing scheme with no caller anywhere in
   // `packages/*/src`. Deferred entry completion IS a real requirement — it is
   // what a transaction's `commit()` needs — but that one has to close a
   // path-scoped delta spanning concurrent writers, which is not what this was
@@ -487,7 +487,7 @@ class TimeTravelManager<T> {
  *
  * The unit is the one that actually costs memory: a history entry retains one
  * POINTER per entity in every included collection, so retention is
- * `entries x collection width`, not either alone. RE-MEASURED for 15.0.0 with
+ * `entries x collection width`, not either alone. RE-MEASURED for 14.1.0 with
  * `tools/bench-retention-arms.mjs` (50 recorded writes, heap baselined after
  * seeding), which comes out at ~8 bytes per retained pointer — a 64-bit pointer,
  * not the ~10 this was originally calibrated against:

@@ -177,7 +177,7 @@ describe('removeMany / removeWhere / removeOne', () => {
   });
 
   // `removeAll()` was a pure alias — its body was `api.clear()`. Removed in
-  // 15.0.0: one operation, one name.
+  // 14.1.0: one operation, one name.
   it('removeAll no longer exists', () => {
     const a = mk() as unknown as { $: { r: Record<string, unknown> } };
     expect(a.$.r['removeAll']).toBeUndefined();

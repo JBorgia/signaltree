@@ -1,6 +1,6 @@
 # History in SignalTree: a greenfield architecture spike
 
-**Status:** research, 2026-08-10. Target release for whatever is chosen: 15.0.0.
+**Status:** research, 2026-08-10. Target release for whatever is chosen: 14.1.0.
 
 This designs history/undo/time-travel **from scratch**. The existing
 `timeTravel()` is treated as prior art, not as a starting point, and no option

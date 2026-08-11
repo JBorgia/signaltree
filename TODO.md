@@ -8,7 +8,7 @@ of decisions already taken, kept for the options that were REJECTED and why. If
 you are about to create `docs/rfcs/00NN-my-idea.md` for something we decided
 internally, put it here instead and go do it.
 
-**Target release: 15.0.0, and it is a clean break.** Breaking changes are explicitly
+**Target release: 14.1.0, and it is a clean break.** Breaking changes are explicitly
 acceptable on anything — decided 2026-08-10. Two consequences that change how items
 below are written:
 
@@ -21,24 +21,24 @@ below are written:
 
 ---
 
-# RELEASE SCOPE — 15.0.0 is SCOPE A ONLY
+# RELEASE SCOPE — 14.1.0 is SCOPE A ONLY
 
 **Decided 2026-08-11.** Two bodies of work have been running in one conversation and
 they are at opposite ends. This section is the boundary; when in doubt about whether
-something belongs in 15.0.0, it is the authority.
+something belongs in 14.1.0, it is the authority.
 
 |                                |                                                                                               |
 | ------------------------------ | --------------------------------------------------------------------------------------------- |
-| **Scope A — the audit**        | retractions, naming, the defects found while auditing, gates. **~85% done. Ships as 15.0.0.** |
+| **Scope A — the audit**        | retractions, naming, the defects found while auditing, gates. **~85% done. Ships as 14.1.0.** |
 | **Scope B — the architecture** | position-attributed transactional history. **Not started.** 16.0.0+                           |
 
 Why cut now rather than hold: holding a release for an unstarted six-phase build is the
 14.0.0 mistake inverted. 14.0.0 shipped too early _while the audit was still producing
-findings_; holding 15.0.0 for work that has not begun is the same error at the other
+findings_; holding 14.1.0 for work that has not begun is the same error at the other
 end. 6a is live data-loss in shipped 14.0.0 and its doc fix is done — users benefit now
 rather than after Phase 6.
 
-## IN 15.0.0
+## IN 14.1.0
 
 Everything already committed, plus:
 
@@ -54,7 +54,7 @@ Everything already committed, plus:
 - **Item 1c** — the `changeId` held-node diagnostic.
 - **Capability matrix** (item 8) and **RFC 0008** (item 9).
 
-## OUT of 15.0.0 — do not let these leak in
+## OUT of 14.1.0 — do not let these leak in
 
 - **Everything in the architecture plan.** Turns, transactions, ownership positions,
   containment, the turn store, position indexes.
@@ -457,7 +457,7 @@ Full write-up in
 
 ### DELETE `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()`
 
-**Not deprecate — delete, in 15.0.0.** This was previously written as blocked on the
+**Not deprecate — delete, in 14.1.0.** This was previously written as blocked on the
 transaction shipping first, on the grounds that removing a published API with no
 replacement leaves callers stranded. That reasoning is void now that breaking changes
 are acceptable, and it was the wrong trade anyway: the API is a **silent-data-loss

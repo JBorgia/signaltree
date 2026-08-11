@@ -335,12 +335,12 @@ retract.
 > do not record" — was **false**, and it was the governing premise for all eleven
 > verdicts below. It was retracted in
 > [14.0.0-what-actually-happened.md](14.0.0-what-actually-happened.md) and the
-> verdicts were re-run by outcome against `main` (15.0.0-dev). Verdicts 2, 4, 5, 6
+> verdicts were re-run by outcome against `main` (14.1.0-dev). Verdicts 2, 4, 5, 6
 > and 8 moved. See
 > [time-travel-use-case-audit.md](time-travel-use-case-audit.md) for the method and
 > the harness results.
 
-Verdicts are against `main` (15.0.0-dev), re-scored by outcome — every one names
+Verdicts are against `main` (14.1.0-dev), re-scored by outcome — every one names
 the `undo()` it called and the state afterwards.
 
 **Two corrections that apply to every workload below:**
@@ -463,7 +463,7 @@ used to prescribe was scored on the retracted premise and has been struck.
 MEASURED: `removeOne('b')` → `undo()` → `a,b,c` restored.
 
 The one that is genuinely unserved is the third: **undo a bulk assign as one step.**
-That needs the transaction handle, and it got worse rather than better in 15.0.0 —
+That needs the transaction handle, and it got worse rather than better in 14.1.0 —
 the `pauseRecording` recipe was deleted, so grouping now depends on whether the
 caller happens to `await` between writes. See case 7 of the sibling audit.
 
