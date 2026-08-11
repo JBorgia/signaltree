@@ -24,13 +24,86 @@ Solid, Vue, Svelte and vanilla JS.
 There is **no empty category here**. Anyone positioning this as a first is going to be
 corrected in public by a project with a bigger audience.
 
+### But it is a client-side DATABASE, and that changes what it competes with
+
+Verified from its own docs. It describes itself as **"the reactive client store for your
+API"**; its primary abstraction is **collections** — "typed sets of objects" — normalized and
+loaded from REST via TanStack Query, sync engines like ElectricSQL, or local storage, then
+read with live queries.
+
+Crucially, **even local UI state goes through the collection abstraction.** The LocalOnly
+collection page covers modals, filters, wizard state and form drafts, and models each as a
+typed keyed record collection. There is **no non-collection primitive** documented for
+arbitrary heterogeneous local state.
+
+So its natural world is:
+
+```text
+todos       collection
+customers   collection
+orders      collection
+assignments collection
+→ query / join / mutate / sync / transact
+```
+
+and SignalTree's is:
+
+```text
+application
+├── dispatch
+│   ├── trucks         entityMap
+│   ├── drivers        entityMap
+│   ├── selectedTruck  leaf
+│   ├── status         status()
+│   └── filters        plain state
+├── editor.form        form()
+├── connectivity       async marker
+└── preferences        stored()
+```
+
+**That is the opening, and it is bigger than the overlap.** A real user or agent operation
+does not stop at database-shaped data:
+
+> "Assign these trucks to Smith."
+
+touches server-backed entities _and_ `selectedIds`, _and_ an in-flight `form()`, _and_
+operation `status()`, _and_ a pending notification. That is **application state**, not a
+client-database transaction.
+
+So the fight worth picking is not "beat TanStack DB at optimistic database transactions" —
+don't take that fight. It is:
+
+> **Why should the transaction boundary stop at database-shaped data?**
+
 ## 2. The claim that does survive
 
 > **SignalTree is not trying to invent optimistic transactions. It is trying to make
 > optimistic transactions safe under overlapping writers, across arbitrary
 > application-state boundaries.**
 
-Narrower, and much better, because the two halves are both defensible and both verified.
+Or, as a category rather than a feature:
+
+> **Transactional application state for multi-writer and agentic frontends.**
+
+Narrower than a uniqueness claim, and much better, because every part of it is defensible
+and the two load-bearing halves are verified below.
+
+```text
+                logical action / turn
+                        │
+        ┌───────────────┼────────────────┐
+        ▼               ▼                ▼
+  server-backed      UI state       behavioural state
+  collections       leaves/forms    status/async/stored
+        │               │                │
+        └────────── ownership positions ─┘
+```
+
+The heterogeneity is the point. An agent does not think "update rows in collections A and
+B"; it thinks "reschedule this delivery and prepare the UI for the operator" — which spans
+domain entities, selection, status, forms and derived working state. **This is also why
+`PositionId` is the load-bearing risk**: the advantage comes from the tree knowing what each
+position _means_, not merely where it is.
 
 ### 2a. Overlapping writers — TanStack DB cascades, we intend not to
 
@@ -94,14 +167,14 @@ problem is real, conceded, and currently answered by giving up the optimism.**
 Several projects already hold the raw material — a mutation-time change record — which is
 the expensive part.
 
-| system               | ability to enter                          | why                                                                                                                           |
-| -------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **TanStack DB**      | **already there**                         | multi-collection optimistic transactions and rollback ship now, across five frameworks                                        |
-| **Legend-State**     | high                                      | fine-grained, path-oriented, mutable, local-first with optimistic sync; change records already expose path/current/previous   |
-| **MobX-State-Tree**  | high                                      | emits JSON patches as mutations happen, patches reverse-apply, actions are observable, listeners attach at arbitrary subtrees |
-| **Redux / RTK**      | medium-high                               | Immer patches and actions exist; precise overlapping rollback is not current semantics (see §2b)                              |
-| **NgRx SignalStore** | medium                                    | highly extensible with custom features and entity collections; would need transaction/ownership machinery                     |
-| **Yjs**              | already solves a stronger related problem | selective undo scoped by shared type and transaction `origin` — but inside a CRDT, for a different application category       |
+| system               | ability to enter                          | why                                                                                                                                                                                                          |
+| -------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **TanStack DB**      | **already there — for DATA**              | multi-collection optimistic transactions and rollback ship now across five frameworks, but everything is a typed keyed collection, including local UI state. Adjacent validation more than direct equivalent |
+| **Legend-State**     | high                                      | fine-grained, path-oriented, mutable, local-first with optimistic sync; change records already expose path/current/previous                                                                                  |
+| **MobX-State-Tree**  | high                                      | emits JSON patches as mutations happen, patches reverse-apply, actions are observable, listeners attach at arbitrary subtrees                                                                                |
+| **Redux / RTK**      | medium-high                               | Immer patches and actions exist; precise overlapping rollback is not current semantics (see §2b)                                                                                                             |
+| **NgRx SignalStore** | medium                                    | highly extensible with custom features and entity collections; would need transaction/ownership machinery                                                                                                    |
+| **Yjs**              | already solves a stronger related problem | selective undo scoped by shared type and transaction `origin` — but inside a CRDT, for a different application category                                                                                      |
 
 Two consequences worth stating plainly:
 
@@ -204,5 +277,27 @@ nothing today.
   transaction implementation".
 - **Do** keep the §5 boundary in any public description.
 - **Superseded:** the older "MST / Yjs audit" open item is largely discharged by this page.
-  What remains is a live comparison against **TanStack DB**, which is the competitor that
-  matters and was not previously on the list.
+  What replaces it is **not** "who has optimistic transactions" — that question is answered
+  and the answer is "several projects". The audit that actually gates a uniqueness claim is
+  whether any general-purpose state system combines **all five**:
+
+  ```text
+  1. arbitrary heterogeneous frontend state   (not only database-shaped collections)
+  2. write-time change records                (path, before, after — no root diffing)
+  3. semantic ownership of positions          (the structure declares what a position MEANS)
+  4. logical multi-position transactions      (one turn crossing unlike kinds of state)
+  5. safe compensation under overlapping writers
+  ```
+
+  Several competitors hold two or three ingredients. Legend-State has 1, 2 and arguably 5 in
+  a limited form; MST has 2 and part of 3; TanStack DB has 4 and 5-with-cascade but is
+  collection-shaped, so it does not have 1. **Run that test against Legend-State, MST,
+  Redux/RTK and NgRx SignalStore before publishing any claim of a first.** It is a much more
+  specific audit than the one it replaces, and it can actually be failed.
+
+- **On cross-framework, reframed:** a generic transaction engine sitting above arbitrary
+  foreign stores is the weak version of this idea — it cannot know what the state _means_, so
+  it gets ingredient 2 at best and never 3. The strong version is a framework-neutral
+  **position-attributed kernel** with per-framework integrations on top
+  (`@signaltree/angular` first, and best). The advantage comes from controlling the mutation
+  substrate, which is exactly what an adapter over Redux would not have.
