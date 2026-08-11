@@ -255,6 +255,30 @@ references to entity objects the tree already holds.
 > collection — sits nearer the 0.896 MB row than the 19.98 MB one. **19.58 MB is a
 > real worst case, not a typical one**, and it should be quoted that way.
 >
+> > ⚠️ **CORRECTED 2026-08-11 — the conclusion of this refinement is wrong, and the
+> > scalar column does not reproduce.** Re-run with
+> > `tools/bench-retention-arms.mjs` (heap baselined after seeding, so the seeded
+> > collection is excluded from the figure):
+> >
+> > | 50 steps @ | scalar — here | scalar — re-run | collection — here | collection — re-run |
+> > | ---------- | ------------- | --------------- | ----------------- | ------------------- |
+> > | 1,000      | 0.201 MB      | **0.109 MB**    | 0.594 MB          | **0.501 MB**        |
+> > | 10,000     | 0.262 MB      | **0.124 MB**    | 4.089 MB          | **3.950 MB**        |
+> > | 50,000     | 0.896 MB      | **0.298 MB**    | 19.98 MB          | **19.382 MB**       |
+> >
+> > The collection arm is close (within 5–19%). The scalar arm is off by 2–3× and
+> > **0.896 MB has not reproduced under any baselining method tried** — baselining
+> > *before* seeding instead gives 7.62 MB, because then the 50,000-row collection
+> > sits inside the arm. Neither method yields 0.896.
+> >
+> > **The load-bearing error is the last sentence, not the numbers.** "19.58 MB is a
+> > real worst case" is false: it is a **floor** for touching the collection at all.
+> > One changed row and fifty different changed rows both retain 19.38 MB, because
+> > the pointer array is rebuilt either way. Each *changed* row adds ~40 bytes on
+> > top, so the actual worst case at 50k — every row changed — is **114.77 MB**,
+> > 5.9× what this section calls the worst case. The reference-sharing insight above
+> > stands and is the durable finding; the ceiling it implied does not.
+>
 > **Which of the two arguments is load-bearing, stated explicitly, because it is
 > easy to get backwards.** §9 and §1.7 together read as "the log wins on both
 > correctness and cost". Only the first is unconditional:

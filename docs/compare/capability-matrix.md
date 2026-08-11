@@ -167,7 +167,7 @@ of these.**
 
 | SignalTree capability                                        | Others | What it is                                                                                                                                        |
 | ------------------------------------------------------------ | :----: | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scoped history** — `entityMap({ history: false })`         |   ❌   | A collection persists and serialises but stays out of the undo stack. See [time-travel-in-production.md](../guides/time-travel-in-production.md). |
+| **Scoped history** — `entityMap({ recordHistory: false })`   |   ❌   | A collection persists and serialises but stays out of the undo stack, and retention becomes independent of its width. See [time-travel-in-production.md](../guides/time-travel-in-production.md). |
 | **Per-leaf equality** — `compared()` / `byKeys()`            |   ❌   | One position gets its own comparator without changing the tree's type                                                                             |
 | **Changed-path reporting** — `tree.updateAndReport(partial)` |   ❌   | Returns the dot-paths of leaves that ACTUALLY changed; a deep-equal re-fetch reports `[]`                                                         |
 | **Type-only read-only view** — `asReadonly(tree)`            |   ❌   | Same object, narrower type. Zero runtime cost                                                                                                     |

@@ -252,11 +252,42 @@ snapshot stack in place" option died.
 436 µs is fine for a user-initiated rewind, so temporal rewind is
 **production-permissible**. It is not a capability nobody else has.
 
-**Retention is its binding constraint**, and only for one write shape. MEASURED at
-50 steps over 50,000 rows: **19.5 MB** when the writes touch the wide collection,
-**0.45 MB** when they are scalar writes beside it — a 43× spread on nothing but which
-node is written. Unchanged collections are shared by reference between entries, so
-`entries × width` is paid only by writes that touch the wide collection.
+**Retention is its binding constraint**, and it varies over a much wider range than
+one figure conveys. MEASURED at 50 steps over 50,000 rows
+(`tools/bench-retention-arms.mjs`, heap baselined after seeding):
+
+| what the 50 writes touch     | retained      |
+| ---------------------------- | ------------- |
+| scalar beside the collection | **0.30 MB**   |
+| one row                      | **19.38 MB**  |
+| 50 different rows            | **19.38 MB** — identical to one row |
+| 400 rows                     | 20.20 MB      |
+| all 50,000 rows              | **114.77 MB** |
+
+Two readings follow, and only the first was previously documented:
+
+- Unchanged collections are shared by reference between entries, so the
+  `entries × width` term is paid only by writes that touch the wide collection —
+  a **64× spread** between the scalar arm and touching the collection at all.
+- **19.38 MB is a floor, not a worst case.** One changed row costs the same as
+  fifty different ones, because the pointer array is rebuilt either way. Each
+  *changed* row adds ~40 bytes on top, which is a further **5.9×** to the
+  all-rows ceiling. The cost function has two terms, not one:
+
+  ```
+  retained ≈ entries × (width × ~8 bytes  +  changedRows × ~40 bytes)
+                        └── array term ──┘   └─── entity term ───┘
+  ```
+
+  The array term's constant is ~8 bytes — a 64-bit pointer — measured at
+  8.13 B/ptr at 50k and 8.28 at 10k. (At 1k rows it reads 10.49 because fixed
+  per-entry overhead is a large share of a 0.5 MB total; the linear model holds
+  from ~10k up.)
+
+The intuition this kills is worth stating, because it is the one adopters bring:
+**a large bulk operation is not inherently the expensive history case.** A single
+400-row entry retains **0.434 MB**. Expense comes from many entries against a wide
+collection, not from one wide operation.
 
 Also measured, and the reason retention must be bounded by **turns** and never by
 entries: the log's entry count is O(state) — 1,050 / 10,050 / 50,050 entries at 1k /
@@ -279,7 +310,9 @@ Keeping these apart is the difference between an architecture and a hope.
 ### Measured
 
 - Recording cost after structural sharing; restore is O(state) with no root pointer.
-- Retention: 19.5 MB vs 0.45 MB at 50k/50 depending on write shape; entry count O(state).
+- Retention at 50k/50: 0.30 MB scalar, 19.38 MB touching the collection (a floor —
+  one row and fifty rows cost the same), 114.77 MB when every row changes. Two terms:
+  `width × ~8 bytes` + `changedRows × ~40 bytes`, per entry. Entry count O(state).
 - Callback scope collapses under async; ambient attribution collapses under concurrency.
 - `form()` participation is asymmetric.
 - `PathNotifier` is blind to plain-leaf writes — `timeTravel()` sees them only because

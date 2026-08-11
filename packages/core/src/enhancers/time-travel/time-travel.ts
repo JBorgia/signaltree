@@ -487,14 +487,24 @@ class TimeTravelManager<T> {
  *
  * The unit is the one that actually costs memory: a history entry retains one
  * POINTER per entity in every included collection, so retention is
- * `entries x collection width`, not either alone. Calibrated against the RFC
- * 0012 measurements, which come out at ~10 bytes per retained pointer:
+ * `entries x collection width`, not either alone. RE-MEASURED for 15.0.0 with
+ * `tools/bench-retention-arms.mjs` (50 recorded writes, heap baselined after
+ * seeding), which comes out at ~8 bytes per retained pointer — a 64-bit pointer,
+ * not the ~10 this was originally calibrated against:
  *
- *     1,000 rows x 50 entries =    50k pointers ->  0.76MB
- *    10,000 rows x 50 entries =   500k pointers ->  5.08MB
- *    50,000 rows x 50 entries = 2,500k pointers -> 24.73MB
+ *     1,000 rows x 50 entries =    50k pointers ->  0.51MB  (~10.5 B/ptr)
+ *    10,000 rows x 50 entries =   500k pointers ->  3.95MB  (~8.3 B/ptr)
+ *    50,000 rows x 50 entries = 2,500k pointers -> 19.38MB  (~8.1 B/ptr)
  *
- * 500k is therefore ~5MB of history spent purely on collection arrays, which is
+ * The 1,000-row row reads high because fixed per-entry overhead is a large
+ * fraction of a 0.5MB total; the linear model holds from ~10k up.
+ *
+ * This is a FLOOR, not a worst case: it is what touching the collection at all
+ * costs, and one changed row costs the same as fifty different ones. Each
+ * CHANGED row adds ~40 bytes on top, so an all-rows write at 50k retains
+ * 114.77MB — 5.9x the floor.
+ *
+ * 500k is therefore ~4MB of history spent purely on collection arrays, which is
  * where "silently heavier forever" stops being theoretical. Deriving the
  * threshold from retention rather than from a row count also means a small
  * collection with a long history and a big one with a short history are judged

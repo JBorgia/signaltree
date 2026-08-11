@@ -418,9 +418,13 @@ walk finds changed subtrees. No API sugar for it.
 Time is fine and was measured: 2,000 objects, 50 recorded steps → 62.5 ms total
 recording, one `undo()` in 0.117 ms.
 
-⚠️ **The memory claim is not verified.** "10,000 objects over 50 entries is ~5 MB"
-is an estimate. It is the same family as the unreproduced 19.58 MB retention figure
-that TODO item 2 flags as load-bearing and agent-measured. Treat both as open.
+⚠️ **The memory claim was an estimate; it is now measured, and it was high.**
+"10,000 objects over 50 entries is ~5 MB" came from the same ~10 bytes/pointer
+assumption as ST2029's 5.08 MB. MEASURED with `tools/bench-retention-arms.mjs`:
+**3.95 MB** — the constant is ~8 bytes, a 64-bit pointer. The 19.58 MB figure at
+50k has also now reproduced (19.382 MB, within 1%), so neither is open any longer.
+What replaced them is a two-term model: `entries × (width × ~8 B + changedRows ×
+~40 B)`, in which the old single-term figure is a **floor** and not a worst case.
 
 ### 28. Undo in a devtools panel with unbounded history 🟡 — downgraded
 

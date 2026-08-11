@@ -47,24 +47,36 @@ size**. If you rejected time travel on write cost, re-measure.
 ## Cost 2 — memory. This is the real constraint, and it is arithmetic.
 
 A history entry holds the tree's snapshot, and a collection's snapshot is **one
-pointer per entity**. So retention is `entries x width`, at roughly 10 bytes per
-retained pointer:
+pointer per entity**. So `entries x width x ~8 bytes` is the **floor** for
+touching that collection at all:
 
-<!-- measured: the ST2029 retention model — `entries x width` at ~10 bytes per retained pointer. Source and measurement are in docs/errors/README.md, ST2029; the threshold lives in packages/core/src/lib/signal-tree.ts. Arithmetic, not a benchmark: it scales linearly by construction. -->
+<!-- measured: node --expose-gc tools/bench-retention-arms.mjs <shape> <width> 50 — heap baselined after seeding, so the figure is history retention alone. Constant is ~8.1-8.3 B/pointer at 10k-50k (a 64-bit pointer); the 1,000-row row reads ~10.5 because fixed per-entry overhead is a large fraction of a 0.5 MB total. Catalogue entry: docs/errors/README.md ST2029; threshold constant: packages/core/src/enhancers/time-travel/time-travel.ts (HISTORY_RETAINED_POINTER_BUDGET). NOT arithmetic — an earlier version of this table asserted a linear model instead of measuring it, and shipped a constant ~28% high. -->
 
-| collection | 50 entries retained |
-| ---------- | ------------------- |
-| 1,000 rows | 0.76 MB             |
-| 10,000     | 5.08 MB             |
-| 50,000     | 24.73 MB            |
+| collection | 50 entries, collection touched | 50 entries, every row changed |
+| ---------- | ------------------------------ | ----------------------------- |
+| 1,000 rows | 0.51 MB                        | 2.45 MB                       |
+| 10,000     | 3.95 MB                        | 23.06 MB                      |
+| 50,000     | 19.38 MB                       | 114.77 MB                     |
 
-Core warns past ~500k retained pointers (**ST2029**), judged on retention rather
-than row count — a wide collection with short history and a narrow one with long
-history are held to the same standard, because a row-count threshold gets both
-wrong.
+**The left column is a floor, not a worst case.** Changing one row costs the same
+as changing fifty different ones, because the pointer array is rebuilt either way.
+What separates the columns is the *changed* rows: each one adds ~40 bytes on top
+of the array, which at 50k is a 5.9x span between the two.
 
-This is the number to design against. It is bounded by two things you control:
-how many entries you keep, and how wide the recorded state is. Both have levers.
+That matters for sizing, because the intuition it kills is a common one: a 400-row
+bulk operation is not inherently the expensive case. One 400-row entry retains
+**0.43 MB**. The expensive case is *many entries* against a *wide* collection.
+
+Core warns past ~500k retained pointers (**ST2029**, ~4 MB), judged on retention
+rather than row count — a wide collection with short history and a narrow one with
+long history are held to the same standard, because a row-count threshold gets
+both wrong.
+
+This is the number to design against. It is bounded by three things you control:
+how many entries you keep, how wide the recorded state is, and how much of it each
+write changes. All three have levers — and `entityMap({ recordHistory: false })`
+removes the width term outright rather than shrinking it (measured flat at
+~0.15 MB across 1k, 10k and 50k).
 
 ## Cost 3 — bundle. Real, and a separate question.
 
