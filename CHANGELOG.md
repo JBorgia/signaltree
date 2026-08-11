@@ -1,4 +1,4 @@
-## 15.0.0 (unreleased)
+## 15.0.0 (2026-08-11)
 
 ### BREAKING
 
@@ -92,6 +92,19 @@
   incompatible shapes. The prefix also matches its siblings (`WebSocketConfig`,
   `WebSocketMessage`, `WebSocketService`). Realtime is unchanged: its `ConnectionState`
   and `ConnectionStatus` are genuinely two concepts.
+
+- **`entityMap`'s `map` is renamed to `asMap`.** `map` read as a PROJECTION beside
+  `all()` — `.map(fn)` means "transform each element" to every JS developer, and reaching
+  for that is a documented failure class (the `WRONG_ENTITY_METHODS` table exists for it).
+  `asMap()` says what it returns. Renamed across core, `readonly`'s reader allowlist, and
+  `@signaltree/events` (including the `EntitySnapshotAccessor` interface that mirrors it).
+
+- **[ST2032]** — `timeTravel({ maxHistorySize })` below 2, or non-finite, cannot support
+  undo and now says so. `maxHistorySize` is a buffer LENGTH, not a step count: N entries
+  yield N-1 undo steps. MEASURED after 10 writes — omitted: 10, 5: 4, 2: 1, **1: 0,
+  0: 0**. `0` reads as "no limit" and `1` reads as "one step"; both left `canUndo()`
+  permanently false, and `NaN` was silently unbounded because `length > NaN` is never
+  true. Any such value now falls back to 50 and reports ST2032.
 
 ### Added
 

@@ -375,10 +375,35 @@ export interface BatchingMethods {
    * // Single CD notification after batch completes
    */
   batch(fn: () => void): void;
+  // See `coalesce()` below for the observable difference: a value read back inside
+  // a `batch()` callback is the NEW value; inside `coalesce()` it is the OLD one.
 
   /**
    * Coalesce rapid updates to the same path.
    * Only the final value for each path is written.
+   *
+   * ## `batch()` vs `coalesce()` — they are NOT interchangeable
+   *
+   * Both end with the same state, so the docstrings used to imply the same
+   * operation reached two ways. They differ in WHEN the write lands, and the
+   * difference is observable:
+   *
+   * | inside the callback | `batch()` | `coalesce()` |
+   * | ------------------- | --------- | ------------ |
+   * | reading a value you just wrote | the NEW value | the **OLD** value |
+   *
+   * MEASURED: writing `'X'` then reading inside the callback gives `'X'` under
+   * `batch()` and `''` under `coalesce()`. `batch()` writes synchronously and
+   * defers only change-detection notification; `coalesce()` defers the WRITE
+   * itself and applies the last value per path on exit.
+   *
+   * So `coalesce()` is wrong for any callback that reads back what it wrote, and
+   * `batch()` is wrong when you specifically want intermediate values discarded.
+   *
+   * ⚠️ An `update(fn)` inside `coalesce()` is NOT coalesced, deliberately. An
+   * updater is a read-modify-write, so keeping only the last of three `+1`s would
+   * mean `+1`. Updaters apply immediately, after draining any pending coalesced
+   * `set` on the same path.
    * Use for high-frequency updates (typing, dragging, etc.)
    *
    * @example

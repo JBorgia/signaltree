@@ -1482,6 +1482,7 @@ different complexity, so any ratio is a function of collection size rather than
 a fact about either one:
 
 | collection | SignalStore `updateEntity` | SignalTree `updateOne` (MERGES) / `replaceOne` (REPLACES, v15) |
+| collection as a keyed Map | — | `asMap()` (v15; was `map()`, which read as a projection beside `all()`) |
 | ---------- | -------------------------- | ---------------------- |
 | 1,000      | 8.6 µs                     | 0.44 µs                |
 | 10,000     | 75.2 µs                    | 0.30 µs                |
@@ -1568,6 +1569,7 @@ Every warning carries a stable `[ST####]` code; full map in
   a shopping cart. Use `transient: true` to drop it from persistence too.
 - **[ST2030]** `@signaltree/guardrails` could not copy a container in state. Guardrails answers "did anything change" from snapshot REFERENCE identity — exact and O(1), because `tree()` returns the identical object when nothing changed. The one thing that escapes it is a container mutated IN PLACE (`tree.$.rows().push(x)` notifies nothing), so it copies each array/`Map`/`Set`/`Date` and re-checks those. `structuredClone` throws on a function or class instance, so a container holding one keeps its SHAPE watched (length/size changes still caught) but not its contents. Scoped to that container; nothing else is affected. Contents watching is budgeted in aggregate (5,000 elements tree-wide), not per container, because what costs time per poll is the sum.
 - **[ST2031]** A node held from `byId(id)` is being read after `changeId(id, newId)` retired that id, so it resolves `undefined` and always will. `changeId` drops the old per-entity signal on purpose — aliasing it would share one signal with a future `addOne({ id: oldId })`, a worse failure — so this is correct behaviour that is impossible to debug from the call site. The shape that hits it is a long-lived `selectById(tempId)` closing over the pre-server id. Fix: re-read with `byId(newId)`, or hold the id and call `byId(id())` at the point of use rather than holding the node across a rekey. Dev-only, reported once per retired id.
+- **[ST2032]** `timeTravel({ maxHistorySize })` cannot support undo. `maxHistorySize` is a buffer LENGTH, not a step count: N retained entries yield N-1 undo steps, because the oldest retained entry is the state you land ON rather than a step you spend. MEASURED after 10 writes — omitted: 10 steps, 5: 4, 2: 1, **1: 0, 0: 0**. So `0` (reads as "no limit") and `1` (reads as "one step") both left `canUndo()` permanently false, and `NaN` was silently UNBOUNDED because `length > NaN` is never true. Any value below 2, or non-finite, now falls back to the default of 50 and reports this. Dev-only.
 
 ### SSR and `TransferState` — `deserialize(json, { transfer: true })` (14.0.0+)
 

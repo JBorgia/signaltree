@@ -971,6 +971,9 @@ import { isSignalTree } from '@signaltree/core/authoring';
 if (isSignalTree(candidate)) candidate.destroy();
 ```
 
+- `entityMap` reads: `all()`, `count()`, `ids()`, `asMap()` (the collection as a
+  `ReadonlyMap`, keyed by id — renamed from `map()` in 15.0.0, which read as a
+  projection beside `all()`), `byId(id)`, `byIdOrFail(id)`, `where(pred)`, `find(pred)`.
 - `entityMap({ recordHistory: false })` - Keep a collection in every OTHER snapshot
   (`serialization()`, `persistence()`, devtools, audit) but out of the `timeTravel()`
   undo stack. For a large server-owned grid that must survive reload and must never be
