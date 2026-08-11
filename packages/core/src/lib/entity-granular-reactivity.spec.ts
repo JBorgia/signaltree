@@ -122,11 +122,11 @@ describe('entityMap — collection queries are lazily derived (13.5.0)', () => {
     });
     tree.$.rows.setAll([{ id: 1, v: 'a' }]);
 
-    const held = tree.$.rows.map();
+    const held = tree.$.rows.asMap();
     tree.$.rows.updateOne(1, { v: 'z' });
 
     expect(held.get(1)?.v).toBe('a');
-    expect(tree.$.rows.map().get(1)?.v).toBe('z');
+    expect(tree.$.rows.asMap().get(1)?.v).toBe('z');
   });
 });
 

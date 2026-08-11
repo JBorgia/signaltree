@@ -6,7 +6,10 @@ import {
   OptimisticUpdateManager,
 } from './optimistic-updates';
 
-function makeUpdate(correlationId: string, overrides: Partial<{ rollback: () => void }> = {}) {
+function makeUpdate(
+  correlationId: string,
+  overrides: Partial<{ rollback: () => void }> = {}
+) {
   return {
     id: `update-${correlationId}`,
     correlationId,
@@ -211,13 +214,13 @@ describe('applyOptimisticEntityChange', () => {
     const removeOne = vi.fn((id: string) => {
       store.delete(id);
     });
-    const map = () => store;
+    const asMap = () => store;
 
     return {
       store,
       upsertOne,
       removeOne,
-      map,
+      asMap,
     } as unknown as EntitySnapshotAccessor<Item, string> & {
       store: Map<string, Item>;
       upsertOne: typeof upsertOne;
@@ -238,7 +241,9 @@ describe('applyOptimisticEntityChange', () => {
   it('rollback restores the previous entity for an existing entity', () => {
     const entities = createFakeAccessor([{ id: '1', name: 'a', qty: 1 }]);
 
-    const { rollback } = applyOptimisticEntityChange(entities, '1', { qty: 99 });
+    const { rollback } = applyOptimisticEntityChange(entities, '1', {
+      qty: 99,
+    });
     expect(entities.store.get('1')?.qty).toBe(99);
 
     rollback();

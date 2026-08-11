@@ -112,7 +112,9 @@ describe('granular-reactivity fan-out', () => {
 
     // Reading through the whole-collection signal SHOULD fan out — anything
     // derived from the entire map legitimately depends on every change.
-    const { counters, readAll } = instrument((i) => rows.map().get(i)?.v ?? -1);
+    const { counters, readAll } = instrument(
+      (i) => rows.asMap().get(i)?.v ?? -1
+    );
 
     readAll();
     rows.updateOne(TARGET, { v: 999 });

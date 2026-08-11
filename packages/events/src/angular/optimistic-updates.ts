@@ -256,7 +256,8 @@ export interface EntitySnapshotAccessor<
   E extends Record<string, unknown>,
   K extends string | number = string
 > {
-  readonly map: Signal<ReadonlyMap<K, E>>;
+  /** Renamed from `map` in 15.0.0 to match `entityMap`'s `asMap`. */
+  readonly asMap: Signal<ReadonlyMap<K, E>>;
   upsertOne(entity: E): K;
   removeOne(id: K): void;
 }
@@ -317,7 +318,7 @@ export function applyOptimisticEntityChange<
   id: K,
   change: Partial<E> | E
 ): EntityOptimisticPatch<E> {
-  const previousData = entities.map().get(id);
+  const previousData = entities.asMap().get(id);
   const existed = previousData !== undefined;
 
   const nextEntity: E = existed
@@ -332,7 +333,7 @@ export function applyOptimisticEntityChange<
     rollback: () => {
       if (existed) {
         entities.upsertOne(previousData as E);
-      } else if (entities.map().has(id)) {
+      } else if (entities.asMap().has(id)) {
         entities.removeOne(id);
       }
     },

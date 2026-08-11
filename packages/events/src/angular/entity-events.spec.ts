@@ -19,10 +19,7 @@ interface ItemEvent extends BaseEvent<string, unknown> {
   };
 }
 
-function makeEvent(
-  type: string,
-  data: ItemEvent['data']
-): ItemEvent {
+function makeEvent(type: string, data: ItemEvent['data']): ItemEvent {
   return {
     id: `evt-${Math.random().toString(36).slice(2)}`,
     type,
@@ -37,9 +34,9 @@ function makeEvent(
 
 /**
  * A minimal, spyable stand-in for a `@signaltree/core` `EntitySignal<Item>`.
- * Backed by a real Map so `.map()` reflects live state, satisfying the
+ * Backed by a real Map so `.asMap()` reflects live state, satisfying the
  * structural surface entityEventHandler needs (upsertMany/updateMany/
- * removeMany + a callable `.map()`).
+ * removeMany + a callable `.asMap()`).
  */
 function createFakeEntities() {
   const store = new Map<string, Item>();
@@ -73,20 +70,20 @@ function createFakeEntities() {
     }
   });
 
-  const map = () => store;
+  const asMap = () => store;
 
   return {
     store,
     upsertMany,
     updateMany,
     removeMany,
-    map,
+    asMap,
   } as unknown as {
     store: Map<string, Item>;
     upsertMany: typeof upsertMany;
     updateMany: typeof updateMany;
     removeMany: typeof removeMany;
-    map: () => ReadonlyMap<string, Item>;
+    asMap: () => ReadonlyMap<string, Item>;
   };
 }
 

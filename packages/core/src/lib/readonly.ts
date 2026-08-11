@@ -53,7 +53,7 @@ export const ENTITY_READERS = [
   'ids',
   'has',
   'empty',
-  'map',
+  'asMap',
   'where',
   'find',
 ] as const;
@@ -140,7 +140,6 @@ export const ASYNC_QUERY_READERS = [
   'error',
 ] as const;
 
-
 // =============================================================================
 // HELPERS
 // =============================================================================
@@ -210,13 +209,15 @@ export type ReadonlyEntityNode<E> = {
  * surface returns a deep-writable `EntityNode`, which would leak the write
  * path through a "readonly" view (RFC 0004 §3 V-P2).
  */
-export type ReadonlyEntitySignal<E, K extends string | number = string> =
-  PickReaders<EntitySignal<E, K>, (typeof ENTITY_READERS)[number]> & {
-    /** Re-signed: same node at runtime, typed without write reachability. */
-    byId(id: K): ReadonlyEntityNode<E> | undefined;
-    /** Re-signed: same node at runtime, typed without write reachability. */
-    byIdOrFail(id: K): ReadonlyEntityNode<E>;
-  };
+export type ReadonlyEntitySignal<
+  E,
+  K extends string | number = string
+> = PickReaders<EntitySignal<E, K>, (typeof ENTITY_READERS)[number]> & {
+  /** Re-signed: same node at runtime, typed without write reachability. */
+  byId(id: K): ReadonlyEntityNode<E> | undefined;
+  /** Re-signed: same node at runtime, typed without write reachability. */
+  byIdOrFail(id: K): ReadonlyEntityNode<E>;
+};
 
 /** Read-only view of {@link EntityLoaderSurface}: status signals only. */
 export type ReadonlyEntityLoaderSurface<P = void> = PickReaders<
@@ -264,7 +265,10 @@ export type ReadonlyAsyncSourceSignal<V> = {
 /** Read-only view of {@link AsyncQuerySignal}: callable read + demoted `input` + results. */
 export type ReadonlyAsyncQuerySignal<In, Out> = {
   (): Out | undefined;
-} & PickReaders<AsyncQuerySignal<In, Out>, (typeof ASYNC_QUERY_READERS)[number]>;
+} & PickReaders<
+  AsyncQuerySignal<In, Out>,
+  (typeof ASYNC_QUERY_READERS)[number]
+>;
 
 // =============================================================================
 // THE VIEW

@@ -30,6 +30,43 @@ export type { TimeTravelConfig, TimeTravelEntry };
 /**
  * Internal time travel state management
  */
+
+/**
+ * @internal Validate `maxHistorySize`, because two plausible values silently
+ * disabled undo entirely.
+ *
+ * `maxHistorySize` is a BUFFER LENGTH, not a step count: N retained entries yield
+ * N-1 undo steps, because the oldest retained entry is the state you land ON rather
+ * than a step you spend. MEASURED after 10 writes — omitted: 10 steps, 5: 4, 2: 1,
+ * **1: 0, 0: 0**.
+ *
+ * So `0` (which reads as "no limit") and `1` (which reads as "one step") both leave
+ * `canUndo()` permanently false. `-1` additionally drives `getCurrentIndex()` to -1,
+ * since the trim runs `currentIndex--` against an already-empty buffer. And `NaN` was
+ * silently UNBOUNDED, because `length > NaN` is never true.
+ *
+ * A silently dead undo button is the same failure class as the phantom-step defect:
+ * the API reports that undo is available and it does nothing. Fail loud instead.
+ *
+ * The `??` is deliberately preserved — it correctly distinguishes "not supplied"
+ * from "supplied as 0", and the fix belongs in validation rather than in coalescing.
+ */
+function normaliseMaxHistorySize(value: number | undefined): number {
+  if (value === undefined) return 50;
+  if (!Number.isFinite(value) || value < 2) {
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      console.error(
+        `SignalTree: timeTravel({ maxHistorySize: ${String(value)} }) cannot ` +
+          `support undo. maxHistorySize is a buffer LENGTH, so N entries give ` +
+          `N-1 undo steps — any value below 2 gives none, and a non-finite value ` +
+          `is silently unbounded. Falling back to the default of 50. Pass 2 or ` +
+          `more, or omit it. [ST2032]`
+      );
+    }
+    return 50;
+  }
+  return Math.floor(value);
+}
 class TimeTravelManager<T> {
   private history: TimeTravelEntry<T>[] = [];
 
@@ -77,7 +114,7 @@ class TimeTravelManager<T> {
     private config: TimeTravelConfig = {},
     private restoreStateFn?: (state: T) => void
   ) {
-    this.maxHistorySize = config.maxHistorySize ?? 50;
+    this.maxHistorySize = normaliseMaxHistorySize(config.maxHistorySize);
     this.includePayload = config.includePayload ?? true;
     this.actionNames = {
       update: 'UPDATE',

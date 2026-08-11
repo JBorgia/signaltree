@@ -901,7 +901,12 @@ export interface EntitySignal<E, K extends string | number = string> {
    * `status` / `form` / `asyncSource` markers.
    */
   readonly empty: Signal<boolean>;
-  readonly map: Signal<ReadonlyMap<K, E>>;
+  /**
+   * The collection as a `ReadonlyMap`, keyed by id. Renamed from `map` in 15.0.0 —
+   * `map` read as a projection beside `all()`, which is what `.map(fn)` means to
+   * every JS developer.
+   */
+  readonly asMap: Signal<ReadonlyMap<K, E>>;
   where(predicate: (entity: E) => boolean): Signal<E[]>;
   find(predicate: (entity: E) => boolean): Signal<E | undefined>;
 

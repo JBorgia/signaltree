@@ -581,7 +581,15 @@ export function createEntitySignal<
       return idsSignal;
     },
 
-    get map(): Signal<ReadonlyMap<K, E>> {
+    /**
+     * The collection as a `ReadonlyMap`, keyed by id.
+     *
+     * Named `asMap` since 15.0.0. It was `map`, which read as a PROJECTION beside
+     * `all()` — every JS developer expects `.map(fn)` to transform elements, and an
+     * agent or newcomer reaching for that is a documented failure class (see
+     * `WRONG_ENTITY_METHODS`). `asMap` says what it returns.
+     */
+    get asMap(): Signal<ReadonlyMap<K, E>> {
       return mapSignal;
     },
 

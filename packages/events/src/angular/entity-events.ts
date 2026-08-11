@@ -241,7 +241,7 @@ export function entityEventHandler<
     }
 
     if (removeIds.size > 0) {
-      const live = entities.map();
+      const live = entities.asMap();
       const idsToRemove = Array.from(removeIds).filter((id) => live.has(id));
       if (idsToRemove.length > 0) {
         entities.removeMany(idsToRemove);

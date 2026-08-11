@@ -304,7 +304,7 @@ rebuilding arms are quadratic in N, so the ratio is a fact about the fixture.
 > sixteen times the array leaf, because `updateEntity` spreads a 50,000-key
 > object per write while `slice()` copies a dense array. The old 46.56 ms sits
 > within noise of the array-leaf figure beside it, which is what a naive
-> `.map()` arm measures; that arm was corrected in `bench-vs-signalstore.mjs`
+> `.asMap()` arm measures; that arm was corrected in `bench-vs-signalstore.mjs`
 > and this table was never updated to match. It also had no generator, which is
 > why nothing caught it. `tools/bench-array-leaf.mjs` now exists so it can.
 
