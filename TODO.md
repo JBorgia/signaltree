@@ -19,6 +19,71 @@ below are written:
    an item now is that we do not yet know the right shape — never that removing it
    would break someone. See the sequencing note at the end of item 2.
 
+---
+
+# RELEASE SCOPE — 15.0.0 is SCOPE A ONLY
+
+**Decided 2026-08-11.** Two bodies of work have been running in one conversation and
+they are at opposite ends. This section is the boundary; when in doubt about whether
+something belongs in 15.0.0, it is the authority.
+
+|                                |                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------- |
+| **Scope A — the audit**        | retractions, naming, the defects found while auditing, gates. **~85% done. Ships as 15.0.0.** |
+| **Scope B — the architecture** | position-attributed transactional history. **Not started.** 16.0.0+                           |
+
+Why cut now rather than hold: holding a release for an unstarted six-phase build is the
+14.0.0 mistake inverted. 14.0.0 shipped too early _while the audit was still producing
+findings_; holding 15.0.0 for work that has not begun is the same error at the other
+end. 6a is live data-loss in shipped 14.0.0 and its doc fix is done — users benefit now
+rather than after Phase 6.
+
+## IN 15.0.0
+
+Everything already committed, plus:
+
+- **`batchUpdate` deletion** — with the demo benchmark **re-run and compared**, not a
+  green build. It is called behind a `typeof … === 'function'` guard with a silent
+  fallback, so removal leaves the benchmark measuring a different path.
+- **entityMap renames** — `byIdOrFail()`, `map()`.
+- **`batch` vs `coalesce` documentation** — the mid-callback contract is undocumented on
+  both sides.
+- **6d input validation** — `maxHistorySize ≤ 1` silently disables undo. Cheap,
+  contained, and a footgun. Needs an ST code.
+- **Item 7** — parity framing removal.
+- **Item 1c** — the `changeId` held-node diagnostic.
+- **Capability matrix** (item 8) and **RFC 0008** (item 9).
+
+## OUT of 15.0.0 — do not let these leak in
+
+- **Everything in the architecture plan.** Turns, transactions, ownership positions,
+  containment, the turn store, position indexes.
+- **The `capacity` removal.** It is breaking and it belongs _with_ the turn store, not
+  before it. Removing it early strands adopters twice.
+- **6a's code fix.** It is gated on the representation decision; the doc fix has shipped.
+- **The MST / Yjs audit.** It blocks public uniqueness claims, not the release.
+
+Mixing Scope B into this release makes it un-reviewable. That is the whole point of the
+boundary.
+
+## BLOCKS the cut
+
+- **Tests for 6a–6d.** Six spec files exist under `enhancers/time-travel/`, and none
+  pins the four documented defects. `tools/verify-history-defects.mjs` is a **provenance
+  tool with deliberately inverted exit codes** — it goes red when a defect is FIXED — so
+  it is not coverage. Documenting a data-loss defect with nothing that fails when it
+  silently changes is exactly how the retracted claim survived on four surfaces.
+- All gates green, tests green, changelog finalised, versions bumped.
+
+## After the cut
+
+Phase 0A and 0B from
+[history-priority-hierarchy.md](docs/architecture/history-priority-hierarchy.md).
+Both are small, both are falsifiable, and either can send the design back — which is why
+they come before any of Scope B's implementation.
+
+---
+
 Ordered by what unblocks the most. Reasoning is compressed — the full derivation
 is in the linked audits. What went wrong in 14.0.0, including what I broke myself,
 is in [14.0.0-what-actually-happened.md](docs/audits/2026-08/14.0.0-what-actually-happened.md).
