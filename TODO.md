@@ -159,14 +159,25 @@ outer. Concretely the signature has to grow:
 `mergeMap(id => action(id), CONCURRENCY)`. That is the cost, and it lands on every
 store method a bulk handler composes.
 
-**3. An action built on the notifier is BLIND to plain-leaf writes.** MEASURED on the
-`bulkPatch$` shape: 3 entity paths captured, **0 of 4** scalar writes
-(`selectedIds`, `saveState`, `bulkCompleted`, `bulkInProgress`). Only markers
-self-notify (§1.2 of the spike). This is not cosmetic — `create$` deliberately carries
-selection from the temp id to the server id, and an undo that restores the row without
-the selection is wrong. So the handle cannot be a thin layer over `PathNotifier`; it
-needs `interceptLeafSignals` the way `timeTravel()` and devtools each install it
-independently.
+**3. The leaf blind spot is `PathNotifier`'s, and SITING fixes it.** The prototype
+captured 3 entity paths and **0 of 4** scalar writes — but it ran against a bare
+`signalTree()`. Re-measured with the enhancer attached:
+
+```
+bare tree         captured: ["entities.e1"]                                        0/3 leaves
+with timeTravel() captured: ["entities.e1","selectedIds","saveState","bulkCompleted"] 3/3 leaves
+```
+
+`time-travel.ts:638` installs `interceptLeafSignals` and calls `notifier.notify()`
+itself at `:646`, so plain-leaf writes reach `PathNotifier` **only because
+`timeTravel()` injects them**. Consequence: an action built as a standalone notifier
+subscriber inherits the blind spot; one built **inside the time-travel enhancer gets
+leaves for free**. That is an independent confirmation of the target doc's §4.5 siting,
+arrived at from the opposite direction.
+
+It still matters that leaves are in scope — `create$` deliberately carries selection
+from the temp id to the server id, and an undo restoring the row without the selection
+is wrong.
 
 **4. Partial failure has no `commit()`/`abort()` answer.** MEASURED on
 `onArchiveToggle` with 3 records, 1 failing: 2 succeeded, 1 failed and **already
@@ -180,6 +191,21 @@ change per path** — first `before`, last `after`, drop paths that round-trip. 
 exactly `PathNotifier.flush()`'s merge rule, which §1.3 measured as already correct
 **within a turn**. The action needs the same rule **across turns**. It also fixes
 result 5 for free.
+
+⚠️ **With one change: the equality predicate must be deep, not reference.**
+`flush()` compares `newValue === oldValue`. Across turns a compensating write often
+**reconstructs** the value rather than restoring the captured object, and reference
+identity then fails to collapse it. MEASURED on the partial-failure shape:
+
+| compensation style                         | net by `Object.is` | net by deep-equal |
+| ------------------------------------------ | ------------------ | ----------------- |
+| v3-faithful (restores the captured object) | `[a, c]` ✓         | `[a, c]` ✓        |
+| reconstructs a fresh object                | `[a, **b**, c]` ✗  | `[a, c]` ✓        |
+
+v3's own handlers capture `currentEntity` before mutating and restore that exact
+object, so reference identity happens to work for them today — but it is one
+refactor away from leaving a phantom entry for a row the user can still see. Specify
+deep equality.
 
 **5. `create$` records history the user never saw.** Server assigns a different id, so
 the action contains `entities.temp-1` (add), `entities.temp-1` (remove),
@@ -197,11 +223,32 @@ now reproduced on a handler that ships.
 not free** — it has to be threaded through store method signatures, and it needs the
 cross-turn merge rule before it can be correct under partial failure.
 
-**Note on `abort()`:** every v3 handler already implements its own compensation in
-`catchError`. So `abort()` largely duplicates what call sites do today, and an
-`abort()` that also reverts would double-revert. The handle's value here is
-**labelling and grouping**, not rollback — worth deciding deliberately rather than
-shipping `abort()` because transactions conventionally have one.
+**Note on `abort()` — RETRACTED and re-tested.** An earlier draft of this item said
+`abort()` duplicates `catchError`, would double-revert, and that the handle's value is
+"labelling and grouping, not rollback". That read `abort()` as reverting **state**. It
+does not: **`abort()` discards the recording; `catchError` reverts the state, exactly
+as it already does.** They compose, and re-measured on `create$`'s error path:
+
+```
+state before = "existing", after = "existing"   (catchError reverted)
+undo steps created by the action: 0
+double-revert: NO — abort() touched no state
+```
+
+So `abort()` does the one thing `catchError` **structurally cannot**: express "this
+action produced nothing the user should be able to undo." Keep it.
+
+Two refinements from the same run:
+
+- **Net collapse makes `abort()` belt-and-braces rather than load-bearing** for the
+  total-failure case: the same failure committed by mistake also recorded 0 steps,
+  because `temp-1` round-tripped and collapsed out. `abort()` still earns its place —
+  it states the intent rather than relying on the arithmetic working out.
+- **`abort()` is the WRONG call on partial failure.** With collapse, `commit()` on the
+  2-of-3 archive records exactly the two the server accepted and drops the
+  self-reverted one. `abort()` there would discard a real two-record change. So the
+  handle needs no third outcome — `commit()` + net collapse covers partial failure,
+  and `abort()` covers total failure.
 
 ### Sequencing: what gates on what
 
