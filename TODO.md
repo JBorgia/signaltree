@@ -353,8 +353,10 @@ Still to do, in order:
 3. **`getHistory()` / `getCurrentIndex()`** — the only `get`-prefixed accessors in a
    library of bare nouns (`all()`, `count()`, `canUndo()`). Both move to the devtools
    surface anyway; rename once, there.
-4. **`resetHistory()` vs `clear()`** — check whether it empties or restores-to-initial
-   first, because those are different operations wearing similar words.
+4. ~~**`resetHistory()` vs `clear()`**~~ — ANSWERED, no rename. MEASURED: after 3
+   writes, `resetHistory()` left `n === 3`, `canUndo() === false`, and a following
+   `undo()` left `n === 3`. It empties the stack and leaves state alone. The name is
+   accurate; `clear()` would be ambiguous between the two operations.
 5. **`byIdOrFail()`** — an `OrFail` suffix unique in the API, for a "strict variant"
    concept that recurs without it (`removeMany`, `addMany` both throw).
 6. **`map()` on `entityMap`** — returns `ReadonlyMap`, but reads as a projection next to
@@ -414,22 +416,94 @@ small.
   lead was chased and cleared — `ErrorClassification`/`ClassificationResult` are two
   real concepts, not a duplicate.
 
-## 6. Re-score the 32-case time-travel audit — now for the opposite reason
+## ~~6. Re-score the 32-case time-travel audit~~ — DONE 2026-08-10
 
-[time-travel-use-case-audit.md](docs/audits/2026-08/time-travel-use-case-audit.md)
-was scored against the belief that collections never recorded, so its FAILURES are
-suspect, not just its passes. Cases 1b, 2, 4 and the workload verdicts 2/4/5/6 in
-[undo-business-and-ux-cases.md](docs/audits/2026-08/undo-business-and-ux-cases.md)
-were all scored on the false premise.
+Both documents re-scored by outcome against the built package on `main`. Every
+verdict now names the `undo()`/`redo()`/`jumpTo()` it called and the state
+afterwards. Seven of 32 cases moved, **five of them downward**, plus workload
+verdicts 2/4/5/6/8 in
+[undo-business-and-ux-cases.md](docs/audits/2026-08/undo-business-and-ux-cases.md).
+Method and results:
+[time-travel-use-case-audit.md](docs/audits/2026-08/time-travel-use-case-audit.md).
 
-Case 8 is still wrong, but the diagnosis flips: `history: false` was not "excluding
-nothing." It excludes the collection from the snapshot and **still writes a history
-entry** — the phantom-step defect in 2a.
+Confirmed along the way, independently: collection mutations record, `undo()`
+restores deletes, field edits and **order**, and 20 `updateOne` in one microtask is
+one entry reverted by one undo. The retraction holds.
 
-Re-score by outcome. Every verdict must name the `undo()` call it made and what the
-state looked like afterwards. A verdict citing `getHistory().length` or `canUndo()`
-without a following `undo()` is not evidence — that is exactly how the original
-scoring went wrong.
+### 6a. NEW DEFECT — `timeTravel()` does not cover `form()` state
+
+**The largest finding of the re-score, and it loses user data.** Form writes never
+notify the history recorder.
+
+- Form-only tree, 3 form writes: `getHistory()` is `["INIT"]`, `canUndo() === false`,
+  `undo()` is a no-op. Identical writes to a plain leaf on the same-shaped tree give
+  4 entries and a working undo.
+- Mixed tree: a _later_ plain-leaf write snapshots the form's then-current values
+  incidentally, so `undo()` on an unrelated field **rewinds the form to a stale
+  value**. Measured: `plain='p1'; name='ada'; plain='p2'; name='ada l'` → one
+  `undo()` → `plain='p1'` AND `name=''`. One Ctrl+Z on a neighbouring field wiped
+  the form.
+
+`form({ history: history() })` — the form's own scoped stack — works correctly.
+This is why v3 does undo at the form layer and type-erases `timeTravel`: their
+architecture was forced, not chosen.
+
+Do not fix by making the snapshot walker descend into form markers — that
+reproduces the whole-tree-snapshot problem item 2 already ruled out. This is
+evidence FOR the path-scoped delta representation, and it belongs to that decision.
+Until then, document scoped form history as the only correct mechanism.
+
+### 6b. NEW DEFECT — `createAuditTracker` is a 100 ms polling sampler
+
+`signalTree` exposes no `.subscribe`, so the tracker always takes its fallback
+branch, `setInterval(handleChange, 100)` (`audit.js:41-49`). It samples rather than
+trails. MEASURED: two writes inside one window log only the last; **a write and its
+revert inside one window log nothing at all**.
+
+That is acceptable for an undo stack and wrong for an audit trail, which is the
+thing it is named for and recommended for in the regulated/healthcare workload.
+Either drive it from `PathNotifier` (the notification already fires at every write
+site) or delete it and document `createAuditCallback` / `getHistory()`, which are
+exact. It also leaks its interval unless the returned stop function is wired to a
+`DestroyRef`.
+
+### 6c. NEW DEFECT — `undo()` after `deserialize()` destroys the restored state
+
+`canUndo()` is `true` immediately after a restore, and the first `undo()` lands on
+the pre-restore state: measured `deserialize()` → `n === 2`, `undo()` → `n === 0`.
+Same family as the phantom step fixed in 2a — an enabled undo button whose first
+press does something the user cannot want. History does not survive a reload
+(expected, gap C); being _destructive_ about it is not.
+
+### 6d. `maxHistorySize` — undocumented default, and a footgun at 0
+
+Default is 50 (`time-travel.js:32`, `config.maxHistorySize ?? 50`), and the type
+declares no default, so "omit it for unbounded history" — which the audit and the
+devtools guidance both said — is false. Measured over 200 writes: omitted → 49
+undos, `Infinity` → 200, `500` → 200, **`0` → 0**.
+
+`maxHistorySize: 0` silently disables undo entirely. `0` is a plausible spelling of
+"no limit"; `?? 50` does not catch it and the trim then fires on every entry. Make
+`0` mean unbounded or throw, and document the default.
+
+### 6e. Doc defects found by re-scoring
+
+- `commit`/`discard` are attributed to `createEditSession`, which has neither. The
+  value-level API is `applyChanges`/`reset`; the tree-bound one is
+  `createTreeEditSession` with `commit()`/`cancel()`. Wrong in the audit (now
+  fixed) and in `docs/guides/time-travel-in-production.md:176` (not fixed).
+- `docs/myths-and-misconceptions.md:261` says a path-bound edit session is "planned
+  for v10.1". `createTreeEditSession` ships today.
+
+### 6f. Tests do not pin any of this
+
+The re-score ran as one-shot scripts, not tests. Cases 13, 15, 20 and 28 are live
+defects with **no test pinning them** — 20 in particular is silent data loss on the
+primary editing surface. Add regression tests with the fixes.
+
+**Also answered:** 5b item 4 — `resetHistory()` EMPTIES the stack and leaves state
+alone; it does not restore-to-initial. The name is accurate; do not rename it to
+`clear()`.
 
 ## 7. Delete the parity framing from time-travel guidance
 

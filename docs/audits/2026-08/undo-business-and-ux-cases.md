@@ -1,6 +1,23 @@
 # Undo: business cases, UX cases, and what they demand of the state layer
 
-**Status:** research, 2026-08-10. Written to answer a question I had been putting
+**Status:** research, 2026-08-10. §7 RE-SCORED 2026-08-10 by outcome.
+
+> ⚠️ **§3 and §3b predate a retraction and are kept as point-in-time reasoning.**
+> §3's central claim — "a collection mutation does not create a history entry",
+> and the conclusion that "cases 1–4, the four most common, do not work" — is
+> **FALSE**. Collection mutations record; `undo()` restores deletes, field edits
+> and order. Read §7 (re-scored) for current verdicts, and
+> [time-travel-use-case-audit.md](time-travel-use-case-audit.md) for the method.
+>
+> One thing in §3 was right about the wrong subject. It describes unrecorded
+> changes riding inside the next recorded snapshot, so that "undoing an unrelated
+> edit silently reverts them — data loss with a confident UI." That mechanism is
+> real and it was **measured** — but it applies to **`form()` state**, not to
+> collections. §3b's clean three-way split is therefore too generous: `timeTravel()`
+> does not merely leave form fields alone, it captures them incidentally and
+> rewinds them. See case 20 of the sibling audit and TODO 6a.
+
+Written to answer a question I had been putting
 back to the maintainer — "is undo a product feature or a debugging aid?" — which
 the research answers, so it should never have been a question.
 
@@ -314,8 +331,32 @@ for**, asks what undo means in each, and sketches the implementation. If a
 workload we actively pitch cannot express its own undo, that is a claim to fix or
 retract.
 
-Verdicts are against 14.0.0 as measured in §4. `form(history())` = scoped field
-undo, works. Collection mutations do not record.
+> **RE-SCORED 2026-08-10.** The line that used to sit here — "Collection mutations
+> do not record" — was **false**, and it was the governing premise for all eleven
+> verdicts below. It was retracted in
+> [14.0.0-what-actually-happened.md](14.0.0-what-actually-happened.md) and the
+> verdicts were re-run by outcome against `main` (15.0.0-dev). Verdicts 2, 4, 5, 6
+> and 8 moved. See
+> [time-travel-use-case-audit.md](time-travel-use-case-audit.md) for the method and
+> the harness results.
+
+Verdicts are against `main` (15.0.0-dev), re-scored by outcome — every one names
+the `undo()` it called and the state afterwards.
+
+**Two corrections that apply to every workload below:**
+
+1. **Collection mutations DO record.** `removeOne` → `undo()` restores the row;
+   `setAll` reorder → `undo()` restores the **order**; 20 `updateOne` in one
+   microtask is one entry that one `undo()` reverts. Every "force a snapshot by
+   bumping a counter" workaround below is unnecessary and has been struck.
+2. **The option is now `recordHistory: false`**, not `history: false`
+   (`063a4457`) — the old spelling collided with `form()`'s opt-IN
+   `history: history()`. Code samples below use the current spelling.
+
+`form(history())` = scoped field undo, works (verified). Note that the **global**
+`timeTravel()` does _not_ cover `form()` state at all — see case 20 of the sibling
+audit — so scoped form history is the only correct mechanism, not merely the
+tidier one.
 
 ### 1. Streaming telemetry into many per-entity bindings
 
@@ -329,13 +370,13 @@ an acknowledgement, a note, a manual override.
 ```ts
 signalTree({
   // Server-authored. MUST be excluded or Ctrl+Z reverts incoming telemetry.
-  units: entityMap({ selectId: (u) => u.id, history: false }),
+  units: entityMap({ selectId: (u) => u.id, recordHistory: false }),
   // The operator's own overlay — this is what undo is for.
   ack: form({ initial: { note: '', override: null }, history: history() }),
 });
 ```
 
-**Verdict: ✅, and this is `history: false`'s real use case** — not bulk import.
+**Verdict: ✅, and this is `recordHistory: false`'s real use case** — not bulk import.
 Without it, a global stack lets an operator undo a telemetry frame they never
 caused. In a SCADA or NOC context that is a safety-adjacent bug, not a papercut.
 
@@ -348,13 +389,21 @@ server sent, and never let a sync write become an undo step.
 
 ```ts
 signalTree({
-  jobs: entityMap({ selectId: (j) => j.id, load: loader(...), history: false }),
+  jobs: entityMap({ selectId: (j) => j.id, load: loader(...), recordHistory: false }),
   edit: form({ initial: blankJob, history: history() }),   // per-job edit buffer
 });
 ```
 
-**Verdict: 🟡.** Editing a job's fields works. _Creating_ a job offline is a
-collection mutation, so it does not record and cannot be undone.
+**Verdict: ✅ (was 🟡 on the false premise).** Editing a job's fields works.
+_Creating_ a job offline is a collection mutation, and collection mutations
+**do** record: `addOne` → `undo()` removes the row again. The original 🟡 was
+scored on the retracted claim.
+
+⚠️ The remaining real caveat is different and narrower: with `recordHistory: false`
+on `jobs` — which this sample sets, correctly, so sync writes never become undo
+steps — the offline creation is deliberately excluded too. Undoing an offline
+create needs the create to live somewhere the user owns, not in the server-owned
+collection.
 
 ### 3. Deep nested forms with audit and persistence
 
@@ -374,9 +423,21 @@ signalTree({
 // trail: createAuditTracker() — append-only, NOT the undo stack
 ```
 
-**Verdict: ✅ — the best-supported workload we claim.** Nested depth is exactly
-what `form()` handles, and undo, durability and audit are three separate
-primitives instead of one overloaded stack.
+**Verdict: 🟡 (was ✅ "the best-supported workload we claim").** Nested depth is
+exactly what `form()` handles, and undo, durability and audit being three separate
+primitives is still the right shape.
+
+⚠️ **The audit leg does not hold up, and this is a regulated workload.**
+`createAuditTracker` has no change subscription to attach to — `signalTree` exposes
+no `.subscribe` — so it always falls back to `setInterval(handleChange, 100)`
+(`audit.js:41-49`). It **samples**; it does not trail. MEASURED: two writes inside
+one 100 ms window log only the last, and a write followed by its revert inside one
+window logs **nothing at all**. For healthcare/claims that is a compliance defect,
+not a papercut — "a field was set and set back" is exactly what the trail exists to
+record.
+
+Use `createAuditCallback(prev, current)` or read `getHistory()`; both are exact.
+Filed in [time-travel-use-case-audit.md](time-travel-use-case-audit.md) case 15.
 
 ### 4. CRUD over moderate lists, server round-trips
 
@@ -390,16 +451,21 @@ Undo a row edit (form-shaped). Undo a delete (structural). Undo a bulk assign
 // Row edit — works.
 rowEdit = form({ initial: row, history: history() });
 
-// Delete — does NOT record. Today's only option is a root write to force a
-// snapshot, which is a workaround, not a design:
+// Delete — records natively. No counter bump, no workaround.
 remove(id: string) {
-  this.tree.$.rows.removeOne(id);
-  this.tree({ rev: this.tree.$.rev() + 1 });   // forces a recordable entry
+  this.tree.$.rows.removeOne(id);   // undo() restores the row
 }
 ```
 
-**Verdict: 🟡, and this is the headline CRUD claim half-served.** One of three
-undo meanings works natively.
+**Verdict: ✅ for row edit and delete, 🟡 overall (was 🟡 with a false diagnosis).**
+Two of three undo meanings work natively — the counter-bump workaround this section
+used to prescribe was scored on the retracted premise and has been struck.
+MEASURED: `removeOne('b')` → `undo()` → `a,b,c` restored.
+
+The one that is genuinely unserved is the third: **undo a bulk assign as one step.**
+That needs the transaction handle, and it got worse rather than better in 15.0.0 —
+the `pauseRecording` recipe was deleted, so grouping now depends on whether the
+caller happens to `await` between writes. See case 7 of the sibling audit.
 
 ### 5. Drag-driven boards and schedules
 
@@ -411,15 +477,15 @@ here — it is the workload's entire gesture.
 ```ts
 // The move itself: order as data (correct, and it persists for free).
 move(id: string, order: number) {
-  this.tree.$.cards.updateOne(id, { order });   // records NOTHING
-  this.tree({ boardRev: this.tree.$.boardRev() + 1 }); // ...so force one
+  this.tree.$.cards.updateOne(id, { order });   // records; undo() reverts the move
 }
 ```
 
-**Verdict: 🟡 with a non-obvious workaround, and this is the sharpest
-contradiction in the set.** We lean on drag-driven boards, and the core gesture's
-undo requires the developer to discover that they must bump an unrelated counter.
-A dispatcher who drags a job to the wrong tech and hits Ctrl+Z gets nothing.
+**Verdict: ✅ (was 🟡 "the sharpest contradiction in the set").** The contradiction
+was an artefact of the retracted premise. The core gesture undoes natively and the
+counter bump has been struck. MEASURED: a `setAll` reorder `a,b,c` → `c,a,b` →
+`undo()` restores `a,b,c`, **order included**. A dispatcher who drags a job to the
+wrong tech and hits Ctrl+Z gets the move back.
 
 ### 6. Undo/redo as a shipped feature over moderate state
 
@@ -427,9 +493,20 @@ _Editors-in-a-panel, wizards, bulk edit_
 
 **What undo means:** whatever the panel edits — which the claim does not say.
 
-**Verdict: ✅ for scalar/branch/form state, ❌ for collection structure.** The
-workload we name "undo as a shipped feature" is the one whose support depends
-entirely on a state shape the claim does not mention. That is the row to reword.
+**Verdict: ✅ for scalar/branch state AND collection structure; ❌ for `form()`
+state under the global stack.** Both halves of the old verdict were wrong, and they
+were wrong in opposite directions.
+
+- Collection structure **does** record — the ❌ came from the retracted premise.
+- `form()` state does **not** participate in `timeTravel()` at all: a form-only
+  tree records `["INIT"]` and nothing else, `canUndo()` stays `false`, and in a
+  mixed tree an `undo()` aimed at a neighbouring field rewinds the form to a stale
+  snapshot value, destroying what the user typed. The ✅ was inherited from "form
+  state is ordinary tree state", which is false for history purposes.
+
+So the row still needs rewording, for the opposite reason: an "editors-in-a-panel"
+workload must use `form({ history: history() })` for the form and the global stack
+for everything else, and today nothing says so. See case 20 of the sibling audit.
 
 ### 7. Whole-dataset reads on every change
 
@@ -443,16 +520,23 @@ filters: form({ initial: { range: '30d', groupBy: 'region' }, history: history()
 ```
 
 **Verdict: ✅.** Filter state is form-shaped and small; the dataset itself is
-read-only and belongs in `history: false`.
+read-only and belongs in `recordHistory: false`.
 
 ### 8. Deep undo over LARGE collections
 
 _Design tools, media timelines_
 
-**Verdict: ❌, and the fit page already says an immutable root wins here.**
-Consistent — no claim to retract. Worth noting _why_ it is now a structural answer
-rather than a cost one: recording is cheap, but collection mutations do not record,
-so depth over structure is the one thing this design does not give.
+**Verdict: ❌ stands, but the stated REASON was wrong.** Consistent with the fit
+page — no claim to retract. The old reasoning ("collection mutations do not record,
+so depth over structure is the one thing this design does not give") is void:
+mutations record, and structural undo works.
+
+The real reason is **retention**, not capability. Each entry is a whole-tree
+snapshot, so cost is `entries × width`, and deep history over a large collection is
+where that product gets expensive. That is a quantitative claim and it is **not yet
+verified here** — the 19.58 MB figure it rests on is agent-measured and
+unreproduced (TODO item 2). Until it is reproduced, this ❌ is justified by design
+shape, not by a number.
 
 ### 9. Concurrent editing of one document
 
@@ -492,11 +576,14 @@ it, and nothing in the docs points there.
 `sortComparer`, so the `order` field was inert and `all()` returned insertion
 order. Re-run with the comparator, it round-trips.)
 
-1. **`history: false` earns its keep, for a reason nobody wrote down.** Its real
+1. **`recordHistory: false` earns its keep, for a reason nobody wrote down.** Its real
    job is keeping server-authored data out of a user's undo stack (workloads 1, 2, 7) — not trimming memory on a bulk import, which is how it is documented.
-2. **Two fit-page rows overstate what works.** "Drag-driven boards" (5) needs a
-   counter-bump workaround for its central gesture, and "Undo/redo as a shipped
-   feature" (6) is silent about the shape dependency. Both should be reworded, or
+2. **One fit-page row overstates what works — not two, and not the one filed.**
+   ~~"Drag-driven boards" (5) needs a counter-bump workaround~~ — **struck**, that
+   was the retracted premise; the drag gesture undoes natively. What does overstate
+   is "Undo/redo as a shipped feature" (6), and the shape dependency it is silent
+   about is the opposite of the one filed: collections are fine, **`form()` state is
+   not covered by the global stack at all**. Should be reworded, or
    item 1 in §5 should ship.
 3. **The two-mechanism split maps onto the workload split.** That is the strongest
    argument yet for scoped, marker-declared undo per §4b: the workloads whose undo
