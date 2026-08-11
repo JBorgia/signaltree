@@ -1,13 +1,15 @@
 # History, in SignalTree's own shape
 
-> **SUPERSEDED — it reads as current, and it is not.** This note argued for the
-> path-diff log as _the_ answer. Its central premise was measured wrong: `notify()`
-> does **not** fire at every write site (plain leaf writes reach it only via
-> `interceptLeafSignals`, `status()` never notifies, and a whole `form()` is a single
-> path, so a path log has no in-form field granularity). The plan of record is
+> ⚠️ **SUPERSEDED — read this as the argument for one option, not as the design.**
+> It reads as current and it is not. This note argued for the path-diff log as _the_
+> answer, and its central premise is measured wrong: `notify()` does **not** fire at
+> every write site. Plain leaf writes reach it only via `interceptLeafSignals`
+> (installed by `timeTravel()` itself), `status()`, `stored()`, `compared()` and the
+> async markers never notify at all, and a whole `form()` is a single path — so a
+> path-diff log has no in-form field granularity. The plan of record is
 > [history-PLAN.md](./history-PLAN.md); the options analysis is
 > [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md).
-> Read this page for the reasoning behind one of the six options, not as the design.
+> The reasoning below is still worth reading; the verdict is not.
 
 **Status:** superseded architecture note, 2026-08-10. Written in answer to one question:
 _why are we coding to make SignalTree look like other libraries when it isn't
@@ -85,8 +87,8 @@ So the native currency of a SignalTree change is not a state. It is:
   and a user's undo filters it out. The failure where Ctrl+Z reverts a change the
   user never made becomes unrepresentable, not merely documented.
 - **Retention** = the log stores what changed, not the whole state. ST2029's
-  `entries x width` model — and the 24.73 MB at 50,000 rows — describes a cost this
-  shape does not have.
+  `entries x width` floor — 19.38 MB at 50,000 rows over 50 entries, and 114.77 MB
+  when every row changes — describes a cost this shape does not have.
 - **Collections** = `entity-signal.ts` already calls `notify` per entity on every
   mutation. Recording collection changes stops being a feature to build and becomes
   a subscription to a notification that already fires.

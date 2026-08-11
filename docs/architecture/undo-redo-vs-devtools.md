@@ -97,13 +97,28 @@ default, and for a big collection it is expensive. A history entry holds the
 tree's snapshot, and an `entityMap`'s snapshot is an N-pointer array rebuilt
 whenever the collection changes. So attaching `timeTravel()` to a tree holding
 a large collection makes every collection-mutating write O(collection width),
-permanently. MEASURED over 50 recorded writes:
+permanently. MEASURED over 50 recorded writes with
+[`tools/bench-retention-arms.mjs`](../../tools/bench-retention-arms.mjs), heap
+baselined after seeding so the collection itself is excluded:
 
-| rows   | default | `recordHistory: false` |
-| ------ | ------- | ---------------------- |
-| 1,000  | 0.76MB  | 0.18MB                 |
-| 10,000 | 5.08MB  | 1.25MB                 |
-| 50,000 | 24.73MB | 5.61MB                 |
+| rows   | default | `recordHistory: false` | every row changed |
+| ------ | ------- | ---------------------- | ----------------- |
+| 1,000  | 0.51MB  | 0.13MB                 | 2.45MB            |
+| 10,000 | 3.95MB  | 0.15MB                 | 23.06MB           |
+| 50,000 | 19.38MB | 0.15MB                 | 114.77MB          |
+
+Two things about that table are easy to read wrong, and an earlier version of it
+did:
+
+- **The default column is a floor, not a worst case.** Changing one row costs the
+  same as changing fifty different ones — the pointer array is rebuilt either way.
+  The third column is the ceiling: each *changed* row adds ~40 bytes on top of the
+  array, so at 50k the span between "touch it at all" and "rewrite all of it" is
+  5.9x.
+- **The exclusion column does not scale with width.** `recordHistory: false` is
+  flat at ~0.15MB whether the collection holds 1,000 rows or 50,000 — the flag
+  removes the `entries x width` term rather than shrinking it. Retention becomes
+  O(1) in collection size, which is a different claim from "cheaper".
 
 `entityMap({ recordHistory: false })` takes the collection out of history capture.
 Everything else about it is unchanged — it still appears in `tree()`, it still

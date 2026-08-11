@@ -533,10 +533,16 @@ mutations record, and structural undo works.
 
 The real reason is **retention**, not capability. Each entry is a whole-tree
 snapshot, so cost is `entries × width`, and deep history over a large collection is
-where that product gets expensive. That is a quantitative claim and it is **not yet
-verified here** — the 19.58 MB figure it rests on is agent-measured and
-unreproduced (TODO item 2). Until it is reproduced, this ❌ is justified by design
-shape, not by a number.
+where that product gets expensive.
+
+> **REPRODUCED 2026-08-11.** `tools/bench-retention-arms.mjs` at 50k rows over 50
+> recorded writes: **19.382 MB**, within 1% of the 19.58 MB this rested on, and
+> bit-identical across repeated runs. The ❌ is now justified by a number, not only
+> by design shape. Two corrections came with the reproduction: `entries × width` is
+> a **floor** rather than the cost (one changed row and fifty different ones both
+> retain 19.38 MB; every row changed retains **114.77 MB**), and the constant is
+> ~8 bytes per retained pointer, not the ~10 that ST2029 published — which is why
+> the catalogue's 24.73 MB and this figure disagreed by 26%.
 
 ### 9. Concurrent editing of one document
 

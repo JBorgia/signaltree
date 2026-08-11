@@ -440,7 +440,8 @@ load-bearing one stands.** Re-run from scratch against the built package with
   Correctness carries every workload: an unrelated write landing between an
   action's open and commit forces path-scoped deltas regardless of memory. Memory
   does not. So if the correctness constraint is ever reopened, **memory is not
-  available as a fallback justification** — at 0.45 MB it isn't one.
+  available as a fallback justification** — at 0.30 MB (re-measured 2026-08-11;
+  0.45 was itself a superseded reading) it isn't one.
 
 - **`undo()` = O(state) REPRODUCED.** 436.67 µs at 50k against 434 µs reported,
   scaling 25.4 → 83.5 → 436.7 µs. There is no root pointer to swap; the snapshot
@@ -455,6 +456,18 @@ load-bearing one stands.** Re-run from scratch against the built package with
   rather than history in general. Doesn't rescue Option F (dead on correctness) and
   doesn't change that `undo()` is O(state) — but the realistic mixed workload sits
   nearer 0.9 MB than 19.6 MB, and the cost argument should say so.
+
+  ⚠️ **CORRECTED 2026-08-11 — "worst case" is exactly backwards, and 0.896 does not
+  reproduce.** Re-run with `tools/bench-retention-arms.mjs` (baseline after seeding):
+  the scalar arm is **0.298 MB** at 50k, not 0.896, and 0.896 has not reproduced
+  under any baselining method (baselining *before* seeding gives 7.62 MB, because
+  then the collection is inside the arm). The reference-sharing insight stands — it
+  is the durable finding — but 19.38 MB is a **floor, not a worst case**: one
+  changed row and fifty different changed rows retain the same 19.38 MB, and
+  changing all 50,000 retains **114.77 MB**. The real cost function has two terms,
+  `entries × (width × ~8 B + changedRows × ~40 B)`, and the second was missing
+  everywhere. The "sits nearer 0.9 than 19.6" conclusion survives in direction
+  (mixed workloads are cheap) but the ceiling it implied was 5.9× too low.
 - **Recording slope PARTIALLY reproduced.** Collection column reproduces in shape
   and within ~2× (31.8/66.9/255 → 18.8/49.8/215 µs per recorded entry). The scalar
   column does not: measured **flat** in collection width (10.8 → 11.3 µs) where the

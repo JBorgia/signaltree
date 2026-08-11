@@ -11,9 +11,12 @@ import { serialization } from '../enhancers/serialization/serialization';
  * `entityMap`'s snapshot is `{ all: node.all() }`, an N-pointer array rebuilt
  * whenever the collection changes. Time travel records on every self-dirty
  * flush, so attaching `timeTravel()` to a tree holding a large collection made
- * every collection-mutating write O(collection width), permanently. MEASURED at
- * 50k rows over 50 recorded writes: 24.73MB retained, against 5.61MB with the
- * flag on.
+ * every collection-mutating write O(collection width), permanently. RE-MEASURED
+ * for 15.0.0 (`tools/bench-retention-arms.mjs`, 50 recorded writes at 50k rows):
+ * 19.38MB retained, against 0.15MB with the flag on. The flag's effect is
+ * stronger than first published: retention becomes INDEPENDENT of collection
+ * width (~0.15MB at 1k, 10k and 50k alike), because it removes the
+ * `entries x width` term rather than shrinking it.
  *
  * Before this, `transient: true` was the only opt-out and it opted out of
  * EVERYTHING — the grid either paid that cost or did not persist at all.
@@ -99,22 +102,34 @@ describe('recordHistory: false — present everywhere ELSE', () => {
   });
 
   it('still round-trips through serialization()', () => {
-    const mk = (history: boolean) => {
+    // The parameter MUST be spelled `recordHistory`. Until 15.0.0 this test
+    // passed `history`, the pre-rename name, which `EntityMapConfig` no longer
+    // declares — so both arms built an identical default-configured tree and the
+    // equality assertion held vacuously. Vitest transpiles via esbuild and does
+    // not typecheck, so nothing caught it. Keep the literal key here, not a
+    // shorthand variable, so a future rename breaks the build instead of
+    // quietly emptying the test.
+    const mk = (recordHistory: boolean) => {
       const t = signalTree({
-        rows: entityMap<Row, number>({ selectId: (r) => r.id, history }),
+        rows: entityMap<Row, number>({ selectId: (r) => r.id, recordHistory }),
       }).with(serialization());
       t.$.rows.setAll(rows(10));
       return t;
     };
 
-    const withFlag = mk(false).serialize();
-    const withoutFlag = mk(true).serialize();
+    const excluded = mk(false).serialize();
+    const included = mk(true).serialize();
     const stripTimestamp = (s: string) =>
       s.replace(/"timestamp":\s*\d+/g, '"timestamp":0');
 
-    // The flag must not reach serialize() at all — payloads identical.
-    expect(stripTimestamp(withFlag)).toBe(stripTimestamp(withoutFlag));
-    expect(withFlag).not.toContain('history');
+    // The flag is time-travel-scoped: it must not reach serialize() at all, so
+    // the two payloads are identical despite differing history participation.
+    expect(stripTimestamp(excluded)).toBe(stripTimestamp(included));
+    expect(excluded).not.toContain('recordHistory');
+    // Both still carry the rows — exclusion from history is not exclusion from
+    // persistence. This is the assertion the vacuous version could never make.
+    // The envelope is `{ data, metadata }`; the rows live at `data.rows.all`.
+    expect(JSON.parse(excluded).data.rows.all).toHaveLength(10);
   });
 });
 

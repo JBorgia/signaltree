@@ -78,6 +78,16 @@ array rebuilt on every change. Measured over 50 writes at 50k rows: **24.73MB �
 5.61MB**. Serialisation verified byte-identical; prune cost 0.09µs with no
 exclusions.
 
+> **Correction, 2026-08-11 (both figures superseded).** Re-measured with
+> `tools/bench-retention-arms.mjs`: **19.38MB → 0.15MB**. The first figure was
+> ~28% high (the ~10 bytes/pointer constant is really ~8, a 64-bit pointer). The
+> second was wrong in kind, not degree: `recordHistory: false` leaves retention
+> **independent of collection width** — flat ~0.15MB at 1k, 10k and 50k — because
+> it removes the `entries × width` term rather than shrinking it. The 5.61MB
+> figure implied the flag still cost O(width), which it does not. This brief is
+> left as the point-in-time record; the live numbers are in
+> [docs/errors/README.md](../../errors/README.md) ST2029.
+
 ### The part worth your attention
 
 **ST2029 as first shipped never fired in a real application.** It checked once

@@ -216,44 +216,62 @@ snapshot stack** — see the boundary note below before generalising any of it.
 
 MEASURED, `--expose-gc`, one process per arm, baselined after seeding, 50,000-row
 `entityMap`. Reproduce with
-`node --expose-gc tools/bench-retention-arms.mjs <shape> 50000 <steps>`.
+`node --expose-gc tools/bench-retention-arms.mjs <shape> 50000 <steps>`. Figures
+below are bit-stable across repeated runs (the scalar arm was repped 5×, the rest 2–3×).
 
 **Rows changed per entry**, at 50 entries:
 
 | what each step changes                             | retained                           |
 | -------------------------------------------------- | ---------------------------------- |
-| nothing in the collection (scalar write beside it) | 0.435 MB                           |
-| **1 row**                                          | **19.518 MB**                      |
-| **50 different rows**                              | **19.518 MB** — identical to 1 row |
-| 400 rows                                           | 20.314 MB                          |
-| 4,000 rows                                         | 27.184 MB                          |
-| all 50,000 rows                                    | **114.911 MB**                     |
+| nothing in the collection (scalar write beside it) | 0.300 MB                           |
+| **1 row**                                          | **19.383 MB**                      |
+| **50 different rows**                              | **19.383 MB** — identical to 1 row |
+| 400 rows                                           | 20.182 MB                          |
+| 4,000 rows                                         | 27.052 MB                          |
+| all 50,000 rows                                    | **114.776 MB**                     |
 
 **Temporal depth**, at 400 rows changed per step:
 
 | entries | retained     |
 | ------- | ------------ |
 | 1       | **0.434 MB** |
-| 5       | 2.08 MB      |
-| 50      | 20.314 MB    |
+| 5       | 2.080 MB     |
+| 50      | 20.182 MB    |
 
-Two things follow, and only for this representation:
+**And collection width**, at 50 entries touching the collection: 0.501 MB at 1,000
+rows, 3.950 at 10,000, 19.383 at 50,000.
+
+Three things follow, and only for this representation:
 
 **One row costs what fifty different rows cost.** The snapshot retains a fresh
 N-pointer array per entry regardless of how many rows changed —
-`50 × 50,000 × 8 bytes ≈ 20 MB`, matching 19.518 almost exactly. So ~19.5 MB is a
+`50 × 50,000 × 8 bytes ≈ 20 MB`, matching 19.383 almost exactly. So ~19.4 MB is a
 **per-entry floor for touching this collection at all**, not a worst case. The worst
 case is 5.9× higher.
+
+**The array term's constant is ~8 bytes — a 64-bit pointer.** Measured 8.13 B/ptr at
+50k and 8.28 at 10k. At 1,000 rows it reads 10.49 because fixed per-entry overhead is
+a large share of a 0.5 MB total, so the linear model holds from ~10k up. ST2029
+published ~10 bytes and a 24.73 MB figure derived arithmetically from it rather than
+measured; that was ~28% high, and it disagreed with this page's own 19.5 MB for two
+releases without anyone reconciling the two.
 
 **The cost function has a second term nobody had documented:**
 
 ```
-retained ≈ entries × (width × ~8 bytes  +  changedRows × ~38 bytes)
+retained ≈ entries × (width × ~8 bytes  +  changedRows × ~40 bytes)
                       └── array term ──┘   └─── entity term ───┘
 ```
 
-The entity term holds at 38.2–39.5 bytes per changed entity per entry across every
-arm (400 rows → 0.79 MB, 4,000 → 7.66 MB, 50,000 → 95.4 MB above the floor).
+The entity term holds at ~40 bytes per changed entity per entry (40.01 at 50,000
+changed rows, 40.21 at 4,000, 42.68 at 400 — the smallest arm is the noisiest,
+since its delta above the floor is only 0.8 MB).
+
+**Unchanged collections are shared by reference between entries**, so the array term
+is paid only by writes that actually touch the wide collection — a **64× spread**
+between the scalar arm (0.300 MB) and touching the collection at all (19.383 MB), on
+nothing but which node is written. This is the durable finding from the spike's
+refinement, and it survives the corrections above.
 
 > ### ⚠️ Evidence boundary: this measures the snapshot stack, NOT the turn store
 >
@@ -301,7 +319,12 @@ Keeping these apart is the difference between an architecture and a hope.
 ### Measured
 
 - Recording cost after structural sharing; restore is O(state) with no root pointer.
-- Retention **of the snapshot stack** (not the turn store): four variables — depth, width, rows-changed-per-entry, representation. ~19.5 MB is a per-entry floor for touching a 50k collection, 114.9 MB when every row changes, 0.434 MB for a single 400-row entry. Entry count O(state).
+- Retention **of the snapshot stack** (not the turn store): four variables — depth,
+  width, rows-changed-per-entry, representation. At 50k/50: 0.300 MB scalar, 19.383 MB
+  touching the collection (a per-entry **floor** — one row and fifty different rows
+  cost the same), 114.776 MB when every row changes, 0.434 MB for a single 400-row
+  entry. Two terms: `width × ~8 bytes` + `changedRows × ~40 bytes`, per entry. Entry
+  count O(state).
 - Callback scope collapses under async; ambient attribution collapses under concurrency.
 - `form()` participation is asymmetric.
 - `PathNotifier` is blind to plain-leaf writes — `timeTravel()` sees them only because
