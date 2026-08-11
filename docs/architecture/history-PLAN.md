@@ -256,14 +256,45 @@ should not be built on it.
 
 ## 6. Phases 1–6, each with a kill criterion
 
-| Phase                                      | Work                                                                                                                              | GATE                                                                                                                                    |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **1 — position history**                   | generalise the shipped position-owned mechanism; canonical position identity; participation/exclusion; **resolve 6a's asymmetry** | existing scoped-history behaviour reproduced under the ownership model; mutation tests prove containment                                |
-| **2 — turn store**                         | `TurnId`, canonical turns, position→turn indexes, turn-based retention, remove `capacity`, atomic eviction, frontier tracking     | single-position history passes existing semantics **plus** atomic eviction and truncation invariants                                    |
-| **3 — cross-position transactions**        | explicit attribution threaded through the call graph                                                                              | **real application actions produce useful NON-ROOT ownership boundaries often enough for containment to be a usable interaction model** |
-| **4 — redo and truncation**                | redo from the same frontier model; conservative first truncation policy, documented                                               | no sequence produces divergent position histories or violates prefix closure                                                            |
-| **5 — collection metadata**                | anchors for remove/insert/prepend/reorder/rekey                                                                                   | positional inverses survive reorder/rekey/drift **or fail loudly without corruption**                                                   |
-| **6 — optimistic rollback productization** | productize the 0B-viable semantics: turns as the primitive for cross-position optimistic workflows                                | a real multi-position optimistic workflow removes bespoke compensation without sacrificing correctness                                  |
+| Phase                    | Work                                                                                                                              | GATE                                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **1 — position history** | generalise the shipped position-owned mechanism; canonical position identity; participation/exclusion; **resolve 6a's asymmetry** | existing scoped-history behaviour reproduced under the ownership model; mutation tests prove containment |
+| **2 — turn store**       | `TurnId`, canonical turns, position→turn indexes, turn-based retention, remove `capacity`, atomic eviction, frontier tracking     | single-position history passes existing semantics **plus** atomic eviction and truncation invariants     |
+
+### Phase 2 must measure the turn store's own cost function
+
+Every retention figure available today measures the **snapshot stack**, whose shape is
+`entries × array-width + changed-entity materialisation`. The turn store is a different
+structure — a turn holds one entry per attributed write, each carrying position, path,
+before, after, operation metadata and anchors — so a 400-row operation is **~400
+entries**, and its cost is plausibly `turn overhead + changedEntries × entryCost +
+metadata`.
+
+Whether that is **O(turns)**, **O(entries)** or **O(turns + entries)** is unmeasured.
+Run this matrix against the turn representation, not `timeTravel()`:
+
+| turns | rows changed per turn |
+| ----: | --------------------: |
+|     1 |                     1 |
+|     1 |                    40 |
+|     1 |                   400 |
+|     1 |                 4,000 |
+|     1 |                50,000 |
+|     5 |                   400 |
+|    50 |                   400 |
+
+Report what anchors and provenance add as a separate column — they are per-entry, so
+they scale with the term that may dominate.
+
+**Do not assume the snapshot-stack result transfers.** The snapshot numbers show that
+temporal depth dominates _there_; the turn store inverts the storage model, and the
+expectation that it lands on `O(turns + entries)` is an inference, not a result.
+
+Same harness discipline as §7, and the same reason: this project has learned not to
+settle a cost question from intuition.| **3 — cross-position transactions** | explicit attribution threaded through the call graph | **real application actions produce useful NON-ROOT ownership boundaries often enough for containment to be a usable interaction model** |
+| **4 — redo and truncation** | redo from the same frontier model; conservative first truncation policy, documented | no sequence produces divergent position histories or violates prefix closure |
+| **5 — collection metadata** | anchors for remove/insert/prepend/reorder/rekey | positional inverses survive reorder/rekey/drift **or fail loudly without corruption** |
+| **6 — optimistic rollback productization** | productize the 0B-viable semantics: turns as the primitive for cross-position optimistic workflows | a real multi-position optimistic workflow removes bespoke compensation without sacrificing correctness |
 
 **Phase 3's gate is the strategic falsifier.** If realistic turns nearly always resolve
 to the root, ancestry is technically correct and practically useless as an interaction

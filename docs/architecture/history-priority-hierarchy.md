@@ -210,35 +210,75 @@ snapshot stack in place" option died.
 436 µs is fine for a user-initiated rewind, so temporal rewind is
 **production-permissible**. It is not a capability nobody else has.
 
-**Retention is its binding constraint**, and only for one write shape. MEASURED at
-50 steps over 50,000 rows, two independent runs, `--expose-gc`, one process per arm,
-**baselined after seeding** so the figure is history retention alone:
+**Retention is its binding constraint**, and the cost has **four independent
+variables**, not one. Everything in this section measures the **current `timeTravel()`
+snapshot stack** — see the boundary note below before generalising any of it.
 
-| arm                                    | run 1     | run 2         |
-| -------------------------------------- | --------- | ------------- |
-| 50 scalar writes beside the collection | 0.451 MB  | **0.432 MB**  |
-| 50 writes that touch the collection    | 19.519 MB | **19.505 MB** |
+MEASURED, `--expose-gc`, one process per arm, baselined after seeding, 50,000-row
+`entityMap`. Reproduce with
+`node --expose-gc tools/bench-retention-arms.mjs <shape> 50000 <steps>`.
 
-A **~45× spread** on nothing but which node is written. Unchanged collections are
-shared by reference between entries, so `entries × width` is paid only by writes that
-touch the wide collection.
+**Rows changed per entry**, at 50 entries:
 
-> **The baseline point matters more than the number.** Baselining BEFORE seeding gives
-> 7.62 MB / 26.704 MB — a 3.5× spread — because the seeded 50,000-row collection
-> (~7.2 MB) sits inside _both_ arms and swamps the difference. Reproduce with
-> `node --expose-gc tools/bench-retention-arms.mjs <scalar|collection> 50000 after`.
+| what each step changes                             | retained                           |
+| -------------------------------------------------- | ---------------------------------- |
+| nothing in the collection (scalar write beside it) | 0.435 MB                           |
+| **1 row**                                          | **19.518 MB**                      |
+| **50 different rows**                              | **19.518 MB** — identical to 1 row |
+| 400 rows                                           | 20.314 MB                          |
+| 4,000 rows                                         | 27.184 MB                          |
+| all 50,000 rows                                    | **114.911 MB**                     |
+
+**Temporal depth**, at 400 rows changed per step:
+
+| entries | retained     |
+| ------- | ------------ |
+| 1       | **0.434 MB** |
+| 5       | 2.08 MB      |
+| 50      | 20.314 MB    |
+
+Two things follow, and only for this representation:
+
+**One row costs what fifty different rows cost.** The snapshot retains a fresh
+N-pointer array per entry regardless of how many rows changed —
+`50 × 50,000 × 8 bytes ≈ 20 MB`, matching 19.518 almost exactly. So ~19.5 MB is a
+**per-entry floor for touching this collection at all**, not a worst case. The worst
+case is 5.9× higher.
+
+**The cost function has a second term nobody had documented:**
+
+```
+retained ≈ entries × (width × ~8 bytes  +  changedRows × ~38 bytes)
+                      └── array term ──┘   └─── entity term ───┘
+```
+
+The entity term holds at 38.2–39.5 bytes per changed entity per entry across every
+arm (400 rows → 0.79 MB, 4,000 → 7.66 MB, 50,000 → 95.4 MB above the floor).
+
+> ### ⚠️ Evidence boundary: this measures the snapshot stack, NOT the turn store
 >
-> **A figure in the spike does not reproduce.** [Spike §1.7's refinement](../research/2026-08-history-greenfield-spike.md)
-> reports the scalar arm at **0.896 MB**, which came out under neither baselining
-> method here (0.432 after, 7.62 before). Its collection arm (19.98 MB) is close to
-> the 19.505 measured here; the scalar arm is not, and the published ratio depends on
-> it. Treat 0.896 as unreproduced until someone recovers its method.
+> Every figure above is `timeTravel()`'s representation, whose cost is
+> `entries × fresh-collection-array-width + changed-entity materialisation`.
 >
-> **And a correction to this section.** An earlier revision replaced "19.5 / 0.45 /
-> 43×" with "19.98 / 0.896 / 22×" on the grounds that the spike had a published
-> table. That was arbitration by documentary authority rather than measurement, and
-> it made the number worse: the original figures were the closest to reproducible.
-> Re-run before re-quoting.
+> The proposed turn store is a different data structure: a turn holds one entry per
+> attributed write, each carrying position, path, before, after, operation metadata
+> and anchors. A 400-row optimistic operation is **~400 entries**, so its cost is
+> plausibly `turn overhead + changedEntries × entryCost + metadata` — an **O(entries)**
+> shape rather than an O(turns) one. **That has not been measured.** The Phase 2
+> matrix in [the PLAN](./history-PLAN.md) exists to measure it.
+>
+> **What the snapshot numbers legitimately kill** is one misleading intuition: _"a
+> bulk operation touching 400 records must inherently be the expensive history
+> case."_ It is not — history depth and operation width are independent variables.
+> That is useful, and it is as far as the evidence reaches.
+>
+> An earlier revision of this section wrote _"the dominant term is the number of
+> turns, not the size of the operation"_ and claimed the PLAN's turn-based retention
+> was "now measured." Both were over-reach: the first is true only for the snapshot
+> stack at the tested shapes, and the second measured the wrong data structure. The
+> architectural argument stands on its own and needs no memory evidence —
+> **turns are the retention unit because they are indivisible. Memory limits decide
+> how many turns fit, not whether a turn can be cut apart.**
 
 Also measured, and the reason retention must be bounded by **turns** and never by
 entries: the log's entry count is O(state) — 1,050 / 10,050 / 50,050 entries at 1k /
@@ -261,7 +301,7 @@ Keeping these apart is the difference between an architecture and a hope.
 ### Measured
 
 - Recording cost after structural sharing; restore is O(state) with no root pointer.
-- Retention: **19.5 MB vs 0.43 MB** at 50k/50 depending on write shape (~45×), baselined after seeding, reproduced twice; entry count O(state).
+- Retention **of the snapshot stack** (not the turn store): four variables — depth, width, rows-changed-per-entry, representation. ~19.5 MB is a per-entry floor for touching a 50k collection, 114.9 MB when every row changes, 0.434 MB for a single 400-row entry. Entry count O(state).
 - Callback scope collapses under async; ambient attribution collapses under concurrency.
 - `form()` participation is asymmetric.
 - `PathNotifier` is blind to plain-leaf writes — `timeTravel()` sees them only because
