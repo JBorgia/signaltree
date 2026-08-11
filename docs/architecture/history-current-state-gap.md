@@ -142,9 +142,10 @@ Two existing subsystems are relevant prior art and neither is it:
 | leaf siting for a standalone history consumer           | 0A / 0B, whichever side the prototype sits on       |
 | turn store, position indexes, frontier                  | Phase 2                                             |
 | cross-position transaction handle                       | Phase 3                                             |
-| collection anchors                                      | **0B** (promoted) → Phase 5                         |
-| write stamp / supersession                              | **0B** (open question)                              |
-| optimistic rollback integration                         | Phase 6                                             |
+| collection anchors                                      | **0B** (rollback viability) → Phase 5               |
+| write stamp / supersession                              | **0B** (viability's open question)                  |
+| optimistic rollback — semantics prove viable            | **0B** (rollback viability prototype)               |
+| optimistic rollback — productization / integration      | Phase 6                                             |
 
 ## 7. The reframe: cheap to **introduce**, not cheap to extend
 
@@ -156,9 +157,9 @@ changes what that question costs to answer:
   args. Adding an owner is a **net-new parameter on the write path**, which is
   where decision 20 (zero-when-unused) bites hardest. "Does an unused owner
   parameter cost anything?" is a different benchmark from "does an unused
-  subscriber cost anything?" and the PLAN's §7 methodology (baseline /
-  present-but-inactive / active, `--expose-gc`, no `await` in the loop) must be
-  run against both shapes.
+  subscriber cost anything?" and the PLAN's §7 methodology (four arms: current 3-arg
+  notify · owner-capable/history absent · owner-capable/inactive · actively recording,
+  `--expose-gc`, no `await` in the loop) must be run against both shapes.
 - The good news is already visible: for `entityMap`, `basePath` **is** the
   ownership position and is **already computed at every call site** —
   `entity-signal.ts:756,845,903,...` — so one of the four marker families pays

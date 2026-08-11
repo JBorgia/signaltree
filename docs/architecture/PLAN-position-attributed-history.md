@@ -224,24 +224,36 @@ passes. If they cannot, that asymmetry is the finding.
 Known cost: this likely changes the notify contract to carry an owner, and that is the
 **write path**, which is where decision 20 bites.
 
+**Measure the contract change itself, four arms** (under the §7 methodology): the
+current 3-arg `notify(path, value, prev)` · owner-capable notify with history
+**absent** · owner-capable notify with history installed but **inactive** · history
+**actively recording**. Arms 1→2 isolate the decision-20 cost — what an owner costs
+when nothing consumes it — and are the pair the gate depends on.
+
 **Also prove identity stability:** record a turn, `changeId`, then inspect the original
 turn's ownership references. Then deliberately derive `PositionId` from the mutable id
 and prove the test fails.
 
 **GATE:** proceed only if ownership is correct _and_ unused cost is unmeasurable.
 
-### 0B — speculative rollback
+### 0B — rollback viability prototype
+
+Safe optimistic rollback is **rank 2** — the strategic centre the whole model exists
+to serve. 0B proves the **semantics** are viable; **Phase 6** productizes them. If
+speculative compensation cannot survive overlapping writers, the rest of the machinery
+(turns, indexes, frontiers, retention, redo) is being built on a premise the primary
+use case has already falsified.
 
 The smallest prototype covering these, **by outcome**:
 
-| #   | Case                                                              | Expected                                           |
-| --- | ----------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | T42 writes position A                                             | rollback succeeds                                  |
-| 2   | T42 writes `A.x`, T43 writes `A.y`                                | rollback preserves T43                             |
-| 3   | T42 writes `A.x`, T43 **overwrites** `A.x`                        | rollback preserves T43 (supersession)              |
-| 4   | T42 mutates a collection structurally, concurrent mutation occurs | anchors compensate **or detect they cannot**       |
-| 5   | T42 and T43 pending simultaneously                                | neither captures nor rolls back the other's writes |
-| 6   | Rejected entity creation, then writes beneath that entity         | dependency detected, not silently corrupted        |
+| #   | Case                                                              | Expected                                                         |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | T42 writes position A                                             | rollback succeeds                                                |
+| 2   | T42 writes `A.x`, T43 writes `A.y`                                | rollback preserves T43                                           |
+| 3   | T42 writes `A.x`, T43 **overwrites** `A.x`                        | rollback preserves T43 (supersession)                            |
+| 4   | T42 mutates a collection structurally, concurrent mutation occurs | anchors compensate **or detect they cannot**                     |
+| 5   | T42 and T43 pending simultaneously (attribution isolation)        | neither captures nor rolls back the other's writes — invariant I |
+| 6   | Rejected entity creation, then writes beneath that entity         | dependency detected, not silently corrupted                      |
 
 **Case 4 must not be skipped.** Value snapshots cannot compensate `remove row B at
 index 1` followed by a concurrent reorder — so **collection anchors move out of the
@@ -263,20 +275,25 @@ Measure both rather than choosing. The ABA hole is narrow but real: restoring `b
 there clobbers a value a later writer deliberately set.
 
 **GATE:** proceed only if cases 1–3 and 5 pass outright and case 4 either compensates
-or detects. Silent corruption in any case is a stop.
+or detects. Silent corruption in any case is a stop. A failure here is a **rank-2
+failure**: speculative compensation cannot survive overlapping writers, and the model
+should not be built on it.
+
+0B's bar is a disposable prototype demonstrating the cases above, nothing more. Phase 6
+(productization, §6) is where it becomes the shipped, correctness-gated integration.
 
 ---
 
 ## 6. Phases 1–6, each with a kill criterion
 
-| Phase                                   | Work                                                                                                                              | GATE                                                                                                                                    |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **1 — position history**                | generalise the shipped position-owned mechanism; canonical position identity; participation/exclusion; **resolve 6a's asymmetry** | existing scoped-history behaviour reproduced under the ownership model; mutation tests prove containment                                |
-| **2 — turn store**                      | `TurnId`, canonical turns, position→turn indexes, turn-based retention, remove `capacity`, atomic eviction, frontier tracking     | single-position history passes existing semantics **plus** atomic eviction and truncation invariants                                    |
-| **3 — cross-position transactions**     | explicit attribution threaded through the call graph                                                                              | **real application actions produce useful NON-ROOT ownership boundaries often enough for containment to be a usable interaction model** |
-| **4 — redo and truncation**             | redo from the same frontier model; conservative first truncation policy, documented                                               | no sequence produces divergent position histories or violates prefix closure                                                            |
-| **5 — collection metadata**             | anchors for remove/insert/prepend/reorder/rekey                                                                                   | positional inverses survive reorder/rekey/drift **or fail loudly without corruption**                                                   |
-| **6 — optimistic rollback integration** | turns as the primitive for cross-position optimistic workflows                                                                    | a real multi-position optimistic workflow removes bespoke compensation without sacrificing correctness                                  |
+| Phase                                      | Work                                                                                                                              | GATE                                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **1 — position history**                   | generalise the shipped position-owned mechanism; canonical position identity; participation/exclusion; **resolve 6a's asymmetry** | existing scoped-history behaviour reproduced under the ownership model; mutation tests prove containment                                |
+| **2 — turn store**                         | `TurnId`, canonical turns, position→turn indexes, turn-based retention, remove `capacity`, atomic eviction, frontier tracking     | single-position history passes existing semantics **plus** atomic eviction and truncation invariants                                    |
+| **3 — cross-position transactions**        | explicit attribution threaded through the call graph                                                                              | **real application actions produce useful NON-ROOT ownership boundaries often enough for containment to be a usable interaction model** |
+| **4 — redo and truncation**                | redo from the same frontier model; conservative first truncation policy, documented                                               | no sequence produces divergent position histories or violates prefix closure                                                            |
+| **5 — collection metadata**                | anchors for remove/insert/prepend/reorder/rekey                                                                                   | positional inverses survive reorder/rekey/drift **or fail loudly without corruption**                                                   |
+| **6 — optimistic rollback productization** | productize the 0B-viable semantics: turns as the primitive for cross-position optimistic workflows                                | a real multi-position optimistic workflow removes bespoke compensation without sacrificing correctness                                  |
 
 **Phase 3's gate is the strategic falsifier.** If realistic turns nearly always resolve
 to the root, ancestry is technically correct and practically useless as an interaction
@@ -325,8 +342,11 @@ someone will reach for it again.
 - **No timer/yield in the measured per-write loop.** `await setTimeout` per write is
   **forbidden**: its ~1 ms floor swamps a ~50 µs signal, and it produced ~1143 µs on
   all eight arms of one benchmark and _negative_ per-write costs in another.
-- Arms measured: **baseline** (no history) · **feature present but inactive** ·
-  **active history**.
+- Arms measured, four: **current 3-arg `notify`** (pre-change baseline) ·
+  **owner-capable notify, history absent** · **owner-capable notify, history installed
+  but inactive** · **active recording**. Arms 1→2 isolate the contract change itself —
+  the cost 0A must show is unmeasurable even when nothing consumes the owner. Arms 2→3
+  isolate installing a non-writing consumer; arms 3→4 recording.
 
 The benchmark must be able to **falsify** "zero when unused," not make every
 implementation look identical.

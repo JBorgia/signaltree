@@ -328,17 +328,20 @@ The codebase already indicates where the answer lives: `entityMap` notifies
 already free. If the other four markers can surrender their own path as cheaply, 0A
 passes. If they cannot, that asymmetry is the finding.
 
-### 0B — speculative rollback
+### 0B — rollback viability prototype
 
-The smallest disposable prototype covering, by outcome:
+Safe optimistic rollback is rank 2 — the strategic centre, so the semantics must be
+falsified here, not after prefix-closure and cross-position turns are built on top of
+them. 0B proves the semantics are viable; Phase 6 of the PLAN productizes them. The
+smallest disposable prototype covering, by outcome:
 
 1. T42 writes position A → rollback succeeds.
 2. T42 writes `A.x`, T43 writes `A.y` → rollback preserves T43.
 3. T42 writes `A.x`, T43 **overwrites** `A.x` → rollback preserves T43 (supersession).
 4. T42 mutates a collection structurally, a concurrent mutation occurs → anchors either
    compensate correctly **or detect that they cannot**.
-5. T42 and T43 pending simultaneously → neither captures nor rolls back the other's
-   writes.
+5. T42 and T43 pending simultaneously (attribution isolation) → neither captures nor
+   rolls back the other's writes.
 6. A rejected entity creation followed by writes beneath that entity → the dependency is
    detected, not silently corrupted.
 
