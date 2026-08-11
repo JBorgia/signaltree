@@ -165,8 +165,22 @@ load-bearing one stands.** Re-run from scratch against the built package with
 
 - **Retention REPRODUCED.** Snapshot stack 0.594 / 4.089 / **19.979 MB** at
   1k / 10k / 50k against the reported 0.59 / 4.05 / 19.58 — within ~2%, and 3 reps
-  at 50k identical to three decimals. So Option F's cost-based elimination holds
-  independently of the path-scoped-delta constraint that already killed it.
+  at 50k identical to three decimals.
+
+  ⚠️ **But the cost argument against Option F does NOT hold generally**, and an
+  earlier draft of this item said it did. By the refinement below, a scalar/form
+  editing workload beside a 50k collection retains ~0.45–0.9 MB — which is free.
+  Memory eliminates Option F **only for collection-write-heavy workloads**. Those
+  happen to be exactly the ones the fit page claims (drag boards, bulk CRUD,
+  offline creates), so the practical conclusion survives — but the reason it
+  survives is contingent, not general.
+
+  **Which argument is load-bearing matters for anyone revisiting this.**
+  Correctness carries every workload: an unrelated write landing between an
+  action's open and commit forces path-scoped deltas regardless of memory. Memory
+  does not. So if the correctness constraint is ever reopened, **memory is not
+  available as a fallback justification** — at 0.45 MB it isn't one.
+
 - **`undo()` = O(state) REPRODUCED.** 436.67 µs at 50k against 434 µs reported,
   scaling 25.4 → 83.5 → 436.7 µs. There is no root pointer to swap; the snapshot
   model's one claimed advantage over a log does not exist here.
@@ -579,6 +593,20 @@ distinguishes "not supplied" from "supplied as 0".
 leaf. The conversion and the ≤ 1 result are arithmetic on buffer length and should
 hold generally, but were not re-run across collection or form shapes.
 
+### 6f-b. OPEN QUESTION — does ST2029 fire on a collection that is never written?
+
+Not a finding; not measured. The retention refinement showed that an untouched
+collection is shared by reference between entries, so a wide-but-never-written
+collection costs almost nothing. ST2029's message models retention as
+`entries × width` and its text says "every write to those collections is
+O(collection)".
+
+If the **trigger** uses the same `entries × width` model rather than tracking
+which collections were actually written, it will fire on a collection that is wide
+and idle — a false positive that advises `recordHistory: false` on something
+already free, and pushes users to exclude data from undo for no gain. Read the
+trigger before rewording the message; whoever takes 6d owns this.
+
 ### 6g. Shipped `.d.ts` files carry no JSDoc
 
 Found while checking whether `maxHistorySize`'s documented `@default 50` reaches
@@ -595,6 +623,17 @@ the intended behaviour — so the fix is to drop the flag from the other five.
 This is a discoverability defect out of proportion to its size: the library's
 answer to "why would an agent reach for SignalTree" leans on the API being
 self-describing, and today every hover in five of seven packages is bare.
+
+**Needs its own gate — nothing existing catches it.** `bundle-budget` measures
+built JS and does not look at `.d.ts` at all; `api-surface` compares symbol
+inventories, not comments. The invariant is small and mutation-provable, which is
+the shape this repo's gates already take:
+
+> A package whose source carries JSDoc ships JSDoc in its declarations.
+
+Count JSDoc lines in `packages/<p>/src/**/*.ts` and in `dist/packages/<p>/src/**/*.d.ts`;
+fail when the source count is non-zero and the declaration count is zero. Mutation
+proof: add `removeComments: true` to `events` and the gate must go red.
 
 ### 6e. Doc defects found by re-scoring
 

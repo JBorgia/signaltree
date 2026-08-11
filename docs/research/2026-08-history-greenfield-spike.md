@@ -247,13 +247,29 @@ references to entity objects the tree already holds.
 > the collection arm. **Unchanged collections are shared by reference between
 > entries**; only a collection that is written gets a fresh array per entry.
 >
-> This does not rescue the snapshot stack (Option F is dead on the
-> path-scoped-delta constraint regardless, and `undo()` is still O(state)), but it
+> This does not rescue the snapshot stack — Option F is dead on the
+> path-scoped-delta constraint regardless, and `undo()` is still O(state) — but it
 > narrows the cost argument and ST2029's wording: `entries × width` describes a
 > collection-write-heavy workload, not history in general. The realistic mixed
 > workload — a user editing form/scalar state beside a large server-owned
 > collection — sits nearer the 0.896 MB row than the 19.98 MB one. **19.58 MB is a
 > real worst case, not a typical one**, and it should be quoted that way.
+>
+> **Which of the two arguments is load-bearing, stated explicitly, because it is
+> easy to get backwards.** §9 and §1.7 together read as "the log wins on both
+> correctness and cost". Only the first is unconditional:
+>
+> | argument                            | scope                                                                                                                                             |
+> | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | **Correctness** (path-scoped delta) | **every workload.** An unrelated write can land between open and commit, so an action entry cannot be a whole-tree snapshot. Independent of size. |
+> | **Memory** (`entries × width`)      | **collection-write-heavy workloads only.** At 0.45–0.9 MB for scalar/form editing beside a 50k collection, the snapshot stack is free.            |
+>
+> The memory argument holds in practice because the workloads this library claims
+> — drag-driven boards, bulk CRUD, offline creates — are collection-write-heavy.
+> That is a contingent fact about our positioning, not a property of the design.
+> **So if the correctness constraint is ever reopened, memory is not available as
+> a fallback justification.** Anyone revisiting Option F has to defeat the
+> correctness argument on its own terms.
 >
 > ### ⚠️ PARTIALLY REPRODUCED: the recording slope (§1.5)
 >
