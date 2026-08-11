@@ -173,7 +173,7 @@ const one = userNode?.(); // User | undefined
 const nameSignal = userNode?.name; // Signal<string> | undefined (field-level)
 ```
 
-Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`); `sortComparer: (a, b) => …` (v10.5+, `@ngrx/entity` parity) to keep `all()` / `ids()` in a stable sorted order (`asMap()` stays insertion-order (renamed from `map()` in v15 — `map` read as a projection beside `all()`)); plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
+Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`); `sortComparer: (a, b) => …` (v10.5+, `@ngrx/entity` parity) to keep `all()` / `ids()` in a stable sorted order (`asMap()` stays insertion-order (renamed from `map()` in 14.1.1 — `map` read as a projection beside `all()`)); plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
 
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
 **Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (the `.isEmpty` alias was removed in v11).

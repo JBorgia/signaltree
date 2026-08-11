@@ -973,7 +973,7 @@ if (isSignalTree(candidate)) candidate.destroy();
 
 - `entityMap` reads: `all()`, `count()`, `ids()`, `asMap()` (the collection as a
   `ReadonlyMap`, keyed by id — renamed from `map()` in 14.1.1, which read as a
-  projection beside `all()`), `byId(id)`, `byIdOrFail(id)`, `where(pred)`, `find(pred)`.
+  projection beside `all()`), `byId(id)`, `where(pred)`, `find(pred)`.
 - `entityMap({ recordHistory: false })` - Keep a collection in every OTHER snapshot
   (`serialization()`, `persistence()`, devtools, audit) but out of the `timeTravel()`
   undo stack. For a large server-owned grid that must survive reload and must never be
@@ -1373,18 +1373,18 @@ tree.$.products.byId(1)?.name.set('New');    // update single field (interceptor
 tree.$.products.byId(1)?.name.update(n => n.toUpperCase()); // updater
 tree.$.products.byId(1)?.name.asReadonly();  // Signal<string> — read-only view
 
-// MERGE vs REPLACE — two operations, two names (v15)
+// MERGE vs REPLACE — two operations, two names (14.1.1)
 tree.$.products.updateOne(1, { price: 899 });   // MERGE: cannot REMOVE a key
 tree.$.products.replaceOne(1, {                  // REPLACE: the only way to remove one
   id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true,
 });
-tree.$.products.clear();                         // `removeAll()` alias removed in v15
+tree.$.products.clear();                         // `removeAll()` alias removed in 14.1.1
 
 // `replaceOne` takes the id explicitly on purpose. A `setOne(entity)` that derived
 // the key via selectId would write to the wrong slot whenever `changeId` has left
 // `entity.id` disagreeing with the storage key.
 
-// Entity-level write via callable — REPLACES (v15 breaking: it used to merge)
+// Entity-level write via callable — REPLACES (14.1.1 breaking: it used to merge)
 const node = tree.$.products.byId(1);
 node?.({ id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true });
 node?.((current) => ({ id: current.id, name: current.name.toUpperCase() }));
@@ -2318,7 +2318,7 @@ const DEVTOOLS_GROUP_NAME = 'MyApp SignalTree';
 const ordersTree = signalTree({ orders: entityMap<Order>() })
   .with(batching())
   .with(devTools({
-    treeName: 'orders-store',
+    name: 'orders-store',
     aggregatedReduxInstance: {
       id: DEVTOOLS_GROUP_ID,
       name: DEVTOOLS_GROUP_NAME,
@@ -2329,7 +2329,7 @@ const ordersTree = signalTree({ orders: entityMap<Order>() })
 const productsTree = signalTree({ products: entityMap<Product>() })
   .with(batching())
   .with(devTools({
-    treeName: 'products-store',
+    name: 'products-store',
     aggregatedReduxInstance: {
       id: DEVTOOLS_GROUP_ID,
       name: DEVTOOLS_GROUP_NAME,

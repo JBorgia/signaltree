@@ -93,7 +93,7 @@ const store = signalTree({
 const store2 = signalTree(initialState, {
   batchUpdates: true,         // default — microtask-level notification batching
   useShallowComparison: true, // switch leaf signal equality from deepEqual to Object.is
-  treeName: 'AppStore',       // for devtools labeling
+  name: 'AppStore',       // for devtools labeling
 });
 ```
 
@@ -265,8 +265,8 @@ store.$.users.setAll(users);
 store.$.users.upsertOne(user);
 store.$.users.upsertMany(users);
 store.$.users.updateOne(id, changes);   // MERGE — cannot remove a key
-store.$.users.replaceOne(id, entity);  // REPLACE (v15) — the only way to remove one
-store.$.users.clear();                 // `removeAll()` alias removed in v15
+store.$.users.replaceOne(id, entity);  // REPLACE (14.1.1) — the only way to remove one
+store.$.users.clear();                 // `removeAll()` alias removed in 14.1.1
 store.$.users.updateMany([id1, id2, id3], { active: false }); // shared Partial<E> applied to every id — NOT NgRx-style [{id, changes}]
 store.$.users.updateWhere(pred, changes);
 store.$.users.removeOne(id);
@@ -945,7 +945,7 @@ Enhancers add cross-cutting capabilities. Chain via `.with()`. Each is opt-in, t
 const store = signalTree({ count: 0, items: [] })
   .with(batching())
   .with(timeTravel({ maxHistorySize: 50 }))
-  .with(devTools({ treeName: 'AppStore' }));
+  .with(devTools({ name: 'AppStore' }));
 
 store.batch(() => {
   store.$.count.set(10);
@@ -1481,8 +1481,8 @@ median of 9, round-to-round spread reported beside every figure.
 different complexity, so any ratio is a function of collection size rather than
 a fact about either one:
 
-| collection | SignalStore `updateEntity` | SignalTree `updateOne` (MERGES) / `replaceOne` (REPLACES, v15) |
-| collection as a keyed Map | — | `asMap()` (v15; was `map()`, which read as a projection beside `all()`) |
+| collection | SignalStore `updateEntity` | SignalTree `updateOne` (MERGES) / `replaceOne` (REPLACES, 14.1.1) |
+| collection as a keyed Map | — | `asMap()` (14.1.1; was `map()`, which read as a projection beside `all()`) |
 | ---------- | -------------------------- | ---------------------- |
 | 1,000      | 8.6 µs                     | 0.44 µs                |
 | 10,000     | 75.2 µs                    | 0.30 µs                |
