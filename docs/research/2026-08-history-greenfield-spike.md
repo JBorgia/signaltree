@@ -243,6 +243,15 @@ references to entity objects the tree already holds.
 > | 10,000     | 0.262 MB      | 4.089 MB          |
 > | 50,000     | **0.896 MB**  | **19.98 MB**      |
 >
+> ⚠️ **The 0.896 MB scalar figure has NOT reproduced.** Re-run 2026-08-11 with
+> `node --expose-gc tools/bench-retention-arms.mjs scalar 50000 after`: **0.432 MB**
+> (and 0.451 MB on an earlier run). Baselining _before_ seeding instead gives
+> 7.62 MB, because the seeded 50,000-row collection sits inside the arm. Neither
+> method yields 0.896. The collection arm is close (19.505 measured vs 19.98 here),
+> so the **ratio** published from this table — and any argument resting on it —
+> should be treated as unconfirmed until the method behind 0.896 is recovered.
+> Measured pair that does reproduce: **19.5 MB / 0.43 MB, ~45×.**
+>
 > Scalar retention is near-flat — 4.5× for a 50× width increase, against 33× for
 > the collection arm. **Unchanged collections are shared by reference between
 > entries**; only a collection that is written gets a fresh array per entry.

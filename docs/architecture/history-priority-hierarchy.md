@@ -211,10 +211,34 @@ snapshot stack in place" option died.
 **production-permissible**. It is not a capability nobody else has.
 
 **Retention is its binding constraint**, and only for one write shape. MEASURED at
-50 steps over 50,000 rows: **19.5 MB** when the writes touch the wide collection,
-**0.45 MB** when they are scalar writes beside it — a 43× spread on nothing but which
-node is written. Unchanged collections are shared by reference between entries, so
-`entries × width` is paid only by writes that touch the wide collection.
+50 steps over 50,000 rows, two independent runs, `--expose-gc`, one process per arm,
+**baselined after seeding** so the figure is history retention alone:
+
+| arm                                    | run 1     | run 2         |
+| -------------------------------------- | --------- | ------------- |
+| 50 scalar writes beside the collection | 0.451 MB  | **0.432 MB**  |
+| 50 writes that touch the collection    | 19.519 MB | **19.505 MB** |
+
+A **~45× spread** on nothing but which node is written. Unchanged collections are
+shared by reference between entries, so `entries × width` is paid only by writes that
+touch the wide collection.
+
+> **The baseline point matters more than the number.** Baselining BEFORE seeding gives
+> 7.62 MB / 26.704 MB — a 3.5× spread — because the seeded 50,000-row collection
+> (~7.2 MB) sits inside _both_ arms and swamps the difference. Reproduce with
+> `node --expose-gc tools/bench-retention-arms.mjs <scalar|collection> 50000 after`.
+>
+> **A figure in the spike does not reproduce.** [Spike §1.7's refinement](../research/2026-08-history-greenfield-spike.md)
+> reports the scalar arm at **0.896 MB**, which came out under neither baselining
+> method here (0.432 after, 7.62 before). Its collection arm (19.98 MB) is close to
+> the 19.505 measured here; the scalar arm is not, and the published ratio depends on
+> it. Treat 0.896 as unreproduced until someone recovers its method.
+>
+> **And a correction to this section.** An earlier revision replaced "19.5 / 0.45 /
+> 43×" with "19.98 / 0.896 / 22×" on the grounds that the spike had a published
+> table. That was arbitration by documentary authority rather than measurement, and
+> it made the number worse: the original figures were the closest to reproducible.
+> Re-run before re-quoting.
 
 Also measured, and the reason retention must be bounded by **turns** and never by
 entries: the log's entry count is O(state) — 1,050 / 10,050 / 50,050 entries at 1k /
@@ -237,7 +261,7 @@ Keeping these apart is the difference between an architecture and a hope.
 ### Measured
 
 - Recording cost after structural sharing; restore is O(state) with no root pointer.
-- Retention: 19.5 MB vs 0.45 MB at 50k/50 depending on write shape; entry count O(state).
+- Retention: **19.5 MB vs 0.43 MB** at 50k/50 depending on write shape (~45×), baselined after seeding, reproduced twice; entry count O(state).
 - Callback scope collapses under async; ambient attribution collapses under concurrency.
 - `form()` participation is asymmetric.
 - `PathNotifier` is blind to plain-leaf writes — `timeTravel()` sees them only because
