@@ -109,7 +109,7 @@ Two facts about it matter for Phase 1, which is meant to generalise it:
 
 - It is **opt-in and self-contained** — `form({ history })` owns its own stack; it
   does not feed `timeTravel()`. That is the opt-in/opt-out collision resolved in
-  15.0.0 by renaming to `recordHistory`, and the current shape of `recordHistory`
+  14.1.1 by renaming to `recordHistory`, and the current shape of `recordHistory`
   (`types.ts:765`) is the participation flag the ownership model keeps.
 - Its reverse (an `entityMap`-style collection with position-aware undo) does
   **not** exist. `removeOne` + `undo()` restores the row at the **end** — the

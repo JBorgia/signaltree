@@ -411,7 +411,7 @@ export function createEntitySignal<
     //   node(value)      → full entity REPLACE (throws if entity removed)
     //   node(updater)    → replace with the updater's return (throws if removed)
     //
-    // These replace, and they always claimed to. Until 15.0.0 they delegated to
+    // These replace, and they always claimed to. Until 14.1.1 they delegated to
     // `updateOne`, which spreads (`{ ...entity, ...changes }`) — so the docs said
     // replace and the code merged. The updater form was the worse half: the
     // updater returns a full `E`, it was spread as `Partial<E>`, so an updater
@@ -584,7 +584,7 @@ export function createEntitySignal<
     /**
      * The collection as a `ReadonlyMap`, keyed by id.
      *
-     * Named `asMap` since 15.0.0. It was `map`, which read as a PROJECTION beside
+     * Named `asMap` since 14.1.1. It was `map`, which read as a PROJECTION beside
      * `all()` — every JS developer expects `.map(fn)` to transform elements, and an
      * agent or newcomer reaching for that is a documented failure class (see
      * `WRONG_ENTITY_METHODS`). `asMap` says what it returns.

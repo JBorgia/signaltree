@@ -1,0 +1,13 @@
+{
+  "//": "Typechecks SPEC files, which tsconfig.typecheck-all.json excludes and core's tsconfig.typecheck.json covers only for *.typing.spec.ts. Consumed by tools/check-spec-types.mjs as a RATCHET, not a clean gate — see that file for the baseline and why.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals"],
+    "allowJs": false,
+    "strict": true
+  },
+  "include": ["packages/*/src/**/*.spec.ts", "packages/*/src/**/*.test.ts"],
+  "exclude": ["**/node_modules/**"]
+}

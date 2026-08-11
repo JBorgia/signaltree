@@ -1,4 +1,39 @@
-## 15.0.0 (2026-08-11)
+## 14.1.1 (2026-08-11)
+
+> **14.1.0 was published and immediately superseded — do not install it.** It shipped
+> with `"@signaltree/core": "workspace:*"` in `peerDependencies` on all five non-core
+> packages, an unresolvable spec that fails on install. The publish script did have a
+> resolve step for exactly this, and the step ran — but it ran once before the publish
+> loop, and the per-package `nx build` inside that loop regenerates the dist manifest
+> from source and overwrote it. So the fix had been sitting in the position where the
+> build undoes it, and the only place the problem is observable is the registry. The
+> resolve now runs after each build, immediately before `npm publish`, with an
+> independent guard on the bytes being shipped. 14.1.0 is deprecated on npm; npm does
+> not permit reusing a version number, hence 14.1.1.
+>
+> Content is otherwise identical to what 14.1.0 intended.
+
+> **Why a MINOR version carries a BREAKING section, stated plainly because it is a
+> semver anomaly and not an accident.**
+>
+> **14.0.0 was published on 2026-08-10 and is deprecated.** It was never meant
+> to be more than a release candidate: it shipped while the audit that produced this
+> release was still generating findings, and several of the things it published were
+> wrong (see
+> [docs/audits/2026-08/14.0.0-what-actually-happened.md](docs/audits/2026-08/14.0.0-what-actually-happened.md)).
+> `14.0.0-rc.1` remains on npm under the `rc` tag.
+>
+> So the breaking changes below are relative to **14.0.0, a deprecated version nobody
+> should be on**. Measured against the last version anyone could install and keep,
+> **13.5.0**, this release removes 25 barrel exports plus `map()` and `removeAll()` —
+> genuinely major-scale, and `13.x -> 14.1.1` crosses the major boundary, so no
+> `^13.5.0` range resolves to it and nobody is auto-updated into a break.
+>
+> The only affected users are those who installed 14.0.0 during its ~24 hours on the
+> registry. For them the delta is: `equal` removed (use `deepEqual`), `map()` ->
+> `asMap()`, `removeAll()` -> `clear()`, and
+> `pauseRecording()`/`resumeRecording()`/`isRecordingPaused()` removed with no
+> replacement.
 
 ### BREAKING
 
@@ -71,7 +106,7 @@
   `parseEvent` to `safeParseEvent`.** The names were INVERTED relative to Zod, which this
   package re-exports as `z`:
 
-  |                    | before 15.0.0   | now                                       |
+  |                    | before 14.1.1   | now                                       |
   | ------------------ | --------------- | ----------------------------------------- |
   | throws on failure  | `validateEvent` | **`parseEvent`** (like `z.parse`)         |
   | returns a result   | `parseEvent`    | **`safeParseEvent`** (like `z.safeParse`) |

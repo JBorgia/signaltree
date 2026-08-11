@@ -256,7 +256,7 @@ export interface EntitySnapshotAccessor<
   E extends Record<string, unknown>,
   K extends string | number = string
 > {
-  /** Renamed from `map` in 15.0.0 to match `entityMap`'s `asMap`. */
+  /** Renamed from `map` in 14.1.1 to match `entityMap`'s `asMap`. */
   readonly asMap: Signal<ReadonlyMap<K, E>>;
   upsertOne(entity: E): K;
   removeOne(id: K): void;

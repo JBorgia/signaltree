@@ -202,10 +202,10 @@ undo level, which makes it a minor at the earliest.
 
 ---
 
-## 15.0.0 — the option was RENAMED to `recordHistory`
+## 14.1.1 — the option was RENAMED to `recordHistory`
 
 This RFC proposed the flag as `history: false` and it shipped under that name in 14.0.0.
-Renamed in 15.0.0 because it collided with `form({ history: history() })`, and the two are
+Renamed in 14.1.1 because it collided with `form({ history: history() })`, and the two are
 **different questions**:
 
 - `form({ history: history() })` — this form OWNS a scoped stack. Opt IN to a new history.
@@ -217,6 +217,6 @@ history" and "be recorded into a history" IS the collision. Two concepts, two na
 
 The rename also came with the fix for a defect this RFC's flag introduced — excluded
 collections still produced history entries, so `canUndo()` was true and the undo changed
-nothing visible. See the 15.0.0 CHANGELOG.
+nothing visible. See the 14.1.1 CHANGELOG.
 
 The text above is left as written, as the record of the original decision.

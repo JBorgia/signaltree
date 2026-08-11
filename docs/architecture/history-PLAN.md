@@ -1,7 +1,7 @@
 # PLAN — Position-Attributed Transactional History
 
 **Status:** plan of record for branch `feat/position-attributed-history`, 2026-08-11.
-Supersedes the phase ordering in `TODO.md` item 2. Target: **16.0.0**.
+Supersedes the phase ordering in `TODO.md` item 2. Target: **15.0.0**.
 
 **Authority.** When this document and any other disagree about ordering or priority,
 this one wins. When a design question arises that this document does not answer, the

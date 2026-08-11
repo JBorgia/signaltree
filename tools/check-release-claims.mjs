@@ -100,14 +100,24 @@ function resolveBase() {
    * it.
    *
    * The question a release gate should answer is "what reaches a user upgrading
-   * from the last version they could install", so prereleases OF THE CURRENT
-   * VERSION are skipped. A prerelease still diffs against whatever came before
-   * it, which is correct for an rc.
+   * from the last version they could install", so a stable release skips ALL
+   * prereleases. A prerelease still diffs against whatever came before it,
+   * including another prerelease, which is correct for an rc.
+   *
+   * THE 14.0.0 FIX WAS INCOMPLETE AND THE BUG RETURNED AT THE NEXT RELEASE. It
+   * excluded only prereleases matching `v${current}-`, which handled 14.0.0 vs
+   * v14.0.0-rc.1 and nothing else. For any later 14.x current the filter kept
+   * `v14.0.0-rc.1`, and git's `--sort=-v:refname` ranks a prerelease ABOVE its
+   * own stable release unless `versionsort.prereleaseSuffix` is configured — so
+   * the base resolved to v14.0.0-rc.1 again and the delta was measured from the
+   * rc rather than from the last installable version. `--self-test` reported the
+   * gate BLIND, which is how this was found. Excluding every prerelease is
+   * version-independent and cannot rot the same way.
    */
   const isPrerelease = /-/.test(current);
   const candidates = isPrerelease
     ? tags.filter((t) => t !== `v${current}`)
-    : tags.filter((t) => t !== `v${current}` && !t.startsWith(`v${current}-`));
+    : tags.filter((t) => t !== `v${current}` && !/-/.test(t));
   const base = candidates[0];
   if (!base) {
     console.error(
@@ -437,13 +447,22 @@ const exempted = rows.filter((r) => r.missing.length && r.exemptReason).length;
 if (LIST_ONLY || gaps.length) {
   console.log('');
   for (const r of rows) {
-    if (!r.missing.length) continue;
-    const tag = r.exemptReason ? 'exempt ' : 'MISSING';
+    // `--list` is documented as "show the delta", so it shows every symbol in
+    // it. It used to print only the gaps, which meant a fully-covered release
+    // printed nothing at all — indistinguishable from an EMPTY delta, and an
+    // empty delta is exactly the condition that makes this gate blind. Anyone
+    // reaching for --list to find out what the release added got silence.
+    if (!LIST_ONLY && !r.missing.length) continue;
+    const tag = r.exemptReason
+      ? 'exempt '
+      : r.missing.length
+        ? 'MISSING'
+        : 'covered';
     const kind = r.isCode ? 'code' : r.kind;
     console.log(
       `  ${tag} ${r.name.padEnd(30)} ${`(${kind}, ${r.pkg})`.padEnd(
         18
-      )} ${r.missing.join(', ')}`
+      )} ${r.missing.join(', ') || `all ${r.applicable} surfaces`}`
     );
     if (r.exemptReason) console.log(`          └─ ${r.exemptReason}`);
   }

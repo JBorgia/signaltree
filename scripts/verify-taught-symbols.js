@@ -214,7 +214,7 @@ const GOLDEN_API = [
   { name: 'timeTravel', entry: '' },
   { name: 'persistence', entry: '' },
   { name: 'serialization', entry: '' },
-  // `equal` was an ALIAS of `deepEqual` and was removed in 15.0.0 — one
+  // `equal` was an ALIAS of `deepEqual` and was removed in 14.1.1 — one
   // operation, one name, and `equal` is the OPTION key throughout the library
   // (`linked({ equal })`, `compared(value, equal)`, `entityMap({ equal })`).
   { name: 'deepEqual', entry: '' },

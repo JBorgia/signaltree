@@ -32,7 +32,7 @@ declare const ngDevMode: boolean | undefined;
 /**
  * WebSocket connection states.
  *
- * Named `WebSocketConnectionState` since 15.0.0. It was `ConnectionState`, which
+ * Named `WebSocketConnectionState` since 14.1.1. It was `ConnectionState`, which
  * collided with a DIFFERENT public type of the same name in `@signaltree/realtime`:
  * there, `ConnectionState` is a bag of signals (`status`, `error`, `isConnected`, …)
  * while this is a plain status union. An app importing both got one name for two

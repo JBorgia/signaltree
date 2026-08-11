@@ -9,7 +9,7 @@ Use when an app needs typed event contracts with runtime validation, stable IDs/
 
 Three layers, composable independently:
 
-1. Schema + validation — `createEventSchema`, `parseEvent` (THROWS), `safeParseEvent` (returns a result), `isValidEvent` (type guard). Names match Zod's `parse`/`safeParse`; before 15.0.0 they were inverted.
+1. Schema + validation — `createEventSchema`, `parseEvent` (THROWS), `safeParseEvent` (returns a result), `isValidEvent` (type guard). Names match Zod's `parse`/`safeParse`; before 14.1.1 they were inverted.
 2. Registry + factory — `EventRegistry`, `createEventFactory`
 3. Transport adapters (subpath) — `/nestjs` (BullMQ/Redis), `/angular` (WebSocket bridge), `/testing` (`MockEventBus`)
 
