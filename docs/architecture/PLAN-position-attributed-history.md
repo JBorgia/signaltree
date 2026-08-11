@@ -15,6 +15,7 @@ tie-break is [history-priority-hierarchy.md](./history-priority-hierarchy.md).
 | [history-the-greenfield-target.md](./history-the-greenfield-target.md)                 | why the unit is a named action, the falsified `act(label, fn)`              |
 | [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md) | the six options and why four are eliminated                                 |
 | [undo-business-and-ux-cases.md](../audits/2026-08/undo-business-and-ux-cases.md)       | 9 UX cases, 11 workloads, 4 business drivers                                |
+| [history-current-state-gap.md](./history-current-state-gap.md)                         | what exists in core today vs the model, marker by marker                    |
 
 ---
 
