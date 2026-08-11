@@ -34,7 +34,7 @@ export interface StandardEnhancerOptions {
   extra?: Array<Enhancer<unknown>>;
 }
 
-export function withStandardEnhancers<T extends object>(tree: SignalTreeBuilder<T, TreeNode<T>>, { treeName, extra = [] }: StandardEnhancerOptions) {
+export function withStandardEnhancers<T extends object>(tree: SignalTreeBuilder<T, TreeNode<T>>, { name, extra = [] }: StandardEnhancerOptions) {
   const base = tree.with(batching()).with(devTools({ name }));
   return extra.reduce((acc, enhancer) => acc.with(enhancer), base);
 }

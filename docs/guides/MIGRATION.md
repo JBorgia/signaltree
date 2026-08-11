@@ -9,6 +9,11 @@
 > did nothing) is now a type error precisely because it used to fail invisibly.
 > Full detail, every symbol, and a checklist:
 > [`docs/guides/migration-v13-v14.md`](migration-v13-v14.md).
+>
+> **Landing on 14.1.1?** That release renames and removes API the 13→14 page does not
+> cover (`map()` → `asMap()`, `treeName` → `name`, `pauseRecording()` removed, and
+> more). Read [`migration-v14-v14.1.md`](migration-v14-v14.1.md) as well — from 13.x
+> you need both pages, and from 14.0.0 you need only that one.
 
 **Breaking:**
 

@@ -168,12 +168,17 @@ tree.$.rows.setActiveId(id); // master/detail without hand-rolling it
 tree.$.rows.activeEntity(); // granular: only THAT row invalidates it
 tree.$.rows.changeId(tempId, 42); // adopt the id the server assigned
 
-tree.pauseRecording(); // a bulk import becomes ONE undo step
 timeTravel({ shouldSkip: (a, b) => a.cursor !== b.cursor });
 
 import { onTreeError } from '@signaltree/core/authoring';
 onTreeError((e) => Sentry.captureException(e.error, { extra: e }));
 ```
+
+> ⚠️ **This guide targets 14.0.0, which was unpublished. If you are landing on
+> 14.1.1, read [migration-v14-v14.1.md](./migration-v14-v14.1.md) as well** — it
+> renames and removes API that this page still describes, `pauseRecording()`
+> among them. That example used to appear in the list above and was removed from
+> it, because it no longer exists.
 
 `canUndo()`, `canRedo()` and `getHistory()` are now **reactive**. If you worked
 around this in 13.x by polling or by forcing change detection, you can stop:

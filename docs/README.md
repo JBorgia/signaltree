@@ -55,12 +55,13 @@ Use this index to navigate the documentation.
 
 ## 📦 Package Documentation
 
-| Document                                           | Description                                                           |
-| -------------------------------------------------- | --------------------------------------------------------------------- |
-| [Events](events.md)                                | @signaltree/events package docs                                       |
-| [Core](../packages/core/README.md)                 | @signaltree/core package                                              |
-| [Migration v13 → v14](guides/migration-v13-v14.md) | `@signaltree/enterprise` was REMOVED in 14.0.0 — §6 has the migration |
-| [Angular Forms](../packages/ng-forms/README.md)    | @signaltree/ng-forms package                                          |
+| Document                                               | Description                                                                                     |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [Events](events.md)                                    | @signaltree/events package docs                                                                 |
+| [Core](../packages/core/README.md)                     | @signaltree/core package                                                                        |
+| [Migration v13 → v14](guides/migration-v13-v14.md)     | `@signaltree/enterprise` was REMOVED in 14.0.0 — §6 has the migration                           |
+| [Migration v14 → v14.1](guides/migration-v14-v14.1.md) | 14.1.1 renames/removes API in a MINOR — `asMap`, `name`, `recordHistory`, `pauseRecording` gone |
+| [Angular Forms](../packages/ng-forms/README.md)        | @signaltree/ng-forms package                                                                    |
 
 ---
 

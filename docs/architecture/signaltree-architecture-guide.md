@@ -289,7 +289,7 @@ export class PlantsFacade {
 
   async loadWithSchedules(gardenId: string) {
     const [plants, schedules] = await Promise.all([...]);
-    this.tree.batchUpdate(() => {
+    this.tree.batch(() => {
       this.tree.$.plants.entities.setAll(plants);
       this.tree.$.schedules.entities.setAll(schedules);
     });
@@ -414,7 +414,7 @@ export const appTree = Object.assign(baseTree, {
     ...baseTree.$.plants,
     async loadWithSchedules(api: PlantsApi, gardenId: string) {
       const [plants, schedules] = await Promise.all([...]);
-      baseTree.batchUpdate(() => {
+      baseTree.batch(() => {
         baseTree.$.plants.entities.setAll(plants);
         baseTree.$.schedules.entities.setAll(schedules);
       });
@@ -804,7 +804,7 @@ export class PlantRepository {
     const updates = Array.from(this.pending.entries());
     await this.api.bulkUpdate(updates);
 
-    this.tree.batchUpdate(() => {
+    this.tree.batch(() => {
       for (const [id, changes] of updates) {
         this.tree.$.plants.entities.updateOne(id, changes);
       }
@@ -1654,7 +1654,7 @@ async bulkUpdate(updates: Array<{ id: string; changes: Partial<Plant> }>) {
   );
 
   // Optimistic batch update
-  this.tree.batchUpdate(() => {
+  this.tree.batch(() => {
     for (const { id, changes } of updates) {
       this.tree.$.plants.entities.updateOne(id, changes);
     }
@@ -1664,7 +1664,7 @@ async bulkUpdate(updates: Array<{ id: string; changes: Partial<Plant> }>) {
     await this.api.bulkUpdate(updates);
   } catch (e) {
     // Rollback all
-    this.tree.batchUpdate(() => {
+    this.tree.batch(() => {
       for (const [id, previous] of previousStates) {
         if (previous) {
           this.tree.$.plants.entities.updateOne(id, previous);
@@ -1693,7 +1693,7 @@ export class GardensFacade {
 
     try {
       // Batch for atomic update
-      this.tree.batchUpdate(() => {
+      this.tree.batch(() => {
         // Remove garden
         this.tree.$.gardens.entities.removeOne(gardenId);
 
@@ -1784,7 +1784,7 @@ export class PlantEditorComponent {
   );
 
   initForm(plant: Plant) {
-    this.formTree.batchUpdate(() => {
+    this.formTree.batch(() => {
       this.formTree.$.draft.set({ ...plant });
       this.formTree.$.original.set({ ...plant });
       this.formTree.$.touched.set({});
@@ -2018,7 +2018,7 @@ export class PlantsPaginationService {
     try {
       const result = await this.api.getPlants({ page, pageSize });
 
-      this.tree.batchUpdate(() => {
+      this.tree.batch(() => {
         if (mode === 'replace' || page === 1) {
           this.tree.$.plants.entities.setAll(result.items);
         } else {

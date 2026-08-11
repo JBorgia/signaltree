@@ -140,7 +140,7 @@ partial such as `{ user: { name: 'Grace' } }` does not typecheck even though it
 works correctly at runtime (the merge is deep — keys you omit are preserved).
 Until the signature takes a deep partial, either pass the complete nested object
 as above, or write the branch directly: `tree.$.user({ name: 'Grace' })`. The
-same caveat applies to the root call form `tree(partial)` and to `batchUpdate()`.
+same caveat applies to the root call form `tree(partial)`. (`batchUpdate()` was REMOVED in 14.1.1 — it was exactly `tree.batch(() => tree(partial))`.)
 
 ## Markers
 
