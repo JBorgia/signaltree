@@ -126,9 +126,82 @@ this item:
   every whole-state option including fix-the-stack-in-place. This was the strongest
   cost-based counter-argument and the constraint removes it.
 
-**Still open before implementing:** write `tree.action()` against v3's three real
-handlers — `onArchiveToggle`, `bulkPatch$`, `create$` — and see which call sites fight
-it. Same falsification that killed the callback form.
+### The `tree.action()` prototype has been run — DONE 2026-08-10
+
+Written against v3's three real handlers as they ship
+(`packages/core-services-v2/src/lib/store-features/service-crud-ops.ts:344` `create$`,
+`:434` `bulkPatch$`, and `packages/screens/src/lib/entity-table-buttons.component.ts:258`
+`onArchiveToggle` → `setArchived$` at `:516`). Five results, and the first one
+falsifies the obvious implementation.
+
+**1. AMBIENT attribution is dead — the same way `act(label, fn)` was.** The cheapest
+handle implementation says "while an action is open, writes belong to it". MEASURED:
+two concurrent actions each captured **both** actions' paths.
+
+```
+a1 "Archive x" captured: ["entities.x","entities.y"]
+a2 "Rename y"  captured: ["entities.x","entities.y"]   -> undoing the rename un-archives x
+```
+
+v3 really does run these concurrently — `bulkPatch$` and `onArchiveToggle` both fan
+out, and a user can start one while another is in flight. So membership cannot be
+inferred from wall-clock overlap. **Writes must be explicitly attributed, which means
+the handle has to reach the call site.** Dynamic scope failed against `await`; ambient
+scope fails against concurrency. Same lesson, one level up.
+
+**2. The call sites that fight it, named.** `onArchiveToggle` fans out through
+`store.activate$` / `deactivate$`, which are ALSO public single-record entry points a
+component calls directly. So either those open their own action (and nest) or they
+take one. **Nesting is forced by v3's structure, not a design choice** — and the
+answer to "inner commits into outer or stands alone" is that the inner must join the
+outer. Concretely the signature has to grow:
+`activate$(id)` → `activate$(id, action?)`, threaded through
+`mergeMap(id => action(id), CONCURRENCY)`. That is the cost, and it lands on every
+store method a bulk handler composes.
+
+**3. An action built on the notifier is BLIND to plain-leaf writes.** MEASURED on the
+`bulkPatch$` shape: 3 entity paths captured, **0 of 4** scalar writes
+(`selectedIds`, `saveState`, `bulkCompleted`, `bulkInProgress`). Only markers
+self-notify (§1.2 of the spike). This is not cosmetic — `create$` deliberately carries
+selection from the temp id to the server id, and an undo that restores the row without
+the selection is wrong. So the handle cannot be a thin layer over `PathNotifier`; it
+needs `interceptLeafSignals` the way `timeTravel()` and devtools each install it
+independently.
+
+**4. Partial failure has no `commit()`/`abort()` answer.** MEASURED on
+`onArchiveToggle` with 3 records, 1 failing: 2 succeeded, 1 failed and **already
+self-reverted** via the handler's own `catchError`. The delta set is
+`["entities.a","entities.b","entities.c","entities.b"]` — b's removal AND its restore.
+`commit()` records a step whose undo re-removes a row the user can still see;
+`abort()` would revert the two the server accepted. Neither describes the outcome.
+
+**The fix is already written elsewhere in the library.** The action must record **net
+change per path** — first `before`, last `after`, drop paths that round-trip. That is
+exactly `PathNotifier.flush()`'s merge rule, which §1.3 measured as already correct
+**within a turn**. The action needs the same rule **across turns**. It also fixes
+result 5 for free.
+
+**5. `create$` records history the user never saw.** Server assigns a different id, so
+the action contains `entities.temp-1` (add), `entities.temp-1` (remove),
+`entities.srv-9` (add). Undo must not resurrect a temp id the server rejected. Net
+collapse per result 4 nets the temp row to nothing.
+
+**Also confirmed against a real shape rather than in theory:** a realtime server push
+landing mid-action is captured inside the user's action
+(`["entities.r1","entities.pushed-by-server"]`), so undoing "Archive r1" would delete a
+row the user never touched. This is the §2 constraint that forces path-scoped deltas —
+now reproduced on a handler that ships.
+
+**What this does NOT change:** the transaction handle is still the right shape, and
+`act(label, fn)` stays dead. What it changes is that the handle is **not ambient and
+not free** — it has to be threaded through store method signatures, and it needs the
+cross-turn merge rule before it can be correct under partial failure.
+
+**Note on `abort()`:** every v3 handler already implements its own compensation in
+`catchError`. So `abort()` largely duplicates what call sites do today, and an
+`abort()` that also reverts would double-revert. The handle's value here is
+**labelling and grouping**, not rollback — worth deciding deliberately rather than
+shipping `abort()` because transactions conventionally have one.
 
 ### Sequencing: what gates on what
 
