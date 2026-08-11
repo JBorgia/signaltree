@@ -32,7 +32,7 @@ in other people's repositories.
 - **Build Tools**: Rollup (packages & guardrails), Angular CLI (demo)
 - **Testing**: Vitest
 - **Linting**: ESLint
-- **License**: BSL-1.1 (Business Source License)
+- **License**: Apache-2.0
 
 ## Architecture
 

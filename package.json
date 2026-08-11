@@ -2,7 +2,7 @@
   "name": "@signaltree/workspace",
   "version": "14.1.1",
   "packageManager": "pnpm@10.17.0",
-  "license": "BUSL-1.1",
+  "license": "Apache-2.0",
   "funding": {
     "type": "github",
     "url": "https://github.com/sponsors/JBorgia"

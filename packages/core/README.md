@@ -3286,7 +3286,7 @@ npm install --save-dev @signaltree/guardrails
 
 ## 📄 License
 
-Business Source License 1.1 (BUSL-1.1) — commercial and internal use permitted; converts to the MIT License on 2028-09-05. No AI-training restriction. See the [LICENSE](../../LICENSE) file for details.
+Apache License 2.0 — see the [LICENSE](../../LICENSE) file. OSI-approved and permissive, with an explicit patent grant.
 
 ---
 

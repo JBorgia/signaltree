@@ -159,4 +159,4 @@ See [the guardrails skill](../../docs/skills/using-signaltree/guardrails/SKILL.m
 
 ## License
 
-MIT
+Apache License 2.0 — see the [LICENSE](../../LICENSE) file. OSI-approved and permissive, with an explicit patent grant.

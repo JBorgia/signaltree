@@ -1,14 +1,48 @@
-# SignalTree Intellectual Property Protection
+# SignalTree — Intellectual Property and Attribution
 
-## Recursive Typing System - Proprietary Innovation
+SignalTree is licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for
+the binding terms; this document is explanatory and grants nothing beyond them.
 
-This document outlines the intellectual property protections for the recursive typing system implemented in SignalTree.
+## What the license gives you
 
-### Protected Innovations
+Apache-2.0 is permissive and OSI-approved. You may use, modify, distribute and
+sublicense the Software for any purpose, including commercially, and you may create
+and distribute derivative works (LICENSE §2). There is no copyleft — code you write
+against SignalTree stays yours.
 
-#### 1. TreeNode<T> Recursive Type System
+You also receive a perpetual, worldwide, royalty-free **patent licence** from every
+contributor covering their contributions (LICENSE §3). That grant terminates for
+anyone who initiates patent litigation alleging the Software infringes their patents.
 
-The core recursive type transformation that maintains perfect type inference through unlimited nesting depth:
+## What you owe in return
+
+Distributing SignalTree, modified or not, requires you to (LICENSE §4):
+
+- include a copy of the LICENSE,
+- retain the copyright, patent, trademark and attribution notices,
+- pass along the [NOTICE](NOTICE) file, and
+- carry prominent notices stating any files you changed.
+
+## What is reserved
+
+**Trademarks.** Apache-2.0 §6 grants no rights to the "SignalTree" name, logo, or
+other marks. The code may be forked freely; a fork must ship under a different name
+and must not imply endorsement by or affiliation with this project.
+
+Nothing else is reserved. Earlier revisions of this document asserted restrictions on
+reimplementing the techniques below, teaching them, or building competing libraries.
+Those assertions are withdrawn: they conflict with the license now granted, and US
+copyright does not reach ideas, methods, or paradigms in any case — only their
+expression (17 U.S.C. §102(b)).
+
+## Techniques introduced by this project
+
+Recorded for attribution and as prior art, not as a restriction. Independent
+reimplementation of any of these is permitted.
+
+### TreeNode&lt;T&gt; recursive type system
+
+Recursive type transformation preserving inference through unlimited nesting depth:
 
 ```typescript
 export type TreeNode<T> = {
@@ -17,84 +51,46 @@ export type TreeNode<T> = {
     : T[K] extends object
     ? T[K] extends Signal<infer TK>
       ? WritableSignal<TK>
-      : TreeNode<T[K]> // 🔒 PROTECTED: Recursive type transformation
+      : TreeNode<T[K]>
     : WritableSignal<T[K]>;
 };
 ```
 
-#### 2. Signal-Store Pattern Implementation
+### Type–runtime alignment
 
-The approach that mirrors type recursion with runtime recursion:
+Runtime construction that mirrors the type recursion exactly, so the structure the
+compiler infers and the structure built at run time cannot drift apart.
 
-```typescript
-// 🔒 PROTECTED: Type-Runtime Alignment Pattern
-function createSignalStore<T>(obj: T): TreeNode<T> {
-  // Recursive call that mirrors the type recursion exactly
-  (result as any)[key] = createSignalStore(value); // PROPRIETARY IMPLEMENTATION
-}
-```
+### "Initiation defines structure"
 
-#### 3. "Initiation Defines Structure" Paradigm
+The initial object literal fixes the complete type system: inference holds at any
+depth thereafter, with no configuration and no per-depth annotation.
 
-The groundbreaking concept where:
+### Built-in object detection
 
-- Initial object structure locks in the complete type system
-- Perfect type inference works forever after initiation
-- Zero configuration required for any depth of nesting
+`Date`, `RegExp`, `Map`, `Set` and similar built-ins are treated as leaf values rather
+than recursively signalified, so their internal slots are never destructured.
 
-#### 4. Built-in Object Detection System
+### Lazy tree materialisation
 
-Proprietary logic for handling Date, RegExp, Map, Set, and other built-in objects as primitives rather than recursively signalifying them.
+Proxy-based on-demand signal creation that preserves the eager type surface, so paths
+that are never read are never allocated.
 
-#### 5. Lazy Signal Tree Creation
+## Contributing
 
-Advanced proxy-based system that creates signals on-demand while maintaining perfect type preservation.
+Contributions are accepted under Apache-2.0 §5: anything you intentionally submit for
+inclusion is licensed under the same terms, with no additional conditions, unless you
+state otherwise explicitly.
 
-### Copyright Protection
+## Contact
 
-**All rights reserved** to Jonathan D Borgia for:
-
-- The specific implementation methodology
-- The recursive type-runtime alignment approach
-- The "initiation defines structure" paradigm
-- Built-in object detection algorithms
-- Lazy evaluation with type preservation
-- Any derivative implementations of these concepts
-
-### Licensing Terms
-
-#### ✅ PERMITTED USES:
-
-- Using SignalTree as provided under the MIT License
-- Building applications that consume the public API
-- Contributing improvements back to this project (under CLA)
-
-#### ❌ PROHIBITED USES:
-
-- Extracting or copying the recursive typing system
-- Creating competing libraries using these concepts
-- Reimplementing the core algorithms in other projects
-- Teaching or distributing implementation details
-- Creating derivative works based on the methodology
-
-### Enforcement
-
-Violations of these intellectual property rights will result in:
-
-1. **Immediate termination** of all license rights
-2. **Legal action** for copyright infringement
-3. **Injunctive relief** to prevent further use
-4. **Damages and attorney fees** as provided by law
-
-### Contact
-
-For licensing inquiries or questions about intellectual property rights:
-
-- Email: licensing@signaltree.dev
-- Website: https://signaltree.dev/licensing
+Questions about attribution, trademark use, or this document:
+<https://github.com/JBorgia/signaltree/issues>
 
 ---
 
-**Copyright (c) 2025 Jonathan D Borgia. All rights reserved.**
+Copyright 2024-2026 Jonathan D Borgia and SignalTree contributors.
+Licensed under the Apache License, Version 2.0.
 
-_This intellectual property is protected under United States and international copyright law. Unauthorized use is strictly prohibited._
+Releases up to and including 14.1.1 were published under the Business Source License
+1.1. That grant is irrevocable for those versions and is not withdrawn here.

@@ -256,4 +256,4 @@ tree.$.listings.all();                   // Signal<Listing[]>
 
 ## License
 
-MIT
+Apache License 2.0 — see the [LICENSE](../../LICENSE) file. OSI-approved and permissive, with an explicit patent grant.
