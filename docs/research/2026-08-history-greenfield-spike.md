@@ -209,6 +209,86 @@ Consistent with ST2029's `entries × width` model for the stack, and the log is
 flat — indistinguishable from no history at all, because `before`/`after` are
 references to entity objects the tree already holds.
 
+> ### ✅ INDEPENDENTLY REPRODUCED 2026-08-10
+>
+> These were agent-measured and unreproduced, and the 19.58 MB figure is
+> load-bearing (it eliminated Option F on cost). Re-run from scratch against the
+> built package — `--expose-gc`, one process per arm, baseline taken after seeding
+> so the number is history retention alone:
+>
+> | width  | none (orig / repro) | snapshot stack (orig / repro) | log (orig / repro) |
+> | ------ | ------------------- | ----------------------------- | ------------------ |
+> | 1,000  | 0.14 / 0.067        | 0.59 / **0.594**              | 0.16 / 0.057       |
+> | 10,000 | 0.17 / 0.058        | 4.05 / **4.089**              | 0.22 / 0.066       |
+> | 50,000 | 0.15 / 0.069        | 19.58 / **19.979**            | 0.15 / 0.077       |
+>
+> The stack arm reproduces within ~2% at every width, and 3 reps at 50k were
+> identical to three decimal places (19.979). **The 19.58 MB figure stands.** > `none` and `log` came out lower here (~0.06–0.08 MB vs ~0.15–0.22 MB) but the
+> claim they carry — flat in width, and indistinguishable from each other — holds.
+>
+> The trap below reproduced exactly: 1,050 / 10,050 / **50,050** log entries.
+>
+> Also reproduced from §1.6: `undo()` at 50k rows = **436.67 µs** against the
+> reported 434 µs, and the O(state) scaling is unambiguous — 25.4 / 83.5 /
+> 436.7 µs at 1k / 10k / 50k. **Restore is O(state), not O(1).**
+>
+> ### 🔶 REFINEMENT: `entries × width` is only paid by writes that TOUCH the wide collection
+>
+> The reproduction above used 50 **collection** writes. Re-run with 50 **scalar**
+> writes beside the same untouched collection, everything else identical:
+>
+> | 50 steps @ | scalar writes | collection writes |
+> | ---------- | ------------- | ----------------- |
+> | 1,000      | 0.201 MB      | 0.594 MB          |
+> | 10,000     | 0.262 MB      | 4.089 MB          |
+> | 50,000     | **0.896 MB**  | **19.98 MB**      |
+>
+> Scalar retention is near-flat — 4.5× for a 50× width increase, against 33× for
+> the collection arm. **Unchanged collections are shared by reference between
+> entries**; only a collection that is written gets a fresh array per entry.
+>
+> This does not rescue the snapshot stack (Option F is dead on the
+> path-scoped-delta constraint regardless, and `undo()` is still O(state)), but it
+> narrows the cost argument and ST2029's wording: `entries × width` describes a
+> collection-write-heavy workload, not history in general. The realistic mixed
+> workload — a user editing form/scalar state beside a large server-owned
+> collection — sits nearer the 0.896 MB row than the 19.98 MB one. **19.58 MB is a
+> real worst case, not a typical one**, and it should be quoted that way.
+>
+> ### ⚠️ PARTIALLY REPRODUCED: the recording slope (§1.5)
+>
+> Method matched to §1.5 as closely as possible — `flushSync()` after each write,
+> median of 11 runs, `maxHistorySize: 50`. One correction to note: 50 writes
+> produce ~30 recorded entries, not 50, so cost is normalised per **recorded
+> entry**.
+>
+> | width  | scalar (orig / repro) | collection (orig / repro) |
+> | ------ | --------------------- | ------------------------- |
+> | 1,000  | 23.1 / 10.8           | 31.8 / 18.8               |
+> | 10,000 | 29.9 / 11.5           | 66.9 / 49.8               |
+> | 50,000 | 70.7 / **11.3**       | 255 / 215                 |
+>
+> **The collection column reproduces in shape and within ~2×.** The scalar column
+> does not: measured cost is **flat in collection width** (10.8 → 11.3 µs) where
+> the original rises 3× (23.1 → 70.7 µs). The flat result is what the retention
+> refinement above predicts — a scalar write does not copy the untouched
+> collection, so it should not scale with it — so the two independent measurements
+> agree with each other and disagree with the original scalar row.
+>
+> Absolute values here are consistently lower than the original and run-to-run
+> spread is wide (50k collection: min 112, median 215, max 359 µs per entry), so
+> treat these as order-of-magnitude, not precise. **Do not quote 70.7 µs again
+> without re-measuring.** Nothing in this document's conclusions turns on the
+> slope; the architecture argument rests on retention and undo cost, and both
+> stand.
+>
+> _Method note, recorded because it cost a wrong answer:_ a first attempt timed
+> writes flushed with `setTimeout`, which puts a ~1 ms floor under every sample and
+> swamps a ~50 µs signal — it produced **negative** per-write costs and was
+> discarded. A second attempt compared `updateOne` results against the **scalar**
+> column and briefly concluded the slope was refuted; it was comparing different
+> operations.
+
 **With one trap that has to be designed around.** The log arm holds 50,050
 entries at 50k rows: seeding a collection notifies **once per entity**. Bytes are
 flat and _entry count is O(state)_. So `maxHistorySize` as an entry count would

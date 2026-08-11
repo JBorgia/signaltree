@@ -157,9 +157,38 @@ under every design:**
   shape is not.
 - `maxHistorySize` → turn-bounded, which is undefinable until "turn" is
 
-**Independent of all of it:** capability matrix (item 8), RFC 0008 (item 9), and
-re-verifying the spike's memory figures — 19.58 MB is load-bearing, agent-measured, and
-not yet reproduced here.
+**Independent of all of it:** capability matrix (item 8) and RFC 0008 (item 9).
+
+~~Re-verifying the spike's memory figures~~ — **DONE 2026-08-10, and the
+load-bearing one stands.** Re-run from scratch against the built package with
+`--expose-gc`, one process per arm:
+
+- **Retention REPRODUCED.** Snapshot stack 0.594 / 4.089 / **19.979 MB** at
+  1k / 10k / 50k against the reported 0.59 / 4.05 / 19.58 — within ~2%, and 3 reps
+  at 50k identical to three decimals. So Option F's cost-based elimination holds
+  independently of the path-scoped-delta constraint that already killed it.
+- **`undo()` = O(state) REPRODUCED.** 436.67 µs at 50k against 434 µs reported,
+  scaling 25.4 → 83.5 → 436.7 µs. There is no root pointer to swap; the snapshot
+  model's one claimed advantage over a log does not exist here.
+- **Entry-count trap REPRODUCED exactly** — 50,050 log entries at 50k rows, with
+  bytes flat. Confirms that a log must be bounded by turns, never by entries.
+- **REFINEMENT — `entries × width` is only paid by writes that TOUCH the wide
+  collection.** 50 scalar writes beside an untouched 50k collection retain
+  **0.896 MB**; 50 collection writes retain **19.98 MB**. Unchanged collections are
+  shared by reference between entries. So 19.58 MB is a real **worst case, not a
+  typical one**, and ST2029's wording describes a collection-write-heavy workload
+  rather than history in general. Doesn't rescue Option F (dead on correctness) and
+  doesn't change that `undo()` is O(state) — but the realistic mixed workload sits
+  nearer 0.9 MB than 19.6 MB, and the cost argument should say so.
+- **Recording slope PARTIALLY reproduced.** Collection column reproduces in shape
+  and within ~2× (31.8/66.9/255 → 18.8/49.8/215 µs per recorded entry). The scalar
+  column does not: measured **flat** in collection width (10.8 → 11.3 µs) where the
+  original rises 3× (23.1 → 70.7). The flat result is what the retention refinement
+  predicts, so the two measurements corroborate each other. Do not quote 70.7 µs
+  again without re-measuring.
+
+Full write-up in
+[the spike §1.7](docs/research/2026-08-history-greenfield-spike.md).
 
 ### DELETE `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()`
 
