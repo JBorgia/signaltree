@@ -251,7 +251,10 @@ declare const DEFAULT_PATH_CACHE_SIZE: number;
       name: 'signaltree-resolve-shared',
       resolveId(source) {
         if (source === '@signaltree/shared') {
-          return { id: path.join(sharedBuildDist, 'index.js'), external: false };
+          return {
+            id: path.join(sharedBuildDist, 'index.js'),
+            external: false,
+          };
         }
         if (source.startsWith('@signaltree/shared/')) {
           const rest = source.slice('@signaltree/shared/'.length);
@@ -273,9 +276,59 @@ declare const DEFAULT_PATH_CACHE_SIZE: number;
       ? [config.plugins]
       : [];
 
+    // Strip comments from the emitted JS, and ONLY the JS.
+    //
+    // The packages used to do this with `removeComments: true` in
+    // tsconfig.lib.prod.json — the single TypeScript switch for it, which strips
+    // `.d.ts` as well. That shipped five of seven packages with declarations
+    // carrying zero JSDoc: core/src/lib/types.ts has 476 doc lines and its
+    // shipped types.d.ts had 0, so a consumer hovering `maxHistorySize` saw no
+    // description and no `@default 50`.
+    //
+    // Doing it HERE rather than in a postbuild script is the load-bearing part.
+    // An earlier attempt stripped comments in npm's `postbuild`, which worked
+    // until `verify-gates.mjs` built `dist/` with nx directly and skipped the
+    // hook entirely — the invariant then held on one build path and broke on
+    // another. A rollup plugin lives in the build graph, so every path that
+    // produces JS produces stripped JS.
+    //
+    // `minifyWhitespace` is required, not cosmetic: without it esbuild keeps
+    // comments attached to object members, and one such survivor mentioning
+    // '@angular/forms/signals' in prose trips the `angular-compat` gate, which
+    // detects APIs with a substring scan (check-angular-compat.mjs:113) and so
+    // silently assumes built JS carries no prose. Identifiers and syntax are
+    // deliberately left alone — this is not a minifier, and consumer stack
+    // traces should still name real functions.
+    //
+    // Safe because no source maps ship: outputs set `sourcemap: false` above,
+    // and `files` publishes only `dist/**/*.js` and `src/**/*.d.ts`. If maps are
+    // ever published this must generate them rather than invalidate them.
+    const stripJsCommentsPlugin = {
+      name: 'signaltree-strip-js-comments',
+      async renderChunk(code) {
+        if (!code.includes('/*') && !code.includes('//')) return null;
+        const { transform } = await import('esbuild');
+        const out = await transform(code, {
+          loader: 'js',
+          format: 'esm',
+          minify: false,
+          minifyIdentifiers: false,
+          minifySyntax: false,
+          minifyWhitespace: true,
+          legalComments: 'none',
+        });
+        return { code: out.code, map: null };
+      },
+    };
+
     return {
       ...config,
-      plugins: [resolveSharedPlugin, ...plugins, inlineSharedTypesPlugin],
+      plugins: [
+        resolveSharedPlugin,
+        ...plugins,
+        stripJsCommentsPlugin,
+        inlineSharedTypesPlugin,
+      ],
       // Entry barrels must keep their re-exports even when the module body is
       // empty after bundling (pure re-export barrels).
       preserveEntrySignatures: 'exports-only',

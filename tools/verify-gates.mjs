@@ -605,6 +605,45 @@ const GATES = [
     },
   },
   {
+    name: 'declaration-docs',
+    covers:
+      'a package whose source carries JSDoc ships JSDoc in its shipped .d.ts',
+    cmd: ['node', 'tools/check-declaration-docs.mjs'],
+    needsBuild: true,
+    // Five of seven packages shipped declarations with ZERO JSDoc, because
+    // `removeComments: true` is the only TS switch for keeping comments out of
+    // emitted JS and it strips `.d.ts` too. core/src/lib/types.ts carried 476
+    // JSDoc lines and its shipped types.d.ts carried 0, so a consumer hovering
+    // `maxHistorySize` got no description and no `@default 50`. Nothing caught
+    // it: bundle-budget measures bundled JS, api-surface compares symbol names,
+    // package-hygiene checks presence. Comments now stay in both outputs and the
+    // strip plugin in tools/build/create-rollup-config.mjs removes them from JS.
+    //
+    // `generate`, not find/replace: the harness replaces the FIRST match only,
+    // so blinding one `/**` of the 106 in this file left the package at 86%
+    // retained and the gate green. Emptying it drops guardrails to ~12%.
+    mutation: {
+      file: 'dist/packages/guardrails/src/lib/types.d.ts',
+      generate: () => '',
+    },
+  },
+  {
+    name: 'declaration-docs:self',
+    covers:
+      'the declaration-docs checker flags a stripped declaration set AND reports clean at the real ratio',
+    cmd: ['node', 'tools/check-declaration-docs.mjs', '--self-test'],
+    needsBuild: true,
+    // Blind the JSDoc counter. Every package then reports zero source blocks, so
+    // the self-test has no documented package to probe with and must refuse to
+    // run rather than pass vacuously — otherwise `declaration-docs` gets
+    // credited on a proof that never happened.
+    mutation: {
+      file: 'tools/check-declaration-docs.mjs',
+      find: '(text.match(/\\/\\*\\*/g) ?? []).length',
+      replace: '0',
+    },
+  },
+  {
     name: 'api-surface',
     covers:
       'the entry-point inventory in llms.txt, llms-full.txt, the SKILL and core README matches the BUILT barrels',

@@ -801,101 +801,75 @@ self-describing, and today every hover in five of seven packages is bare.
 built JS and does not look at `.d.ts` at all; `api-surface` compares symbol
 inventories, not comments.
 
-### 6g — ATTEMPTED 2026-08-10, REVERTED. Read this before trying again.
+### 6g — FIXED 2026-08-11 (second attempt; the first was reverted)
 
-The fix and the gate were both built and both worked; the change was reverted
-because the delivery mechanism is unsound. What was learned:
+**The root cause is that one config drives both emits.** `removeComments: true`
+sat in the same `compilerOptions` as `declaration: true`, so it stripped `.d.ts`
+and `.js` together. That is why dropping it fixed declarations and polluted the JS
+in a single move.
 
-**1. The obvious fix does not work, and the reason is a TypeScript limitation.**
-`removeComments` is the only switch for keeping comments out of emitted JS and it
-strips `.d.ts` too. Dropping it from the five packages does give fully documented
-declarations (core: 0 → 2,973 JSDoc lines, ratio 75% of source) — but it also puts
-JSDoc into the shipped runtime JS, which the repo explicitly does not want and
-already validates against in `scripts/verify-jsdoc-stripping.js`.
+**The fix: strip comments in the rollup output, not in the tsconfig.** A
+`signaltree-strip-js-comments` plugin (`renderChunk`) in
+`tools/build/create-rollup-config.mjs` removes comments from emitted JS, and
+`removeComments` is gone from all five package tsconfigs so declarations keep their
+JSDoc. Result: 0 comment-carrying JS files and fully documented `.d.ts` —
+core 0 → 2,973 JSDoc lines shipped, 75% of source retained.
 
-**2. Post-hoc stripping of the built JS is fragile by construction.** A
-`scripts/strip-js-comments.mjs` esbuild pass removed 337 KB of comments from JS
-while leaving `.d.ts` intact, wired into npm's `postbuild`. It worked — and then
-`verify-gates.mjs` went red, because **the gate harness builds `dist/` with nx
-directly and never runs npm's `postbuild` hook.** So the invariant held after
-`npm run build` and broke after any nx-driven build. Any fix that repairs the
-artifact after the fact inherits this: it must run on every build path, and there
-is more than one.
+**Why this succeeded where the first attempt failed.** The first attempt stripped
+JS in npm's `postbuild`, which held after `npm run build` and broke the moment
+`verify-gates.mjs` built `dist/` with nx directly and skipped the hook. A rollup
+plugin lives in the **build graph**, so every path that produces JS produces
+stripped JS. The invariant stopped being build-path-dependent.
 
-**3. `angular-compat` silently depends on built JS being comment-free.** It
-detects APIs with `text.includes(api)` over whole files
-(`check-angular-compat.mjs:113`), so a doc comment that merely NAMES
-`@angular/forms/signals` reads as an import of it. That gate was correct only
-because `removeComments: true` guaranteed no prose reached the JS — an invariant
-nothing states and nothing tests. Worth fixing on its own merits regardless of
-6g: strip comments before scanning, or match import syntax rather than substrings.
+**A viability risk that turned out not to exist.** The concern was that
+`compilationMode: "partial"` (set in four packages) means ngc emits Angular
+declaration metadata a plain declaration pass would lose. MEASURED: **zero** `ɵ`
+metadata in any shipped `.d.ts` and **zero** `ɵɵngDeclare*` in any built JS,
+because every package builds with `@nx/rollup:rollup` — ngc never runs.
+`compilationMode: "partial"` is **inert config in core, ng-forms, events and
+realtime**, and declarations were already plain-TypeScript output. Worth deleting
+or honouring deliberately; filed separately below.
 
-**4. `esbuild` needs `minifyWhitespace: true` to strip comments completely.**
-Without it, comments attached to object members survive (8 files in core), and one
-survivor is what tripped `angular-compat`. That flag is safe here only because no
-source maps ship — `files` publishes `dist/**/*.js` and `src/**/*.d.ts`, and dist
-contains no `.js.map` and no `sourceMappingURL`.
+**Gate: `declaration-docs` + `declaration-docs:self`, both mutation-proven.**
+`tools/check-declaration-docs.mjs` compares source JSDoc blocks against shipped
+`.d.ts` blocks per package. Two design points that each cost a cycle:
 
-**The remaining approach that has none of these problems: a two-pass declaration
-emit.** Keep `removeComments: true` so every build path emits comment-free JS
-unchanged, and regenerate `.d.ts` with a declaration-only pass that keeps comments
-(`--emitDeclarationOnly` with `removeComments: false`). Nothing rewrites JS, so
-there is no build-path coupling and no `angular-compat` interaction. The open
-question is whether a plain `tsc` declaration pass produces declarations identical
-to what ngc emits for the partially-compiled packages (`core`, `ng-forms`) — verify
-that before adopting.
+- The invariant is a **ratio, not "not zero"** — `stripInternal` removes whole
+  declarations so no package ships 100% (measured 72%–98%); the floor is 50%.
+- A `needsBuild` gate must mutate a **built** file, and the harness replaces only
+  the **first** match. Mutating schema's tsconfig was reported BLIND (dist is built
+  before the mutation lands); blinding one `/**` of guardrails' 106 was also blind.
+  `generate: () => ''` on the built `.d.ts` is what works.
 
-**The gate itself was built, proven, and is worth restoring with the fix.**
-`tools/check-declaration-docs.mjs` compared source JSDoc blocks against shipped
-`.d.ts` blocks per package. Two design notes that cost a cycle each:
+**Cost, recorded because no gate measures it** — five tarballs grow 11–36%:
 
-- The invariant must be a **ratio, not "not zero"**. `stripInternal` legitimately
-  removes whole declarations, so no package ships 100% — the measured spread was
-  72%–98%, and a 50% floor sits clear of it.
-- Its first mutation (`removeComments` back into `schema`'s tsconfig) was reported
-  **BLIND** by the harness, correctly: `needsBuild` gates read `dist/`, which is
-  built before the mutation is applied, so mutating source changes nothing. The
-  second (blinding one `/**` in a built `.d.ts`) was also blind, because the
-  harness replaces only the FIRST match and guardrails holds 106 blocks in that
-  file. `generate: () => ''` on `dist/packages/guardrails/src/lib/types.d.ts` drops
-  it to 12% and works — both gates then proved able to fail.
+| package    | before  | after   |
+| ---------- | ------- | ------- |
+| core       | 114,732 | 156,382 |
+| shared     | 4,440   | 5,884   |
+| ng-forms   | 26,403  | 32,138  |
+| guardrails | 14,002  | 15,465  |
+| schema     | 11,544  | 13,977  |
+| events     | 55,209  | 55,209  |
+| realtime   | 8,620   | 7,848   |
 
-**Before/after sizes, recorded because no gate measures this** and the change
-grows published tarballs:
+This is **install weight, not bundle weight**: consumers bundle these and their
+minifier strips comments regardless, and `bundle-budget` is unchanged.
 
-| package    | tarball before | after   | `.d.ts` before | after   |
-| ---------- | -------------- | ------- | -------------- | ------- |
-| core       | 114,732        | 171,384 | 62,963         | 202,342 |
-| shared     | 4,440          | 6,113   | 1,851          | 5,633   |
-| ng-forms   | 26,403         | 33,754  | 10,457         | 34,203  |
-| guardrails | 14,002         | 16,140  | 6,969          | 14,754  |
-| schema     | 11,544         | 14,556  | 4,869          | 15,113  |
-| events     | 55,209         | 48,601  | 101,214        | 101,214 |
-| realtime   | 8,620          | 8,104   | 12,924         | 12,924  |
+**Still open, both independent of 6g:**
 
-Five grow by 15–49%. **`events` and `realtime` SHRANK** — they never set
-`removeComments`, so they had been shipping JSDoc in their runtime JS all along.
-That is a real inefficiency this work found and did not fix, and it is independent
-of the rest of 6g.
-
-### 6e. Doc defects found by re-scoring
-
-- `commit`/`discard` are attributed to `createEditSession`, which has neither. The
-  value-level API is `applyChanges`/`reset`; the tree-bound one is
-  `createTreeEditSession` with `commit()`/`cancel()`. Wrong in the audit (now
-  fixed) and in `docs/guides/time-travel-in-production.md:176` (not fixed).
-- `docs/myths-and-misconceptions.md:261` says a path-bound edit session is "planned
-  for v10.1". `createTreeEditSession` ships today.
-
-### 6f. Tests do not pin any of this
-
-The re-score ran as one-shot scripts, not tests. Cases 13, 15, 20 and 28 are live
-defects with **no test pinning them** — 20 in particular is silent data loss on the
-primary editing surface. Add regression tests with the fixes.
-
-**Also answered:** 5b item 4 — `resetHistory()` EMPTIES the stack and leaves state
-alone; it does not restore-to-initial. The name is accurate; do not rename it to
-`clear()`.
+- **`events` has its own `rollup.config.mjs`** and does not use the shared factory,
+  so the strip plugin does not apply — 20 of its JS files still ship comments. Not
+  a regression (it never set `removeComments`), but its tarball is the one that
+  did not improve. Either adopt the shared factory or export the plugin to it.
+- **`angular-compat` silently depends on built JS being comment-free.** It detects
+  APIs with `text.includes(api)` over whole files
+  (`check-angular-compat.mjs:113`), so a doc comment merely NAMING
+  `@angular/forms/signals` reads as an import of it. It **fails closed** — it can
+  produce a spurious red but never miss a real violation — so this is a latent trap
+  rather than a correctness bug. Cheap fix: strip comments from the text before
+  matching. The defect is the unstated coupling, not the detection direction.
+- **`compilationMode: "partial"` is inert** in four packages (see above).
 
 ## 7. Delete the parity framing from time-travel guidance
 
