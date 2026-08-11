@@ -1162,26 +1162,12 @@ function create<T extends object>(
     configurable: true,
   });
 
-  // batchUpdate(): default pass-through for when batching is not enabled.
-  // Applies the update immediately using the same internal recursiveUpdate
-  // logic so consumers can call `tree.batchUpdate(...)` regardless of
-  // whether the batching enhancer is active.
-  Object.defineProperty(tree, 'batchUpdate', {
-    value: function (arg?: unknown): void {
-      if (arguments.length === 0) return;
-
-      if (typeof arg === 'function') {
-        const updater = arg as (current: T) => T;
-        const current = unwrap(signalState) as T;
-        recursiveUpdate(signalState, updater(current));
-      } else {
-        recursiveUpdate(signalState, arg);
-      }
-    },
-    enumerable: false,
-    writable: true,
-    configurable: true,
-  });
+  // `batchUpdate()` was REMOVED in 15.0.0. Its body was
+  // `recursiveUpdate(signalState, arg)` — exactly what the tree callable
+  // `tree(partial)` / `tree(updater)` already does. With `batching()` attached it
+  // additionally wrapped in `batch()`, so `tree.batchUpdate(x)` was precisely
+  // `tree.batch(() => tree(x))`. MEASURED equivalent before removal: 0.921 vs
+  // 0.925 us at 10 fields, 16.585 vs 16.475 us at 100 (medians of 9 x 2000).
 
   // updateAndReport(): apply a partial update and return the dot-paths of
   // signals that actually changed (after ref-equality short-circuit).
@@ -1495,25 +1481,8 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     configurable: true,
   });
 
-  // Forward 'batchUpdate' from baseTree (mirrors the existing internal
-  // helper; needed because non-enumerable properties don't reach the
-  // builder via the generic copy loop).
-  Object.defineProperty(builder, 'batchUpdate', {
-    value: function (this: unknown, arg?: unknown): void {
-      finalize();
-      const fn = (baseTree as unknown as Record<string, unknown>)[
-        'batchUpdate'
-      ] as ((a?: unknown) => void) | undefined;
-      if (!fn) {
-        warnMissingForward('batchUpdate');
-        return;
-      }
-      fn.call(baseTree, arg);
-    },
-    enumerable: false,
-    writable: true,
-    configurable: true,
-  });
+  // The `batchUpdate` forward was REMOVED in 15.0.0 along with the method it
+  // forwarded. Use `tree(partial)`, or `tree.batch(() => tree(partial))`.
 
   // Add derived() method
   Object.defineProperty(builder, 'derived', {

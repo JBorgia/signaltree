@@ -98,13 +98,8 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
     updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
   ): string[];
 
-  /**
-   * Apply a partial update in a single batch. Same forwarded-but-untyped gap
-   * as `updateAndReport`.
-   */
-  batchUpdate(
-    updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
-  ): void;
+  // `batchUpdate` was REMOVED in 15.0.0 — a duplicate of the tree callable.
+  // Use `tree(partial)`, or `tree.batch(() => tree(partial))` to batch notifications.
 
   /**
    * Add a layer of derived state.

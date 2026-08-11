@@ -59,15 +59,6 @@ export function batching(
       const enhanced = tree as ISignalTree<T> & BatchingMethods;
       Object.assign(enhanced, passthrough);
 
-      // Backwards compat: batchUpdate delegates to immediate execution
-      (enhanced as any).batchUpdate = (updater: (current: T) => Partial<T>) => {
-        if (typeof (tree as any).batchUpdate === 'function') {
-          (tree as any).batchUpdate(updater);
-        } else {
-          updater(tree());
-        }
-      };
-
       return enhanced;
     }
 
@@ -371,46 +362,6 @@ export function batching(
 
     // Add batching methods
     Object.assign(enhancedTree, batchingMethods);
-
-    // batchUpdate — MUST accept the same arguments as core's, which takes an
-    // object OR an updater function. This override previously took only a
-    // function, so `.with(batching())` turned `batchUpdate({ count: 1 })` —
-    // valid everywhere else and the shape the docs use — into
-    // `TypeError: updater is not a function`. An enhancer may add behaviour to
-    // a method; narrowing its signature is a silent breaking change.
-    (enhancedTree as any).batchUpdate = (
-      arg: Partial<T> | ((current: T) => Partial<T>)
-    ) => {
-      (enhancedTree as any).batch(() => {
-        const updates =
-          typeof arg === 'function'
-            ? (arg as (current: T) => Partial<T>)(originalTreeCall())
-            : arg;
-        if (!updates || typeof updates !== 'object') return;
-
-        Object.entries(updates).forEach(([key, value]) => {
-          // Own-property read: `updates` is caller-supplied, so `$[key]` with
-          // key === '__proto__' would walk off the tree.
-          const $ = (enhancedTree as ISignalTree<T>).$ as Record<
-            string,
-            unknown
-          >;
-          if (!Object.prototype.hasOwnProperty.call($, key)) return;
-          const property = $[key] as
-            | { set?: (v: unknown) => void }
-            | ((v: unknown) => void)
-            | undefined;
-          if (
-            property &&
-            typeof (property as { set?: unknown }).set === 'function'
-          ) {
-            (property as { set: (v: unknown) => void }).set(value);
-          } else if (typeof property === 'function') {
-            (property as (v: unknown) => void)(value);
-          }
-        });
-      });
-    };
 
     // Register cleanup for tree destruction
     if (typeof tree.registerCleanup === 'function') {

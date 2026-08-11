@@ -13,7 +13,7 @@ function createFakeTree(initial: any) {
 
   tree.bind = () => tree;
 
-  // Minimal node accessor shape used by batching.batchUpdate
+  // Minimal node accessor shape used by the batching enhancer's write path
   tree.state = {
     count: {
       set: (v: any) => {
@@ -81,7 +81,9 @@ describe('batching behavior', () => {
         notificationCount++;
       };
 
-      const enhanced = batching({ notificationDelayMs: 100 })(tree as any) as any;
+      const enhanced = batching({ notificationDelayMs: 100 })(
+        tree as any
+      ) as any;
 
       enhanced.batch(() => {
         enhanced.$.count.set(1);

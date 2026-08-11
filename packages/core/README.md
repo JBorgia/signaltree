@@ -2161,11 +2161,15 @@ const tree = signalTree({
   batching() // Batch updates for optimal rendering
 );
 
-// Now supports batched updates
-tree.batchUpdate((state) => ({
-  products: [...state.products, ...newProducts],
-  filters: { category: 'electronics', search: '' },
-}));
+// One batched notification for a multi-field write.
+// `batchUpdate()` was REMOVED in 15.0.0 — it was a duplicate of the tree callable
+// (`tree.batchUpdate(x)` === `tree.batch(() => tree(x))`), measured equivalent.
+tree.batch(() =>
+  tree({
+    products: [...tree.$.products(), ...newProducts],
+    filters: { category: 'electronics', search: '' },
+  })
+);
 
 // Angular's computed() automatically caches derived values
 const filteredProducts = computed(() => {

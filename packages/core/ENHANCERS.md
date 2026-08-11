@@ -25,7 +25,8 @@ Behavior
   returns the same instance, mutation is assumed. If it returns a new value, that value is used
   for subsequent enhancers.
 - If any metadata `requires` are already available from core configuration (for example,
-  `batchUpdate` when `config.batchUpdates` is true), the sorter treats them as satisfied.
+  microtask notification batching when `config.batchUpdates` is true), the sorter treats them
+  as satisfied.
 - A topological sort orders enhancers that declare metadata. On cycles the system falls back to
   the user-provided order and warns in debug mode.
 

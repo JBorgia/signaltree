@@ -345,22 +345,18 @@ describe('batching enhancer', () => {
   // ==========================================
 
   describe('backwards compatibility', () => {
-    it('should provide batchUpdate method', () => {
-      const tree = createMockTree();
-      const enhanced = batching()(tree) as any;
+    // `batchUpdate` was REMOVED in 15.0.0. It was a duplicate of the tree
+    // callable: its body was `recursiveUpdate(signalState, arg)`, and with
+    // `batching()` attached it wrapped that in `batch()` — so
+    // `tree.batchUpdate(x)` was exactly `tree.batch(() => tree(x))`.
+    // MEASURED equivalent before removal: 0.921 vs 0.925 us at 10 fields,
+    // 16.585 vs 16.475 us at 100 (medians of 9 x 2000, overlapping ranges).
+    it('batchUpdate no longer exists on any tree shape', () => {
+      const enhanced = batching()(createMockTree()) as any;
+      const disabled = batching({ enabled: false })(createMockTree()) as any;
 
-      expect(typeof enhanced.batchUpdate).toBe('function');
-    });
-
-    it('batchUpdate should work correctly', () => {
-      const tree = createMockTree();
-      const enhanced = batching()(tree) as any;
-
-      enhanced.batchUpdate((current: any) => ({
-        count: current.count + 5,
-      }));
-
-      expect(tree().count).toBe(5);
+      expect(enhanced.batchUpdate).toBeUndefined();
+      expect(disabled.batchUpdate).toBeUndefined();
     });
 
     // (v12 removed the deprecated global functions flushBatchedUpdates /

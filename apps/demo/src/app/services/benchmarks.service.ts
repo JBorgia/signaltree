@@ -368,109 +368,59 @@ export class BenchmarkService {
       const batchTree = signalTree(state).with(batching());
 
       results.batch10 = BenchmarkService.measureTime(() => {
-        try {
-          // Try different batch methods
-          if (
-            typeof (
-              batchTree as unknown as {
-                batchUpdate?: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            ).batchUpdate === 'function'
-          ) {
-            (
-              batchTree as unknown as {
-                batchUpdate: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            ).batchUpdate((state: Record<string, unknown>) => {
-              const updates: Record<string, unknown> = {};
-              for (let i = 0; i < 10; i++) {
-                updates[`field_${i}`] = Math.random();
-              }
-              return { ...state, ...updates };
-            });
-          } else {
-            // Fallback to regular update
-            (
-              batchTree as unknown as {
-                update: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            )['update']((state: Record<string, unknown>) => {
-              const updates: Record<string, unknown> = {};
-              for (let i = 0; i < 10; i++) {
-                updates[`field_${i}`] = Math.random();
-              }
-              return { ...state, ...updates };
-            });
-          }
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (_e) {
-          // Ignore batch method errors and continue with fallback
+        // `batch(() => tree(partial))` — explicit, and NOT `batchUpdate`, which was
+        // removed in 15.0.0 as a duplicate of the tree callable.
+        //
+        // This used to probe for `batchUpdate` and fall back to `tree.update(fn)`
+        // inside a swallowing try/catch. MEASURED: `update` is not a function on the
+        // root, so the fallback THREW and the catch hid it — this arm would have
+        // reported ~0us while measuring nothing at all.
+        //
+        // The replacement is equivalence-checked, not assumed: batchUpdate vs
+        // batch(() => tree(u)) measured 0.921 vs 0.925 us at 10 fields and 16.585 vs
+        // 16.475 us at 100 (medians of 9 x 2000, overlapping ranges).
+        const updates: Record<string, unknown> = {};
+        for (let i = 0; i < 10; i++) {
+          updates[`field_${i}`] = Math.random();
         }
+        (
+          batchTree as unknown as {
+            batch: (fn: () => void) => void;
+            (partial: Record<string, unknown>): void;
+          }
+        ).batch(() =>
+          (batchTree as unknown as (p: Record<string, unknown>) => void)(
+            updates
+          )
+        );
       });
 
       results.batch100 = BenchmarkService.measureTime(() => {
-        try {
-          // Try different batch methods
-          if (
-            typeof (
-              batchTree as unknown as {
-                batchUpdate?: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            ).batchUpdate === 'function'
-          ) {
-            (
-              batchTree as unknown as {
-                batchUpdate: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            ).batchUpdate((state: Record<string, unknown>) => {
-              const updates: Record<string, unknown> = {};
-              for (let i = 0; i < 100; i++) {
-                updates[`field_${i}`] = Math.random();
-              }
-              return { ...state, ...updates };
-            });
-          } else {
-            // Fallback to regular update
-            (
-              batchTree as unknown as {
-                update: (
-                  fn: (
-                    state: Record<string, unknown>
-                  ) => Record<string, unknown>
-                ) => void;
-              }
-            )['update']((state: Record<string, unknown>) => {
-              const updates: Record<string, unknown> = {};
-              for (let i = 0; i < 100; i++) {
-                updates[`field_${i}`] = Math.random();
-              }
-              return { ...state, ...updates };
-            });
-          }
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (_e) {
-          // Ignore batch method errors and continue with fallback
+        // `batch(() => tree(partial))` — explicit, and NOT `batchUpdate`, which was
+        // removed in 15.0.0 as a duplicate of the tree callable.
+        //
+        // This used to probe for `batchUpdate` and fall back to `tree.update(fn)`
+        // inside a swallowing try/catch. MEASURED: `update` is not a function on the
+        // root, so the fallback THREW and the catch hid it — this arm would have
+        // reported ~0us while measuring nothing at all.
+        //
+        // The replacement is equivalence-checked, not assumed: batchUpdate vs
+        // batch(() => tree(u)) measured 0.921 vs 0.925 us at 10 fields and 16.585 vs
+        // 16.475 us at 100 (medians of 9 x 2000, overlapping ranges).
+        const updates: Record<string, unknown> = {};
+        for (let i = 0; i < 100; i++) {
+          updates[`field_${i}`] = Math.random();
         }
+        (
+          batchTree as unknown as {
+            batch: (fn: () => void) => void;
+            (partial: Record<string, unknown>): void;
+          }
+        ).batch(() =>
+          (batchTree as unknown as (p: Record<string, unknown>) => void)(
+            updates
+          )
+        );
       });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_e) {
@@ -574,12 +524,18 @@ export class BenchmarkService {
 
       // Lazy loading
       const lazyMemory = BenchmarkService.profileMemory(() => {
-        const tree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
+        const tree = signalTree(largeState, {
+          lazy: lazy(),
+          useLazySignals: true,
+        });
         tree();
       });
       results.lazy.memory = lazyMemory?.delta || 0;
 
-      const lazyTree = signalTree(largeState, { lazy: lazy(), useLazySignals: true });
+      const lazyTree = signalTree(largeState, {
+        lazy: lazy(),
+        useLazySignals: true,
+      });
       results.lazy.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties

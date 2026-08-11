@@ -10,7 +10,7 @@ import { signalTree } from '../index';
  * across by property DESCRIPTOR, not `Object.assign`.
  *
  * `Object.assign` copies only ENUMERABLE own properties, and every tree method
- * — `updateAndReport`, `batchUpdate`, `onPathChange`, `registerCleanup` — is
+ * — `updateAndReport`, `onPathChange`, `registerCleanup` — is
  * defined `enumerable: false`. They were silently dropped, so the builder
  * wrapping the enhanced tree found nothing to forward to and returned an empty
  * result. `updateAndReport({count:1})` on a `.with(timeTravel())` tree returned
@@ -38,13 +38,17 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     expect(changed).toEqual(['count']);
   });
 
-  it('batchUpdate writes', () => {
+  // `batchUpdate` and its builder forward were REMOVED in 15.0.0 — a duplicate of
+  // the tree callable. The replacement is the callable itself, which the builder
+  // already exposes, so this asserts the write path that survives.
+  it('the tree callable writes through the builder (batchUpdate is gone)', () => {
     const tree = signalTree({ count: 0 }).with(make() as never);
 
-    (tree as unknown as { batchUpdate: (u: unknown) => void }).batchUpdate({
-      count: 3,
-    });
+    expect(
+      (tree as unknown as { batchUpdate?: unknown }).batchUpdate
+    ).toBeUndefined();
 
+    (tree as unknown as (p: { count: number }) => void)({ count: 3 });
     expect(tree.$.count()).toBe(3);
   });
 
