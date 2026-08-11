@@ -460,6 +460,10 @@ branch, `setInterval(handleChange, 100)` (`audit.js:41-49`). It samples rather t
 trails. MEASURED: two writes inside one window log only the last; **a write and its
 revert inside one window log nothing at all**.
 
+Boundary measured: two writes 0/25/50 ms apart log **1** entry, 90 ms+ log 2. A
+write followed by a revert to the original value logs **0** entries at 0 ms and
+50 ms, and 2 at 120 ms — so below ~90 ms the trail has no record it happened.
+
 That is acceptable for an undo stack and wrong for an audit trail, which is the
 thing it is named for and recommended for in the regulated/healthcare workload.
 Either drive it from `PathNotifier` (the notification already fires at every write
@@ -467,24 +471,63 @@ site) or delete it and document `createAuditCallback` / `getHistory()`, which ar
 exact. It also leaks its interval unless the returned stop function is wired to a
 `DestroyRef`.
 
-### 6c. NEW DEFECT — `undo()` after `deserialize()` destroys the restored state
+### 6c. NEW DEFECT — `undo()` after `deserialize()` reverts the restore
 
-`canUndo()` is `true` immediately after a restore, and the first `undo()` lands on
-the pre-restore state: measured `deserialize()` → `n === 2`, `undo()` → `n === 0`.
-Same family as the phantom step fixed in 2a — an enabled undo button whose first
-press does something the user cannot want. History does not survive a reload
-(expected, gap C); being _destructive_ about it is not.
+`deserialize()` is recorded as an ordinary `BATCH` entry (`["INIT"]` →
+`["INIT","BATCH"]`), so `canUndo()` is `true` immediately after a restore and the
+first `undo()` always discards it. Verified at the boundary, not from one data
+point — with a payload restoring `n = 2`:
 
-### 6d. `maxHistorySize` — undocumented default, and a footgun at 0
+| target before restore  | entries | `canUndo` | after undo | after 2nd undo |
+| ---------------------- | ------- | --------- | ---------- | -------------- |
+| fresh                  | 2       | `true`    | `0`        | `0`            |
+| 1 prior write (`7`)    | 3       | `true`    | `7`        | `0`            |
+| 2 prior writes (`7,8`) | 4       | `true`    | `8`        | `7`            |
+| 3 prior writes         | 5       | `true`    | `9`        | `8`            |
 
-Default is 50 (`time-travel.js:32`, `config.maxHistorySize ?? 50`), and the type
-declares no default, so "omit it for unbounded history" — which the audit and the
-devtools guidance both said — is false. Measured over 200 writes: omitted → 49
-undos, `Infinity` → 200, `500` → 200, **`0` → 0**.
+Where it lands varies; that it discards the restore does not.
 
-`maxHistorySize: 0` silently disables undo entirely. `0` is a plausible spelling of
-"no limit"; `?? 50` does not catch it and the trim then fires on every entry. Make
-`0` mean unbounded or throw, and document the default.
+**Severity correction on the first report:** it is **recoverable** — `canRedo()` is
+`true` and `redo()` returns the restored value. This is an enabled undo button
+whose first press does something the user cannot want, not data loss. Rank it below
+6a and 6b accordingly.
+
+Mitigation that works today: `deserialize()` **before** `.with(timeTravel({}))` →
+`canUndo() === false` and `undo()` is a no-op. That may simply be the documented
+answer rather than a code change.
+
+### 6d. `maxHistorySize` — it is a buffer length, not a step count
+
+Bigger than first reported. Default is 50 (`time-travel.ts:80`,
+`config.maxHistorySize ?? 50`) and the type declares no default, so "omit it for
+unbounded history" is false. But the off-by-one is the part that affects everyone.
+10 writes on a tree starting at `n = 0`:
+
+| config     | entries | index  | undos spendable | note               |
+| ---------- | ------- | ------ | --------------- | ------------------ |
+| omitted    | 11      | 10     | 10              |                    |
+| `0`        | 0       | **-1** | **0**           | undo disabled      |
+| `1`        | 1       | 0      | **0**           | undo disabled      |
+| `2`        | 2       | 1      | 1               |                    |
+| `5`        | 5       | 4      | 4               |                    |
+| `-1`       | 0       | **-1** | **0**           | undo disabled      |
+| `NaN`      | 11      | 10     | 10              | silently unbounded |
+| `Infinity` | 11      | 10     | 10              |                    |
+
+1. **Usable undo steps = `maxHistorySize - 1`.** The default of 50 gives 49 steps,
+   and every doc sample naming a size is off by one.
+2. **Any value ≤ 1 silently disables undo.** `0` reads as "no limit", `1` reads as
+   "one step"; both give none. `-1` also drives `getCurrentIndex()` to `-1`, since
+   the trim runs `currentIndex--` against an already-empty buffer.
+3. **`NaN` is silently unbounded** (`length > NaN` is never true).
+
+**It is `??`, not `||`, and that decides the fix.** Under `|| 50` a `0` would
+become `50` and undo would work; under `??` it is a genuine zero-length buffer that
+shifts off every entry as it is pushed (`:233`). So **validate the input** — reject
+`< 1` and non-finite, or define `0` as unbounded — and do **not** change the `??`,
+which correctly distinguishes "not supplied" from "supplied as 0". Document the
+default and say whether the number means steps or entries; today it means entries
+and reads as steps.
 
 ### 6e. Doc defects found by re-scoring
 

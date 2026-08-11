@@ -41,15 +41,15 @@ Legend: ✅ works today · 🟡 works with assembly, caveat noted · ❌ not sup
 Seven rows moved. Five of them moved **down**, which is the point of re-scoring
 from a retracted premise rather than only auditing the passes.
 
-| Case                                | Was  | Now | Why                                                                                    |
-| ----------------------------------- | ---- | --- | -------------------------------------------------------------------------------------- |
-| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 15.0.0. No replacement yet.  |
-| 8. Undo scoped to a draft           | ✅\* | ✅  | Phantom-step defect **fixed**; option renamed `history` → `recordHistory`.             |
-| 9. Discarding an in-progress edit   | ✅   | ✅  | Passes, but the audit named the **wrong function** — see the doc defect below.         |
-| 15. An audit trail rather than undo | ✅   | 🟡  | `createAuditTracker` is a 100 ms **polling sampler** that can miss changes entirely.   |
-| 20. Undo in a form                  | ✅   | ❌  | `timeTravel()` does **not** cover `form()` state. In a mixed tree it loses form edits. |
-| 22. Pausing while replaying         | ✅   | ❌  | `pauseRecording` deleted.                                                              |
-| 28. Devtools unbounded history      | ✅   | 🟡  | "Omit `maxHistorySize`" does not give unbounded history — it defaults to **50**.       |
+| Case                                | Was  | Now | Why                                                                                                      |
+| ----------------------------------- | ---- | --- | -------------------------------------------------------------------------------------------------------- |
+| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 15.0.0. No replacement yet.                    |
+| 8. Undo scoped to a draft           | ✅\* | ✅  | Phantom-step defect **fixed**; option renamed `history` → `recordHistory`.                               |
+| 9. Discarding an in-progress edit   | ✅   | ✅  | Passes, but the audit named the **wrong function** — see the doc defect below.                           |
+| 15. An audit trail rather than undo | ✅   | 🟡  | `createAuditTracker` is a 100 ms **polling sampler** that can miss changes entirely.                     |
+| 20. Undo in a form                  | ✅   | ❌  | `timeTravel()` does **not** cover `form()` state. In a mixed tree it loses form edits.                   |
+| 22. Pausing while replaying         | ✅   | ❌  | `pauseRecording` deleted.                                                                                |
+| 28. Devtools unbounded history      | ✅   | 🟡  | Omitting `maxHistorySize` caps at **50**, and it counts entries not steps — any value ≤ 1 disables undo. |
 
 Cases 2, 4, 5, 6, 19, 23, 24, 26 were re-run and their original verdicts survived
 unchanged.
@@ -83,6 +83,10 @@ left `canRedo() === false`.
 
 20 writes at `maxHistorySize: 5` → 4 undos spendable, ending at `n === 16`, **not**
 `0`. The oldest entries were evicted, which is the feature.
+
+⚠️ 4, not 5 — `maxHistorySize` is a buffer length, so usable steps are
+`maxHistorySize - 1`. See case 28; it applies to every sample in this document
+that names a size, including case 8's `50` (which is 49 steps).
 
 ### 6. Not recording cursor/hover/selection churn ✅
 
@@ -192,22 +196,38 @@ History is tree state, so it survives anything that does not dispose the tree;
 **lifetime**: a root-provided tree keeps history, a component-provided `defineStore`
 tree disposes with the component. That part is architectural and was not executed.
 
-### 13. Persisting history across a reload ❌ — and the failure is worse than "absent"
+### 13. Persisting history across a reload ❌ — and the undo button is live afterwards
 
 `serialize()` output contains no history key. Round-tripped through
 `deserialize()` into a fresh tree: state restored (`n === 2`), history did not.
 
-**New defect found while re-scoring.** After `deserialize()`, `canUndo()` is
-`true`, and one `undo()` took `n` from the restored `2` to `0`:
+**New defect found while re-scoring**, stated at the boundary rather than from one
+data point. `deserialize()` is recorded as an ordinary `BATCH` entry
+(`["INIT"]` → `["INIT","BATCH"]`), so the first `undo()` after a restore always
+reverts the restore. What it lands on varies with prior history; that it discards
+the restore does not.
+
+Payload restores `n = 2`:
+
+| target tree before restore | entries | `canUndo()` | after `undo()` | after 2nd `undo()` | restore |
+| -------------------------- | ------- | ----------- | -------------- | ------------------ | ------- |
+| fresh, 0 prior writes      | 2       | `true`      | `0`            | `0`                | lost    |
+| 1 prior write (`n=7`)      | 3       | `true`      | `7`            | `0`                | lost    |
+| 2 prior writes (`7,8`)     | 4       | `true`      | `8`            | `7`                | lost    |
+| 3 prior writes (`7,8,9`)   | 5       | `true`      | `9`            | `8`                | lost    |
+
+**Severity correction.** An earlier draft of this row called it "throws away the
+restored state". It is **recoverable**: `canRedo()` is `true` afterwards and
+`redo()` returns `n` to `2`. So this is a live undo button that does something the
+user cannot want on its first press, not data loss.
+
+**Mitigation that works today:** restore _before_ attaching the enhancer.
 
 ```
-deserialize(json) -> n === 2, canUndo() === true
-undo()            -> n === 0     // discards everything that was just restored
+deserialize() then .with(timeTravel({}))  ->  canUndo() === false, undo() is a no-op
 ```
 
-So the reload story is not "undo is unavailable" — it is "the undo button is
-enabled and pressing it throws away the restored state." Same family as the phantom
-step fixed in case 8. **See gap C.**
+Same family as the phantom step fixed in case 8. **See gap C.**
 
 ### 14. Undo in a wizard (back = undo) — judgement
 
@@ -226,11 +246,34 @@ n=2 then n=3 inside one 100ms window -> logged {"n":3}   // intermediate lost
 name='TEMP' then name='a' in one window -> logged NOTHING // write+revert invisible
 ```
 
+The window was measured rather than assumed. Two writes to the same field, varying
+only the gap between them:
+
+| gap between writes | entries logged | outcome                 |
+| ------------------ | -------------- | ----------------------- |
+| 0 ms               | 1              | intermediate state lost |
+| 25 ms              | 1              | intermediate state lost |
+| 50 ms              | 1              | intermediate state lost |
+| 90 ms              | 2              | both captured           |
+| 120 ms             | 2              | both captured           |
+
+And the case that matters for a trail — a write followed by a **revert to the
+original value**, which leaves no net change for the next sample to see:
+
+| gap    | entries logged |                                        |
+| ------ | -------------- | -------------------------------------- |
+| 0 ms   | **0**          | invisible — no record it ever happened |
+| 50 ms  | **0**          | invisible                              |
+| 120 ms | 2              | captured                               |
+
 For an undo stack, coalescing is a feature. For an **audit trail** it is a
 correctness bug: "a field was set and set back" is precisely what an audit trail
-exists to capture, and it is silently dropped. This matters most in the workload
-the sibling audit calls our best-supported one — healthcare/claims/regulated —
-where it is a compliance question, not a papercut.
+exists to capture, and below ~90 ms it is silently dropped. This matters most in
+the workload the sibling audit calls our best-supported one —
+healthcare/claims/regulated — where it is a compliance question, not a papercut.
+
+The interval also keeps sampling until the returned stop function is called;
+verified still running 500 ms after the tracker went out of scope.
 
 `createAuditCallback(prev, current)` and reading `getHistory()` are exact; prefer
 either. `createAuditTracker` also leaks its interval unless the returned stop
@@ -363,21 +406,43 @@ that TODO item 2 flags as load-bearing and agent-measured. Treat both as open.
 ### 28. Undo in a devtools panel with unbounded history 🟡 — downgraded
 
 **"Omit `maxHistorySize`" does not give unbounded history.** The default is 50
-(`time-travel.js:32`, `config.maxHistorySize ?? 50`), and the type declares no
-default. Measured over 200 writes:
+(`time-travel.ts:80`, `config.maxHistorySize ?? 50`), and the type declares no
+default. Unbounded requires `maxHistorySize: Infinity` explicitly.
 
-| `maxHistorySize` | undos spendable | final `n` |
-| ---------------- | --------------- | --------- |
-| omitted          | 49              | 151       |
-| `Infinity`       | 200             | 0         |
-| `500`            | 200             | 0         |
-| `0`              | **0**           | 200       |
+The full boundary is worse than a bad default, and it is **not** the "0 is
+falsy" bug it looks like. 10 writes (`n = 1..10`) on a tree starting at `n = 0`:
 
-Unbounded requires `maxHistorySize: Infinity` explicitly.
+| `maxHistorySize` | entries | `getCurrentIndex()` | undos spendable | final `n` |                    |
+| ---------------- | ------- | ------------------- | --------------- | --------- | ------------------ |
+| omitted (→ 50)   | 11      | 10                  | 10              | 0         |                    |
+| `0`              | 0       | **-1**              | **0**           | 10        | undo disabled      |
+| `1`              | 1       | 0                   | **0**           | 10        | undo disabled      |
+| `2`              | 2       | 1                   | 1               | 9         |                    |
+| `5`              | 5       | 4                   | 4               | 6         |                    |
+| `-1`             | 0       | **-1**              | **0**           | 10        | undo disabled      |
+| `NaN`            | 11      | 10                  | 10              | 0         | silently unbounded |
+| `Infinity`       | 11      | 10                  | 10              | 0         |                    |
 
-**New defect:** `maxHistorySize: 0` silently disables undo entirely. `0` is a
-plausible spelling of "no limit" — `?? 50` does not catch it, and the trim then
-fires on every entry. It should either mean unbounded or throw.
+Three things follow, and the first is the one that affects everybody:
+
+1. **`maxHistorySize` is a buffer length, not a step count. Usable undo steps are
+   `maxHistorySize - 1`.** The documented default of 50 gives **49** undo steps,
+   and `timeTravel({ maxHistorySize: 50 })` in every sample — including case 8's —
+   means 49. The name and the docs both imply step count.
+2. **Any value ≤ 1 disables undo entirely**, silently. `0` is a plausible spelling
+   of "no limit" and `1` is a plausible spelling of "one step of undo"; both give
+   none. `-1` does the same and drives `getCurrentIndex()` to `-1`, because the
+   trim runs `currentIndex--` against an already-empty buffer.
+3. **`NaN` is silently unbounded**, since `length > NaN` is never true.
+
+**This is `??`, not `||`, and the distinction decides the fix.** Under
+`config.maxHistorySize || 50` a `0` would have become `50` and undo would work.
+It is `config.maxHistorySize ?? 50` (`time-travel.ts:80`) with
+`if (this.history.length > this.maxHistorySize) { this.history.shift(); … }`
+(`:233`), so `0` is a genuine zero-length buffer that shifts off every entry as
+it is pushed. Validate the input (reject `< 1` and non-finite, or define `0` as
+unbounded) — do not change the `??`, which is correct for distinguishing "not
+supplied" from "supplied as 0".
 
 ---
 
@@ -413,17 +478,22 @@ Ordered by how much damage they do.
 2. **`createAuditTracker` is a 100 ms polling sampler (case 15).** No `.subscribe`
    on the tree means the fallback always runs. A write and its revert inside one
    window are logged as nothing.
-3. **`undo()` after `deserialize()` discards the restored state (case 13).**
-   `canUndo()` is true post-restore and the first undo lands on the pre-restore
-   state.
-4. **`maxHistorySize` defaults to 50, undocumented (case 28)**, so "omit for
-   unbounded" is false.
-5. **`maxHistorySize: 0` silently disables undo (case 28).**
-6. **Doc defect (case 9):** `commit`/`discard` are attributed to
+3. **`maxHistorySize` is a buffer length, not a step count (case 28).** Usable undo
+   steps are `maxHistorySize - 1`, so the undocumented default of 50 is 49 steps
+   and every sample in our docs naming a size is off by one. **Any value ≤ 1
+   silently disables undo**, `NaN` is silently unbounded, and `-1` drives
+   `getCurrentIndex()` negative. Confirmed `??`, not `||` — `0` is a real
+   zero-length buffer, so the fix is input validation, not changing the coalesce.
+4. **`undo()` after `deserialize()` reverts the restore (case 13).** `deserialize`
+   records an ordinary `BATCH` entry, so the first press always discards the
+   restore regardless of how many entries exist — verified across 0–3 prior writes.
+   **Recoverable via `redo()`**, so this is a live-but-wrong undo button rather
+   than data loss, and restoring before attaching the enhancer avoids it.
+5. **Doc defect (case 9):** `commit`/`discard` are attributed to
    `createEditSession`, which has neither; they are `commit()`/`cancel()` on
    `createTreeEditSession`. Present in this audit and in
    `docs/guides/time-travel-in-production.md:176`.
-7. **Stale doc (case 9):** `myths-and-misconceptions.md:261` calls the path-bound
+6. **Stale doc (case 9):** `myths-and-misconceptions.md:261` calls the path-bound
    session "planned for v10.1"; `createTreeEditSession` ships.
 
 Answered along the way: **TODO 5b item 4** — `resetHistory()` empties, it does not
