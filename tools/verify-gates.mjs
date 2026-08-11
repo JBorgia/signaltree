@@ -576,6 +576,26 @@ const GATES = [
     },
   },
   {
+    name: 'spec-types',
+    covers:
+      'spec files are typechecked (they were covered by NOTHING) — ratcheted per file, so a renamed public config option cannot silently void a test',
+    cmd: ['node', 'tools/check-spec-types.mjs'],
+    slow: true,
+    // The concrete escape this closes: `entityMap({ selectId, history })` in
+    // history-scoped-capture.spec.ts, where `history` had been renamed to
+    // `recordHistory` in 15.0.0. tsconfig.typecheck-all.json excludes
+    // `**/*.spec.ts` and core's typecheck config covers only *.typing.spec.ts,
+    // so nothing typechecked it; esbuild strips types without checking. Both
+    // arms of the test built an identical default tree and its equality
+    // assertion passed vacuously. Mutating the option name back reproduces it.
+    mutation: {
+      file: 'packages/core/src/lib/history-scoped-capture.spec.ts',
+      find: 'selectId: (r) => r.id, recordHistory }',
+      replace:
+        'selectId: (r) => r.id, recordHistory: recordHistory as never, bogusOption: 1 }',
+    },
+  },
+  {
     name: 'error-codes',
     covers:
       'every diagnostic code the packages can emit is in docs/errors/README.md, and the catalogue invents none',
