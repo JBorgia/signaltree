@@ -333,10 +333,19 @@ data-loss defect it surfaced.
 
 Still to do, in order:
 
-1. **`batchUpdate`** — a third grouping name, attached via `as any`, absent from
-   `types.ts`, and publicly documented at `packages/core/README.md:2136`. It is a
-   composition (`batch(() => tree(partial))`), not a capability. Spans `signal-tree.ts`,
-   `builder-types.ts`, `batching.ts` and two shipped docs, so it wants its own change.
+1. **DELETE `batchUpdate`** — it is a pure duplicate of the tree callable, not just a
+   composition. Its body is `recursiveUpdate(signalState, arg)`, which is precisely what
+   `tree(partial)` / `tree(updater)` already do; with `batching()` attached it adds a
+   `batch()` wrap, so `tree.batchUpdate(x)` === `tree.batch(() => tree(x))`.
+
+   **Hazard, handle before deleting:** the demo's `benchmarks.service.ts` calls it behind
+   a `typeof … === 'function'` guard **with a silent fallback**, so removing the method
+   leaves the benchmark running and measuring a different path. Re-run and compare that
+   benchmark as part of the change — a green build will not catch it. Sites:
+   `signal-tree.ts`, `batching.ts:63,381`, `builder-types.ts:105`,
+   `packages/core/README.md:2136`, `ENHANCERS.md:28`, `callable-syntax-demo`, and the
+   benchmark harness.
+
 2. **Document `batch` vs `coalesce`.** Not duplicates — MEASURED, a mid-callback read
    inside `coalesce` sees the OLD value because `coalesce` defers the WRITE, while
    `batch` defers only notification. Neither docstring says so, and both currently imply

@@ -43,14 +43,34 @@ collisions dropped writes. Fixed and pinned; see the CHANGELOG.
 So it is a real, documented, reachable public method that TypeScript does not know
 about. Verified reachable: `tree.batchUpdate({ a: 5, b: 6 })` set both.
 
-**It is a composition, not a capability.** `batchUpdate(partial)` is
-`batch(() => tree(partial))` — and `tree(partial)` is already the partial-write API. By
-the standard applied to the capability matrix ("any library composes it, so it is not a
-capability"), this should not be a method.
+**Sharpened after reading the body: it is a pure DUPLICATE of the tree callable, not
+merely a composition.** `signal-tree.ts:1169` is:
 
-Not removed here because it spans `signal-tree.ts`, `builder-types.ts`, `batching.ts`
-and two shipped docs, and it deserves its own change rather than a footnote in one about
-`coalesce`.
+```ts
+if (typeof arg === 'function') recursiveUpdate(signalState, updater(current));
+else recursiveUpdate(signalState, arg);
+```
+
+That is exactly what `tree(partial)` and `tree(updater)` already do — `NodeAccessor<T>`
+declares both signatures. With `batching()` attached it additionally wraps in `batch()`.
+So:
+
+| call                                            | equivalent                        |
+| ----------------------------------------------- | --------------------------------- |
+| `tree.batchUpdate(partial)`                     | `tree(partial)`                   |
+| `tree.batchUpdate(partial)` _with `batching()`_ | `tree.batch(() => tree(partial))` |
+
+**Deletion is the right answer and it is NOT yet done, deliberately.** The blast radius
+includes a hazard worth naming: `apps/demo/.../benchmarks.service.ts` calls it behind a
+`typeof (tree as any).batchUpdate === 'function'` guard **with a silent fallback**. Remove
+the method and that benchmark keeps running and quietly measures a different code path.
+This session already came close to publishing one benchmark artifact (a `0.176 µs/write`
+figure that was dead-code elimination), so a deletion that can silently change a measured
+number needs the benchmark re-run and compared, not just a green build.
+
+Sites to change: `signal-tree.ts` (the `defineProperty`), `batching.ts:63,381`,
+`builder-types.ts:105`, `packages/core/README.md:2136`, `ENHANCERS.md:28`, the demo's
+`callable-syntax-demo`, and the benchmark harness.
 
 ---
 
