@@ -135,7 +135,7 @@ Not hand-waved:
    records pre- or post-batch decides whether a batch is one entry or many, which is
    the grouping question again from below.
 
-## Why this is a 14.1.0 shape, not a patch
+## Why this is a 14.1.1 shape, not a patch
 
 It replaces the history representation. Everything reading `getHistory()` sees a
 different thing, `jumpTo` changes cost, and `maxHistorySize` stops meaning what it

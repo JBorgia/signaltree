@@ -1,6 +1,6 @@
 // Provenance for the ST2029 retention figures.
 //
-// Two questions this answers, both of which the pre-14.1.0 published table got wrong:
+// Two questions this answers, both of which the pre-14.1.1 published table got wrong:
 //   1. Is ~19.4 MB at 50k/50 a "worst case", or what ANY touch of the collection costs?
 //      -> a FLOOR: sameRow and diffRows are identical. The ceiling is `allRows`.
 //   2. What is the per-retained-pointer constant?

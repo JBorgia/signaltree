@@ -292,7 +292,7 @@ export type { LoadingEntityMapMarker, LoadingEntitySignal } from './lib/types';
 
 export {
   // Core utilities - Primary helper functions
-  // `equal` (an alias of `deepEqual`) was removed in 14.1.0 — see deep-equal.ts.
+  // `equal` (an alias of `deepEqual`) was removed in 14.1.1 — see deep-equal.ts.
   deepEqual,
   toWritableSignal,
   // isNodeAccessor / isAnySignal / isTraversableNode / isBuiltInObject /

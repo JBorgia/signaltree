@@ -670,7 +670,7 @@ rollback();`,
       }
 
       // Parse against the schema — `parseEvent` THROWS on failure, matching
-      // Zod's own `parse`. (It was called `validateEvent` before 14.1.0, when
+      // Zod's own `parse`. (It was called `validateEvent` before 14.1.1, when
       // the names were inverted relative to Zod.)
       try {
         parseEvent(schema, parsed);

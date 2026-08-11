@@ -104,9 +104,9 @@ function resolveBase() {
    * prereleases. A prerelease still diffs against whatever came before it,
    * including another prerelease, which is correct for an rc.
    *
-   * THE 14.0.0 FIX WAS INCOMPLETE AND THE BUG RETURNED AT 14.1.0. It excluded
-   * only prereleases matching `v${current}-`, which handled 14.0.0 vs
-   * v14.0.0-rc.1 and nothing else. With current = 14.1.0 the filter kept
+   * THE 14.0.0 FIX WAS INCOMPLETE AND THE BUG RETURNED AT THE NEXT RELEASE. It
+   * excluded only prereleases matching `v${current}-`, which handled 14.0.0 vs
+   * v14.0.0-rc.1 and nothing else. For any later 14.x current the filter kept
    * `v14.0.0-rc.1`, and git's `--sort=-v:refname` ranks a prerelease ABOVE its
    * own stable release unless `versionsort.prereleaseSuffix` is configured — so
    * the base resolved to v14.0.0-rc.1 again and the delta was measured from the

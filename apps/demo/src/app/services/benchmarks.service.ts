@@ -369,7 +369,7 @@ export class BenchmarkService {
 
       results.batch10 = BenchmarkService.measureTime(() => {
         // `batch(() => tree(partial))` — explicit, and NOT `batchUpdate`, which was
-        // removed in 14.1.0 as a duplicate of the tree callable.
+        // removed in 14.1.1 as a duplicate of the tree callable.
         //
         // This used to probe for `batchUpdate` and fall back to `tree.update(fn)`
         // inside a swallowing try/catch. MEASURED: `update` is not a function on the
@@ -397,7 +397,7 @@ export class BenchmarkService {
 
       results.batch100 = BenchmarkService.measureTime(() => {
         // `batch(() => tree(partial))` — explicit, and NOT `batchUpdate`, which was
-        // removed in 14.1.0 as a duplicate of the tree callable.
+        // removed in 14.1.1 as a duplicate of the tree callable.
         //
         // This used to probe for `batchUpdate` and fall back to `tree.update(fn)`
         // inside a swallowing try/catch. MEASURED: `update` is not a function on the

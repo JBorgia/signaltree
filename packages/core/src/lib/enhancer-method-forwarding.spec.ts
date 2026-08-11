@@ -38,7 +38,7 @@ describe.each(ENHANCERS)('%s — writes survive the enhancer', (_name, make) => 
     expect(changed).toEqual(['count']);
   });
 
-  // `batchUpdate` and its builder forward were REMOVED in 14.1.0 — a duplicate of
+  // `batchUpdate` and its builder forward were REMOVED in 14.1.1 — a duplicate of
   // the tree callable. The replacement is the callable itself, which the builder
   // already exposes, so this asserts the write path that survives.
   it('the tree callable writes through the builder (batchUpdate is gone)', () => {

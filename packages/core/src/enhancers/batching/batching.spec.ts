@@ -345,7 +345,7 @@ describe('batching enhancer', () => {
   // ==========================================
 
   describe('backwards compatibility', () => {
-    // `batchUpdate` was REMOVED in 14.1.0. It was a duplicate of the tree
+    // `batchUpdate` was REMOVED in 14.1.1. It was a duplicate of the tree
     // callable: its body was `recursiveUpdate(signalState, arg)`, and with
     // `batching()` attached it wrapped that in `batch()` — so
     // `tree.batchUpdate(x)` was exactly `tree.batch(() => tree(x))`.
@@ -397,7 +397,7 @@ describe('batching enhancer', () => {
   });
 });
 
-describe('coalesce() + update() — no wall-clock data loss (14.1.0)', () => {
+describe('coalesce() + update() — no wall-clock data loss (14.1.1)', () => {
   // BEFORE the fix, updaters were deferred under the key
   // `${path}:update:${Date.now()}`, so two in the same millisecond collided and
   // one was silently dropped. Three `+1`s gave n = 1 when fast and n = 3 when

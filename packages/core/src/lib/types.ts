@@ -438,7 +438,7 @@ export interface TimeTravelMethods<T = unknown> {
   jumpTo(index: number): void;
   getCurrentIndex(): number;
   // `pauseRecording()` / `resumeRecording()` / `isRecordingPaused()` were
-  // REMOVED in 14.1.0. They could not express "one undo step", only "record
+  // REMOVED in 14.1.1. They could not express "one undo step", only "record
   // nothing" — so the documented recipe needed a synthetic sealing write landing
   // on an invented domain field, and an earlier revision of that guide shipped
   // the destructive version without it. Worse, pause was a GLOBAL mode: an
@@ -510,7 +510,7 @@ export interface TimeTravelEntry<T> {
 
 export interface TreeConfig {
   batchUpdates?: boolean;
-  // `enableTimeTravel` was REMOVED here in 14.1.0: it had ZERO consumers in
+  // `enableTimeTravel` was REMOVED here in 14.1.1: it had ZERO consumers in
   // signal-tree.ts and silently did nothing, while a working flag of the same
   // name lives on `DevToolsConfig`. The one a user reached for first was the
   // dead one. Attach `timeTravel()` as an enhancer instead.
@@ -528,7 +528,7 @@ export interface TreeConfig {
   useShallowComparison?: boolean;
   maxCacheSize?: number;
   trackPerformance?: boolean;
-  /** Name shown in devtools. Was also spelled `treeName` on DevToolsConfig; that alias is gone in 14.1.0. */
+  /** Name shown in devtools. Was also spelled `treeName` on DevToolsConfig; that alias is gone in 14.1.1. */
   name?: string;
   enableDevTools?: boolean;
   debugMode?: boolean;
@@ -731,7 +731,7 @@ export interface EntityConfig<E, K extends string | number = string> {
    * Exclude this collection from `timeTravel()` history while keeping it in
    * every OTHER snapshot — `serialization()`, `persistence()`, devtools, audit.
    *
-   * **Named `recordHistory`, not `history`, since 14.1.0.** The old name collided
+   * **Named `recordHistory`, not `history`, since 14.1.1.** The old name collided
    * with `form({ history: history() })` — and the two are DIFFERENT questions, so
    * unifying them (the first plan) would have been wrong:
    *
@@ -927,7 +927,7 @@ export interface EntitySignal<E, K extends string | number = string> {
    */
   readonly empty: Signal<boolean>;
   /**
-   * The collection as a `ReadonlyMap`, keyed by id. Renamed from `map` in 14.1.0 —
+   * The collection as a `ReadonlyMap`, keyed by id. Renamed from `map` in 14.1.1 —
    * `map` read as a projection beside `all()`, which is what `.map(fn)` means to
    * every JS developer.
    */
@@ -1043,7 +1043,7 @@ export interface DevToolsConfig {
   /**
    * Name shown in Redux DevTools.
    *
-   * The `treeName` alias was REMOVED in 14.1.0 — the source called it "legacy
+   * The `treeName` alias was REMOVED in 14.1.1 — the source called it "legacy
    * support" and `name ?? treeName` meant `name` always won anyway.
    */
   name?: string;

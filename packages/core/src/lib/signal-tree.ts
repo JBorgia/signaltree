@@ -1162,7 +1162,7 @@ function create<T extends object>(
     configurable: true,
   });
 
-  // `batchUpdate()` was REMOVED in 14.1.0. Its body was
+  // `batchUpdate()` was REMOVED in 14.1.1. Its body was
   // `recursiveUpdate(signalState, arg)` — exactly what the tree callable
   // `tree(partial)` / `tree(updater)` already does. With `batching()` attached it
   // additionally wrapped in `batch()`, so `tree.batchUpdate(x)` was precisely
@@ -1481,7 +1481,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     configurable: true,
   });
 
-  // The `batchUpdate` forward was REMOVED in 14.1.0 along with the method it
+  // The `batchUpdate` forward was REMOVED in 14.1.1 along with the method it
   // forwarded. Use `tree(partial)`, or `tree.batch(() => tree(partial))`.
 
   // Add derived() method

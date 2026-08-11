@@ -592,7 +592,7 @@ const GATES = [
     slow: true,
     // The concrete escape this closes: `entityMap({ selectId, history })` in
     // history-scoped-capture.spec.ts, where `history` had been renamed to
-    // `recordHistory` in 14.1.0. tsconfig.typecheck-all.json excludes
+    // `recordHistory` in 14.1.1. tsconfig.typecheck-all.json excludes
     // `**/*.spec.ts` and core's typecheck config covers only *.typing.spec.ts,
     // so nothing typechecked it; esbuild strips types without checking. Both
     // arms of the test built an identical default tree and its equality

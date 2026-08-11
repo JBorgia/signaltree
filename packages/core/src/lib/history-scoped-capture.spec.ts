@@ -12,7 +12,7 @@ import { serialization } from '../enhancers/serialization/serialization';
  * whenever the collection changes. Time travel records on every self-dirty
  * flush, so attaching `timeTravel()` to a tree holding a large collection made
  * every collection-mutating write O(collection width), permanently. RE-MEASURED
- * for 14.1.0 (`tools/bench-retention-arms.mjs`, 50 recorded writes at 50k rows):
+ * for 14.1.1 (`tools/bench-retention-arms.mjs`, 50 recorded writes at 50k rows):
  * 19.38MB retained, against 0.15MB with the flag on. The flag's effect is
  * stronger than first published: retention becomes INDEPENDENT of collection
  * width (~0.15MB at 1k, 10k and 50k alike), because it removes the
@@ -102,7 +102,7 @@ describe('recordHistory: false — present everywhere ELSE', () => {
   });
 
   it('still round-trips through serialization()', () => {
-    // The parameter MUST be spelled `recordHistory`. Until 14.1.0 this test
+    // The parameter MUST be spelled `recordHistory`. Until 14.1.1 this test
     // passed `history`, the pre-rename name, which `EntityMapConfig` no longer
     // declares — so both arms built an identical default-configured tree and the
     // equality assertion held vacuously. Vitest transpiles via esbuild and does
@@ -235,7 +235,7 @@ describe('ST2029 — history retention', () => {
   });
 });
 
-describe('entityMap({ recordHistory: false }) — no PHANTOM undo steps (14.1.0)', () => {
+describe('entityMap({ recordHistory: false }) — no PHANTOM undo steps (14.1.1)', () => {
   const tick = () => new Promise((r) => setTimeout(r, 0));
 
   // Before the fix: five excluded-only writes produced FIVE entries with

@@ -130,6 +130,41 @@ publish_package() {
         return 1
     fi
 
+    # Resolve workspace specs HERE, after the build, immediately before publish.
+    #
+    # This has to happen inside this function and not once up front. `nx build`
+    # above REGENERATES dist/packages/<pkg>/package.json from the source
+    # manifest, so anything rewritten before the build loop is silently undone.
+    # That is exactly how 14.1.0 shipped `"@signaltree/core": "workspace:*"` in
+    # peerDependencies on all five non-core packages — an unresolvable range that
+    # fails on install. The resolve step existed and ran; it just ran where the
+    # build overwrote it, so the fix the comment above describes never took
+    # effect. Verified against the registry after publishing, which is the only
+    # place this is observable.
+    if ! node scripts/resolve-workspace-specs.mjs "$VERSION" "$package_name"; then
+        print_error "Could not resolve workspace specs for $package_name"
+        return 1
+    fi
+
+    # Independent guard on the actual bytes about to be published, so that a
+    # future reordering of this function cannot reintroduce the bug quietly.
+    # Checks only the fields a consumer installs from; devDependencies keeping
+    # `workspace:*` is correct and must not trip this.
+    if ! node -e "
+      const m = require('./$dist_path/package.json');
+      const bad = ['dependencies','peerDependencies','optionalDependencies']
+        .flatMap((f) => Object.entries(m[f] ?? {}))
+        .filter(([, v]) => v === '*' || String(v).startsWith('workspace:'));
+      if (bad.length) {
+        console.error('UNPUBLISHABLE SPEC in ' + m.name + ': ' +
+          bad.map(([k, v]) => k + '@' + v).join(', '));
+        process.exit(1);
+      }
+    "; then
+        print_error "Refusing to publish $package_name with an unresolvable dependency spec"
+        return 1
+    fi
+
     print_status "Publishing package: @signaltree/$package_name"
 
     # Change to dist directory and publish

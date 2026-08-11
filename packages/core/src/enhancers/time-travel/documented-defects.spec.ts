@@ -176,7 +176,7 @@ describe('6c — undo() after deserialize() reverts the restore', () => {
   });
 });
 
-describe('6d — maxHistorySize validation (FIXED in 14.1.0)', () => {
+describe('6d — maxHistorySize validation (FIXED in 14.1.1)', () => {
   // Ordinary regression tests: this defect IS fixed.
   const usableSteps = async (cfg?: number) => {
     const tree = signalTree({ n: 0 }).with(

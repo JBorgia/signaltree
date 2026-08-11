@@ -98,7 +98,7 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
     updates: Partial<TSource> | ((current: TSource) => Partial<TSource>)
   ): string[];
 
-  // `batchUpdate` was REMOVED in 14.1.0 — a duplicate of the tree callable.
+  // `batchUpdate` was REMOVED in 14.1.1 — a duplicate of the tree callable.
   // Use `tree(partial)`, or `tree.batch(() => tree(partial))` to batch notifications.
 
   /**

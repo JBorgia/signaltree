@@ -149,7 +149,7 @@ export class WhatsNew14Component {
    * This method used to pause recording, add 25 rows, resume, then perform a
    * synthetic "sealing" root write. Every part of that was wrong:
    *
-   * - `pauseRecording()` was REMOVED in 14.1.0. It could only express "record
+   * - `pauseRecording()` was REMOVED in 14.1.1. It could only express "record
    *   nothing", never "one step", and it was a global mute that suppressed
    *   unrelated writers too.
    * - The comment justifying the seal claimed "collection mutations do not

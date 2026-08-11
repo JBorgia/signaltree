@@ -9,12 +9,12 @@
  * spec files were typechecked by NOTHING, and Vitest transpiles via esbuild, which
  * strips types without checking them.
  *
- * What that permitted, found in 14.1.0:
+ * What that permitted, found in 14.1.1:
  *
  *     const mk = (history: boolean) =>
  *       signalTree({ rows: entityMap({ selectId: r => r.id, history }) })
  *
- * `history` was renamed to `recordHistory` in 14.1.0 and `EntityConfig` no longer
+ * `history` was renamed to `recordHistory` in 14.1.1 and `EntityConfig` no longer
  * declares it. The test claimed to pin "the flag must not reach serialize()", but
  * both of its arms built an identical default-configured tree, so its equality
  * assertion held vacuously. The suite stayed green while the premise of the test
