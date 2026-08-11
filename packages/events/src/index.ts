@@ -74,9 +74,9 @@ export {
   EventActorSchema,
   EventVersionSchema,
   // Validation
-  validateEvent,
-  isValidEvent,
   parseEvent,
+  isValidEvent,
+  safeParseEvent,
   EventValidationError,
 } from './core/validation';
 

@@ -72,20 +72,17 @@ const event = eventFactory.create('TradeProposalCreated', {
 ### 3. Validate Events
 
 ```typescript
-import { validateEvent, isValidEvent, parseEvent } from '@signaltree/events';
+import { parseEvent, safeParseEvent, isValidEvent } from '@signaltree/events';
 
-// Throws on invalid
-const validatedEvent = validateEvent(TradeProposalCreatedSchema, rawEvent);
+// Throws on invalid — matches Zod's own `parse`
+const validatedEvent = parseEvent(TradeProposalCreatedSchema, rawEvent);
+
+// Returns a result instead of throwing — matches `safeParse`
+const result = safeParseEvent(TradeProposalCreatedSchema, rawEvent);
 
 // Returns boolean
 if (isValidEvent(TradeProposalCreatedSchema, rawEvent)) {
   // rawEvent is typed as TradeProposalCreated
-}
-
-// Returns { success, data, error }
-const result = parseEvent(TradeProposalCreatedSchema, rawEvent);
-if (result.success) {
-  console.log(result.data);
 }
 ```
 
@@ -218,11 +215,7 @@ import { OptimisticUpdateManager, applyOptimisticEntityChange } from '@signaltre
 
 const manager = new OptimisticUpdateManager();
 
-const { data, previousData, rollback } = applyOptimisticEntityChange(
-  store.$.trades.entities,
-  tradeId,
-  { status: 'accepted' }
-);
+const { data, previousData, rollback } = applyOptimisticEntityChange(store.$.trades.entities, tradeId, { status: 'accepted' });
 
 manager.apply({
   id: crypto.randomUUID(),
@@ -245,7 +238,7 @@ burst of N pending updates is O(n) instead of O(n²).
 ### Entity Events — event batch → `entityMap` batch ops bridge (v13+)
 
 If your entity collections live in a `@signaltree/core` `entityMap`,
-`entityEventHandler` maps a *batch* of domain events onto `entityMap`'s own
+`entityEventHandler` maps a _batch_ of domain events onto `entityMap`'s own
 batch mutation ops (`upsertMany`/`updateMany`/`removeMany`) instead of a
 per-event `upsertOne`/`updateOne`/`removeOne` loop — one signal notification
 per op instead of one per event:
@@ -254,15 +247,9 @@ per op instead of one per event:
 import { entityEventHandler } from '@signaltree/events/angular';
 
 const flush = entityEventHandler(store.$.trades.entities, {
-  match: (e) =>
-    e.type === 'TradeCreated' ? 'upsert' :
-    e.type === 'TradeStatusChanged' ? 'update' :
-    e.type === 'TradeCancelled' ? 'remove' : null,
+  match: (e) => (e.type === 'TradeCreated' ? 'upsert' : e.type === 'TradeStatusChanged' ? 'update' : e.type === 'TradeCancelled' ? 'remove' : null),
   upsert: (e) => (e.type === 'TradeCreated' ? e.data.trade : undefined),
-  update: (e) =>
-    e.type === 'TradeStatusChanged'
-      ? { id: e.data.tradeId, changes: { status: e.data.status } }
-      : undefined,
+  update: (e) => (e.type === 'TradeStatusChanged' ? { id: e.data.tradeId, changes: { status: e.data.status } } : undefined),
   remove: (e) => (e.type === 'TradeCancelled' ? e.data.tradeId : undefined),
 });
 
@@ -333,9 +320,7 @@ const event = createTestEvent('TradeProposalCreated', {
 const factory = createTestEventFactory({
   defaultActor: { id: 'test-user', type: 'user' },
 });
-const events = [0, 1, 2, 3, 4].map((index) =>
-  factory.create('UserLoggedIn', { userId: `user-${index}` })
-);
+const events = [0, 1, 2, 3, 4].map((index) => factory.create('UserLoggedIn', { userId: `user-${index}` }));
 ```
 
 ### Assertions
@@ -347,10 +332,7 @@ const assertions = createEventAssertions(bus.getPublishedEvents());
 
 expect(assertions.toHavePublished('TradeProposalCreated').passed).toBe(true);
 expect(assertions.toHavePublishedCount(3).passed).toBe(true);
-expect(
-  assertions.toHavePublishedInOrder(['TradeProposalCreated', 'TradeAccepted'])
-    .passed
-).toBe(true);
+expect(assertions.toHavePublishedInOrder(['TradeProposalCreated', 'TradeAccepted']).passed).toBe(true);
 
 assertEventSequence(events, ['TradeProposalCreated', 'NotificationSent', 'AuditLogCreated']);
 ```
@@ -427,7 +409,7 @@ const isValid = registry.validate(event);
 ### Core Exports (`@signaltree/events`)
 
 - **Types**: `BaseEvent`, `EventMetadata`, `EventPriority`
-- **Schemas**: `createEventSchema`, `BaseEventSchema`, `validateEvent`, `parseEvent`
+- **Schemas**: `createEventSchema`, `BaseEventSchema`, `parseEvent` (throws), `safeParseEvent` (returns a result), `isValidEvent` (type guard)
 - **Factory**: `createEventFactory`, `createEvent`, `generateEventId`
 - **Registry**: `EventRegistry`, `createEventRegistry`
 - **Errors**: `classifyError`, `isRetryableError`, `createErrorClassifier`

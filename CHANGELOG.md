@@ -67,6 +67,32 @@
   `entityMap({ load, equal })` — where it means "your comparator," not "deep equality."
   One word cannot mean both.
 
+- **`@signaltree/events`: `validateEvent` is renamed to `parseEvent`, and the old
+  `parseEvent` to `safeParseEvent`.** The names were INVERTED relative to Zod, which this
+  package re-exports as `z`:
+
+  |                    | before 15.0.0   | now                                       |
+  | ------------------ | --------------- | ----------------------------------------- |
+  | throws on failure  | `validateEvent` | **`parseEvent`** (like `z.parse`)         |
+  | returns a result   | `parseEvent`    | **`safeParseEvent`** (like `z.safeParse`) |
+  | boolean type guard | `isValidEvent`  | `isValidEvent` (unchanged)                |
+
+  The audience for a Zod-based event package is people who know Zod, so both old names
+  mispredicted for exactly the people using them. Our own events SKILL doc had it wrong
+  in a code comment — `validateEvent(...) // never throws` — which is what the inversion
+  costs in practice.
+
+  The return types differ enough (`z.infer<T>` versus `SafeParseReturnType`) that a
+  caller of the old `parseEvent` gets a compile error rather than a silent behaviour swap.
+
+- **`@signaltree/events`: `ConnectionState` is renamed to `WebSocketConnectionState`.**
+  It collided with a different public type of the same name in `@signaltree/realtime`,
+  where `ConnectionState` is a bag of signals (`status`, `error`, `isConnected`, …) while
+  this is a plain status union — so an app importing both got one name for two
+  incompatible shapes. The prefix also matches its siblings (`WebSocketConfig`,
+  `WebSocketMessage`, `WebSocketService`). Realtime is unchanged: its `ConnectionState`
+  and `ConnectionStatus` are genuinely two concepts.
+
 ### Added
 
 - **`replaceOne(id, entity)`** on `entityMap` — the missing half of `updateOne`.

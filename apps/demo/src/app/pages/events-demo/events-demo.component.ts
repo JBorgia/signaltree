@@ -1,21 +1,25 @@
-
-import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
 import {
-    BaseEvent,
-    classifyError,
-    createEventFactory,
-    createEventSchema,
-    EVENT_PRIORITIES,
-    EventPriority,
-    EventValidationError,
-    generateEventId,
-    generateIdempotencyKey,
-    isRetryableError,
-    isValidEvent,
-    validateEvent,
-    z,
+  BaseEvent,
+  classifyError,
+  createEventFactory,
+  createEventSchema,
+  EVENT_PRIORITIES,
+  EventPriority,
+  EventValidationError,
+  generateEventId,
+  generateIdempotencyKey,
+  isRetryableError,
+  isValidEvent,
+  parseEvent,
+  z,
 } from '@signaltree/events';
 import {
   applyOptimisticEntityChange,
@@ -23,7 +27,12 @@ import {
   type EntityEventMapping,
   type EntityOptimisticPatch,
 } from '@signaltree/events/angular';
-import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent } from '@signaltree/events/testing';
+import {
+  createMockEventBus,
+  createTestEvent,
+  MockEventBus,
+  PublishedEvent,
+} from '@signaltree/events/testing';
 
 import {
   type CodeFile,
@@ -86,7 +95,10 @@ interface OrderEventData {
 type OrderEventType = 'OrderCreated' | 'OrderUpdated' | 'OrderCancelled';
 type OrderEvent = BaseEvent<OrderEventType, OrderEventData>;
 
-function makeOrderEvent(type: OrderEventType, data: OrderEventData): OrderEvent {
+function makeOrderEvent(
+  type: OrderEventType,
+  data: OrderEventData
+): OrderEvent {
   return {
     id: generateEventId(),
     type,
@@ -230,17 +242,18 @@ export class EventsDemoComponent {
   // The coalescing flush: one call handles a whole batch of events, mapping
   // them onto entityMap's batch ops (upsertMany/updateMany/removeMany) so the
   // batch produces ONE notification per op type instead of one per event.
-  private readonly flushOrderEvents = entityEventHandler<Order, string, OrderEvent>(
-    this.entityDemoTree.$.orders,
-    this.orderEventMapping
-  );
+  private readonly flushOrderEvents = entityEventHandler<
+    Order,
+    string,
+    OrderEvent
+  >(this.entityDemoTree.$.orders, this.orderEventMapping);
 
   readonly orderEventLog = signal<string[]>([]);
 
   readonly optimisticPatch = signal<EntityOptimisticPatch<Order> | null>(null);
-  readonly optimisticStatus = signal<'idle' | 'pending' | 'confirmed' | 'rolled-back'>(
-    'idle'
-  );
+  readonly optimisticStatus = signal<
+    'idle' | 'pending' | 'confirmed' | 'rolled-back'
+  >('idle');
 
   private logOrderEvent(message: string): void {
     this.orderEventLog.update((log) => [...log, message]);
@@ -656,9 +669,11 @@ rollback();`,
           return;
       }
 
-      // Validate using the schema - validateEvent throws on failure
+      // Parse against the schema — `parseEvent` THROWS on failure, matching
+      // Zod's own `parse`. (It was called `validateEvent` before 15.0.0, when
+      // the names were inverted relative to Zod.)
       try {
-        validateEvent(schema, parsed);
+        parseEvent(schema, parsed);
         this.validationResult.set({ isValid: true, errors: [] });
         this.logValidation(`✓ Event is valid: ${eventType}`);
       } catch (validationError: unknown) {

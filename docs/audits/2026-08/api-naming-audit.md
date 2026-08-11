@@ -212,22 +212,32 @@ who knows Zod, which is the whole audience for a Zod-based event package, will p
 the wrong behaviour from both names. All three take `(schema, event)` and wrap
 `safeParse`, so the three names are three return contracts over one operation.
 
-**Recommendation:** follow Zod. `parseEvent` throws, `safeParseEvent` returns a result,
-`isValidEvent` stays as the type guard. That is a breaking rename of two symbols and it
-removes a whole class of mistake.
+**DONE in 15.0.0** — follows Zod now: `parseEvent` throws, `safeParseEvent` returns a
+result, `isValidEvent` unchanged. `validateEvent` is gone. Verified by execution against
+the built barrel. The return types differ enough (`z.infer<T>` vs `SafeParseReturnType`)
+that a caller who had the old `parseEvent` gets a compile error rather than a silent
+behaviour swap.
 
-### `@signaltree/events` — `Id` vs `Key`, used interchangeably
+### ~~`@signaltree/events` — `Id` vs `Key`, used interchangeably~~ — WRONG, retracted
 
-Four generators in the barrel, two suffixes, no rule:
+Pass 2 claimed `generateCorrelationId` and `generateCorrelationKey` were "the sharp pair
+— same noun, two suffixes." **They are two different operations, and the suffixes are
+the rule rather than a violation of it:**
 
-```
-generateEventId    generateCorrelationId
-generateIdempotencyKey    generateCorrelationKey
-```
+| Function                                           | Does                                                            | Suffix means                             |
+| -------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------- |
+| `generateEventId()`                                | mints a new identifier                                          | `Id` = mint an identifier                |
+| `generateCorrelationId()`                          | mints a new identifier                                          | `Id`                                     |
+| `generateCorrelationKey(correlationId, operation)` | derives `idempotency:correlation:${operation}:${correlationId}` | `Key` = derive a storage key from inputs |
+| `generateIdempotencyKey(...)`                      | derives a storage key                                           | `Key`                                    |
 
-`generateCorrelationId` and `generateCorrelationKey` are the sharp pair — same noun,
-two suffixes, both public. Pick one suffix for "opaque generated string" and apply it
-to all four.
+All four follow it. The finding was made by reading names off a barrel listing without
+reading the bodies, which is the same shortcut that made pass 2 over-report `schema`'s
+internals. **Read the body before calling something a duplicate.**
+
+One real observation survives, and it is minor: `generateCorrelationId()` is
+`return generateEventId();` — a semantic alias. Left alone deliberately; the name
+documents intent at the call site and the two could diverge in format later.
 
 ### Cross-package name collisions
 
@@ -238,8 +248,10 @@ to all four.
 | `ConnectionState`  | `events/angular/websocket.service.ts:35` (a union type), `realtime/types.ts:22` (an interface) | **No — two different shapes, one name, both public**                                          |
 | `ConnectionStatus` | `realtime/types.ts:6` (an enum)                                                                | Sits beside realtime's own `ConnectionState`, so realtime has two connection nouns of its own |
 
-The `ConnectionState` collision is the one to fix: an app using both `@signaltree/events/angular`
-and `@signaltree/realtime` imports two incompatible types with one name.
+**DONE in 15.0.0**: events' type is now `WebSocketConnectionState`, which also matches its
+siblings there (`WebSocketConfig`, `WebSocketMessage`, `WebSocketService`). Realtime keeps
+`ConnectionState` (the signal bag) and `ConnectionStatus` (the status enum) — those two are
+distinct concepts and both names are right.
 
 ### `packages/enterprise/` is a dead directory
 

@@ -158,7 +158,7 @@ export class EventValidationError extends Error {
  * @example
  * ```typescript
  * try {
- *   const validEvent = validateEvent(TradeProposalCreatedSchema, rawEvent);
+ *   const validEvent = parseEvent(TradeProposalCreatedSchema, rawEvent);
  *   // validEvent is typed as TradeProposalCreated
  * } catch (error) {
  *   if (error instanceof EventValidationError) {
@@ -167,7 +167,20 @@ export class EventValidationError extends Error {
  * }
  * ```
  */
-export function validateEvent<T extends z.ZodTypeAny>(
+/**
+ * Parse an event against a schema, THROWING `EventValidationError` on failure.
+ *
+ * Named to match Zod, which this package re-exports as `z`. Until 15.0.0 the
+ * names were INVERTED: `validateEvent` threw and `parseEvent` returned a result —
+ * the opposite of `z.parse` / `z.safeParse`. The audience for a Zod-based event
+ * package is people who know Zod, so both names mispredicted for exactly the
+ * people using them.
+ *
+ * - `parseEvent(schema, event)` — throws. (was `validateEvent`)
+ * - `safeParseEvent(schema, event)` — returns `{ success, data | error }`. (was `parseEvent`)
+ * - `isValidEvent(schema, event)` — boolean type guard. Unchanged.
+ */
+export function parseEvent<T extends z.ZodTypeAny>(
   schema: T,
   event: unknown
 ): z.infer<T> {
@@ -207,7 +220,7 @@ export function isValidEvent<T extends z.ZodTypeAny>(
  * @param event - Event to parse
  * @returns SafeParseResult with data or error
  */
-export function parseEvent<T extends z.ZodTypeAny>(
+export function safeParseEvent<T extends z.ZodTypeAny>(
   schema: T,
   event: unknown
 ): z.SafeParseReturnType<unknown, z.infer<T>> {
@@ -234,4 +247,3 @@ export function validateBaseEvent(event: unknown): BaseEvent {
   // Type assertion is safe because schema validation passed and data is required
   return result.data as BaseEvent<string, unknown>;
 }
-

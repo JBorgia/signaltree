@@ -86,11 +86,11 @@ const event = factory.create<TradeProposalCreated>(
 ### 3. Validate Events
 
 ```typescript
-import { validateEvent, isValidEvent, EventValidationError } from '@signaltree/events';
+import { parseEvent, isValidEvent, EventValidationError } from '@signaltree/events';
 
 // Validate and throw on failure
 try {
-  const validEvent = validateEvent(TradeProposalCreatedSchema, rawEvent);
+  const validEvent = parseEvent(TradeProposalCreatedSchema, rawEvent);
   // validEvent is typed as TradeProposalCreated
 } catch (error) {
   if (error instanceof EventValidationError) {
@@ -263,18 +263,18 @@ type UserRegistered = z.infer<typeof UserRegisteredSchema>;
 ### Validation Functions
 
 ```typescript
-import { validateEvent, isValidEvent, parseEvent, EventValidationError } from '@signaltree/events';
+import { parseEvent, safeParseEvent, isValidEvent, EventValidationError } from '@signaltree/events';
 
 // Throws on invalid event
-const valid = validateEvent(UserRegisteredSchema, event);
+const valid = parseEvent(UserRegisteredSchema, event); // THROWS on failure, like z.parse
 
 // Returns boolean (type guard)
 if (isValidEvent(UserRegisteredSchema, event)) {
   // event is typed as UserRegistered
 }
 
-// Returns Zod SafeParseResult
-const result = parseEvent(UserRegisteredSchema, event);
+// Returns Zod SafeParseResult — never throws
+const result = safeParseEvent(UserRegisteredSchema, event);
 if (result.success) {
   console.log(result.data);
 } else {
@@ -288,7 +288,7 @@ When validation fails, `EventValidationError` provides detailed information:
 
 ```typescript
 try {
-  validateEvent(schema, event);
+  parseEvent(schema, event);
 } catch (error) {
   if (error instanceof EventValidationError) {
     // Get formatted error messages
@@ -619,9 +619,13 @@ export class TradeRealtimeService {
 #### Validation
 
 - `createEventSchema(type, dataSchema)` - Create event schema
-- `validateEvent(schema, event)` - Validate and throw
+- `parseEvent(schema, event)` - Parse and **throw** on failure (matches `z.parse`)
+- `safeParseEvent(schema, event)` - Parse and **return** `{ success, data | error }` (matches `z.safeParse`)
 - `isValidEvent(schema, event)` - Type guard
-- `parseEvent(schema, event)` - Safe parse
+
+  Before 15.0.0 these were inverted: `validateEvent` threw and `parseEvent` returned a
+  result, the opposite of the Zod names this package re-exports as `z`.
+
 - `EventValidationError` - Validation error class
 - `BaseEventSchema` - Base schema for events
 - `EventActorSchema` - Schema for actors

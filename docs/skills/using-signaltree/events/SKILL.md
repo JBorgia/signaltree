@@ -1,6 +1,6 @@
 ---
 name: signaltree-events
-description: Guides AI agents using @signaltree/events for Zod-validated event schemas, event registries, factories, idempotency, retry classification, and framework subpath integrations (NestJS EventBusModule, Angular WebSocket bridge, entityMap batch-op bridge, optimistic updates, testing utilities). Triggers on @signaltree/events, createEventSchema, validateEvent, EventRegistry, EventBusModule, BaseSubscriber, NestJS event bus, Zod schema, idempotency store, retryable error, event factory, CQRS events, entityEventHandler, OptimisticUpdateManager, applyOptimisticEntityChange, optimistic update rollback.
+description: Guides AI agents using @signaltree/events for Zod-validated event schemas, event registries, factories, idempotency, retry classification, and framework subpath integrations (NestJS EventBusModule, Angular WebSocket bridge, entityMap batch-op bridge, optimistic updates, testing utilities). Triggers on @signaltree/events, createEventSchema, parseEvent, safeParseEvent, EventRegistry, EventBusModule, BaseSubscriber, NestJS event bus, Zod schema, idempotency store, retryable error, event factory, CQRS events, entityEventHandler, OptimisticUpdateManager, applyOptimisticEntityChange, optimistic update rollback.
 ---
 
 # Using @signaltree/events
@@ -9,7 +9,7 @@ Use when an app needs typed event contracts with runtime validation, stable IDs/
 
 Three layers, composable independently:
 
-1. Schema + validation — `createEventSchema`, `validateEvent`, `isValidEvent`, `parseEvent`
+1. Schema + validation — `createEventSchema`, `parseEvent` (THROWS), `safeParseEvent` (returns a result), `isValidEvent` (type guard). Names match Zod's `parse`/`safeParse`; before 15.0.0 they were inverted.
 2. Registry + factory — `EventRegistry`, `createEventFactory`
 3. Transport adapters (subpath) — `/nestjs` (BullMQ/Redis), `/angular` (WebSocket bridge), `/testing` (`MockEventBus`)
 
@@ -39,7 +39,7 @@ export type UserCreated = z.infer<typeof UserCreatedSchema>;
 Validate:
 
 ```ts
-import { createEventSchema, isValidEvent, parseEvent, validateEvent, z } from '@signaltree/events';
+import { createEventSchema, isValidEvent, parseEvent, safeParseEvent, z } from '@signaltree/events';
 
 declare const incoming: unknown;
 
@@ -53,7 +53,7 @@ if (isValidEvent(UserCreatedSchema, incoming)) {
   /* typed */
 }
 const event = parseEvent(UserCreatedSchema, incoming); // throws on fail
-const result = validateEvent(UserCreatedSchema, incoming); // never throws; result.success + result.error.issues
+const result = safeParseEvent(UserCreatedSchema, incoming); // never throws; result.success + result.error.issues
 ```
 
 Factory (`source` and `environment` required; `systemActor.type` must be `'user'|'system'|'admin'|'webhook'`):

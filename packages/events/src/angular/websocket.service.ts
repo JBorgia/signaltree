@@ -30,9 +30,18 @@ declare const ngDevMode: boolean | undefined;
  * - SignalTree integration
  */
 /**
- * WebSocket connection states
+ * WebSocket connection states.
+ *
+ * Named `WebSocketConnectionState` since 15.0.0. It was `ConnectionState`, which
+ * collided with a DIFFERENT public type of the same name in `@signaltree/realtime`:
+ * there, `ConnectionState` is a bag of signals (`status`, `error`, `isConnected`, …)
+ * while this is a plain status union. An app importing both got one name for two
+ * incompatible shapes.
+ *
+ * The prefix also matches its siblings here — `WebSocketConfig`, `WebSocketMessage`,
+ * `WebSocketService`.
  */
-export type ConnectionState =
+export type WebSocketConnectionState =
   | 'disconnected'
   | 'connecting'
   | 'connected'
@@ -131,13 +140,14 @@ export abstract class WebSocketService implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
 
   // Signals for reactive state
-  private readonly _connectionState = signal<ConnectionState>('disconnected');
+  private readonly _connectionState =
+    signal<WebSocketConnectionState>('disconnected');
   private readonly _lastError = signal<Error | null>(null);
   private readonly _reconnectAttempts = signal(0);
   private readonly _lastMessageTime = signal<Date | null>(null);
 
   // Public readonly signals
-  readonly connectionState: Signal<ConnectionState> =
+  readonly connectionState: Signal<WebSocketConnectionState> =
     this._connectionState.asReadonly();
   readonly lastError: Signal<Error | null> = this._lastError.asReadonly();
   readonly isConnected = computed(

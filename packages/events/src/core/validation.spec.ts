@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import {
-    BaseEventSchema,
-    createEventSchema,
-    EventActorSchema,
-    EventMetadataSchema,
-    EventValidationError,
-    EventVersionSchema,
-    isValidEvent,
-    parseEvent,
-    validateBaseEvent,
-    validateEvent,
+  BaseEventSchema,
+  createEventSchema,
+  EventActorSchema,
+  EventMetadataSchema,
+  EventValidationError,
+  EventVersionSchema,
+  isValidEvent,
+  safeParseEvent,
+  validateBaseEvent,
+  parseEvent,
 } from './validation';
 
 describe('Event Validation', () => {
@@ -215,7 +215,7 @@ describe('Event Validation', () => {
     });
   });
 
-  describe('validateEvent', () => {
+  describe('parseEvent', () => {
     const schema = createEventSchema('ValidatedEvent', {
       message: z.string(),
     });
@@ -232,19 +232,19 @@ describe('Event Validation', () => {
     };
 
     it('should return validated data for valid event', () => {
-      const result = validateEvent(schema, validEvent);
+      const result = parseEvent(schema, validEvent);
       expect(result.data.message).toBe('Hello');
     });
 
     it('should throw EventValidationError for invalid event', () => {
       const invalidEvent = { ...validEvent, type: 'WrongType' };
-      expect(() => validateEvent(schema, invalidEvent)).toThrow(
+      expect(() => parseEvent(schema, invalidEvent)).toThrow(
         EventValidationError
       );
     });
   });
 
-  describe('parseEvent', () => {
+  describe('safeParseEvent', () => {
     const schema = createEventSchema('ParsedEvent', {
       value: z.number(),
     });
@@ -261,7 +261,7 @@ describe('Event Validation', () => {
     };
 
     it('should return success for valid event', () => {
-      const result = parseEvent(schema, validEvent);
+      const result = safeParseEvent(schema, validEvent);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.data.value).toBe(42);
@@ -270,7 +270,7 @@ describe('Event Validation', () => {
 
     it('should return error for invalid event', () => {
       const invalidEvent = { ...validEvent, data: { value: 'not-a-number' } };
-      const result = parseEvent(schema, invalidEvent);
+      const result = safeParseEvent(schema, invalidEvent);
       expect(result.success).toBe(false);
     });
   });

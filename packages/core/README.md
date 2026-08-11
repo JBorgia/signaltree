@@ -971,6 +971,12 @@ import { isSignalTree } from '@signaltree/core/authoring';
 if (isSignalTree(candidate)) candidate.destroy();
 ```
 
+- `entityMap({ recordHistory: false })` - Keep a collection in every OTHER snapshot
+  (`serialization()`, `persistence()`, devtools, audit) but out of the `timeTravel()`
+  undo stack. For a large server-owned grid that must survive reload and must never be
+  undone. Renamed from `history: false` in 15.0.0: that name collided with
+  `form({ history: history() })`, which asks the opposite question — own a scoped stack,
+  versus be recorded into one someone else owns.
 - `timeTravel(config?)` - Undo/redo. `canUndo()`, `canRedo()` and `getHistory()` are **reactive** as of 14.0.0 — before that they read plain values, so `computed(() => tree.canUndo())` cached `false` forever and an undo button in a **zoneless** app never enabled. **Removed in 15.0.0:** `pauseRecording()`/`resumeRecording()`/`isRecordingPaused()` — they could only express "record nothing", never "one undo step", so the documented recipe needed a synthetic sealing write, and pause was a global mute that suppressed unrelated writers. `timeTravel({ shouldSkip: (prev, next) => … })` drops uninteresting transitions — it runs on **every** recorded write, so compare only the fields you mean.
 
 #### Additional Packages

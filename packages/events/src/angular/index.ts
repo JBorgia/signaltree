@@ -9,7 +9,7 @@
 export { WebSocketService } from './websocket.service';
 export type {
   WebSocketConfig,
-  ConnectionState,
+  WebSocketConnectionState,
   WebSocketMessage,
 } from './websocket.service';
 
