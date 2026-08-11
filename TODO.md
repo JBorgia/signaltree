@@ -493,8 +493,15 @@ whose first press does something the user cannot want, not data loss. Rank it be
 6a and 6b accordingly.
 
 Mitigation that works today: `deserialize()` **before** `.with(timeTravel({}))` →
-`canUndo() === false` and `undo()` is a no-op. That may simply be the documented
-answer rather than a code change.
+`canUndo() === false` and `undo()` is a no-op, because the restored state becomes
+`INIT`'s baseline and undo has no way past it.
+
+⚠️ **That only covers SYNCHRONOUS hydration** — `localStorage`, a transferred SSR
+blob, an embedded bootstrap. An app hydrating from an **async fetch** cannot
+sequence it that way: the tree must exist before the response arrives, so the
+enhancer is already attached and the restore lands as a recorded entry. So the doc
+line closes the narrower half; the async half still needs a code answer (a
+non-recording restore path, or authorship — item 3).
 
 ### 6d. `maxHistorySize` — it is a buffer length, not a step count
 
@@ -514,20 +521,51 @@ unbounded history" is false. But the off-by-one is the part that affects everyon
 | `NaN`      | 11      | 10     | 10              | silently unbounded |
 | `Infinity` | 11      | 10     | 10              |                    |
 
-1. **Usable undo steps = `maxHistorySize - 1`.** The default of 50 gives 49 steps,
-   and every doc sample naming a size is off by one.
-2. **Any value ≤ 1 silently disables undo.** `0` reads as "no limit", `1` reads as
-   "one step"; both give none. `-1` also drives `getCurrentIndex()` to `-1`, since
-   the trim runs `currentIndex--` against an already-empty buffer.
-3. **`NaN` is silently unbounded** (`length > NaN` is never true).
+1. **HEADLINE: any value ≤ 1 silently disables undo.** `0` reads as "no limit",
+   `1` reads as "one step"; both give none. `-1` also drives `getCurrentIndex()`
+   to `-1`, since the trim runs `currentIndex--` against an already-empty buffer.
+   Fix with **input validation and a stable ST-code** — a silently dead undo
+   button is the same failure class as the phantom step fixed in 2a.
+2. **N entries yields N−1 undo steps**, because the oldest retained entry is a
+   floor you land on rather than a step you spend.
+
+   ⚠️ **The docs are NOT wrong and must not be renumbered.** An earlier draft of
+   this item said "every doc sample is off by one". That was false. `types.ts:43`
+   says "Maximum number of history **entries** to keep, `@default 50`" and
+   `time-travel-in-production.md:95` says "20 writes against `maxHistorySize: 5`
+   leaves a history of 5" — measured here as exactly 5 entries. Changing `50` to
+   `51` would introduce a real error. **Document the conversion**; do not touch
+   the numbers.
+
+3. **`NaN` is silently unbounded** (`length > NaN` is never true). Narrower than
+   1; cover it in the same validation guard.
 
 **It is `??`, not `||`, and that decides the fix.** Under `|| 50` a `0` would
 become `50` and undo would work; under `??` it is a genuine zero-length buffer that
 shifts off every entry as it is pushed (`:233`). So **validate the input** — reject
-`< 1` and non-finite, or define `0` as unbounded — and do **not** change the `??`,
-which correctly distinguishes "not supplied" from "supplied as 0". Document the
-default and say whether the number means steps or entries; today it means entries
-and reads as steps.
+`< 1` and non-finite — and do **not** change the `??`, which correctly
+distinguishes "not supplied" from "supplied as 0".
+
+**Scope:** every row of that table was executed at 10 writes on a single scalar
+leaf. The conversion and the ≤ 1 result are arithmetic on buffer length and should
+hold generally, but were not re-run across collection or form shapes.
+
+### 6g. Shipped `.d.ts` files carry no JSDoc
+
+Found while checking whether `maxHistorySize`'s documented `@default 50` reaches
+consumers. It does not. `removeComments: true` in `tsconfig.lib.prod.json` strips
+every comment from declaration emit, so an IDE hover shows
+`maxHistorySize?: number` with no description and no default. `core/src/lib/types.ts`
+has 476 JSDoc lines; the shipped `types.d.ts` has 0.
+
+All seven packages checked: **core, shared, ng-forms, guardrails, schema** set the
+flag and ship 0 JSDoc lines; **events and realtime** do not and retain theirs. A
+five-of-seven inconsistency rather than a policy, and the two that omit it show
+the intended behaviour — so the fix is to drop the flag from the other five.
+
+This is a discoverability defect out of proportion to its size: the library's
+answer to "why would an agent reach for SignalTree" leans on the API being
+self-describing, and today every hover in five of seven packages is bare.
 
 ### 6e. Doc defects found by re-scoring
 

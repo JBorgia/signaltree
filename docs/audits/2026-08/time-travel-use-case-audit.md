@@ -84,9 +84,11 @@ left `canRedo() === false`.
 20 writes at `maxHistorySize: 5` → 4 undos spendable, ending at `n === 16`, **not**
 `0`. The oldest entries were evicted, which is the feature.
 
-⚠️ 4, not 5 — `maxHistorySize` is a buffer length, so usable steps are
-`maxHistorySize - 1`. See case 28; it applies to every sample in this document
-that names a size, including case 8's `50` (which is 49 steps).
+⚠️ 4 steps, not 5 — but the history really does hold 5 **entries**, exactly as
+`maxHistorySize: 5` says and as the guide documents. The oldest entry is the state
+you land on rather than a step you spend, so N entries yields N−1 steps. Nothing in
+the docs is wrong here and no sample needs renumbering; the conversion is what goes
+unsaid. See case 28.
 
 ### 6. Not recording cursor/hover/selection churn ✅
 
@@ -221,11 +223,20 @@ restored state". It is **recoverable**: `canRedo()` is `true` afterwards and
 `redo()` returns `n` to `2`. So this is a live undo button that does something the
 user cannot want on its first press, not data loss.
 
-**Mitigation that works today:** restore _before_ attaching the enhancer.
+**Mitigation that works today:** restore _before_ attaching the enhancer, which
+makes the restored state `INIT`'s baseline so undo has no way past it.
 
 ```
 deserialize() then .with(timeTravel({}))  ->  canUndo() === false, undo() is a no-op
 ```
+
+⚠️ **That only covers synchronous hydration**, and it is the narrower half of the
+problem. It works when the payload exists at tree construction — `localStorage`, a
+transferred SSR state blob, an embedded bootstrap. An app hydrating from an
+**async fetch** cannot sequence it that way: the tree must exist before the
+response arrives, so the enhancer is already attached and the restore lands as a
+recorded entry. That case needs the code answer — a non-recording restore path, or
+authorship (TODO item 3) — not the doc line.
 
 Same family as the phantom step fixed in case 8. **See gap C.**
 
@@ -331,8 +342,16 @@ plain='p1'; name='ada'; plain='p2'; name='ada l'
 undo()  ->  plain 'p1'  AND  name ''        // the user's form content is gone
 ```
 
-One Ctrl+Z on an unrelated field wipes the form. The correct mechanism is the
-form's **own** scoped stack, which works:
+⚠️ **Scope of that last line.** What was executed is the four-write sequence above:
+one neighbouring plain write after the form edit. "One Ctrl+Z wipes what the user
+typed" is exact for that shape and is the common one — a form beside any
+non-form field — but with more intervening plain writes the form rewinds to
+whichever snapshot that undo lands on, which may be a partially-typed value rather
+than `''`. The invariant that was verified across both runs is narrower and is the
+real claim: **form edits are never their own entry, and are reverted by undos they
+did not cause.**
+
+The correct mechanism is the form's **own** scoped stack, which works:
 
 ```ts
 form({ initial: { name: '' }, history: history() });
@@ -405,12 +424,21 @@ that TODO item 2 flags as load-bearing and agent-measured. Treat both as open.
 
 ### 28. Undo in a devtools panel with unbounded history 🟡 — downgraded
 
-**"Omit `maxHistorySize`" does not give unbounded history.** The default is 50
-(`time-travel.ts:80`, `config.maxHistorySize ?? 50`), and the type declares no
-default. Unbounded requires `maxHistorySize: Infinity` explicitly.
+**"Omit `maxHistorySize`" does not give unbounded history** — that was this
+audit's claim, not the library's. The default is 50
+(`time-travel.ts:80`, `config.maxHistorySize ?? 50`) and unbounded requires
+`maxHistorySize: Infinity` explicitly.
 
-The full boundary is worse than a bad default, and it is **not** the "0 is
-falsy" bug it looks like. 10 writes (`n = 1..10`) on a tree starting at `n = 0`:
+> **The library docs are ACCURATE and were wrongly called into question by an
+> earlier draft of this row.** `types.ts:43` says "Maximum number of history
+> **entries** to keep, `@default 50`", and
+> `time-travel-in-production.md:95` says "20 writes against `maxHistorySize: 5`
+> leaves a history of 5" — measured here as exactly 5 entries. There is **no
+> off-by-one error in any sample, and no sample should be renumbered.** Changing
+> `50` to `51` would introduce a real error, because 50 entries is what happens.
+
+What is missing is a **conversion, not a correction**: entries are not undo steps.
+10 writes (`n = 1..10`) on a tree starting at `n = 0`:
 
 | `maxHistorySize` | entries | `getCurrentIndex()` | undos spendable | final `n` |                    |
 | ---------------- | ------- | ------------------- | --------------- | --------- | ------------------ |
@@ -423,26 +451,37 @@ falsy" bug it looks like. 10 writes (`n = 1..10`) on a tree starting at `n = 0`:
 | `NaN`            | 11      | 10                  | 10              | 0         | silently unbounded |
 | `Infinity`       | 11      | 10                  | 10              | 0         |                    |
 
-Three things follow, and the first is the one that affects everybody:
+Three things follow, and the **second** is the headline:
 
-1. **`maxHistorySize` is a buffer length, not a step count. Usable undo steps are
-   `maxHistorySize - 1`.** The documented default of 50 gives **49** undo steps,
-   and `timeTravel({ maxHistorySize: 50 })` in every sample — including case 8's —
-   means 49. The name and the docs both imply step count.
-2. **Any value ≤ 1 disables undo entirely**, silently. `0` is a plausible spelling
-   of "no limit" and `1` is a plausible spelling of "one step of undo"; both give
-   none. `-1` does the same and drives `getCurrentIndex()` to `-1`, because the
-   trim runs `currentIndex--` against an already-empty buffer.
-3. **`NaN` is silently unbounded**, since `length > NaN` is never true.
+1. **N entries yields N−1 undo steps.** The oldest retained entry is a floor you
+   cannot undo _from_ — it is the state you land on, not a step you spend. So a
+   documented, accurate `maxHistorySize: 50` gives 49 undo steps. This is an
+   unstated conversion, not a wrong number: the docs say entries and deliver
+   entries. **Fix by documenting the conversion, not by renumbering.**
+2. **Any value ≤ 1 disables undo entirely, silently.** By the conversion above
+   this is arithmetic, but it lands on exactly the two values a caller is most
+   likely to reach for by intuition: `0` reads as "no limit" and `1` reads as "one
+   step of undo". Both give none. `-1` does the same and drives
+   `getCurrentIndex()` to `-1`, because the trim runs `currentIndex--` against an
+   already-empty buffer. This deserves **input validation with a stable ST-code**,
+   not only a doc line — a silently dead undo button is the same failure class as
+   the phantom step in case 8.
+3. **`NaN` is silently unbounded**, since `length > NaN` is never true. Narrower
+   than 2; validation should cover it in the same guard.
 
 **This is `??`, not `||`, and the distinction decides the fix.** Under
 `config.maxHistorySize || 50` a `0` would have become `50` and undo would work.
 It is `config.maxHistorySize ?? 50` (`time-travel.ts:80`) with
 `if (this.history.length > this.maxHistorySize) { this.history.shift(); … }`
 (`:233`), so `0` is a genuine zero-length buffer that shifts off every entry as
-it is pushed. Validate the input (reject `< 1` and non-finite, or define `0` as
-unbounded) — do not change the `??`, which is correct for distinguishing "not
-supplied" from "supplied as 0".
+it is pushed. Validate the input — reject `< 1` and non-finite — and do **not**
+change the `??`, which correctly distinguishes "not supplied" from "supplied
+as 0".
+
+⚠️ **Scope of this row:** every value in the table was executed at 10 writes on a
+single scalar leaf. The conversion and the ≤ 1 result are arithmetic on buffer
+length and should hold generally, but they were not re-run across collection or
+form shapes.
 
 ---
 
@@ -478,12 +517,13 @@ Ordered by how much damage they do.
 2. **`createAuditTracker` is a 100 ms polling sampler (case 15).** No `.subscribe`
    on the tree means the fallback always runs. A write and its revert inside one
    window are logged as nothing.
-3. **`maxHistorySize` is a buffer length, not a step count (case 28).** Usable undo
-   steps are `maxHistorySize - 1`, so the undocumented default of 50 is 49 steps
-   and every sample in our docs naming a size is off by one. **Any value ≤ 1
-   silently disables undo**, `NaN` is silently unbounded, and `-1` drives
-   `getCurrentIndex()` negative. Confirmed `??`, not `||` — `0` is a real
-   zero-length buffer, so the fix is input validation, not changing the coalesce.
+3. **`maxHistorySize` ≤ 1 silently disables undo (case 28).** `0` reads as "no
+   limit", `1` reads as "one step"; both give none, because N entries yields N−1
+   undo steps. `NaN` is silently unbounded and `-1` drives `getCurrentIndex()`
+   negative. Confirmed `??`, not `||` — `0` is a real zero-length buffer, so the
+   fix is **input validation with an ST-code**, not changing the coalesce.
+   The docs are accurate and must not be renumbered; what is missing is the
+   entries→steps conversion.
 4. **`undo()` after `deserialize()` reverts the restore (case 13).** `deserialize`
    records an ordinary `BATCH` entry, so the first press always discards the
    restore regardless of how many entries exist — verified across 0–3 prior writes.
@@ -495,9 +535,29 @@ Ordered by how much damage they do.
    `docs/guides/time-travel-in-production.md:176`.
 6. **Stale doc (case 9):** `myths-and-misconceptions.md:261` calls the path-bound
    session "planned for v10.1"; `createTreeEditSession` ships.
+7. **Shipped `.d.ts` files carry no JSDoc at all** — found while checking whether
+   `maxHistorySize`'s documented `@default 50` reaches consumers. It does not:
+   `removeComments: true` in `tsconfig.lib.prod.json` strips every comment from
+   declaration emit, so a consumer's IDE hover shows `maxHistorySize?: number` with
+   no description and no default. Measured: `core/src/lib/types.ts` has 476 JSDoc
+   lines; its shipped `types.d.ts` has 0.
+
+   Scope — all seven packages checked: **core, shared, ng-forms, guardrails,
+   schema** set the flag and ship 0 JSDoc lines; **events and realtime** do not set
+   it and retain theirs (5 and 22 lines in the sampled files). A five-of-seven
+   inconsistency, not a workspace-wide policy — and the two that omit it show the
+   intended behaviour. Not a time-travel defect; filed here because this is where
+   it surfaced.
 
 Answered along the way: **TODO 5b item 4** — `resetHistory()` empties, it does not
 restore-to-initial.
+
+**Corrections to this document's own earlier drafts**, kept because the pattern
+repeated: twice the measurement was right and the sentence around it was too
+broad — "every doc sample is off by one" (the docs say entries and are accurate)
+and "one Ctrl+Z wipes what the user typed" (exact at one neighbouring write, not
+in general). Before a verdict leaves the harness, name the configuration that
+would falsify it and either run that too or scope the sentence to what was run.
 
 ---
 
