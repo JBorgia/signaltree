@@ -192,8 +192,42 @@ exactly `PathNotifier.flush()`'s merge rule, which §1.3 measured as already cor
 **within a turn**. The action needs the same rule **across turns**. It also fixes
 result 5 for free.
 
-⚠️ **With one change: the equality predicate must be deep, not reference.**
-`flush()` compares `newValue === oldValue`. Across turns a compensating write often
+⚠️ **The collapse predicate must be deep — but do NOT change `flush()`.**
+`path-notifier.ts:198` is literally `if (newValue === oldValue) continue;`, and that
+line must stay `===`. `flush()` runs on **every turn** over **every changed path**,
+driven by `queueMicrotask` — putting a structural walk there is the same mistake as
+write-time `shouldSkip`, which item 1 just finished moving off the hot path.
+
+| runs                | when                      | over                 | predicate  |
+| ------------------- | ------------------------- | -------------------- | ---------- |
+| `flush()`           | every turn                | every changed path   | keep `===` |
+| `commit()` collapse | per action, human-clicked | that action's deltas | deep       |
+
+`commit()` is a person clicking Save; `flush()` is a keystroke. Same siting argument
+as `shouldSkip`.
+
+**Reuse `prunedEqual` (`utils.ts:118`) rather than inventing a predicate.** It is
+reference-first (`if (a === b) return true`), treats arrays and built-ins as leaves
+so it never walks them, and recurses only into plain objects. VERIFIED against the
+exact case:
+
+```
+same reference    -> true   (fast path, no walk)
+reconstructed obj -> true   <- collapses the phantom
+genuinely changed -> false
+```
+
+It is honest about its limit: reference-first still pays the structural walk when
+references differ, which is precisely when you have to look. What it buys is that
+v3's capture-then-restore style hits the fast path — fast where it can be, correct
+always.
+
+**Cost bound to state while designing:** O(paths touched × value size), not O(state).
+The per-path term is large when a path's value is a big array. `ST2027` already exists
+for the deep-equal-different-reference class (~2.8 ms on a 50k array) if a diagnostic
+is wanted rather than an unbounded walk.
+
+The finding that motivates all of this — across turns a compensating write often
 **reconstructs** the value rather than restoring the captured object, and reference
 identity then fails to collapse it. MEASURED on the partial-failure shape:
 

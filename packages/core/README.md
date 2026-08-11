@@ -1785,6 +1785,15 @@ Signal-native undo/redo for a `form()` marker. Import `history` alongside
 `form`/`signalTree` and attach it via the `history` config key — a raw config
 object there throws `[ST2006]`, it must be `history()`'s output:
 
+> ⚠️ **This is the ONLY undo mechanism that covers form state.** The global
+> `timeTravel()` enhancer does **not** — form writes never notify its recorder, so a
+> form-only tree records `["INIT"]` and nothing else and `canUndo()` stays `false`. In
+> a mixed tree it is worse than absent: a later plain-leaf write snapshots the form's
+> then-current values incidentally, so an `undo()` aimed at an unrelated field rewinds
+> the form to a stale value and discards what the user typed. If your undoable state
+> is a `form()`, reach for `history()` below, not for `timeTravel()`. See
+> [time-travel-in-production.md §2b](../../docs/guides/time-travel-in-production.md).
+
 ```typescript
 import { signalTree, form, history, validators } from '@signaltree/core';
 
