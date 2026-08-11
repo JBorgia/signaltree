@@ -419,7 +419,7 @@ const GATES = [
     // The mutation must name a symbol that is IN THE CURRENT DELTA, or it proves
     // nothing: the gate only inspects what this release added, so blanking a
     // symbol from an older release is invisible to it. `prependOne` shipped in
-    // 14.0.0 and the base tag is now v14.0.0, so the previous mutation targeted
+    // 14.0.0, which sat outside the window, so the previous mutation targeted
     // a symbol outside the window and the harness correctly reported this gate
     // BLIND. `asMap` is in the delta and appears exactly once in llms.txt —
     // occurrence count matters, because the harness uses String.replace, which
