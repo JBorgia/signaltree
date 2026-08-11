@@ -799,14 +799,84 @@ self-describing, and today every hover in five of seven packages is bare.
 
 **Needs its own gate — nothing existing catches it.** `bundle-budget` measures
 built JS and does not look at `.d.ts` at all; `api-surface` compares symbol
-inventories, not comments. The invariant is small and mutation-provable, which is
-the shape this repo's gates already take:
+inventories, not comments.
 
-> A package whose source carries JSDoc ships JSDoc in its declarations.
+### 6g — ATTEMPTED 2026-08-10, REVERTED. Read this before trying again.
 
-Count JSDoc lines in `packages/<p>/src/**/*.ts` and in `dist/packages/<p>/src/**/*.d.ts`;
-fail when the source count is non-zero and the declaration count is zero. Mutation
-proof: add `removeComments: true` to `events` and the gate must go red.
+The fix and the gate were both built and both worked; the change was reverted
+because the delivery mechanism is unsound. What was learned:
+
+**1. The obvious fix does not work, and the reason is a TypeScript limitation.**
+`removeComments` is the only switch for keeping comments out of emitted JS and it
+strips `.d.ts` too. Dropping it from the five packages does give fully documented
+declarations (core: 0 → 2,973 JSDoc lines, ratio 75% of source) — but it also puts
+JSDoc into the shipped runtime JS, which the repo explicitly does not want and
+already validates against in `scripts/verify-jsdoc-stripping.js`.
+
+**2. Post-hoc stripping of the built JS is fragile by construction.** A
+`scripts/strip-js-comments.mjs` esbuild pass removed 337 KB of comments from JS
+while leaving `.d.ts` intact, wired into npm's `postbuild`. It worked — and then
+`verify-gates.mjs` went red, because **the gate harness builds `dist/` with nx
+directly and never runs npm's `postbuild` hook.** So the invariant held after
+`npm run build` and broke after any nx-driven build. Any fix that repairs the
+artifact after the fact inherits this: it must run on every build path, and there
+is more than one.
+
+**3. `angular-compat` silently depends on built JS being comment-free.** It
+detects APIs with `text.includes(api)` over whole files
+(`check-angular-compat.mjs:113`), so a doc comment that merely NAMES
+`@angular/forms/signals` reads as an import of it. That gate was correct only
+because `removeComments: true` guaranteed no prose reached the JS — an invariant
+nothing states and nothing tests. Worth fixing on its own merits regardless of
+6g: strip comments before scanning, or match import syntax rather than substrings.
+
+**4. `esbuild` needs `minifyWhitespace: true` to strip comments completely.**
+Without it, comments attached to object members survive (8 files in core), and one
+survivor is what tripped `angular-compat`. That flag is safe here only because no
+source maps ship — `files` publishes `dist/**/*.js` and `src/**/*.d.ts`, and dist
+contains no `.js.map` and no `sourceMappingURL`.
+
+**The remaining approach that has none of these problems: a two-pass declaration
+emit.** Keep `removeComments: true` so every build path emits comment-free JS
+unchanged, and regenerate `.d.ts` with a declaration-only pass that keeps comments
+(`--emitDeclarationOnly` with `removeComments: false`). Nothing rewrites JS, so
+there is no build-path coupling and no `angular-compat` interaction. The open
+question is whether a plain `tsc` declaration pass produces declarations identical
+to what ngc emits for the partially-compiled packages (`core`, `ng-forms`) — verify
+that before adopting.
+
+**The gate itself was built, proven, and is worth restoring with the fix.**
+`tools/check-declaration-docs.mjs` compared source JSDoc blocks against shipped
+`.d.ts` blocks per package. Two design notes that cost a cycle each:
+
+- The invariant must be a **ratio, not "not zero"**. `stripInternal` legitimately
+  removes whole declarations, so no package ships 100% — the measured spread was
+  72%–98%, and a 50% floor sits clear of it.
+- Its first mutation (`removeComments` back into `schema`'s tsconfig) was reported
+  **BLIND** by the harness, correctly: `needsBuild` gates read `dist/`, which is
+  built before the mutation is applied, so mutating source changes nothing. The
+  second (blinding one `/**` in a built `.d.ts`) was also blind, because the
+  harness replaces only the FIRST match and guardrails holds 106 blocks in that
+  file. `generate: () => ''` on `dist/packages/guardrails/src/lib/types.d.ts` drops
+  it to 12% and works — both gates then proved able to fail.
+
+**Before/after sizes, recorded because no gate measures this** and the change
+grows published tarballs:
+
+| package    | tarball before | after   | `.d.ts` before | after   |
+| ---------- | -------------- | ------- | -------------- | ------- |
+| core       | 114,732        | 171,384 | 62,963         | 202,342 |
+| shared     | 4,440          | 6,113   | 1,851          | 5,633   |
+| ng-forms   | 26,403         | 33,754  | 10,457         | 34,203  |
+| guardrails | 14,002         | 16,140  | 6,969          | 14,754  |
+| schema     | 11,544         | 14,556  | 4,869          | 15,113  |
+| events     | 55,209         | 48,601  | 101,214        | 101,214 |
+| realtime   | 8,620          | 8,104   | 12,924         | 12,924  |
+
+Five grow by 15–49%. **`events` and `realtime` SHRANK** — they never set
+`removeComments`, so they had been shipping JSDoc in their runtime JS all along.
+That is a real inefficiency this work found and did not fix, and it is independent
+of the rest of 6g.
 
 ### 6e. Doc defects found by re-scoring
 
