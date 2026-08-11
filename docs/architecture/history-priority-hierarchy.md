@@ -114,57 +114,120 @@ rank 2 is worthless.
 
 ---
 
-## The live conflict this hierarchy has to resolve
+## The conflict this hierarchy exposed, and its resolution
 
-The ranking is not decoration. It has an immediate consequence that contradicts a
-decision already written down.
+The ranking is not decoration. Applying it surfaced an apparent contradiction with an
+invariant already written down, and resolving that contradiction produced the sharpest
+distinction in the architecture.
 
-**Rank 2 (`rollback()`) collides with the prefix-closure invariant.**
+### The apparent contradiction
 
-The invariant: applied history is prefix-closed at every participating position, so a
-turn is reversible only when it sits at the applied frontier of every position it
+Prefix-closure says applied history is prefix-closed at every participating position,
+so a turn is reversible only when it sits at the applied frontier of every position it
 touched. That is what makes rank 3 safe.
 
-But consider the motivating scenario. T42 optimistically writes `dispatch.trucks`,
-`dispatch.drivers`, `dispatch.orders`. While the request is in flight, telemetry
-updates a truck's location — a legitimate write to a position T42 touched, creating
-T43. Then the server rejects T42.
+But take the motivating scenario. T42 optimistically writes `dispatch.trucks`,
+`dispatch.drivers`, `dispatch.orders`. While the request is in flight, telemetry writes
+`trucks.location` — legitimate, and to a position T42 touched, creating T43. Then the
+server rejects T42.
 
-T42 is no longer at the frontier of `trucks`. **Prefix-closure forbids reversing it.**
+T42 is no longer at the frontier of `trucks`, so prefix-closure forbids reversing it.
 
-- Refusal is correct for rank 3. A user is told they cannot undo from here.
-- **Refusal is a product failure for rank 2.** The server said no, the optimistic
-  state is wrong on screen, and the app has no recourse.
+- Refusal is **correct** for rank 3: the user is told they cannot undo from here.
+- Refusal is a **product failure** for rank 2: the server said no, the screen is
+  showing a lie, and the app has no recourse.
 
-And this is not an edge case — concurrent writes during an in-flight request are the
-normal condition the architecture is built for.
+And this is not an edge case. Concurrent writes during an in-flight request are the
+normal condition the architecture exists for.
 
-### Three exits, none free
+### The resolution: rollback is not undo
 
-| Option                                             | Cost                                                                                                                                       |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Rollback is not frontier-constrained               | a later turn's value at a shared path gets clobbered — the exact "reverting destroys legitimate work" failure the design exists to prevent |
-| Rollback may fail, app reconciles                  | reintroduces caller-authored compensation, defeating the primary objective                                                                 |
-| Frontier at **path** granularity for rollback only | works, but carves an exception into the "dependency is conservatively position-level" decision                                             |
+The contradiction came from an unexamined assumption — that rollback reverses a
+**committed history turn**. It does not. It removes a **pending speculative** one.
 
-The third is more defensible for rollback than for undo: rollback knows the exact
-paths it wrote and is compensating **its own** writes, rather than inferring semantic
-independence between unrelated turns. That is a narrower claim than general
-path-granular dependency analysis. It is still an exception, and exceptions inside
-invariants are how invariants stop being invariants.
+`commit()` was conflating two different moments, and separating them dissolves the
+conflict without weakening undo at all:
 
-**This must be decided before the turn store is built, not discovered afterwards.**
-Under the current phasing, optimistic rollback is the last phase and prefix-closure
-is built two phases earlier — so the collision would surface after the decision it
-contradicts is implemented. Add a rollback spike alongside the ownership experiment:
-_can a committed turn be reversed after a concurrent write to a shared position, and
-if not, what happens?_
+| Operation    | Purpose                                           | Frontier-constrained? |
+| ------------ | ------------------------------------------------- | --------------------- |
+| `abort()`    | stop recording; state untouched                   | n/a — no reversal     |
+| `seal()`     | capture the net speculative mutation set          | no                    |
+| `confirm()`  | promote the sealed turn into confirmed history    | —                     |
+| `rollback()` | remove a rejected turn's speculative contribution | **no**                |
+| `undo()`     | traverse confirmed history                        | **yes**               |
 
-### The constraint, stated so it cannot be lost
+```text
+                  ┌──── confirm ──→ CONFIRMED ──→ undo / redo
+RECORDING → SEALED│
+                  └──── rollback ─→ REJECTED
+RECORDING ─ abort ─→ recording discarded, state untouched
+```
 
-> **Rollback must succeed in the presence of concurrent writes to positions the turn
-> touched. If the frontier rule forbids that, the frontier rule is wrong for rollback
-> and the exception must be stated rather than discovered.**
+Prefix-closure keeps its full strength, restated precisely:
+
+> **Confirmed history is prefix-closed at each position.**
+
+A pending speculative turn was never in confirmed history, so it was never subject to
+the rule.
+
+### Two causalities, not one invariant with an exception
+
+This is the distinction to protect, because someone will later see two reversal paths
+and try to unify them.
+
+|                           | used by             | granularity                                     | why                                                               |
+| ------------------------- | ------------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
+| **Historical causality**  | `undo()` / `redo()` | conservative, **position**-level, prefix-closed | we refuse to invent semantic independence between unrelated turns |
+| **Speculative ownership** | `rollback()`        | precise, **entry**-level                        | the turn _recorded_ what it wrote; it is not guessing             |
+
+Path-granular rollback is therefore **not an exception** to the conservative
+position-level dependency rule. It is a different invariant for a different operation,
+and the earlier decision should be worded to say so:
+
+> Undo/redo preserve historical causality and use conservative position-level
+> frontiers. Rollback removes a pending turn's own speculative contribution and
+> evaluates conflicts at that turn's recorded entry and operation granularity.
+
+### What rollback success actually means
+
+The rule that prevents the naive implementation:
+
+> **Rollback success does not mean restoring the pre-turn value. It means eliminating
+> the rejected turn's SURVIVING speculative contribution without destroying legitimate
+> subsequent writes.**
+
+So for `A --T42--> B --T43--> C`, rejecting T42 leaves **C**. T43 superseded T42's
+value; the rejected value B is already gone, and that is successful compensation.
+Anyone implementing rollback as "apply `before` regardless of current provenance"
+recreates exactly the multi-writer corruption this architecture exists to prevent.
+
+### The limit — stated, because it cannot be engineered away
+
+An earlier draft of this document claimed rollback must always succeed under concurrent
+writes. That was too strong. Rollback cannot resolve a later write whose _premise_ was
+the rejected one:
+
+```text
+x = 10
+T42:  x = 20
+T43:  x = x + 5   →  25      (T42 rejected — is the answer 15, 25, or an error?)
+```
+
+`before: 20, after: 25` does not say whether T43 meant "+5 independently", was an
+authoritative server value, or depended on T42 and should itself be rejected. No store
+can infer that.
+
+The honest promise:
+
+> **Concurrent writes to the same ownership position do not prevent rollback.
+> Unrelated and superseding writes are preserved automatically. When a later write
+> semantically depends on the rejected mutation, rollback must DETECT the conflict
+> rather than silently corrupt state** — with a generic fallback of invalidating the
+> affected server-owned position for refetch.
+
+That is still far better than caller-authored compensation: the application no longer
+writes `restoreDrivers(); restoreTrucks(); restoreSelection();` — SignalTree knows
+which ownership positions need reconciliation.
 
 ---
 
@@ -247,6 +310,59 @@ history. **MobX-State-Tree's patch/UndoManager and Yjs's `UndoManager`
 before a public claim, not before building.
 
 ---
+
+## What Phase 0 must falsify — two parallel experiments
+
+Optimistic rollback cannot remain the last phase. It is rank 2; if it is the strategic
+centre it must be falsified first, not after prefix-closure and cross-position turns are
+already built on top of decisions it might contradict.
+
+### 0A — ownership attribution
+
+> Can a stable ownership position be obtained at write time for plain leaves,
+> `entityMap`, `form()`, `status()` and `stored()`, with **no measurable cost when
+> history is not installed**?
+
+The codebase already indicates where the answer lives: `entityMap` notifies
+`${basePath}.${id}`, so `basePath` **is** the ownership position — already computed,
+already free. If the other four markers can surrender their own path as cheaply, 0A
+passes. If they cannot, that asymmetry is the finding.
+
+### 0B — speculative rollback
+
+The smallest disposable prototype covering, by outcome:
+
+1. T42 writes position A → rollback succeeds.
+2. T42 writes `A.x`, T43 writes `A.y` → rollback preserves T43.
+3. T42 writes `A.x`, T43 **overwrites** `A.x` → rollback preserves T43 (supersession).
+4. T42 mutates a collection structurally, a concurrent mutation occurs → anchors either
+   compensate correctly **or detect that they cannot**.
+5. T42 and T43 pending simultaneously → neither captures nor rolls back the other's
+   writes.
+6. A rejected entity creation followed by writes beneath that entity → the dependency is
+   detected, not silently corrupted.
+
+Case 4 is the one that must not be skipped. Value snapshots are insufficient for
+`remove row B at index 1` followed by a concurrent reorder, so **collection anchors move
+out of the last phase and into this spike** — one representative structural mutation is
+enough, but scalar-only would prove nothing about the primary use case.
+
+Expect an asymmetry, and treat it as a result rather than a bug: a scalar has a
+supersession answer (compare the current value against the entry's `after`), while a
+structurally reordered collection may only have _compensate_ or _cannot — reconcile_.
+
+### An open question 0B should answer while it is there
+
+Deciding "does this speculative write still own the currently visible value?" has two
+implementations with different costs:
+
+|                                              | cost                        | hole                                                                                                                           |
+| -------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| compare current value to the entry's `after` | free, no hot-path machinery | **ABA** — if a later turn wrote a different value and a third wrote the original back, T42 looks like the owner when it is not |
+| carry a write stamp / generation per path    | closes ABA                  | pays on the write path, which rank 1's zero-when-unused requirement constrains                                                 |
+
+Measure both rather than choosing. And note the ABA hole is narrow but real: restoring
+`before` in that case clobbers a value a later writer deliberately set.
 
 ## How to use this document
 
