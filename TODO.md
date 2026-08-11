@@ -217,10 +217,29 @@ reconstructed obj -> true   <- collapses the phantom
 genuinely changed -> false
 ```
 
-It is honest about its limit: reference-first still pays the structural walk when
+It is honest about its cost: reference-first still pays the structural walk when
 references differ, which is precisely when you have to look. What it buys is that
-v3's capture-then-restore style hits the fast path — fast where it can be, correct
-always.
+v3's capture-then-restore style hits the fast path — fast where it can be.
+
+⚠️ **KNOWN HOLE — `prunedEqual` treats arrays as leaves, and for THIS use that is
+not merely "conservative".** `utils.ts:130` returns `false` for two arrays with
+differing references without comparing contents. Everywhere else in the library that
+is the safe direction; here it means **failing to collapse**, so the phantom entry
+survives — the exact defect the collapse exists to prevent. VERIFIED:
+`prunedEqual([1,2,3], [1,2,3]) === false`.
+
+Reachability, stated so nobody reads the table row as "safe":
+
+- **Entity collections: probably not reachable.** They notify per-entity paths
+  (`rows.<id>`), so the value at a path is an entity object, not the array.
+- **A plain array leaf IS reachable**, directly. `tags: string[]` compensated by
+  reconstruction (`tags.set([...original])` rather than `tags.set(original)`) leaves
+  a phantom step.
+
+So `prunedEqual` is the right base but not sufficient alone. Either special-case
+array leaves in the collapse predicate, or accept the hole and document it — decide
+deliberately, and do not let "arrays are leaves" pass review as an optimisation when
+here it is a correctness gap.
 
 **Cost bound to state while designing:** O(paths touched × value size), not O(state).
 The per-path term is large when a path's value is a big array. `ST2027` already exists

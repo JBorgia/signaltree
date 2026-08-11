@@ -108,7 +108,11 @@ const check = (name, reproduced, detail) => {
   );
 }
 
-// -- 6b: createAuditTracker samples on a ~100 ms timer ----------------------
+// -- 6b: createAuditTracker samples, so it drops changes -------------------
+// NB: the 100 ms interval is NOT measured here. It is a source constant —
+// `setInterval(handleChange, 100)` at packages/core/src/lib/audit/audit.ts:156.
+// The sleeps below are CHOSEN from that constant; what these checks establish
+// is the consequence (changes are dropped), not the number.
 {
   const t = signalTree({ n: 0 });
   const log = [];
@@ -146,11 +150,13 @@ const check = (name, reproduced, detail) => {
   );
 }
 {
+  // Why it polls at all: the tracker only avoids setInterval when the tree has a
+  // .subscribe method to attach to (audit.ts:150). It never does.
   const t = signalTree({ n: 0 });
+  const hasSubscribe = 'subscribe' in t;
   console.log(
-    `    (tracker polls because signalTree exposes no .subscribe: ${
-      'subscribe' in t
-    })`
+    `    (why it polls: tree has .subscribe? ${hasSubscribe ? 'yes' : 'NO'} ` +
+      `-> the setInterval fallback at audit.ts:160 always runs)`
   );
 }
 

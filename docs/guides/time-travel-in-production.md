@@ -213,7 +213,8 @@ whole-state deep compare here undoes the saving.
 
 ## Composition patterns, and whether they hold up
 
-<!-- measured: node tools/verify-history-defects.mjs — reproduces the form-coverage gap, the audit-tracker sampling window (100 ms) and the maxHistorySize step arithmetic, by outcome (every check calls undo() and inspects state). -->
+<!-- measured: the 100 ms sampling interval is a source constant — `setInterval(handleChange, 100)` at packages/core/src/lib/audit/audit.ts:156 (and :160). Cited rather than benchmarked on purpose: a constant breaks greppably when someone changes it, where a timing run only breaks when re-run. -->
+<!-- measured: node tools/verify-history-defects.mjs — reproduces the CONSEQUENCES by outcome (every check calls undo() and inspects state): the form-coverage gap, that write-then-revert pairs are dropped, and the maxHistorySize step arithmetic. It does NOT measure the 100 ms figure — its sleeps are chosen from the constant above. -->
 
 | What you are building                                 | Pattern                                                                              | Supported                                                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
