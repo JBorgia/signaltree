@@ -1,10 +1,14 @@
 # History: the current codebase, against the target
 
 **Status:** gap analysis, 2026-08-11. The "what exists today" map that
-[PLAN-position-attributed-history.md](./PLAN-position-attributed-history.md) §5
+[history-PLAN.md](./history-PLAN.md) §5
 needs before Phase 0: for each element of the position-attributed model, what is in
 `packages/core` today, what is partial, what is absent, and which phase owns closing
 it.
+
+**Staleness stamp:** inventory verified accurate as of `6abbc3a5` (2026-08-11).
+Point-in-time by design — §§2–5 are invalidated the moment Phase 1 lands; the file
+becomes a record of the pre-ownership substrate, not a live description.
 
 This document **decides nothing**. It inventories. The PLAN is the authority on
 ordering and priority; the tie-break when the PLAN is silent is
@@ -54,15 +58,27 @@ Measured against the current source, by marker:
 | `entityMap` `changeId`                              | `${basePath}.${String(to)}` (`:845`)                                                               | **Yes** — and see §4 for the stability trap                               |
 | `form()` `set` / `update`                           | `path` — **only when `notifier && path`** (`form.ts:871`)                                          | **Partial** — position = the form's path, but notification is conditional |
 | plain leaf `tree.$.a.b.set()`                       | **only via `interceptLeafSignals`**, installed by `timeTravel()` itself (`time-travel.ts:675,683`) | **Conditional** — the leaf blind spot; see §3                             |
-| `status()`                                          | — (0 `notify` sites)                                                                               | **No**                                                                    |
-| `stored()`                                          | — (0 `notify` sites)                                                                               | **No**                                                                    |
-| `compared()`                                        | — (0 `notify` sites)                                                                               | **No**                                                                    |
-| `async-source()` / `async-query()`                  | — (0 `notify` sites)                                                                               | **No**                                                                    |
+| `status()`                                          | — (0 `notify` sites)                                                                               | **No owner** — writes still reach history via leaves (§3)                 |
+| `stored()`                                          | — (0 `notify` sites)                                                                               | **No owner** — writes still reach history via leaves (§3)                 |
+| `compared()`                                        | — (0 `notify` sites)                                                                               | **No owner** — writes still reach history via leaves (§3)                 |
+| `async-source()` / `async-query()`                  | — (0 `notify` sites)                                                                               | **No owner** — writes still reach history via leaves (§3)                 |
 
-That last block is the 0A asymmetry, named precisely rather than as a hunch: three
-markers write state the history subsystem will need to attribute, and **none of
-them announces it**. If 0A's gate is "ownership resolved at write time across all
-marker types," the marker set is currently split 2½ / 0 / 3½.
+That last block is the 0A asymmetry, named precisely rather than as a hunch: five
+marker families write state the history subsystem will need to attribute, and **none
+of them announces it**. If 0A's gate is "ownership resolved at write time across all
+marker types," the marker set splits **1 available · 2 conditional · 5 silent**
+(`entityMap` · `form()` + plain leaves · the five above, `async-source()` and
+`async-query()` as one family).
+
+> **Unattributed, not absent.** Zero `notify()` sites does not mean invisible to
+> history: these markers write through leaf signals, and `interceptLeafSignals` (§3)
+> records them whenever `timeTravel()` is attached — verified by outcome, a `status()`
+> write with no `notify()` in the marker produces a history entry and `undo()` reverts
+> it (`NOT_LOADED → LOADING → NOT_LOADED`). The value already flows; **only the owner
+> is missing.** For these families 0A has to build ownership alone, not recording —
+> which relocates the risk: the question becomes "can a leaf-routed write carry its
+> owning marker's identity", and at the leaf-interception point you have a path but
+> not the marker that owns it.
 
 The marker notifier wiring itself is lazy — `materialize-markers.ts:563-567`
 `getNotifier()` — so an owner on the notify contract is not paid by trees that
@@ -157,14 +173,17 @@ changes what that question costs to answer:
   args. Adding an owner is a **net-new parameter on the write path**, which is
   where decision 20 (zero-when-unused) bites hardest. "Does an unused owner
   parameter cost anything?" is a different benchmark from "does an unused
-  subscriber cost anything?" and the PLAN's §7 methodology (four arms: current 3-arg
-  notify · owner-capable/history absent · owner-capable/inactive · actively recording,
-  `--expose-gc`, no `await` in the loop) must be run against both shapes.
+  subscriber cost anything?" — benchmark under the PLAN's §7 methodology, which
+  was written exactly to isolate that difference.
 - The good news is already visible: for `entityMap`, `basePath` **is** the
   ownership position and is **already computed at every call site** —
   `entity-signal.ts:756,845,903,...` — so one of the four marker families pays
   nothing to surrender it. The cost question concentrates on the other families,
-  especially the silent three.
+  especially the silent five.
+- And §2's sharpening narrows what 0A has to build for those five: their writes
+  already reach history via the leaves, so the cost question for them is
+  **ownership only** — with the risk relocating to whether a leaf-routed write
+  can carry its owning marker's identity.
 
 ## 8. What this map does not claim
 

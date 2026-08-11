@@ -1,8 +1,12 @@
 # History: the greenfield target
 
 **Status:** goal statement, 2026-08-10. This is the _what for_, derived from the
-research rather than from any implementation. The design space that could satisfy it
-is in [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md);
+research rather than from any implementation. It owns the derivation and the
+conceptual model; it decides no execution detail. The executable plan — phases,
+gates, decisions — is [history-PLAN.md](./history-PLAN.md); the priority ranking is
+[history-priority-hierarchy.md](./history-priority-hierarchy.md). The design space
+that could satisfy it is in
+[2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md);
 the demand it answers is in
 [undo-business-and-ux-cases.md](../audits/2026-08/undo-business-and-ux-cases.md).
 

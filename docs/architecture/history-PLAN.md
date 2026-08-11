@@ -120,42 +120,13 @@ RECORDING ─ abort ─→ recording discarded, state untouched
 
 **`commit()` is gone as a name**, deliberately. It conflated _seal the recorded set_
 with _the server accepted this_. Separating them is what dissolves the
-rollback/prefix-closure collision — see the hierarchy doc.
+rollback/prefix-closure collision — the resolution is in the hierarchy doc.
 
-### The two causalities
-
-|                           | used by         | granularity                                     | why                                                               |
-| ------------------------- | --------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
-| **Historical causality**  | `undo` / `redo` | conservative, **position**-level, prefix-closed | we refuse to invent semantic independence between unrelated turns |
-| **Speculative ownership** | `rollback`      | precise, **entry**-level                        | the turn _recorded_ what it wrote; it is not guessing             |
-
-Path-granular rollback is **not an exception** to the conservative rule. It is a
-different invariant for a different operation. Someone will eventually see two
-reversal paths and try to unify them; this table is why they must not.
-
-### What rollback success means
-
-> **Eliminate the rejected turn's SURVIVING speculative contribution without
-> destroying legitimate subsequent writes.** Not "restore the pre-turn value."
-
-`A --T42--> B --T43--> C`, reject T42 → **C stays C**. T43 superseded it; the rejected
-value B is already gone, and that is successful compensation. Implementing rollback as
-"apply `before` regardless of current provenance" recreates the exact multi-writer
-corruption this architecture exists to prevent.
-
-**The limit, stated because it cannot be engineered away.** Rollback cannot resolve a
-later write whose _premise_ was the rejected one:
-
-```
-x = 10;  T42: x = 20;  T43: x = x + 5  → 25.   T42 rejected. Is the answer 15, 25, or an error?
-```
-
-`before: 20, after: 25` does not say whether T43 meant "+5 independently", was
-authoritative, or should itself be rejected. **The promise:** concurrent writes to a
-shared position do not prevent rollback; unrelated and superseding writes are
-preserved automatically; a later write that semantically **depends** on the rejected
-mutation must be **detected**, not silently corrupted — with invalidate-for-refetch as
-the generic fallback.
+**Why rollback is not frontier-constrained** — the two causalities, what successful
+compensation means, and the dependent-write limit — is the hierarchy doc's
+rollback/prefix-closure resolution, which owns that reasoning. Here it reduces to
+decisions 11 and 12 below: undo/redo dependency is conservatively position-level;
+rollback evaluates the entries the turn actually wrote.
 
 ---
 
@@ -196,13 +167,12 @@ in commit messages.
 ### Two eliminated by measurement — do not revive
 
 - **`act('label', fn)`** — callback scope is dynamic scope and dies on `await`.
-  MEASURED via `batch()`: 5 sync writes → 1 entry, 5 awaited → 2, a 12-way concurrent
-  `mergeMap` fan-out → **12 entries**.
 - **Ambient attribution** — two concurrent actions each captured the other's paths, so
   undoing a rename un-archived an unrelated row.
 
-That leaves **explicit attribution** as the only surviving mechanism, by exhaustive
-elimination rather than assertion.
+Both were falsified by measurement — the `batch()`/fan-out numbers are in the
+hierarchy's Measured section. That leaves **explicit attribution** as the only
+surviving mechanism, by exhaustive elimination rather than assertion.
 
 ---
 
@@ -363,51 +333,10 @@ structured reasons; that decision can come later.
 
 ## 8. Evidence discipline
 
-### Measured — trust these
-
-- Recording after structural sharing: 50 writes over 10k rows, 340.60 ms → sub-ms.
-- **Restore is O(state)**: `undo()` 436.67 µs at 50k, scaling 25.4 / 83.5 / 436.7 at
-  1k / 10k / 50k. `restoreState` is `this.tree(state)`; **there is no root pointer.**
-- Retention at 50 steps / 50k rows: **19.5 MB** for collection-touching writes,
-  **0.45 MB** for scalar writes beside them — 43× on write shape alone. Unchanged
-  collections are shared by reference.
-- Log **entry count is O(state)** — 1,050 / 10,050 / 50,050 — while bytes stay flat.
-  So retention must be bounded by **turns**, never entries.
-- Callback scope collapses under async; ambient attribution collapses under concurrency.
-- `form()` participation is **asymmetric**: no recording, yet restored anyway.
-- `PathNotifier` is blind to plain-leaf writes; `timeTravel()` sees them only because
-  it separately wraps leaves via `interceptLeafSignals` and injects into the notifier.
-  **Consequence:** an action built as a standalone notifier subscriber inherits that
-  blind spot; one built inside the enhancer gets leaves for free.
-- `flush()` compares by reference (`path-notifier.ts:198`) — correct within a turn,
-  insufficient across turns. Deep collapse belongs at `confirm()`/`rollback()`, **not**
-  on line 198. `prunedEqual` is the reuse: reference-first, structural on mismatch.
-  Known hole: it treats arrays as leaves, so a reconstructed **array** does not
-  collapse.
-- A real adopter declined optimistic bulk writes for want of reversal.
-
-### Strategic bet — labelled as such
-
-> Serious client applications increasingly have multiple legitimate writers: user,
-> server push, background refresh, offline sync, optimistic writes, autosave,
-> telemetry, workers, **AI agents**, collaborators. The more writers state has, the
-> less acceptable snapshot rollback becomes, because reverting an old tree destroys
-> legitimate intervening work.
-
-An agent writing into app state is a second writer with **no UI presence** — an app
-becomes multi-writer without becoming collaborative.
-
-**Falsifier:** if applications route multi-writer state through CRDT/event-sourced
-layers whose own undo and ownership systems make store-level transactional history
-unnecessary, this capability is worth less than expected.
-
-### Unaudited — no uniqueness claim is licensed
-
-The Angular set was audited by probing installed declarations: `@ngrx/signals` 21.1.1,
-elf 2.5.1 / elf-state-history 1.4.0, `@ngxs/store` 20.1.0 — **none ships scoped
-history**. **MobX-State-Tree's patch/UndoManager and Yjs's `UndoManager`
-(`trackedOrigins`) are the real prior art and have NOT been audited.** Required before
-a public claim; not required before building.
+The measured / strategic-bet / unaudited classification — and the competitive-claim
+limit — is owned by the hierarchy doc, which justifies the ranking with it. The PLAN
+keeps a measurement value here only when a phase or gate needs the number (the four
+benchmark arms in §7; the 12-way fan-out that falsified `act(label, fn)`, §4).
 
 ---
 
@@ -492,7 +421,6 @@ Carried forward because each was paid for.
 7. **Say which hierarchy rank a change protects**, in the commit message. A reviewer can
    then ask "you are weakening attribution isolation — which higher rank does that
    buy?" If the answer is "cleaner API," rank 6 loses.
-8. **Do not resolve on paper what can be measured.** Every reasoned conclusion in this
-   design that ran ahead of execution was wrong: `act(label, fn)`, ambient attribution,
-   "collections do not record", "every doc sample is off by one", "the cost argument
-   holds independently", "one parameter at the Ops boundary". Six for six.
+8. **Do not resolve on paper what can be measured.** The six falsified conclusions are
+   listed in the hierarchy's use rules; read them before defending a reasoned argument
+   over an experiment.

@@ -166,7 +166,7 @@ six capabilities no competitor has.
 ## 2. Position-attributed transactional history — SEE THE PLAN
 
 **The representation decision is MADE.** The plan of record is
-[PLAN-position-attributed-history.md](docs/architecture/PLAN-position-attributed-history.md)
+[history-PLAN.md](docs/architecture/history-PLAN.md)
 on branch `feat/position-attributed-history`, targeting **16.0.0**. It supersedes the
 phase ordering below and carries 22 settled decisions, invariants A–I with required
 mutation proofs, and a falsification gate per phase.

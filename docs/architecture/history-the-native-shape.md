@@ -1,6 +1,15 @@
 # History, in SignalTree's own shape
 
-**Status:** architecture note, 2026-08-10. Written in answer to one question:
+> **SUPERSEDED — it reads as current, and it is not.** This note argued for the
+> path-diff log as _the_ answer. Its central premise was measured wrong: `notify()`
+> does **not** fire at every write site (plain leaf writes reach it only via
+> `interceptLeafSignals`, `status()` never notifies, and a whole `form()` is a single
+> path, so a path log has no in-form field granularity). The plan of record is
+> [history-PLAN.md](./history-PLAN.md); the options analysis is
+> [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md).
+> Read this page for the reasoning behind one of the six options, not as the design.
+
+**Status:** superseded architecture note, 2026-08-10. Written in answer to one question:
 _why are we coding to make SignalTree look like other libraries when it isn't
 them?_ The answer is that we are, the audit that preceded this inherited their
 vocabulary, and most of its "gaps" are artefacts of the borrowed shape rather

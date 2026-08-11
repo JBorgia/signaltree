@@ -1,9 +1,11 @@
 # History: the hierarchy of importance
 
-**Status:** priority statement, 2026-08-11. Companion to
-[history-the-greenfield-target.md](./history-the-greenfield-target.md) (what we are
-building) and [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md)
-(the options considered).
+**Status:** decision card, 2026-08-11. Owns the ranking, the conflict-resolution
+rules, and the measured / strategic-bet / unaudited evidence that justifies them.
+The executable plan — phases, gates, benchmarks — is
+[history-PLAN.md](./history-PLAN.md); the goal and its derivation are
+[history-the-greenfield-target.md](./history-the-greenfield-target.md); the options
+considered are [2026-08-history-greenfield-spike.md](../research/2026-08-history-greenfield-spike.md).
 
 This document exists because the design conversation collapsed back to _"which undo
 stack should SignalTree use?"_ three separate times. That is the wrong question, and
@@ -12,56 +14,12 @@ higher rank wins and the lower rank absorbs the cost.**
 
 ---
 
-## The primary objective
+## The objective — owned elsewhere
 
-> **Make multi-position optimistic operations safely reversible without
-> caller-authored compensation. User undo/redo is a second consumer of the same
-> mechanism.**
-
-Not "better undo." The thing developers cannot do today is update several parts of
-state immediately and reverse exactly that operation if the server rejects it. So
-they don't: they wait.
-
-**This is observed, not assumed.** v3's `bulkPatch$` deliberately performs **no
-optimistic pre-write** — each record's slice changes only when its own PATCH
-succeeds, so the user watches a progress bar through N round trips. That choice was
-made because there was no way to reverse a wrong bulk apply. A real adopter avoiding
-optimistic behaviour in exactly the place the design targets, for exactly the stated
-reason.
-
-The pattern to replace:
-
-```ts
-const oldDrivers = ...; const oldTrucks = ...;
-const oldSelection = ...; const oldStatus = ...;
-try {
-  optimisticUpdateEverything();
-  await save();
-} catch {
-  restoreDrivers(oldDrivers); restoreTrucks(oldTrucks);
-  restoreSelection(oldSelection); restoreStatus(oldStatus);
-}
-```
-
-The pattern to enable:
-
-```ts
-const tx = tree.transaction();
-updateDrivers();
-updateTrucks();
-clearSelection();
-setSaving();
-const turn = tx.commit();
-try {
-  await save();
-} catch {
-  turn.rollback();
-}
-```
-
-And `rollback()` must mean _reverse the positions attributed to this action, while
-preserving legitimate writes from the server, another user, background sync,
-telemetry, or an agent_ — **not** "restore an old snapshot."
+The objective and its derivation — bulk-safe optimistic operations, the business
+drivers, the nine UX cases — are [history-PLAN.md](./history-PLAN.md) §1 and
+[history-the-greenfield-target.md](./history-the-greenfield-target.md). This page only
+ranks the capabilities that objective demands.
 
 ---
 
@@ -284,8 +242,13 @@ Keeping these apart is the difference between an architecture and a hope.
 - `form()` participation is asymmetric.
 - `PathNotifier` is blind to plain-leaf writes — `timeTravel()` sees them only because
   it separately wraps leaves via `interceptLeafSignals` and injects into the notifier.
+  **Consequence:** an action built as a standalone notifier subscriber inherits that
+  blind spot; one built inside the enhancer gets leaves for free.
 - `flush()` compares by reference (`path-notifier.ts:198`), which is correct within a
-  turn and insufficient across turns.
+  turn and insufficient across turns. Deep collapse belongs at
+  `confirm()`/`rollback()`, **not** on line 198. `prunedEqual` is the reuse:
+  reference-first, structural on mismatch. Known hole: it treats arrays as leaves, so
+  a reconstructed **array** does not collapse.
 - A real adopter deliberately declined optimistic bulk writes for want of reversal.
 
 ### Bet
@@ -311,61 +274,13 @@ before a public claim, not before building.
 
 ---
 
-## What Phase 0 must falsify — two parallel experiments
+## Why Phase 0 is early — the rank-2 falsifier
 
-Optimistic rollback cannot remain the last phase. It is rank 2; if it is the strategic
-centre it must be falsified first, not after prefix-closure and cross-position turns are
-already built on top of decisions it might contradict.
-
-### 0A — ownership attribution
-
-> Can a stable ownership position be obtained at write time for plain leaves,
-> `entityMap`, `form()`, `status()` and `stored()`, with **no measurable cost when
-> history is not installed**?
-
-The codebase already indicates where the answer lives: `entityMap` notifies
-`${basePath}.${id}`, so `basePath` **is** the ownership position — already computed,
-already free. If the other four markers can surrender their own path as cheaply, 0A
-passes. If they cannot, that asymmetry is the finding.
-
-### 0B — rollback viability prototype
-
-Safe optimistic rollback is rank 2 — the strategic centre, so the semantics must be
-falsified here, not after prefix-closure and cross-position turns are built on top of
-them. 0B proves the semantics are viable; Phase 6 of the PLAN productizes them. The
-smallest disposable prototype covering, by outcome:
-
-1. T42 writes position A → rollback succeeds.
-2. T42 writes `A.x`, T43 writes `A.y` → rollback preserves T43.
-3. T42 writes `A.x`, T43 **overwrites** `A.x` → rollback preserves T43 (supersession).
-4. T42 mutates a collection structurally, a concurrent mutation occurs → anchors either
-   compensate correctly **or detect that they cannot**.
-5. T42 and T43 pending simultaneously (attribution isolation) → neither captures nor
-   rolls back the other's writes.
-6. A rejected entity creation followed by writes beneath that entity → the dependency is
-   detected, not silently corrupted.
-
-Case 4 is the one that must not be skipped. Value snapshots are insufficient for
-`remove row B at index 1` followed by a concurrent reorder, so **collection anchors move
-out of the last phase and into this spike** — one representative structural mutation is
-enough, but scalar-only would prove nothing about the primary use case.
-
-Expect an asymmetry, and treat it as a result rather than a bug: a scalar has a
-supersession answer (compare the current value against the entry's `after`), while a
-structurally reordered collection may only have _compensate_ or _cannot — reconcile_.
-
-### An open question 0B should answer while it is there
-
-Deciding "does this speculative write still own the currently visible value?" has two
-implementations with different costs:
-
-|                                              | cost                        | hole                                                                                                                           |
-| -------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| compare current value to the entry's `after` | free, no hot-path machinery | **ABA** — if a later turn wrote a different value and a third wrote the original back, T42 looks like the owner when it is not |
-| carry a write stamp / generation per path    | closes ABA                  | pays on the write path, which rank 1's zero-when-unused requirement constrains                                                 |
-
-Measure both rather than choosing. And note the ABA hole is narrow but real: restoring
-`before` in that case clobbers a value a later writer deliberately set.
+Because optimistic rollback is rank 2, rollback viability must be falsified **before**
+prefix-closure and cross-position turns are built on top of decisions it might
+contradict. The experiments — 0A ownership attribution, 0B rollback viability — their
+kill gates, benchmark arms and the six rollback cases are all specified in
+[history-PLAN.md](./history-PLAN.md) §5. This page records only why they come first.
 
 ## How to use this document
 
