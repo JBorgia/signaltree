@@ -2606,6 +2606,94 @@ describe('time-travel enhancer', () => {
     expect(store.canRedo()).toBe(true);
   });
 
+  it('preserves confirmed frontiers and turn status across repeated temporal jumpTo excursions', async () => {
+    const store = signalTree({
+      drivers: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    store.$.drivers.addOne({ id: 7, status: 'idle' });
+    store.$.orders.addOne({ id: 99, status: 'new' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+
+    store.$.drivers.byIdOrFail(7).status.set('assigned');
+    await Promise.resolve();
+    await Promise.resolve();
+    const firstTurn = t.getTurns().at(-1) as {
+      id: number;
+      historyIndex: number;
+      __positionIds?: number[];
+    };
+
+    store.$.orders.byIdOrFail(99).status.set('queued');
+    await Promise.resolve();
+    await Promise.resolve();
+    const secondTurn = t.getTurns().at(-1) as {
+      id: number;
+      historyIndex: number;
+      __positionIds?: number[];
+    };
+
+    const driverPositionId = firstTurn.__positionIds?.[0] as number;
+
+    t.undoPosition(driverPositionId);
+
+    const baselineFrontier = t.getFrontier(driverPositionId);
+    const baselineFirstStatus = t.getTurnStatus(firstTurn.id);
+    const baselineSecondStatus = t.getTurnStatus(secondTurn.id);
+    const baselineCanUndo = store.canUndo();
+    const baselineCanRedo = store.canRedo();
+
+    expect(baselineFrontier).toBe(0);
+    expect(baselineFirstStatus).toBe('unapplied');
+    expect(baselineSecondStatus).toBe('applied');
+    expect(baselineCanUndo).toBe(true);
+    expect(baselineCanRedo).toBe(true);
+
+    store.jumpTo(firstTurn.historyIndex);
+    expect(store.$.drivers.byIdOrFail(7).status()).toBe('assigned');
+    expect(store.$.orders.byIdOrFail(99).status()).toBe('new');
+    expect(t.getFrontier(driverPositionId)).toBe(baselineFrontier);
+    expect(t.getTurnStatus(firstTurn.id)).toBe(baselineFirstStatus);
+    expect(t.getTurnStatus(secondTurn.id)).toBe(baselineSecondStatus);
+    expect(store.canUndo()).toBe(baselineCanUndo);
+    expect(store.canRedo()).toBe(baselineCanRedo);
+
+    store.jumpTo(secondTurn.historyIndex);
+    expect(store.$.drivers.byIdOrFail(7).status()).toBe('assigned');
+    expect(store.$.orders.byIdOrFail(99).status()).toBe('queued');
+    expect(t.getFrontier(driverPositionId)).toBe(baselineFrontier);
+    expect(t.getTurnStatus(firstTurn.id)).toBe(baselineFirstStatus);
+    expect(t.getTurnStatus(secondTurn.id)).toBe(baselineSecondStatus);
+    expect(store.canUndo()).toBe(baselineCanUndo);
+    expect(store.canRedo()).toBe(baselineCanRedo);
+
+    store.jumpTo(firstTurn.historyIndex);
+    expect(store.$.drivers.byIdOrFail(7).status()).toBe('assigned');
+    expect(store.$.orders.byIdOrFail(99).status()).toBe('new');
+    expect(t.getFrontier(driverPositionId)).toBe(baselineFrontier);
+    expect(t.getTurnStatus(firstTurn.id)).toBe(baselineFirstStatus);
+    expect(t.getTurnStatus(secondTurn.id)).toBe(baselineSecondStatus);
+    expect(store.canUndo()).toBe(baselineCanUndo);
+    expect(store.canRedo()).toBe(baselineCanRedo);
+
+    store.redo();
+
+    expect(store.$.drivers.byIdOrFail(7).status()).toBe('assigned');
+    expect(store.$.orders.byIdOrFail(99).status()).toBe('queued');
+    expect(t.getFrontier(driverPositionId)).toBe(1);
+    expect(t.getTurnStatus(firstTurn.id)).toBe('applied');
+    expect(t.getTurnStatus(secondTurn.id)).toBe('applied');
+  });
+
   it('clears public redo availability when a new confirmed write truncates the abandoned future in a mixed frontier state', async () => {
     const store = signalTree({
       drivers: entityMap<{ id: number; status: string }, number>({

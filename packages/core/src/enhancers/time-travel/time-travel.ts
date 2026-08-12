@@ -230,6 +230,7 @@ class TimeTravelManager<T> {
   private readonly indexSignal = signal(-1);
   private readonly historyVersion = signal(0);
   private readonly frontierVersion = signal(0);
+  private isTemporalViewActive = false;
 
   private get currentIndex(): number {
     return this.indexSignal();
@@ -308,8 +309,7 @@ class TimeTravelManager<T> {
       this.truncateScopedRedoFuture();
     }
 
-    // If we're not at the end of history, remove everything after current position
-    if (this.currentIndex < this.history.length - 1) {
+    if (this.isTemporalViewActive && this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
       this.bumpHistory();
     }
@@ -463,6 +463,7 @@ class TimeTravelManager<T> {
     this.history.push(entry);
     this.bumpHistory();
     this.currentIndex = this.history.length - 1;
+    this.isTemporalViewActive = false;
 
     // Enforce max history size
     if (this.history.length > this.maxHistorySize) {
@@ -698,6 +699,40 @@ class TimeTravelManager<T> {
     });
   }
 
+  private restoreVisibleStateToConfirmed(): void {
+    if (!this.isTemporalViewActive) {
+      return;
+    }
+
+    const temporalIndex = this.currentIndex;
+    const turnIdsToUndo: number[] = [];
+    const turnIdsToRedo: number[] = [];
+
+    for (const turn of this.history) {
+      if (!turn.__effects || turn.__effects.length === 0) {
+        continue;
+      }
+
+      const temporalApplied = turn.historyIndex <= temporalIndex;
+      const confirmedApplied = this.getTurnStatus(turn.id) === 'applied';
+
+      if (temporalApplied && !confirmedApplied) {
+        turnIdsToUndo.unshift(turn.id);
+      } else if (!temporalApplied && confirmedApplied) {
+        turnIdsToRedo.push(turn.id);
+      }
+    }
+
+    if (turnIdsToUndo.length > 0) {
+      this.applyTurnEffects(turnIdsToUndo, 'undo');
+    }
+    if (turnIdsToRedo.length > 0) {
+      this.applyTurnEffects(turnIdsToRedo, 'redo');
+    }
+
+    this.isTemporalViewActive = false;
+  }
+
   undoPosition(positionId: number): number[] {
     const closure = this.resolveUndoClosure(positionId);
     if (closure.length === 0) {
@@ -835,17 +870,13 @@ class TimeTravelManager<T> {
     return earliestTurn;
   }
 
-  private syncCurrentIndexToAppliedTurns(): void {
-    const latestTurn = this.getLatestAppliedTurn();
-    this.currentIndex = latestTurn?.historyIndex ?? (this.history.length > 0 ? 0 : -1);
-  }
-
   private undoBySnapshot(): boolean {
     const undoneEntry = this.history[this.currentIndex] as TimeTravelEntry<T> & {
       __subjectIds?: number[];
       __positionIds?: number[];
     };
     this.currentIndex = this.skipsBackward(this.currentIndex);
+    this.isTemporalViewActive = true;
     const entry = this.history[this.currentIndex];
     this.restoreState(entry.state, undoneEntry.__subjectIds, undoneEntry.__positionIds);
     return true;
@@ -856,12 +887,13 @@ class TimeTravelManager<T> {
       return false;
     }
 
+    this.restoreVisibleStateToConfirmed();
+
     const latestTurn = this.getLatestAppliedTurn();
     const seedPositionId = latestTurn?.__positionIds?.[0];
 
     if (latestTurn && seedPositionId !== undefined) {
       this.undoPosition(seedPositionId);
-      this.syncCurrentIndexToAppliedTurns();
       return true;
     }
 
@@ -941,6 +973,7 @@ class TimeTravelManager<T> {
     }
 
     this.currentIndex = this.skipsForward(this.currentIndex);
+    this.isTemporalViewActive = true;
     const entry = this.history[this.currentIndex] as TimeTravelEntry<T> & {
       __subjectIds?: number[];
       __positionIds?: number[];
@@ -954,12 +987,13 @@ class TimeTravelManager<T> {
       return false;
     }
 
+    this.restoreVisibleStateToConfirmed();
+
     const earliestTurn = this.getEarliestUnappliedTurn();
     const seedPositionId = earliestTurn?.__positionIds?.[0];
 
     if (earliestTurn && seedPositionId !== undefined) {
       this.redoPosition(seedPositionId);
-      this.syncCurrentIndexToAppliedTurns();
       return true;
     }
 
@@ -988,6 +1022,7 @@ class TimeTravelManager<T> {
     this.positionTurnIds.clear();
     this.positionFrontiers.clear();
     this.nextTurnId = 1;
+    this.isTemporalViewActive = false;
     this.bumpHistory();
     this.currentIndex = -1;
     this.addEntry('RESET');
@@ -1000,6 +1035,7 @@ class TimeTravelManager<T> {
     }
 
     this.currentIndex = index;
+    this.isTemporalViewActive = true;
     const entry = this.history[index] as TimeTravelEntry<T> & {
       __subjectIds?: number[];
       __positionIds?: number[];
@@ -1142,6 +1178,18 @@ class TimeTravelManager<T> {
   }
 
   private rebuildTurnIndexes(): void {
+    const appliedTurnIds = new Set<number>();
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      const frontier = this.getFrontier(positionId);
+      for (let i = 0; i < frontier; i++) {
+        const turnId = turnIds[i];
+        if (turnId !== undefined) {
+          appliedTurnIds.add(turnId);
+        }
+      }
+    }
+    const previousTurnIds = new Set(this.turns.keys());
+
     this.turns.clear();
     this.positionTurnIds.clear();
     this.positionFrontiers.clear();
@@ -1160,16 +1208,21 @@ class TimeTravelManager<T> {
       }
     });
 
-    this.syncFrontiersToCurrentIndex();
+    this.restoreFrontiersFromAppliedTurns(appliedTurnIds, previousTurnIds);
     this.bumpFrontiers();
   }
 
-  private syncFrontiersToCurrentIndex(): void {
+  private restoreFrontiersFromAppliedTurns(
+    appliedTurnIds: Set<number>,
+    previousTurnIds: Set<number>
+  ): void {
     for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
       let frontier = 0;
       while (frontier < turnIds.length) {
-        const turn = this.turns.get(turnIds[frontier]);
-        if (!turn || turn.historyIndex > this.currentIndex) {
+        const turnId = turnIds[frontier];
+        const wasApplied = appliedTurnIds.has(turnId);
+        const isNewTurn = !previousTurnIds.has(turnId);
+        if (!wasApplied && !isNewTurn) {
           break;
         }
         frontier++;

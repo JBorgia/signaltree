@@ -1085,6 +1085,41 @@ transactions + pending rollback migrate
 -> the same Turn/Effect substrate owns confirmed and speculative causality
 ```
 
+### Gate 1 complete
+
+Confirmed causal history is now turn/frontier-based; snapshot history is
+temporal-only. Normal SignalTree writes remain the mutation API.
+
+The final dependency audit answers the boundary questions this way:
+
+```text
+confirmed history
+-> can operate without currentIndex authority
+
+temporal travel
+-> can operate without frontier authority
+
+temporal snapshots
+-> may reconstruct visible state
+-> are not authoritative for semantic identity or causal reconstruction
+```
+
+The new `isTemporalViewActive` flag is acceptable because it answers only one
+question:
+
+```text
+do the live values currently represent a temporal snapshot view?
+```
+
+It must not answer:
+
+```text
+what turn is applied?
+what can undo?
+what can redo?
+what causal future exists?
+```
+
 ### Gate 2 success criteria, tightened
 
 Gate 2 should now be defined as deletion of form-owned causal history, not just
