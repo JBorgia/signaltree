@@ -23,6 +23,7 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { deepClone, snapshotsEqual } from '@signaltree/shared';
+import { createScopedHistoryAuthority } from '../../enhancers/time-travel/time-travel';
 
 import type {
   FormHistoryApi,
@@ -76,6 +77,12 @@ export function history<T extends Record<string, unknown>>(
     attach(ctx) {
       let sharedAuthority: FormHistorySharedAuthority | undefined;
       const sharedMode = signal(false);
+      const standaloneAuthority = createScopedHistoryAuthority<T>({
+        read: () => project(ctx.read()),
+        write: ctx.write,
+        maxHistoryEntries: capacity + 1,
+        ownerPath: '__formHistory',
+      });
 
       const snap = signal<FormHistorySnapshot<T>>({
         past: [],
@@ -90,6 +97,7 @@ export function history<T extends Record<string, unknown>>(
         if (sharedMode()) {
           return;
         }
+        standaloneAuthority.record(next);
         const past = [...current.past, current.present];
         if (past.length > capacity) past.shift();
         snap.set({ past, present: next, future: [] });
@@ -114,15 +122,16 @@ export function history<T extends Record<string, unknown>>(
             if (!sharedAuthority.undo()) return;
             return;
           }
+          if (!standaloneAuthority.undo()) {
+            return;
+          }
+          const prev = project(ctx.read());
           const s = snap();
-          if (s.past.length === 0) return;
-          const prev = s.past[s.past.length - 1];
           snap.set({
             past: s.past.slice(0, -1),
             present: prev,
             future: [s.present, ...s.future],
           });
-          restore(prev);
         },
         redo(): void {
           if (sharedAuthority) {
@@ -130,27 +139,31 @@ export function history<T extends Record<string, unknown>>(
             return;
           }
           const s = snap();
-          if (s.future.length === 0) return;
-          const next = s.future[0];
+          if (!standaloneAuthority.redo() || s.future.length === 0) return;
+          const next = project(ctx.read());
           snap.set({
             past: [...s.past, s.present],
             present: next,
             future: s.future.slice(1),
           });
-          restore(next);
         },
         clearHistory(): void {
           if (sharedMode()) {
             return;
           }
-          const s = snap();
-          snap.set({ past: [], present: s.present, future: [] });
+          const next = project(ctx.read());
+          standaloneAuthority.reset(next);
+          snap.set({ past: [], present: next, future: [] });
         },
         canUndo: computed(() =>
-          sharedMode() ? sharedAuthority?.canUndo() === true : snap().past.length > 0
+          sharedMode()
+            ? sharedAuthority?.canUndo() === true
+            : standaloneAuthority.canUndo()
         ),
         canRedo: computed(() =>
-          sharedMode() ? sharedAuthority?.canRedo() === true : snap().future.length > 0
+          sharedMode()
+            ? sharedAuthority?.canRedo() === true
+            : standaloneAuthority.canRedo()
         ),
         history: historyView,
       };

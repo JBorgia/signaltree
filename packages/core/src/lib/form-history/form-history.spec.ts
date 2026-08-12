@@ -22,6 +22,15 @@ function makeTree(opts?: { capacity?: number; exclude?: (keyof Profile)[] }) {
 
 const flush = () => Promise.resolve().then(() => Promise.resolve());
 
+function makeTimedTree() {
+  return signalTree({
+    profile: form<Profile>({
+      initial: { name: '', password: '' },
+      history: history<Profile>(),
+    }),
+  }).with(timeTravel());
+}
+
 describe('form history()', () => {
   it('exposes an undo/redo api on the marker', () => {
     const tree = makeTree();
@@ -49,12 +58,7 @@ describe('form history()', () => {
   });
 
   it('uses the same form-facing undo/redo api under timeTravel for form-only history', async () => {
-    const tree = signalTree({
-      profile: form<Profile>({
-        initial: { name: '', password: '' },
-        history: history<Profile>(),
-      }),
-    }).with(timeTravel());
+    const tree = makeTimedTree();
     const p = tree.$.profile;
 
     p.patch({ name: 'Ada' });
@@ -67,6 +71,26 @@ describe('form history()', () => {
 
     p.history?.redo();
     expect(p().name).toBe('Grace');
+  });
+
+  it('preserves undo/redo ergonomics with and without timeTravel', async () => {
+    const localTree = makeTree();
+    const timedTree = makeTimedTree();
+
+    for (const tree of [localTree, timedTree]) {
+      const p = tree.$.profile;
+      p.patch({ name: 'Ada' });
+      await flush();
+      p.patch({ name: 'Grace' });
+      await flush();
+
+      expect(p.history?.canUndo()).toBe(true);
+      p.history?.undo();
+      expect(p().name).toBe('Ada');
+      expect(p.history?.canRedo()).toBe(true);
+      p.history?.redo();
+      expect(p().name).toBe('Grace');
+    }
   });
 
   it('routes form.undo() through shared scoped causality instead of private chronology', async () => {

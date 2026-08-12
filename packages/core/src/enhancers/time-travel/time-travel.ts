@@ -1094,7 +1094,6 @@ class TimeTravelManager<T> {
     }
     return false;
   }
-
   private canUndoBySnapshot(): boolean {
     return this.currentIndex > 0;
   }
@@ -1289,6 +1288,108 @@ class TimeTravelManager<T> {
     this.bumpHistory();
     this.rebuildTurnIndexes();
   }
+}
+
+export interface ScopedHistoryAuthority<T> {
+  record(next: T): void;
+  reset(next: T): void;
+  undo(): boolean;
+  redo(): boolean;
+  canUndo(): boolean;
+  canRedo(): boolean;
+}
+
+export function createScopedHistoryAuthority<T extends Record<string, unknown>>(
+  options: {
+    read: () => T;
+    write: (next: Partial<T>) => void;
+    maxHistoryEntries?: number;
+    ownerPath?: string;
+    positionId?: number;
+  }
+): ScopedHistoryAuthority<T> {
+  const ownerPath = options.ownerPath ?? '__history';
+  const positionId = options.positionId ?? 1;
+  const snapshot = signal(options.read());
+  const historyTree = { $: snapshot.asReadonly() } as unknown as ISignalTree<T>;
+  const manager = new TimeTravelManager(
+    historyTree,
+    {
+      maxHistorySize: Math.max(2, options.maxHistoryEntries ?? 2),
+      includePayload: false,
+    },
+    undefined,
+    (effects, direction) => {
+      for (const effect of effects) {
+        if (effect.kind !== 'set') {
+          throw new Error(`Unsupported scoped form effect at ${effect.path}`);
+        }
+        const nextValue =
+          direction === 'undo' ? effect.before : effect.after;
+        options.write(nextValue as Partial<T>);
+      }
+      snapshot.set(options.read());
+    }
+  );
+
+  let lastRecorded = options.read();
+
+  return {
+    record(next: T): void {
+      if (deepEqual(lastRecorded, next)) {
+        snapshot.set(next);
+        return;
+      }
+
+      manager.addEntry(
+        'SET',
+        undefined,
+        [ownerPath],
+        undefined,
+        [positionId],
+        [
+          {
+            kind: 'set',
+            path: `${ownerPath}.values`,
+            ownerPath,
+            position: positionId,
+            before: lastRecorded,
+            after: next,
+          },
+        ]
+      );
+      lastRecorded = next;
+      snapshot.set(next);
+    },
+    reset(next: T): void {
+      manager.resetHistory();
+      snapshot.set(next);
+      lastRecorded = next;
+      manager.addEntry('INIT');
+    },
+    undo(): boolean {
+      const changed = manager.undoScoped(positionId);
+      if (changed) {
+        lastRecorded = options.read();
+        snapshot.set(lastRecorded);
+      }
+      return changed;
+    },
+    redo(): boolean {
+      const changed = manager.redoScoped(positionId);
+      if (changed) {
+        lastRecorded = options.read();
+        snapshot.set(lastRecorded);
+      }
+      return changed;
+    },
+    canUndo(): boolean {
+      return manager.canUndoPosition(positionId);
+    },
+    canRedo(): boolean {
+      return manager.canRedoPosition(positionId);
+    },
+  };
 }
 
 /**

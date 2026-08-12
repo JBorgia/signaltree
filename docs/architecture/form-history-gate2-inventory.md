@@ -4,7 +4,7 @@ Gate 2 starts from deletion inventory, not new abstraction.
 
 ## Current ownership split
 
-### Causal history currently owned by form history
+### Legacy private history shape still exposed for compatibility
 
 Source: packages/core/src/lib/form-history/form-history.ts
 
@@ -12,26 +12,36 @@ Source: packages/core/src/lib/form-history/form-history.ts
 snap.past[]
 snap.present
 snap.future[]
-undo()
-redo()
-clearHistory()
-record()
-restore()
 capacity trimming
 exclude-field projection
 ```
 
-This is a private causal stack attached to the form values signal. It decides:
+This no longer owns causal reversal. In standalone mode it is a compatibility
+inspection shape mirrored around the shared causal authority; in shared mode it
+projects:
 
 ```text
-what can undo
-what can redo
-what the previous form state was
-what the next form state was
-how causal future is truncated
+past = []
+present = current projected form state
+future = []
 ```
 
-That is the substrate Gate 2 should delete.
+The remaining question is the fate of that inspection surface, not whether forms
+have their own causal engine.
+
+### Causal history currently owned by the shared scoped authority
+
+Source: packages/core/src/enhancers/time-travel/time-travel.ts
+
+```text
+turns
+frontiers
+position-scoped undo/redo selection
+canUndo / canRedo predicates
+effect replay
+```
+
+This same core now drives form history both with and without `timeTravel()`.
 
 ### Form semantics currently owned by the form marker
 
@@ -183,7 +193,7 @@ Do not broaden `touched` into "all marker metadata is causal" from one replay
 hook. The current evidence only supports restoring touched state that was already
 part of the form state the user had reached.
 
-## Gate 2 status after shared-authority cut
+## Gate 2 status after convergence
 
 ```text
 Stable form PositionId                    GREEN
@@ -193,11 +203,12 @@ Cross-position indivisibility             GREEN
 form.undo/redo shared authority           GREEN
 form.canUndo/canRedo shared authority     GREEN
 private stack causal authority            REMOVED
+standalone/shared dual implementation     REMOVED
 
 future mirror                             DELETED
 past mirror                               DELETED
 present mirror                            DELETED
-grouping preservation                     NEEDS CHARACTERIZATION
+grouping preservation                     CHARACTERIZED
 ```
 
 ## Grouping characterization
