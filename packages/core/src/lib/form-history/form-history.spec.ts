@@ -151,6 +151,35 @@ describe('form history()', () => {
     expect(p.history?.canRedo()).toBe(true);
   });
 
+  it('reconstructs form values and existing touched state from shared causality after an unrelated turn intervenes', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string; email: string }>({
+        initial: { name: '', email: '' },
+        history: history<{ name: string; email: string }>(),
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.patch({ name: 'Ada' });
+    p.touch('name');
+    await flush();
+
+    tree.$.orders.addOne({ id: 7, status: 'new' });
+    await flush();
+
+    p.patch({ name: 'Grace' });
+    await flush();
+
+    p.history?.undo();
+
+    expect(p()).toEqual({ name: 'Ada', email: '' });
+    expect(p.touched()).toEqual({ name: true, email: false });
+    expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
+  });
+
   it('collapses no-op writes (equal snapshots record nothing)', () => {
     const tree = makeTree();
     const p = tree.$.profile;

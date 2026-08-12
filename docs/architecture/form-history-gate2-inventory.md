@@ -140,3 +140,57 @@ private undo/redo selection
 private future truncation rules
 private reversal authority
 ```
+
+## Provisional state classification
+
+Current behavior proves the following split more narrowly than the old private
+stack suggested:
+
+```text
+values
+-> CAUSAL
+-> shared scoped undo/redo must reverse them
+
+touched
+-> SELECTIVELY CAUSAL form semantic
+-> previously-established touched state is restored on form undo
+-> later touched mutations are not yet characterized as standalone shared effects
+
+dirty
+-> DERIVED
+-> computed from current values vs initial
+
+valid / errors / errorList
+-> DERIVED
+-> recomputed from live values + validators
+
+submitting
+-> EPHEMERAL
+-> never rewound by undo/redo
+
+history grouping
+-> FORM POLICY
+-> if a logical form action must stay one undo step, preserve it at turn
+	boundaries, not by reviving form-owned chronology
+```
+
+Do not broaden `touched` into "all marker metadata is causal" from one replay
+hook. The current evidence only supports restoring touched state that was already
+part of the form state the user had reached.
+
+## Gate 2 status after shared-authority cut
+
+```text
+Stable form PositionId                    GREEN
+Form writes in canonical turns            GREEN
+Form-scoped selection                     GREEN
+Cross-position indivisibility             GREEN
+form.undo/redo shared authority           GREEN
+form.canUndo/canRedo shared authority     GREEN
+private stack causal authority            REMOVED
+
+future mirror                             DELETED
+past mirror                               DELETED
+present mirror                            AFTER
+grouping preservation                     NEEDS CHARACTERIZATION
+```

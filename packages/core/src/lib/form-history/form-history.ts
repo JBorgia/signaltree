@@ -86,6 +86,10 @@ export function history<T extends Record<string, unknown>>(
         const next = project(ctx.read());
         const current = snap();
         if (snapshotsEqual(current.present, next)) return;
+        if (sharedAuthority) {
+          snap.set({ past: [], present: next, future: [] });
+          return;
+        }
         const past = [...current.past, current.present];
         if (past.length > capacity) past.shift();
         snap.set({ past, present: next, future: [] });
@@ -99,25 +103,19 @@ export function history<T extends Record<string, unknown>>(
       };
 
       const mirrorSharedUndo = (): void => {
-        const current = snap();
-        const before = current.present;
         const after = project(ctx.read());
         snap.set({
-          past: current.past.slice(0, -1),
+          past: [],
           present: after,
-          future: [before, ...current.future],
+          future: [],
         });
       };
 
       const mirrorSharedRedo = (): void => {
-        const current = snap();
-        const before = current.present;
-        const past = [...current.past, before];
-        if (past.length > capacity) past.shift();
         snap.set({
-          past,
+          past: [],
           present: project(ctx.read()),
-          future: current.future.slice(1),
+          future: [],
         });
       };
 
