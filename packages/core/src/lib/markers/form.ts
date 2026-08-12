@@ -427,10 +427,12 @@ export function isFormMarker(
 export function createFormSignal<T extends Record<string, unknown>>(
   marker: FormMarker<T>,
   notifier?: PathNotifier,
-  path?: string
+  path?: string,
+  context?: { allocatePositionId: () => number }
 ): FormSignal<T> {
   const config = marker.config;
   const initial = config.initial;
+  const positionIds = context ? [context.allocatePositionId()] : undefined;
 
   // ==================
   // CORE STATE
@@ -858,6 +860,30 @@ export function createFormSignal<T extends Record<string, unknown>>(
     value: valuesSignal,
     enumerable: false,
   });
+
+  Object.defineProperty(formSignalFn, '__setTouchedSnapshot', {
+    value: (nextTouched: Record<keyof T, boolean>) => {
+      touchedSignal.set({ ...nextTouched });
+    },
+    enumerable: false,
+    configurable: true,
+  });
+
+  if (positionIds) {
+    Object.defineProperty(formSignalFn, '__positionIds', {
+      get: () => [...positionIds],
+      enumerable: false,
+      configurable: true,
+    });
+  }
+
+  if (path) {
+    Object.defineProperty(formSignalFn, '__ownerPath', {
+      value: path,
+      enumerable: false,
+      configurable: true,
+    });
+  }
 
   // v10.4 — .data() alias. Identical to calling the marker itself.
   // Absorbs the form-vocab hallucination ("how do I read form values?

@@ -2175,6 +2175,132 @@ describe('time-travel enhancer', () => {
     expect(t.getFrontier(positionId)).toBe(0);
   });
 
+  it('captures form field writes under one stable form PositionId across canonical turns', async () => {
+    const store = signalTree({
+      profile: form({ initial: { name: '', email: '' } }),
+      theme: 'light',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+
+    store.$.profile.$.name.set('Ada');
+    await Promise.resolve();
+    await Promise.resolve();
+    const firstTurn = t.getTurns().at(-1) as {
+      id: number;
+      __positionIds?: number[];
+      __ownerPaths?: string[];
+    };
+
+    store.$.theme.set('dark');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    store.$.profile.$.name.set('Grace');
+    await Promise.resolve();
+    await Promise.resolve();
+    const thirdTurn = t.getTurns().at(-1) as {
+      id: number;
+      __positionIds?: number[];
+      __ownerPaths?: string[];
+    };
+
+    const formPositionId = (store.$.profile as any).__positionIds?.[0] as number;
+
+    expect(formPositionId).toBeDefined();
+    expect(firstTurn.__positionIds).toEqual([formPositionId]);
+    expect(firstTurn.__ownerPaths).toEqual(['profile']);
+    expect(thirdTurn.__positionIds).toEqual([formPositionId]);
+    expect(thirdTurn.__ownerPaths).toEqual(['profile']);
+    expect(t.getTurnIdsForPosition(formPositionId)).toEqual([
+      firstTurn.id,
+      thirdTurn.id,
+    ]);
+  });
+
+  it('treats form-scoped undo as a scope over global causality, not a private chronology', async () => {
+    const store = signalTree({
+      profile: form({ initial: { name: '' } }),
+      theme: 'light',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+
+    store.$.profile.$.name.set('Ada');
+    await Promise.resolve();
+    await Promise.resolve();
+    const firstTurn = t.getTurns().at(-1) as { id: number; __positionIds?: number[] };
+
+    store.$.theme.set('dark');
+    await Promise.resolve();
+    await Promise.resolve();
+    const secondTurn = t.getTurns().at(-1) as { id: number; __positionIds?: number[] };
+
+    store.$.profile.$.name.set('Grace');
+    await Promise.resolve();
+    await Promise.resolve();
+    const thirdTurn = t.getTurns().at(-1) as { id: number; __positionIds?: number[] };
+
+    const formPositionId = firstTurn.__positionIds?.[0] as number;
+
+    expect(t.undoPosition(formPositionId)).toEqual([thirdTurn.id]);
+
+    expect(store.$.profile().name).toBe('Ada');
+    expect(store.$.theme()).toBe('dark');
+    expect(t.getTurnStatus(firstTurn.id)).toBe('applied');
+    expect(t.getTurnStatus(secondTurn.id)).toBe('applied');
+    expect(t.getTurnStatus(thirdTurn.id)).toBe('unapplied');
+  });
+
+  it('lets the form position select a shared turn without splitting that turn', async () => {
+    const store = signalTree({
+      profile: form({ initial: { name: '' } }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+      theme: 'light',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.orders.addOne({ id: 7, status: 'new' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    t.resetHistory();
+
+    store.$.profile.$.name.set('Jon');
+    store.$.orders.byIdOrFail(7).status.set('queued');
+    await Promise.resolve();
+    await Promise.resolve();
+    const firstTurn = t.getTurns().at(-1) as {
+      id: number;
+      __positionIds?: number[];
+    };
+
+    store.$.theme.set('dark');
+    await Promise.resolve();
+    await Promise.resolve();
+    const secondTurn = t.getTurns().at(-1) as { id: number };
+
+    const formPositionId = (store.$.profile as any).__positionIds?.[0] as number;
+    const ordersPositionId = ((firstTurn.__positionIds ?? []).find(
+      (positionId: number) => positionId !== formPositionId
+    ) ?? 0) as number;
+
+    expect(firstTurn.__positionIds).toEqual(
+      expect.arrayContaining([formPositionId, ordersPositionId])
+    );
+    expect(t.undoPosition(formPositionId)).toEqual([firstTurn.id]);
+
+    expect(store.$.profile().name).toBe('');
+    expect(store.$.orders.byIdOrFail(7).status()).toBe('new');
+    expect(store.$.theme()).toBe('dark');
+    expect(t.getTurnStatus(firstTurn.id)).toBe('unapplied');
+    expect(t.getTurnStatus(secondTurn.id)).toBe('applied');
+  });
+
   it('routes public undo through turn frontiers for collection add, remove, and rekey', async () => {
     const store = signalTree({
       rows: entityMap<{ id: number; name: string }, number>({

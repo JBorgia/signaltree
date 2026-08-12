@@ -1156,7 +1156,10 @@ class TimeTravelManager<T> {
   private isSupportedEffect(effect: TurnEffect): boolean {
     switch (effect.kind) {
       case 'set':
-        return this.isScalarValue(effect.before) && this.isScalarValue(effect.after);
+        return (
+          (this.isScalarValue(effect.before) && this.isScalarValue(effect.after)) ||
+          (effect.subject === undefined && effect.ownerPath !== effect.path)
+        );
       case 'remove':
         return effect.subject !== undefined;
       case 'add':
@@ -1620,6 +1623,75 @@ export function timeTravel(
       return leaf;
     };
 
+    const resolveOwnedWritableLeaf = (
+      root: Record<string, unknown>,
+      ownerPath: string,
+      path: string
+    ): { set?: (value: unknown) => void } => {
+      const ownerSegments = ownerPath.split('.');
+      let cursor: unknown = root;
+      for (const segment of ownerSegments) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          throw new Error(`Cannot resolve owner path from ${path}`);
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      const suffix = path.slice(ownerPath.length + 1);
+      if (!suffix) {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      const suffixSegments = suffix.split('.');
+      const ownerNode = cursor as {
+        $?: Record<string, unknown>;
+        set?: (value: unknown) => void;
+        __setTouchedSnapshot?: (value: Record<string, boolean>) => void;
+      };
+
+      if (suffixSegments.length === 1 && suffixSegments[0] === 'values') {
+        if (typeof ownerNode.set !== 'function') {
+          throw new Error(`Unsupported scoped undo path ${path}`);
+        }
+        return {
+          set: (value: unknown) => ownerNode.set?.(value),
+        };
+      }
+
+      if (suffixSegments.length === 1 && suffixSegments[0] === 'touched') {
+        if (typeof ownerNode.__setTouchedSnapshot !== 'function') {
+          throw new Error(`Unsupported scoped undo path ${path}`);
+        }
+        return {
+          set: (value: unknown) =>
+            ownerNode.__setTouchedSnapshot?.(value as Record<string, boolean>),
+        };
+      }
+
+      const ownedRoot =
+        cursor && (typeof cursor === 'object' || typeof cursor === 'function')
+          ? ((cursor as Record<string, unknown>)['$'] ?? cursor)
+          : cursor;
+
+      let leafCursor: unknown = ownedRoot;
+      for (const segment of suffixSegments) {
+        if (
+          !leafCursor ||
+          (typeof leafCursor !== 'object' && typeof leafCursor !== 'function')
+        ) {
+          throw new Error(`Cannot resolve scoped undo path ${path}`);
+        }
+        leafCursor = (leafCursor as Record<string, unknown>)[segment];
+      }
+
+      const leaf = leafCursor as { set?: (value: unknown) => void };
+      if (typeof leaf?.set !== 'function') {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      return leaf;
+    };
+
     const hasLiveCollectionKey = (
       ownerNode: EntityCollectionLookupNode,
       key: string | number
@@ -1645,10 +1717,12 @@ export function timeTravel(
         switch (effect.kind) {
           case 'set': {
             if (effect.subject === undefined) {
-              resolveWritableLeaf(
-                (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                effect.path
-              );
+              const root = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+              if (effect.ownerPath && effect.ownerPath !== effect.path) {
+                resolveOwnedWritableLeaf(root, effect.ownerPath, effect.path);
+              } else {
+                resolveWritableLeaf(root, effect.path);
+              }
             } else {
               resolveOwnerNode(
                 (tree as ISignalTree<T>).$ as Record<string, unknown>,
@@ -1740,10 +1814,17 @@ export function timeTravel(
             case 'set': {
               const leaf =
                 effect.subject === undefined
-                  ? resolveWritableLeaf(
-                      (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                      effect.path
-                    )
+                  ? (() => {
+                      const root = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+                      if (effect.ownerPath && effect.ownerPath !== effect.path) {
+                        return resolveOwnedWritableLeaf(
+                          root,
+                          effect.ownerPath,
+                          effect.path
+                        );
+                      }
+                      return resolveWritableLeaf(root, effect.path);
+                    })()
                   : (() => {
                       const { ownerNode, entityId, fieldSegments } = resolveOwnerNode(
                         (tree as ISignalTree<T>).$ as Record<string, unknown>,
