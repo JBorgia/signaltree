@@ -661,6 +661,14 @@ export interface FormHistorySnapshot<T> {
   future: T[];
 }
 
+/** @internal Shared scoped-history authority bound by `timeTravel()` during Gate 2 migration. */
+export interface FormHistorySharedAuthority {
+  undo(): boolean;
+  redo(): boolean;
+  canUndo(): boolean;
+  canRedo(): boolean;
+}
+
 /**
  * Undo/redo surface attached to a `form()` marker when `history()` is
  * configured. Because history rides on the marker's values signal — the same
@@ -677,6 +685,8 @@ export interface FormHistoryApi<T> {
   canUndo: Signal<boolean>;
   canRedo: Signal<boolean>;
   history: Signal<FormHistorySnapshot<T>>;
+  /** @internal Binds form undo/redo selection to shared scoped history. */
+  __bindSharedAuthority?(authority: FormHistorySharedAuthority): void;
 }
 
 /**

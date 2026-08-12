@@ -9,6 +9,7 @@ import {
 } from '../../lib/utils';
 import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
+import { visitTree } from '../../lib/internals/visit-tree';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { withWriteContext } from '../../lib/write-context';
 
@@ -815,6 +816,34 @@ class TimeTravelManager<T> {
 
     this.assertTurnStatusConsistency();
     return closure;
+  }
+
+  canUndoPosition(positionId: number): boolean {
+    this.frontierVersion();
+    return this.resolveUndoClosure(positionId).length > 0;
+  }
+
+  canRedoPosition(positionId: number): boolean {
+    this.frontierVersion();
+    return this.resolveRedoClosure(positionId).length > 0;
+  }
+
+  undoScoped(positionId: number): boolean {
+    if (!this.canUndoPosition(positionId)) {
+      return false;
+    }
+
+    this.restoreVisibleStateToConfirmed();
+    return this.undoPosition(positionId).length > 0;
+  }
+
+  redoScoped(positionId: number): boolean {
+    if (!this.canRedoPosition(positionId)) {
+      return false;
+    }
+
+    this.restoreVisibleStateToConfirmed();
+    return this.redoPosition(positionId).length > 0;
   }
 
   private getLatestAppliedTurn(): CanonicalTurn<T> | undefined {
@@ -2430,6 +2459,36 @@ export function timeTravel(
     // Expose internal manager for advanced tooling / demo usage
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =
       timeTravelManager;
+
+    visitTree((enhancedTree as ISignalTree<T>).$, (node) => {
+      const formNode = node as {
+        __positionIds?: number[];
+        history?: {
+          __bindSharedAuthority?: (authority: {
+            undo(): boolean;
+            redo(): boolean;
+            canUndo(): boolean;
+            canRedo(): boolean;
+          }) => void;
+        };
+      };
+      const positionId = formNode.__positionIds?.[0];
+
+      if (
+        typeof positionId === 'number' &&
+        typeof formNode.history?.__bindSharedAuthority === 'function'
+      ) {
+        formNode.history.__bindSharedAuthority({
+          undo: () => timeTravelManager.undoScoped(positionId),
+          redo: () => timeTravelManager.redoScoped(positionId),
+          canUndo: () => timeTravelManager.canUndoPosition(positionId),
+          canRedo: () => timeTravelManager.canRedoPosition(positionId),
+        });
+        return false;
+      }
+
+      return undefined;
+    });
 
     // Register cleanup to free history snapshots on destroy and to tear down
     // PathNotifier subscriptions / leaf-signal interceptors.

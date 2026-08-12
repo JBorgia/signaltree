@@ -27,6 +27,7 @@ import { deepClone, snapshotsEqual } from '@signaltree/shared';
 import type {
   FormHistoryApi,
   FormHistoryOptions,
+  FormHistorySharedAuthority,
   FormHistorySnapshot,
   HistoryFeature,
 } from '../types';
@@ -73,6 +74,8 @@ export function history<T extends Record<string, unknown>>(
   return {
     __signalTreeFormHistory: true,
     attach(ctx) {
+      let sharedAuthority: FormHistorySharedAuthority | undefined;
+
       const snap = signal<FormHistorySnapshot<T>>({
         past: [],
         present: project(ctx.read()),
@@ -95,8 +98,36 @@ export function history<T extends Record<string, unknown>>(
         ctx.write(target as Partial<T>);
       };
 
+      const mirrorSharedUndo = (): void => {
+        const current = snap();
+        const before = current.present;
+        const after = project(ctx.read());
+        snap.set({
+          past: current.past.slice(0, -1),
+          present: after,
+          future: [before, ...current.future],
+        });
+      };
+
+      const mirrorSharedRedo = (): void => {
+        const current = snap();
+        const before = current.present;
+        const past = [...current.past, before];
+        if (past.length > capacity) past.shift();
+        snap.set({
+          past,
+          present: project(ctx.read()),
+          future: current.future.slice(1),
+        });
+      };
+
       const api: FormHistoryApi<T> = {
         undo(): void {
+          if (sharedAuthority) {
+            if (!sharedAuthority.undo()) return;
+            mirrorSharedUndo();
+            return;
+          }
           const s = snap();
           if (s.past.length === 0) return;
           const prev = s.past[s.past.length - 1];
@@ -108,6 +139,11 @@ export function history<T extends Record<string, unknown>>(
           restore(prev);
         },
         redo(): void {
+          if (sharedAuthority) {
+            if (!sharedAuthority.redo()) return;
+            mirrorSharedRedo();
+            return;
+          }
           const s = snap();
           if (s.future.length === 0) return;
           const next = s.future[0];
@@ -122,10 +158,22 @@ export function history<T extends Record<string, unknown>>(
           const s = snap();
           snap.set({ past: [], present: s.present, future: [] });
         },
-        canUndo: computed(() => snap().past.length > 0),
-        canRedo: computed(() => snap().future.length > 0),
+        canUndo: computed(() =>
+          sharedAuthority ? sharedAuthority.canUndo() : snap().past.length > 0
+        ),
+        canRedo: computed(() =>
+          sharedAuthority ? sharedAuthority.canRedo() : snap().future.length > 0
+        ),
         history: snap.asReadonly(),
       };
+
+      Object.defineProperty(api, '__bindSharedAuthority', {
+        value: (authority: FormHistorySharedAuthority) => {
+          sharedAuthority = authority;
+        },
+        enumerable: false,
+        configurable: true,
+      });
 
       return { api, record };
     },

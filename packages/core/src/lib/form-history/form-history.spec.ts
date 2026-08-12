@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { signalTree } from '../signal-tree';
+import { timeTravel } from '../../enhancers/time-travel/time-travel';
 import { form } from '../markers/form';
+import { entityMap } from '../types';
 import { history } from './form-history';
 
 interface Profile extends Record<string, unknown> {
@@ -17,6 +19,8 @@ function makeTree(opts?: { capacity?: number; exclude?: (keyof Profile)[] }) {
     }),
   });
 }
+
+const flush = () => Promise.resolve().then(() => Promise.resolve());
 
 describe('form history()', () => {
   it('exposes an undo/redo api on the marker', () => {
@@ -41,6 +45,109 @@ describe('form history()', () => {
 
     p.history?.redo();
     expect(p().name).toBe('Ada');
+    expect(p.history?.canRedo()).toBe(true);
+  });
+
+  it('uses the same form-facing undo/redo api under timeTravel for form-only history', async () => {
+    const tree = signalTree({
+      profile: form<Profile>({
+        initial: { name: '', password: '' },
+        history: history<Profile>(),
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.patch({ name: 'Ada' });
+    await flush();
+    p.patch({ name: 'Grace' });
+    await flush();
+
+    p.history?.undo();
+    expect(p().name).toBe('Ada');
+
+    p.history?.redo();
+    expect(p().name).toBe('Grace');
+  });
+
+  it('routes form.undo() through shared scoped causality instead of private chronology', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string }>({
+        initial: { name: '' },
+        history: history<{ name: string }>(),
+      }),
+      theme: 'light',
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.$.name.set('Ada');
+    await flush();
+    tree.$.theme.set('dark');
+    await flush();
+    p.$.name.set('Grace');
+    await flush();
+
+    p.history?.undo();
+
+    expect(p().name).toBe('Ada');
+    expect(tree.$.theme()).toBe('dark');
+  });
+
+  it('routes form.undo() through shared turns without splitting a mixed turn', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string }>({
+        initial: { name: '' },
+        history: history<{ name: string }>(),
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+      theme: 'light',
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    tree.$.orders.addOne({ id: 7, status: 'new' });
+    await flush();
+
+    p.$.name.set('Jon');
+    tree.$.orders.byIdOrFail(7).status.set('queued');
+    await flush();
+    tree.$.theme.set('dark');
+    await flush();
+
+    p.history?.undo();
+
+    expect(p().name).toBe('');
+    expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
+    expect(tree.$.theme()).toBe('dark');
+  });
+
+  it('derives form canUndo/canRedo from shared scoped history, even when another api path moves the turn frontier', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string }>({
+        initial: { name: '' },
+        history: history<{ name: string }>(),
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    tree.$.orders.addOne({ id: 7, status: 'new' });
+    await flush();
+
+    p.$.name.set('Jon');
+    tree.$.orders.byIdOrFail(7).status.set('queued');
+    await flush();
+
+    expect(p.history?.canUndo()).toBe(true);
+    expect(p.history?.canRedo()).toBe(false);
+
+    tree.undo();
+
+    expect(p().name).toBe('');
+    expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
+    expect(p.history?.canUndo()).toBe(false);
     expect(p.history?.canRedo()).toBe(true);
   });
 
