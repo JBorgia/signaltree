@@ -31,6 +31,27 @@ const WRONG_ENTITY_METHODS: Record<string, string> = {
   asObservable: 'use the signal directly — not an RxJS Subject',
 };
 
+type EntityPositionIdAllocator = () => number | undefined;
+let nextStandaloneEntityPositionId = 1;
+const standaloneEntityPositionIdAllocator: EntityPositionIdAllocator = () =>
+  nextStandaloneEntityPositionId++;
+let entityPositionIdAllocatorOverride: EntityPositionIdAllocator | undefined;
+let entityPositionIdNotifyEnabled = true;
+
+/** @internal Bench/test-only hook for owner PositionId allocation experiments. */
+export function setEntityPositionIdAllocatorForTesting(
+  allocator?: EntityPositionIdAllocator
+): void {
+  entityPositionIdAllocatorOverride = allocator;
+}
+
+/** @internal Bench/test-only hook to isolate owner-id carriage from stamping. */
+export function setEntityPositionIdNotifyEnabledForTesting(
+  enabled = true
+): void {
+  entityPositionIdNotifyEnabled = enabled;
+}
+
 /**
  * EntitySignal Implementation (Composition Pattern)
  *
@@ -70,7 +91,10 @@ export function createEntitySignal<
 >(
   config: EntityConfig<E, K>,
   pathNotifier: PathNotifier,
-  basePath: string
+  basePath: string,
+  options?: {
+    positionIdAllocator?: EntityPositionIdAllocator;
+  }
 ): EntitySignal<E, K> {
   // ==================
   // CLOSURE STATE (no `this` needed)
@@ -142,6 +166,49 @@ export function createEntitySignal<
    * mutation by only syncing the entities that actually changed.
    */
   const entitySignals = new Map<K, WritableSignal<E | undefined>>();
+  const subjectIds = new Map<K, number>();
+  const pendingHistoryEffects: Array<{
+    path: string;
+    subject: number;
+    effect:
+      | {
+          kind: 'add';
+          subject: number;
+          key: K;
+          value: E;
+          beforeSubject?: number;
+          afterSubject?: number;
+        }
+      | {
+          kind: 'remove';
+          subject: number;
+          key: K;
+          value: E;
+          beforeSubject?: number;
+          afterSubject?: number;
+        }
+      | {
+          kind: 'rekey';
+          subject: number;
+          beforeKey: K;
+          afterKey: K;
+        };
+  }> = [];
+  const positionId = (
+    options?.positionIdAllocator ??
+    entityPositionIdAllocatorOverride ??
+    standaloneEntityPositionIdAllocator
+  )();
+  let nextSubjectId = 1;
+  let lastSubjectIds: number[] | undefined;
+
+  function getPositionIds(): number[] | undefined {
+    return positionId === undefined ? undefined : [positionId];
+  }
+
+  function getPositionIdsForNotify(): number[] | undefined {
+    return entityPositionIdNotifyEnabled ? getPositionIds() : undefined;
+  }
 
   /**
    * ST2026 — the inline-predicate trap, caught in dev.
@@ -277,6 +344,157 @@ export function createEntitySignal<
       entitySignals.set(id, s);
     }
     return s;
+  }
+
+  function allocateSubjectId(id: K): number {
+    const existing = subjectIds.get(id);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const subjectId = nextSubjectId++;
+    subjectIds.set(id, subjectId);
+    return subjectId;
+  }
+
+  function rememberSubjectIds(ids: K[]): number[] {
+    const resolved = ids.map((id) => allocateSubjectId(id));
+    lastSubjectIds = resolved;
+    return resolved;
+  }
+
+  function transferSubjectId(from: K, to: K): number {
+    const subjectId = allocateSubjectId(from);
+    subjectIds.delete(from);
+    subjectIds.set(to, subjectId);
+    lastSubjectIds = [subjectId];
+    return subjectId;
+  }
+
+  function findKeyBySubjectId(subjectId: number): K | undefined {
+    for (const [key, candidateSubjectId] of subjectIds.entries()) {
+      if (candidateSubjectId === subjectId) {
+        return key;
+      }
+    }
+
+    return undefined;
+  }
+
+  function getNeighborSubjects(id: K): {
+    beforeSubject?: number;
+    afterSubject?: number;
+  } {
+    const keys = Array.from(storage.keys());
+    const index = keys.indexOf(id);
+    if (index === -1) {
+      return {};
+    }
+
+    const beforeKey = index > 0 ? keys[index - 1] : undefined;
+    const afterKey = index < keys.length - 1 ? keys[index + 1] : undefined;
+
+    return {
+      beforeSubject:
+        beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+      afterSubject: afterKey === undefined ? undefined : allocateSubjectId(afterKey),
+    };
+  }
+
+  function resolveRestoreIndex(
+    entries: Array<readonly [K, E]>,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): number {
+    const beforeIndex =
+      beforeSubject === undefined
+        ? -1
+        : entries.findIndex(
+            ([key]) => subjectIds.get(key) === beforeSubject
+          );
+    const afterIndex =
+      afterSubject === undefined
+        ? -1
+        : entries.findIndex(([key]) => subjectIds.get(key) === afterSubject);
+
+    if (beforeIndex !== -1 && afterIndex !== -1 && beforeIndex < afterIndex) {
+      return beforeIndex + 1;
+    }
+    if (afterIndex !== -1) {
+      return afterIndex;
+    }
+    if (beforeIndex !== -1) {
+      return beforeIndex + 1;
+    }
+    return entries.length;
+  }
+
+  function restoreOne(
+    key: K,
+    entity: E,
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): void {
+    if (storage.has(key)) {
+      throw new Error(`Entity with id ${String(key)} already exists`);
+    }
+
+    const entries = Array.from(storage.entries());
+    const restoreIndex = resolveRestoreIndex(entries, beforeSubject, afterSubject);
+    entries.splice(restoreIndex, 0, [key, entity]);
+
+    storage.clear();
+    for (const [entryKey, entryValue] of entries) {
+      storage.set(entryKey, entryValue);
+    }
+
+    subjectIds.set(key, subjectId);
+    lastSubjectIds = [subjectId];
+    nodeCache.delete(key);
+    syncEntitySignal(key);
+    updateSignals();
+    pathNotifier.notify(
+      `${basePath}.${String(key)}`,
+      entity,
+      undefined,
+      basePath,
+      [subjectId],
+      getPositionIdsForNotify()
+    );
+  }
+
+  function rewritePendingAddEffect(
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): void {
+    for (let i = pendingHistoryEffects.length - 1; i >= 0; i--) {
+      const entry = pendingHistoryEffects[i];
+      if (entry.subject !== subjectId || entry.effect.kind !== 'add') {
+        continue;
+      }
+      entry.effect.beforeSubject = beforeSubject;
+      entry.effect.afterSubject = afterSubject;
+      return;
+    }
+  }
+
+  function consumeHistoryEffect(
+    path: string,
+    subject: number
+  ):
+    | (typeof pendingHistoryEffects)[number]['effect']
+    | undefined {
+    const index = pendingHistoryEffects.findIndex(
+      (entry) => entry.path === path && entry.subject === subject
+    );
+    if (index === -1) {
+      return undefined;
+    }
+
+    const [effect] = pendingHistoryEffects.splice(index, 1);
+    return effect?.effect;
   }
 
   /**
@@ -497,6 +715,25 @@ export function createEntitySignal<
           } as Partial<E>);
         },
         asReadonly: () => fieldSignal,
+      });
+
+      Object.defineProperty(fieldSignal, '__ownerPath', {
+        get: () => `${basePath}.${String(id)}`,
+        enumerable: false,
+        configurable: true,
+      });
+      Object.defineProperty(fieldSignal, '__subjectIds', {
+        get: () => {
+          const subjectId = subjectIds.get(id);
+          return subjectId === undefined ? undefined : [subjectId];
+        },
+        enumerable: false,
+        configurable: true,
+      });
+      Object.defineProperty(fieldSignal, '__positionIds', {
+        get: getPositionIds,
+        enumerable: false,
+        configurable: true,
       });
 
       Object.defineProperty(node, key, {
@@ -722,6 +959,7 @@ export function createEntitySignal<
 
     addOne(entity: E, opts?: AddOptions<E, K>): K {
       const id = deriveId(entity, opts);
+      const previousKeys = Array.from(storage.keys());
 
       // Check for duplicates first
       if (storage.has(id)) {
@@ -748,6 +986,20 @@ export function createEntitySignal<
 
       // Store and update signals
       storage.set(id, transformedEntity);
+      const subjectIdsForWrite = rememberSubjectIds([id]);
+      const beforeKey = previousKeys.at(-1);
+      pendingHistoryEffects.push({
+        path: `${basePath}.${String(id)}`,
+        subject: subjectIdsForWrite[0],
+        effect: {
+          kind: 'add',
+          subject: subjectIdsForWrite[0],
+          key: id,
+          value: transformedEntity,
+          beforeSubject:
+            beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+        },
+      });
       nodeCache.delete(id);
       syncEntitySignal(id);
       updateSignals();
@@ -756,7 +1008,10 @@ export function createEntitySignal<
       pathNotifier.notify(
         `${basePath}.${String(id)}`,
         transformedEntity,
-        undefined
+        undefined,
+        basePath,
+        subjectIdsForWrite,
+        getPositionIdsForNotify()
       );
 
       // Run tap handlers
@@ -781,8 +1036,16 @@ export function createEntitySignal<
      * interceptors, notifier and tap handlers on exactly one path.
      */
     prependOne(entity: E, opts?: AddOptions<E, K>): K {
+      const previousFirstKey = Array.from(storage.keys())[0];
       const id = api.addOne(entity, opts);
       moveToFront([id]);
+      rewritePendingAddEffect(
+        allocateSubjectId(id),
+        undefined,
+        previousFirstKey === undefined
+          ? undefined
+          : allocateSubjectId(previousFirstKey)
+      );
       return id;
     },
 
@@ -839,10 +1102,28 @@ export function createEntitySignal<
       if (activeIdSignal() === from) activeIdSignal.set(to);
       // ST2031's evidence. Dev-only in effect: nothing reads it in production.
       rekeyed.set(from, to);
+      const subjectIdsForWrite = [transferSubjectId(from, to)];
+      pendingHistoryEffects.push({
+        path: basePath,
+        subject: subjectIdsForWrite[0],
+        effect: {
+          kind: 'rekey',
+          subject: subjectIdsForWrite[0],
+          beforeKey: from,
+          afterKey: to,
+        },
+      });
 
       syncEntitySignal(to);
       updateSignals();
-      pathNotifier.notify(`${basePath}.${String(to)}`, entity, entity);
+      pathNotifier.notify(
+        `${basePath}.${String(to)}`,
+        entity,
+        entity,
+        basePath,
+        subjectIdsForWrite,
+        getPositionIdsForNotify()
+      );
     },
 
     addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
@@ -898,9 +1179,19 @@ export function createEntitySignal<
       // Single signal update after all entities are processed
       updateSignals();
 
+      const subjectIdsForWrite = rememberSubjectIds(processedIds);
+
       // Notify PathNotifier for each processed entity
-      for (const { id, entity } of addedEntities) {
-        pathNotifier.notify(`${basePath}.${String(id)}`, entity, undefined);
+      for (let i = 0; i < addedEntities.length; i++) {
+        const { id, entity } = addedEntities[i];
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          entity,
+          undefined,
+          basePath,
+          [subjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Run tap handlers for each processed entity
@@ -945,12 +1236,20 @@ export function createEntitySignal<
 
       const finalUpdated = { ...entity, ...transformedChanges };
       storage.set(id, finalUpdated);
+      const subjectIdsForWrite = rememberSubjectIds([id]);
       nodeCache.delete(id);
       syncEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
-      pathNotifier.notify(`${basePath}.${String(id)}`, finalUpdated, prev);
+      pathNotifier.notify(
+        `${basePath}.${String(id)}`,
+        finalUpdated,
+        prev,
+        basePath,
+        subjectIdsForWrite,
+        getPositionIdsForNotify()
+      );
 
       // Run tap handlers
       for (const handler of tapHandlers) {
@@ -998,7 +1297,14 @@ export function createEntitySignal<
       nodeCache.delete(id);
       syncEntitySignal(id);
       updateSignals();
-      pathNotifier.notify(`${basePath}.${String(id)}`, next, prev);
+      pathNotifier.notify(
+        `${basePath}.${String(id)}`,
+        next,
+        prev,
+        basePath,
+        undefined,
+        getPositionIdsForNotify()
+      );
       for (const handler of tapHandlers) {
         handler.onUpdate?.(id, next as Partial<E>, next);
       }
@@ -1050,9 +1356,19 @@ export function createEntitySignal<
       // Single signal update after all entities are updated
       updateSignals();
 
+      const subjectIdsForWrite = rememberSubjectIds(ids);
+
       // Notify PathNotifier for each updated entity
-      for (const { id, prev, finalUpdated } of updatedEntities) {
-        pathNotifier.notify(`${basePath}.${String(id)}`, finalUpdated, prev);
+      for (let i = 0; i < updatedEntities.length; i++) {
+        const { id, prev, finalUpdated } = updatedEntities[i];
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          finalUpdated,
+          prev,
+          basePath,
+          [subjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Run tap handlers for each updated entity
@@ -1088,6 +1404,7 @@ export function createEntitySignal<
       if (!entity) {
         throw new Error(`Entity with id ${String(id)} not found`);
       }
+      const { beforeSubject, afterSubject } = getNeighborSubjects(id);
 
       // Run interceptors
       for (const handler of interceptHandlers) {
@@ -1107,13 +1424,34 @@ export function createEntitySignal<
       }
 
       // Delete and update signals
+      const subjectIdsForWrite = rememberSubjectIds([id]);
+      pendingHistoryEffects.push({
+        path: `${basePath}.${String(id)}`,
+        subject: subjectIdsForWrite[0],
+        effect: {
+          kind: 'remove',
+          subject: subjectIdsForWrite[0],
+          key: id,
+          value: entity,
+          beforeSubject,
+          afterSubject,
+        },
+      });
       storage.delete(id);
+      subjectIds.delete(id);
       nodeCache.delete(id);
       removeEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
-      pathNotifier.notify(`${basePath}.${String(id)}`, undefined, entity);
+      pathNotifier.notify(
+        `${basePath}.${String(id)}`,
+        undefined,
+        entity,
+        basePath,
+        subjectIdsForWrite,
+        getPositionIdsForNotify()
+      );
 
       // Run tap handlers
       for (const handler of tapHandlers) {
@@ -1126,11 +1464,16 @@ export function createEntitySignal<
 
       // Collect entities and run interceptors first
       const entitiesToRemove: Array<{ id: K; entity: E }> = [];
+      const neighborSubjects = new Map<
+        K,
+        { beforeSubject?: number; afterSubject?: number }
+      >();
       for (const id of ids) {
         const entity = storage.get(id);
         if (!entity) {
           throw new Error(`Entity with id ${String(id)} not found`);
         }
+        neighborSubjects.set(id, getNeighborSubjects(id));
 
         // Run interceptors
         for (const handler of interceptHandlers) {
@@ -1153,8 +1496,28 @@ export function createEntitySignal<
       }
 
       // Delete all entities without triggering per-entity signal updates
+      const subjectIdsForWrite = rememberSubjectIds(ids);
+
+      for (let i = 0; i < entitiesToRemove.length; i++) {
+        const { id, entity } = entitiesToRemove[i];
+        const anchors = neighborSubjects.get(id) ?? {};
+        pendingHistoryEffects.push({
+          path: `${basePath}.${String(id)}`,
+          subject: subjectIdsForWrite[i],
+          effect: {
+            kind: 'remove',
+            subject: subjectIdsForWrite[i],
+            key: id,
+            value: entity,
+            beforeSubject: anchors.beforeSubject,
+            afterSubject: anchors.afterSubject,
+          },
+        });
+      }
+
       for (const { id } of entitiesToRemove) {
         storage.delete(id);
+        subjectIds.delete(id);
         nodeCache.delete(id);
         removeEntitySignal(id);
       }
@@ -1163,8 +1526,16 @@ export function createEntitySignal<
       updateSignals();
 
       // Notify PathNotifier for each removed entity
-      for (const { id, entity } of entitiesToRemove) {
-        pathNotifier.notify(`${basePath}.${String(id)}`, undefined, entity);
+      for (let i = 0; i < entitiesToRemove.length; i++) {
+        const { id, entity } = entitiesToRemove[i];
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          undefined,
+          entity,
+          basePath,
+          [subjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Run tap handlers for each removed entity
@@ -1280,14 +1651,37 @@ export function createEntitySignal<
       // Single signal update after all entities are processed
       updateSignals();
 
+      const addedSubjectIdsForWrite = rememberSubjectIds(
+        addedEntities.map(({ id }) => id)
+      );
+      const updatedSubjectIdsForWrite = rememberSubjectIds(
+        updatedEntities.map(({ id }) => id)
+      );
+
       // Notify PathNotifier for added entities
-      for (const { id, entity } of addedEntities) {
-        pathNotifier.notify(`${basePath}.${String(id)}`, entity, undefined);
+      for (let i = 0; i < addedEntities.length; i++) {
+        const { id, entity } = addedEntities[i];
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          entity,
+          undefined,
+          basePath,
+          [addedSubjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Notify PathNotifier for updated entities
-      for (const { id, prev, finalUpdated } of updatedEntities) {
-        pathNotifier.notify(`${basePath}.${String(id)}`, finalUpdated, prev);
+      for (let i = 0; i < updatedEntities.length; i++) {
+        const { id, prev, finalUpdated } = updatedEntities[i];
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          finalUpdated,
+          prev,
+          basePath,
+          [updatedSubjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Run tap handlers for added entities
@@ -1313,6 +1707,8 @@ export function createEntitySignal<
 
     clear(): void {
       storage.clear();
+      subjectIds.clear();
+      lastSubjectIds = undefined;
       nodeCache.clear();
       resetEntitySignals();
       updateSignals();
@@ -1321,6 +1717,8 @@ export function createEntitySignal<
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
       // Clear storage without triggering intermediate signal updates
       storage.clear();
+      subjectIds.clear();
+      lastSubjectIds = undefined;
       nodeCache.clear();
 
       // Add all entities without triggering per-entity signal updates
@@ -1357,11 +1755,20 @@ export function createEntitySignal<
       resetEntitySignals();
       updateSignals();
 
+      const subjectIdsForWrite = rememberSubjectIds(addedIds);
+
       // Notify PathNotifier for each added entity
       for (let i = 0; i < addedIds.length; i++) {
         const id = addedIds[i];
         const entity = storage.get(id);
-        pathNotifier.notify(`${basePath}.${String(id)}`, entity, undefined);
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          entity,
+          undefined,
+          basePath,
+          [subjectIdsForWrite[i]],
+          getPositionIdsForNotify()
+        );
       }
 
       // Run tap handlers for each added entity
@@ -1414,6 +1821,31 @@ export function createEntitySignal<
       configurable: true,
     });
   }
+  Object.defineProperty(api, '__subjectIds', {
+    get: () => lastSubjectIds,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__positionIds', {
+    get: getPositionIds,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__consumeHistoryEffect', {
+    value: consumeHistoryEffect,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__findKeyBySubjectId', {
+    value: findKeyBySubjectId,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__restoreOne', {
+    value: restoreOne,
+    enumerable: false,
+    configurable: true,
+  });
 
   // ==================
   // PROXY FOR BRACKET NOTATION
@@ -1449,3 +1881,14 @@ export function createEntitySignal<
     },
   });
 }
+
+Object.defineProperty(createEntitySignal, '__setPositionIdAllocatorForTesting', {
+  value: setEntityPositionIdAllocatorForTesting,
+  enumerable: false,
+  configurable: true,
+});
+Object.defineProperty(createEntitySignal, '__setPositionIdNotifyEnabledForTesting', {
+  value: setEntityPositionIdNotifyEnabledForTesting,
+  enumerable: false,
+  configurable: true,
+});

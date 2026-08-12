@@ -94,5 +94,6 @@
     "version": {
       "preVersionCommand": "npx nx run-many -t build --projects=core,ng-forms,guardrails,shared"
     }
-  }
+  },
+  "analytics": false
 }

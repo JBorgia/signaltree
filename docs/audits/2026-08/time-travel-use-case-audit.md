@@ -41,15 +41,15 @@ Legend: ✅ works today · 🟡 works with assembly, caveat noted · ❌ not sup
 Seven rows moved. Five of them moved **down**, which is the point of re-scoring
 from a retracted premise rather than only auditing the passes.
 
-| Case                                | Was  | Now | Why                                                                                                      |
-| ----------------------------------- | ---- | --- | -------------------------------------------------------------------------------------------------------- |
-| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 14.1.1. No replacement yet.                    |
-| 8. Undo scoped to a draft           | ✅\* | ✅  | Phantom-step defect **fixed**; option renamed `history` → `recordHistory`.                               |
-| 9. Discarding an in-progress edit   | ✅   | ✅  | Passes, but the audit named the **wrong function** — see the doc defect below.                           |
-| 15. An audit trail rather than undo | ✅   | 🟡  | `createAuditTracker` is a 100 ms **polling sampler** that can miss changes entirely.                     |
-| 20. Undo in a form                  | ✅   | ❌  | `timeTravel()` does **not** cover `form()` state. In a mixed tree it loses form edits.                   |
-| 22. Pausing while replaying         | ✅   | ❌  | `pauseRecording` deleted.                                                                                |
-| 28. Devtools unbounded history      | ✅   | 🟡  | Omitting `maxHistorySize` caps at **50**, and it counts entries not steps — any value ≤ 1 disables undo. |
+| Case                                | Was  | Now | Why                                                                                                                                                                                                |
+| ----------------------------------- | ---- | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7. Bulk operation as one step       | 🟡   | ❌  | The documented `pauseRecording` recipe was **deleted** in 14.1.1. No replacement yet.                                                                                                              |
+| 8. Undo scoped to a draft           | ✅\* | ✅  | Phantom-step defect **fixed**; option renamed `history` → `recordHistory`.                                                                                                                         |
+| 9. Discarding an in-progress edit   | ✅   | ✅  | Passes, but the audit named the **wrong function** — see the doc defect below.                                                                                                                     |
+| 15. An audit trail rather than undo | ✅   | 🟡  | `createAuditTracker` is a 100 ms **polling sampler** that can miss changes entirely.                                                                                                               |
+| 20. Undo in a form                  | ✅   | ✅  | Re-ran after the 2026-08-11 form notifier fix. Direct `form()` field writes record into `timeTravel()`, undo reverts them, and undoing a neighbouring plain-leaf write no longer rewinds the form. |
+| 22. Pausing while replaying         | ✅   | ❌  | `pauseRecording` deleted.                                                                                                                                                                          |
+| 28. Devtools unbounded history      | ✅   | 🟡  | Omitting `maxHistorySize` caps at **50**, and it counts entries not steps — values `< 2` or non-finite warn ST2032 and fall back to 50, so unbounded undo is no longer expressible.                                                            |
 
 Cases 2, 4, 5, 6, 19, 23, 24, 26 were re-run and their original verdicts survived
 unchanged.
@@ -430,8 +430,7 @@ What replaced them is a two-term model: `entries × (width × ~8 B + changedRows
 
 **"Omit `maxHistorySize`" does not give unbounded history** — that was this
 audit's claim, not the library's. The default is 50
-(`time-travel.ts:80`, `config.maxHistorySize ?? 50`) and unbounded requires
-`maxHistorySize: Infinity` explicitly.
+(`time-travel.ts:80`, `config.maxHistorySize ?? 50`).
 
 > **The library docs are ACCURATE and were wrongly called into question by an
 > earlier draft of this row.** `types.ts:43` says "Maximum number of history
@@ -442,20 +441,21 @@ audit's claim, not the library's. The default is 50
 > `50` to `51` would introduce a real error, because 50 entries is what happens.
 
 What is missing is a **conversion, not a correction**: entries are not undo steps.
-10 writes (`n = 1..10`) on a tree starting at `n = 0`:
+10 writes (`n = 1..10`) on a tree starting at `n = 0`, re-run after
+`maxHistorySize` validation landed (ST2032, `4835da80`):
 
-| `maxHistorySize` | entries | `getCurrentIndex()` | undos spendable | final `n` |                    |
-| ---------------- | ------- | ------------------- | --------------- | --------- | ------------------ |
-| omitted (→ 50)   | 11      | 10                  | 10              | 0         |                    |
-| `0`              | 0       | **-1**              | **0**           | 10        | undo disabled      |
-| `1`              | 1       | 0                   | **0**           | 10        | undo disabled      |
-| `2`              | 2       | 1                   | 1               | 9         |                    |
-| `5`              | 5       | 4                   | 4               | 6         |                    |
-| `-1`             | 0       | **-1**              | **0**           | 10        | undo disabled      |
-| `NaN`            | 11      | 10                  | 10              | 0         | silently unbounded |
-| `Infinity`       | 11      | 10                  | 10              | 0         |                    |
+| `maxHistorySize`      | entries | `getCurrentIndex()` | undos spendable | final `n` |                          |
+| --------------------- | ------- | ------------------- | --------------- | --------- | ------------------------ |
+| omitted (→ 50)        | 11      | 10                  | 10              | 0         |                          |
+| `0`                   | 11      | 10                  | 10              | 0         | warns ST2032, → 50       |
+| `1`                   | 11      | 10                  | 10              | 0         | warns ST2032, → 50       |
+| `2`                   | 2       | 1                   | 1               | 9         |                          |
+| `5`                   | 5       | 4                   | 4               | 6         |                          |
+| `-1`                  | 11      | 10                  | 10              | 0         | warns ST2032, → 50       |
+| `NaN`                 | 11      | 10                  | 10              | 0         | warns ST2032, → 50       |
+| `Infinity`            | 11      | 10                  | 10              | 0         | warns ST2032, → 50       |
 
-Three things follow, and the **second** is the headline:
+Three things follow, and the **second** was the headline until it was fixed:
 
 1. **N entries yields N−1 undo steps.** The oldest retained entry is a floor you
    cannot undo _from_ — it is the state you land on, not a step you spend. So a
@@ -467,19 +467,22 @@ Three things follow, and the **second** is the headline:
    likely to reach for by intuition: `0` reads as "no limit" and `1` reads as "one
    step of undo". Both give none. `-1` does the same and drives
    `getCurrentIndex()` to `-1`, because the trim runs `currentIndex--` against an
-   already-empty buffer. This deserves **input validation with a stable ST-code**,
-   not only a doc line — a silently dead undo button is the same failure class as
-   the phantom step in case 8.
+   already-empty buffer. **ADDRESSED since `4835da80`:** these values now warn
+   `[ST2032]` and fall back to the 50 default instead of silently disabling undo.
+   The one genuinely lost option is unbounded history: `Infinity` is non-finite,
+   so it warns and falls back to 50 too — devtools-style unbounded undo is no
+   longer expressible through `maxHistorySize`.
 3. **`NaN` is silently unbounded**, since `length > NaN` is never true. Narrower
-   than 2; validation should cover it in the same guard.
+   than 2; **ADDRESSED since `4835da80`** — the same `!Number.isFinite` guard
+   covers it alongside the `< 2` case.
 
-**This is `??`, not `||`, and the distinction decides the fix.** Under
+**This is `??`, not `||`, and the distinction decided the fix.** Under
 `config.maxHistorySize || 50` a `0` would have become `50` and undo would work.
 It is `config.maxHistorySize ?? 50` (`time-travel.ts:80`) with
 `if (this.history.length > this.maxHistorySize) { this.history.shift(); … }`
 (`:233`), so `0` is a genuine zero-length buffer that shifts off every entry as
-it is pushed. Validate the input — reject `< 1` and non-finite — and do **not**
-change the `??`, which correctly distinguishes "not supplied" from "supplied
+it is pushed. Validation now rejects `< 2` and non-finite (ST2032) **without**
+changing the `??`, which correctly distinguishes "not supplied" from "supplied
 as 0".
 
 ⚠️ **Scope of this row:** every value in the table was executed at 10 writes on a
@@ -515,9 +518,11 @@ Reproducing a bug by scrubbing is a debugging aid, not a regression guard.
 
 Ordered by how much damage they do.
 
-1. **`timeTravel()` does not cover `form()` state (case 20).** Form-only trees have
-   no undo at all; mixed trees silently rewind form fields to a stale snapshot when
-   an unrelated field is undone. Data loss, on the primary editing surface.
+1. **Case 20 was fixed after this audit was written.** The original audit was correct
+   at the time, but the current source no longer matches it: direct `form()` field
+   writes produce history entries, `undo()` reverts those writes, and a neighbouring
+   plain-leaf undo no longer drags the form with it. The remaining question is UX
+   scoping, not raw correctness.
 2. **`createAuditTracker` is a 100 ms polling sampler (case 15).** No `.subscribe`
    on the tree means the fallback always runs. A write and its revert inside one
    window are logged as nothing.
@@ -567,15 +572,15 @@ would falsify it and either run that too or scope the sentence to what was run.
 
 ## Gaps, ranked by how many use cases they block
 
-| Gap                               | Blocks                        | Assessment                                                                                                                                                                                                                        |
-| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **G. Forms are outside history**  | 20, and most real editing UIs | **New, and now the widest.** The primary editing surface is invisible to `timeTravel()` and undoing a neighbour destroys form content. Scoped `form(history())` works and should be the documented answer until this is resolved. |
-| **B. No settable entry label**    | 18, and weakens 7, 17         | Cheapest fix with the widest reach. Entries already carry `action`; it needs a public way to set it.                                                                                                                              |
-| **A. No group/transaction API**   | 7, and any multi-write action | Worse than at 14.0.0: the documented workaround was deleted, so grouping now depends on incidental `await` placement. The transaction handle closes A and B together.                                                             |
-| **D. No coalescing window**       | 19, text editing generally    | Needed for per-word undo. Distinct from `shouldSkip`, which drops rather than merges.                                                                                                                                             |
-| **C. History is not persistable** | 13                            | And the current behaviour is destructive, not merely absent.                                                                                                                                                                      |
-| **E. No per-entity history**      | 23                            | Real gap vs elf, not composable, narrower audience.                                                                                                                                                                               |
-| **F. No branch-level scoping**    | 24                            | Already scoped as RFC 0012 and deferred deliberately.                                                                                                                                                                             |
+| Gap                                                           | Blocks                        | Assessment                                                                                                                                                                                                              |
+| ------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G. Form history needs product guidance, not a bug warning** | 20, and most real editing UIs | The correctness defect is gone: global `timeTravel()` can record direct form writes again. What remains is product guidance about when shared global undo is desirable versus when `form(history())` should stay local. |
+| **B. No settable entry label**                                | 18, and weakens 7, 17         | Cheapest fix with the widest reach. Entries already carry `action`; it needs a public way to set it.                                                                                                                    |
+| **A. No group/transaction API**                               | 7, and any multi-write action | Worse than at 14.0.0: the documented workaround was deleted, so grouping now depends on incidental `await` placement. The transaction handle closes A and B together.                                                   |
+| **D. No coalescing window**                                   | 19, text editing generally    | Needed for per-word undo. Distinct from `shouldSkip`, which drops rather than merges.                                                                                                                                   |
+| **C. History is not persistable**                             | 13                            | And the current behaviour is destructive, not merely absent.                                                                                                                                                            |
+| **E. No per-entity history**                                  | 23                            | Real gap vs elf, not composable, narrower audience.                                                                                                                                                                     |
+| **F. No branch-level scoping**                                | 24                            | Already scoped as RFC 0012 and deferred deliberately.                                                                                                                                                                   |
 
 **A and B are still one feature**, and G raises the stakes: an action-scoped,
 path-delta history is also what would let a form participate in a shared stack

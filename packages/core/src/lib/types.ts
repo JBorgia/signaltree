@@ -31,6 +31,10 @@ export interface UpdateMetadata {
   correlationId?: string;
   /** Optional timestamp. */
   timestamp?: number;
+  /** Internal owner position ids carried by replayed writes. */
+  positionIds?: number[];
+  /** Internal row subject ids carried by replayed writes. */
+  subjectIds?: number[];
   /** Open extension for guardrails' historical custom-key shape. */
   [key: string]: unknown;
 }
@@ -1179,10 +1183,25 @@ export type EntityAwareTreeNode<T> = {
 export interface PathNotifier {
   subscribe(pattern: string, handler: PathHandler): () => void;
   intercept(pattern: string, fn: PathInterceptor): () => void;
-  notify(path: string, value: unknown, prev: unknown): void;
+  notify(
+    path: string,
+    value: unknown,
+    prev: unknown,
+    ownerPath?: string,
+    subjectIds?: number[],
+    positionIds?: number[]
+  ): void;
 }
 
-type PathHandler = (value: unknown, prev: unknown, path: string) => void;
+type PathHandler = (
+  value: unknown,
+  prev: unknown,
+  path: string,
+  ownerPath?: string,
+  source?: string,
+  subjectIds?: number[],
+  positionIds?: number[]
+) => void;
 
 type PathInterceptor = (
   ctx: {

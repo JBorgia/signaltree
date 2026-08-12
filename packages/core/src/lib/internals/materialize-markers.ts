@@ -53,9 +53,25 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
  */
 export type HydrateMode = 'merge' | 'restore' | 'rehydrate' | 'transfer';
 
+export interface MaterializationContext {
+  allocatePositionId: () => number;
+}
+
+export function createMaterializationContext(): MaterializationContext {
+  let nextPositionId = 1;
+  return {
+    allocatePositionId: () => nextPositionId++,
+  };
+}
+
 interface MarkerProcessor {
   check: (value: unknown) => boolean;
-  create: (marker: unknown, notifier: PathNotifier, path: string) => unknown;
+  create: (
+    marker: unknown,
+    notifier: PathNotifier,
+    path: string,
+    context: MaterializationContext
+  ) => unknown;
   /**
    * Live node → the payload that represents its STATE. Anything the node can
    * recompute must be omitted: a derived value frozen into a snapshot is stale
@@ -315,7 +331,12 @@ export function hasUnregisteredSymbolKeys(value: unknown): boolean {
  */
 export function registerMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
-  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  create: (
+    marker: T,
+    notifier: PathNotifier,
+    path: string,
+    context: MaterializationContext
+  ) => R,
   hooks?: {
     snapshot?: (node: R) => unknown;
     hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
@@ -344,7 +365,12 @@ export function registerMarkerProcessor<T, R>(
  */
 export function registerBuiltinMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
-  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  create: (
+    marker: T,
+    notifier: PathNotifier,
+    path: string,
+    context: MaterializationContext
+  ) => R,
   hooks?: {
     snapshot?: (node: R) => unknown;
     hydrate?: (node: R, value: unknown, mode: HydrateMode) => void;
@@ -454,7 +480,12 @@ function warnWriteOnlyMarker(processor: MarkerProcessor, node: unknown): void {
 
 function registerProcessor<T, R>(
   check: (value: unknown) => value is T,
-  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  create: (
+    marker: T,
+    notifier: PathNotifier,
+    path: string,
+    context: MaterializationContext
+  ) => R,
   suppressTimingWarning: boolean,
   hooks?: {
     snapshot?: (node: R) => unknown;
@@ -508,7 +539,8 @@ function registerProcessor<T, R>(
     create: create as (
       marker: unknown,
       notifier: PathNotifier,
-      path: string
+      path: string,
+      context: MaterializationContext
     ) => unknown,
     snapshot: hooks?.snapshot as ((node: unknown) => unknown) | undefined,
     hydrate: hooks?.hydrate as
@@ -548,7 +580,8 @@ export function _recordTreeConstruction(): void {
 export function materializeMarkers(
   node: unknown,
   notifier?: PathNotifier,
-  path: string[] = []
+  path: string[] = [],
+  context: MaterializationContext = createMaterializationContext()
 ): void {
   if (!isTraversableNode(node)) return;
   if (isSignal(node)) return;
@@ -580,7 +613,8 @@ export function materializeMarkers(
           const materialized = processor.create(
             value,
             getNotifier(),
-            pathString
+            pathString,
+            context
           );
           // Stamp the owning processor so lookup is an O(1) property read
           // rather than a scan over every registered marker. Non-enumerable so
@@ -631,14 +665,14 @@ export function materializeMarkers(
     if (!processed && value != null) {
       if (isNodeAccessor(value)) {
         // NodeAccessor - recurse to find nested markers
-        materializeMarkers(value, notifier, currentPath);
+        materializeMarkers(value, notifier, currentPath, context);
       } else if (
         typeof value === 'object' &&
         !Array.isArray(value) &&
         !isSignal(value)
       ) {
         // Plain object - recurse
-        materializeMarkers(value, notifier, currentPath);
+        materializeMarkers(value, notifier, currentPath, context);
       }
     }
   }

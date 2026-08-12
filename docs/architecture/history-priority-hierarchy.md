@@ -333,6 +333,26 @@ Keeping these apart is the difference between an architecture and a hope.
 CRDT/event-sourced layers whose own undo and ownership systems make store-level
 transactional history unnecessary, this capability is worth less than expected.
 
+### Competitive claim (a test, with a failure condition)
+
+Decided 2026-08-11: the differentiator is **surgical compensation**, not
+"transactions." The only competitive comparison worth building is the production
+rollback engine (0B, then Phase 3) against the **cascade** model — rolling back a
+transaction also rolls back later conflicting transactions, which is what TanStack
+DB documents. SignalTree's claim is the opposite: reject T42 and a later T43 that
+superseded or merely touched the same position **survives**.
+
+**Failure condition:** if production 0B cannot preserve legitimate later writes
+(the supersession case in `rollback-viability-prototype` case 3, and the
+independent-sibling case 2), the differentiator evaporates and the honest position
+collapses to "another transaction implementation." That collapse is acceptable —
+it means we built a competent transaction layer and no more. It must not be
+disguised.
+
+So 0B's supersession case is no longer only a semantics check; it is the
+competitive claim, and the bench-to-build is "reject T42, T43's later write
+survives" against the cascade baseline.
+
 ### Not yet audited
 
 Claims of the form _"no other state system provides this"_ are **not licensed**. The
@@ -341,6 +361,20 @@ elf 2.5.1 / elf-state-history 1.4.0, `@ngxs/store` 20.1.0 — and none ships sco
 history. **MobX-State-Tree's patch/UndoManager and Yjs's `UndoManager`
 (`trackedOrigins`) have not been audited** and are the real prior art. Required
 before a public claim, not before building.
+
+**TanStack DB is not a front-end state store** — it is a data-access layer over
+server-owned collections (QueryCollection / ElectricCollection sync layers). Its
+local state is an optimistic overlay that the sync replaces, so everything
+converges and no state exists that the server never sees: no forms, status
+markers, or UI flags, no undo of local-only state. Same boat as TanStack Query,
+not this one. It is, however, the right baseline for the Competitive claim above
+in its own domain: a real app doing optimistic collection writes against its
+backend gets exactly this machinery, and its `rollback()` is documented to
+cascade — "Rollback the transaction and any conflicting transactions" (Transaction
+reference, verified live 2026-08-11). The same-boat prior art for scoped history
+is MST, whose patch docs confirm patches "are emitted immediately when a mutation
+is made and don't respect transaction boundaries" — the turn-boundary gap is open
+there too (verified live 2026-08-11).
 
 ---
 

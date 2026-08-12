@@ -218,6 +218,22 @@ describe('changeId', () => {
       t.$.r.updateOne(1, { v: 777 });
       expect(t.$.r.byId(100)?.().v).toBe(1);
     });
+
+    it('a naive path-derived position id aliases a different row after changeId and id reuse', () => {
+      const t = mk([]);
+      const tempId = -1;
+      const naivePositionId = `r.${tempId}`;
+
+      t.$.r.addOne({ id: tempId, v: 1 });
+      t.$.r.changeId(tempId, 42);
+      t.$.r.addOne({ id: tempId, v: 555 });
+
+      const key = Number(naivePositionId.slice(naivePositionId.indexOf('.') + 1));
+
+      // The string still names a CURRENT row, just not the ORIGINAL row.
+      expect(t.$.r.byId(key)?.().v).toBe(555);
+      expect(t.$.r.byId(42)?.().v).toBe(1);
+    });
   });
 
   it('the optimistic-create flow end to end', () => {

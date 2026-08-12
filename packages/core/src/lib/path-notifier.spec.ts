@@ -24,6 +24,133 @@ describe('PathNotifier (batching)', () => {
     expect(spy).toHaveBeenCalledWith(3, 0, 'count');
   });
 
+  it('propagates ownerPath through batched notifications', async () => {
+    const notifier = new PathNotifier();
+    const spy = vi.fn();
+
+    notifier.subscribe('rows.*', (_v, _p, path, ownerPath, _source, subjectIds, positionIds) => {
+      spy(path, ownerPath, subjectIds, positionIds);
+    });
+
+    notifier.notify('rows.1', { id: 1 }, undefined, 'rows', [17], [3]);
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('rows.1', 'rows', [17], [3]);
+  });
+
+  it('treats owner position changes as batching boundaries on the same path', async () => {
+    const notifier = new PathNotifier();
+    const spy = vi.fn();
+
+    notifier.subscribe(
+      'foo.x',
+      (value, prev, path, ownerPath, _source, _subjectIds, positionIds) => {
+        spy(value, prev, path, ownerPath, positionIds);
+      }
+    );
+
+    notifier.notify('foo.x', 'A', 'before-P17', 'foo', undefined, [17]);
+    notifier.notify('foo.x', 'B', 'before-P18', 'foo', undefined, [18]);
+
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenNthCalledWith(1, 'A', 'before-P17', 'foo.x', 'foo', [17]);
+    expect(spy).toHaveBeenNthCalledWith(2, 'B', 'before-P18', 'foo.x', 'foo', [18]);
+  });
+
+  it('treats subject changes as batching boundaries on the same path under one owner', async () => {
+    const notifier = new PathNotifier();
+    const spy = vi.fn();
+
+    notifier.subscribe(
+      'rows.7',
+      (value, prev, path, ownerPath, _source, subjectIds, positionIds) => {
+        spy(value, prev, path, ownerPath, subjectIds, positionIds);
+      }
+    );
+
+    notifier.notify(
+      'rows.7',
+      undefined,
+      { id: 7, name: 'first' },
+      'rows',
+      [17],
+      [3]
+    );
+    notifier.notify(
+      'rows.7',
+      { id: 7, name: 'replacement' },
+      undefined,
+      'rows',
+      [18],
+      [3]
+    );
+
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenNthCalledWith(
+      1,
+      undefined,
+      { id: 7, name: 'first' },
+      'rows.7',
+      'rows',
+      [17],
+      [3]
+    );
+    expect(spy).toHaveBeenNthCalledWith(
+      2,
+      { id: 7, name: 'replacement' },
+      undefined,
+      'rows.7',
+      'rows',
+      [18],
+      [3]
+    );
+  });
+
+  it('marks coalesced writes from different sources as mixed', async () => {
+    const notifier = new PathNotifier();
+    const spy = vi.fn();
+    const { withWriteContext } = await import('./write-context');
+
+    notifier.subscribe(
+      'rows.7',
+      (_value, _prev, _path, _ownerPath, source, subjectIds, positionIds) => {
+        spy(source, subjectIds, positionIds);
+      }
+    );
+
+    withWriteContext({ intent: 'system', source: 'time-travel' }, () => {
+      notifier.notify('rows.7', { id: 7, name: 'after-replay' }, undefined, 'rows', [17], [3]);
+    });
+    withWriteContext({ intent: 'user', source: 'devtools' }, () => {
+      notifier.notify('rows.7', { id: 7, name: 'after-devtools' }, { id: 7, name: 'after-replay' }, 'rows', [17], [3]);
+    });
+
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('mixed', [17], [3]);
+  });
+
+  it('does not drop owner-only marker notifications during batching', async () => {
+    const notifier = new PathNotifier();
+    const spy = vi.fn();
+
+    notifier.subscribe('rows', (_v, _p, path, ownerPath) => {
+      spy(path, ownerPath);
+    });
+
+    notifier.notify('rows', undefined, undefined, 'rows');
+    await Promise.resolve();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('rows', 'rows');
+  });
+
   it('flushSync forces immediate notification', () => {
     const notifier = new PathNotifier();
     const spy = vi.fn();

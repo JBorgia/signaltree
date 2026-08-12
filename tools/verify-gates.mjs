@@ -481,6 +481,26 @@ const GATES = [
     },
   },
   {
+    name: 'history-ownership-bench',
+    releaseOnly: true,
+    covers:
+      'the 6 Phase 0A ownership arms construct, run, keep owner-path postconditions honest, and preserve the current decision-20 verdict contract',
+    cmd: [
+      'node',
+      '--expose-gc',
+      'tools/bench-history-ownership.mjs',
+      '--smoke',
+      '--require-verdict',
+      'INCONCLUSIVE',
+    ],
+    needsBuild: true,
+    mutation: {
+      file: 'tools/bench-history-ownership.mjs',
+      find: "    ownerPath = 'rows';",
+      replace: "    ownerPath = '__gateWrongOwner';",
+    },
+  },
+  {
     name: 'memory-harness',
     releaseOnly: true,
     covers:

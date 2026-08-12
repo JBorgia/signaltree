@@ -9,11 +9,14 @@
  * without a following undo() is NOT evidence — that is how the original
  * time-travel audit mis-scored itself (see docs/audits/2026-08/).
  *
- * Exits 0 when the defects still reproduce as documented, 1 when a documented
- * defect no longer reproduces — i.e. this goes RED when something is FIXED, and
- * the fixer should update the docs it cites. It is a provenance tool for the
- * figures published in docs/guides/time-travel-in-production.md, not a
- * regression test.
+ * 6a is FIXED (2026-08-11) and its checks now pin the corrected behaviour;
+ * 6b and 6d still reproduce as documented.
+ *
+ * Exits 0 when the documented behaviours reproduce (6b/6d) and the fixed
+ * behaviour holds (6a), 1 when a documented defect no longer reproduces —
+ * i.e. this goes RED when something is FIXED, and the fixer should update
+ * the docs it cites. It is a provenance tool for the figures published in
+ * docs/guides/time-travel-in-production.md, not a regression test.
  *
  * Runs against the BUILT package, because an `as any` attachment is invisible
  * to a type-level read. Requires `npx nx build core` first.
@@ -41,11 +44,16 @@ const check = (name, reproduced, detail) => {
   console.log(`    ${detail}`);
 };
 
-// -- 6a: timeTravel() does not cover form() state --------------------------
+// -- 6a: timeTravel() covers form() state (fixed 2026-08-11) ----------------
+// 6a was the data-losing shape: form writes produced no entries, and undoing a
+// neighbouring plain-leaf write rewound the form to a stale snapshot. That is
+// fixed — form field writes announce on the form path, so global time-travel
+// records and reverts them. These checks pin the FIXED behaviour by outcome.
 {
   const t = signalTree({ profile: form({ initial: { name: '' } }) }).with(
     timeTravel({})
   );
+  const baseline = t.getHistory().length;
   for (const v of ['a', 'ab', 'abc']) {
     t.$.profile.$.name.set(v);
     await flush();
@@ -54,15 +62,15 @@ const check = (name, reproduced, detail) => {
   t.undo();
   const after = t.$.profile.$.name();
   check(
-    '6a form-only tree: timeTravel records nothing for form writes',
-    after === before && t.getHistory().length === 1,
+    '6a form-only tree: timeTravel records form writes and reverts them',
+    t.getHistory().length > baseline && after === 'ab',
     `3 form writes -> getHistory() ${JSON.stringify(
       t.getHistory().map((e) => e.action)
-    )}, ` + `undo() left name ${JSON.stringify(after)} (unchanged)`
+    )}, ` + `undo() left name ${JSON.stringify(after)} (expected "ab")`
   );
 }
 {
-  // the mixed tree, which is the data-losing shape
+  // the mixed tree: undo aimed at the plain field must NOT rewind the form
   const t = signalTree({
     profile: form({ initial: { name: '' } }),
     plain: '',
@@ -73,18 +81,15 @@ const check = (name, reproduced, detail) => {
   await flush();
   t.$.plain.set('p2');
   await flush();
-  t.$.profile.$.name.set('ada l');
-  await flush();
-  const typed = t.$.profile.$.name();
   t.undo();
-  const afterUndo = t.$.profile.$.name();
+  const afterUndo = t.$.plain();
+  const formAfterUndo = t.$.profile.$.name();
   check(
-    '6a mixed tree: undo of an unrelated field discards form content',
-    typed === 'ada l' && afterUndo !== 'ada l',
-    `user typed ${JSON.stringify(
-      typed
-    )}; one undo() of the PLAIN field left the form at ` +
-      `${JSON.stringify(afterUndo)}`
+    '6a mixed tree: undoing a neighbouring plain-leaf write keeps form content',
+    afterUndo === 'p1' && formAfterUndo === 'ada',
+    `undo() of the PLAIN field left plain=${JSON.stringify(
+      afterUndo
+    )} and form name ${JSON.stringify(formAfterUndo)} (both expected to hold)`
   );
 }
 {
@@ -161,8 +166,16 @@ const check = (name, reproduced, detail) => {
 }
 
 // -- 6d: maxHistorySize is a buffer length, not a step count ---------------
+// Validated since 4835da80: a cap below 2 warns ST2032 and FALLS BACK to the
+// default of 50 rather than silently disabling undo.
 {
   const rows = [];
+  const warnings = [];
+  const origError = console.error;
+  console.error = (...args) => {
+    if (String(args[0] ?? '').includes('[ST2032]')) warnings.push(args[0]);
+    origError(...args);
+  };
   for (const cap of [undefined, 0, 1, 2, 5]) {
     const t = signalTree({ n: 0 }).with(
       timeTravel(cap === undefined ? {} : { maxHistorySize: cap })
@@ -178,13 +191,13 @@ const check = (name, reproduced, detail) => {
     }
     rows.push(`${cap === undefined ? 'omitted' : cap}=${spent}`);
   }
-  const disabledAtOne = rows.includes('1=0') && rows.includes('0=0');
+  console.error = origError;
   check(
-    '6d maxHistorySize <= 1 silently disables undo',
-    disabledAtOne,
+    '6d maxHistorySize < 2 warns ST2032 and falls back to 50 (undo not disabled)',
+    warnings.length === 2 && rows.includes('0=10') && rows.includes('1=10'),
     `undo steps spendable after 10 writes — ${rows.join(
       ', '
-    )} (N entries yields N-1 steps)`
+    )}; ST2032 warnings for caps 0 and 1: ${warnings.length}`
   );
 }
 

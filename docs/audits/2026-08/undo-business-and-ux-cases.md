@@ -353,10 +353,10 @@ the `undo()` it called and the state afterwards.
    (`063a4457`) — the old spelling collided with `form()`'s opt-IN
    `history: history()`. Code samples below use the current spelling.
 
-`form(history())` = scoped field undo, works (verified). Note that the **global**
-`timeTravel()` does _not_ cover `form()` state at all — see case 20 of the sibling
-audit — so scoped form history is the only correct mechanism, not merely the
-tidier one.
+`form(history())` = scoped field undo, works (verified). The older warning that the
+**global** `timeTravel()` could not see `form()` state is now stale: direct form
+writes record into global history again. Scoped form history remains the tidier choice
+when undo should belong to the form instead of the whole app.
 
 ### 1. Streaming telemetry into many per-entity bindings
 
@@ -493,20 +493,20 @@ _Editors-in-a-panel, wizards, bulk edit_
 
 **What undo means:** whatever the panel edits — which the claim does not say.
 
-**Verdict: ✅ for scalar/branch state AND collection structure; ❌ for `form()`
-state under the global stack.** Both halves of the old verdict were wrong, and they
-were wrong in opposite directions.
+**Verdict: ✅ for scalar/branch state, collection structure, and direct `form()`
+writes.** The old verdict was right to flag form UX risk, but the raw claim that
+global history could not see form writes is now outdated.
 
 - Collection structure **does** record — the ❌ came from the retracted premise.
-- `form()` state does **not** participate in `timeTravel()` at all: a form-only
-  tree records `["INIT"]` and nothing else, `canUndo()` stays `false`, and in a
-  mixed tree an `undo()` aimed at a neighbouring field rewinds the form to a stale
-  snapshot value, destroying what the user typed. The ✅ was inherited from "form
-  state is ordinary tree state", which is false for history purposes.
+- Direct `form()` state now **does** participate in `timeTravel()` again for ordinary
+  field writes, and undoing a neighbouring plain-leaf write no longer rewinds the
+  form. The remaining product question is scope: whether a form should share the
+  app-wide undo stream or keep a local `form(history())` stack.
 
-So the row still needs rewording, for the opposite reason: an "editors-in-a-panel"
-workload must use `form({ history: history() })` for the form and the global stack
-for everything else, and today nothing says so. See case 20 of the sibling audit.
+So the row still needs rewording, but for UX rather than correctness: an
+"editors-in-a-panel" workload should choose explicitly between shared global undo and
+local `form({ history: history() })`, and today the docs do not frame that choice
+clearly enough.
 
 ### 7. Whole-dataset reads on every change
 

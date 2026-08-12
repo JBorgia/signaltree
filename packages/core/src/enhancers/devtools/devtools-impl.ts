@@ -1826,8 +1826,8 @@ export function createDevToolsEnhancer(
       if ('$' in tree) {
         const restore = interceptLeafSignals(
           tree.$ as Record<string, unknown>,
-          (path, next, prev) => {
-            notifier.notify(path, next, prev);
+          (path, next, prev, _meta, ownerPath) => {
+            notifier.notify(path, next, prev, ownerPath);
           }
         );
         restoreInterceptors.push(restore);

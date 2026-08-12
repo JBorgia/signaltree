@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 
 import {
+  deepEqual,
   HISTORY_EXCLUDED,
   prunedEqual,
   pruneHistoryExcluded,
@@ -30,6 +31,132 @@ export type { TimeTravelConfig, TimeTravelEntry };
 /**
  * Internal time travel state management
  */
+
+type CanonicalTurn<T> = TimeTravelEntry<T> & {
+  id: number;
+  historyIndex: number;
+  __turnId: number;
+  __ownerPaths?: string[];
+  __subjectIds?: number[];
+  __positionIds?: number[];
+  __effects?: TurnEffect[];
+};
+
+type TurnEffectBase = {
+  position: number;
+  ownerPath: string;
+  path: string;
+};
+
+type ScalarSetEffect = TurnEffectBase & {
+  kind: 'set';
+  subject?: number;
+  before: unknown;
+  after: unknown;
+};
+
+type CollectionAddEffect = TurnEffectBase & {
+  kind: 'add';
+  subject: number;
+  key: string | number;
+  value: unknown;
+  beforeSubject?: number;
+  afterSubject?: number;
+};
+
+type CollectionRemoveEffect = TurnEffectBase & {
+  kind: 'remove';
+  subject: number;
+  key: string | number;
+  value: unknown;
+  beforeSubject?: number;
+  afterSubject?: number;
+};
+
+type CollectionRekeyEffect = TurnEffectBase & {
+  kind: 'rekey';
+  subject: number;
+  beforeKey: string | number;
+  afterKey: string | number;
+};
+
+type TurnEffect =
+  | ScalarSetEffect
+  | CollectionAddEffect
+  | CollectionRemoveEffect
+  | CollectionRekeyEffect;
+
+type PendingEffectMap = Map<string, TurnEffect>;
+
+type CollectionHistoryEffect =
+  | CollectionAddEffect
+  | CollectionRemoveEffect
+  | CollectionRekeyEffect;
+
+type EntityCollectionLookupNode = {
+  byIdOrFail: (id: string | number) => Record<string, unknown>;
+};
+
+type EntityCollectionNode = EntityCollectionLookupNode & {
+  addOne: (value: unknown) => void;
+  removeOne: (id: string | number) => void;
+  changeId: (from: string | number, to: string | number) => void;
+  __findKeyBySubjectId?: (subject: number) => string | number | undefined;
+  __restoreOne?: (
+    key: string | number,
+    value: unknown,
+    subject: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ) => void;
+};
+
+type HistoryAwareCollectionNode = EntityCollectionNode & {
+  __consumeHistoryEffect?: (
+    path: string,
+    subject: number
+  ) => CollectionHistoryEffect | undefined;
+  __findKeyBySubjectId?: (subject: number) => string | number | undefined;
+  __restoreOne?: (
+    key: string | number,
+    value: unknown,
+    subject: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ) => void;
+};
+
+type OwnerResolution = {
+  ownerNode: EntityCollectionLookupNode;
+  entityId: string | number;
+  fieldSegments: string[];
+};
+
+type CollectionResolution = {
+  ownerNode: HistoryAwareCollectionNode;
+  entityId: string | number;
+};
+
+type ScalarEffectDraft = {
+  path: string;
+  ownerPath?: string;
+  subjectIds?: number[];
+  positionIds?: number[];
+  before: unknown;
+  after: unknown;
+};
+
+function cloneTurnEffect(effect: TurnEffect): TurnEffect {
+  switch (effect.kind) {
+    case 'set':
+      return { ...effect };
+    case 'add':
+    case 'remove':
+      return { ...effect };
+    case 'rekey':
+      return { ...effect };
+  }
+}
 
 /**
  * @internal Validate `maxHistorySize`, because two plausible values silently
@@ -68,7 +195,16 @@ function normaliseMaxHistorySize(value: number | undefined): number {
   return Math.floor(value);
 }
 class TimeTravelManager<T> {
-  private history: TimeTravelEntry<T>[] = [];
+  private history: CanonicalTurn<T>[] = [];
+  private turns = new Map<number, CanonicalTurn<T>>();
+  private positionTurnIds = new Map<number, number[]>();
+  private positionFrontiers = new Map<number, number>();
+  private nextTurnId = 1;
+  private observedBatches: Array<{
+    action: string;
+    ownerPaths: string[];
+    recorded: boolean;
+  }> = [];
 
   /**
    * The undo/redo position is a SIGNAL, because `canUndo()` bound in a template
@@ -93,6 +229,7 @@ class TimeTravelManager<T> {
    */
   private readonly indexSignal = signal(-1);
   private readonly historyVersion = signal(0);
+  private readonly frontierVersion = signal(0);
 
   private get currentIndex(): number {
     return this.indexSignal();
@@ -105,6 +242,11 @@ class TimeTravelManager<T> {
     this.historyVersion.update((v) => v + 1);
   }
 
+  /** Call after any structural change to frontier-derived turn state. */
+  private bumpFrontiers(): void {
+    this.frontierVersion.update((v) => v + 1);
+  }
+
   private maxHistorySize: number;
   private includePayload: boolean;
   private actionNames: Record<string, string>;
@@ -112,7 +254,11 @@ class TimeTravelManager<T> {
   constructor(
     private tree: ISignalTree<T>,
     private config: TimeTravelConfig = {},
-    private restoreStateFn?: (state: T) => void
+    private restoreStateFn?: (state: T) => void,
+    private applyEffectsFn?: (
+      effects: TurnEffect[],
+      direction: 'undo' | 'redo'
+    ) => void
   ) {
     this.maxHistorySize = normaliseMaxHistorySize(config.maxHistorySize);
     this.includePayload = config.includePayload ?? true;
@@ -150,7 +296,18 @@ class TimeTravelManager<T> {
   // path-scoped delta spanning concurrent writers, which is not what this was
   // built for. Rebuilding ~20 lines beats reasoning about which of its
   // assumptions still hold. See docs/architecture/history-the-greenfield-target.md.
-  addEntry(action: string, payload?: unknown): void {
+  addEntry(
+    action: string,
+    payload?: unknown,
+    ownerPaths?: string[],
+    subjectIds?: number[],
+    positionIds?: number[],
+    effects?: TurnEffect[]
+  ): boolean {
+    if (this.hasScopedRedoFuture()) {
+      this.truncateScopedRedoFuture();
+    }
+
     // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
@@ -218,12 +375,51 @@ class TimeTravelManager<T> {
       checkHistoryRetention(this.tree.$, this.history.length);
     }
 
-    const entry: TimeTravelEntry<T> = {
+    const turnId = this.nextTurnId++;
+    const effectOwnerPaths = Array.from(
+      new Set(
+        (effects ?? [])
+          .map((effect) => effect.ownerPath)
+          .filter((value): value is string => typeof value === 'string')
+      )
+    ).sort();
+    const effectSubjectIds = Array.from(
+      new Set(
+        (effects ?? [])
+          .map((effect) => effect.subject)
+          .filter((value): value is number => typeof value === 'number')
+      )
+    ).sort((left, right) => left - right);
+    const effectPositionIds = Array.from(
+      new Set((effects ?? []).map((effect) => effect.position))
+    ).sort((left, right) => left - right);
+    const entry: CanonicalTurn<T> = {
+      id: turnId,
+      historyIndex: this.history.length,
+      __turnId: turnId,
       state: plain as T,
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
     };
+    const resolvedOwnerPaths =
+      ownerPaths && ownerPaths.length > 0 ? ownerPaths : effectOwnerPaths;
+    if (resolvedOwnerPaths.length > 0) {
+      entry.__ownerPaths = [...resolvedOwnerPaths];
+    }
+    const resolvedSubjectIds =
+      subjectIds && subjectIds.length > 0 ? subjectIds : effectSubjectIds;
+    if (resolvedSubjectIds.length > 0) {
+      entry.__subjectIds = [...resolvedSubjectIds];
+    }
+    const resolvedPositionIds =
+      positionIds && positionIds.length > 0 ? positionIds : effectPositionIds;
+    if (resolvedPositionIds.length > 0) {
+      entry.__positionIds = [...resolvedPositionIds];
+    }
+    if (effects && effects.length > 0) {
+      entry.__effects = effects.map(cloneTurnEffect);
+    }
 
     // Dedupe by REFERENCE. `tree()` returns the identical object when nothing
     // changed, so this is exact for the case that matters and O(1) — the
@@ -248,12 +444,14 @@ class TimeTravelManager<T> {
     // them and each became a PHANTOM entry: `canUndo()` true, undo changes
     // nothing visible, and the user spends a step they never had.
     const last = this.history[this.history.length - 1];
+    const isEffectEmpty = !effects || effects.length === 0;
     if (
       last &&
       (last.state === entry.state ||
-        (didPrune && prunedEqual(last.state, entry.state)))
+        (didPrune && prunedEqual(last.state, entry.state)) ||
+        (isEffectEmpty && deepEqual(last.state, entry.state)))
     ) {
-      return; // skip duplicate
+      return false; // skip duplicate
     }
 
     // `shouldSkip` is NOT consulted here. It used to be, and the entry was
@@ -262,7 +460,7 @@ class TimeTravelManager<T> {
     // The reference-dedup above stays: it is O(1), structural rather than
     // semantic, and collapsing an identical snapshot loses nothing.
 
-    this.history.push(entry as TimeTravelEntry<T>);
+    this.history.push(entry);
     this.bumpHistory();
     this.currentIndex = this.history.length - 1;
 
@@ -272,6 +470,402 @@ class TimeTravelManager<T> {
       this.bumpHistory();
       this.currentIndex--;
     }
+
+    this.rebuildTurnIndexes();
+    return true;
+  }
+
+  observeBatch(action: string, ownerPaths: string[], recorded: boolean): void {
+    if (this.observedBatches.length >= MAX_OBSERVED_BATCHES) {
+      this.observedBatches.shift();
+    }
+    this.observedBatches.push({ action, ownerPaths: [...ownerPaths], recorded });
+  }
+
+  getObservedBatches(): Array<{
+    action: string;
+    ownerPaths: string[];
+    recorded: boolean;
+  }> {
+    return this.observedBatches.map((batch) => ({
+      ...batch,
+      ownerPaths: [...batch.ownerPaths],
+    }));
+  }
+
+  getTurns(): Array<CanonicalTurn<T>> {
+    return Array.from(this.turns.values()).map((turn) => ({
+      ...turn,
+      __ownerPaths: turn.__ownerPaths ? [...turn.__ownerPaths] : undefined,
+      __subjectIds: turn.__subjectIds ? [...turn.__subjectIds] : undefined,
+      __positionIds: turn.__positionIds ? [...turn.__positionIds] : undefined,
+      __effects: turn.__effects ? turn.__effects.map(cloneTurnEffect) : undefined,
+    }));
+  }
+
+  getTurn(turnId: number): CanonicalTurn<T> | undefined {
+    const turn = this.turns.get(turnId);
+    if (!turn) {
+      return undefined;
+    }
+
+    return {
+      ...turn,
+      __ownerPaths: turn.__ownerPaths ? [...turn.__ownerPaths] : undefined,
+      __subjectIds: turn.__subjectIds ? [...turn.__subjectIds] : undefined,
+      __positionIds: turn.__positionIds ? [...turn.__positionIds] : undefined,
+      __effects: turn.__effects ? turn.__effects.map(cloneTurnEffect) : undefined,
+    };
+  }
+
+  getTurnRef(turnId: number): CanonicalTurn<T> | undefined {
+    return this.turns.get(turnId);
+  }
+
+  getHistoryRef(index: number): CanonicalTurn<T> | undefined {
+    return this.history[index];
+  }
+
+  getTurnIdsForPosition(positionId: number): number[] {
+    return [...(this.positionTurnIds.get(positionId) ?? [])];
+  }
+
+  getFrontier(positionId: number): number {
+    return this.positionFrontiers.get(positionId) ?? 0;
+  }
+
+  getAppliedTurnIdsForPosition(positionId: number): number[] {
+    const turnIds = this.positionTurnIds.get(positionId) ?? [];
+    const frontier = this.getFrontier(positionId);
+    return turnIds.slice(0, frontier);
+  }
+
+  getTurnStatus(
+    turnId: number
+  ): 'applied' | 'unapplied' | 'inconsistent' | undefined {
+    const turn = this.turns.get(turnId);
+    if (!turn) {
+      return undefined;
+    }
+
+    let applied: boolean | undefined;
+    for (const positionId of turn.__positionIds ?? []) {
+      const turnIds = this.positionTurnIds.get(positionId) ?? [];
+      const turnIndex = turnIds.indexOf(turnId);
+      const positionApplied = turnIndex !== -1 && turnIndex < this.getFrontier(positionId);
+      if (applied === undefined) {
+        applied = positionApplied;
+      } else if (applied !== positionApplied) {
+        return 'inconsistent';
+      }
+    }
+
+    return applied ? 'applied' : 'unapplied';
+  }
+
+  isTurnApplied(turnId: number): boolean | undefined {
+    const status = this.getTurnStatus(turnId);
+    if (status === 'inconsistent') {
+      throw new Error(`Inconsistent applied status for turn ${turnId}`);
+    }
+    if (status === undefined) {
+      return undefined;
+    }
+    return status === 'applied';
+  }
+
+  assertTurnStatusConsistency(): void {
+    for (const turnId of this.turns.keys()) {
+      this.isTurnApplied(turnId);
+    }
+  }
+
+  resolveUndoClosure(positionId: number): number[] {
+    const turnIds = this.positionTurnIds.get(positionId) ?? [];
+    const frontier = this.getFrontier(positionId);
+    if (frontier <= 0) {
+      return [];
+    }
+
+    const seedTurnId = turnIds[frontier - 1];
+    const closure = new Set<number>([seedTurnId]);
+    let changed = true;
+
+    while (changed) {
+      changed = false;
+      const closureTurnIds = [...closure];
+
+      for (const candidateTurnId of closureTurnIds) {
+        const turn = this.turns.get(candidateTurnId);
+        if (!turn) {
+          continue;
+        }
+
+        for (const candidatePositionId of turn.__positionIds ?? []) {
+          const candidatePositionTurnIds =
+            this.positionTurnIds.get(candidatePositionId) ?? [];
+          const candidateFrontier = this.getFrontier(candidatePositionId);
+          const earliestClosureIndex = candidatePositionTurnIds.findIndex(
+            (indexedTurnId, turnIndex) =>
+              turnIndex < candidateFrontier && closure.has(indexedTurnId)
+          );
+
+          if (earliestClosureIndex === -1) {
+            continue;
+          }
+
+          for (
+            let turnIndex = earliestClosureIndex;
+            turnIndex < candidateFrontier;
+            turnIndex++
+          ) {
+            const dependentTurnId = candidatePositionTurnIds[turnIndex];
+            if (!closure.has(dependentTurnId)) {
+              closure.add(dependentTurnId);
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+
+    return [...closure].sort((left, right) => {
+      const leftTurn = this.turns.get(left);
+      const rightTurn = this.turns.get(right);
+      return (rightTurn?.historyIndex ?? -1) - (leftTurn?.historyIndex ?? -1);
+    });
+  }
+
+  resolveRedoClosure(positionId: number): number[] {
+    const turnIds = this.positionTurnIds.get(positionId) ?? [];
+    const frontier = this.getFrontier(positionId);
+    if (frontier >= turnIds.length) {
+      return [];
+    }
+
+    const seedTurnId = turnIds[frontier];
+    const closure = new Set<number>([seedTurnId]);
+    let changed = true;
+
+    while (changed) {
+      changed = false;
+      const closureTurnIds = [...closure];
+
+      for (const candidateTurnId of closureTurnIds) {
+        const turn = this.turns.get(candidateTurnId);
+        if (!turn) {
+          continue;
+        }
+
+        for (const candidatePositionId of turn.__positionIds ?? []) {
+          const candidatePositionTurnIds =
+            this.positionTurnIds.get(candidatePositionId) ?? [];
+          const candidateFrontier = this.getFrontier(candidatePositionId);
+          let latestClosureIndex = -1;
+          for (
+            let turnIndex = candidateFrontier;
+            turnIndex < candidatePositionTurnIds.length;
+            turnIndex++
+          ) {
+            if (closure.has(candidatePositionTurnIds[turnIndex])) {
+              latestClosureIndex = turnIndex;
+            }
+          }
+
+          if (latestClosureIndex === -1) {
+            continue;
+          }
+
+          for (
+            let turnIndex = candidateFrontier;
+            turnIndex <= latestClosureIndex;
+            turnIndex++
+          ) {
+            const prerequisiteTurnId = candidatePositionTurnIds[turnIndex];
+            if (!closure.has(prerequisiteTurnId)) {
+              closure.add(prerequisiteTurnId);
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+
+    return [...closure].sort((left, right) => {
+      const leftTurn = this.turns.get(left);
+      const rightTurn = this.turns.get(right);
+      return (leftTurn?.historyIndex ?? -1) - (rightTurn?.historyIndex ?? -1);
+    });
+  }
+
+  undoPosition(positionId: number): number[] {
+    const closure = this.resolveUndoClosure(positionId);
+    if (closure.length === 0) {
+      return closure;
+    }
+
+    const frontierUpdates = new Map<number, number>();
+
+    for (const turnId of closure) {
+      const turn = this.turns.get(turnId);
+      if (!turn) {
+        continue;
+      }
+
+      for (const candidatePositionId of turn.__positionIds ?? []) {
+        const turnIds = this.positionTurnIds.get(candidatePositionId) ?? [];
+        const turnIndex = turnIds.indexOf(turnId);
+        if (turnIndex === -1) {
+          continue;
+        }
+        frontierUpdates.set(
+          candidatePositionId,
+          Math.min(
+            frontierUpdates.get(candidatePositionId) ??
+              this.getFrontier(candidatePositionId),
+            turnIndex
+          )
+        );
+      }
+    }
+
+    this.applyTurnEffects(closure, 'undo');
+
+    for (const [candidatePositionId, frontier] of frontierUpdates.entries()) {
+      this.positionFrontiers.set(candidatePositionId, frontier);
+    }
+    this.bumpFrontiers();
+
+    this.assertTurnStatusConsistency();
+    return closure;
+  }
+
+  redoPosition(positionId: number): number[] {
+    const closure = this.resolveRedoClosure(positionId);
+    if (closure.length === 0) {
+      return closure;
+    }
+
+    const frontierUpdates = new Map<number, number>();
+
+    for (const turnId of closure) {
+      const turn = this.turns.get(turnId);
+      if (!turn) {
+        continue;
+      }
+
+      for (const candidatePositionId of turn.__positionIds ?? []) {
+        const turnIds = this.positionTurnIds.get(candidatePositionId) ?? [];
+        const turnIndex = turnIds.indexOf(turnId);
+        if (turnIndex === -1) {
+          continue;
+        }
+        frontierUpdates.set(
+          candidatePositionId,
+          Math.max(
+            frontierUpdates.get(candidatePositionId) ??
+              this.getFrontier(candidatePositionId),
+            turnIndex + 1
+          )
+        );
+      }
+    }
+
+    this.applyTurnEffects(closure, 'redo');
+
+    for (const [candidatePositionId, frontier] of frontierUpdates.entries()) {
+      this.positionFrontiers.set(candidatePositionId, frontier);
+    }
+    this.bumpFrontiers();
+
+    this.assertTurnStatusConsistency();
+    return closure;
+  }
+
+  private getLatestAppliedTurn(): CanonicalTurn<T> | undefined {
+    let latestTurn: CanonicalTurn<T> | undefined;
+
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      const frontier = this.getFrontier(positionId);
+      if (frontier <= 0) {
+        continue;
+      }
+
+      const turnId = turnIds[frontier - 1];
+      const turn = this.turns.get(turnId);
+      if (!turn) {
+        continue;
+      }
+
+      if (
+        !latestTurn ||
+        (turn.historyIndex ?? -1) > (latestTurn.historyIndex ?? -1)
+      ) {
+        latestTurn = turn;
+      }
+    }
+
+    return latestTurn;
+  }
+
+  private getEarliestUnappliedTurn(): CanonicalTurn<T> | undefined {
+    let earliestTurn: CanonicalTurn<T> | undefined;
+
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      const frontier = this.getFrontier(positionId);
+      if (frontier >= turnIds.length) {
+        continue;
+      }
+
+      const turnId = turnIds[frontier];
+      const turn = this.turns.get(turnId);
+      if (!turn) {
+        continue;
+      }
+
+      if (
+        !earliestTurn ||
+        (turn.historyIndex ?? Number.POSITIVE_INFINITY) <
+          (earliestTurn.historyIndex ?? Number.POSITIVE_INFINITY)
+      ) {
+        earliestTurn = turn;
+      }
+    }
+
+    return earliestTurn;
+  }
+
+  private syncCurrentIndexToAppliedTurns(): void {
+    const latestTurn = this.getLatestAppliedTurn();
+    this.currentIndex = latestTurn?.historyIndex ?? (this.history.length > 0 ? 0 : -1);
+  }
+
+  private undoBySnapshot(): boolean {
+    const undoneEntry = this.history[this.currentIndex] as TimeTravelEntry<T> & {
+      __subjectIds?: number[];
+      __positionIds?: number[];
+    };
+    this.currentIndex = this.skipsBackward(this.currentIndex);
+    const entry = this.history[this.currentIndex];
+    this.restoreState(entry.state, undoneEntry.__subjectIds, undoneEntry.__positionIds);
+    return true;
+  }
+
+  undoConfirmed(): boolean {
+    if (!this.canUndoConfirmed()) {
+      return false;
+    }
+
+    const latestTurn = this.getLatestAppliedTurn();
+    const seedPositionId = latestTurn?.__positionIds?.[0];
+
+    if (latestTurn && seedPositionId !== undefined) {
+      this.undoPosition(seedPositionId);
+      this.syncCurrentIndexToAppliedTurns();
+      return true;
+    }
+
+    return false;
   }
 
   undo(): boolean {
@@ -279,10 +873,7 @@ class TimeTravelManager<T> {
       return false;
     }
 
-    this.currentIndex = this.skipsBackward(this.currentIndex);
-    const entry = this.history[this.currentIndex];
-    this.restoreState(entry.state);
-    return true;
+    return this.undoBySnapshot();
   }
 
   /**
@@ -350,9 +941,29 @@ class TimeTravelManager<T> {
     }
 
     this.currentIndex = this.skipsForward(this.currentIndex);
-    const entry = this.history[this.currentIndex];
-    this.restoreState(entry.state);
+    const entry = this.history[this.currentIndex] as TimeTravelEntry<T> & {
+      __subjectIds?: number[];
+      __positionIds?: number[];
+    };
+    this.restoreState(entry.state, entry.__subjectIds, entry.__positionIds);
     return true;
+  }
+
+  redoConfirmed(): boolean {
+    if (!this.canRedoConfirmed()) {
+      return false;
+    }
+
+    const earliestTurn = this.getEarliestUnappliedTurn();
+    const seedPositionId = earliestTurn?.__positionIds?.[0];
+
+    if (earliestTurn && seedPositionId !== undefined) {
+      this.redoPosition(seedPositionId);
+      this.syncCurrentIndexToAppliedTurns();
+      return true;
+    }
+
+    return false;
   }
 
   getHistory(): TimeTravelEntry<T>[] {
@@ -373,9 +984,14 @@ class TimeTravelManager<T> {
 
   resetHistory(): void {
     this.history = [];
+    this.turns.clear();
+    this.positionTurnIds.clear();
+    this.positionFrontiers.clear();
+    this.nextTurnId = 1;
     this.bumpHistory();
     this.currentIndex = -1;
     this.addEntry('RESET');
+    this.observedBatches = [];
   }
 
   jumpTo(index: number): boolean {
@@ -384,8 +1000,11 @@ class TimeTravelManager<T> {
     }
 
     this.currentIndex = index;
-    const entry = this.history[index];
-    this.restoreState(entry.state);
+    const entry = this.history[index] as TimeTravelEntry<T> & {
+      __subjectIds?: number[];
+      __positionIds?: number[];
+    };
+    this.restoreState(entry.state, entry.__subjectIds, entry.__positionIds);
     return true;
   }
 
@@ -393,11 +1012,29 @@ class TimeTravelManager<T> {
     return this.currentIndex;
   }
 
-  canUndo(): boolean {
+  private hasAppliedConfirmedTurns(): boolean {
+    for (const [positionId] of this.positionTurnIds.entries()) {
+      if (this.getFrontier(positionId) > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private hasUnappliedConfirmedTurns(): boolean {
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      if (this.getFrontier(positionId) < turnIds.length) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private canUndoBySnapshot(): boolean {
     return this.currentIndex > 0;
   }
 
-  canRedo(): boolean {
+  private canRedoBySnapshot(): boolean {
     // Reads historyVersion as well as the index: redo depends on the LENGTH of
     // history, which changes without the index moving (a new entry pushed while
     // sitting at the end).
@@ -405,21 +1042,167 @@ class TimeTravelManager<T> {
     return this.currentIndex < this.history.length - 1;
   }
 
+  canUndoConfirmed(): boolean {
+    this.frontierVersion();
+    return this.hasAppliedConfirmedTurns();
+  }
+
+  canRedoConfirmed(): boolean {
+    this.frontierVersion();
+    return this.hasUnappliedConfirmedTurns();
+  }
+
+  canUndo(): boolean {
+    return this.canUndoConfirmed();
+  }
+
+  canRedo(): boolean {
+    return this.canRedoConfirmed();
+  }
+
   /**
    * Restore state without triggering time travel middleware
    */
-  private restoreState(state: T): void {
+  private restoreState(
+    state: T,
+    subjectIds?: number[],
+    positionIds?: number[]
+  ): void {
     // Tag every leaf write performed during this undo/redo/jump with
     // `source: 'time-travel'`. Enhancers (validation, guardrails) read this
     // via `getActiveWriteContext()` and can suppress side effects for replays.
-    withWriteContext({ intent: 'system', source: 'time-travel' }, () => {
+    withWriteContext(
+      { intent: 'system', source: 'time-travel', subjectIds, positionIds },
+      () => {
       if (this.restoreStateFn) {
         this.restoreStateFn(state);
       } else {
         // Fallback if no restoration function provided
         this.tree(state);
       }
+      }
+    );
+  }
+
+  private applyTurnEffects(
+    turnIds: number[],
+    direction: 'undo' | 'redo'
+  ): void {
+    if (!this.applyEffectsFn) {
+      return;
+    }
+
+    const effects: TurnEffect[] = [];
+    for (const turnId of turnIds) {
+      const turn = this.turns.get(turnId);
+      if (!turn) {
+        continue;
+      }
+      const turnEffects = turn.__effects ?? [];
+      if (direction === 'undo') {
+        for (let i = turnEffects.length - 1; i >= 0; i--) {
+          effects.push(turnEffects[i]);
+        }
+      } else {
+        effects.push(...turnEffects);
+      }
+    }
+
+    for (const effect of effects) {
+      if (!this.isSupportedEffect(effect)) {
+        throw new Error(`Unsupported scoped undo effect at ${effect.path}`);
+      }
+    }
+
+    this.applyEffectsFn(effects, direction);
+  }
+
+  private isSupportedEffect(effect: TurnEffect): boolean {
+    switch (effect.kind) {
+      case 'set':
+        return this.isScalarValue(effect.before) && this.isScalarValue(effect.after);
+      case 'remove':
+        return effect.subject !== undefined;
+      case 'add':
+        return effect.subject !== undefined;
+      case 'rekey':
+        return effect.subject !== undefined;
+    }
+  }
+
+  private isScalarValue(value: unknown): boolean {
+    return (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    );
+  }
+
+  private rebuildTurnIndexes(): void {
+    this.turns.clear();
+    this.positionTurnIds.clear();
+    this.positionFrontiers.clear();
+
+    this.history.forEach((entry, historyIndex) => {
+      entry.historyIndex = historyIndex;
+      this.turns.set(entry.id, entry);
+
+      for (const positionId of entry.__positionIds ?? []) {
+        const turnIds = this.positionTurnIds.get(positionId);
+        if (turnIds) {
+          turnIds.push(entry.id);
+        } else {
+          this.positionTurnIds.set(positionId, [entry.id]);
+        }
+      }
     });
+
+    this.syncFrontiersToCurrentIndex();
+    this.bumpFrontiers();
+  }
+
+  private syncFrontiersToCurrentIndex(): void {
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      let frontier = 0;
+      while (frontier < turnIds.length) {
+        const turn = this.turns.get(turnIds[frontier]);
+        if (!turn || turn.historyIndex > this.currentIndex) {
+          break;
+        }
+        frontier++;
+      }
+      this.positionFrontiers.set(positionId, frontier);
+    }
+  }
+
+  private hasScopedRedoFuture(): boolean {
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      if (this.getFrontier(positionId) < turnIds.length) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private truncateScopedRedoFuture(): void {
+    const survivingIds = new Set<number>();
+    for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      const frontier = this.getFrontier(positionId);
+      for (let i = 0; i < frontier; i++) {
+        survivingIds.add(turnIds[i]);
+      }
+    }
+
+    this.history = this.history.filter((entry) => {
+      const indexed = (entry.__positionIds?.length ?? 0) > 0;
+      return !indexed || survivingIds.has(entry.id);
+    });
+    this.currentIndex = this.history.length - 1;
+    this.bumpHistory();
+    this.rebuildTurnIndexes();
   }
 }
 
@@ -514,6 +1297,15 @@ const HISTORY_RETAINED_POINTER_BUDGET = 500_000;
 
 /** @internal Records between retention checks. See `checkHistoryRetention`. */
 const RETENTION_CHECK_INTERVAL = 16;
+
+/**
+ * @internal Cap on the `observedBatches` probe log. It exists so Phase 0A specs
+ * can read what the flush hook recorded per batch; nothing reads it in
+ * production. Without a cap a long-lived tree accumulates one entry per flush
+ * forever. The spec only ever reads the last two entries, so a bounded
+ * last-N window preserves the probe's purpose.
+ */
+const MAX_OBSERVED_BATCHES = 1_000;
 
 /** @internal One report per process. */
 let warnedHistoryRetention = false;
@@ -649,6 +1441,393 @@ export function timeTravel(
     // Flag to prevent time travel during restoration
     let isRestoring = false;
 
+    const parseEntityKey = (raw: string): string | number => {
+      if (/^-?\d+$/.test(raw)) {
+        return Number(raw);
+      }
+      return raw;
+    };
+
+    const resolveOwnerNode = (
+      root: Record<string, unknown>,
+      path: string
+    ): OwnerResolution => {
+      let cursor: unknown = root;
+      const segments = path.split('.');
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          throw new Error(`Cannot resolve owner path from ${path}`);
+        }
+        const next = (cursor as Record<string, unknown>)[segment] as {
+          byIdOrFail?: (id: string | number) => Record<string, unknown>;
+        };
+        if (typeof next?.byIdOrFail === 'function') {
+          const entitySegment = segments[i + 1];
+          const fieldSegments = segments.slice(i + 2);
+          if (entitySegment === undefined || fieldSegments.length === 0) {
+            throw new Error(`Unsupported scoped undo path ${path}`);
+          }
+          return {
+            ownerNode: next as EntityCollectionLookupNode,
+            entityId: parseEntityKey(entitySegment),
+            fieldSegments,
+          };
+        }
+        cursor = next;
+      }
+      throw new Error(`Cannot resolve owner path from ${path}`);
+    };
+
+    const resolveCollectionNode = (
+      root: Record<string, unknown>,
+      ownerPath: string,
+      path: string
+    ): CollectionResolution => {
+      const ownerSegments = ownerPath.split('.');
+      let cursor: unknown = root;
+      for (const segment of ownerSegments) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          throw new Error(`Cannot resolve owner path from ${path}`);
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        throw new Error(`Cannot resolve owner path from ${path}`);
+      }
+
+      const ownerNode = cursor as HistoryAwareCollectionNode;
+      if (
+        typeof ownerNode.byIdOrFail !== 'function' ||
+        typeof ownerNode.removeOne !== 'function' ||
+        typeof ownerNode.addOne !== 'function'
+      ) {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      const suffix = path.slice(ownerPath.length + 1);
+      const [entitySegment] = suffix.split('.');
+      if (!entitySegment) {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      return {
+        ownerNode,
+        entityId: parseEntityKey(entitySegment),
+      };
+    };
+
+    const resolveCollectionOwner = (
+      root: Record<string, unknown>,
+      ownerPath: string,
+      path: string
+    ): HistoryAwareCollectionNode => {
+      const ownerSegments = ownerPath.split('.');
+      let cursor: unknown = root;
+      for (const segment of ownerSegments) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          throw new Error(`Cannot resolve owner path from ${path}`);
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        throw new Error(`Cannot resolve owner path from ${path}`);
+      }
+
+      const ownerNode = cursor as HistoryAwareCollectionNode;
+      if (
+        typeof ownerNode.byIdOrFail !== 'function' ||
+        typeof ownerNode.changeId !== 'function'
+      ) {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      return ownerNode;
+    };
+
+    const resolveWritableLeaf = (
+      root: Record<string, unknown>,
+      path: string
+    ): { set?: (value: unknown) => void } => {
+      let cursor: unknown = root;
+      for (const segment of path.split('.')) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          throw new Error(`Cannot resolve scoped undo path ${path}`);
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      const leaf = cursor as { set?: (value: unknown) => void };
+      if (typeof leaf?.set !== 'function') {
+        throw new Error(`Unsupported scoped undo path ${path}`);
+      }
+
+      return leaf;
+    };
+
+    const hasLiveCollectionKey = (
+      ownerNode: EntityCollectionLookupNode,
+      key: string | number
+    ): boolean => {
+      try {
+        ownerNode.byIdOrFail(key);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const resolveLiveKeyForSubject = (
+      ownerNode: HistoryAwareCollectionNode,
+      subject: number
+    ): string | number | undefined => ownerNode.__findKeyBySubjectId?.(subject);
+
+    const validateScopedEffects = (
+      effects: TurnEffect[],
+      direction: 'undo' | 'redo'
+    ): void => {
+      for (const effect of effects) {
+        switch (effect.kind) {
+          case 'set': {
+            if (effect.subject === undefined) {
+              resolveWritableLeaf(
+                (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                effect.path
+              );
+            } else {
+              resolveOwnerNode(
+                (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                effect.path
+              );
+            }
+            break;
+          }
+          case 'remove': {
+            const { ownerNode, entityId } = resolveCollectionNode(
+              (tree as ISignalTree<T>).$ as Record<string, unknown>,
+              effect.ownerPath,
+              effect.path
+            );
+            if (direction === 'undo') {
+              if (typeof ownerNode.__restoreOne !== 'function') {
+                throw new Error(`Unsupported scoped undo path ${effect.path}`);
+              }
+              if (hasLiveCollectionKey(ownerNode, effect.key)) {
+                throw new Error(`Cannot restore removed entity at ${effect.path}`);
+              }
+              if (resolveLiveKeyForSubject(ownerNode, effect.subject) !== undefined) {
+                throw new Error(`Cannot restore removed subject at ${effect.path}`);
+              }
+            } else {
+              const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
+              if (liveKey !== entityId) {
+                throw new Error(`Cannot remove missing subject at ${effect.path}`);
+              }
+            }
+            break;
+          }
+          case 'add': {
+            const { ownerNode } = resolveCollectionNode(
+              (tree as ISignalTree<T>).$ as Record<string, unknown>,
+              effect.ownerPath,
+              effect.path
+            );
+            if (direction === 'undo') {
+              const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
+              if (liveKey !== effect.key) {
+                throw new Error(`Cannot undo added subject at ${effect.path}`);
+              }
+            } else {
+              if (typeof ownerNode.__restoreOne !== 'function') {
+                throw new Error(`Unsupported scoped undo path ${effect.path}`);
+              }
+              if (hasLiveCollectionKey(ownerNode, effect.key)) {
+                throw new Error(`Cannot restore added entity at ${effect.path}`);
+              }
+              if (resolveLiveKeyForSubject(ownerNode, effect.subject) !== undefined) {
+                throw new Error(`Cannot restore added subject at ${effect.path}`);
+              }
+            }
+            break;
+          }
+          case 'rekey': {
+            const ownerNode = resolveCollectionOwner(
+              (tree as ISignalTree<T>).$ as Record<string, unknown>,
+              effect.ownerPath,
+              effect.path
+            );
+            const expectedSourceKey =
+              direction === 'undo' ? effect.afterKey : effect.beforeKey;
+            const expectedTargetKey =
+              direction === 'undo' ? effect.beforeKey : effect.afterKey;
+            const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
+            if (liveKey !== expectedSourceKey) {
+              throw new Error(`Cannot rekey missing subject at ${effect.path}`);
+            }
+            if (hasLiveCollectionKey(ownerNode, expectedTargetKey)) {
+              throw new Error(`Cannot rekey to occupied key at ${effect.path}`);
+            }
+            break;
+          }
+        }
+      }
+    };
+
+    const applyScopedEffects = (
+      effects: TurnEffect[],
+      direction: 'undo' | 'redo'
+    ): void => {
+      validateScopedEffects(effects, direction);
+      isRestoring = true;
+      try {
+        for (const effect of effects) {
+          switch (effect.kind) {
+            case 'set': {
+              const leaf =
+                effect.subject === undefined
+                  ? resolveWritableLeaf(
+                      (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                      effect.path
+                    )
+                  : (() => {
+                      const { ownerNode, entityId, fieldSegments } = resolveOwnerNode(
+                        (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                        effect.path
+                      );
+                      let cursor = ownerNode.byIdOrFail(entityId) as Record<string, unknown>;
+                      for (let i = 0; i < fieldSegments.length - 1; i++) {
+                        cursor = cursor[fieldSegments[i]] as Record<string, unknown>;
+                        if (!cursor) {
+                          throw new Error(`Cannot resolve scoped undo path ${effect.path}`);
+                        }
+                      }
+
+                      const resolvedLeaf = cursor[
+                        fieldSegments[fieldSegments.length - 1]
+                      ] as {
+                        set?: (value: unknown) => void;
+                      };
+                      if (typeof resolvedLeaf?.set !== 'function') {
+                        throw new Error(`Unsupported scoped undo path ${effect.path}`);
+                      }
+                      return resolvedLeaf;
+                    })();
+
+              withWriteContext(
+                {
+                  intent: 'system',
+                  source: 'time-travel',
+                  subjectIds:
+                    effect.subject === undefined ? undefined : [effect.subject],
+                  positionIds: [effect.position],
+                },
+                () => {
+                  leaf.set?.(direction === 'undo' ? effect.before : effect.after);
+                }
+              );
+              break;
+            }
+            case 'remove': {
+              const { ownerNode, entityId } = resolveCollectionNode(
+                (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                effect.ownerPath,
+                effect.path
+              );
+
+              withWriteContext(
+                {
+                  intent: 'system',
+                  source: 'time-travel',
+                  subjectIds: [effect.subject],
+                  positionIds: [effect.position],
+                },
+                () => {
+                  if (direction === 'undo') {
+                    if (typeof ownerNode.__restoreOne !== 'function') {
+                      throw new Error(`Unsupported scoped undo path ${effect.path}`);
+                    }
+                    ownerNode.__restoreOne(
+                      effect.key,
+                      effect.value,
+                      effect.subject,
+                      effect.beforeSubject,
+                      effect.afterSubject
+                    );
+                  } else {
+                    ownerNode.removeOne(entityId);
+                  }
+                }
+              );
+              break;
+            }
+            case 'add': {
+              const { ownerNode } = resolveCollectionNode(
+                (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                effect.ownerPath,
+                effect.path
+              );
+
+              withWriteContext(
+                {
+                  intent: 'system',
+                  source: 'time-travel',
+                  subjectIds: [effect.subject],
+                  positionIds: [effect.position],
+                },
+                () => {
+                  if (direction === 'undo') {
+                    const liveKey = resolveLiveKeyForSubject(
+                      ownerNode,
+                      effect.subject
+                    ) as string | number;
+                    ownerNode.removeOne(liveKey);
+                  } else {
+                    ownerNode.__restoreOne?.(
+                      effect.key,
+                      effect.value,
+                      effect.subject,
+                      effect.beforeSubject,
+                      effect.afterSubject
+                    );
+                  }
+                }
+              );
+              break;
+            }
+            case 'rekey': {
+              const ownerNode = resolveCollectionOwner(
+                (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                effect.ownerPath,
+                effect.path
+              );
+
+              withWriteContext(
+                {
+                  intent: 'system',
+                  source: 'time-travel',
+                  subjectIds: [effect.subject],
+                  positionIds: [effect.position],
+                },
+                () => {
+                  ownerNode.changeId(
+                    direction === 'undo' ? effect.afterKey : effect.beforeKey,
+                    direction === 'undo' ? effect.beforeKey : effect.afterKey
+                  );
+                }
+              );
+              break;
+            }
+            default:
+              throw new Error('Unsupported scoped undo effect');
+          }
+        }
+      } finally {
+        isRestoring = false;
+      }
+    };
+
     // Create time travel manager with restoration function
     const timeTravelManager = new TimeTravelManager(
       tree,
@@ -660,7 +1839,8 @@ export function timeTravel(
         } finally {
           isRestoring = false;
         }
-      }
+      },
+      applyScopedEffects
     );
 
     // If PathNotifier batching is enabled, use flush events to record
@@ -674,23 +1854,288 @@ export function timeTravel(
     // intercept every plain writable signal and route their writes through
     // the global notifier. Without this interception, time-travel would
     // silently miss every leaf .set()/.update() in the tree.
+    const pendingOwnerPaths = new Set<string>();
+    const pendingSubjectIds = new Set<number>();
+    const pendingPositionIds = new Set<number>();
+    const pendingEffects: PendingEffectMap = new Map();
+    const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      !(value instanceof Date) &&
+      !(value instanceof Map) &&
+      !(value instanceof Set);
+    const drainOwnerPaths = (): string[] => {
+      const ownerPaths = Array.from(pendingOwnerPaths).sort();
+      pendingOwnerPaths.clear();
+      return ownerPaths;
+    };
+    const drainSubjectIds = (): number[] => {
+      const subjectIds = Array.from(pendingSubjectIds).sort(
+        (left, right) => left - right
+      );
+      pendingSubjectIds.clear();
+      return subjectIds;
+    };
+    const drainPositionIds = (): number[] => {
+      const positionIds = Array.from(pendingPositionIds).sort(
+        (left, right) => left - right
+      );
+      pendingPositionIds.clear();
+      return positionIds;
+    };
+    const resolveOwnerPositionId = (ownerPath?: string): number | undefined => {
+      if (!ownerPath) {
+        return undefined;
+      }
+
+      const segments = ownerPath.split('.');
+      let cursor: unknown = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+      for (const segment of segments) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          return undefined;
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      const resolved = (cursor as { __positionIds?: number[] } | undefined)
+        ?.__positionIds?.[0];
+      return typeof resolved === 'number' ? resolved : undefined;
+    };
+    const effectKey = (effect: TurnEffect): string => {
+      switch (effect.kind) {
+        case 'set':
+          return `${effect.kind}\u0000${effect.path}\u0000${effect.position}\u0000${effect.subject ?? ''}`;
+        case 'remove':
+          return `${effect.kind}\u0000${effect.ownerPath}\u0000${effect.position}\u0000${effect.subject}`;
+        case 'add':
+          return `${effect.kind}\u0000${effect.ownerPath}\u0000${effect.position}\u0000${effect.subject}`;
+        case 'rekey':
+          return `${effect.kind}\u0000${effect.ownerPath}\u0000${effect.position}\u0000${effect.subject}`;
+      }
+    };
+    const enqueueEffect = (effect: TurnEffect): void => {
+      const key = effectKey(effect);
+      const existing = pendingEffects.get(key);
+      if (existing) {
+        if (existing.kind === 'set' && effect.kind === 'set') {
+          existing.after = effect.after;
+          if (existing.before === existing.after) {
+            pendingEffects.delete(key);
+          }
+          return;
+        }
+        return;
+      }
+      pendingEffects.set(key, effect);
+    };
+    const buildTurnEffectFromHistory = (
+      ownerPath: string,
+      path: string,
+      positionIds?: number[],
+      subjectIds?: number[]
+    ): TurnEffect | undefined => {
+      const position = positionIds?.[0];
+      const subject = subjectIds?.[0];
+      if (position === undefined || subject === undefined) {
+        return undefined;
+      }
+
+      const segments = ownerPath.split('.');
+      let cursor: unknown = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+      for (const segment of segments) {
+        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+          return undefined;
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        return undefined;
+      }
+
+      const ownerNode = cursor as HistoryAwareCollectionNode;
+      const effect = ownerNode.__consumeHistoryEffect?.(path, subject);
+      if (!effect) {
+        return undefined;
+      }
+
+      switch (effect.kind) {
+        case 'add':
+          return {
+            ...effect,
+            ownerPath,
+            path,
+            position,
+          } satisfies CollectionAddEffect;
+        case 'remove':
+          return {
+            ...effect,
+            ownerPath,
+            path,
+            position,
+          } satisfies CollectionRemoveEffect;
+        case 'rekey':
+          return {
+            ...effect,
+            ownerPath,
+            path,
+            position,
+          } satisfies CollectionRekeyEffect;
+      }
+    };
+    const captureEffects = (
+      path: string,
+      next: unknown,
+      prev: unknown,
+      ownerPath?: string,
+      subjectIds?: number[],
+      positionIds?: number[]
+    ): void => {
+      const historyEffect = ownerPath
+        ? buildTurnEffectFromHistory(ownerPath, path, positionIds, subjectIds)
+        : undefined;
+      if (historyEffect) {
+        enqueueEffect(historyEffect);
+        return;
+      }
+
+      if (next === undefined && prev === undefined) {
+        return;
+      }
+
+      if (isPlainRecord(next) && isPlainRecord(prev)) {
+        const position = positionIds?.[0];
+        const subject = subjectIds?.[0];
+        if (position === undefined) {
+          return;
+        }
+        const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+        for (const key of keys) {
+          const before = prev[key];
+          const after = next[key];
+          if (before === after) {
+            continue;
+          }
+          enqueueEffect({
+            kind: 'set',
+            path: `${path}.${key}`,
+            ownerPath: ownerPath ?? path,
+            position,
+            subject,
+            before,
+            after,
+          });
+        }
+        return;
+      }
+
+      const position = positionIds?.[0];
+      if (position === undefined) {
+        return;
+      }
+
+      if (prev === next) {
+        return;
+      }
+
+      enqueueEffect({
+        kind: 'set',
+        path,
+        ownerPath: ownerPath ?? path,
+        position,
+        subject: subjectIds?.[0],
+        before: prev,
+        after: next,
+      });
+    };
+    const drainEffects = (): TurnEffect[] => {
+      const effects = Array.from(pendingEffects.values()).map(cloneTurnEffect);
+      pendingEffects.clear();
+      return effects;
+    };
+    const recordCapturedEntry = (action: string): boolean => {
+      const ownerPaths = drainOwnerPaths();
+      const subjectIds = drainSubjectIds();
+      const positionIds = drainPositionIds();
+      const effects = drainEffects();
+
+      if (
+        ownerPaths.length === 0 &&
+        subjectIds.length === 0 &&
+        positionIds.length === 0 &&
+        effects.length === 0
+      ) {
+        return timeTravelManager.addEntry(action);
+      }
+
+      return timeTravelManager.addEntry(
+        action,
+        undefined,
+        ownerPaths.length > 0 ? ownerPaths : undefined,
+        subjectIds.length > 0 ? subjectIds : undefined,
+        positionIds.length > 0 ? positionIds : undefined,
+        effects.length > 0 ? effects : undefined
+      );
+    };
+
     /** Set by this tree's own leaf interceptors; read by the global flush hook. */
     let selfDirty = false;
+    let suppressNextFlushRecord = false;
     let unsubscribeFlush: (() => void) | null = null;
+    let unsubscribeNotifications: (() => void) | null = null;
+    let unsubscribeReset: (() => void) | null = null;
     let restoreLeafInterceptors: (() => void) | null = null;
     try {
       const notifier = getPathNotifier();
       if (notifier) {
+        const subscribeCollectionNotifications = (): void => {
+          unsubscribeNotifications?.();
+          unsubscribeNotifications = notifier.subscribe(
+            '**',
+            (next, prev, path, ownerPath, source, subjectIds, positionIds) => {
+              if (source === 'time-travel') {
+                return;
+              }
+              selfDirty = true;
+              pendingOwnerPaths.add(ownerPath ?? path);
+              for (const subjectId of subjectIds ?? []) {
+                pendingSubjectIds.add(subjectId);
+              }
+              const resolvedPositionIds =
+                positionIds && positionIds.length > 0
+                  ? positionIds
+                  : (() => {
+                      const fallback = resolveOwnerPositionId(ownerPath);
+                      return fallback === undefined ? [] : [fallback];
+                    })();
+              for (const positionId of resolvedPositionIds) {
+                pendingPositionIds.add(positionId);
+              }
+              captureEffects(
+                path,
+                next,
+                prev,
+                ownerPath,
+                subjectIds,
+                resolvedPositionIds
+              );
+            }
+          );
+        };
+        subscribeCollectionNotifications();
+        if (typeof notifier.onReset === 'function') {
+          unsubscribeReset = notifier.onReset(() => {
+            subscribeCollectionNotifications();
+          });
+        }
         if ('$' in tree) {
           restoreLeafInterceptors = interceptLeafSignals(
             (tree as ISignalTree<T>).$ as Record<string, unknown>,
-            (path, next, prev) => {
+            (path, next, prev, _meta, ownerPath, subjectIds, positionIds) => {
               if (isRestoring) return;
-              // Mark THIS tree dirty. The flush hook below is global, so
-              // without this flag every time-travelled tree snapshotted itself
-              // whenever ANY tree in the process flushed.
-              selfDirty = true;
-              notifier.notify(path, next, prev);
+              captureEffects(path, next, prev, ownerPath, subjectIds, positionIds);
+              notifier.notify(path, next, prev, ownerPath, subjectIds, positionIds);
             }
           );
         }
@@ -698,6 +2143,15 @@ export function timeTravel(
           unsubscribeFlush = notifier.onFlush(() => {
             // Avoid recording history while restoring
             if (isRestoring) return;
+            if (suppressNextFlushRecord) {
+              suppressNextFlushRecord = false;
+              selfDirty = false;
+              drainOwnerPaths();
+              drainSubjectIds();
+              drainPositionIds();
+              drainEffects();
+              return;
+            }
             // `onFlush` is on the GLOBAL PathNotifier, so this fires for writes
             // to trees that have nothing to do with this one. Recording
             // unconditionally meant a full materialise + structuredClone of
@@ -707,7 +2161,19 @@ export function timeTravel(
             // people's trees is the worst kind.
             if (!selfDirty) return;
             selfDirty = false;
-            timeTravelManager.addEntry('batch');
+            const ownerPaths = drainOwnerPaths();
+            const subjectIds = drainSubjectIds();
+            const positionIds = drainPositionIds();
+            const effects = drainEffects();
+            const recorded = timeTravelManager.addEntry(
+              'batch',
+              undefined,
+              ownerPaths,
+              subjectIds,
+              positionIds,
+              effects
+            );
+            timeTravelManager.observeBatch('batch', ownerPaths, recorded);
           });
         }
       }
@@ -753,8 +2219,15 @@ export function timeTravel(
         // 50 writes changing ONE number cost 57.49ms at 10k rows with it and
         // 0.44ms without.
         if (beforeState !== afterState) {
-          // Immediate entry on explicit tree updates (preserve historical behavior)
-          timeTravelManager.addEntry('update');
+          // Preserve the synchronous history contract for explicit root writes,
+          // but attach the leaf-level effects they already generated so a
+          // batched flush does not win the dedupe race with an unindexed turn.
+          const notifier = getPathNotifier();
+          if (notifier?.isBatchingEnabled()) {
+            suppressNextFlushRecord = true;
+          }
+          selfDirty = false;
+          recordCapturedEntry('update');
         }
 
         return result;
@@ -796,10 +2269,10 @@ export function timeTravel(
     }
 
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['undo'] = () => {
-      timeTravelManager.undo();
+      timeTravelManager.undoConfirmed();
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['redo'] = () => {
-      timeTravelManager.redo();
+      timeTravelManager.redoConfirmed();
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getHistory'] =
       () => timeTravelManager.getHistory();
@@ -814,9 +2287,9 @@ export function timeTravel(
       timeTravelManager.jumpTo(index);
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['canUndo'] = () =>
-      timeTravelManager.canUndo();
+      timeTravelManager.canUndoConfirmed();
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['canRedo'] = () =>
-      timeTravelManager.canRedo();
+      timeTravelManager.canRedoConfirmed();
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getCurrentIndex'] =
       () => timeTravelManager.getCurrentIndex();
 
@@ -834,11 +2307,23 @@ export function timeTravel(
           /* ignore */
         }
         try {
+          unsubscribeNotifications?.();
+        } catch {
+          /* ignore */
+        }
+        try {
+          unsubscribeReset?.();
+        } catch {
+          /* ignore */
+        }
+        try {
           restoreLeafInterceptors?.();
         } catch {
           /* ignore */
         }
         unsubscribeFlush = null;
+        unsubscribeNotifications = null;
+        unsubscribeReset = null;
         restoreLeafInterceptors = null;
         timeTravelManager.resetHistory();
       });

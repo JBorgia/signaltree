@@ -301,10 +301,14 @@ export function isStatusMarker(value: unknown): value is StatusMarker {
  * @returns Fully functional StatusSignal
  */
 export function createStatusSignal<E = Error>(
-  marker: StatusMarker<E>
+  marker: StatusMarker<E>,
+  _notifier?: unknown,
+  path?: string,
+  context?: { allocatePositionId: () => number }
 ): StatusSignal<E> {
   const stateSignal = signal<LoadingState>(marker.initialState);
   const errorSignal = signal<E | null>(null);
+  const positionIds = context ? [context.allocatePositionId()] : undefined;
 
   // Lazy computed signals — one per predicate, created on first access (no
   // duplicate computation, no double allocation).
@@ -342,7 +346,7 @@ export function createStatusSignal<E = Error>(
         stateSignal() === LoadingState.Error
     ));
 
-  return {
+  const api = {
     // Source signals
     state: stateSignal,
     error: errorSignal,
@@ -409,4 +413,22 @@ export function createStatusSignal<E = Error>(
       errorSignal.set(err);
     },
   };
+
+  if (positionIds) {
+    Object.defineProperty(api, '__positionIds', {
+      get: () => [...positionIds],
+      enumerable: false,
+      configurable: true,
+    });
+  }
+
+  if (path) {
+    Object.defineProperty(api, '__ownerPath', {
+      value: path,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+
+  return api;
 }

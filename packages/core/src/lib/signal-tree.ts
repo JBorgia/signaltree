@@ -5,10 +5,12 @@ import { batchScope } from './internals/batch-scope';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
 import {
+  createMaterializationContext,
   _recordTreeConstruction,
   isRegisteredMarker,
   materializeMarkers,
 } from './internals/materialize-markers';
+import type { MaterializationContext } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isComparedMarker } from './markers/compared';
 import { hydrateMarkerNode } from './internals/materialize-markers';
@@ -743,9 +745,25 @@ function leafEqual(
   };
 }
 
+function definePositionIds(
+  node: object,
+  positionIds: readonly number[] | undefined
+): void {
+  if (!positionIds || positionIds.length === 0) {
+    return;
+  }
+
+  Object.defineProperty(node, '__positionIds', {
+    get: () => [...positionIds],
+    enumerable: false,
+    configurable: true,
+  });
+}
+
 function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
+  positionIds?: readonly number[],
   /**
    * Dot-path to this node, used ONLY to name the leaf in ST2027. Threaded
    * rather than reconstructed because the walk already knows it, and a
@@ -755,32 +773,38 @@ function createSignalStore<T>(
 ): TreeNode<T> {
   // Primitives, null, undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return signal(obj, {
+    const leaf = signal(obj, {
       equal:
         typeof ngDevMode === 'undefined' || ngDevMode
           ? leafEqual(equalityFn, path)
           : equalityFn,
-    }) as unknown as TreeNode<T>;
+    });
+    definePositionIds(leaf as object, positionIds);
+    return leaf as unknown as TreeNode<T>;
   }
 
   // Arrays
   if (Array.isArray(obj)) {
-    return signal(obj, {
+    const leaf = signal(obj, {
       equal:
         typeof ngDevMode === 'undefined' || ngDevMode
           ? leafEqual(equalityFn, path)
           : equalityFn,
-    }) as unknown as TreeNode<T>;
+    });
+    definePositionIds(leaf as object, positionIds);
+    return leaf as unknown as TreeNode<T>;
   }
 
   // Built-in objects (Date, Map, Set, etc.)
   if (isBuiltInObject(obj)) {
-    return signal(obj, {
+    const leaf = signal(obj, {
       equal:
         typeof ngDevMode === 'undefined' || ngDevMode
           ? leafEqual(equalityFn, path)
           : equalityFn,
-    }) as unknown as TreeNode<T>;
+    });
+    definePositionIds(leaf as object, positionIds);
+    return leaf as unknown as TreeNode<T>;
   }
 
   // Regular object - recursive
@@ -824,9 +848,11 @@ function createSignalStore<T>(
     // Note this makes the position a LEAF even when the value is an object,
     // which is the intent (the object is compared as a unit).
     if (isComparedMarker(value)) {
-      store[key] = signal(value.value, {
+      const leaf = signal(value.value, {
         equal: value.equal as (a: unknown, b: unknown) => boolean,
       });
+      definePositionIds(leaf as object, positionIds);
+      store[key] = leaf;
       continue;
     }
 
@@ -868,12 +894,14 @@ function createSignalStore<T>(
 
     // Null, undefined, primitives
     if (value === null || value === undefined || typeof value !== 'object') {
-      store[key] = signal(value, {
+      const leaf = signal(value, {
         equal:
           typeof ngDevMode === 'undefined' || ngDevMode
             ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
             : equalityFn,
       });
+      definePositionIds(leaf as object, positionIds);
+      store[key] = leaf;
       continue;
     }
 
@@ -883,12 +911,14 @@ function createSignalStore<T>(
         warnMarkerInArray(key, value);
         warnEntityArrayLeaf(key, value);
       }
-      store[key] = signal(value, {
+      const leaf = signal(value, {
         equal:
           typeof ngDevMode === 'undefined' || ngDevMode
             ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
             : equalityFn,
       });
+      definePositionIds(leaf as object, positionIds);
+      store[key] = leaf;
       continue;
     }
 
@@ -896,6 +926,7 @@ function createSignalStore<T>(
     const nested = createSignalStore(
       value,
       equalityFn,
+      positionIds,
       // Folds to '' in production — the path exists only to name a leaf in
       // ST2027, so a prod build should not spend a string concat per node
       // building one nothing will read.
@@ -922,7 +953,8 @@ function createSignalStore<T>(
 
 function create<T extends object>(
   initialState: T,
-  config: TreeConfig
+  config: TreeConfig,
+  materializationContext: MaterializationContext
 ): ISignalTree<T> {
   if (initialState === null || initialState === undefined) {
     throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
@@ -953,6 +985,7 @@ function create<T extends object>(
   // Create signal store
   let signalState: TreeNode<T>;
   let disposeLazy: (() => void) | undefined;
+  const rootPositionIds = [materializationContext.allocatePositionId()];
 
   // Configure global PathNotifier batching based on tree config (opt-out via config.batchUpdates=false)
   // Default: batching enabled unless explicitly disabled
@@ -973,11 +1006,11 @@ function create<T extends object>(
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
       }
-      signalState = createSignalStore(initialState, equalityFn);
+      signalState = createSignalStore(initialState, equalityFn, rootPositionIds);
       disposeLazy = undefined;
     }
   } else {
-    signalState = createSignalStore(initialState, equalityFn);
+    signalState = createSignalStore(initialState, equalityFn, rootPositionIds);
   }
 
   // Create root callable function
@@ -1272,8 +1305,12 @@ export function signalTree<T extends object, TDerived extends object>(
   const isFactory = typeof configOrDerived === 'function';
   const config: TreeConfig = isFactory ? {} : configOrDerived ?? {};
 
-  const baseTree = create(initialState, config);
-  const builder = createBuilder<T, TreeNode<T>>(baseTree);
+  const materializationContext = createMaterializationContext();
+  const baseTree = create(initialState, config, materializationContext);
+  const builder = createBuilder<T, TreeNode<T>>(
+    baseTree,
+    materializationContext
+  );
 
   // If derived factory provided, apply it immediately
   if (isFactory) {
@@ -1295,7 +1332,8 @@ export function signalTree<T extends object, TDerived extends object>(
  * - Lazy finalization (derived factories run on first $ access)
  */
 function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
-  baseTree: ISignalTree<TSource>
+  baseTree: ISignalTree<TSource>,
+  materializationContext: MaterializationContext
 ): SignalTreeBuilder<TSource, TAccum> {
   const derivedQueue: Array<($: unknown) => object> = [];
   let isFinalized = false;
@@ -1311,7 +1349,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   const materializeOnly = () => {
     if (markersMaterialized) return;
     markersMaterialized = true;
-    materializeMarkers(baseTree.$);
+    materializeMarkers(baseTree.$, undefined, [], materializationContext);
     _recordTreeConstruction();
   };
 
@@ -1370,7 +1408,8 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       const enhanced = baseTree.with(enhancer);
       // Create a new builder wrapping the enhanced tree
       const newBuilder = createBuilder<TSource, TAccum>(
-        enhanced as unknown as ISignalTree<TSource>
+        enhanced as unknown as ISignalTree<TSource>,
+        materializationContext
       );
       // Copy any additional properties from the enhancer result
       for (const key of Object.keys(enhanced)) {

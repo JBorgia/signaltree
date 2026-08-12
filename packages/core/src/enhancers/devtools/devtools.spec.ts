@@ -7,6 +7,7 @@ import {
   productionDevTools,
 } from './devtools';
 import { getPathNotifier, resetPathNotifier } from '../../lib/path-notifier';
+import { status } from '../../lib/markers/status';
 import { signalTree } from '../../lib/signal-tree';
 
 function createMockTree(initialState: Record<string, any> = { count: 0 }) {
@@ -240,6 +241,47 @@ describe('devTools enhancer (v6 API)', () => {
           },
         },
       });
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('sends updates when marker mutators emit owner-only notifications', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({ send }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const tree = signalTree({
+        load: status<string>(),
+      }).with(devTools({ enabled: true, enableBrowserDevTools: true }));
+
+      send.mockClear();
+
+      tree.$.load.start();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send.mock.calls[0][0]).toMatchObject({
+        type: 'SignalTree/load',
+        payload: 'load',
+        meta: {
+          source: 'path-notifier',
+          paths: ['load'],
+          timestamp: expect.any(Number),
+        },
+      });
+      expect(send.mock.calls[0][1]).toEqual(tree());
     } finally {
       (globalThis as any).window = originalWindow;
     }

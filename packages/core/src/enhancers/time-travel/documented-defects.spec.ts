@@ -37,12 +37,8 @@ import { timeTravel } from './time-travel';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-describe('6a — timeTravel() does not cover form() state', () => {
-  // If this fails, the defect may be fixed. Update:
-  //   docs/guides/time-travel-in-production.md §2b
-  //   packages/core/README.md (the history() section warning)
-  //   TODO.md 6a
-  it('form writes produce NO history entries', async () => {
+describe('6a — timeTravel() covers form() state', () => {
+  it('form writes produce history entries', async () => {
     const tree = signalTree({
       profile: form<{ name: string }>({ initial: { name: '' } }),
     }).with(timeTravel({}));
@@ -54,34 +50,50 @@ describe('6a — timeTravel() does not cover form() state', () => {
       await flush();
     }
 
-    expect(tree.getHistory().length).toBe(baseline);
-    expect(tree.canUndo()).toBe(false);
-    // Outcome, not counter: the value is still what was typed.
+    expect(tree.getHistory().length).toBeGreaterThan(baseline);
+    expect(tree.canUndo()).toBe(true);
     expect(tree.$.profile.$.name()).toBe('abc');
   });
 
-  // The asymmetry is the actual defect: excluded from RECORDING, included in
-  // RESTORATION. Incoherent under either semantic — either forms participate and
-  // must record, or they do not and must be excluded from restore.
-  it('...yet a neighbouring undo REWINDS the form (asymmetric participation)', async () => {
+  it('undo reverts the form write itself', async () => {
     const tree = signalTree({
       profile: form<{ name: string }>({ initial: { name: '' } }),
-      counter: 0,
     }).with(timeTravel({}));
     await flush();
 
     tree.$.profile.$.name.set('typed');
     await flush();
-    tree.$.counter.set(1); // the only write that records
-    await flush();
 
     expect(tree.$.profile.$.name()).toBe('typed');
 
-    tree.undo(); // aimed at `counter`
+    tree.undo();
 
-    expect(tree.$.counter()).toBe(0);
-    // The form is rewound even though it never recorded a step.
-    expect(tree.$.profile.$.name()).not.toBe('typed');
+    expect(tree.$.profile.$.name()).toBe('');
+  });
+
+  it('undoing a neighbouring plain-leaf write does not rewind the form', async () => {
+    const tree = signalTree({
+      plain: '',
+      profile: form<{ name: string }>({ initial: { name: '' } }),
+    }).with(timeTravel({}));
+    await flush();
+
+    tree.$.plain.set('p1');
+    await flush();
+
+    tree.$.profile.$.name.set('ada');
+    await flush();
+
+    tree.$.plain.set('p2');
+    await flush();
+
+    expect(tree.$.plain()).toBe('p2');
+    expect(tree.$.profile.$.name()).toBe('ada');
+
+    tree.undo();
+
+    expect(tree.$.plain()).toBe('p1');
+    expect(tree.$.profile.$.name()).toBe('ada');
   });
 
   // The mechanism that DOES work, so the documented recommendation is verified

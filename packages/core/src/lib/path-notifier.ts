@@ -9,17 +9,44 @@
  * @internal
  */
 
+import { getActiveWriteContext } from './write-context';
+
 export type PathNotifierHandler = (
   value: unknown,
   prev: unknown,
-  path: string
+  path: string,
+  ownerPath?: string,
+  source?: string,
+  subjectIds?: number[],
+  positionIds?: number[]
 ) => void | Promise<void>;
 
 export type PathNotifierInterceptor = (
   value: unknown,
   prev: unknown,
-  path: string
+  path: string,
+  ownerPath?: string
 ) => { block?: boolean; transform?: unknown };
+
+type BatchIdentityMode =
+  | 'path'
+  | 'path-position'
+  | 'path-position-subject'
+  | 'path-position-subject-composite';
+
+type PendingEntry = {
+  path: string;
+  newValue: unknown;
+  oldValue: unknown;
+  ownerPath?: string;
+  source?: string;
+  subjectId?: number;
+  positionId?: number;
+  subjectIds?: number[];
+  positionIds?: number[];
+};
+
+type PendingSlot = PendingEntry | PendingEntry[];
 
 /**
  * Simple path-based notification system
@@ -27,6 +54,8 @@ export type PathNotifierInterceptor = (
  * Access via getPathNotifier().
  */
 export class PathNotifier {
+  private static readonly ownerBoundarySeparator = '\u0000';
+
   // Map of pattern -> Set of handlers
   private subscribers = new Map<string, Set<PathNotifierHandler>>();
 
@@ -34,10 +63,12 @@ export class PathNotifier {
   private interceptors = new Map<string, Set<PathNotifierInterceptor>>();
 
   // Batching state
+  private resetCallbacks = new Set<() => void>();
   private batchingEnabled = true;
+  private batchIdentityMode: BatchIdentityMode =
+    'path-position-subject';
   private pendingFlush = false;
-  private pending = new Map<string, { newValue: unknown; oldValue: unknown }>();
-  private firstValues = new Map<string, unknown>();
+  private pending = new Map<string, PendingSlot>();
   private flushCallbacks = new Set<() => void>();
 
   constructor(options?: { batching?: boolean }) {
@@ -53,6 +84,13 @@ export class PathNotifier {
 
   isBatchingEnabled(): boolean {
     return this.batchingEnabled;
+  }
+
+  /** @internal Bench/test-only hook to isolate batching-key overhead. */
+  setBatchIdentityModeForTesting(
+    mode: BatchIdentityMode = 'path-position-subject'
+  ): void {
+    this.batchIdentityMode = mode;
   }
 
   /**
@@ -113,21 +151,43 @@ export class PathNotifier {
   notify(
     path: string,
     value: unknown,
-    prev: unknown
+    prev: unknown,
+    ownerPath?: string,
+    subjectIds?: number[],
+    positionIds?: number[]
   ): { blocked: boolean; value: unknown } {
+    // Tag the batch with the ambient write source (e.g. `time-travel` during a
+    // history restore). The flush that delivers this entry is DEFERRED to a
+    // microtask, so consumers must be able to tell "this write came from a
+    // restore" apart from a user change at flush time — `isRestoring`-style
+    // flags that reset synchronously are already false by then.
+    const source = getActiveWriteContext()?.source;
     if (!this.batchingEnabled) {
       // Synchronous path: run interceptors and subscribers immediately
-      return this._runNotify(path, value, prev);
+      return this._runNotify(
+        path,
+        value,
+        prev,
+        ownerPath,
+        source,
+        subjectIds,
+        positionIds
+      );
     }
 
-    // Batched path: record first oldValue for the path and latest newValue
-    if (!this.pending.has(path)) {
-      this.firstValues.set(path, prev);
-    }
-    this.pending.set(path, {
+    const entry: PendingEntry = {
+      path,
       newValue: value,
-      oldValue: this.firstValues.get(path),
-    });
+      oldValue: prev,
+      ownerPath,
+      source,
+      subjectId: subjectIds?.[0],
+      positionId: positionIds?.[0],
+      subjectIds,
+      positionIds,
+    };
+
+    this.enqueuePending(entry);
 
     if (!this.pendingFlush) {
       this.pendingFlush = true;
@@ -144,7 +204,11 @@ export class PathNotifier {
   private _runNotify(
     path: string,
     value: unknown,
-    prev: unknown
+    prev: unknown,
+    ownerPath?: string,
+    source?: string,
+    subjectIds?: number[],
+    positionIds?: number[]
   ): { blocked: boolean; value: unknown } {
     let blocked = false;
     let transformed = value;
@@ -153,7 +217,7 @@ export class PathNotifier {
     for (const [pattern, interceptorSet] of this.interceptors) {
       if (this.matches(pattern, path)) {
         for (const interceptor of interceptorSet) {
-          const result = interceptor(transformed, prev, path);
+          const result = interceptor(transformed, prev, path, ownerPath);
           if (result.block) {
             blocked = true;
           }
@@ -173,7 +237,15 @@ export class PathNotifier {
     for (const [pattern, handlers] of this.subscribers) {
       if (this.matches(pattern, path)) {
         for (const handler of handlers) {
-          handler(transformed, prev, path);
+          handler(
+            transformed,
+            prev,
+            path,
+            ownerPath,
+            source,
+            subjectIds,
+            positionIds
+          );
         }
       }
     }
@@ -190,17 +262,33 @@ export class PathNotifier {
     // Snapshot and clear before notifying to allow re-entrant behavior
     const toNotify = new Map(this.pending);
     this.pending.clear();
-    this.firstValues.clear();
     this.pendingFlush = false;
 
-    for (const [path, { newValue, oldValue }] of toNotify) {
-      // If value didn't change compared to original oldValue, skip
-      if (newValue === oldValue) continue;
+    for (const slot of toNotify.values()) {
+      const entries = Array.isArray(slot) ? slot : [slot];
+      for (const entry of entries) {
+        const isOwnerOnlyMarkerSignal =
+          entry.ownerPath !== undefined &&
+          entry.newValue === undefined &&
+          entry.oldValue === undefined;
+        // If value didn't change compared to original oldValue, skip
+        if (entry.newValue === entry.oldValue && !isOwnerOnlyMarkerSignal) {
+          continue;
+        }
 
-      // Run interceptors + subscribers synchronously for each path
-      const res = this._runNotify(path, newValue, oldValue);
-      if (res.blocked) {
-        // blocked by interceptor - nothing to do
+        // Run interceptors + subscribers synchronously for each path
+        const res = this._runNotify(
+          entry.path,
+          entry.newValue,
+          entry.oldValue,
+          entry.ownerPath,
+          entry.source,
+          entry.subjectIds,
+          entry.positionIds
+        );
+        if (res.blocked) {
+          // blocked by interceptor - nothing to do
+        }
       }
     }
 
@@ -264,6 +352,95 @@ export class PathNotifier {
     return false;
   }
 
+  private enqueuePending(entry: PendingEntry): void {
+    const path = entry.path;
+    const existing = this.pending.get(path);
+    if (!existing) {
+      this.pending.set(path, entry);
+      return;
+    }
+
+    if (this.batchIdentityMode === 'path') {
+      this.coalesceEntry(Array.isArray(existing) ? existing[0] : existing, entry);
+      if (Array.isArray(existing) && existing.length > 1) {
+        existing.splice(1);
+      }
+      if (Array.isArray(existing)) {
+        existing[0] = Array.isArray(existing) ? existing[0] : existing;
+      }
+      return;
+    }
+
+    if (this.batchIdentityMode === 'path-position-subject-composite') {
+      this.enqueuePendingComposite(entry);
+      return;
+    }
+
+    if (Array.isArray(existing)) {
+      const match = existing.find((candidate) =>
+        this.hasSameSemanticIdentity(candidate, entry)
+      );
+      if (match) {
+        this.coalesceEntry(match, entry);
+        return;
+      }
+      existing.push(entry);
+      return;
+    }
+
+    if (this.hasSameSemanticIdentity(existing, entry)) {
+      this.coalesceEntry(existing, entry);
+      return;
+    }
+
+    this.pending.set(path, [existing, entry]);
+  }
+
+  private enqueuePendingComposite(entry: PendingEntry): void {
+    const compositeKey = this.getCompositeBatchKey(entry);
+    const existing = this.pending.get(compositeKey);
+    if (!existing) {
+      this.pending.set(compositeKey, entry);
+      return;
+    }
+
+    const target = Array.isArray(existing) ? existing[0] : existing;
+    this.coalesceEntry(target, entry);
+  }
+
+  private hasSameSemanticIdentity(left: PendingEntry, right: PendingEntry): boolean {
+    if (this.batchIdentityMode === 'path-position') {
+      return left.positionId === right.positionId;
+    }
+
+    return (
+      left.positionId === right.positionId &&
+      left.subjectId === right.subjectId
+    );
+  }
+
+  private coalesceEntry(target: PendingEntry, next: PendingEntry): void {
+    target.newValue = next.newValue;
+    target.ownerPath = next.ownerPath;
+    target.source = this.mergeSource(target.source, next.source);
+    target.subjectId = next.subjectId;
+    target.positionId = next.positionId;
+    target.subjectIds = next.subjectIds;
+    target.positionIds = next.positionIds;
+  }
+
+  private mergeSource(left?: string, right?: string): string | undefined {
+    if (!left) return right;
+    if (!right || left === right) return left;
+    return 'mixed';
+  }
+
+  private getCompositeBatchKey(entry: PendingEntry): string {
+    const positionKey = entry.positionIds?.join(',') ?? '';
+    const subjectKey = entry.subjectIds?.join(',') ?? '';
+    return `${entry.path}${PathNotifier.ownerBoundarySeparator}${positionKey}${PathNotifier.ownerBoundarySeparator}${subjectKey}`;
+  }
+
   /**
    * Clear all subscribers and interceptors
    */
@@ -271,11 +448,26 @@ export class PathNotifier {
     this.subscribers.clear();
     this.interceptors.clear();
     this.pending.clear();
-    this.firstValues.clear();
     // Note: do NOT clear flush callbacks here. Enhancers may have
     // registered onFlush listeners that should survive a runtime reset
     // (e.g., resetPathNotifier) to avoid losing subscriptions silently.
     this.pendingFlush = false;
+  }
+
+  /** Reset queued runtime state but preserve registered listeners. */
+  onReset(callback: () => void): () => void {
+    this.resetCallbacks.add(callback);
+    return () => this.resetCallbacks.delete(callback);
+  }
+
+  emitReset(): void {
+    for (const cb of Array.from(this.resetCallbacks)) {
+      try {
+        cb();
+      } catch {
+        // swallow callback errors to avoid breaking reset flow
+      }
+    }
   }
 
   /**
@@ -336,4 +528,5 @@ export function resetPathNotifier(): void {
 
   globalPathNotifier.clear();
   globalPathNotifier.setBatchingEnabled(true);
+  globalPathNotifier.emitReset();
 }

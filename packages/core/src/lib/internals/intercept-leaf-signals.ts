@@ -1,6 +1,6 @@
 import type { UpdateMetadata } from '../types';
 import { isTraversableNode } from '../utils';
-import { getNodeProcessor } from './materialize-markers';
+import { getNodeProcessor, snapshotMarkerNode } from './materialize-markers';
 import { getActiveWriteContext } from '../write-context';
 
 import { visitTree } from './visit-tree';
@@ -18,8 +18,8 @@ import { visitTree } from './visit-tree';
  *
  * The `onWrite` callback receives an optional `meta: UpdateMetadata` captured
  * synchronously from the active `withWriteContext` frame (if any). Existing
- * 3-arg callbacks `(path, next, prev) => void` continue to work since `meta`
- * is the trailing optional parameter.
+ * 3-arg callbacks `(path, next, prev) => void` continue to work since the
+ * trailing `meta` and `ownerPath` parameters are optional.
  *
  * Skips:
  *   - Entity-collection signals (have `add`/`remove` and already notify).
@@ -39,12 +39,169 @@ export function interceptLeafSignals(
     path: string,
     next: unknown,
     prev: unknown,
-    meta?: UpdateMetadata
+    meta?: UpdateMetadata,
+    ownerPath?: string,
+    subjectIds?: number[],
+    positionIds?: number[]
   ) => void,
   options: { maxDepth?: number } = {}
 ): () => void {
   const restorers: Array<() => void> = [];
   const maxDepth = options.maxDepth ?? 32;
+
+  const getOwnerPath = (node: unknown, path: string): string => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((node as any)?.__ownerPath as string | undefined) ?? path;
+  };
+
+  const getSubjectIds = (node: unknown): number[] | undefined => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subjectIds = (node as any)?.__subjectIds as
+      | number[]
+      | undefined;
+    return subjectIds ? [...subjectIds] : undefined;
+  };
+
+  const getPositionIds = (node: unknown): number[] | undefined => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const positionIds = (node as any)?.__positionIds as
+      | number[]
+      | undefined;
+    return positionIds ? [...positionIds] : undefined;
+  };
+
+  const wrapWritableSignal = (
+    node: unknown,
+    path: string,
+    ownerPathOverride?: string
+  ): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const original = node as any;
+    const originalSet = original.set.bind(original);
+    const originalUpdate = original.update.bind(original);
+
+    restorers.push(() => {
+      original.set = originalSet;
+      original.update = originalUpdate;
+    });
+
+    original.set = (value: unknown) => {
+      const prev = original();
+      originalSet(value);
+      const next = original();
+      const ownerPath = ownerPathOverride ?? getOwnerPath(node, path);
+      const subjectIds = getSubjectIds(node);
+      const positionIds = getPositionIds(node);
+      if (next !== prev) {
+        onWrite(
+          path,
+          next,
+          prev,
+          getActiveWriteContext(),
+          ownerPath,
+          subjectIds,
+          positionIds
+        );
+      }
+    };
+
+    original.update = (updater: (v: unknown) => unknown) => {
+      const prev = original();
+      originalUpdate(updater);
+      const next = original();
+      const ownerPath = ownerPathOverride ?? getOwnerPath(node, path);
+      const subjectIds = getSubjectIds(node);
+      const positionIds = getPositionIds(node);
+      if (next !== prev) {
+        onWrite(
+          path,
+          next,
+          prev,
+          getActiveWriteContext(),
+          ownerPath,
+          subjectIds,
+          positionIds
+        );
+      }
+    };
+  };
+
+  const wrapOwnedFieldAccessors = (
+    node: unknown,
+    basePath: string,
+    ownerPath: string,
+    seen = new WeakSet<object>()
+  ): void => {
+    if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+      return;
+    }
+    const ref = node as object;
+    if (seen.has(ref)) return;
+    seen.add(ref);
+
+    const isWritableSignal =
+      typeof node === 'function' &&
+      'set' in node &&
+      'update' in node &&
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      typeof (node as any).set === 'function' &&
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      typeof (node as any).update === 'function';
+
+    if (isWritableSignal) {
+      wrapWritableSignal(node, basePath, ownerPath);
+    }
+
+    for (const key of Object.keys(node as Record<string, unknown>)) {
+      const child = (node as Record<string, unknown>)[key];
+      if (
+        child !== null &&
+        typeof child === 'object' &&
+        !(Array.isArray(child) || child instanceof Date || child instanceof Map || child instanceof Set)
+      ) {
+        wrapOwnedFieldAccessors(child, `${basePath}.${key}`, ownerPath, seen);
+      } else if (typeof child === 'function') {
+        wrapOwnedFieldAccessors(child, `${basePath}.${key}`, ownerPath, seen);
+      }
+    }
+  };
+
+  const wrapMutator = (
+    target: Record<string, unknown>,
+    method: string,
+    path: string
+  ): void => {
+    if (typeof target[method] !== 'function') return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const originalMethod = (target as any)[method].bind(target);
+    restorers.push(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (target as any)[method] = originalMethod;
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (target as any)[method] = (...args: unknown[]) => {
+      const canSnapshotMutatorState =
+        typeof (target as { __consumeHistoryEffect?: unknown })
+          .__consumeHistoryEffect !== 'function';
+      const prevSnapshot = canSnapshotMutatorState
+        ? snapshotMarkerNode(target)?.value
+        : undefined;
+      const result = originalMethod(...args);
+      const nextSnapshot = canSnapshotMutatorState
+        ? snapshotMarkerNode(target)?.value
+        : undefined;
+      onWrite(
+        path,
+        nextSnapshot,
+        prevSnapshot,
+        getActiveWriteContext(),
+        path,
+        getSubjectIds(target),
+        getPositionIds(target)
+      );
+      return result;
+    };
+  };
 
   // Traversal is the shared `visitTree` skeleton; this visitor supplies only
   // the leaf action (wrap `.set`/`.update` to observe writes) and the recurse
@@ -71,31 +228,14 @@ export function interceptLeafSignals(
           const isEntityCollection = 'add' in node || 'remove' in node;
           if (isEntityCollection) return false; // collection notifies itself
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const original = node as any;
-          const originalSet = original.set.bind(original);
-          const originalUpdate = original.update.bind(original);
+          const proc = getNodeProcessor(node);
+          wrapWritableSignal(node, path);
 
-          restorers.push(() => {
-            original.set = originalSet;
-            original.update = originalUpdate;
-          });
-
-          original.set = (value: unknown) => {
-            const prev = original();
-            originalSet(value);
-            const next = original();
-            if (next !== prev)
-              onWrite(path, next, prev, getActiveWriteContext());
-          };
-
-          original.update = (updater: (v: unknown) => unknown) => {
-            const prev = original();
-            originalUpdate(updater);
-            const next = original();
-            if (next !== prev)
-              onWrite(path, next, prev, getActiveWriteContext());
-          };
+          if (proc && isTraversableNode(node)) {
+            for (const method of ['clear', 'reload', 'reset', 'refresh']) {
+              wrapMutator(node as Record<string, unknown>, method, path);
+            }
+          }
           return false; // leaf — don't recurse into it
         }
 
@@ -139,6 +279,7 @@ export function interceptLeafSignals(
             'updateMany',
             'upsertOne',
             'upsertMany',
+            'changeId',
             'removeOne',
             'removeMany',
             'clear',
@@ -146,22 +287,20 @@ export function interceptLeafSignals(
             'setLoaded',
             'setError',
             'setNotLoaded',
+            'start',
+            'setSuccess',
+            'succeed',
+            'fail',
+            'refresh',
+            'rerun',
             'reset',
           ] as const;
           for (const method of MUTATORS) {
-            if (typeof marker[method] !== 'function') continue;
-            const originalMethod = marker[method].bind(marker);
-            restorers.push(() => (marker[method] = originalMethod));
-            marker[method] = (...args: unknown[]) => {
-              const result = originalMethod(...args);
-              // A marker's value is not always readable through the node
-              // itself (entityMap and status are not callable), so the write is
-              // announced by PATH rather than by value. Time travel snapshots
-              // the whole tree on flush, so the payload is what matters, not
-              // these operands.
-              onWrite(path, undefined, undefined, getActiveWriteContext());
-              return result;
-            };
+            wrapMutator(marker as Record<string, unknown>, method, path);
+          }
+          const fields = marker.$ as Record<string, unknown> | undefined;
+          if (fields && isTraversableNode(fields)) {
+            wrapOwnedFieldAccessors(fields, path, path);
           }
           return false; // leaf — do not recurse into a marker node
         }

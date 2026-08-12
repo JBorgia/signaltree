@@ -261,12 +261,13 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
     entityMapRegistered = true;
     registerBuiltinMarkerProcessor(
       isEntityMapMarker as (value: unknown) => value is InternalMarker,
-      (marker, notifier, path) => {
+      (marker, notifier, path, context) => {
         const cfg = marker.__entityMapConfig ?? {};
         const entitySignal = createEntitySignal(
           cfg as EntityConfig<Record<string, unknown>, string | number>,
           notifier,
-          path
+          path,
+          { positionIdAllocator: context.allocatePositionId }
         );
 
         // Computed slices

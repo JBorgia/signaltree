@@ -1,5 +1,5 @@
 import { isSignal } from '@angular/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createEntitySignal } from './entity-signal';
 
@@ -233,6 +233,125 @@ describe('.empty (canonical bare-name predicate)', () => {
     );
     expect(api.empty).toBe(api.empty);
     expect(isSignal(api.empty)).toBe(true);
+  });
+});
+
+describe('owner PositionId allocation', () => {
+  it('allocates a new owner position when the same path materializes twice', () => {
+    type Row = { id: number; name: string };
+    const notify = vi.fn(() => ({ blocked: false, value: undefined }));
+    const notifier = { notify } as any;
+
+    const first = createEntitySignal<Row, number>(
+      { selectId: (row) => row.id },
+      notifier,
+      'rows'
+    );
+    first.addOne({ id: 1, name: 'first' });
+    const firstPositionIds = (first as any).__positionIds as number[];
+
+    const second = createEntitySignal<Row, number>(
+      { selectId: (row) => row.id },
+      notifier,
+      'rows'
+    );
+    second.addOne({ id: 2, name: 'second' });
+    const secondPositionIds = (second as any).__positionIds as number[];
+
+    expect(firstPositionIds).toHaveLength(1);
+    expect(secondPositionIds).toHaveLength(1);
+    expect(secondPositionIds).not.toEqual(firstPositionIds);
+    expect(notify).toHaveBeenNthCalledWith(
+      1,
+      'rows.1',
+      { id: 1, name: 'first' },
+      undefined,
+      'rows',
+      [1],
+      firstPositionIds
+    );
+    expect(notify).toHaveBeenNthCalledWith(
+      2,
+      'rows.2',
+      { id: 2, name: 'second' },
+      undefined,
+      'rows',
+      [1],
+      secondPositionIds
+    );
+  });
+
+  it('keeps one owner position across entityMap bulk write paths', () => {
+    type Row = { id: number; name: string };
+    const notify = vi.fn(() => ({ blocked: false, value: undefined }));
+    const notifier = { notify } as any;
+    const api = createEntitySignal<Row, number>(
+      { selectId: (row) => row.id },
+      notifier,
+      'rows'
+    );
+    const ownerPositionIds = (api as any).__positionIds as number[];
+
+    api.addMany([
+      { id: 1, name: 'first' },
+      { id: 2, name: 'second' },
+    ]);
+    api.updateMany([1, 2], { name: 'updated' });
+    api.removeMany([1, 2]);
+    api.addMany([
+      { id: 1, name: 'reused first' },
+      { id: 2, name: 'reused second' },
+    ]);
+    api.setAll([
+      { id: 3, name: 'third' },
+      { id: 4, name: 'fourth' },
+    ]);
+    api.upsertMany([
+      { id: 3, name: 'third updated' },
+      { id: 5, name: 'fifth' },
+    ]);
+
+    const calls = notify.mock.calls.map((call) => ({
+      path: call[0] as string,
+      ownerPath: call[3] as string | undefined,
+      subjectId: (call[4] as number[] | undefined)?.[0],
+      positionIds: call[5] as number[] | undefined,
+    }));
+
+    expect(calls).toHaveLength(12);
+    expect(calls.every((call) => call.ownerPath === 'rows')).toBe(true);
+    expect(calls.every((call) => call.positionIds?.[0] === ownerPositionIds[0])).toBe(true);
+
+    const firstAddSubjects = calls.slice(0, 2).map((call) => call.subjectId);
+    const updateManySubjects = calls.slice(2, 4).map((call) => call.subjectId);
+    const removeManySubjects = calls.slice(4, 6).map((call) => call.subjectId);
+    const secondAddSubjects = calls.slice(6, 8).map((call) => call.subjectId);
+    const setAllSubjects = calls.slice(8, 10).map((call) => call.subjectId);
+    const upsertSubjects = calls.slice(10, 12).map((call) => call.subjectId);
+    const subjectByPath = new Map(calls.map((call) => [call.path, call.subjectId]));
+
+    expect(new Set(firstAddSubjects).size).toBe(2);
+    expect(updateManySubjects).toEqual(firstAddSubjects);
+    expect(removeManySubjects).toEqual(firstAddSubjects);
+    expect(secondAddSubjects).not.toEqual(firstAddSubjects);
+    expect(new Set(setAllSubjects).size).toBe(2);
+    expect(subjectByPath.get('rows.3')).toBe(setAllSubjects[0]);
+    expect(setAllSubjects).not.toContain(subjectByPath.get('rows.5'));
+    expect(new Set(upsertSubjects).size).toBe(2);
+    expect(calls.map((call) => call.path)).toEqual([
+      'rows.1',
+      'rows.2',
+      'rows.1',
+      'rows.2',
+      'rows.1',
+      'rows.2',
+      'rows.1',
+      'rows.2',
+      'rows.3',
+      'rows.4',
+      'rows.5',
+      'rows.3',
+    ]);
   });
 });
 

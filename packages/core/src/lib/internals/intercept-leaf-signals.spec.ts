@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { signal } from '@angular/core';
 
+import { entityMap } from '../markers/entity-map';
+import { status } from '../markers/status';
+import { stored } from '../markers/stored';
+import { signalTree } from '../signal-tree';
 import { interceptLeafSignals } from './intercept-leaf-signals';
 import { withWriteContext } from '../write-context';
 import type { UpdateMetadata } from '../types';
@@ -10,6 +14,7 @@ interface Captured {
   next: unknown;
   prev: unknown;
   meta?: UpdateMetadata;
+  ownerPath?: string;
 }
 
 function captureWrites(): {
@@ -18,14 +23,15 @@ function captureWrites(): {
     path: string,
     next: unknown,
     prev: unknown,
-    meta?: UpdateMetadata
+    meta?: UpdateMetadata,
+    ownerPath?: string
   ) => void;
 } {
   const list: Captured[] = [];
   return {
     list,
-    onWrite: (path, next, prev, meta) => {
-      list.push({ path, next, prev, meta });
+    onWrite: (path, next, prev, meta, ownerPath) => {
+      list.push({ path, next, prev, meta, ownerPath });
     },
   };
 }
@@ -42,6 +48,7 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
 
     expect(list).toHaveLength(1);
     expect(list[0].path).toBe('count');
+    expect(list[0].ownerPath).toBe('count');
     expect(list[0].next).toBe(1);
     expect(list[0].prev).toBe(0);
     expect(list[0].meta).toEqual({
@@ -63,6 +70,7 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
 
     expect(list).toHaveLength(1);
     expect(list[0].meta).toEqual({ intent: 'user' });
+    expect(list[0].ownerPath).toBe('count');
     expect(list[0].next).toBe(11);
     expect(list[0].prev).toBe(10);
 
@@ -78,6 +86,55 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
 
     expect(list).toHaveLength(1);
     expect(list[0].meta).toBeUndefined();
+    expect(list[0].ownerPath).toBe('count');
+
+    restore();
+  });
+
+  it('reports owner paths for built-in markers at their owning positions', () => {
+    const storage = new Map<string, string>();
+    const tree = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+      load: status(),
+      theme: stored('intercept-owner-theme', 'light', {
+        storage: {
+          getItem: (key: string) => storage.get(key) ?? null,
+          setItem: (key: string, value: string) => {
+            storage.set(key, value);
+          },
+          removeItem: (key: string) => {
+            storage.delete(key);
+          },
+          clear: () => {
+            storage.clear();
+          },
+          key: (index: number) => Array.from(storage.keys())[index] ?? null,
+          get length() {
+            return storage.size;
+          },
+        },
+        debounceMs: 0,
+      }),
+    });
+    const { list, onWrite } = captureWrites();
+    const restore = interceptLeafSignals(tree.$, onWrite);
+
+    tree.$.rows.addOne({ id: 1, name: 'A' });
+    tree.$.load.setLoading();
+    tree.$.theme.set('dark');
+
+    expect(list.map((entry) => entry.ownerPath)).toEqual([
+      'rows',
+      'load',
+      'theme',
+    ]);
+    expect(list.map((entry) => entry.path)).toEqual([
+      'rows',
+      'load',
+      'theme',
+    ]);
 
     restore();
   });

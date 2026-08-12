@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { signalTree } from '../signal-tree';
+import { PathNotifier } from '../path-notifier';
 import { createFormSignal, form, FORM_MARKER, isFormMarker, validators, withKind } from './form';
 
 // Mock localStorage for testing
@@ -18,12 +19,12 @@ function createMockStorage(): Storage {
   };
 }
 
-interface TestFormData {
+type TestFormData = Record<string, unknown> & {
   name: string;
   email: string;
   age: number;
   acceptTerms: boolean;
-}
+};
 
 const defaultFormData: TestFormData = {
   name: '',
@@ -103,6 +104,29 @@ describe('form() marker', () => {
         name: 'John',
         email: 'john@example.com',
       });
+    });
+
+    it('announces field accessor writes on the form path', () => {
+      const notifier = new PathNotifier({ batching: false });
+      const spy = vi.fn();
+      notifier.subscribe('profile', (next, prev, path) => {
+        spy(next, prev, path);
+      });
+
+      const formSignal = createFormSignal(
+        form<TestFormData>({ initial: defaultFormData }),
+        notifier,
+        'profile'
+      );
+
+      formSignal.$.name.set('John');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(
+        { ...defaultFormData, name: 'John' },
+        defaultFormData,
+        'profile'
+      );
     });
 
     describe('v10.4 .data() alias', () => {
@@ -535,11 +559,11 @@ describe('form() marker', () => {
   });
 
   describe('wizard support', () => {
-    interface WizardFormData {
+    type WizardFormData = Record<string, unknown> & {
       step1Field: string;
       step2Field: string;
       step3Field: string;
-    }
+    };
 
     it('should create wizard with steps', () => {
       const formSignal = createFormSignal(

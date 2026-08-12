@@ -588,12 +588,16 @@ export function createFormSignal<T extends Record<string, unknown>>(
     persistTimeout = setTimeout(saveToStorage, config.persistDebounceMs ?? 500);
   }
 
+  function announceCurrent(prev: T): void {
+    if (notifier && path) notifier.notify(path, valuesSignal(), prev, path);
+  }
+
   // ==================
   // DEEP FIELD ACCESS
   // ==================
 
   function createFieldAccessor<V>(
-    path: string,
+    fieldPath: string,
     getValue: () => V,
     setValue: (v: V) => void
   ): { (): V; set(v: V): void; update(fn: (c: V) => V): void } {
@@ -602,13 +606,22 @@ export function createFormSignal<T extends Record<string, unknown>>(
       set(v: V): void;
       update(fn: (c: V) => V): void;
     };
+    Object.defineProperty(accessor, '__ownerPath', {
+      value: path ?? fieldPath,
+      enumerable: false,
+      configurable: true,
+    });
     accessor.set = (v: V) => {
+      const prev = valuesSignal();
       setValue(v);
+      announceCurrent(prev);
       schedulePersist();
       recordHistory();
     };
     accessor.update = (fn: (c: V) => V) => {
+      const prev = valuesSignal();
       setValue(fn(getValue()));
+      announceCurrent(prev);
       schedulePersist();
       recordHistory();
     };
@@ -868,7 +881,7 @@ export function createFormSignal<T extends Record<string, unknown>>(
    * same contract.
    */
   const announce = (next: T, prev: T): void => {
-    if (notifier && path) notifier.notify(path, next, prev);
+    if (notifier && path) notifier.notify(path, next, prev, path);
   };
 
   formSignalFn.set = (values: Partial<T>): void => {

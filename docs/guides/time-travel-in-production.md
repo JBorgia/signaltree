@@ -60,12 +60,12 @@ touching that collection at all:
 
 **The left column is a floor, not a worst case.** Changing one row costs the same
 as changing fifty different ones, because the pointer array is rebuilt either way.
-What separates the columns is the *changed* rows: each one adds ~40 bytes on top
+What separates the columns is the _changed_ rows: each one adds ~40 bytes on top
 of the array, which at 50k is a 5.9x span between the two.
 
 That matters for sizing, because the intuition it kills is a common one: a 400-row
 bulk operation is not inherently the expensive case. One 400-row entry retains
-**0.43 MB**. The expensive case is *many entries* against a *wide* collection.
+**0.43 MB**. The expensive case is _many entries_ against a _wide_ collection.
 
 Core warns past ~500k retained pointers (**ST2029**, ~4 MB), judged on retention
 rather than row count — a wide collection with short history and a narrow one with
@@ -134,34 +134,27 @@ serialisation. Use it for genuinely derived or secret state.
 Arbitrary branches cannot be scoped yet — only markers. That is
 [RFC 0012](../rfcs/0012-history-scoped-marker-capture.md), accepted and deferred.
 
-### 2b. `timeTravel()` does not cover `form()` state — use the form's own history
+### 2b. `form()` now records under `timeTravel()`, but scoped form history is still the better UI default
 
-**This is the most important thing on this page if you are building an editing UI**,
-and it is not a scoping choice you make — it is how the two mechanisms are built.
-Form writes never notify the history recorder.
+The old guidance here is stale. Form field writes now announce back onto the form path,
+so a tree with `timeTravel()` attached records and undoes direct `form()` edits again.
 
-MEASURED against the built package; reproduce with `node tools/verify-history-defects.mjs`.
-A form-only tree, three writes to a form field:
+That does **not** make scoped form history obsolete. `form({ history: history() })`
+is still the cleaner choice when undo authority should stay inside the panel or draft
+being edited rather than join the app-wide stack.
 
-```
-getHistory() -> ["INIT"]      canUndo() -> false      undo() -> no change
-```
+Today the practical rule is:
 
-The identical writes to a plain leaf on an identically shaped tree give four entries
-and a working undo. **In a mixed tree it is worse than absent.** Form writes create no
-entry, but a _later_ plain-leaf write takes a snapshot that incidentally includes the
-form's then-current values — so an `undo()` aimed at the plain field also rewinds the
-form to a stale value:
+- Use global `timeTravel()` when form edits should participate in the same global undo
+  stream as neighbouring tree writes.
+- Use `form({ history: history() })` when the form wants its own local undo model,
+  independent of unrelated app activity.
 
-```ts
-plain.set('p1');
-form.$.name.set('ada');
-plain.set('p2');
-form.$.name.set('ada l');
-tree.undo(); // plain -> 'p1'  AND  form name -> ''   ← the user's typing is gone
-```
-
-Use the form's **own** scoped stack, which is correct and is what the marker is for:
+The old defect harness was correct when it reported missing form participation. The
+current source has moved past that specific defect; what still deserves product-level
+judgement is global-vs-scoped undo semantics, not raw form invisibility.
+Use the form's **own** scoped stack when the form should undo locally rather than as
+part of the app-wide history stream:
 
 ```ts
 signalTree({
@@ -172,10 +165,8 @@ signalTree({
 tree.$.profile.history?.undo(); // reverts the field — this is the working path
 ```
 
-Scoped form history is not the tidier option here; it is the only correct one. Filed
-as TODO 6a — the fix belongs to the history representation decision, because making
-the snapshot walker descend into form markers rebuilds the whole-tree-snapshot
-problem that decision exists to remove.
+Global `timeTravel()` now records direct form writes too, so this is a UX boundary
+choice rather than a correctness escape hatch.
 
 ### 3. ~~Make bulk work one step — `pauseRecording()`~~ — REMOVED in 14.1.1
 
@@ -226,21 +217,21 @@ whole-state deep compare here undoes the saving.
 ## Composition patterns, and whether they hold up
 
 <!-- measured: the 100 ms sampling interval is a source constant — `setInterval(handleChange, 100)` at packages/core/src/lib/audit/audit.ts:156 (and :160). Cited rather than benchmarked on purpose: a constant breaks greppably when someone changes it, where a timing run only breaks when re-run. -->
-<!-- measured: node tools/verify-history-defects.mjs — reproduces the CONSEQUENCES by outcome (every check calls undo() and inspects state): the form-coverage gap, that write-then-revert pairs are dropped, and the maxHistorySize step arithmetic. It does NOT measure the 100 ms figure — its sleeps are chosen from the constant above. -->
+<!-- measured: node tools/verify-history-defects.mjs — reproduces the CONSEQUENCES by outcome (every check calls undo() and inspects state): the fixed form-coverage behaviour, that write-then-revert pairs are dropped, and the maxHistorySize fallback. It does NOT measure the 100 ms figure — its sleeps are chosen from the constant above. -->
 
-| What you are building                                 | Pattern                                                                              | Supported                                                                                            |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Editor undo over a small document                     | `maxHistorySize` + `shouldSkip` for caret/selection                                  | Yes                                                                                                  |
-| Bulk-edit grid with cancel                            | `createTreeEditSession` (`@signaltree/core/edit-session`) — `commit()` or `cancel()` | Yes, and independent of `timeTravel`                                                                 |
-| Undo one panel, not the whole app                     | `recordHistory: false` on everything outside the panel                               | Yes                                                                                                  |
-| Large server collection + small editable **branch**   | `entityMap({ recordHistory: false })` beside an undoable branch                      | Yes — the headline pattern                                                                           |
-| Large server collection + small editable **`form()`** | `entityMap({ recordHistory: false })` beside `form({ history: history() })`          | Yes, but **`timeTravel()` does not cover the form** — see below                                      |
-| Optimistic write, roll back on error                  | `undo()` in the error path, or `jumpTo(getCurrentIndex() - 1)`                       | Yes — only if nothing else recorded in between                                                       |
-| Import/generate, then one undo                        | —                                                                                    | **No.** `pauseRecording()` was removed in 14.1.1 (see lever 3) and has no replacement                |
-| Audit trail rather than undo                          | `createAuditCallback()` or `getHistory()`                                            | Yes. **Not `createAuditTracker()`** — it samples on a 100 ms timer and drops write-then-revert pairs |
-| Show the user how far they can go                     | `getCurrentIndex()` back, `getHistory().length - 1 - getCurrentIndex()` fwd          | Yes — reactive since 14.0.0                                                                          |
-| Undo per entity, independently                        | —                                                                                    | **No.** elf has this; we do not                                                                      |
-| Collaborative editing                                 | A CRDT (Yjs, Automerge) underneath — undo is per-user, not per-document              | **Not a store feature.** Don't                                                                       |
+| What you are building                                 | Pattern                                                                              | Supported                                                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Editor undo over a small document                     | `maxHistorySize` + `shouldSkip` for caret/selection                                  | Yes                                                                                                                                 |
+| Bulk-edit grid with cancel                            | `createTreeEditSession` (`@signaltree/core/edit-session`) — `commit()` or `cancel()` | Yes, and independent of `timeTravel`                                                                                                |
+| Undo one panel, not the whole app                     | `recordHistory: false` on everything outside the panel                               | Yes                                                                                                                                 |
+| Large server collection + small editable **branch**   | `entityMap({ recordHistory: false })` beside an undoable branch                      | Yes — the headline pattern                                                                                                          |
+| Large server collection + small editable **`form()`** | `entityMap({ recordHistory: false })` beside `form({ history: history() })`          | Yes. Prefer scoped form history when the form should undo independently; global `timeTravel()` also records direct form writes now. |
+| Optimistic write, roll back on error                  | `undo()` in the error path, or `jumpTo(getCurrentIndex() - 1)`                       | Yes — only if nothing else recorded in between                                                                                      |
+| Import/generate, then one undo                        | —                                                                                    | **No.** `pauseRecording()` was removed in 14.1.1 (see lever 3) and has no replacement                                               |
+| Audit trail rather than undo                          | `createAuditCallback()` or `getHistory()`                                            | Yes. **Not `createAuditTracker()`** — it samples on a 100 ms timer and drops write-then-revert pairs                                |
+| Show the user how far they can go                     | `getCurrentIndex()` back, `getHistory().length - 1 - getCurrentIndex()` fwd          | Yes — reactive since 14.0.0                                                                                                         |
+| Undo per entity, independently                        | —                                                                                    | **No.** elf has this; we do not                                                                                                     |
+| Collaborative editing                                 | A CRDT (Yjs, Automerge) underneath — undo is per-user, not per-document              | **Not a store feature.** Don't                                                                                                      |
 
 ## Reactive readers, and why that mattered
 

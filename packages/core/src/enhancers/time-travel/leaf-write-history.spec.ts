@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { signalTree } from '../../lib/signal-tree';
+import { entityMap } from '../../lib/markers/entity-map';
 import { timeTravel } from './time-travel';
 
 /**
@@ -82,5 +83,39 @@ describe('time travel records direct leaf writes', () => {
     await flush();
 
     expect(tree.getHistory().length).toBeLessThanOrEqual(before);
+  });
+
+  it('undo on a tree with entity collections keeps redo and records no phantom entry', async () => {
+    const tree = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    tree.$.rows.addOne({ id: 1, name: 'a' });
+    await flush();
+    tree.$.rows.addOne({ id: 2, name: 'b' });
+    await flush();
+    tree.$.rows.addOne({ id: 3, name: 'c' });
+    await flush();
+
+    const before = tree.getHistory().length;
+
+    tree.undo();
+    await flush();
+
+    const afterUndo = tree() as unknown as {
+      rows: { all: Array<{ id: number; name: string }> };
+    };
+
+    expect(tree.getHistory().length).toBe(before);
+    expect(tree.canRedo()).toBe(true);
+    expect(afterUndo.rows.all.map((row) => row.id)).toEqual([1, 2]);
+
+    tree.redo();
+    const afterRedo = tree() as unknown as {
+      rows: { all: Array<{ id: number; name: string }> };
+    };
+    expect(afterRedo.rows.all.map((row) => row.id)).toEqual([1, 2, 3]);
   });
 });

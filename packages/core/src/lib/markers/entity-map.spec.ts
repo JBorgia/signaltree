@@ -165,5 +165,23 @@ describe('entityMap() marker', () => {
       tree.$.users.removeOne(1);
       expect(tree.$.users.all()).toHaveLength(0);
     });
+
+    it('allocates owner PositionIds per tree domain, not globally', () => {
+      const firstTree = signalTree({
+        users: entityMap<User, number>(),
+        orders: entityMap<{ id: number; total: number }, number>(),
+      });
+      const secondTree = signalTree({
+        users: entityMap<User, number>(),
+      });
+
+      const firstUsersPositionIds = (firstTree.$.users as any).__positionIds as number[];
+      const firstOrdersPositionIds = (firstTree.$.orders as any).__positionIds as number[];
+      const secondUsersPositionIds = (secondTree.$.users as any).__positionIds as number[];
+
+      expect(firstUsersPositionIds).toEqual([1]);
+      expect(firstOrdersPositionIds).toEqual([2]);
+      expect(secondUsersPositionIds).toEqual([1]);
+    });
   });
 });

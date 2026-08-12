@@ -61,6 +61,13 @@ Everything already committed, plus:
 - **The `capacity` removal.** It is breaking and it belongs _with_ the turn store, not
   before it. Removing it early strands adopters twice.
 - **6a's code fix.** It is gated on the representation decision; the doc fix has shipped.
+  > **Boundary crossed (2026-08-11, audit note):** the working tree later landed the
+  > form-notifier fix that makes global `timeTravel()` record direct `form()` writes,
+  > and `docs/guides/time-travel-in-production.md` §2b, `packages/core/README.md` and
+  > the 2026-08 audits were rewritten to say 6a is fixed. This contradicts the
+  > "OUT of 14.1.1 — do not let these leak in" decision above. Noted here because the
+  > boundary was recorded, not because the fix is wrong — it is verified working and
+  > fully green. Open for the boundary decision; nothing reverted.
 - **The MST / Yjs audit.** It blocks public uniqueness claims, not the release.
 
 Mixing Scope B into this release makes it un-reviewable. That is the whole point of the

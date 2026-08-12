@@ -55,6 +55,24 @@ describe('undo/redo restores what the user edited', () => {
     expect(tree.$.rows.count()).toBe(2);
   });
 
+  it('undoing a removed entity restores it at its original position', async () => {
+    const tree = signalTree({
+      rows: entityMap<{ id: string }, string>(),
+    }).with(timeTravel());
+
+    tree.$.rows.setAll([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    await flush();
+
+    tree.$.rows.removeOne('b');
+    await flush();
+
+    expect(tree.$.rows.all().map((row) => row.id)).toEqual(['a', 'c']);
+
+    tree.undo();
+
+    expect(tree.$.rows.all().map((row) => row.id)).toEqual(['a', 'b', 'c']);
+  });
+
   it('records every form edit, so undo has something to go back to', async () => {
     const tree = signalTree({ f: form({ initial: { a: 0 } }), n: 0 }).with(
       timeTravel()
