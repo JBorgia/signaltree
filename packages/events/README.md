@@ -453,4 +453,4 @@ All peer dependencies except `zod` are optional - only install what you need for
 
 ## License
 
-MIT © [SignalTree](https://github.com/JBorgia/signaltree)
+Apache License 2.0 — see the [LICENSE](../../LICENSE) file. OSI-approved and permissive, with an explicit patent grant.

@@ -605,18 +605,30 @@ Contributions welcome. Please run `npm run validate:all` before submitting PRs.
 
 ## License
 
-**Business Source License 1.1 (BUSL-1.1)** — see [LICENSE](LICENSE). Commercial and internal use is permitted; it converts to the **MIT License on 2028-09-05** (the Change Date). Source-available, not OSI "open source," until then.
+**Apache License 2.0** — see [LICENSE](LICENSE). OSI-approved open source, with an
+explicit patent grant. Versions up to and including 14.1.1 were released under the
+Business Source License 1.1; that grant is irrevocable for those versions, so nothing
+you already depend on is withdrawn.
 
 ### Enterprise / procurement FAQ
 
 **Q: Can we use this in commercial, government, or regulated-industry applications?**
-A: Yes. BUSL-1.1 grants worldwide rights to use, modify, and distribute the Software for your own applications, including commercial and internal use (LICENSE §2–3). Using it as a dependency in your product is unrestricted.
+A: Yes. Apache-2.0 is OSI-approved and permissive — use, modification, distribution
+and sublicensing are granted for any purpose, commercial included (LICENSE §2).
 
-**Q: What is actually restricted?**
-A: One thing: you may not publicly offer a _modified, competing_ version of SignalTree itself in a way that circumvents the license (§4b). This does not affect using the library in an application.
+**Q: Does it include a patent grant?**
+A: Yes. §3 grants a perpetual, worldwide, royalty-free patent licence from every
+contributor, and terminates that grant for anyone who initiates patent litigation
+over the Software.
+
+**Q: What are our obligations?**
+A: Retain the copyright, patent, trademark and attribution notices, include a copy
+of the LICENSE, pass on the NOTICE file, and state significant changes in modified
+files (LICENSE §4). There is no copyleft — your own code stays yours.
+
+**Q: What is restricted?**
+A: Trademarks. §6 grants no rights to the "SignalTree" name or marks, so a fork must
+ship under a different name. The code itself may be forked freely.
 
 **Q: Is there an AI-training restriction?**
 A: No. The license contains no AI- or model-training clause.
-
-**Q: Does the license change over time?**
-A: Yes — each release automatically converts to the standard **MIT License** on its Change Date, **2028-09-05** (§6). Governing law is New York (§7).

@@ -2,7 +2,7 @@
   "name": "@signaltree/ng-forms",
   "version": "14.1.1",
   "description": "Angular forms as reactive JSON. Seamless SignalTree integration with FormTree creation, validators, and form state tracking.",
-  "license": "BUSL-1.1",
+  "license": "Apache-2.0",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
