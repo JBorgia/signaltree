@@ -310,6 +310,30 @@ describe('form history()', () => {
     expect(p().name).toBe('');
   });
 
+  it('treats writes separated by flush boundaries as separate undo steps under timeTravel', async () => {
+    const tree = signalTree({
+      profile: form<Profile>({
+        initial: { name: '', password: '' },
+        history: history<Profile>(),
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.$.name.set('J');
+    await flush();
+    p.$.name.set('Jo');
+    await flush();
+    p.$.name.set('Jon');
+    await flush();
+
+    p.history?.undo();
+    expect(p().name).toBe('Jo');
+    p.history?.undo();
+    expect(p().name).toBe('J');
+    p.history?.undo();
+    expect(p().name).toBe('');
+  });
+
   it('never buffers excluded fields, and keeps their live value on undo', () => {
     const tree = makeTree({ exclude: ['password'] });
     const p = tree.$.profile;

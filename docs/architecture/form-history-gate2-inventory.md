@@ -222,9 +222,24 @@ local form history (no timeTravel)
 
 shared timeTravel mode
 -> synchronous form writes before the flush boundary coalesce into one undo turn
+
+shared timeTravel mode across flush / event boundaries
+-> writes separated by flushes remain separate undo steps
 ```
 
 That behavior now lives in shared turn production, not in form-owned storage.
 If the product wants different grouping, the fix belongs at causal boundary
 production (form mutation grouping / flush policy), not by reviving
 `past/present/future`.
+
+Given the current characterization, the lightweight default is coherent:
+
+```text
+one synchronous operation / flush
+-> one implicit undo turn
+
+separate event / flush boundaries
+-> separate undo turns
+```
+
+That is sufficient to freeze Gate 2 without adding new grouping configuration.
