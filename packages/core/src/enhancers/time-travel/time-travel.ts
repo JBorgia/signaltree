@@ -20,9 +20,10 @@ import type {
   TimeTravelEntry,
   TreeNode,
   EnhancerMeta,
+  UpdateMetadata,
 } from '../../lib/types';
 
-import { ENHANCER_META } from '../../lib/types';
+import { ENHANCER_META, SignalTreeRollbackError } from '../../lib/types';
 
 // Re-export for convenience (do not redefine locally)
 export type { TimeTravelConfig, TimeTravelEntry };
@@ -54,6 +55,7 @@ type ScalarSetEffect = TurnEffectBase & {
   subject?: number;
   before: unknown;
   after: unknown;
+  mutationIntent?: 'replace' | 'derive';
 };
 
 type CollectionAddEffect = TurnEffectBase & {
@@ -87,6 +89,192 @@ type TurnEffect =
   | CollectionRemoveEffect
   | CollectionRekeyEffect;
 
+type LaterAppliedEffect = {
+  turnId: number;
+  effect: TurnEffect;
+};
+
+type PendingRollbackDependencyConflict = {
+  kind: 'later-confirmed-dependency';
+  pendingTurnId: number;
+  pendingEffect: TurnEffect;
+  conflictingTurnId?: number;
+  conflictingEffect?: TurnEffect;
+};
+
+type PendingRollbackPlan =
+  | { compensation: TurnEffect[] }
+  | { conflict: PendingRollbackDependencyConflict };
+
+type RollbackTurnLike = {
+  id: number;
+  __effects?: TurnEffect[];
+};
+
+type RollbackFailureCause =
+  | PendingRollbackDependencyConflict
+  | {
+      kind: 'effect-validation-failed';
+      pendingTurnId: number;
+      compensation: TurnEffect[];
+      errorMessage: string;
+      cause?: unknown;
+    };
+
+const ROLLBACK_ERROR_MESSAGE =
+  'SignalTree could not rollback the pending transaction';
+
+const createRollbackError = (
+  cause: RollbackFailureCause
+): SignalTreeRollbackError =>
+  new SignalTreeRollbackError(ROLLBACK_ERROR_MESSAGE, { cause });
+
+function buildPendingRollbackPlan(
+  pendingTurn: RollbackTurnLike | undefined,
+  laterEffects: LaterAppliedEffect[]
+): PendingRollbackPlan {
+  if (!pendingTurn) {
+    return { compensation: [] };
+  }
+
+  const pendingEffects = pendingTurn.__effects ?? [];
+  const makeScalarKey = (effect: ScalarSetEffect): string =>
+    `${effect.position}\u0000${effect.path}\u0000${effect.subject ?? ''}`;
+  const supersededScalarKeys = new Set(
+    laterEffects
+      .map(({ effect }) => effect)
+      .filter((effect): effect is ScalarSetEffect => effect.kind === 'set')
+      .map(makeScalarKey)
+  );
+  const classifyLaterOverlap = (
+    effect: ScalarSetEffect
+  ):
+    | { kind: 'none' }
+    | { kind: 'superseded' }
+    | {
+        kind: 'conflict';
+        conflictingTurnId?: number;
+        conflictingEffect?: TurnEffect;
+      } => {
+    let superseded = false;
+    for (const laterEntry of laterEffects) {
+      const laterEffect = laterEntry.effect;
+      if (laterEffect.position !== effect.position) {
+        continue;
+      }
+      if (
+        laterEffect.subject !== undefined &&
+        effect.subject !== undefined &&
+        laterEffect.subject !== effect.subject
+      ) {
+        continue;
+      }
+      if (laterEffect.path === effect.path) {
+        if (laterEffect.kind !== 'set') {
+          return {
+            kind: 'conflict',
+            conflictingTurnId: laterEntry.turnId,
+            conflictingEffect: laterEffect,
+          };
+        }
+        if (laterEffect.mutationIntent === 'replace') {
+          if (supersededScalarKeys.has(makeScalarKey(effect))) {
+            superseded = true;
+            continue;
+          }
+        }
+        return {
+          kind: 'conflict',
+          conflictingTurnId: laterEntry.turnId,
+          conflictingEffect: laterEffect,
+        };
+      }
+      if (
+        laterEffect.path.startsWith(`${effect.path}.`) ||
+        effect.path.startsWith(`${laterEffect.path}.`)
+      ) {
+        return {
+          kind: 'conflict',
+          conflictingTurnId: laterEntry.turnId,
+          conflictingEffect: laterEffect,
+        };
+      }
+    }
+    return superseded ? { kind: 'superseded' } : { kind: 'none' };
+  };
+  const hasSameSubjectDependency = (
+    effect: CollectionAddEffect | CollectionRemoveEffect | CollectionRekeyEffect
+  ):
+    | { conflictingTurnId?: number; conflictingEffect?: TurnEffect }
+    | undefined => {
+    for (const laterEntry of laterEffects) {
+      const laterEffect = laterEntry.effect;
+      if (laterEffect.kind === 'set') {
+        if (laterEffect.subject === effect.subject && effect.kind !== 'rekey') {
+          return {
+            conflictingTurnId: laterEntry.turnId,
+            conflictingEffect: laterEffect,
+          };
+        }
+        continue;
+      }
+      if (laterEffect.subject === effect.subject) {
+        return {
+          conflictingTurnId: laterEntry.turnId,
+          conflictingEffect: laterEffect,
+        };
+      }
+    }
+    return undefined;
+  };
+
+  const compensation: TurnEffect[] = [];
+  for (let i = pendingEffects.length - 1; i >= 0; i--) {
+    const effect = pendingEffects[i];
+    switch (effect.kind) {
+      case 'set': {
+        const overlap = classifyLaterOverlap(effect);
+        if (overlap.kind === 'conflict') {
+          return {
+            conflict: {
+              kind: 'later-confirmed-dependency',
+              pendingTurnId: pendingTurn.id,
+              pendingEffect: effect,
+              conflictingTurnId: overlap.conflictingTurnId,
+              conflictingEffect: overlap.conflictingEffect,
+            },
+          };
+        }
+        if (overlap.kind === 'superseded') {
+          continue;
+        }
+        compensation.push(effect);
+        break;
+      }
+      case 'add':
+      case 'remove':
+      case 'rekey': {
+        const dependency = hasSameSubjectDependency(effect);
+        if (dependency) {
+          return {
+            conflict: {
+              kind: 'later-confirmed-dependency',
+              pendingTurnId: pendingTurn.id,
+              pendingEffect: effect,
+              conflictingTurnId: dependency.conflictingTurnId,
+              conflictingEffect: dependency.conflictingEffect,
+            },
+          };
+        }
+        compensation.push(effect);
+        break;
+      }
+    }
+  }
+
+  return { compensation };
+}
+
 type PendingEffectMap = Map<string, TurnEffect>;
 
 type CaptureBucket = {
@@ -95,11 +283,6 @@ type CaptureBucket = {
   positionIds: Set<number>;
   effects: PendingEffectMap;
 };
-
-type CollectionHistoryEffect =
-  | CollectionAddEffect
-  | CollectionRemoveEffect
-  | CollectionRekeyEffect;
 
 type EntityCollectionLookupNode = {
   byIdOrFail: (id: string | number) => Record<string, unknown>;
@@ -119,20 +302,7 @@ type EntityCollectionNode = EntityCollectionLookupNode & {
   ) => void;
 };
 
-type HistoryAwareCollectionNode = EntityCollectionNode & {
-  __consumeHistoryEffect?: (
-    path: string,
-    subject: number
-  ) => CollectionHistoryEffect | undefined;
-  __findKeyBySubjectId?: (subject: number) => string | number | undefined;
-  __restoreOne?: (
-    key: string | number,
-    value: unknown,
-    subject: number,
-    beforeSubject?: number,
-    afterSubject?: number
-  ) => void;
-};
+type HistoryAwareCollectionNode = EntityCollectionNode;
 
 type OwnerResolution = {
   ownerNode: EntityCollectionLookupNode;
@@ -155,6 +325,19 @@ function cloneTurnEffect(effect: TurnEffect): TurnEffect {
     case 'rekey':
       return { ...effect };
   }
+}
+
+function combineScalarMutationIntent(
+  left?: 'replace' | 'derive',
+  right?: 'replace' | 'derive'
+): 'replace' | 'derive' | undefined {
+  if (left === 'replace' || right === 'replace') {
+    return 'replace';
+  }
+  if (left === 'derive' || right === 'derive') {
+    return 'derive';
+  }
+  return undefined;
 }
 
 /**
@@ -196,6 +379,7 @@ function normaliseMaxHistorySize(value: number | undefined): number {
 class TimeTravelManager<T> {
   private history: CanonicalTurn<T>[] = [];
   private turns = new Map<number, CanonicalTurn<T>>();
+  private pendingTurns = new Map<number, CanonicalTurn<T>>();
   private positionTurnIds = new Map<number, number[]>();
   private positionFrontiers = new Map<number, number>();
   private nextTurnId = 1;
@@ -302,8 +486,103 @@ class TimeTravelManager<T> {
     ownerPaths?: string[],
     subjectIds?: number[],
     positionIds?: number[],
-    effects?: TurnEffect[]
+    effects?: TurnEffect[],
+    explicitTurnId?: number
   ): boolean {
+    const entry = this.buildTurn(
+      action,
+      payload,
+      ownerPaths,
+      subjectIds,
+      positionIds,
+      effects,
+      explicitTurnId
+    );
+    if (!entry) {
+      return false;
+    }
+
+    return this.insertConfirmedTurn(entry);
+  }
+
+  createPendingEntry(
+    action: string,
+    payload?: unknown,
+    ownerPaths?: string[],
+    subjectIds?: number[],
+    positionIds?: number[],
+    effects?: TurnEffect[],
+    explicitTurnId?: number
+  ): CanonicalTurn<T> | undefined {
+    const entry = this.buildTurn(
+      action,
+      payload,
+      ownerPaths,
+      subjectIds,
+      positionIds,
+      effects,
+      explicitTurnId
+    );
+    if (!entry) {
+      return undefined;
+    }
+
+    this.pendingTurns.set(entry.id, entry);
+    return {
+      ...entry,
+      __ownerPaths: entry.__ownerPaths ? [...entry.__ownerPaths] : undefined,
+      __subjectIds: entry.__subjectIds ? [...entry.__subjectIds] : undefined,
+      __positionIds: entry.__positionIds ? [...entry.__positionIds] : undefined,
+      __effects: entry.__effects ? entry.__effects.map(cloneTurnEffect) : undefined,
+    };
+  }
+
+  confirmPendingTurn(turnId: number): boolean {
+    const entry = this.pendingTurns.get(turnId);
+    if (!entry) {
+      return false;
+    }
+
+    this.pendingTurns.delete(turnId);
+    return this.insertConfirmedTurn(entry);
+  }
+
+  discardPendingTurn(turnId: number): boolean {
+    return this.pendingTurns.delete(turnId);
+  }
+
+  hasPendingTurn(turnId: number): boolean {
+    return this.pendingTurns.has(turnId);
+  }
+
+  hasConfirmedTurnAfter(turnId: number): boolean {
+    return this.history.some((turn) => turn.id > turnId);
+  }
+
+  getPendingRollbackPlan(turnId: number): PendingRollbackPlan {
+    const pendingTurn = this.pendingTurns.get(turnId);
+    const laterEffects = this.history
+      .filter(
+        (turn) => turn.id > turnId && this.getTurnStatus(turn.id) === 'applied'
+      )
+      .flatMap((turn) =>
+        (turn.__effects ?? []).map((effect) => ({
+          turnId: turn.id,
+          effect,
+        }))
+      ) as LaterAppliedEffect[];
+    return buildPendingRollbackPlan(pendingTurn, laterEffects);
+  }
+
+  private buildTurn(
+    action: string,
+    payload?: unknown,
+    ownerPaths?: string[],
+    subjectIds?: number[],
+    positionIds?: number[],
+    effects?: TurnEffect[],
+    explicitTurnId?: number
+  ): CanonicalTurn<T> | undefined {
     if (this.hasScopedRedoFuture()) {
       this.truncateScopedRedoFuture();
     }
@@ -374,7 +653,8 @@ class TimeTravelManager<T> {
       checkHistoryRetention(this.tree.$, this.history.length);
     }
 
-    const turnId = this.nextTurnId++;
+    const turnId = explicitTurnId ?? this.nextTurnId;
+    this.nextTurnId = Math.max(this.nextTurnId, turnId + 1);
     const effectOwnerPaths = Array.from(
       new Set(
         (effects ?? [])
@@ -450,7 +730,7 @@ class TimeTravelManager<T> {
         (didPrune && prunedEqual(last.state, entry.state)) ||
         (isEffectEmpty && deepEqual(last.state, entry.state)))
     ) {
-      return false; // skip duplicate
+      return undefined;
     }
 
     // `shouldSkip` is NOT consulted here. It used to be, and the entry was
@@ -459,7 +739,16 @@ class TimeTravelManager<T> {
     // The reference-dedup above stays: it is O(1), structural rather than
     // semantic, and collapsing an identical snapshot loses nothing.
 
-    this.history.push(entry);
+    return entry;
+  }
+
+  private insertConfirmedTurn(entry: CanonicalTurn<T>): boolean {
+    const insertIndex = this.history.findIndex((candidate) => candidate.id > entry.id);
+    if (insertIndex === -1) {
+      this.history.push(entry);
+    } else {
+      this.history.splice(insertIndex, 0, entry);
+    }
     this.bumpHistory();
     this.currentIndex = this.history.length - 1;
     this.isTemporalViewActive = false;
@@ -494,17 +783,19 @@ class TimeTravelManager<T> {
   }
 
   getTurns(): Array<CanonicalTurn<T>> {
-    return Array.from(this.turns.values()).map((turn) => ({
-      ...turn,
-      __ownerPaths: turn.__ownerPaths ? [...turn.__ownerPaths] : undefined,
-      __subjectIds: turn.__subjectIds ? [...turn.__subjectIds] : undefined,
-      __positionIds: turn.__positionIds ? [...turn.__positionIds] : undefined,
-      __effects: turn.__effects ? turn.__effects.map(cloneTurnEffect) : undefined,
-    }));
+    return [...this.turns.values(), ...this.pendingTurns.values()]
+      .sort((left, right) => left.id - right.id)
+      .map((turn) => ({
+        ...turn,
+        __ownerPaths: turn.__ownerPaths ? [...turn.__ownerPaths] : undefined,
+        __subjectIds: turn.__subjectIds ? [...turn.__subjectIds] : undefined,
+        __positionIds: turn.__positionIds ? [...turn.__positionIds] : undefined,
+        __effects: turn.__effects ? turn.__effects.map(cloneTurnEffect) : undefined,
+      }));
   }
 
   getTurn(turnId: number): CanonicalTurn<T> | undefined {
-    const turn = this.turns.get(turnId);
+    const turn = this.turns.get(turnId) ?? this.pendingTurns.get(turnId);
     if (!turn) {
       return undefined;
     }
@@ -542,7 +833,11 @@ class TimeTravelManager<T> {
 
   getTurnStatus(
     turnId: number
-  ): 'applied' | 'unapplied' | 'inconsistent' | undefined {
+  ): 'pending' | 'applied' | 'unapplied' | 'inconsistent' | undefined {
+    if (this.pendingTurns.has(turnId)) {
+      return 'pending';
+    }
+
     const turn = this.turns.get(turnId);
     if (!turn) {
       return undefined;
@@ -1046,6 +1341,7 @@ class TimeTravelManager<T> {
   resetHistory(): void {
     this.history = [];
     this.turns.clear();
+    this.pendingTurns.clear();
     this.positionTurnIds.clear();
     this.positionFrontiers.clear();
     this.nextTurnId = 1;
@@ -1592,8 +1888,16 @@ export function timeTravel(
         redo(): void {
           /* disabled */
         },
-        transaction<R>(fn: () => R): R {
-          return fn();
+        transaction(fn: () => void) {
+          fn();
+          return {
+            confirm(): void {
+              /* disabled */
+            },
+            rollback(): void {
+              /* disabled */
+            },
+          };
         },
         canUndo(): boolean {
           return false;
@@ -2197,6 +2501,10 @@ export function timeTravel(
       if (existing) {
         if (existing.kind === 'set' && effect.kind === 'set') {
           existing.after = effect.after;
+          existing.mutationIntent = combineScalarMutationIntent(
+            existing.mutationIntent,
+            effect.mutationIntent
+          );
           if (existing.before === existing.after) {
             effectMap.delete(key);
           }
@@ -2209,6 +2517,7 @@ export function timeTravel(
     const buildTurnEffectFromHistory = (
       ownerPath: string,
       path: string,
+      meta?: UpdateMetadata,
       positionIds?: number[],
       subjectIds?: number[]
     ): TurnEffect | undefined => {
@@ -2218,21 +2527,7 @@ export function timeTravel(
         return undefined;
       }
 
-      const segments = ownerPath.split('.');
-      let cursor: unknown = (tree as ISignalTree<T>).$ as Record<string, unknown>;
-      for (const segment of segments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
-          return undefined;
-        }
-        cursor = (cursor as Record<string, unknown>)[segment];
-      }
-
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
-        return undefined;
-      }
-
-      const ownerNode = cursor as HistoryAwareCollectionNode;
-      const effect = ownerNode.__consumeHistoryEffect?.(path, subject);
+      const effect = meta?.historyEffect;
       if (!effect) {
         return undefined;
       }
@@ -2266,12 +2561,13 @@ export function timeTravel(
       path: string,
       next: unknown,
       prev: unknown,
+      meta?: UpdateMetadata,
       ownerPath?: string,
       subjectIds?: number[],
       positionIds?: number[]
     ): void => {
       const historyEffect = ownerPath
-        ? buildTurnEffectFromHistory(ownerPath, path, positionIds, subjectIds)
+        ? buildTurnEffectFromHistory(ownerPath, path, meta, positionIds, subjectIds)
         : undefined;
       if (historyEffect) {
         enqueueEffect(effectMap, historyEffect);
@@ -2303,6 +2599,7 @@ export function timeTravel(
             subject,
             before,
             after,
+            mutationIntent: meta?.mutationIntent,
           });
         }
         return;
@@ -2325,6 +2622,7 @@ export function timeTravel(
         subject: subjectIds?.[0],
         before: prev,
         after: next,
+        mutationIntent: meta?.mutationIntent,
       });
     };
     const captureIntoBucket = (
@@ -2332,6 +2630,7 @@ export function timeTravel(
       path: string,
       next: unknown,
       prev: unknown,
+      meta?: UpdateMetadata,
       ownerPath?: string,
       subjectIds?: number[],
       positionIds?: number[]
@@ -2355,6 +2654,7 @@ export function timeTravel(
         path,
         next,
         prev,
+        meta,
         ownerPath,
         subjectIds,
         resolvedPositionIds
@@ -2366,7 +2666,6 @@ export function timeTravel(
     ): boolean => {
       const { ownerPaths, subjectIds, positionIds, effects } =
         drainCaptureBucket(bucket);
-
       if (
         ownerPaths.length === 0 &&
         subjectIds.length === 0 &&
@@ -2398,22 +2697,44 @@ export function timeTravel(
         ? meta.transactionId
         : undefined;
     };
-    const sealTransaction = (transactionId: number): boolean => {
+    const materializePendingTransaction = (
+      transactionId: number
+    ): CanonicalTurn<T> | undefined => {
       const bucket = pendingTransactions.get(transactionId);
       pendingTransactions.delete(transactionId);
       if (!bucket) {
-        return false;
+        return undefined;
       }
-      return recordCaptureBucket(bucket, 'transaction');
+      const { ownerPaths, subjectIds, positionIds, effects } =
+        drainCaptureBucket(bucket);
+      return timeTravelManager.createPendingEntry(
+        'transaction',
+        undefined,
+        ownerPaths.length > 0 ? ownerPaths : undefined,
+        subjectIds.length > 0 ? subjectIds : undefined,
+        positionIds.length > 0 ? positionIds : undefined,
+        effects.length > 0 ? effects : undefined
+      );
+    };
+    const drainTransactionEffects = (transactionId: number): TurnEffect[] => {
+      const bucket = pendingTransactions.get(transactionId);
+      pendingTransactions.delete(transactionId);
+      if (!bucket) {
+        return [];
+      }
+
+      const { effects } = drainCaptureBucket(bucket);
+      return effects.reverse();
     };
 
     /** Set by this tree's own leaf interceptors; read by the global flush hook. */
+    let restoreLeafInterceptors: (() => void) | null = null;
+    /** Set by this tree's own notifier subscription; read by the global flush hook. */
     let selfDirty = false;
     let suppressNextFlushRecord = false;
     let unsubscribeFlush: (() => void) | null = null;
     let unsubscribeNotifications: (() => void) | null = null;
     let unsubscribeReset: (() => void) | null = null;
-    let restoreLeafInterceptors: (() => void) | null = null;
     try {
       const notifier = getPathNotifier();
       if (notifier) {
@@ -2425,7 +2746,18 @@ export function timeTravel(
               if (source === 'time-travel') {
                 return;
               }
-              if (resolveTransactionId(meta) !== undefined) {
+              const transactionId = resolveTransactionId(meta);
+              if (transactionId !== undefined) {
+                captureIntoBucket(
+                  getTransactionBucket(transactionId),
+                  path,
+                  next,
+                  prev,
+                  meta,
+                  ownerPath,
+                  subjectIds,
+                  positionIds
+                );
                 return;
               }
               selfDirty = true;
@@ -2434,6 +2766,7 @@ export function timeTravel(
                 path,
                 next,
                 prev,
+                meta,
                 ownerPath,
                 subjectIds,
                 positionIds
@@ -2451,14 +2784,16 @@ export function timeTravel(
           restoreLeafInterceptors = interceptLeafSignals(
             (tree as ISignalTree<T>).$ as Record<string, unknown>,
             (path, next, prev, meta, ownerPath, subjectIds, positionIds) => {
+              const effectiveMeta = meta ?? getActiveWriteContext();
               if (isRestoring) return;
-              const transactionId = resolveTransactionId(meta);
+              const transactionId = resolveTransactionId(effectiveMeta);
               if (transactionId !== undefined) {
                 captureIntoBucket(
                   getTransactionBucket(transactionId),
                   path,
                   next,
                   prev,
+                  effectiveMeta,
                   ownerPath,
                   subjectIds,
                   positionIds
@@ -2469,12 +2804,21 @@ export function timeTravel(
                   path,
                   next,
                   prev,
+                  effectiveMeta,
                   ownerPath,
                   subjectIds,
                   positionIds
                 );
               }
-              notifier.notify(path, next, prev, ownerPath, subjectIds, positionIds);
+              notifier.notify(
+                path,
+                next,
+                prev,
+                ownerPath,
+                subjectIds,
+                positionIds,
+                effectiveMeta
+              );
             }
           );
         }
@@ -2618,20 +2962,22 @@ export function timeTravel(
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['redo'] = () => {
       timeTravelManager.redoConfirmed();
     };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['transaction'] = <R>(
-      fn: () => R
-    ): R => {
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['transaction'] = (
+      fn: () => void
+    ) => {
       const activeMeta = getActiveWriteContext();
+      const notifier = getPathNotifier();
       if (typeof activeMeta?.transactionId === 'number') {
         throw new Error('Nested transaction is not supported');
       }
 
+      notifier?.flushSync();
+
       const transactionId = nextTransactionId++;
       pendingTransactions.set(transactionId, createCaptureBucket());
-      const beforeTransactionState = originalTreeCall();
 
       try {
-        return withWriteContext(
+        withWriteContext(
           {
             ...(activeMeta ?? {}),
             transactionId,
@@ -2640,24 +2986,71 @@ export function timeTravel(
           fn
         );
       } catch (error) {
-        pendingTransactions.delete(transactionId);
-        withWriteContext(
-          { intent: 'system', source: 'time-travel' },
-          () => {
-            isRestoring = true;
+        notifier?.flushSync();
+        const transactionEffects = drainTransactionEffects(transactionId);
+        if (transactionEffects.length > 0) {
+          applyScopedEffects(transactionEffects, 'undo');
+        }
+        throw error;
+      }
+
+      notifier?.flushSync();
+      const pendingTurn = materializePendingTransaction(transactionId);
+      const pendingTurnId = pendingTurn?.id;
+      let lifecycle: 'pending' | 'confirmed' | 'rejected' = 'pending';
+
+      return {
+        confirm(): void {
+          if (lifecycle === 'confirmed') {
+            return;
+          }
+          if (lifecycle === 'rejected') {
+            throw new Error('Cannot confirm a rolled back transaction');
+          }
+          lifecycle = 'confirmed';
+          if (pendingTurnId !== undefined) {
+            timeTravelManager.confirmPendingTurn(pendingTurnId);
+          }
+        },
+        rollback(): void {
+          if (lifecycle === 'rejected') {
+            return;
+          }
+          if (lifecycle === 'confirmed') {
+            throw new Error('Cannot rollback a confirmed transaction');
+          }
+
+          const rollbackPlan = pendingTurnId !== undefined
+            ? timeTravelManager.getPendingRollbackPlan(pendingTurnId)
+            : { compensation: [] };
+          if ('conflict' in rollbackPlan) {
+            throw createRollbackError(rollbackPlan.conflict);
+          }
+
+          lifecycle = 'rejected';
+          if (pendingTurnId !== undefined) {
+            timeTravelManager.discardPendingTurn(pendingTurnId);
+          }
+
+          const compensation = rollbackPlan.compensation;
+          if (compensation.length > 0) {
             try {
-              originalTreeCall(beforeTransactionState);
-            } finally {
-              isRestoring = false;
+              applyScopedEffects(compensation, 'undo');
+            } catch (error) {
+              throw createRollbackError({
+                kind: 'effect-validation-failed',
+                pendingTurnId: pendingTurnId as number,
+                compensation,
+                errorMessage:
+                  error instanceof Error
+                    ? error.message
+                    : 'Unknown rollback validation failure',
+                cause: error,
+              });
             }
           }
-        );
-        throw error;
-      } finally {
-        if (pendingTransactions.has(transactionId)) {
-          sealTransaction(transactionId);
-        }
-      }
+        },
+      };
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getHistory'] =
       () => timeTravelManager.getHistory();
@@ -2665,7 +3058,6 @@ export function timeTravel(
       () => {
         timeTravelManager.resetHistory();
       };
-
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['jumpTo'] = (
       index: number
     ) => {

@@ -6,9 +6,29 @@ import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals
 import { status } from '../../lib/markers/status';
 import { stored } from '../../lib/markers/stored';
 import { signalTree } from '../../lib/signal-tree';
+import { SignalTreeRollbackError } from '../../lib/types';
+import { transactions } from '../transactions/transactions';
 import { enableTimeTravel, timeTravel, withTimeTravel } from './time-travel';
 
 describe('time-travel enhancer', () => {
+  const expectRollbackError = (
+    attempt: () => void,
+    expectedCause: Record<string, unknown>
+  ): void => {
+    try {
+      attempt();
+      throw new Error('Expected rollback to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(SignalTreeRollbackError);
+      const rollbackError = error as SignalTreeRollbackError;
+      expect(rollbackError.code).toBe('SIGNALTREE_ROLLBACK_FAILED');
+      expect(rollbackError.message).toBe(
+        'SignalTree could not rollback the pending transaction'
+      );
+      expect(rollbackError.cause).toMatchObject(expectedCause);
+    }
+  };
+
   it('exports factory and aliases', () => {
     expect(typeof timeTravel).toBe('function');
     expect(typeof timeTravel()).toBe('function');
@@ -125,7 +145,7 @@ describe('time-travel enhancer', () => {
     ]);
   });
 
-  it('groups multiple positions into exactly one explicit transaction turn when batching is disabled', async () => {
+  it('returns a pending transaction: visible immediately, absent from confirmed history until confirm', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
@@ -146,16 +166,35 @@ describe('time-travel enhancer', () => {
     const t = (store as any).__timeTravel;
     t.resetHistory();
     const baseline = t.getTurns().length;
+    const baselineHistory = t.getHistory().length;
 
-    store.transaction(() => {
+    const pending = store.transaction(() => {
       store.$.drivers.addOne({ id: 7, status: 'assigned' });
       store.$.trucks.addOne({ id: 12, driverId: 7 });
       store.$.orders.addOne({ id: 99, status: 'dispatched' });
     });
 
+    expect(store.$.drivers.all()).toEqual([{ id: 7, status: 'assigned' }]);
+    expect(store.$.trucks.all()).toEqual([{ id: 12, driverId: 7 }]);
+    expect(store.$.orders.all()).toEqual([{ id: 99, status: 'dispatched' }]);
+    expect(store.canUndo()).toBe(false);
+    expect(t.getHistory()).toHaveLength(baselineHistory);
+    expect(t.getTurns()).toHaveLength(baseline + 1);
+
+    const pendingTurn = t.getTurns().at(-1) as {
+      id: number;
+      __positionIds?: number[];
+    };
+    expect(t.getTurnStatus(pendingTurn.id)).toBe('pending');
+
+    pending.confirm();
+
     const turns = t.getTurns();
     expect(turns).toHaveLength(baseline + 1);
-    const transactionTurn = turns.at(-1) as {
+    expect(store.canUndo()).toBe(true);
+    expect(t.getHistory()).toHaveLength(baselineHistory + 1);
+    const confirmedTurn = turns.at(-1) as {
+      id: number;
       state: {
         drivers: { all: { id: number; status: string }[] };
         trucks: { all: { id: number; driverId: number | null }[] };
@@ -164,23 +203,22 @@ describe('time-travel enhancer', () => {
       __ownerPaths?: string[];
       __positionIds?: number[];
     };
-    expect(transactionTurn.state).toEqual({
+    expect(confirmedTurn.state).toEqual({
       drivers: { all: [{ id: 7, status: 'assigned' }] },
       trucks: { all: [{ id: 12, driverId: 7 }] },
       orders: { all: [{ id: 99, status: 'dispatched' }] },
     });
-    expect([...(transactionTurn.__ownerPaths ?? [])].sort()).toEqual([
+    expect([...(confirmedTurn.__ownerPaths ?? [])].sort()).toEqual([
       'drivers',
       'orders',
       'trucks',
     ]);
-    expect(transactionTurn.__positionIds).toHaveLength(3);
+    expect(confirmedTurn.__positionIds).toHaveLength(3);
+    expect(t.getTurnStatus(confirmedTurn.id)).toBe('applied');
   });
 
-  it('does not capture writes scheduled after the explicit transaction callback returns', async () => {
-    const { getPathNotifier, resetPathNotifier } = await import(
-      '../../lib/path-notifier'
-    );
+  it('rollback removes a pending transaction contribution without entering confirmed history', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
     resetPathNotifier();
 
     const store = signalTree({
@@ -190,8 +228,38 @@ describe('time-travel enhancer', () => {
     const t = (store as any).__timeTravel;
     t.resetHistory();
     const baseline = t.getTurns().length;
+    const baselineHistory = t.getHistory().length;
 
-    store.transaction(() => {
+    const pending = store.transaction(() => {
+      store.$.inside.set('grouped');
+    });
+
+    expect(store().inside).toBe('grouped');
+    expect(store.canUndo()).toBe(false);
+    expect(t.getTurns()).toHaveLength(baseline + 1);
+
+    pending.rollback();
+
+    expect(store()).toEqual({ inside: '', outside: '' });
+    expect(store.canUndo()).toBe(false);
+    expect(t.getHistory()).toHaveLength(baselineHistory);
+    expect(t.getTurns()).toHaveLength(baseline);
+  });
+
+  it('does not capture writes scheduled after the explicit transaction callback returns', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      inside: '',
+      outside: '',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+    const baselineHistory = t.getHistory().length;
+
+    const pending = store.transaction(() => {
       store.$.inside.set('grouped');
     });
 
@@ -200,9 +268,18 @@ describe('time-travel enhancer', () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    expect(store()).toEqual({ inside: 'grouped', outside: 'later' });
+    expect(store.canUndo()).toBe(true);
+    expect(t.getHistory()).toHaveLength(baselineHistory + 1);
+    expect(t.getTurns()).toHaveLength(baseline + 2);
+
+    pending.confirm();
+
     const turns = t.getTurns();
     expect(turns).toHaveLength(baseline + 2);
-    const transactionTurn = turns.at(-2) as {
+    expect(t.getHistory()).toHaveLength(baselineHistory + 2);
+    const pendingTurn = turns.at(-2) as {
+      id: number;
       state: { inside: string; outside: string };
       __ownerPaths?: string[];
     };
@@ -210,8 +287,9 @@ describe('time-travel enhancer', () => {
       state: { inside: string; outside: string };
       __ownerPaths?: string[];
     };
-    expect(transactionTurn.state).toEqual({ inside: 'grouped', outside: '' });
-    expect(transactionTurn.__ownerPaths).toEqual(['inside']);
+    expect(pendingTurn.state).toEqual({ inside: 'grouped', outside: '' });
+    expect(pendingTurn.__ownerPaths).toEqual(['inside']);
+    expect(t.getTurnStatus(pendingTurn.id)).toBe('applied');
     expect(laterTurn.state).toEqual({ inside: 'grouped', outside: 'later' });
     expect(laterTurn.__ownerPaths).toEqual(['outside']);
   });
@@ -253,6 +331,1004 @@ describe('time-travel enhancer', () => {
 
     const turns = t.getTurns();
     expect(turns).toHaveLength(baseline);
+  });
+
+  it('preserves causal order when a pending transaction is confirmed after a later confirmed turn', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: '', y: '' }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.x.set('pending');
+    });
+
+    store.$.y.set('confirmed-later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store.canUndo()).toBe(true);
+    const beforeConfirmTurns = t.getTurns();
+    expect(beforeConfirmTurns.at(-2)?.state).toEqual({ x: 'pending', y: '' });
+    expect(beforeConfirmTurns.at(-1)?.state).toEqual({ x: 'pending', y: 'confirmed-later' });
+
+    pending.confirm();
+
+    expect(store.canUndo()).toBe(true);
+    store.undo();
+    expect(store()).toEqual({ x: 'pending', y: '' });
+    store.undo();
+    expect(store()).toEqual({ x: '', y: '' });
+  });
+
+  it('rolls back a pending scalar write while preserving a later unrelated confirmed write', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      a: { x: 1 },
+      b: { y: 2 },
+    }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.a.x.set(10);
+    });
+
+    store.$.b.y.set(20);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({
+      a: { x: 1 },
+      b: { y: 20 },
+    });
+  });
+
+  it('rolls back a pending write while preserving a later sibling write under the same owner', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      profile: {
+        name: '',
+        email: 'old@example.com',
+      },
+    }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.profile.name.set('Jon');
+    });
+
+    store.$.profile.email.set('new@example.com');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({
+      profile: {
+        name: '',
+        email: 'new@example.com',
+      },
+    });
+  });
+
+  it('preserves a later confirmed replace write on the same scalar path', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 'A' }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    const pending = store.transaction(() => {
+      store.$.x.set('B');
+    });
+
+    store.$.x.set('C');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store()).toEqual({ x: 'C' });
+    expect(t.getHistory()).toHaveLength(2);
+    expect(t.getTurns()).toHaveLength(3);
+
+    pending.rollback();
+
+    expect(store()).toEqual({ x: 'C' });
+  });
+
+  it('keeps pending and later same-microtask scalar writes as separate causal turns', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.update((value) => (value as number) + 5);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store()).toEqual({ x: 25 });
+    expect(t.getHistory()).toHaveLength(2);
+    expect(t.getTurns()).toHaveLength(3);
+    expect(t.getTurnStatus(t.getTurns().at(-2)?.id)).toBe('pending');
+    expect(t.getTurnStatus(t.getTurns().at(-1)?.id)).toBe('applied');
+
+    void pending;
+  });
+
+  it('preserves a later same-microtask replace write when rolling back a pending replace', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.set(25);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({ x: 25 });
+  });
+
+  it('rejects rollback when a later same-microtask update derives from pending state', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.update((value) => (value as number) + 5);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'later-confirmed-dependency',
+    });
+    expect(store()).toEqual({ x: 25 });
+  });
+
+  it('treats set then update in one later confirmed turn as replace for rollback classification', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.set(100);
+    store.$.x.update((value) => (value as number) + 5);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({ x: 105 });
+  });
+
+  it('treats update then set in one later confirmed turn as replace for rollback classification', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.update((value) => (value as number) + 5);
+    store.$.x.set(100);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({ x: 100 });
+  });
+
+  it('treats set then set in one later confirmed turn as replace for rollback classification', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.set(100);
+    store.$.x.set(105);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({ x: 105 });
+  });
+
+  it('treats update then update in one later confirmed turn as derive for rollback classification', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ x: 10 }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.x.set(20);
+    });
+
+    store.$.x.update((value) => (value as number) + 5);
+    store.$.x.update((value) => (value as number) + 7);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'later-confirmed-dependency',
+      pendingEffect: { kind: 'set' },
+      conflictingEffect: { kind: 'set', mutationIntent: 'derive' },
+    });
+    expect(store()).toEqual({ x: 32 });
+  });
+
+  it('rolls back callable partial writes at leaf precision', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({ count: 10, title: 'Original' }).with(
+      timeTravel()
+    );
+
+    const pending = store.transaction(() => {
+      store({
+        count: 20,
+        title: 'Pending',
+      });
+    });
+
+    store.$.count.set(30);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store()).toEqual({ count: 30, title: 'Original' });
+  });
+
+  it('rolls back a pending add while preserving later work on a different SubjectId', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 18, name: 'existing' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.addOne({ id: 17, name: 'pending' });
+    });
+
+    store.$.rows.byIdOrFail(18).name.set('later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([18]);
+    expect(store.$.rows.byIdOrFail(18).name()).toBe('later');
+  });
+
+  it('rejects rollback of a pending add when later same-subject field set depends on that existence', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.rows.addOne({ id: 17, name: 'pending' });
+    });
+
+    store.$.rows.byIdOrFail(17).name.set('later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'later-confirmed-dependency',
+      pendingEffect: { kind: 'add' },
+      conflictingEffect: { kind: 'set' },
+    });
+    expect(store.$.rows.ids()).toEqual([17]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('later');
+  });
+
+  it('rejects rollback of a pending add when later same-subject field update depends on that existence', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    const pending = store.transaction(() => {
+      store.$.rows.addOne({ id: 17, name: 'pending' });
+    });
+
+    store.$.rows.byIdOrFail(17).name.update((value) => `${value}-updated`);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'later-confirmed-dependency',
+      pendingEffect: { kind: 'add' },
+      conflictingEffect: { kind: 'set' },
+    });
+    expect(store.$.rows.ids()).toEqual([17]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('pending-updated');
+  });
+
+  it('rolls back a pending remove while restoring anchors and preserving later work on a different SubjectId', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 16, name: 'A' });
+    store.$.rows.addOne({ id: 17, name: 'B' });
+    store.$.rows.addOne({ id: 18, name: 'C' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const originalSubject = (store.$.rows.byIdOrFail(17).name as any).__subjectIds?.[0] as number;
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    store.$.rows.byIdOrFail(18).name.set('later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([16, 17, 18]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('B');
+    expect(store.$.rows.byIdOrFail(18).name()).toBe('later');
+    expect((store.$.rows.byIdOrFail(17).name as any).__subjectIds?.[0]).toBe(
+      originalSubject
+    );
+  });
+
+  it('does not expose a supported same-subject field path after a pending remove', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 17, name: 'pending-remove' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    expect(store.$.rows.byId(17)).toBeUndefined();
+    expect(() => store.$.rows.byIdOrFail(17)).toThrow(/Entity with id 17 not found/);
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([17]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('pending-remove');
+  });
+
+  it('rejects rollback of a pending remove when the restore key is occupied by a different SubjectId', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 17, name: 'original' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    store.$.rows.addOne({ id: 17, name: 'replacement' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'effect-validation-failed',
+      errorMessage: expect.stringMatching(/cannot restore removed entity/i),
+    });
+    expect(store.$.rows.ids()).toEqual([17]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('replacement');
+  });
+
+  it('rolls back a pending rekey while preserving later work on a different SubjectId', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'target' });
+    store.$.rows.addOne({ id: 18, name: 'other' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const originalSubject = (store.$.rows.byIdOrFail(7).name as any).__subjectIds?.[0] as number;
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+    });
+
+    store.$.rows.byIdOrFail(18).name.set('later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([7, 18]);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('target');
+    expect(store.$.rows.byIdOrFail(18).name()).toBe('later');
+    expect((store.$.rows.byIdOrFail(7).name as any).__subjectIds?.[0]).toBe(
+      originalSubject
+    );
+  });
+
+  it('treats an explicit transaction boundary as a flush boundary for surrounding ordinary writes', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      status: 'idle',
+      other: 'before',
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+    const baselineHistory = t.getHistory().length;
+
+    store.$.status.set('queued-before');
+
+    const pending = store.transaction(() => {
+      store.$.rows.addOne({ id: 17, name: 'pending' });
+    });
+
+    store.$.other.set('queued-after');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(t.getHistory()).toHaveLength(baselineHistory + 2);
+
+    pending.confirm();
+
+    const turns = t.getTurns();
+    expect(turns).toHaveLength(baseline + 3);
+
+    const beforeTurn = turns.at(-3) as {
+      __ownerPaths?: string[];
+      state: { status: string; other: string; rows: { all: unknown[] } };
+    };
+    const pendingTurn = turns.at(-2) as {
+      __ownerPaths?: string[];
+      state: { status: string; other: string; rows: { all: Array<{ id: number; name: string }> } };
+    };
+    const afterTurn = turns.at(-1) as {
+      __ownerPaths?: string[];
+      state: { status: string; other: string; rows: { all: Array<{ id: number; name: string }> } };
+    };
+
+    expect(beforeTurn.__ownerPaths).toEqual(['status']);
+    expect(beforeTurn.state).toEqual({
+      status: 'queued-before',
+      other: 'before',
+      rows: { all: [] },
+    });
+    expect(pendingTurn.__ownerPaths).toEqual(['rows']);
+    expect(pendingTurn.state).toEqual({
+      status: 'queued-before',
+      other: 'before',
+      rows: { all: [{ id: 17, name: 'pending' }] },
+    });
+    expect(afterTurn.__ownerPaths).toEqual(['other']);
+    expect(afterTurn.state).toEqual({
+      status: 'queued-before',
+      other: 'queued-after',
+      rows: { all: [{ id: 17, name: 'pending' }] },
+    });
+  });
+
+  it('flushes queued ordinary writes without retaining an aborted transaction turn', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      a: 0,
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+    const baselineHistory = t.getHistory().length;
+
+    store.$.a.set(1);
+
+    expect(() =>
+      store.transaction(() => {
+        store.$.rows.addOne({ id: 17, name: 'pending' });
+        throw new Error('boom');
+      })
+    ).toThrow('boom');
+
+    expect(store()).toEqual({
+      a: 1,
+      rows: { all: [] },
+    });
+    expect(t.getHistory()).toHaveLength(baselineHistory + 1);
+    expect(t.getTurns()).toHaveLength(baseline + 1);
+
+    const survivingTurn = t.getTurns().at(-1) as {
+      __ownerPaths?: string[];
+      state: { a: number; rows: { all: unknown[] } };
+    };
+    expect(survivingTurn.__ownerPaths).toEqual(['a']);
+    expect(survivingTurn.state).toEqual({ a: 1, rows: { all: [] } });
+  });
+
+  it('preserves a later same-subject field set when rolling back a pending rekey', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'target' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+    });
+
+    store.$.rows.byIdOrFail(42).name.set('later');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([7]);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('later');
+  });
+
+  it('captures both rekey and same-subject field set inside a standalone pending transaction', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel()) as {
+      $: {
+        rows: {
+          addOne(row: { id: number; name: string }): void;
+          changeId(from: number, to: number): void;
+          byIdOrFail(id: number): { name: { set(value: string): void } };
+        };
+      };
+      transaction(fn: () => void): { confirm(): void; rollback(): void };
+      __timeTravel: {
+        resetHistory(): void;
+        getTurns(): Array<{ id: number; __effects?: Array<{ kind: string }> }>;
+      };
+    };
+
+    store.$.rows.addOne({ id: 7, name: 'temp' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const t = store.__timeTravel;
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+      store.$.rows.byIdOrFail(42).name.set('stable');
+    });
+
+    expect(t.getTurns().at(-1)?.__effects?.map((effect) => effect.kind)).toEqual([
+      'rekey',
+      'set',
+    ]);
+  });
+
+  it('keeps transaction authority singular for composed transactions() + timeTravel() rekey plus scalar writes', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(transactions()).with(timeTravel()) as {
+      $: {
+        rows: {
+          addOne(row: { id: number; name: string }): void;
+          changeId(from: number, to: number): void;
+          byIdOrFail(id: number): { name: { (): string; set(value: string): void } };
+          ids(): number[];
+        };
+      };
+      transaction(fn: () => void): { confirm(): void; rollback(): void };
+      __transactions: {
+        getConfirmedTurnCount(): number;
+        getPendingTurnCount(): number;
+      };
+      __timeTravel: {
+        resetHistory(): void;
+        getHistory(): unknown[];
+        getTurns(): Array<{ id: number; __effects?: Array<{ kind: string }> }>;
+        getTurnStatus(id: number | undefined): string | undefined;
+      };
+    };
+
+    store.$.rows.addOne({ id: 7, name: 'temp' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const t = store.__timeTravel;
+    t.resetHistory();
+    const baselineHistory = t.getHistory().length;
+    const baselineTurns = t.getTurns().length;
+    const baselineTransactionConfirmed =
+      store.__transactions.getConfirmedTurnCount();
+    const baselineTransactionPending = store.__transactions.getPendingTurnCount();
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+      store.$.rows.byIdOrFail(42).name.set('stable');
+    });
+
+    expect(store.$.rows.ids()).toEqual([42]);
+    expect([
+      store.__transactions.getConfirmedTurnCount(),
+      store.__transactions.getPendingTurnCount(),
+    ]).toEqual([
+      baselineTransactionConfirmed,
+      baselineTransactionPending,
+    ]);
+    expect(t.getHistory()).toHaveLength(baselineHistory);
+    expect(t.getTurns()).toHaveLength(baselineTurns + 1);
+    expect(t.getTurnStatus(t.getTurns().at(-1)?.id)).toBe('pending');
+    expect(t.getTurns().at(-1)?.__effects?.map((effect) => effect.kind)).toEqual([
+      'rekey',
+      'set',
+    ]);
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([7]);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('temp');
+    expect([
+      store.__transactions.getConfirmedTurnCount(),
+      store.__transactions.getPendingTurnCount(),
+    ]).toEqual([
+      baselineTransactionConfirmed,
+      baselineTransactionPending,
+    ]);
+    expect(t.getHistory()).toHaveLength(baselineHistory);
+    expect(t.getTurns()).toHaveLength(baselineTurns);
+  });
+
+  it('preserves a later same-subject field update when rolling back a pending rekey', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'target' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+    });
+
+    store.$.rows.byIdOrFail(42).name.update((value) => `${value}-updated`);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([7]);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('target-updated');
+  });
+
+  it('rejects rollback of a pending rekey when later work touches the same structural dimension', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'target' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+    });
+
+    store.$.rows.changeId(42, 99);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'later-confirmed-dependency',
+      pendingEffect: { kind: 'rekey' },
+      conflictingEffect: { kind: 'rekey' },
+    });
+    expect(store.$.rows.ids()).toEqual([99]);
+    expect(store.$.rows.byIdOrFail(99).name()).toBe('target');
+  });
+
+  it('fails atomically when rolling back a pending rekey would restore into an occupied original key', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'target' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const originalSubject = (store.$.rows.byIdOrFail(7).name as any).__subjectIds?.[0] as number;
+
+    const pending = store.transaction(() => {
+      store.$.rows.changeId(7, 42);
+    });
+
+    store.$.rows.addOne({ id: 7, name: 'occupier' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expectRollbackError(() => pending.rollback(), {
+      kind: 'effect-validation-failed',
+      errorMessage: expect.stringMatching(/cannot rekey to occupied key/i),
+    });
+    expect(store.$.rows.ids()).toEqual([42, 7]);
+    expect(store.$.rows.byIdOrFail(42).name()).toBe('target');
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('occupier');
+    expect((store.$.rows.byIdOrFail(42).name as any).__subjectIds?.[0]).toBe(
+      originalSubject
+    );
+  });
+
+  it('restores a removed row before the surviving after-anchor when the before-anchor is gone', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 16, name: 'A' });
+    store.$.rows.addOne({ id: 17, name: 'B' });
+    store.$.rows.addOne({ id: 18, name: 'C' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    store.$.rows.removeOne(16);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([17, 18]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('B');
+    expect(store.$.rows.byIdOrFail(18).name()).toBe('C');
+  });
+
+  it('restores a removed row after the surviving before-anchor when the after-anchor is gone', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 16, name: 'A' });
+    store.$.rows.addOne({ id: 17, name: 'B' });
+    store.$.rows.addOne({ id: 18, name: 'C' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    store.$.rows.removeOne(18);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([16, 17]);
+    expect(store.$.rows.byIdOrFail(16).name()).toBe('A');
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('B');
+  });
+
+  it('treats a reused anchor key as invalid and restores relative to surviving subject anchors', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 16, name: 'A' });
+    store.$.rows.addOne({ id: 17, name: 'B' });
+    store.$.rows.addOne({ id: 18, name: 'C' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    const pending = store.transaction(() => {
+      store.$.rows.removeOne(17);
+    });
+
+    store.$.rows.removeOne(16);
+    store.$.rows.addOne({ id: 16, name: 'replacement-anchor' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    pending.rollback();
+
+    expect(store.$.rows.ids()).toEqual([17, 18, 16]);
+    expect(store.$.rows.byIdOrFail(17).name()).toBe('B');
+    expect(store.$.rows.byIdOrFail(18).name()).toBe('C');
+    expect(store.$.rows.byIdOrFail(16).name()).toBe('replacement-anchor');
+  });
+
+  it.todo(
+    'characterizes rollback when both remove anchors are gone and no retained structural fact proves placement'
+  );
+
+  it('makes confirm and rollback idempotent in their own terminal direction', () => {
+    const store = signalTree({ value: '' }).with(timeTravel());
+
+    const confirmed = store.transaction(() => {
+      store.$.value.set('confirmed');
+    });
+    confirmed.confirm();
+    confirmed.confirm();
+    expect(store()).toEqual({ value: 'confirmed' });
+
+    const rolledBack = store.transaction(() => {
+      store.$.value.set('rolled-back');
+    });
+    rolledBack.rollback();
+    rolledBack.rollback();
+    expect(store()).toEqual({ value: 'confirmed' });
+  });
+
+  it('rejects mixed terminal transitions on a transaction handle', () => {
+    const store = signalTree({ value: '' }).with(timeTravel());
+
+    const confirmed = store.transaction(() => {
+      store.$.value.set('confirmed');
+    });
+    confirmed.confirm();
+    expect(() => confirmed.rollback()).toThrow(/confirmed transaction/i);
+
+    const rolledBack = store.transaction(() => {
+      store.$.value.set('rolled-back');
+    });
+    rolledBack.rollback();
+    expect(() => rolledBack.confirm()).toThrow(/rolled back transaction/i);
   });
 
   it('records one canonical turn across multiple owner positions in one flush', async () => {
@@ -1631,12 +2707,9 @@ describe('time-travel enhancer', () => {
       ownerPaths: ['rows'],
       recorded: true,
     });
-    // `changeId` notifies with the same entity object as both prev and next,
-    // so the generic PathNotifier flush dedupes that path out. The owner-path
-    // probe still records the owning position through the marker interceptor,
-    // which is what makes the batch record even though a generic subscriber
-    // does not see `rows.42`.
-    expect(seenPaths).toEqual(['rows.-1']);
+    // Same-reference rekeys still carry canonical structural metadata through
+    // PathNotifier transport, so generic subscribers observe the rekey path.
+    expect(seenPaths).toEqual(['rows.-1', 'rows.42']);
   });
 
   it('records the user branch, not the replay branch, when undo and a user write share a tick', async () => {

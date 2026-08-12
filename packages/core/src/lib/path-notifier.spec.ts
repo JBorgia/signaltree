@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getPathNotifier, PathNotifier, resetPathNotifier } from './path-notifier';
+import type { UpdateMetadata } from './types';
 
 describe('PathNotifier (batching)', () => {
+  type ObservedNotification = {
+    path: string;
+    ownerPath?: string;
+    subjectIds?: number[];
+    positionIds?: number[];
+    meta?: UpdateMetadata;
+  };
+
+  const captureNotifications = async (
+    emit: (notifier: PathNotifier) => void
+  ): Promise<ObservedNotification[]> => {
+    const notifier = new PathNotifier();
+    const seen: ObservedNotification[] = [];
+
+    notifier.subscribe(
+      '**',
+      (_value, _prev, path, ownerPath, _source, subjectIds, positionIds, meta) => {
+        seen.push({
+          path,
+          ownerPath,
+          subjectIds,
+          positionIds,
+          meta,
+        });
+      }
+    );
+
+    emit(notifier);
+    await Promise.resolve();
+
+    return seen;
+  };
+
   it('batches multiple updates to same path and flushes once', async () => {
     const notifier = new PathNotifier();
     const spy = vi.fn();
@@ -134,6 +168,374 @@ describe('PathNotifier (batching)', () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith('mixed', [17], [3]);
+  });
+
+  it('preserves rekey metadata on the structural notification only when a later same-subject set happens in the same flush', async () => {
+    const rekeyedEntity = { id: 42, name: 'pending' };
+    const seen = await captureNotifications((notifier) => {
+      notifier.notify(
+        'rows.42',
+        rekeyedEntity,
+        rekeyedEntity,
+        'rows',
+        [17],
+        [3],
+        {
+          historyEffect: {
+            kind: 'rekey',
+            subject: 17,
+            beforeKey: 7,
+            afterKey: 42,
+          },
+        }
+      );
+      notifier.notify(
+        'rows.42.name',
+        'later',
+        'pending',
+        'rows',
+        [17],
+        [3],
+        {
+          mutationIntent: 'replace',
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toMatchObject({
+      path: 'rows.42',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        historyEffect: {
+          kind: 'rekey',
+          subject: 17,
+          beforeKey: 7,
+          afterKey: 42,
+        },
+      },
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.42.name',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        mutationIntent: 'replace',
+      },
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
+  });
+
+  it('preserves rekey metadata on the structural notification only when a later same-subject update happens in the same flush', async () => {
+    const rekeyedEntity = { id: 42, name: 'pending' };
+    const seen = await captureNotifications((notifier) => {
+      notifier.notify(
+        'rows.42',
+        rekeyedEntity,
+        rekeyedEntity,
+        'rows',
+        [17],
+        [3],
+        {
+          historyEffect: {
+            kind: 'rekey',
+            subject: 17,
+            beforeKey: 7,
+            afterKey: 42,
+          },
+        }
+      );
+      notifier.notify(
+        'rows.42.name',
+        'later',
+        'pending',
+        'rows',
+        [17],
+        [3],
+        {
+          mutationIntent: 'derive',
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]?.meta?.historyEffect).toMatchObject({
+      kind: 'rekey',
+      subject: 17,
+      beforeKey: 7,
+      afterKey: 42,
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.42.name',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        mutationIntent: 'derive',
+      },
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
+  });
+
+  it('does not drop a same-reference structural notification when historyEffect is present', async () => {
+    const rekeyedEntity = { id: 42, name: 'pending' };
+    const seen = await captureNotifications((notifier) => {
+      notifier.notify(
+        'rows.42',
+        rekeyedEntity,
+        rekeyedEntity,
+        'rows',
+        [17],
+        [3],
+        {
+          historyEffect: {
+            kind: 'rekey',
+            subject: 17,
+            beforeKey: 7,
+            afterKey: 42,
+          },
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({
+      path: 'rows.42',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        historyEffect: {
+          kind: 'rekey',
+          subject: 17,
+          beforeKey: 7,
+          afterKey: 42,
+        },
+      },
+    });
+  });
+
+  it('keeps structural metadata on the structural entry when a later same-path notification with matching identity follows it', async () => {
+    const seen = await captureNotifications((notifier) => {
+      const transactionOwner = { token: 'same-owner' };
+      notifier.notify(
+        'rows.42',
+        { id: 42, name: 'pending' },
+        { id: 42, name: 'pending' },
+        'rows',
+        [17],
+        [3],
+        {
+          transactionId: 1,
+          transactionOwner,
+          historyEffect: {
+            kind: 'rekey',
+            subject: 17,
+            beforeKey: 7,
+            afterKey: 42,
+          },
+        }
+      );
+      notifier.notify(
+        'rows.42',
+        { id: 42, name: 'pending' },
+        { id: 42, name: 'pending' },
+        'rows',
+        [17],
+        [3],
+        {
+          transactionId: 1,
+          transactionOwner,
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toMatchObject({
+      path: 'rows.42',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        transactionId: 1,
+        historyEffect: {
+          kind: 'rekey',
+          subject: 17,
+          beforeKey: 7,
+          afterKey: 42,
+        },
+      },
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.42',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        transactionId: 1,
+      },
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
+  });
+
+  it('keeps same-path structural and later entity updates separate within one flush', async () => {
+    const seen = await captureNotifications((notifier) => {
+      const transactionOwner = { token: 'same-owner' };
+      notifier.notify(
+        'rows.42',
+        { id: 42, name: 'temp' },
+        { id: 42, name: 'temp' },
+        'rows',
+        [17],
+        [3],
+        {
+          transactionId: 1,
+          transactionOwner,
+          historyEffect: {
+            kind: 'rekey',
+            subject: 17,
+            beforeKey: 7,
+            afterKey: 42,
+          },
+        }
+      );
+      notifier.notify(
+        'rows.42',
+        { id: 42, name: 'stable' },
+        { id: 42, name: 'temp' },
+        'rows',
+        [17],
+        [3],
+        {
+          transactionId: 1,
+          transactionOwner,
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]?.meta?.historyEffect).toMatchObject({
+      kind: 'rekey',
+      subject: 17,
+      beforeKey: 7,
+      afterKey: 42,
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.42',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
+  });
+
+  it('preserves add metadata on the structural notification only when a later same-subject set happens in the same flush', async () => {
+    const seen = await captureNotifications((notifier) => {
+      notifier.notify(
+        'rows.17',
+        { id: 17, name: 'pending' },
+        undefined,
+        'rows',
+        [17],
+        [3],
+        {
+          historyEffect: {
+            kind: 'add',
+            subject: 17,
+            key: 17,
+            value: { id: 17, name: 'pending' },
+          },
+        }
+      );
+      notifier.notify(
+        'rows.17.name',
+        'later',
+        'pending',
+        'rows',
+        [17],
+        [3],
+        {
+          mutationIntent: 'replace',
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toMatchObject({
+      path: 'rows.17',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: 17,
+          key: 17,
+        },
+      },
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.17.name',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        mutationIntent: 'replace',
+      },
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
+  });
+
+  it('preserves add metadata on the structural notification only when a later same-subject update happens in the same flush', async () => {
+    const seen = await captureNotifications((notifier) => {
+      notifier.notify(
+        'rows.17',
+        { id: 17, name: 'pending' },
+        undefined,
+        'rows',
+        [17],
+        [3],
+        {
+          historyEffect: {
+            kind: 'add',
+            subject: 17,
+            key: 17,
+            value: { id: 17, name: 'pending' },
+          },
+        }
+      );
+      notifier.notify(
+        'rows.17.name',
+        'later',
+        'pending',
+        'rows',
+        [17],
+        [3],
+        {
+          mutationIntent: 'derive',
+        }
+      );
+    });
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]?.meta?.historyEffect).toMatchObject({
+      kind: 'add',
+      subject: 17,
+      key: 17,
+    });
+    expect(seen[1]).toMatchObject({
+      path: 'rows.17.name',
+      ownerPath: 'rows',
+      subjectIds: [17],
+      positionIds: [3],
+      meta: {
+        mutationIntent: 'derive',
+      },
+    });
+    expect(seen[1]?.meta?.historyEffect).toBeUndefined();
   });
 
   it('does not drop owner-only marker notifications during batching', async () => {

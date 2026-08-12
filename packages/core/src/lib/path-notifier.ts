@@ -52,6 +52,19 @@ type PendingEntry = {
 
 type PendingSlot = PendingEntry | PendingEntry[];
 
+const materializeDeliveryMeta = (
+  meta?: UpdateMetadata
+): UpdateMetadata | undefined => {
+  if (!meta?.historyEffect) {
+    return meta;
+  }
+
+  return {
+    ...meta,
+    historyEffect: Object.freeze({ ...meta.historyEffect }),
+  };
+};
+
 /**
  * Simple path-based notification system
  * Used internally by SignalTree for entity hooks and enhancers.
@@ -158,9 +171,10 @@ export class PathNotifier {
     prev: unknown,
     ownerPath?: string,
     subjectIds?: number[],
-    positionIds?: number[]
+    positionIds?: number[],
+    metaOverride?: UpdateMetadata
   ): { blocked: boolean; value: unknown } {
-    const meta = getActiveWriteContext();
+    const meta = metaOverride ?? getActiveWriteContext();
     // Tag the batch with the ambient write source (e.g. `time-travel` during a
     // history restore). The flush that delivers this entry is DEFERRED to a
     // microtask, so consumers must be able to tell "this write came from a
@@ -169,6 +183,7 @@ export class PathNotifier {
     const source = meta?.source;
     if (!this.batchingEnabled) {
       // Synchronous path: run interceptors and subscribers immediately
+      const deliveryMeta = materializeDeliveryMeta(meta);
       return this._runNotify(
         path,
         value,
@@ -177,7 +192,7 @@ export class PathNotifier {
         source,
         subjectIds,
         positionIds,
-        meta
+        deliveryMeta
       );
     }
 
@@ -280,8 +295,14 @@ export class PathNotifier {
           entry.ownerPath !== undefined &&
           entry.newValue === undefined &&
           entry.oldValue === undefined;
+        const hasStructuralHistoryEffect =
+          entry.meta?.historyEffect !== undefined;
         // If value didn't change compared to original oldValue, skip
-        if (entry.newValue === entry.oldValue && !isOwnerOnlyMarkerSignal) {
+        if (
+          entry.newValue === entry.oldValue &&
+          !isOwnerOnlyMarkerSignal &&
+          !hasStructuralHistoryEffect
+        ) {
           continue;
         }
 
@@ -294,7 +315,7 @@ export class PathNotifier {
           entry.source,
           entry.subjectIds,
           entry.positionIds,
-          entry.meta
+          materializeDeliveryMeta(entry.meta)
         );
         if (res.blocked) {
           // blocked by interceptor - nothing to do
@@ -419,6 +440,10 @@ export class PathNotifier {
   }
 
   private hasSameSemanticIdentity(left: PendingEntry, right: PendingEntry): boolean {
+    if (this.crossesStructuralBoundary(left, right)) {
+      return false;
+    }
+
     if (this.batchIdentityMode === 'path-position') {
       return left.positionId === right.positionId;
     }
@@ -429,10 +454,17 @@ export class PathNotifier {
     );
   }
 
+  private crossesStructuralBoundary(left: PendingEntry, right: PendingEntry): boolean {
+    const leftStructural = left.meta?.historyEffect !== undefined;
+    const rightStructural = right.meta?.historyEffect !== undefined;
+    return leftStructural !== rightStructural;
+  }
+
   private coalesceEntry(target: PendingEntry, next: PendingEntry): void {
     target.newValue = next.newValue;
     target.ownerPath = next.ownerPath;
     target.source = this.mergeSource(target.source, next.source);
+    target.meta = this.mergeMeta(target.meta, next.meta);
     target.subjectId = next.subjectId;
     target.positionId = next.positionId;
     target.subjectIds = next.subjectIds;
@@ -440,9 +472,38 @@ export class PathNotifier {
   }
 
   private mergeSource(left?: string, right?: string): string | undefined {
-    if (!left) return right;
-    if (!right || left === right) return left;
+    if (!left && !right) return undefined;
+    if (left === right) return left;
     return 'mixed';
+  }
+
+  private mergeMeta(
+    left?: UpdateMetadata,
+    right?: UpdateMetadata
+  ): UpdateMetadata | undefined {
+    if (!left && !right) {
+      return undefined;
+    }
+    if (!left || !right) {
+      return undefined;
+    }
+    if (left.source !== right.source) {
+      return undefined;
+    }
+    if (
+      left.transactionId !== right.transactionId ||
+      left.transactionOwner !== right.transactionOwner ||
+      left.mutationIntent !== right.mutationIntent
+    ) {
+      return undefined;
+    }
+    if (left.historyEffect && !right.historyEffect) {
+      return {
+        ...right,
+        historyEffect: left.historyEffect,
+      };
+    }
+    return right;
   }
 
   private getCompositeBatchKey(entry: PendingEntry): string {

@@ -87,7 +87,9 @@ export type {
   AddOptions,
   AddManyOptions,
   TimeTravelEntry,
+  TransactionMethods,
   TimeTravelMethods,
+  PendingTransaction,
 
   // Enhancer-added method types. Exported so a DOWNSTREAM LIBRARY can name the
   // return type of its own `.with(...)` chain in its emitted .d.ts. `.with()`
@@ -109,6 +111,8 @@ export type {
   // Update metadata (lifted from guardrails in v9.3 for cross-enhancer use)
   UpdateMetadata,
 } from './lib/types';
+
+export { SignalTreeRollbackError } from './lib/types';
 
 // Enhancer-author plumbing (EnhancerMeta, withWriteContext,
 // getActiveWriteContext, interceptLeafSignals) was removed from the root barrel
@@ -353,6 +357,11 @@ export type { BatchingConfig, BatchingMethods } from './lib/types';
 export { timeTravel } from './enhancers/time-travel/time-travel';
 
 /**
+ * Transaction enhancer for optimistic updates without temporal history APIs.
+ */
+export { transactions } from './enhancers/transactions/transactions';
+
+/**
  * Serialization enhancer for state persistence and restoration
  */
 export {
@@ -410,6 +419,7 @@ export { isDev } from './lib/constants';
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications
  * - `timeTravel(config?)` - Undo/redo
+ * - `transactions()` - Optimistic transaction rollback without undo/redo history
  * - `devTools(config?)` - Redux DevTools integration
  * - `serialization(config?)` - State serialization
  * - `persistence(config?)` - State persistence

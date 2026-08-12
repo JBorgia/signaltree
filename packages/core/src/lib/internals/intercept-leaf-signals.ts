@@ -49,6 +49,14 @@ export function interceptLeafSignals(
   const restorers: Array<() => void> = [];
   const maxDepth = options.maxDepth ?? 32;
 
+  const withMutationIntent = (
+    meta: UpdateMetadata | undefined,
+    mutationIntent: 'replace' | 'derive'
+  ): UpdateMetadata => ({
+    ...(meta ?? {}),
+    mutationIntent,
+  });
+
   const getOwnerPath = (node: unknown, path: string): string => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return ((node as any)?.__ownerPath as string | undefined) ?? path;
@@ -97,7 +105,7 @@ export function interceptLeafSignals(
           path,
           next,
           prev,
-          getActiveWriteContext(),
+          withMutationIntent(getActiveWriteContext(), 'replace'),
           ownerPath,
           subjectIds,
           positionIds
@@ -117,7 +125,7 @@ export function interceptLeafSignals(
           path,
           next,
           prev,
-          getActiveWriteContext(),
+          withMutationIntent(getActiveWriteContext(), 'derive'),
           ownerPath,
           subjectIds,
           positionIds
@@ -181,8 +189,8 @@ export function interceptLeafSignals(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (target as any)[method] = (...args: unknown[]) => {
       const canSnapshotMutatorState =
-        typeof (target as { __consumeHistoryEffect?: unknown })
-          .__consumeHistoryEffect !== 'function';
+        typeof (target as { __findKeyBySubjectId?: unknown })
+          .__findKeyBySubjectId !== 'function';
       const prevSnapshot = canSnapshotMutatorState
         ? snapshotMarkerNode(target)?.value
         : undefined;

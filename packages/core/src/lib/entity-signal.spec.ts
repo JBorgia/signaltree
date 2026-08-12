@@ -2,6 +2,7 @@ import { isSignal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createEntitySignal } from './entity-signal';
+import { PathNotifier } from './path-notifier';
 
 // Minimal PathNotifier stub
 const pathNotifier = {
@@ -268,7 +269,14 @@ describe('owner PositionId allocation', () => {
       undefined,
       'rows',
       [1],
-      firstPositionIds
+      firstPositionIds,
+      expect.objectContaining({
+        historyEffect: expect.objectContaining({
+          kind: 'add',
+          key: 1,
+          subject: 1,
+        }),
+      })
     );
     expect(notify).toHaveBeenNthCalledWith(
       2,
@@ -277,7 +285,14 @@ describe('owner PositionId allocation', () => {
       undefined,
       'rows',
       [1],
-      secondPositionIds
+      secondPositionIds,
+      expect.objectContaining({
+        historyEffect: expect.objectContaining({
+          kind: 'add',
+          key: 2,
+          subject: 1,
+        }),
+      })
     );
   });
 
@@ -352,6 +367,130 @@ describe('owner PositionId allocation', () => {
       'rows.5',
       'rows.3',
     ]);
+  });
+});
+
+describe('structural history effect delivery', () => {
+  type Row = { id: number; name: string };
+  type StructuralEvent = {
+    path: string;
+    ownerPath?: string;
+    subjectIds?: number[];
+    positionIds?: number[];
+    historyEffect?: unknown;
+  };
+
+  const observeStructuralMutation = (
+    exercise: (
+      api: ReturnType<typeof createEntitySignal<Row, number>>,
+      resetSeen: () => void
+    ) => void
+  ): { seenA: StructuralEvent[]; seenB: StructuralEvent[] } => {
+    const notifier = new PathNotifier({ batching: false });
+    const api = createEntitySignal<Row, number>(
+      { selectId: (row) => row.id },
+      notifier,
+      'rows'
+    );
+    const seenA: StructuralEvent[] = [];
+    const seenB: StructuralEvent[] = [];
+
+    const subscribe = (bucket: StructuralEvent[]): (() => void) =>
+      notifier.subscribe(
+        'rows.*',
+        (_next, _prev, path, ownerPath, _source, subjectIds, positionIds, meta) => {
+          if (meta?.historyEffect) {
+            expect(Object.isFrozen(meta.historyEffect)).toBe(true);
+          }
+          bucket.push({
+            path,
+            ownerPath,
+            subjectIds,
+            positionIds,
+            historyEffect: meta?.historyEffect,
+          });
+        }
+      );
+
+    const unsubscribeA = subscribe(seenA);
+    const unsubscribeB = subscribe(seenB);
+
+    exercise(api, () => {
+      seenA.length = 0;
+      seenB.length = 0;
+    });
+
+    unsubscribeA();
+    unsubscribeB();
+
+    return { seenA, seenB };
+  };
+
+  it('delivers the same canonical add effect to two observers', () => {
+    const { seenA, seenB } = observeStructuralMutation((api) => {
+      api.addOne({ id: 17, name: 'pending' });
+    });
+
+    expect(seenA).toHaveLength(1);
+    expect(seenB).toHaveLength(1);
+    expect(seenA[0]?.historyEffect).toBe(seenB[0]?.historyEffect);
+    expect(seenA[0]).toMatchObject({
+      path: 'rows.17',
+      ownerPath: 'rows',
+      historyEffect: {
+        kind: 'add',
+        key: 17,
+        subject: seenA[0]?.subjectIds?.[0],
+      },
+      positionIds: seenB[0]?.positionIds,
+    });
+  });
+
+  it('delivers the same canonical remove effect to two observers', () => {
+    const { seenA, seenB } = observeStructuralMutation((api, resetSeen) => {
+      api.addOne({ id: 16, name: 'before' });
+      api.addOne({ id: 17, name: 'target' });
+      api.addOne({ id: 18, name: 'after' });
+      resetSeen();
+      api.removeOne(17);
+    });
+
+    expect(seenA).toHaveLength(1);
+    expect(seenB).toHaveLength(1);
+    expect(seenA[0]?.historyEffect).toBe(seenB[0]?.historyEffect);
+    expect(seenA[0]).toMatchObject({
+      path: 'rows.17',
+      ownerPath: 'rows',
+      historyEffect: {
+        kind: 'remove',
+        key: 17,
+        subject: seenA[0]?.subjectIds?.[0],
+      },
+      positionIds: seenB[0]?.positionIds,
+    });
+  });
+
+  it('delivers the same canonical rekey effect to two observers', () => {
+    const { seenA, seenB } = observeStructuralMutation((api, resetSeen) => {
+      api.addOne({ id: 17, name: 'target' });
+      resetSeen();
+      api.changeId(17, 27);
+    });
+
+    expect(seenA).toHaveLength(1);
+    expect(seenB).toHaveLength(1);
+    expect(seenA[0]?.historyEffect).toBe(seenB[0]?.historyEffect);
+    expect(seenA[0]).toMatchObject({
+      path: 'rows.27',
+      ownerPath: 'rows',
+      historyEffect: {
+        kind: 'rekey',
+        beforeKey: 17,
+        afterKey: 27,
+        subject: seenA[0]?.subjectIds?.[0],
+      },
+      positionIds: seenB[0]?.positionIds,
+    });
   });
 });
 

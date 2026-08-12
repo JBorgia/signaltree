@@ -1,6 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { PathNotifier } from '../lib/path-notifier';
+import { getActiveWriteContext } from '../lib/write-context';
 import { HISTORY_EXCLUDED } from './utils';
 
 // Angular's global dev-mode flag (defined by the Angular CLI; undefined in
@@ -77,6 +78,8 @@ import type {
   EntityNode,
   AddOptions,
   AddManyOptions,
+  UpdateMetadata,
+  StructuralHistoryEffect,
 } from '../lib/types';
 
 /**
@@ -167,33 +170,6 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<K, WritableSignal<E | undefined>>();
   const subjectIds = new Map<K, number>();
-  const pendingHistoryEffects: Array<{
-    path: string;
-    subject: number;
-    effect:
-      | {
-          kind: 'add';
-          subject: number;
-          key: K;
-          value: E;
-          beforeSubject?: number;
-          afterSubject?: number;
-        }
-      | {
-          kind: 'remove';
-          subject: number;
-          key: K;
-          value: E;
-          beforeSubject?: number;
-          afterSubject?: number;
-        }
-      | {
-          kind: 'rekey';
-          subject: number;
-          beforeKey: K;
-          afterKey: K;
-        };
-  }> = [];
   const positionId = (
     options?.positionIdAllocator ??
     entityPositionIdAllocatorOverride ??
@@ -202,12 +178,25 @@ export function createEntitySignal<
   let nextSubjectId = 1;
   let lastSubjectIds: number[] | undefined;
 
+  type PendingHistoryEffect = StructuralHistoryEffect;
+  type PendingAddHistoryEffect = Extract<PendingHistoryEffect, { kind: 'add' }>;
+
   function getPositionIds(): number[] | undefined {
     return positionId === undefined ? undefined : [positionId];
   }
 
   function getPositionIdsForNotify(): number[] | undefined {
     return entityPositionIdNotifyEnabled ? getPositionIds() : undefined;
+  }
+
+  function createStructuralHistoryMeta(
+    effect: PendingHistoryEffect
+  ): UpdateMetadata {
+    const meta = getActiveWriteContext();
+    return {
+      ...(meta ?? {}),
+      historyEffect: effect,
+    };
   }
 
   /**
@@ -465,36 +454,72 @@ export function createEntitySignal<
   }
 
   function rewritePendingAddEffect(
-    subjectId: number,
+    effect: PendingAddHistoryEffect,
     beforeSubject?: number,
     afterSubject?: number
   ): void {
-    for (let i = pendingHistoryEffects.length - 1; i >= 0; i--) {
-      const entry = pendingHistoryEffects[i];
-      if (entry.subject !== subjectId || entry.effect.kind !== 'add') {
-        continue;
-      }
-      entry.effect.beforeSubject = beforeSubject;
-      entry.effect.afterSubject = afterSubject;
-      return;
-    }
+    effect.beforeSubject = beforeSubject;
+    effect.afterSubject = afterSubject;
   }
 
-  function consumeHistoryEffect(
-    path: string,
-    subject: number
-  ):
-    | (typeof pendingHistoryEffects)[number]['effect']
-    | undefined {
-    const index = pendingHistoryEffects.findIndex(
-      (entry) => entry.path === path && entry.subject === subject
-    );
-    if (index === -1) {
-      return undefined;
+  function addOneWithHistoryEffect(
+    entity: E,
+    opts?: AddOptions<E, K>
+  ): { id: K; historyEffect: PendingAddHistoryEffect } {
+    const id = deriveId(entity, opts);
+    const previousKeys = Array.from(storage.keys());
+
+    if (storage.has(id)) {
+      throw new Error(`Entity with id ${String(id)} already exists`);
     }
 
-    const [effect] = pendingHistoryEffects.splice(index, 1);
-    return effect?.effect;
+    let transformedEntity = entity;
+    for (const handler of interceptHandlers) {
+      const ctx: InterceptContext<E> = {
+        block: (reason?: string) => {
+          throw new Error(
+            `Cannot add entity: ${reason || 'blocked by interceptor'}`
+          );
+        },
+        transform: (value: E) => {
+          transformedEntity = value;
+        },
+        blocked: false,
+        blockReason: undefined,
+      };
+      handler.onAdd?.(entity, ctx);
+    }
+
+    storage.set(id, transformedEntity);
+    const subjectIdsForWrite = rememberSubjectIds([id]);
+    const beforeKey = previousKeys.at(-1);
+    const historyEffect: PendingAddHistoryEffect = {
+      kind: 'add',
+      subject: subjectIdsForWrite[0],
+      key: id,
+      value: transformedEntity,
+      beforeSubject:
+        beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+    };
+    nodeCache.delete(id);
+    syncEntitySignal(id);
+    updateSignals();
+
+    pathNotifier.notify(
+      `${basePath}.${String(id)}`,
+      transformedEntity,
+      undefined,
+      basePath,
+      subjectIdsForWrite,
+      getPositionIdsForNotify(),
+      createStructuralHistoryMeta(historyEffect)
+    );
+
+    for (const handler of tapHandlers) {
+      handler.onAdd?.(transformedEntity, id);
+    }
+
+    return { id, historyEffect };
   }
 
   /**
@@ -958,68 +983,7 @@ export function createEntitySignal<
     // ==================
 
     addOne(entity: E, opts?: AddOptions<E, K>): K {
-      const id = deriveId(entity, opts);
-      const previousKeys = Array.from(storage.keys());
-
-      // Check for duplicates first
-      if (storage.has(id)) {
-        throw new Error(`Entity with id ${String(id)} already exists`);
-      }
-
-      // Run interceptors
-      let transformedEntity = entity;
-      for (const handler of interceptHandlers) {
-        const ctx: InterceptContext<E> = {
-          block: (reason?: string) => {
-            throw new Error(
-              `Cannot add entity: ${reason || 'blocked by interceptor'}`
-            );
-          },
-          transform: (value: E) => {
-            transformedEntity = value;
-          },
-          blocked: false,
-          blockReason: undefined,
-        };
-        handler.onAdd?.(entity, ctx);
-      }
-
-      // Store and update signals
-      storage.set(id, transformedEntity);
-      const subjectIdsForWrite = rememberSubjectIds([id]);
-      const beforeKey = previousKeys.at(-1);
-      pendingHistoryEffects.push({
-        path: `${basePath}.${String(id)}`,
-        subject: subjectIdsForWrite[0],
-        effect: {
-          kind: 'add',
-          subject: subjectIdsForWrite[0],
-          key: id,
-          value: transformedEntity,
-          beforeSubject:
-            beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
-        },
-      });
-      nodeCache.delete(id);
-      syncEntitySignal(id);
-      updateSignals();
-
-      // Notify PathNotifier
-      pathNotifier.notify(
-        `${basePath}.${String(id)}`,
-        transformedEntity,
-        undefined,
-        basePath,
-        subjectIdsForWrite,
-        getPositionIdsForNotify()
-      );
-
-      // Run tap handlers
-      for (const handler of tapHandlers) {
-        handler.onAdd?.(transformedEntity, id);
-      }
-
-      return id;
+      return addOneWithHistoryEffect(entity, opts).id;
     },
 
     /**
@@ -1037,10 +1001,10 @@ export function createEntitySignal<
      */
     prependOne(entity: E, opts?: AddOptions<E, K>): K {
       const previousFirstKey = Array.from(storage.keys())[0];
-      const id = api.addOne(entity, opts);
+      const { id, historyEffect } = addOneWithHistoryEffect(entity, opts);
       moveToFront([id]);
       rewritePendingAddEffect(
-        allocateSubjectId(id),
+        historyEffect,
         undefined,
         previousFirstKey === undefined
           ? undefined
@@ -1103,16 +1067,12 @@ export function createEntitySignal<
       // ST2031's evidence. Dev-only in effect: nothing reads it in production.
       rekeyed.set(from, to);
       const subjectIdsForWrite = [transferSubjectId(from, to)];
-      pendingHistoryEffects.push({
-        path: basePath,
+      const historyEffect: PendingHistoryEffect = {
+        kind: 'rekey',
         subject: subjectIdsForWrite[0],
-        effect: {
-          kind: 'rekey',
-          subject: subjectIdsForWrite[0],
-          beforeKey: from,
-          afterKey: to,
-        },
-      });
+        beforeKey: from,
+        afterKey: to,
+      };
 
       syncEntitySignal(to);
       updateSignals();
@@ -1122,7 +1082,8 @@ export function createEntitySignal<
         entity,
         basePath,
         subjectIdsForWrite,
-        getPositionIdsForNotify()
+        getPositionIdsForNotify(),
+        createStructuralHistoryMeta(historyEffect)
       );
     },
 
@@ -1248,7 +1209,8 @@ export function createEntitySignal<
         prev,
         basePath,
         subjectIdsForWrite,
-        getPositionIdsForNotify()
+        getPositionIdsForNotify(),
+        getActiveWriteContext()
       );
 
       // Run tap handlers
@@ -1303,7 +1265,8 @@ export function createEntitySignal<
         prev,
         basePath,
         undefined,
-        getPositionIdsForNotify()
+        getPositionIdsForNotify(),
+        getActiveWriteContext()
       );
       for (const handler of tapHandlers) {
         handler.onUpdate?.(id, next as Partial<E>, next);
@@ -1367,7 +1330,8 @@ export function createEntitySignal<
           prev,
           basePath,
           [subjectIdsForWrite[i]],
-          getPositionIdsForNotify()
+          getPositionIdsForNotify(),
+          getActiveWriteContext()
         );
       }
 
@@ -1425,18 +1389,14 @@ export function createEntitySignal<
 
       // Delete and update signals
       const subjectIdsForWrite = rememberSubjectIds([id]);
-      pendingHistoryEffects.push({
-        path: `${basePath}.${String(id)}`,
+      const historyEffect: PendingHistoryEffect = {
+        kind: 'remove',
         subject: subjectIdsForWrite[0],
-        effect: {
-          kind: 'remove',
-          subject: subjectIdsForWrite[0],
-          key: id,
-          value: entity,
-          beforeSubject,
-          afterSubject,
-        },
-      });
+        key: id,
+        value: entity,
+        beforeSubject,
+        afterSubject,
+      };
       storage.delete(id);
       subjectIds.delete(id);
       nodeCache.delete(id);
@@ -1450,7 +1410,8 @@ export function createEntitySignal<
         entity,
         basePath,
         subjectIdsForWrite,
-        getPositionIdsForNotify()
+        getPositionIdsForNotify(),
+        createStructuralHistoryMeta(historyEffect)
       );
 
       // Run tap handlers
@@ -1501,18 +1462,14 @@ export function createEntitySignal<
       for (let i = 0; i < entitiesToRemove.length; i++) {
         const { id, entity } = entitiesToRemove[i];
         const anchors = neighborSubjects.get(id) ?? {};
-        pendingHistoryEffects.push({
-          path: `${basePath}.${String(id)}`,
+        const historyEffect: PendingHistoryEffect = {
+          kind: 'remove',
           subject: subjectIdsForWrite[i],
-          effect: {
-            kind: 'remove',
-            subject: subjectIdsForWrite[i],
-            key: id,
-            value: entity,
-            beforeSubject: anchors.beforeSubject,
-            afterSubject: anchors.afterSubject,
-          },
-        });
+          key: id,
+          value: entity,
+          beforeSubject: anchors.beforeSubject,
+          afterSubject: anchors.afterSubject,
+        };
       }
 
       for (const { id } of entitiesToRemove) {
@@ -1534,7 +1491,15 @@ export function createEntitySignal<
           entity,
           basePath,
           [subjectIdsForWrite[i]],
-          getPositionIdsForNotify()
+          getPositionIdsForNotify(),
+          createStructuralHistoryMeta({
+            kind: 'remove',
+            subject: subjectIdsForWrite[i],
+            key: id,
+            value: entity,
+            beforeSubject: neighborSubjects.get(id)?.beforeSubject,
+            afterSubject: neighborSubjects.get(id)?.afterSubject,
+          })
         );
       }
 
@@ -1828,11 +1793,6 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__positionIds', {
     get: getPositionIds,
-    enumerable: false,
-    configurable: true,
-  });
-  Object.defineProperty(api, '__consumeHistoryEffect', {
-    value: consumeHistoryEffect,
     enumerable: false,
     configurable: true,
   });

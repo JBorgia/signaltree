@@ -39,9 +39,37 @@ export interface UpdateMetadata {
   transactionId?: number;
   /** @internal Owning tree token for transaction attribution isolation. */
   transactionOwner?: object;
+  /** @internal Declared leaf-write semantics for scalar rollback classification. */
+  mutationIntent?: 'replace' | 'derive';
+  /** @internal Canonical structural collection effect produced at mutation time. */
+  historyEffect?: StructuralHistoryEffect;
   /** Open extension for guardrails' historical custom-key shape. */
   [key: string]: unknown;
 }
+
+export type StructuralHistoryEffect =
+  | {
+      kind: 'add';
+      subject: number;
+      key: string | number;
+      value: unknown;
+      beforeSubject?: number;
+      afterSubject?: number;
+    }
+  | {
+      kind: 'remove';
+      subject: number;
+      key: string | number;
+      value: unknown;
+      beforeSubject?: number;
+      afterSubject?: number;
+    }
+  | {
+      kind: 'rekey';
+      subject: number;
+      beforeKey: string | number;
+      afterKey: string | number;
+    };
 
 // Time travel enhancer configuration (canonical)
 export interface TimeTravelConfig {
@@ -436,10 +464,13 @@ export interface BatchingMethods {
   flushNotifications(): void;
 }
 
-export interface TimeTravelMethods<T = unknown> {
+export interface TransactionMethods {
+  transaction(fn: () => void): PendingTransaction;
+}
+
+export interface TimeTravelMethods<T = unknown> extends TransactionMethods {
   undo(): void;
   redo(): void;
-  transaction<R>(fn: () => R): R;
   canUndo(): boolean;
   canRedo(): boolean;
   getHistory(): TimeTravelEntry<T>[];
@@ -468,6 +499,40 @@ export interface TimeTravelMethods<T = unknown> {
     jumpTo(index: number): void;
     getCurrentIndex(): number;
   };
+}
+
+/**
+ * Thrown when a pending transaction cannot be rolled back conservatively.
+ *
+ * The public contract is intentionally narrow: callers only need to know that
+ * rollback failed and the optimistic state may need reconciliation or refetch.
+ * Richer causal details may be attached as an internal `cause` payload for
+ * tooling, but that shape is not part of the application-facing API.
+ */
+export class SignalTreeRollbackError extends Error {
+  readonly code = 'SIGNALTREE_ROLLBACK_FAILED';
+  cause?: unknown;
+
+  constructor(
+    message = 'SignalTree could not rollback the pending transaction',
+    options?: { cause?: unknown }
+  ) {
+    super(message);
+    this.name = 'SignalTreeRollbackError';
+    this.cause = options?.cause;
+    Object.setPrototypeOf(this, SignalTreeRollbackError.prototype);
+  }
+}
+
+export interface PendingTransaction {
+  confirm(): void;
+  /**
+   * Rolls back the pending optimistic transaction.
+   *
+   * Throws {@link SignalTreeRollbackError} when SignalTree cannot remove the
+   * transaction conservatively without risking later valid work.
+   */
+  rollback(): void;
 }
 
 export interface DevToolsMethods {
@@ -1195,7 +1260,8 @@ export interface PathNotifier {
     prev: unknown,
     ownerPath?: string,
     subjectIds?: number[],
-    positionIds?: number[]
+    positionIds?: number[],
+    meta?: UpdateMetadata
   ): void;
 }
 
