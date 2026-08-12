@@ -38,6 +38,8 @@ describe('form history()', () => {
     expect(h).toBeDefined();
     expect(h?.canUndo()).toBe(false);
     expect(h?.canRedo()).toBe(false);
+    expect((h as { history?: unknown; clearHistory?: unknown } | undefined)?.history).toBeUndefined();
+    expect((h as { history?: unknown; clearHistory?: unknown } | undefined)?.clearHistory).toBeUndefined();
   });
 
   it('undoes and redoes value changes', () => {
@@ -204,7 +206,7 @@ describe('form history()', () => {
     expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
   });
 
-  it('keeps history().present aligned with visible form state across shared-frontier moves from multiple api surfaces', async () => {
+  it('does not expose the removed snapshot inspection surface', async () => {
     const tree = signalTree({
       profile: form<{ name: string }>({
         initial: { name: '' },
@@ -223,57 +225,45 @@ describe('form history()', () => {
     p.patch({ name: 'B' });
     await flush();
 
-    expect(p.history?.history().present).toEqual(p());
+    expect((p.history as { history?: unknown } | undefined)?.history).toBeUndefined();
 
     p.history?.undo();
-    expect(p.history?.history().present).toEqual(p());
+    expect(p()).toEqual({ name: 'A' });
 
     tree.redo();
     expect(p()).toEqual({ name: 'B' });
-    expect(p.history?.history().present).toEqual(p());
 
     p.history?.undo();
-    expect(p.history?.history().present).toEqual(p());
+    expect(p()).toEqual({ name: 'A' });
 
     p.history?.redo();
-    expect(p.history?.history().present).toEqual(p());
+    expect(p()).toEqual({ name: 'B' });
   });
 
-  it('preserves the history() shape in shared mode while past storage is absent', async () => {
-    const tree = signalTree({
-      profile: form<{ name: string }>({
-        initial: { name: '' },
-        history: history<{ name: string }>(),
-      }),
-    }).with(timeTravel());
-    const p = tree.$.profile;
-
-    p.patch({ name: 'Ada' });
-    await flush();
-    p.patch({ name: 'Grace' });
-    await flush();
-
-    expect(p.history?.history().past).toEqual([]);
-    expect(p.history?.history().future).toEqual([]);
-    expect(p.history?.history().present).toEqual(p());
-  });
-
-  it('collapses no-op writes (equal snapshots record nothing)', () => {
+  it('collapses no-op writes so one undo clears the only meaningful change', () => {
     const tree = makeTree();
     const p = tree.$.profile;
     p.patch({ name: 'Ada' });
     p.patch({ name: 'Ada' });
-    expect(p.history?.history().past.length).toBe(1);
+
+    p.history?.undo();
+    expect(p().name).toBe('');
+    expect(p.history?.canUndo()).toBe(false);
   });
 
-  it('honors capacity by evicting the oldest entry', () => {
+  it('honors capacity by evicting the oldest undoable state', () => {
     const tree = makeTree({ capacity: 2 });
     const p = tree.$.profile;
     p.patch({ name: 'a' });
     p.patch({ name: 'b' });
     p.patch({ name: 'c' });
-    // capacity 2 → at most 2 past entries retained
-    expect(p.history?.history().past.length).toBe(2);
+
+    p.history?.undo();
+    expect(p().name).toBe('b');
+    p.history?.undo();
+    expect(p().name).toBe('a');
+    p.history?.undo();
+    expect(p().name).toBe('');
   });
 
   it('records one local history step per form write without shared timeTravel grouping', () => {
@@ -334,18 +324,14 @@ describe('form history()', () => {
     expect(p().name).toBe('');
   });
 
-  it('never buffers excluded fields, and keeps their live value on undo', () => {
+  it('never buffers excluded fields, keeps their live value on undo, and exposes no snapshot api', () => {
     const tree = makeTree({ exclude: ['password'] });
     const p = tree.$.profile;
     p.patch({ name: 'Ada', password: 'secret1' });
     p.patch({ name: 'Grace', password: 'secret2' });
 
-    // snapshots must not contain the excluded field
-    const snap = p.history?.history();
-    expect('password' in (snap?.present ?? {})).toBe(false);
-    expect(snap?.past.every((s) => !('password' in s))).toBe(true);
+    expect((p.history as { history?: unknown } | undefined)?.history).toBeUndefined();
 
-    // undo reverts name but leaves the live password untouched
     p.history?.undo();
     expect(p().name).toBe('Ada');
     expect(p().password).toBe('secret2');

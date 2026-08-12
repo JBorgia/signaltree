@@ -4,7 +4,7 @@ Gate 2 starts from deletion inventory, not new abstraction.
 
 ## Current ownership split
 
-### Legacy private history shape still exposed for compatibility
+### Legacy private history shape is now deleted
 
 Source: packages/core/src/lib/form-history/form-history.ts
 
@@ -16,18 +16,15 @@ capacity trimming
 exclude-field projection
 ```
 
-This no longer owns causal reversal. In standalone mode it is a compatibility
-inspection shape mirrored around the shared causal authority; in shared mode it
-projects:
+This no longer exists on the form-facing API. Form history now exposes only
+behavioral capabilities:
 
 ```text
-past = []
-present = current projected form state
-future = []
+undo()
+redo()
+canUndo()
+canRedo()
 ```
-
-The remaining question is the fate of that inspection surface, not whether forms
-have their own causal engine.
 
 ### Causal history currently owned by the shared scoped authority
 
@@ -161,11 +158,6 @@ values
 -> CAUSAL
 -> shared scoped undo/redo must reverse them
 
-history().present
--> PUBLIC INSPECTION DATA
--> in shared mode it is derived from current form state, not retained as a
-	private baseline
-
 touched
 -> SELECTIVELY CAUSAL form semantic
 -> previously-established touched state is restored on form undo
@@ -204,6 +196,7 @@ form.undo/redo shared authority           GREEN
 form.canUndo/canRedo shared authority     GREEN
 private stack causal authority            REMOVED
 standalone/shared dual implementation     REMOVED
+obsolete inspection api                   REMOVED
 
 future mirror                             DELETED
 past mirror                               DELETED
@@ -243,3 +236,15 @@ separate event / flush boundaries
 ```
 
 That is sufficient to freeze Gate 2 without adding new grouping configuration.
+
+## Gate 2 frozen surface
+
+```text
+form.history.undo()
+form.history.redo()
+form.history.canUndo()
+form.history.canRedo()
+```
+
+No `past/present/future` projection remains, and no new turn/position
+inspection surface replaces it.

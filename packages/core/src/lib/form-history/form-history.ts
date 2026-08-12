@@ -20,6 +20,7 @@ import {
   inject,
   Injector,
   signal,
+  type Signal,
   type WritableSignal,
 } from '@angular/core';
 import { deepClone, snapshotsEqual } from '@signaltree/shared';
@@ -29,9 +30,154 @@ import type {
   FormHistoryApi,
   FormHistoryOptions,
   FormHistorySharedAuthority,
-  FormHistorySnapshot,
   HistoryFeature,
 } from '../types';
+
+interface TrackHistorySnapshot<T> {
+  past: T[];
+  present: T;
+  future: T[];
+}
+
+interface TrackHistoryApi<T> extends FormHistoryApi<T> {
+  clearHistory(): void;
+  history: Signal<TrackHistorySnapshot<T>>;
+}
+
+function attachHistory<T extends Record<string, unknown>>(
+  ctx: { read: () => T; write: (next: Partial<T>) => void },
+  options: FormHistoryOptions<T>,
+  exposeSnapshotHistory: boolean
+): {
+  api: FormHistoryApi<T> | TrackHistoryApi<T>;
+  record: () => void;
+} {
+  const capacity = Math.max(1, options.capacity ?? 10);
+  const exclude = options.exclude ?? [];
+
+  const project = (value: T): T => {
+    const cloned = deepClone(value);
+    for (const key of exclude) {
+      delete (cloned as Record<keyof T, unknown>)[key];
+    }
+    return cloned;
+  };
+
+  let sharedAuthority: FormHistorySharedAuthority | undefined;
+  const sharedMode = signal(false);
+  const standaloneAuthority = createScopedHistoryAuthority<T>({
+    read: () => project(ctx.read()),
+    write: ctx.write,
+    maxHistoryEntries: capacity + 1,
+    ownerPath: '__formHistory',
+  });
+
+  const snapshotHistory = exposeSnapshotHistory
+    ? signal<TrackHistorySnapshot<T>>({
+        past: [],
+        present: project(ctx.read()),
+        future: [],
+      })
+    : undefined;
+
+  const record = (): void => {
+    const next = project(ctx.read());
+    const current = snapshotHistory?.();
+    if (current && snapshotsEqual(current.present, next)) return;
+    if (sharedMode()) {
+      return;
+    }
+    standaloneAuthority.record(next);
+    if (!snapshotHistory || !current) {
+      return;
+    }
+    const past = [...current.past, current.present];
+    if (past.length > capacity) past.shift();
+    snapshotHistory.set({ past, present: next, future: [] });
+  };
+
+  const clearHistory = (): void => {
+    if (sharedMode()) {
+      return;
+    }
+    const next = project(ctx.read());
+    standaloneAuthority.reset(next);
+    snapshotHistory?.set({ past: [], present: next, future: [] });
+  };
+
+  const api: FormHistoryApi<T> = {
+    undo(): void {
+      if (sharedAuthority) {
+        sharedAuthority.undo();
+        return;
+      }
+      if (!standaloneAuthority.undo()) {
+        return;
+      }
+      if (!snapshotHistory) {
+        return;
+      }
+      const prev = project(ctx.read());
+      const current = snapshotHistory();
+      snapshotHistory.set({
+        past: current.past.slice(0, -1),
+        present: prev,
+        future: [current.present, ...current.future],
+      });
+    },
+    redo(): void {
+      if (sharedAuthority) {
+        sharedAuthority.redo();
+        return;
+      }
+      const current = snapshotHistory?.();
+      if (!standaloneAuthority.redo()) {
+        return;
+      }
+      if (!snapshotHistory || !current || current.future.length === 0) {
+        return;
+      }
+      const next = project(ctx.read());
+      snapshotHistory.set({
+        past: [...current.past, current.present],
+        present: next,
+        future: current.future.slice(1),
+      });
+    },
+    canUndo: computed(() =>
+      sharedMode()
+        ? sharedAuthority?.canUndo() === true
+        : standaloneAuthority.canUndo()
+    ),
+    canRedo: computed(() =>
+      sharedMode()
+        ? sharedAuthority?.canRedo() === true
+        : standaloneAuthority.canRedo()
+    ),
+  };
+
+  Object.defineProperty(api, '__bindSharedAuthority', {
+    value: (authority: FormHistorySharedAuthority) => {
+      sharedAuthority = authority;
+      sharedMode.set(true);
+    },
+    enumerable: false,
+    configurable: true,
+  });
+
+  if (!snapshotHistory) {
+    return { api, record };
+  }
+
+  return {
+    api: {
+      ...api,
+      clearHistory,
+      history: computed(() => snapshotHistory()),
+    },
+    record,
+  };
+}
 
 /**
  * Create an undo/redo feature for a `form()` marker.
@@ -58,126 +204,13 @@ import type {
 export function history<T extends Record<string, unknown>>(
   options: FormHistoryOptions<T> = {}
 ): HistoryFeature<T> {
-  const capacity = Math.max(1, options.capacity ?? 10);
-  const exclude = options.exclude ?? [];
-
-  // Snapshot projection: deep-clone, then strip excluded fields so secrets
-  // never enter the buffer. Comparison and storage both use the projection,
-  // so an edit that only touches an excluded field records nothing.
-  const project = (value: T): T => {
-    const cloned = deepClone(value);
-    for (const key of exclude) {
-      delete (cloned as Record<keyof T, unknown>)[key];
-    }
-    return cloned;
-  };
-
   return {
     __signalTreeFormHistory: true,
     attach(ctx) {
-      let sharedAuthority: FormHistorySharedAuthority | undefined;
-      const sharedMode = signal(false);
-      const standaloneAuthority = createScopedHistoryAuthority<T>({
-        read: () => project(ctx.read()),
-        write: ctx.write,
-        maxHistoryEntries: capacity + 1,
-        ownerPath: '__formHistory',
-      });
-
-      const snap = signal<FormHistorySnapshot<T>>({
-        past: [],
-        present: project(ctx.read()),
-        future: [],
-      });
-
-      const record = (): void => {
-        const next = project(ctx.read());
-        const current = snap();
-        if (snapshotsEqual(current.present, next)) return;
-        if (sharedMode()) {
-          return;
-        }
-        standaloneAuthority.record(next);
-        const past = [...current.past, current.present];
-        if (past.length > capacity) past.shift();
-        snap.set({ past, present: next, future: [] });
+      return attachHistory(ctx, options, false) as {
+        api: FormHistoryApi<T>;
+        record: () => void;
       };
-
-      // Restore merges the projected snapshot over the live values so excluded
-      // fields (absent from the snapshot) keep whatever they currently hold —
-      // an undo never resurrects an old secret. `write` does NOT re-`record`.
-      const restore = (target: T): void => {
-        ctx.write(target as Partial<T>);
-      };
-
-      const historyView = computed<FormHistorySnapshot<T>>(() =>
-        sharedMode()
-          ? { past: [], present: project(ctx.read()), future: [] }
-          : snap()
-      );
-
-      const api: FormHistoryApi<T> = {
-        undo(): void {
-          if (sharedAuthority) {
-            if (!sharedAuthority.undo()) return;
-            return;
-          }
-          if (!standaloneAuthority.undo()) {
-            return;
-          }
-          const prev = project(ctx.read());
-          const s = snap();
-          snap.set({
-            past: s.past.slice(0, -1),
-            present: prev,
-            future: [s.present, ...s.future],
-          });
-        },
-        redo(): void {
-          if (sharedAuthority) {
-            if (!sharedAuthority.redo()) return;
-            return;
-          }
-          const s = snap();
-          if (!standaloneAuthority.redo() || s.future.length === 0) return;
-          const next = project(ctx.read());
-          snap.set({
-            past: [...s.past, s.present],
-            present: next,
-            future: s.future.slice(1),
-          });
-        },
-        clearHistory(): void {
-          if (sharedMode()) {
-            return;
-          }
-          const next = project(ctx.read());
-          standaloneAuthority.reset(next);
-          snap.set({ past: [], present: next, future: [] });
-        },
-        canUndo: computed(() =>
-          sharedMode()
-            ? sharedAuthority?.canUndo() === true
-            : standaloneAuthority.canUndo()
-        ),
-        canRedo: computed(() =>
-          sharedMode()
-            ? sharedAuthority?.canRedo() === true
-            : standaloneAuthority.canRedo()
-        ),
-        history: historyView,
-      };
-
-      Object.defineProperty(api, '__bindSharedAuthority', {
-        value: (authority: FormHistorySharedAuthority) => {
-          sharedAuthority = authority;
-          sharedMode.set(true);
-        },
-        enumerable: false,
-        configurable: true,
-      });
-
-      return { api, record };
     },
   };
 }
@@ -186,7 +219,8 @@ export function history<T extends Record<string, unknown>>(
  * Attach undo/redo history to ANY `WritableSignal` model — no `form()` marker
  * required. This is the marker-free counterpart to `history()`: point it at the
  * model signal an Angular Signal Forms `form(model, schema)` was built over (or
- * any writable signal) and get `undo()`/`redo()`/`canUndo`/`canRedo`/`history`.
+ * any writable signal) and get `undo()`/`redo()`/`canUndo`/`canRedo` plus
+ * local snapshot inspection/reset helpers.
  *
  * It runs the same engine as `history()`, plus an `effect()` that observes the
  * model and records every change — from any source (Signal Forms `FieldTree`
@@ -209,12 +243,19 @@ export function history<T extends Record<string, unknown>>(
 export function trackHistory<T extends Record<string, unknown>>(
   model: WritableSignal<T>,
   options: FormHistoryOptions<T> & { injector?: Injector } = {}
-): FormHistoryApi<T> {
+) {
   const injector = options.injector ?? inject(Injector);
-  const binding = history<T>(options).attach({
+  const binding = attachHistory<T>(
+    {
     read: () => model(),
     write: (next) => model.update((m) => ({ ...m, ...next })),
-  });
+    },
+    options,
+    true
+  ) as {
+    api: TrackHistoryApi<T>;
+    record: () => void;
+  };
   effect(
     () => {
       model();

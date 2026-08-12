@@ -655,12 +655,6 @@ export interface FormHistoryOptions<T> {
 }
 
 /** Immutable undo/redo state exposed by {@link FormHistoryApi.history}. */
-export interface FormHistorySnapshot<T> {
-  past: T[];
-  present: T;
-  future: T[];
-}
-
 /** @internal Shared scoped-history authority bound by `timeTravel()` during Gate 2 migration. */
 export interface FormHistorySharedAuthority {
   undo(): boolean;
@@ -680,11 +674,8 @@ export interface FormHistoryApi<T> {
   undo(): void;
   /** Re-apply the next state after an undo (no-op if none). */
   redo(): void;
-  /** Drop past/future, keeping the current values as the only present. */
-  clearHistory(): void;
   canUndo: Signal<boolean>;
   canRedo: Signal<boolean>;
-  history: Signal<FormHistorySnapshot<T>>;
   /** @internal Binds form undo/redo selection to shared scoped history. */
   __bindSharedAuthority?(authority: FormHistorySharedAuthority): void;
 }

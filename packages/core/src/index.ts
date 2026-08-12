@@ -218,7 +218,6 @@ export type {
   HistoryFeature,
   FormHistoryApi,
   FormHistoryOptions,
-  FormHistorySnapshot,
 } from './lib/types';
 
 // Audit tracker — framework-agnostic tree change logging (moved from

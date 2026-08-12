@@ -142,8 +142,10 @@ tree.$.contact.patch({ name: 'Ada' });
 tree.$.contact.history?.undo();
 tree.$.contact.history?.redo();
 tree.$.contact.history?.canUndo(); // Signal<boolean>
-tree.$.contact.history?.history(); // Signal<{ past: T[]; present: T; future: T[] }>
 ```
+
+`form().history` intentionally exposes only behavioral controls. It does not
+project `past`/`present`/`future` snapshots.
 
 A raw object on `history` (not `history()`'s output) throws `[ST2006]` at the `form()` call. If a `signalForm()` binds this same marker, undo/redo also move the bound `FieldTree`, and edits made through the `FieldTree` are captured too — one engine, no sync loop.
 
@@ -165,6 +167,8 @@ const hist = trackHistory(model, { capacity: 25, exclude: ['secret'], injector: 
 hist.undo();
 hist.redo();
 hist.canUndo(); // FieldTree reflects undo/redo
+hist.clearHistory(); // marker-free local buffer reset
+hist.history(); // local snapshot inspection for the tracked WritableSignal
 ```
 
 Pattern E — pass an Angular Signal Forms schema + FormOptions to a marker-bridged form (v13.1+). `signalForm(marker, options)` takes `schema` as a `SchemaOrSchemaFn<T>` (inline `SchemaFn` OR a cached `schema()` object) for rules a marker's `validators` can't hold (`disabled`/`hidden`/`applyEach`/cross-field `validate`/`validateAsync`), and forwards `name`/`submission`/`experimentalWebMcpTool` verbatim to Angular's `form(model, schema, options)`:
