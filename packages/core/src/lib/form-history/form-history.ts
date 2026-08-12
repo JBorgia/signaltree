@@ -75,6 +75,7 @@ export function history<T extends Record<string, unknown>>(
     __signalTreeFormHistory: true,
     attach(ctx) {
       let sharedAuthority: FormHistorySharedAuthority | undefined;
+      const sharedMode = signal(false);
 
       const snap = signal<FormHistorySnapshot<T>>({
         past: [],
@@ -86,8 +87,7 @@ export function history<T extends Record<string, unknown>>(
         const next = project(ctx.read());
         const current = snap();
         if (snapshotsEqual(current.present, next)) return;
-        if (sharedAuthority) {
-          snap.set({ past: [], present: next, future: [] });
+        if (sharedMode()) {
           return;
         }
         const past = [...current.past, current.present];
@@ -102,28 +102,16 @@ export function history<T extends Record<string, unknown>>(
         ctx.write(target as Partial<T>);
       };
 
-      const mirrorSharedUndo = (): void => {
-        const after = project(ctx.read());
-        snap.set({
-          past: [],
-          present: after,
-          future: [],
-        });
-      };
-
-      const mirrorSharedRedo = (): void => {
-        snap.set({
-          past: [],
-          present: project(ctx.read()),
-          future: [],
-        });
-      };
+      const historyView = computed<FormHistorySnapshot<T>>(() =>
+        sharedMode()
+          ? { past: [], present: project(ctx.read()), future: [] }
+          : snap()
+      );
 
       const api: FormHistoryApi<T> = {
         undo(): void {
           if (sharedAuthority) {
             if (!sharedAuthority.undo()) return;
-            mirrorSharedUndo();
             return;
           }
           const s = snap();
@@ -139,7 +127,6 @@ export function history<T extends Record<string, unknown>>(
         redo(): void {
           if (sharedAuthority) {
             if (!sharedAuthority.redo()) return;
-            mirrorSharedRedo();
             return;
           }
           const s = snap();
@@ -153,21 +140,25 @@ export function history<T extends Record<string, unknown>>(
           restore(next);
         },
         clearHistory(): void {
+          if (sharedMode()) {
+            return;
+          }
           const s = snap();
           snap.set({ past: [], present: s.present, future: [] });
         },
         canUndo: computed(() =>
-          sharedAuthority ? sharedAuthority.canUndo() : snap().past.length > 0
+          sharedMode() ? sharedAuthority?.canUndo() === true : snap().past.length > 0
         ),
         canRedo: computed(() =>
-          sharedAuthority ? sharedAuthority.canRedo() : snap().future.length > 0
+          sharedMode() ? sharedAuthority?.canRedo() === true : snap().future.length > 0
         ),
-        history: snap.asReadonly(),
+        history: historyView,
       };
 
       Object.defineProperty(api, '__bindSharedAuthority', {
         value: (authority: FormHistorySharedAuthority) => {
           sharedAuthority = authority;
+          sharedMode.set(true);
         },
         enumerable: false,
         configurable: true,

@@ -180,6 +180,60 @@ describe('form history()', () => {
     expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
   });
 
+  it('keeps history().present aligned with visible form state across shared-frontier moves from multiple api surfaces', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string }>({
+        initial: { name: '' },
+        history: history<{ name: string }>(),
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.patch({ name: 'A' });
+    await flush();
+    tree.$.orders.addOne({ id: 7, status: 'new' });
+    await flush();
+    p.patch({ name: 'B' });
+    await flush();
+
+    expect(p.history?.history().present).toEqual(p());
+
+    p.history?.undo();
+    expect(p.history?.history().present).toEqual(p());
+
+    tree.redo();
+    expect(p()).toEqual({ name: 'B' });
+    expect(p.history?.history().present).toEqual(p());
+
+    p.history?.undo();
+    expect(p.history?.history().present).toEqual(p());
+
+    p.history?.redo();
+    expect(p.history?.history().present).toEqual(p());
+  });
+
+  it('preserves the history() shape in shared mode while past storage is absent', async () => {
+    const tree = signalTree({
+      profile: form<{ name: string }>({
+        initial: { name: '' },
+        history: history<{ name: string }>(),
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.patch({ name: 'Ada' });
+    await flush();
+    p.patch({ name: 'Grace' });
+    await flush();
+
+    expect(p.history?.history().past).toEqual([]);
+    expect(p.history?.history().future).toEqual([]);
+    expect(p.history?.history().present).toEqual(p());
+  });
+
   it('collapses no-op writes (equal snapshots record nothing)', () => {
     const tree = makeTree();
     const p = tree.$.profile;
@@ -196,6 +250,40 @@ describe('form history()', () => {
     p.patch({ name: 'c' });
     // capacity 2 → at most 2 past entries retained
     expect(p.history?.history().past.length).toBe(2);
+  });
+
+  it('records one local history step per form write without shared timeTravel grouping', () => {
+    const tree = makeTree();
+    const p = tree.$.profile;
+
+    p.$.name.set('J');
+    p.$.name.set('Jo');
+    p.$.name.set('Jon');
+
+    p.history?.undo();
+    expect(p().name).toBe('Jo');
+    p.history?.undo();
+    expect(p().name).toBe('J');
+    p.history?.undo();
+    expect(p().name).toBe('');
+  });
+
+  it('groups synchronous form writes into one shared undo step under timeTravel', async () => {
+    const tree = signalTree({
+      profile: form<Profile>({
+        initial: { name: '', password: '' },
+        history: history<Profile>(),
+      }),
+    }).with(timeTravel());
+    const p = tree.$.profile;
+
+    p.$.name.set('J');
+    p.$.name.set('Jo');
+    p.$.name.set('Jon');
+    await flush();
+
+    p.history?.undo();
+    expect(p().name).toBe('');
   });
 
   it('never buffers excluded fields, and keeps their live value on undo', () => {

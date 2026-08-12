@@ -151,6 +151,11 @@ values
 -> CAUSAL
 -> shared scoped undo/redo must reverse them
 
+history().present
+-> PUBLIC INSPECTION DATA
+-> in shared mode it is derived from current form state, not retained as a
+	private baseline
+
 touched
 -> SELECTIVELY CAUSAL form semantic
 -> previously-established touched state is restored on form undo
@@ -191,6 +196,24 @@ private stack causal authority            REMOVED
 
 future mirror                             DELETED
 past mirror                               DELETED
-present mirror                            AFTER
+present mirror                            DELETED
 grouping preservation                     NEEDS CHARACTERIZATION
 ```
+
+## Grouping characterization
+
+Current characterization shows a real policy difference between the legacy local
+stack and shared turns:
+
+```text
+local form history (no timeTravel)
+-> one form write = one undo step
+
+shared timeTravel mode
+-> synchronous form writes before the flush boundary coalesce into one undo turn
+```
+
+That behavior now lives in shared turn production, not in form-owned storage.
+If the product wants different grouping, the fix belongs at causal boundary
+production (form mutation grouping / flush policy), not by reviving
+`past/present/future`.
