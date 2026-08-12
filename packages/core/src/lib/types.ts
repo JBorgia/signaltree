@@ -35,6 +35,10 @@ export interface UpdateMetadata {
   positionIds?: number[];
   /** Internal row subject ids carried by replayed writes. */
   subjectIds?: number[];
+  /** @internal Explicit transaction grouping token for Gate 3 attribution. */
+  transactionId?: number;
+  /** @internal Owning tree token for transaction attribution isolation. */
+  transactionOwner?: object;
   /** Open extension for guardrails' historical custom-key shape. */
   [key: string]: unknown;
 }
@@ -435,6 +439,7 @@ export interface BatchingMethods {
 export interface TimeTravelMethods<T = unknown> {
   undo(): void;
   redo(): void;
+  transaction<R>(fn: () => R): R;
   canUndo(): boolean;
   canRedo(): boolean;
   getHistory(): TimeTravelEntry<T>[];
@@ -1201,7 +1206,8 @@ type PathHandler = (
   ownerPath?: string,
   source?: string,
   subjectIds?: number[],
-  positionIds?: number[]
+  positionIds?: number[],
+  meta?: UpdateMetadata
 ) => void;
 
 type PathInterceptor = (

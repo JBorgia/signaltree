@@ -11,6 +11,8 @@
 
 import { getActiveWriteContext } from './write-context';
 
+import type { UpdateMetadata } from './types';
+
 export type PathNotifierHandler = (
   value: unknown,
   prev: unknown,
@@ -18,7 +20,8 @@ export type PathNotifierHandler = (
   ownerPath?: string,
   source?: string,
   subjectIds?: number[],
-  positionIds?: number[]
+  positionIds?: number[],
+  meta?: UpdateMetadata
 ) => void | Promise<void>;
 
 export type PathNotifierInterceptor = (
@@ -40,6 +43,7 @@ type PendingEntry = {
   oldValue: unknown;
   ownerPath?: string;
   source?: string;
+  meta?: UpdateMetadata;
   subjectId?: number;
   positionId?: number;
   subjectIds?: number[];
@@ -156,12 +160,13 @@ export class PathNotifier {
     subjectIds?: number[],
     positionIds?: number[]
   ): { blocked: boolean; value: unknown } {
+    const meta = getActiveWriteContext();
     // Tag the batch with the ambient write source (e.g. `time-travel` during a
     // history restore). The flush that delivers this entry is DEFERRED to a
     // microtask, so consumers must be able to tell "this write came from a
     // restore" apart from a user change at flush time — `isRestoring`-style
     // flags that reset synchronously are already false by then.
-    const source = getActiveWriteContext()?.source;
+    const source = meta?.source;
     if (!this.batchingEnabled) {
       // Synchronous path: run interceptors and subscribers immediately
       return this._runNotify(
@@ -171,7 +176,8 @@ export class PathNotifier {
         ownerPath,
         source,
         subjectIds,
-        positionIds
+        positionIds,
+        meta
       );
     }
 
@@ -181,6 +187,7 @@ export class PathNotifier {
       oldValue: prev,
       ownerPath,
       source,
+      meta,
       subjectId: subjectIds?.[0],
       positionId: positionIds?.[0],
       subjectIds,
@@ -208,7 +215,8 @@ export class PathNotifier {
     ownerPath?: string,
     source?: string,
     subjectIds?: number[],
-    positionIds?: number[]
+    positionIds?: number[],
+    meta?: UpdateMetadata
   ): { blocked: boolean; value: unknown } {
     let blocked = false;
     let transformed = value;
@@ -244,7 +252,8 @@ export class PathNotifier {
             ownerPath,
             source,
             subjectIds,
-            positionIds
+            positionIds,
+            meta
           );
         }
       }
@@ -284,7 +293,8 @@ export class PathNotifier {
           entry.ownerPath,
           entry.source,
           entry.subjectIds,
-          entry.positionIds
+          entry.positionIds,
+          entry.meta
         );
         if (res.blocked) {
           // blocked by interceptor - nothing to do

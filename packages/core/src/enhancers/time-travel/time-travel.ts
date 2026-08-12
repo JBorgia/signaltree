@@ -11,7 +11,7 @@ import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { visitTree } from '../../lib/internals/visit-tree';
 import { getPathNotifier } from '../../lib/path-notifier';
-import { withWriteContext } from '../../lib/write-context';
+import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
 
 import type {
   ISignalTree,
@@ -89,6 +89,13 @@ type TurnEffect =
 
 type PendingEffectMap = Map<string, TurnEffect>;
 
+type CaptureBucket = {
+  ownerPaths: Set<string>;
+  subjectIds: Set<number>;
+  positionIds: Set<number>;
+  effects: PendingEffectMap;
+};
+
 type CollectionHistoryEffect =
   | CollectionAddEffect
   | CollectionRemoveEffect
@@ -136,15 +143,6 @@ type OwnerResolution = {
 type CollectionResolution = {
   ownerNode: HistoryAwareCollectionNode;
   entityId: string | number;
-};
-
-type ScalarEffectDraft = {
-  path: string;
-  ownerPath?: string;
-  subjectIds?: number[];
-  positionIds?: number[];
-  before: unknown;
-  after: unknown;
 };
 
 function cloneTurnEffect(effect: TurnEffect): TurnEffect {
@@ -1594,6 +1592,9 @@ export function timeTravel(
         redo(): void {
           /* disabled */
         },
+        transaction<R>(fn: () => R): R {
+          return fn();
+        },
         canUndo(): boolean {
           return false;
         },
@@ -2118,10 +2119,16 @@ export function timeTravel(
     // intercept every plain writable signal and route their writes through
     // the global notifier. Without this interception, time-travel would
     // silently miss every leaf .set()/.update() in the tree.
-    const pendingOwnerPaths = new Set<string>();
-    const pendingSubjectIds = new Set<number>();
-    const pendingPositionIds = new Set<number>();
-    const pendingEffects: PendingEffectMap = new Map();
+    const createCaptureBucket = (): CaptureBucket => ({
+      ownerPaths: new Set<string>(),
+      subjectIds: new Set<number>(),
+      positionIds: new Set<number>(),
+      effects: new Map(),
+    });
+    const pendingCapture = createCaptureBucket();
+    const pendingTransactions = new Map<number, CaptureBucket>();
+    const transactionOwnerToken = {};
+    let nextTransactionId = 1;
     const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
       value !== null &&
       typeof value === 'object' &&
@@ -2129,24 +2136,27 @@ export function timeTravel(
       !(value instanceof Date) &&
       !(value instanceof Map) &&
       !(value instanceof Set);
-    const drainOwnerPaths = (): string[] => {
-      const ownerPaths = Array.from(pendingOwnerPaths).sort();
-      pendingOwnerPaths.clear();
-      return ownerPaths;
-    };
-    const drainSubjectIds = (): number[] => {
-      const subjectIds = Array.from(pendingSubjectIds).sort(
+    const drainCaptureBucket = (
+      bucket: CaptureBucket
+    ): {
+      ownerPaths: string[];
+      subjectIds: number[];
+      positionIds: number[];
+      effects: TurnEffect[];
+    } => {
+      const ownerPaths = Array.from(bucket.ownerPaths).sort();
+      bucket.ownerPaths.clear();
+      const subjectIds = Array.from(bucket.subjectIds).sort(
         (left, right) => left - right
       );
-      pendingSubjectIds.clear();
-      return subjectIds;
-    };
-    const drainPositionIds = (): number[] => {
-      const positionIds = Array.from(pendingPositionIds).sort(
+      bucket.subjectIds.clear();
+      const positionIds = Array.from(bucket.positionIds).sort(
         (left, right) => left - right
       );
-      pendingPositionIds.clear();
-      return positionIds;
+      bucket.positionIds.clear();
+      const effects = Array.from(bucket.effects.values()).map(cloneTurnEffect);
+      bucket.effects.clear();
+      return { ownerPaths, subjectIds, positionIds, effects };
     };
     const resolveOwnerPositionId = (ownerPath?: string): number | undefined => {
       if (!ownerPath) {
@@ -2178,20 +2188,23 @@ export function timeTravel(
           return `${effect.kind}\u0000${effect.ownerPath}\u0000${effect.position}\u0000${effect.subject}`;
       }
     };
-    const enqueueEffect = (effect: TurnEffect): void => {
+    const enqueueEffect = (
+      effectMap: PendingEffectMap,
+      effect: TurnEffect
+    ): void => {
       const key = effectKey(effect);
-      const existing = pendingEffects.get(key);
+      const existing = effectMap.get(key);
       if (existing) {
         if (existing.kind === 'set' && effect.kind === 'set') {
           existing.after = effect.after;
           if (existing.before === existing.after) {
-            pendingEffects.delete(key);
+            effectMap.delete(key);
           }
           return;
         }
         return;
       }
-      pendingEffects.set(key, effect);
+      effectMap.set(key, effect);
     };
     const buildTurnEffectFromHistory = (
       ownerPath: string,
@@ -2249,6 +2262,7 @@ export function timeTravel(
       }
     };
     const captureEffects = (
+      effectMap: PendingEffectMap,
       path: string,
       next: unknown,
       prev: unknown,
@@ -2260,7 +2274,7 @@ export function timeTravel(
         ? buildTurnEffectFromHistory(ownerPath, path, positionIds, subjectIds)
         : undefined;
       if (historyEffect) {
-        enqueueEffect(historyEffect);
+        enqueueEffect(effectMap, historyEffect);
         return;
       }
 
@@ -2281,7 +2295,7 @@ export function timeTravel(
           if (before === after) {
             continue;
           }
-          enqueueEffect({
+          enqueueEffect(effectMap, {
             kind: 'set',
             path: `${path}.${key}`,
             ownerPath: ownerPath ?? path,
@@ -2303,7 +2317,7 @@ export function timeTravel(
         return;
       }
 
-      enqueueEffect({
+      enqueueEffect(effectMap, {
         kind: 'set',
         path,
         ownerPath: ownerPath ?? path,
@@ -2313,16 +2327,45 @@ export function timeTravel(
         after: next,
       });
     };
-    const drainEffects = (): TurnEffect[] => {
-      const effects = Array.from(pendingEffects.values()).map(cloneTurnEffect);
-      pendingEffects.clear();
-      return effects;
+    const captureIntoBucket = (
+      bucket: CaptureBucket,
+      path: string,
+      next: unknown,
+      prev: unknown,
+      ownerPath?: string,
+      subjectIds?: number[],
+      positionIds?: number[]
+    ): void => {
+      bucket.ownerPaths.add(ownerPath ?? path);
+      for (const subjectId of subjectIds ?? []) {
+        bucket.subjectIds.add(subjectId);
+      }
+      const resolvedPositionIds =
+        positionIds && positionIds.length > 0
+          ? positionIds
+          : (() => {
+              const fallback = resolveOwnerPositionId(ownerPath);
+              return fallback === undefined ? [] : [fallback];
+            })();
+      for (const positionId of resolvedPositionIds) {
+        bucket.positionIds.add(positionId);
+      }
+      captureEffects(
+        bucket.effects,
+        path,
+        next,
+        prev,
+        ownerPath,
+        subjectIds,
+        resolvedPositionIds
+      );
     };
-    const recordCapturedEntry = (action: string): boolean => {
-      const ownerPaths = drainOwnerPaths();
-      const subjectIds = drainSubjectIds();
-      const positionIds = drainPositionIds();
-      const effects = drainEffects();
+    const recordCaptureBucket = (
+      bucket: CaptureBucket,
+      action: string
+    ): boolean => {
+      const { ownerPaths, subjectIds, positionIds, effects } =
+        drainCaptureBucket(bucket);
 
       if (
         ownerPaths.length === 0 &&
@@ -2330,7 +2373,7 @@ export function timeTravel(
         positionIds.length === 0 &&
         effects.length === 0
       ) {
-        return timeTravelManager.addEntry(action);
+        return false;
       }
 
       return timeTravelManager.addEntry(
@@ -2341,6 +2384,27 @@ export function timeTravel(
         positionIds.length > 0 ? positionIds : undefined,
         effects.length > 0 ? effects : undefined
       );
+    };
+    const getTransactionBucket = (transactionId: number): CaptureBucket => {
+      let bucket = pendingTransactions.get(transactionId);
+      if (!bucket) {
+        bucket = createCaptureBucket();
+        pendingTransactions.set(transactionId, bucket);
+      }
+      return bucket;
+    };
+    const resolveTransactionId = (meta?: { transactionId?: unknown; transactionOwner?: unknown }): number | undefined => {
+      return typeof meta?.transactionId === 'number' && meta.transactionOwner === transactionOwnerToken
+        ? meta.transactionId
+        : undefined;
+    };
+    const sealTransaction = (transactionId: number): boolean => {
+      const bucket = pendingTransactions.get(transactionId);
+      pendingTransactions.delete(transactionId);
+      if (!bucket) {
+        return false;
+      }
+      return recordCaptureBucket(bucket, 'transaction');
     };
 
     /** Set by this tree's own leaf interceptors; read by the global flush hook. */
@@ -2357,32 +2421,22 @@ export function timeTravel(
           unsubscribeNotifications?.();
           unsubscribeNotifications = notifier.subscribe(
             '**',
-            (next, prev, path, ownerPath, source, subjectIds, positionIds) => {
+            (next, prev, path, ownerPath, source, subjectIds, positionIds, meta) => {
               if (source === 'time-travel') {
                 return;
               }
+              if (resolveTransactionId(meta) !== undefined) {
+                return;
+              }
               selfDirty = true;
-              pendingOwnerPaths.add(ownerPath ?? path);
-              for (const subjectId of subjectIds ?? []) {
-                pendingSubjectIds.add(subjectId);
-              }
-              const resolvedPositionIds =
-                positionIds && positionIds.length > 0
-                  ? positionIds
-                  : (() => {
-                      const fallback = resolveOwnerPositionId(ownerPath);
-                      return fallback === undefined ? [] : [fallback];
-                    })();
-              for (const positionId of resolvedPositionIds) {
-                pendingPositionIds.add(positionId);
-              }
-              captureEffects(
+              captureIntoBucket(
+                pendingCapture,
                 path,
                 next,
                 prev,
                 ownerPath,
                 subjectIds,
-                resolvedPositionIds
+                positionIds
               );
             }
           );
@@ -2396,9 +2450,30 @@ export function timeTravel(
         if ('$' in tree) {
           restoreLeafInterceptors = interceptLeafSignals(
             (tree as ISignalTree<T>).$ as Record<string, unknown>,
-            (path, next, prev, _meta, ownerPath, subjectIds, positionIds) => {
+            (path, next, prev, meta, ownerPath, subjectIds, positionIds) => {
               if (isRestoring) return;
-              captureEffects(path, next, prev, ownerPath, subjectIds, positionIds);
+              const transactionId = resolveTransactionId(meta);
+              if (transactionId !== undefined) {
+                captureIntoBucket(
+                  getTransactionBucket(transactionId),
+                  path,
+                  next,
+                  prev,
+                  ownerPath,
+                  subjectIds,
+                  positionIds
+                );
+              } else {
+                captureEffects(
+                  pendingCapture.effects,
+                  path,
+                  next,
+                  prev,
+                  ownerPath,
+                  subjectIds,
+                  positionIds
+                );
+              }
               notifier.notify(path, next, prev, ownerPath, subjectIds, positionIds);
             }
           );
@@ -2410,10 +2485,7 @@ export function timeTravel(
             if (suppressNextFlushRecord) {
               suppressNextFlushRecord = false;
               selfDirty = false;
-              drainOwnerPaths();
-              drainSubjectIds();
-              drainPositionIds();
-              drainEffects();
+              drainCaptureBucket(pendingCapture);
               return;
             }
             // `onFlush` is on the GLOBAL PathNotifier, so this fires for writes
@@ -2425,18 +2497,22 @@ export function timeTravel(
             // people's trees is the worst kind.
             if (!selfDirty) return;
             selfDirty = false;
-            const ownerPaths = drainOwnerPaths();
-            const subjectIds = drainSubjectIds();
-            const positionIds = drainPositionIds();
-            const effects = drainEffects();
-            const recorded = timeTravelManager.addEntry(
-              'batch',
-              undefined,
-              ownerPaths,
-              subjectIds,
-              positionIds,
-              effects
-            );
+            const { ownerPaths, subjectIds, positionIds, effects } =
+              drainCaptureBucket(pendingCapture);
+            const recorded =
+              ownerPaths.length === 0 &&
+              subjectIds.length === 0 &&
+              positionIds.length === 0 &&
+              effects.length === 0
+                ? false
+                : timeTravelManager.addEntry(
+                    'batch',
+                    undefined,
+                    ownerPaths.length > 0 ? ownerPaths : undefined,
+                    subjectIds.length > 0 ? subjectIds : undefined,
+                    positionIds.length > 0 ? positionIds : undefined,
+                    effects.length > 0 ? effects : undefined
+                  );
             timeTravelManager.observeBatch('batch', ownerPaths, recorded);
           });
         }
@@ -2483,6 +2559,10 @@ export function timeTravel(
         // 50 writes changing ONE number cost 57.49ms at 10k rows with it and
         // 0.44ms without.
         if (beforeState !== afterState) {
+          const transactionId = resolveTransactionId(getActiveWriteContext());
+          if (transactionId !== undefined) {
+            return result;
+          }
           // Preserve the synchronous history contract for explicit root writes,
           // but attach the leaf-level effects they already generated so a
           // batched flush does not win the dedupe race with an unindexed turn.
@@ -2491,7 +2571,7 @@ export function timeTravel(
             suppressNextFlushRecord = true;
           }
           selfDirty = false;
-          recordCapturedEntry('update');
+          recordCaptureBucket(pendingCapture, 'update');
         }
 
         return result;
@@ -2537,6 +2617,30 @@ export function timeTravel(
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['redo'] = () => {
       timeTravelManager.redoConfirmed();
+    };
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['transaction'] = <R>(
+      fn: () => R
+    ): R => {
+      const activeMeta = getActiveWriteContext();
+      if (typeof activeMeta?.transactionId === 'number') {
+        throw new Error('Nested transaction is not supported');
+      }
+
+      const transactionId = nextTransactionId++;
+      pendingTransactions.set(transactionId, createCaptureBucket());
+
+      try {
+        return withWriteContext(
+          {
+            ...(activeMeta ?? {}),
+            transactionId,
+            transactionOwner: transactionOwnerToken,
+          },
+          fn
+        );
+      } finally {
+        sealTransaction(transactionId);
+      }
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getHistory'] =
       () => timeTravelManager.getHistory();

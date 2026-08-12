@@ -125,6 +125,141 @@ describe('time-travel enhancer', () => {
     ]);
   });
 
+  it('groups multiple positions into exactly one explicit transaction turn when batching is disabled', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({
+      drivers: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+      trucks: entityMap<{ id: number; driverId: number | null }, number>({
+        selectId: (row) => row.id,
+      }),
+      orders: entityMap<{ id: number; status: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+
+    store.transaction(() => {
+      store.$.drivers.addOne({ id: 7, status: 'assigned' });
+      store.$.trucks.addOne({ id: 12, driverId: 7 });
+      store.$.orders.addOne({ id: 99, status: 'dispatched' });
+    });
+
+    const turns = t.getTurns();
+    expect(turns).toHaveLength(baseline + 1);
+    const transactionTurn = turns.at(-1) as {
+      state: {
+        drivers: { all: { id: number; status: string }[] };
+        trucks: { all: { id: number; driverId: number | null }[] };
+        orders: { all: { id: number; status: string }[] };
+      };
+      __ownerPaths?: string[];
+      __positionIds?: number[];
+    };
+    expect(transactionTurn.state).toEqual({
+      drivers: { all: [{ id: 7, status: 'assigned' }] },
+      trucks: { all: [{ id: 12, driverId: 7 }] },
+      orders: { all: [{ id: 99, status: 'dispatched' }] },
+    });
+    expect([...(transactionTurn.__ownerPaths ?? [])].sort()).toEqual([
+      'drivers',
+      'orders',
+      'trucks',
+    ]);
+    expect(transactionTurn.__positionIds).toHaveLength(3);
+  });
+
+  it('does not capture writes scheduled after the explicit transaction callback returns', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+
+    const store = signalTree({
+      inside: '',
+      outside: '',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+
+    store.transaction(() => {
+      store.$.inside.set('grouped');
+    });
+
+    store.$.outside.set('later');
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const turns = t.getTurns();
+    expect(turns).toHaveLength(baseline + 2);
+    const transactionTurn = turns.at(-2) as {
+      state: { inside: string; outside: string };
+      __ownerPaths?: string[];
+    };
+    const laterTurn = turns.at(-1) as {
+      state: { inside: string; outside: string };
+      __ownerPaths?: string[];
+    };
+    expect(transactionTurn.state).toEqual({ inside: 'grouped', outside: '' });
+    expect(transactionTurn.__ownerPaths).toEqual(['inside']);
+    expect(laterTurn.state).toEqual({ inside: 'grouped', outside: 'later' });
+    expect(laterTurn.__ownerPaths).toEqual(['outside']);
+  });
+
+  it('rejects nested explicit transactions', () => {
+    const store = signalTree({ count: 0 }).with(timeTravel());
+
+    expect(() =>
+      store.transaction(() => {
+        store.$.count.set(1);
+        store.transaction(() => {
+          store.$.count.set(2);
+        });
+      })
+    ).toThrow(/nested transaction/i);
+  });
+
+  it('rethrows a transaction callback error after sealing executed writes into one turn', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({ left: '', right: '' }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+    t.resetHistory();
+    const baseline = t.getTurns().length;
+
+    expect(() =>
+      store.transaction(() => {
+        store.$.left.set('L');
+        store.$.right.set('R');
+        throw new Error('boom');
+      })
+    ).toThrow('boom');
+
+    const turns = t.getTurns();
+    expect(turns).toHaveLength(baseline + 1);
+    const transactionTurn = turns.at(-1) as {
+      state: { left: string; right: string };
+      __ownerPaths?: string[];
+    };
+    expect(transactionTurn.state).toEqual({ left: 'L', right: 'R' });
+    expect([...(transactionTurn.__ownerPaths ?? [])].sort()).toEqual([
+      'left',
+      'right',
+    ]);
+  });
+
   it('records one canonical turn across multiple owner positions in one flush', async () => {
     const store = signalTree({
       drivers: entityMap<{ id: number; status: string }, number>({
