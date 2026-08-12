@@ -126,7 +126,9 @@ describe('time-travel enhancer', () => {
   });
 
   it('groups multiple positions into exactly one explicit transaction turn when batching is disabled', async () => {
-    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
     resetPathNotifier();
     getPathNotifier().setBatchingEnabled(false);
 
@@ -227,7 +229,7 @@ describe('time-travel enhancer', () => {
     ).toThrow(/nested transaction/i);
   });
 
-  it('rethrows a transaction callback error after sealing executed writes into one turn', async () => {
+  it('rolls back a thrown transaction callback and records no turn', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
@@ -247,17 +249,10 @@ describe('time-travel enhancer', () => {
       })
     ).toThrow('boom');
 
+    expect(store()).toEqual({ left: '', right: '' });
+
     const turns = t.getTurns();
-    expect(turns).toHaveLength(baseline + 1);
-    const transactionTurn = turns.at(-1) as {
-      state: { left: string; right: string };
-      __ownerPaths?: string[];
-    };
-    expect(transactionTurn.state).toEqual({ left: 'L', right: 'R' });
-    expect([...(transactionTurn.__ownerPaths ?? [])].sort()).toEqual([
-      'left',
-      'right',
-    ]);
+    expect(turns).toHaveLength(baseline);
   });
 
   it('records one canonical turn across multiple owner positions in one flush', async () => {

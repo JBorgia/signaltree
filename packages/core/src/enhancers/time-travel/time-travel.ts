@@ -2628,6 +2628,7 @@ export function timeTravel(
 
       const transactionId = nextTransactionId++;
       pendingTransactions.set(transactionId, createCaptureBucket());
+      const beforeTransactionState = originalTreeCall();
 
       try {
         return withWriteContext(
@@ -2638,8 +2639,24 @@ export function timeTravel(
           },
           fn
         );
+      } catch (error) {
+        pendingTransactions.delete(transactionId);
+        withWriteContext(
+          { intent: 'system', source: 'time-travel' },
+          () => {
+            isRestoring = true;
+            try {
+              originalTreeCall(beforeTransactionState);
+            } finally {
+              isRestoring = false;
+            }
+          }
+        );
+        throw error;
       } finally {
-        sealTransaction(transactionId);
+        if (pendingTransactions.has(transactionId)) {
+          sealTransaction(transactionId);
+        }
       }
     };
     (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getHistory'] =
