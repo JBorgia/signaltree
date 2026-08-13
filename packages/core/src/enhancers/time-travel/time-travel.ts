@@ -17,6 +17,7 @@ import {
   type PositionRegistry,
 } from '../../lib/internals/position-registry';
 import { visitTree } from '../../lib/internals/visit-tree';
+import { getCausalWriteMode } from '../../lib/causal-write-mode';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
 
@@ -30,7 +31,10 @@ import type {
   UpdateMetadata,
 } from '../../lib/types';
 
-import { ENHANCER_META, SignalTreeRollbackError } from '../../lib/types';
+import {
+  ENHANCER_META,
+  SignalTreeRollbackError,
+} from '../../lib/types';
 
 // Re-export for convenience (do not redefine locally)
 export type { TimeTravelConfig, TimeTravelEntry };
@@ -1543,7 +1547,14 @@ class TimeTravelManager<T> {
     // `source: 'time-travel'`. Enhancers (validation, guardrails) read this
     // via `getActiveWriteContext()` and can suppress side effects for replays.
     withWriteContext(
-      { intent: 'system', source: 'time-travel', subjectIds, positionIds },
+      {
+        ...(getActiveWriteContext() ?? {}),
+        intent: 'system',
+        source: 'time-travel',
+        causalMode: 'realization',
+        subjectIds,
+        positionIds,
+      },
       () => {
       if (this.restoreStateFn) {
         this.restoreStateFn(state);
@@ -2398,8 +2409,10 @@ export function timeTravel(
 
               withWriteContext(
                 {
+                  ...(getActiveWriteContext() ?? {}),
                   intent: 'system',
                   source: 'time-travel',
+                  causalMode: 'realization',
                   subjectIds:
                     effect.subject === undefined ? undefined : [effect.subject],
                   positionIds: [effect.position],
@@ -2419,8 +2432,10 @@ export function timeTravel(
 
               withWriteContext(
                 {
+                  ...(getActiveWriteContext() ?? {}),
                   intent: 'system',
                   source: 'time-travel',
+                  causalMode: 'realization',
                   subjectIds: [effect.subject],
                   positionIds: [effect.position],
                 },
@@ -2452,8 +2467,10 @@ export function timeTravel(
 
               withWriteContext(
                 {
+                  ...(getActiveWriteContext() ?? {}),
                   intent: 'system',
                   source: 'time-travel',
+                  causalMode: 'realization',
                   subjectIds: [effect.subject],
                   positionIds: [effect.position],
                 },
@@ -2486,8 +2503,10 @@ export function timeTravel(
 
               withWriteContext(
                 {
+                  ...(getActiveWriteContext() ?? {}),
                   intent: 'system',
                   source: 'time-travel',
+                  causalMode: 'realization',
                   subjectIds: [effect.subject],
                   positionIds: [effect.position],
                 },
@@ -2905,6 +2924,9 @@ export function timeTravel(
               if (source === 'time-travel') {
                 return;
               }
+              if (getCausalWriteMode(meta) === 'realization') {
+                return;
+              }
               const transactionId = resolveTransactionId(meta);
               if (transactionId !== undefined) {
                 captureIntoBucket(
@@ -2945,6 +2967,18 @@ export function timeTravel(
             (path, next, prev, meta, ownerPath, subjectIds, positionIds) => {
               const effectiveMeta = meta ?? getActiveWriteContext();
               if (isRestoring) return;
+              if (getCausalWriteMode(effectiveMeta) === 'realization') {
+                notifier.notify(
+                  path,
+                  next,
+                  prev,
+                  ownerPath,
+                  subjectIds,
+                  positionIds,
+                  effectiveMeta
+                );
+                return;
+              }
               const transactionId = resolveTransactionId(effectiveMeta);
               if (transactionId !== undefined) {
                 captureIntoBucket(
@@ -3062,7 +3096,11 @@ export function timeTravel(
         // 50 writes changing ONE number cost 57.49ms at 10k rows with it and
         // 0.44ms without.
         if (beforeState !== afterState) {
-          const transactionId = resolveTransactionId(getActiveWriteContext());
+          const activeMeta = getActiveWriteContext();
+          if (getCausalWriteMode(activeMeta) === 'realization') {
+            return result;
+          }
+          const transactionId = resolveTransactionId(activeMeta);
           if (transactionId !== undefined) {
             return result;
           }
@@ -3078,7 +3116,6 @@ export function timeTravel(
             recordCaptureBucket(pendingCapture, 'update');
           }
         }
-
         return result;
       }
     } as unknown as ISignalTree<T>;
@@ -3094,7 +3131,6 @@ export function timeTravel(
       tree as unknown as object,
       enhancedTree as unknown as object
     );
-
     // Define new .with() method that passes enhancedTree (not the original tree)
     // to subsequent enhancers. This is critical for preserving the enhancer chain.
     Object.defineProperty(enhancedTree, 'with', {

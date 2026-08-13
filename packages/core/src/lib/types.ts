@@ -41,6 +41,8 @@ export interface UpdateMetadata {
   transactionOwner?: object;
   /** @internal Declared leaf-write semantics for scalar rollback classification. */
   mutationIntent?: 'replace' | 'derive';
+  /** @internal Explicitly distinguishes causal authorship from causal realization. */
+  causalMode?: CausalWriteMode;
   /** @internal Canonical structural collection effect produced at mutation time. */
   historyEffect?: StructuralHistoryEffect;
   /** Open extension for guardrails' historical custom-key shape. */
@@ -106,12 +108,15 @@ export type MutationKind =
   | 'rekey'
   | 'replace';
 
+export type CausalWriteMode = 'authoring' | 'realization';
+
 export interface WriteAttribution {
   intent?: UpdateMetadata['intent'];
   source?: UpdateMetadata['source'];
   transactionId?: number;
   transactionOwner?: object;
   mutationIntent?: UpdateMetadata['mutationIntent'];
+  causalMode?: UpdateMetadata['causalMode'];
 }
 
 export interface MutationEnvelope<T = unknown> {

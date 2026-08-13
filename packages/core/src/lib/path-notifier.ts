@@ -11,6 +11,8 @@
 
 import { getActiveWriteContext } from './write-context';
 
+import { getCausalWriteMode } from './causal-write-mode';
+
 import type { MutationEnvelope, UpdateMetadata } from './types';
 
 export type PathNotifierHandler = (
@@ -419,13 +421,22 @@ export class PathNotifier {
     }
 
     if (this.batchIdentityMode === 'path') {
-      this.coalesceEntry(Array.isArray(existing) ? existing[0] : existing, entry);
-      if (Array.isArray(existing) && existing.length > 1) {
-        existing.splice(1);
-      }
       if (Array.isArray(existing)) {
-        existing[0] = Array.isArray(existing) ? existing[0] : existing;
+        const tail = existing[existing.length - 1];
+        if (this.hasSameSemanticIdentity(tail, entry)) {
+          this.coalesceEntry(tail, entry);
+          return;
+        }
+        existing.push(entry);
+        return;
       }
+
+      if (this.hasSameSemanticIdentity(existing, entry)) {
+        this.coalesceEntry(existing, entry);
+        return;
+      }
+
+      this.pending.set(path, [existing, entry]);
       return;
     }
 
@@ -435,11 +446,9 @@ export class PathNotifier {
     }
 
     if (Array.isArray(existing)) {
-      const match = existing.find((candidate) =>
-        this.hasSameSemanticIdentity(candidate, entry)
-      );
-      if (match) {
-        this.coalesceEntry(match, entry);
+      const tail = existing[existing.length - 1];
+      if (this.hasSameSemanticIdentity(tail, entry)) {
+        this.coalesceEntry(tail, entry);
         return;
       }
       existing.push(entry);
@@ -475,6 +484,10 @@ export class PathNotifier {
       return false;
     }
 
+    if (this.crossesCausalModeBoundary(left, right)) {
+      return false;
+    }
+
     if (this.batchIdentityMode === 'path-position') {
       return left.positionId === right.positionId;
     }
@@ -499,6 +512,10 @@ export class PathNotifier {
       rightIntent !== undefined &&
       leftIntent !== rightIntent
     );
+  }
+
+  private crossesCausalModeBoundary(left: PendingEntry, right: PendingEntry): boolean {
+    return getCausalWriteMode(left.meta) !== getCausalWriteMode(right.meta);
   }
 
   private coalesceEntry(target: PendingEntry, next: PendingEntry): void {
@@ -534,7 +551,8 @@ export class PathNotifier {
     if (
       left.transactionId !== right.transactionId ||
       left.transactionOwner !== right.transactionOwner ||
-      left.mutationIntent !== right.mutationIntent
+      left.mutationIntent !== right.mutationIntent ||
+      getCausalWriteMode(left) !== getCausalWriteMode(right)
     ) {
       return undefined;
     }
@@ -550,7 +568,8 @@ export class PathNotifier {
   private getCompositeBatchKey(entry: PendingEntry): string {
     const positionKey = entry.positionIds?.join(',') ?? '';
     const subjectKey = entry.subjectIds?.join(',') ?? '';
-    return `${entry.path}${PathNotifier.ownerBoundarySeparator}${positionKey}${PathNotifier.ownerBoundarySeparator}${subjectKey}`;
+    const causalMode = getCausalWriteMode(entry.meta);
+    return `${entry.path}${PathNotifier.ownerBoundarySeparator}${positionKey}${PathNotifier.ownerBoundarySeparator}${subjectKey}${PathNotifier.ownerBoundarySeparator}${causalMode}`;
   }
 
   /**

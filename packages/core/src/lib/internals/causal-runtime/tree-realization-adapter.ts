@@ -1,5 +1,5 @@
 import type { ISignalTree, PositionId, StructuralHistoryEffect, UpdateMetadata } from '../../types';
-import { withWriteContext } from '../../write-context';
+import { getActiveWriteContext, withWriteContext } from '../../write-context';
 import { getOwnedPositionIds } from '../owned-mutation';
 import { visitTree } from '../visit-tree';
 
@@ -169,8 +169,10 @@ function applyEffect(
 
   withWriteContext(
     {
+      ...(getActiveWriteContext() ?? {}),
       intent: 'system',
       source: 'system',
+      causalMode: 'realization',
       positionIds: [effect.owner],
       subjectIds:
         typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,

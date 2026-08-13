@@ -6,7 +6,11 @@ import type {
   UpdateMetadata,
 } from '../../lib/types';
 
-import { ENHANCER_META, SignalTreeRollbackError } from '../../lib/types';
+import { getCausalWriteMode } from '../../lib/causal-write-mode';
+import {
+  ENHANCER_META,
+  SignalTreeRollbackError,
+} from '../../lib/types';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getMutationCaptureRuntime } from '../../lib/internals/mutation-capture-runtime';
 import { getPathNotifier } from '../../lib/path-notifier';
@@ -777,6 +781,9 @@ export function getOrCreateInternalTransactionRuntime<T>(
             if (source === 'time-travel') {
               return;
             }
+            if (getCausalWriteMode(meta) === 'realization') {
+              return;
+            }
             if (
               typeof meta?.transactionId === 'number' &&
               meta.transactionOwner !== transactionOwnerToken
@@ -825,6 +832,18 @@ export function getOrCreateInternalTransactionRuntime<T>(
           const effectiveMeta = meta ?? getActiveWriteContext();
           if (isRestoring) return;
           if (effectiveMeta?.source === 'time-travel') {
+            return;
+          }
+          if (getCausalWriteMode(effectiveMeta) === 'realization') {
+            notifier.notify(
+              path,
+              next,
+              prev,
+              ownerPath,
+              subjectIds,
+              positionIds,
+              effectiveMeta
+            );
             return;
           }
           if (
@@ -1270,8 +1289,10 @@ export function transactions(): <T>(
             );
             withWriteContext(
               {
+                ...(getActiveWriteContext() ?? {}),
                 intent: 'system',
                 source: 'system',
+                causalMode: 'realization',
                 subjectIds:
                   effect.subject === undefined ? undefined : [effect.subject],
                 positionIds: [effect.position],
@@ -1290,8 +1311,10 @@ export function transactions(): <T>(
             );
             withWriteContext(
               {
+                ...(getActiveWriteContext() ?? {}),
                 intent: 'system',
                 source: 'system',
+                causalMode: 'realization',
                 subjectIds: [effect.subject],
                 positionIds: [effect.position],
               },
@@ -1319,8 +1342,10 @@ export function transactions(): <T>(
             );
             withWriteContext(
               {
+                ...(getActiveWriteContext() ?? {}),
                 intent: 'system',
                 source: 'system',
+                causalMode: 'realization',
                 subjectIds: [effect.subject],
                 positionIds: [effect.position],
               },
@@ -1352,8 +1377,10 @@ export function transactions(): <T>(
             );
             withWriteContext(
               {
+                ...(getActiveWriteContext() ?? {}),
                 intent: 'system',
                 source: 'system',
+                causalMode: 'realization',
                 subjectIds: [effect.subject],
                 positionIds: [effect.position],
               },

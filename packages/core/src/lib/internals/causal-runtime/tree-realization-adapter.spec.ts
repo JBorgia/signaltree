@@ -5,6 +5,8 @@ import { stored } from '../../markers/stored';
 import { getPathNotifier, resetPathNotifier } from '../../path-notifier';
 import { signalTree } from '../../signal-tree';
 import type { ISignalTree, UpdateMetadata } from '../../types';
+import { timeTravel } from '../../../enhancers/time-travel/time-travel';
+import { transactions } from '../../../enhancers/transactions/transactions';
 import { getOwnedPositionIds } from '../owned-mutation';
 
 import { createTransactionCaptureBridge } from './transaction-capture-bridge';
@@ -672,6 +674,260 @@ describe('tree realization adapter', () => {
 
     expect(notifications).not.toHaveLength(0);
     unsubscribe();
+  });
+
+  it('keeps scalar realization causally silent between authored writes', async () => {
+    const tree = signalTree({ left: '', middle: '', right: '' }).with(
+      timeTravel()
+    ) as ISignalTree<{
+      left: { (): string; set(value: string): void };
+      middle: { (): string; set(value: string): void };
+      right: { (): string; set(value: string): void };
+    }> & {
+      getHistory(): unknown[];
+    };
+    const owner = getOwnedPositionIds(tree.$.middle)?.[0];
+    if (owner === undefined) {
+      throw new Error('Expected owned position for middle');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'middle',
+      positionIds: [owner],
+    });
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const baselineHistory = tree.getHistory().length;
+
+    tree.$.left.set('A');
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+    const afterAuthoredLeft = tree.getHistory().length;
+
+    adapter.applyAtomically([{ owner, before: '', after: 'B' }]);
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+
+    tree.$.right.set('C');
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+
+    expect(tree.$.left()).toBe('A');
+    expect(tree.$.middle()).toBe('B');
+    expect(tree.$.right()).toBe('C');
+    expect(afterAuthoredLeft).toBe(baselineHistory + 1);
+    expect(tree.getHistory().length).toBe(baselineHistory + 2);
+  });
+
+  it('keeps stored realization causally silent while preserving persistence consequences', async () => {
+    const storage = createMockStorage();
+    const tree = signalTree({
+      preference: stored('realization-non-authoring-preference', 'compact', {
+        storage,
+        debounceMs: 0,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      preference: { (): string; set(value: string): void };
+    }> & {
+      getHistory(): unknown[];
+    };
+    const owner = getOwnedPositionIds(tree.$.preference)?.[0];
+    if (owner === undefined) {
+      throw new Error('Expected owned position for preference');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'preference',
+      positionIds: [owner],
+    });
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const baselineHistory = tree.getHistory().length;
+    adapter.applyAtomically([{ owner, before: 'compact', after: 'spacious' }]);
+    getPathNotifier().flushSync();
+    await new Promise((resolve) => queueMicrotask(resolve));
+
+    expect(tree.$.preference()).toBe('spacious');
+    expect(JSON.parse(storage.getItem('realization-non-authoring-preference') ?? 'null')).toEqual({
+      __v: 1,
+      data: 'spacious',
+    });
+    expect(tree.getHistory().length).toBe(baselineHistory);
+  });
+
+  it('keeps structural realization causally silent while preserving subject identity', async () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        changeId(from: string, to: string): void;
+        byIdOrFail(id: string): {
+          name: (() => string) & { __subjectIds?: number[] };
+        };
+        ids(): string[];
+      };
+    }> & {
+      getHistory(): unknown[];
+    };
+
+    tree.$.users.addOne({ id: 'u2', name: 'Alice' });
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+
+    const owner = getOwnedPositionIds(tree.$.users)?.[0];
+    const beforeNameLeaf = tree.$.users.byIdOrFail('u2').name;
+    const beforeSubjectId = beforeNameLeaf.__subjectIds?.[0];
+    const beforePositions = getOwnedPositionIds(beforeNameLeaf);
+    if (owner === undefined || beforeSubjectId === undefined || !beforePositions) {
+      throw new Error('Expected entity ownership metadata');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u2',
+      ownerPath: 'users',
+      positionIds: [owner],
+    });
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const baselineHistory = tree.getHistory().length;
+    adapter.applyAtomically([
+      {
+        owner,
+        before: 'u2',
+        after: 'u1',
+        subjectId: beforeSubjectId,
+        structural: 'rekey',
+      },
+    ]);
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+
+    const afterNameLeaf = tree.$.users.byIdOrFail('u1').name;
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(afterNameLeaf.__subjectIds?.[0]).toBe(beforeSubjectId);
+    expect(getOwnedPositionIds(afterNameLeaf)).toEqual(beforePositions);
+    expect(tree.getHistory().length).toBe(baselineHistory);
+  });
+
+  it('restores authored capture after a realization write throws', async () => {
+    const tree = signalTree({
+      before: '',
+      after: '',
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      before: { (): string; set(value: string): void };
+      after: { (): string; set(value: string): void };
+      users: {
+        ids(): string[];
+      };
+    }> & {
+      getHistory(): unknown[];
+    };
+
+    tree.$.before.set('A');
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+    const baselineHistory = tree.getHistory().length;
+
+    const owner = getOwnedPositionIds((tree.$ as Record<string, unknown>).users)?.[0];
+    if (owner === undefined) {
+      throw new Error('Expected structural owner');
+    }
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors: new Map(),
+    });
+
+    expect(() =>
+      adapter.applyAtomically([
+        {
+          owner,
+          before: undefined,
+          after: 'u1',
+          subjectId: 1,
+          structural: 'add',
+        },
+      ])
+    ).toThrow('Missing structural restore metadata');
+
+    tree.$.after.set('B');
+    getPathNotifier().flushSync();
+    await Promise.resolve();
+
+    expect(tree.$.before()).toBe('A');
+    expect(tree.$.after()).toBe('B');
+    expect(tree.getHistory().length).toBe(baselineHistory + 1);
+  });
+
+  it('keeps outer transaction authorship active across an inner realization write', () => {
+    const tree = signalTree({ left: '', middle: '', right: '' }).with(
+      transactions()
+    ) as ISignalTree<{
+      left: { (): string; set(value: string): void };
+      middle: { (): string; set(value: string): void };
+      right: { (): string; set(value: string): void };
+    }> & {
+      transaction(fn: () => void): { confirm(): void; rollback(): void };
+      __transactions: {
+        getPendingTurnCount(): number;
+        getConfirmedTurnCount(): number;
+      };
+    };
+    const owner = getOwnedPositionIds(tree.$.middle)?.[0];
+    if (owner === undefined) {
+      throw new Error('Expected owned position for middle');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'middle',
+      positionIds: [owner],
+    });
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const pending = tree.transaction(() => {
+      tree.$.left.set('A');
+      adapter.applyAtomically([{ owner, before: '', after: 'B' }]);
+      tree.$.right.set('C');
+    });
+
+    expect(tree.$.left()).toBe('A');
+    expect(tree.$.middle()).toBe('B');
+    expect(tree.$.right()).toBe('C');
+    expect(tree.__transactions.getPendingTurnCount()).toBe(1);
+
+    pending.rollback();
+
+    expect(tree.$.left()).toBe('');
+    expect(tree.$.middle()).toBe('B');
+    expect(tree.$.right()).toBe('');
+    expect(tree.__transactions.getPendingTurnCount()).toBe(0);
+    expect(tree.__transactions.getConfirmedTurnCount()).toBe(0);
   });
 
   it('validates the full effect set before any mutation and refuses structural drift without partial application', () => {

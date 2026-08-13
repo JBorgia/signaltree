@@ -110,4 +110,37 @@ describe('transaction capture bridge', () => {
       subjectPositions: [3, 4, 5],
     });
   });
+
+  it('ignores matching explicit transaction attribution when the write is marked as causal realization', () => {
+    const owner = { token: 'owner' };
+    const capture = vi.fn();
+    const bridge = createTransactionCaptureBridge({
+      draft: {
+        capture,
+        seal: vi.fn(),
+        confirm: vi.fn(),
+        abort: vi.fn(),
+        getLifecycle: vi.fn(),
+      },
+      turnId: 7,
+      transactionOwner: owner,
+    });
+
+    bridge(
+      'Alicia',
+      'Alice',
+      'profile.name',
+      'profile.name',
+      'system',
+      undefined,
+      [3],
+      {
+        transactionId: 7,
+        transactionOwner: owner,
+        causalMode: 'realization',
+      }
+    );
+
+    expect(capture).not.toHaveBeenCalled();
+  });
 });

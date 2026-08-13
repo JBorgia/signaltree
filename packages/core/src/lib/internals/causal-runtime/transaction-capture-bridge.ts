@@ -1,5 +1,7 @@
 import type { PathNotifierHandler } from '../../path-notifier';
 
+import { getCausalWriteMode } from '../../causal-write-mode';
+
 import type { PositionId, StructuralHistoryEffect, UpdateMetadata } from '../../types';
 
 import type { ExplicitTransactionEffect, GreenfieldTransactionDraft } from './greenfield-transactions';
@@ -46,6 +48,7 @@ export function createTransactionCaptureBridge(options: {
     meta
   ) => {
     if (
+      getCausalWriteMode(meta) === 'realization' ||
       meta?.transactionId !== options.turnId ||
       meta.transactionOwner !== options.transactionOwner
     ) {

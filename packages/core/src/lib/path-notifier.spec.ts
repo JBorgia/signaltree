@@ -170,6 +170,90 @@ describe('PathNotifier (batching)', () => {
     expect(spy).toHaveBeenCalledWith('mixed', [17], [3]);
   });
 
+  it('does not coalesce authoring and realization writes on the same path within one batch', async () => {
+    const notifier = new PathNotifier();
+    const seen = vi.fn();
+
+    notifier.subscribe(
+      'rows.7.name',
+      (value, prev, path, ownerPath, _source, subjectIds, positionIds, meta) => {
+        seen(value, prev, path, ownerPath, subjectIds, positionIds, meta?.causalMode);
+      }
+    );
+
+    notifier.notify('rows.7.name', 'B', 'A', 'rows', [17], [3], {
+      causalMode: 'authoring',
+      mutationIntent: 'replace',
+    });
+    notifier.notify('rows.7.name', 'C', 'B', 'rows', [17], [3], {
+      causalMode: 'realization',
+      mutationIntent: 'replace',
+    });
+    notifier.notify('rows.7.name', 'D', 'C', 'rows', [17], [3], {
+      causalMode: 'authoring',
+      mutationIntent: 'replace',
+    });
+
+    await Promise.resolve();
+
+    expect(seen).toHaveBeenCalledTimes(3);
+    expect(seen).toHaveBeenNthCalledWith(
+      1,
+      'B',
+      'A',
+      'rows.7.name',
+      'rows',
+      [17],
+      [3],
+      'authoring'
+    );
+    expect(seen).toHaveBeenNthCalledWith(
+      2,
+      'C',
+      'B',
+      'rows.7.name',
+      'rows',
+      [17],
+      [3],
+      'realization'
+    );
+    expect(seen).toHaveBeenNthCalledWith(
+      3,
+      'D',
+      'C',
+      'rows.7.name',
+      'rows',
+      [17],
+      [3],
+      'authoring'
+    );
+  });
+
+  it('treats implicit and explicit authoring modes as the same batching class', async () => {
+    const notifier = new PathNotifier();
+    const seen = vi.fn();
+
+    notifier.subscribe(
+      'rows.7.name',
+      (value, prev, path, ownerPath, _source, subjectIds, positionIds, meta) => {
+        seen(value, prev, path, ownerPath, subjectIds, positionIds, meta?.causalMode);
+      }
+    );
+
+    notifier.notify('rows.7.name', 'B', 'A', 'rows', [17], [3], {
+      mutationIntent: 'replace',
+    });
+    notifier.notify('rows.7.name', 'C', 'B', 'rows', [17], [3], {
+      causalMode: 'authoring',
+      mutationIntent: 'replace',
+    });
+
+    await Promise.resolve();
+
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(seen).toHaveBeenCalledWith('C', 'A', 'rows.7.name', 'rows', [17], [3], 'authoring');
+  });
+
   it('preserves rekey metadata on the structural notification only when a later same-subject set happens in the same flush', async () => {
     const rekeyedEntity = { id: 42, name: 'pending' };
     const seen = await captureNotifications((notifier) => {
