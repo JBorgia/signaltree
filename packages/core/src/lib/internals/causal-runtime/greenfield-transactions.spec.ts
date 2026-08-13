@@ -14,6 +14,11 @@ import { getPositionRegistry } from '../position-registry';
 import { createRealizationContextSource } from './realization-context';
 import { createGreenfieldTransactionDraft } from './greenfield-transactions';
 import { createTransactionCaptureBridge, toExplicitTransactionEffect } from './transaction-capture-bridge';
+import {
+  createTreeRealizationAdapter,
+  rememberTreeRealizationDescriptor,
+  type TreeRealizationDescriptor,
+} from './tree-realization-adapter';
 import { undoConfirmedAt } from './confirmed-undo';
 import { TurnStore } from './turn-store';
 
@@ -26,25 +31,6 @@ const P_DRIVER_KEY = 3 as PositionId;
 const P_DRIVER_NAME = 4 as PositionId;
 const P_DRIVER_ENABLED = 5 as PositionId;
 const SUBJECT_DRIVER = 'driver-1';
-
-type CapturedDraftDescriptor = {
-  path: string;
-  ownerPath: string;
-  historyEffect?: StructuralHistoryEffect;
-};
-
-type CollectionNode = {
-  byIdOrFail(id: string | number): unknown;
-  changeId(from: string | number, to: string | number): void;
-  removeOne(id: string | number): void;
-  __restoreOne?(
-    key: string | number,
-    entity: unknown,
-    subjectId: number,
-    beforeSubject?: number,
-    afterSubject?: number
-  ): void;
-};
 
 const createMockStorage = (): Storage => {
   const map = new Map<string, string>();
@@ -66,18 +52,6 @@ const createMockStorage = (): Storage => {
   };
 };
 
-const resolveNodeAtPath = (
-  root: Record<string, unknown>,
-  path: string
-): unknown => {
-  let cursor: unknown = root;
-  for (const segment of path.split('.')) {
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-
-  return cursor;
-};
-
 const createLiveDraftHarness = (
   draft: ReturnType<typeof createGreenfieldTransactionDraft>,
   turnId: number
@@ -85,7 +59,7 @@ const createLiveDraftHarness = (
   const notifier = getPathNotifier();
   const transactionOwner = {};
   const baselineValues = new Map<PositionId, unknown>();
-  const descriptors = new Map<PositionId, CapturedDraftDescriptor>();
+  const descriptors = new Map<PositionId, TreeRealizationDescriptor>();
   const bridge = createTransactionCaptureBridge({
     draft,
     turnId,
@@ -112,10 +86,12 @@ const createLiveDraftHarness = (
         baselineValues.set(captured.owner, captured.before);
       }
       if (captured) {
-        descriptors.set(captured.owner, {
+        rememberTreeRealizationDescriptor({
+          descriptors,
           path,
-          ownerPath: ownerPath ?? path,
-          historyEffect: meta?.historyEffect,
+          ownerPath,
+          positionIds,
+          meta,
         });
       }
 
@@ -146,86 +122,13 @@ const createLiveDraftHarness = (
   };
 };
 
-const applyLiveTreeEffects = (
-  tree: ISignalTree<object>,
-  descriptors: ReadonlyMap<PositionId, CapturedDraftDescriptor>,
-  effects: readonly Array<{
-    owner: PositionId;
-    before: unknown;
-    after: unknown;
-    subjectId?: unknown;
-    structural?: 'add' | 'remove' | 'rekey';
-  }>
-): void => {
-  for (const effect of effects) {
-    const descriptor = descriptors.get(effect.owner);
-    if (!descriptor) {
-      throw new Error(`Missing live descriptor for owner ${String(effect.owner)}`);
-    }
-
-    withWriteContext(
-      {
-        intent: 'system',
-        source: 'system',
-        positionIds: [effect.owner],
-        subjectIds:
-          typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
-      },
-      () => {
-        if (!effect.structural) {
-          const leaf = resolveNodeAtPath(
-            tree.$ as Record<string, unknown>,
-            descriptor.path
-          ) as { set(value: unknown): void };
-          leaf.set(effect.after);
-          return;
-        }
-
-        const ownerNode = resolveNodeAtPath(
-          tree.$ as Record<string, unknown>,
-          descriptor.ownerPath
-        ) as CollectionNode;
-
-        switch (effect.structural) {
-          case 'rekey':
-            ownerNode.changeId(
-              effect.before as string | number,
-              effect.after as string | number
-            );
-            return;
-          case 'remove':
-            ownerNode.removeOne(effect.before as string | number);
-            return;
-          case 'add': {
-            const historyEffect = descriptor.historyEffect;
-            if (!historyEffect || historyEffect.kind === 'rekey') {
-              throw new Error(
-                `Missing structural restore metadata for owner ${String(effect.owner)}`
-              );
-            }
-
-            ownerNode.__restoreOne?.(
-              effect.after as string | number,
-              historyEffect.value,
-              effect.subjectId as number,
-              historyEffect.beforeSubject,
-              historyEffect.afterSubject
-            );
-            return;
-          }
-        }
-      }
-    );
-  }
-};
-
 const createActualTreeAbort = (options: {
   tree: ISignalTree<object>;
   authority: PositionId;
   store: TurnStore;
   appliedHistory: AppliedHistory;
   baselineValues: ReadonlyMap<PositionId, unknown>;
-  descriptors: ReadonlyMap<PositionId, CapturedDraftDescriptor>;
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>;
 }) => {
   const topology = getPositionRegistry(options.tree.$);
   if (!topology) {
@@ -244,11 +147,10 @@ const createActualTreeAbort = (options: {
       turnId,
       store: options.store,
       topology,
-      port: {
-        applyAtomically(effects) {
-          applyLiveTreeEffects(options.tree, options.descriptors, effects);
-        },
-      },
+      port: createTreeRealizationAdapter({
+        tree: options.tree,
+        descriptors: options.descriptors,
+      }),
       realizationContext,
     });
 };
@@ -1233,6 +1135,13 @@ describe('greenfield transactions', () => {
           after: 'u2',
           subjectId: originalSubject,
           structural: 'rekey',
+          structuralContext: {
+            kind: 'rekey',
+            subject: originalSubject as number,
+            beforeKey: 'u1',
+            afterKey: 'u2',
+            subjectPositions: [usersOwner],
+          },
           subjectPositions: [usersOwner],
         },
         {
@@ -1294,6 +1203,14 @@ describe('greenfield transactions', () => {
           after: 'u1',
           subjectId: 1,
           structural: 'add',
+          structuralContext: {
+            kind: 'add',
+            subject: 1,
+            key: 'u1',
+            value: { id: 'u1', name: 'Jonathan' },
+            beforeSubject: undefined,
+            subjectPositions: [usersOwner],
+          },
           subjectPositions: [usersOwner],
         },
       ],
@@ -1339,6 +1256,15 @@ describe('greenfield transactions', () => {
           after: undefined,
           subjectId: 1,
           structural: 'remove',
+          structuralContext: {
+            kind: 'remove',
+            subject: 1,
+            key: 'u1',
+            value: { id: 'u1', name: 'Jonathan' },
+            beforeSubject: undefined,
+            afterSubject: undefined,
+            subjectPositions: [usersOwner],
+          },
           subjectPositions: [usersOwner],
         },
       ],
@@ -1416,6 +1342,15 @@ describe('greenfield transactions', () => {
           after: undefined,
           subjectId: 1,
           structural: 'remove',
+          structuralContext: {
+            kind: 'remove',
+            subject: 1,
+            key: 'u1',
+            value: { id: 'u1', name: 'Alice', enabled: true },
+            beforeSubject: undefined,
+            afterSubject: undefined,
+            subjectPositions: [usersOwner],
+          },
           subjectPositions: [usersOwner],
         },
       ],
@@ -1434,5 +1369,253 @@ describe('greenfield transactions', () => {
     expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
 
     liveHarness.dispose();
+  });
+
+  it('restores multiple removed subjects in one live transaction abort even when they share one collection owner', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: (() => string | undefined) & { __subjectIds?: number[] };
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+    tree.$.users.addOne({ id: 'u2', name: 'Bob' });
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    let liveHarness:
+      | ReturnType<typeof createLiveDraftHarness>
+      | undefined;
+    const liveDraft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+      abortPendingTurn: (turnId) => {
+        if (!liveHarness) {
+          throw new Error('Live draft harness was not initialized');
+        }
+
+        return createActualTreeAbort({
+          tree: tree as ISignalTree<object>,
+          authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+          store,
+          appliedHistory,
+          baselineValues: liveHarness.baselineValues,
+          descriptors: liveHarness.descriptors,
+        })(turnId);
+      },
+    });
+    liveHarness = createLiveDraftHarness(liveDraft, 1);
+
+    const subjectOne = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0];
+    const subjectTwo = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+
+    liveHarness.write(() => {
+      tree.$.users.removeOne('u1');
+      tree.$.users.removeOne('u2');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.users.ids()).toEqual([]);
+
+    liveDraft.seal();
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+    expect(tree.$.users.ids()).toEqual(['u1', 'u2']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
+    expect(tree.$.users.byIdOrFail('u2').name()).toBe('Bob');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(subjectOne);
+    expect(tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0]).toBe(subjectTwo);
+
+    liveHarness.dispose();
+  });
+
+  it('undoes a confirmed structural remove after the live transaction harness is disposed', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string; enabled: boolean }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string; enabled: boolean }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: (() => string | undefined) & { __subjectIds?: number[] };
+          enabled(): boolean | undefined;
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice', enabled: true });
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({ turnId: 1, store, appliedHistory });
+    const liveHarness = createLiveDraftHarness(draft, 1);
+
+    liveHarness.write(() => {
+      tree.$.users.removeOne('u1');
+    });
+    liveHarness.flush();
+
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: getOwnedPositionIds(tree.$.users)?.[0] as PositionId,
+          before: 'u1',
+          after: undefined,
+          subjectId: 1,
+          structural: 'remove',
+          structuralContext: {
+            kind: 'remove',
+            subject: 1,
+            key: 'u1',
+            value: { id: 'u1', name: 'Alice', enabled: true },
+            beforeSubject: undefined,
+            afterSubject: undefined,
+            subjectPositions: [getOwnedPositionIds(tree.$.users)?.[0] as PositionId],
+          },
+          subjectPositions: [getOwnedPositionIds(tree.$.users)?.[0] as PositionId],
+        },
+      ],
+      participants: [getOwnedPositionIds(tree.$.users)?.[0] as PositionId],
+      state: 'pending',
+    });
+    expect(draft.confirm()).toEqual({ ok: true, turnId: 1 });
+    liveHarness.dispose();
+
+    expect(tree.$.users.ids()).toEqual([]);
+
+    const topology = getPositionRegistry(tree.$);
+    if (!topology) {
+      throw new Error('Expected tree position registry');
+    }
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors: new Map(),
+    });
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map(),
+      store,
+      appliedHistory,
+    });
+
+    expect(
+      undoConfirmedAt({
+        authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+        store,
+        appliedHistory,
+        topology,
+        port: adapter,
+        realizationContext,
+      })
+    ).toEqual({ ok: true, turnId: 1 });
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
+    expect(tree.$.users.byIdOrFail('u1').enabled()).toBe(true);
+  });
+
+  it('restores the authored structural snapshot rather than a later-mutated detached entity alias', () => {
+    resetPathNotifier();
+    const original = {
+      id: 'u1',
+      name: 'Alice',
+      settings: { enabled: true },
+    };
+    const tree = signalTree({
+      users: entityMap<{
+        id: string;
+        name: string;
+        settings: { enabled: boolean };
+      }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: {
+          id: string;
+          name: string;
+          settings: { enabled: boolean };
+        }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        all(): Array<{
+          id: string;
+          name: string;
+          settings: { enabled: boolean };
+        }>;
+      };
+    }>;
+
+    tree.$.users.addOne(original);
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({ turnId: 1, store, appliedHistory });
+    const liveHarness = createLiveDraftHarness(draft, 1);
+
+    liveHarness.write(() => {
+      tree.$.users.removeOne('u1');
+    });
+    liveHarness.flush();
+
+    const sealed = draft.seal();
+    expect(sealed.state).toBe('pending');
+    expect(draft.confirm()).toEqual({ ok: true, turnId: 1 });
+
+    original.name = 'Mallory';
+    original.settings.enabled = false;
+    liveHarness.dispose();
+
+    const topology = getPositionRegistry(tree.$);
+    if (!topology) {
+      throw new Error('Expected tree position registry');
+    }
+
+    expect(tree.$.users.ids()).toEqual([]);
+
+    expect(
+      undoConfirmedAt({
+        authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+        store,
+        appliedHistory,
+        topology,
+        port: createTreeRealizationAdapter({
+          tree: tree as ISignalTree<object>,
+          descriptors: new Map(),
+        }),
+        realizationContext: createRealizationContextSource({
+          baselineValues: new Map(),
+          store,
+          appliedHistory,
+        }),
+      })
+    ).toEqual({ ok: true, turnId: 1 });
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.all()).toEqual([
+      {
+        id: 'u1',
+        name: 'Alice',
+        settings: { enabled: true },
+      },
+    ]);
   });
 });

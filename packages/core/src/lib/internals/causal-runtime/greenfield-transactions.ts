@@ -1,3 +1,5 @@
+import type { StructuralHistoryEffect } from '../../types';
+
 import type { AppliedHistory } from './applied-history';
 import type { CausalTurn, PositionId, ReversalResult, TurnId } from './causal-types';
 import { confirmPendingTurnAt } from './pending-confirmation';
@@ -10,6 +12,7 @@ export interface ExplicitTransactionEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: 'add' | 'remove' | 'rekey';
+  readonly structuralContext?: StructuralHistoryEffect;
   readonly subjectPositions?: readonly PositionId[];
 }
 
@@ -57,6 +60,7 @@ class DefaultGreenfieldTransactionDraft implements GreenfieldTransactionDraft {
       after: effect.after,
       subjectId: effect.subjectId,
       structural: effect.structural,
+      structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
     });
   }
@@ -159,6 +163,7 @@ function shouldPreserveAuthoredEffect(effect: ExplicitTransactionEffect): boolea
   return (
     effect.subjectId !== undefined ||
     effect.structural !== undefined ||
+    effect.structuralContext !== undefined ||
     effect.subjectPositions !== undefined
   );
 }
@@ -172,6 +177,7 @@ function copyEffect(
     after: effect.after,
     subjectId: effect.subjectId,
     structural: effect.structural,
+    structuralContext: effect.structuralContext,
     subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
   };
 }

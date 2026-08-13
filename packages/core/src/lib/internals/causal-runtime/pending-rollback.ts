@@ -131,6 +131,7 @@ function createPendingRollbackEffect(
       after: deriveStructuralRollbackAfter(effect),
       subjectId: effect.subjectId,
       structural,
+      structuralContext: effect.structuralContext,
       subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
     };
   }
@@ -141,6 +142,7 @@ function createPendingRollbackEffect(
     after: realizationContext.getValueWithoutPendingTurn(turnId, effect.owner),
     subjectId: effect.subjectId,
     structural,
+    structuralContext: effect.structuralContext,
     subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
   };
 }

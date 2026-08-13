@@ -1,4 +1,4 @@
-import type { PositionId } from '../../types';
+import type { PositionId, StructuralHistoryEffect } from '../../types';
 
 export type { PositionId };
 
@@ -12,6 +12,15 @@ export interface CausalEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: StructuralEffect;
+  /**
+   * Producer-authored structural information required to realize this
+   * existence transition after the original mutation context is gone.
+   *
+   * This is durable canonical history. It is an authored structural snapshot,
+   * not the current contextual subject state; planners derive that separately
+   * as `subjectState` when realizing undo/redo.
+   */
+  readonly structuralContext?: StructuralHistoryEffect;
   // Structural coverage for an authored existence transition. These positions may
   // supply payload needed to physically realize add/remove without becoming
   // independent value participants in the turn.
@@ -31,6 +40,8 @@ export interface ReversalEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: StructuralEffect;
+  /** Durable structural recipe carried from canonical history into realization. */
+  readonly structuralContext?: StructuralHistoryEffect;
   // Structural coverage carried forward so reversal can reconstruct the physical
   // subject boundary at the structural effect boundary.
   readonly subjectPositions?: readonly PositionId[];

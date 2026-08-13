@@ -30,6 +30,15 @@ describe('transaction capture bridge', () => {
       after: undefined,
       subjectId: 17,
       structural: 'remove',
+      structuralContext: {
+        kind: 'remove',
+        subject: 17,
+        key: 'u1',
+        value: { id: 'u1', name: 'Alice', enabled: true },
+        beforeSubject: 16,
+        afterSubject: 18,
+        subjectPositions: [3, 4, 5],
+      },
       subjectPositions: [3, 4, 5],
     });
   });
@@ -91,6 +100,13 @@ describe('transaction capture bridge', () => {
       after: 'u2',
       subjectId: 17,
       structural: 'rekey',
+      structuralContext: {
+        kind: 'rekey',
+        subject: 17,
+        beforeKey: 'u1',
+        afterKey: 'u2',
+        subjectPositions: [3, 4, 5],
+      },
       subjectPositions: [3, 4, 5],
     });
   });

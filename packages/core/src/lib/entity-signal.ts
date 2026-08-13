@@ -1,4 +1,5 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
+import { deepClone } from '@signaltree/shared';
 
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
@@ -554,7 +555,7 @@ export function createEntitySignal<
       kind: 'add',
       subject: subjectIdsForWrite[0],
       key: id,
-      value: transformedEntity,
+        value: deepClone(transformedEntity),
       beforeSubject:
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
@@ -1224,7 +1225,7 @@ export function createEntitySignal<
             kind: 'add',
             subject: subjectIdsForWrite[i],
             key: id,
-            value: entity,
+            value: deepClone(entity),
             beforeSubject:
               beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
             subjectPositions: deriveSubjectPositions(id, entity),
@@ -1470,7 +1471,7 @@ export function createEntitySignal<
         kind: 'remove',
         subject: subjectIdsForWrite[0],
         key: id,
-        value: entity,
+        value: deepClone(entity),
         beforeSubject,
         afterSubject,
         subjectPositions: deriveSubjectPositions(id, entity),
@@ -1561,7 +1562,7 @@ export function createEntitySignal<
             kind: 'remove',
             subject: subjectIdsForWrite[i],
             key: id,
-            value: entity,
+            value: deepClone(entity),
             beforeSubject: neighborSubjects.get(id)?.beforeSubject,
             afterSubject: neighborSubjects.get(id)?.afterSubject,
             subjectPositions: deriveSubjectPositions(id, entity),

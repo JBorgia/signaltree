@@ -38,12 +38,13 @@ function createReapplyEffects(
 ): ConfirmedReapplyPlan['effects'] {
   if (!realizationContext) {
     return turn.effects.map(
-      ({ owner, before, after, subjectId, structural, subjectPositions }) => ({
+      ({ owner, before, after, subjectId, structural, structuralContext, subjectPositions }) => ({
       owner,
       before,
       after,
       subjectId,
       structural,
+        structuralContext,
       subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
     })
     );
@@ -64,6 +65,7 @@ function createReapplyEffects(
       after: effect.after,
       subjectId: effect.subjectId,
       structural: effect.structural,
+      structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
     };
   });

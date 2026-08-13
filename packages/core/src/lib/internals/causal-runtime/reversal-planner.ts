@@ -39,12 +39,13 @@ function createReversalEffects(
   if (!realizationContext) {
     return [...turn.effects]
       .reverse()
-      .map(({ owner, before, after, subjectId, structural, subjectPositions }) => ({
+      .map(({ owner, before, after, subjectId, structural, structuralContext, subjectPositions }) => ({
         owner,
         before: after,
         after: before,
         subjectId,
         structural: deriveUndoStructural(structural),
+        structuralContext,
         subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
         subjectState: undefined,
       }));
@@ -60,19 +61,25 @@ function createReversalEffects(
 
   return [...turn.effects].reverse().map((effect) => {
     const originalIndex = turn.effects.indexOf(effect);
-    const before = currentByOwner.has(effect.owner)
-      ? currentByOwner.get(effect.owner)
-      : realizationContext.getCurrentValue(effect.owner);
-    const after = firstEffectIndexByOwner.get(effect.owner) === originalIndex
-      ? realizationContext.getValueWithoutConfirmedTurn(turn.id, effect.owner)
-      : effect.before;
+    const structural = deriveUndoStructural(effect.structural);
+    const before = effect.structural !== undefined
+      ? deriveStructuralUndoBefore(effect)
+      : currentByOwner.has(effect.owner)
+        ? currentByOwner.get(effect.owner)
+        : realizationContext.getCurrentValue(effect.owner);
+    const after = effect.structural !== undefined
+      ? deriveStructuralUndoAfter(effect)
+      : firstEffectIndexByOwner.get(effect.owner) === originalIndex
+        ? realizationContext.getValueWithoutConfirmedTurn(turn.id, effect.owner)
+        : effect.before;
 
     const reversedEffect = {
       owner: effect.owner,
       before,
       after,
       subjectId: effect.subjectId,
-      structural: deriveUndoStructural(effect.structural),
+      structural,
+      structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
       subjectState: deriveUndoSubjectState({
         turn,
@@ -148,6 +155,34 @@ function deriveUndoSubjectState(options: {
   }
 
   return Object.fromEntries(entries.map(([positionId, value]) => [String(positionId), value]));
+}
+
+function deriveStructuralUndoBefore(
+  effect: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number]
+): unknown {
+  switch (effect.structural) {
+    case 'add':
+    case 'remove':
+      return effect.after;
+    case 'rekey':
+      return effect.after;
+    default:
+      return effect.before;
+  }
+}
+
+function deriveStructuralUndoAfter(
+  effect: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number]
+): unknown {
+  switch (effect.structural) {
+    case 'add':
+    case 'remove':
+      return effect.before;
+    case 'rekey':
+      return effect.before;
+    default:
+      return effect.after;
+  }
 }
 
 function seedCurrentBoundary(
