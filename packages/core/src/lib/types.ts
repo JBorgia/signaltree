@@ -55,6 +55,14 @@ export type StructuralHistoryEffect =
       value: unknown;
       beforeSubject?: number;
       afterSubject?: number;
+      /**
+       * Structural ownership positions encompassed by this existence transition.
+       *
+       * Coverage is expressed at structural ownership granularity and does not
+       * imply enumeration, participation, indexing, frontier advancement, or
+       * authority for descendant reactive positions.
+       */
+      subjectPositions?: readonly PositionId[];
     }
   | {
       kind: 'remove';
@@ -63,12 +71,28 @@ export type StructuralHistoryEffect =
       value: unknown;
       beforeSubject?: number;
       afterSubject?: number;
+      /**
+       * Structural ownership positions encompassed by this existence transition.
+       *
+       * Coverage is expressed at structural ownership granularity and does not
+       * imply enumeration, participation, indexing, frontier advancement, or
+       * authority for descendant reactive positions.
+       */
+      subjectPositions?: readonly PositionId[];
     }
   | {
       kind: 'rekey';
       subject: number;
       beforeKey: string | number;
       afterKey: string | number;
+      /**
+       * Structural ownership positions encompassed by this existence transition.
+       *
+       * Coverage is expressed at structural ownership granularity and does not
+       * imply enumeration, participation, indexing, frontier advancement, or
+       * authority for descendant reactive positions.
+       */
+      subjectPositions?: readonly PositionId[];
     };
 
 export type PositionId = number;

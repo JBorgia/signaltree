@@ -441,6 +441,7 @@ describe('structural history effect delivery', () => {
         kind: 'add',
         key: 17,
         subject: seenA[0]?.subjectIds?.[0],
+        subjectPositions: seenA[0]?.positionIds,
       },
       positionIds: seenB[0]?.positionIds,
     });
@@ -465,6 +466,7 @@ describe('structural history effect delivery', () => {
         kind: 'remove',
         key: 17,
         subject: seenA[0]?.subjectIds?.[0],
+        subjectPositions: seenA[0]?.positionIds,
       },
       positionIds: seenB[0]?.positionIds,
     });
@@ -488,9 +490,29 @@ describe('structural history effect delivery', () => {
         beforeKey: 17,
         afterKey: 27,
         subject: seenA[0]?.subjectIds?.[0],
+        subjectPositions: seenA[0]?.positionIds,
       },
       positionIds: seenB[0]?.positionIds,
     });
+  });
+
+  it('authors complete canonical structural coverage on add, remove, and rekey envelopes', () => {
+    const { seenA } = observeStructuralMutation((api, resetSeen) => {
+      api.addOne({ id: 17, name: 'target' });
+      api.changeId(17, 27);
+      api.removeOne(27);
+      resetSeen();
+      api.addOne({ id: 33, name: 'added' });
+      api.changeId(33, 44);
+      api.removeOne(44);
+    });
+
+    expect(seenA).toHaveLength(3);
+    for (const event of seenA) {
+      expect(event.historyEffect).toMatchObject({
+        subjectPositions: event.positionIds,
+      });
+    }
   });
 });
 

@@ -1,9 +1,19 @@
 import type { PositionId } from './causal-types';
 import { AppliedHistory } from './applied-history';
 import { rollbackPendingTurnAt } from './pending-rollback';
+import { getPathNotifier, resetPathNotifier } from '../../path-notifier';
+import { signalTree } from '../../signal-tree';
+import type { ISignalTree, StructuralHistoryEffect, UpdateMetadata } from '../../types';
+import { withWriteContext } from '../../write-context';
+import { entityMap } from '../../markers/entity-map';
+import { LoadingState, status } from '../../markers/status';
+import { stored } from '../../markers/stored';
+import { getOwnedPositionIds } from '../owned-mutation';
 import { createPositionRegistry } from '../position-registry';
+import { getPositionRegistry } from '../position-registry';
 import { createRealizationContextSource } from './realization-context';
 import { createGreenfieldTransactionDraft } from './greenfield-transactions';
+import { createTransactionCaptureBridge, toExplicitTransactionEffect } from './transaction-capture-bridge';
 import { undoConfirmedAt } from './confirmed-undo';
 import { TurnStore } from './turn-store';
 
@@ -16,6 +26,232 @@ const P_DRIVER_KEY = 3 as PositionId;
 const P_DRIVER_NAME = 4 as PositionId;
 const P_DRIVER_ENABLED = 5 as PositionId;
 const SUBJECT_DRIVER = 'driver-1';
+
+type CapturedDraftDescriptor = {
+  path: string;
+  ownerPath: string;
+  historyEffect?: StructuralHistoryEffect;
+};
+
+type CollectionNode = {
+  byIdOrFail(id: string | number): unknown;
+  changeId(from: string | number, to: string | number): void;
+  removeOne(id: string | number): void;
+  __restoreOne?(
+    key: string | number,
+    entity: unknown,
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): void;
+};
+
+const createMockStorage = (): Storage => {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key: string) => map.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      map.set(key, value);
+    },
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
+    clear: () => {
+      map.clear();
+    },
+    key: (index: number) => Array.from(map.keys())[index] ?? null,
+    get length() {
+      return map.size;
+    },
+  };
+};
+
+const resolveNodeAtPath = (
+  root: Record<string, unknown>,
+  path: string
+): unknown => {
+  let cursor: unknown = root;
+  for (const segment of path.split('.')) {
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+
+  return cursor;
+};
+
+const createLiveDraftHarness = (
+  draft: ReturnType<typeof createGreenfieldTransactionDraft>,
+  turnId: number
+) => {
+  const notifier = getPathNotifier();
+  const transactionOwner = {};
+  const baselineValues = new Map<PositionId, unknown>();
+  const descriptors = new Map<PositionId, CapturedDraftDescriptor>();
+  const bridge = createTransactionCaptureBridge({
+    draft,
+    turnId,
+    transactionOwner,
+  });
+  const unsubscribe = notifier.subscribe(
+    '**',
+    (next, prev, path, ownerPath, source, subjectIds, positionIds, meta) => {
+      if (
+        meta?.transactionId !== turnId ||
+        meta.transactionOwner !== transactionOwner
+      ) {
+        return;
+      }
+
+      const captured = toExplicitTransactionEffect({
+        next,
+        prev,
+        subjectIds,
+        positionIds,
+        meta,
+      });
+      if (captured && !baselineValues.has(captured.owner)) {
+        baselineValues.set(captured.owner, captured.before);
+      }
+      if (captured) {
+        descriptors.set(captured.owner, {
+          path,
+          ownerPath: ownerPath ?? path,
+          historyEffect: meta?.historyEffect,
+        });
+      }
+
+      bridge(next, prev, path, ownerPath, source, subjectIds, positionIds, meta);
+    }
+  );
+
+  return {
+    baselineValues,
+    descriptors,
+    write<R>(fn: () => R): R {
+      return withWriteContext(
+        {
+          intent: 'user',
+          source: 'user',
+          transactionId: turnId,
+          transactionOwner,
+        },
+        fn
+      );
+    },
+    flush(): void {
+      notifier.flushSync();
+    },
+    dispose(): void {
+      unsubscribe();
+    },
+  };
+};
+
+const applyLiveTreeEffects = (
+  tree: ISignalTree<object>,
+  descriptors: ReadonlyMap<PositionId, CapturedDraftDescriptor>,
+  effects: readonly Array<{
+    owner: PositionId;
+    before: unknown;
+    after: unknown;
+    subjectId?: unknown;
+    structural?: 'add' | 'remove' | 'rekey';
+  }>
+): void => {
+  for (const effect of effects) {
+    const descriptor = descriptors.get(effect.owner);
+    if (!descriptor) {
+      throw new Error(`Missing live descriptor for owner ${String(effect.owner)}`);
+    }
+
+    withWriteContext(
+      {
+        intent: 'system',
+        source: 'system',
+        positionIds: [effect.owner],
+        subjectIds:
+          typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+      },
+      () => {
+        if (!effect.structural) {
+          const leaf = resolveNodeAtPath(
+            tree.$ as Record<string, unknown>,
+            descriptor.path
+          ) as { set(value: unknown): void };
+          leaf.set(effect.after);
+          return;
+        }
+
+        const ownerNode = resolveNodeAtPath(
+          tree.$ as Record<string, unknown>,
+          descriptor.ownerPath
+        ) as CollectionNode;
+
+        switch (effect.structural) {
+          case 'rekey':
+            ownerNode.changeId(
+              effect.before as string | number,
+              effect.after as string | number
+            );
+            return;
+          case 'remove':
+            ownerNode.removeOne(effect.before as string | number);
+            return;
+          case 'add': {
+            const historyEffect = descriptor.historyEffect;
+            if (!historyEffect || historyEffect.kind === 'rekey') {
+              throw new Error(
+                `Missing structural restore metadata for owner ${String(effect.owner)}`
+              );
+            }
+
+            ownerNode.__restoreOne?.(
+              effect.after as string | number,
+              historyEffect.value,
+              effect.subjectId as number,
+              historyEffect.beforeSubject,
+              historyEffect.afterSubject
+            );
+            return;
+          }
+        }
+      }
+    );
+  }
+};
+
+const createActualTreeAbort = (options: {
+  tree: ISignalTree<object>;
+  authority: PositionId;
+  store: TurnStore;
+  appliedHistory: AppliedHistory;
+  baselineValues: ReadonlyMap<PositionId, unknown>;
+  descriptors: ReadonlyMap<PositionId, CapturedDraftDescriptor>;
+}) => {
+  const topology = getPositionRegistry(options.tree.$);
+  if (!topology) {
+    throw new Error('Expected tree position registry');
+  }
+
+  const realizationContext = createRealizationContextSource({
+    baselineValues: new Map(options.baselineValues),
+    store: options.store,
+    appliedHistory: options.appliedHistory,
+  });
+
+  return (turnId: number) =>
+    rollbackPendingTurnAt({
+      authority: options.authority,
+      turnId,
+      store: options.store,
+      topology,
+      port: {
+        applyAtomically(effects) {
+          applyLiveTreeEffects(options.tree, options.descriptors, effects);
+        },
+      },
+      realizationContext,
+    });
+};
 
 describe('greenfield transactions', () => {
   it('seals explicitly captured live effects into one pending turn, then confirms without additional physical writes', () => {
@@ -744,5 +980,459 @@ describe('greenfield transactions', () => {
       participants: [P_DRIVER_KEY],
       state: 'pending',
     });
+  });
+
+  it('captures a real SignalTree leaf write into an open draft, seals it as pending, then confirms without extra writes', () => {
+    resetPathNotifier();
+    const tree = signalTree({ theme: 'light' }) as ISignalTree<{ theme: string }>;
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+    });
+    const harness = createLiveDraftHarness(draft, 1);
+    const notifications: Array<{ path: string; meta?: UpdateMetadata }> = [];
+    const unsubscribe = getPathNotifier().subscribe(
+      '**',
+      (_next, _prev, path, _ownerPath, _source, _subjectIds, _positionIds, meta) => {
+        notifications.push({ path, meta });
+      }
+    );
+
+    expect(draft.getLifecycle()).toBe('open');
+    expect(store.getPendingTurnIds()).toEqual([]);
+
+    harness.write(() => {
+      tree.$.theme.set('dark');
+    });
+    harness.flush();
+
+    expect(tree.$.theme()).toBe('dark');
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+    expect(notifications).toHaveLength(1);
+
+    const owner = getOwnedPositionIds(tree.$.theme)?.[0] as PositionId;
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [{ owner, before: 'light', after: 'dark' }],
+      participants: [owner],
+      state: 'pending',
+    });
+
+    expect(draft.confirm()).toEqual({ ok: true, turnId: 1 });
+    harness.flush();
+
+    expect(draft.getLifecycle()).toBe('confirmed');
+    expect(notifications).toHaveLength(1);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns()).toEqual([
+      {
+        id: 1,
+        effects: [{ owner, before: 'light', after: 'dark' }],
+        participants: [owner],
+        state: 'confirmed',
+      },
+    ]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([1]);
+
+    unsubscribe();
+    harness.dispose();
+  });
+
+  it('nets repeated real scalar writes inside one draft from the first before value to the final after value', () => {
+    resetPathNotifier();
+    const tree = signalTree({ theme: 'A' }) as ISignalTree<{ theme: string }>;
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+    });
+    const harness = createLiveDraftHarness(draft, 1);
+
+    harness.write(() => {
+      tree.$.theme.set('B');
+      tree.$.theme.set('C');
+    });
+    harness.flush();
+
+    const owner = getOwnedPositionIds(tree.$.theme)?.[0] as PositionId;
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [{ owner, before: 'A', after: 'C' }],
+      participants: [owner],
+      state: 'pending',
+    });
+
+    harness.dispose();
+  });
+
+  it('keeps explicit attribution local when two real drafts interleave writes', () => {
+    resetPathNotifier();
+    const tree = signalTree({ a: 'A', b: 'B', c: 'C' }) as ISignalTree<{
+      a: string;
+      b: string;
+      c: string;
+    }>;
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const firstDraft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+    });
+    const secondDraft = createGreenfieldTransactionDraft({
+      turnId: 2,
+      store,
+      appliedHistory,
+    });
+    const firstHarness = createLiveDraftHarness(firstDraft, 1);
+    const secondHarness = createLiveDraftHarness(secondDraft, 2);
+
+    firstHarness.write(() => {
+      tree.$.a.set('A1');
+    });
+    firstHarness.flush();
+
+    secondHarness.write(() => {
+      tree.$.b.set('B1');
+    });
+    secondHarness.flush();
+
+    firstHarness.write(() => {
+      tree.$.c.set('C1');
+    });
+    firstHarness.flush();
+
+    const aOwner = getOwnedPositionIds(tree.$.a)?.[0] as PositionId;
+    const bOwner = getOwnedPositionIds(tree.$.b)?.[0] as PositionId;
+    const cOwner = getOwnedPositionIds(tree.$.c)?.[0] as PositionId;
+
+    expect(firstDraft.seal()).toEqual({
+      id: 1,
+      effects: [
+        { owner: aOwner, before: 'A', after: 'A1' },
+        { owner: cOwner, before: 'C', after: 'C1' },
+      ],
+      participants: [aOwner, cOwner],
+      state: 'pending',
+    });
+    expect(secondDraft.seal()).toEqual({
+      id: 2,
+      effects: [{ owner: bOwner, before: 'B', after: 'B1' }],
+      participants: [bOwner],
+      state: 'pending',
+    });
+
+    firstHarness.dispose();
+    secondHarness.dispose();
+  });
+
+  it('captures heterogeneous real writes on one draft and aborts them through the frozen kernel', () => {
+    resetPathNotifier();
+    const storage = createMockStorage();
+    storage.setItem(
+      'greenfield-live-preference',
+      JSON.stringify({ __v: 1, data: 'compact' })
+    );
+
+    const tree = signalTree({
+      profile: { firstName: 'John' },
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+      request: status(),
+      preference: stored('greenfield-live-preference', 'compact', {
+        storage,
+        debounceMs: 0,
+      }),
+    }) as ISignalTree<{
+      profile: { firstName: string };
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        changeId(from: string, to: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: (() => string | undefined) & { __subjectIds?: number[] };
+        };
+      };
+      request: {
+        state(): LoadingState;
+        setLoading(): void;
+      };
+      preference: {
+        (): string;
+        set(value: string): void;
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Jonathan' });
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    let liveHarness:
+      | ReturnType<typeof createLiveDraftHarness>
+      | undefined;
+    const liveDraft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+      abortPendingTurn: (turnId) => {
+        if (!liveHarness) {
+          throw new Error('Live draft harness was not initialized');
+        }
+
+        return createActualTreeAbort({
+          tree: tree as ISignalTree<object>,
+          authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+          store,
+          appliedHistory,
+          baselineValues: liveHarness.baselineValues,
+          descriptors: liveHarness.descriptors,
+        })(turnId);
+      },
+    });
+    liveHarness = createLiveDraftHarness(liveDraft, 1);
+
+    const originalSubject = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0];
+
+    liveHarness.write(() => {
+      tree.$.profile.firstName.set('Jane');
+      tree.$.users.changeId('u1', 'u2');
+      tree.$.request.setLoading();
+      tree.$.preference.set('spacious');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.profile.firstName()).toBe('Jane');
+    expect(tree.$.users.ids()).toEqual(['u2']);
+    expect(tree.$.request.state()).toBe(LoadingState.Loading);
+    expect(tree.$.preference()).toBe('spacious');
+    expect(
+      JSON.parse(storage.getItem('greenfield-live-preference') as string).data
+    ).toBe('spacious');
+    expect(store.getPendingTurnIds()).toEqual([]);
+
+    const profileOwner = getOwnedPositionIds(tree.$.profile.firstName)?.[0] as PositionId;
+    const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
+    const requestOwner = getOwnedPositionIds(tree.$.request)?.[0] as PositionId;
+    const preferenceOwner = getOwnedPositionIds(tree.$.preference)?.[0] as PositionId;
+
+    expect(liveDraft.seal()).toEqual({
+      id: 1,
+      effects: [
+        { owner: profileOwner, before: 'John', after: 'Jane' },
+        {
+          owner: usersOwner,
+          before: 'u1',
+          after: 'u2',
+          subjectId: originalSubject,
+          structural: 'rekey',
+          subjectPositions: [usersOwner],
+        },
+        {
+          owner: requestOwner,
+          before: LoadingState.NotLoaded,
+          after: LoadingState.Loading,
+        },
+        { owner: preferenceOwner, before: 'compact', after: 'spacious' },
+      ],
+      participants: [profileOwner, usersOwner, requestOwner, preferenceOwner],
+      state: 'pending',
+    });
+
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+
+    expect(tree.$.profile.firstName()).toBe('John');
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.request.state()).toBe(LoadingState.NotLoaded);
+    expect(tree.$.preference()).toBe('compact');
+    expect(
+      JSON.parse(storage.getItem('greenfield-live-preference') as string).data
+    ).toBe('compact');
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
+  it('captures a real entity add transaction with canonical structural coverage already authored', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        byIdOrFail(id: string): { name: () => string | undefined };
+      };
+    }>;
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({ turnId: 1, store, appliedHistory });
+    const harness = createLiveDraftHarness(draft, 1);
+
+    harness.write(() => {
+      tree.$.users.addOne({ id: 'u1', name: 'Jonathan' });
+    });
+    harness.flush();
+
+    const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: usersOwner,
+          before: undefined,
+          after: 'u1',
+          subjectId: 1,
+          structural: 'add',
+          subjectPositions: [usersOwner],
+        },
+      ],
+      participants: [usersOwner],
+      state: 'pending',
+    });
+
+    harness.dispose();
+  });
+
+  it('captures a real entity remove transaction with canonical structural coverage already authored', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+      };
+    }>;
+    tree.$.users.addOne({ id: 'u1', name: 'Jonathan' });
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({ turnId: 1, store, appliedHistory });
+    const harness = createLiveDraftHarness(draft, 1);
+
+    harness.write(() => {
+      tree.$.users.removeOne('u1');
+    });
+    harness.flush();
+
+    const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: usersOwner,
+          before: 'u1',
+          after: undefined,
+          subjectId: 1,
+          structural: 'remove',
+          subjectPositions: [usersOwner],
+        },
+      ],
+      participants: [usersOwner],
+      state: 'pending',
+    });
+
+    harness.dispose();
+  });
+
+  it('proves collection-owner remove coverage is sufficient for real multi-field abort restoration', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string; enabled: boolean }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string; enabled: boolean }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: (() => string | undefined) & { __positionIds?: number[] };
+          enabled: (() => boolean | undefined) & { __positionIds?: number[] };
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice', enabled: true });
+    getPathNotifier().flushSync();
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    let liveHarness:
+      | ReturnType<typeof createLiveDraftHarness>
+      | undefined;
+    const liveDraft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+      abortPendingTurn: (turnId) => {
+        if (!liveHarness) {
+          throw new Error('Live draft harness was not initialized');
+        }
+
+        return createActualTreeAbort({
+          tree: tree as ISignalTree<object>,
+          authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+          store,
+          appliedHistory,
+          baselineValues: liveHarness.baselineValues,
+          descriptors: liveHarness.descriptors,
+        })(turnId);
+      },
+    });
+    liveHarness = createLiveDraftHarness(liveDraft, 1);
+
+    const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
+    const nameOwner = tree.$.users.byIdOrFail('u1').name.__positionIds?.[0] as PositionId;
+    const enabledOwner = tree.$.users.byIdOrFail('u1').enabled.__positionIds?.[0] as PositionId;
+
+    liveHarness.write(() => {
+      tree.$.users.removeOne('u1');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.users.ids()).toEqual([]);
+
+    expect(liveDraft.seal()).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: usersOwner,
+          before: 'u1',
+          after: undefined,
+          subjectId: 1,
+          structural: 'remove',
+          subjectPositions: [usersOwner],
+        },
+      ],
+      participants: [usersOwner],
+      state: 'pending',
+    });
+
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
+    expect(tree.$.users.byIdOrFail('u1').enabled()).toBe(true);
+    expect(tree.$.users.byIdOrFail('u1').name.__positionIds?.[0]).toBe(nameOwner);
+    expect(tree.$.users.byIdOrFail('u1').enabled.__positionIds?.[0]).toBe(enabledOwner);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
   });
 });

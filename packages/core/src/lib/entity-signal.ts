@@ -79,6 +79,7 @@ import type {
   AddOptions,
   AddManyOptions,
   UpdateMetadata,
+  PositionId,
   StructuralHistoryEffect,
 } from '../lib/types';
 
@@ -205,6 +206,54 @@ export function createEntitySignal<
       ...(meta ?? {}),
       historyEffect: effect,
     };
+  }
+
+  function collectOwnedPositions(
+    node: unknown,
+    positions: Set<PositionId>,
+    seen = new WeakSet<object>()
+  ): void {
+    const direct =
+      typeof node === 'object' || typeof node === 'function'
+        ? (node as { __positionIds?: readonly number[] }).__positionIds
+        : undefined;
+    for (const positionId of direct ?? []) {
+      positions.add(positionId as PositionId);
+    }
+
+    if (
+      node === null ||
+      node === undefined ||
+      (typeof node !== 'object' && typeof node !== 'function')
+    ) {
+      return;
+    }
+
+    const ref = node as object;
+    if (seen.has(ref)) {
+      return;
+    }
+
+    seen.add(ref);
+
+    for (const key of Object.keys(node as Record<string, unknown>)) {
+      collectOwnedPositions(
+        (node as Record<string, unknown>)[key],
+        positions,
+        seen
+      );
+    }
+  }
+
+  function deriveSubjectPositions(id: K, entity: E): readonly PositionId[] | undefined {
+    const positions = new Set<PositionId>();
+    collectOwnedPositions(api, positions);
+    collectOwnedPositions(getOrCreateNode(id, entity), positions);
+    if (positions.size === 0) {
+      return undefined;
+    }
+
+    return [...positions].sort((left, right) => left - right);
   }
 
   /**
@@ -508,6 +557,7 @@ export function createEntitySignal<
       value: transformedEntity,
       beforeSubject:
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+      subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
     nodeCache.delete(id);
     syncEntitySignal(id);
@@ -1086,6 +1136,7 @@ export function createEntitySignal<
         subject: subjectIdsForWrite[0],
         beforeKey: from,
         afterKey: to,
+        subjectPositions: deriveSubjectPositions(to, entity),
       };
 
       syncEntitySignal(to);
@@ -1156,16 +1207,28 @@ export function createEntitySignal<
 
       const subjectIdsForWrite = rememberSubjectIds(processedIds);
 
+      const previousKeys = Array.from(storage.keys()).slice(0, -processedIds.length);
+
       // Notify PathNotifier for each processed entity
       for (let i = 0; i < addedEntities.length; i++) {
         const { id, entity } = addedEntities[i];
+        const beforeKey = previousKeys.at(i + previousKeys.length - addedEntities.length);
         pathNotifier.notify(
           `${basePath}.${String(id)}`,
           entity,
           undefined,
           basePath,
           [subjectIdsForWrite[i]],
-          getPositionIdsForNotify()
+          getPositionIdsForNotify(),
+          createStructuralHistoryMeta({
+            kind: 'add',
+            subject: subjectIdsForWrite[i],
+            key: id,
+            value: entity,
+            beforeSubject:
+              beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+            subjectPositions: deriveSubjectPositions(id, entity),
+          })
         );
       }
 
@@ -1410,6 +1473,7 @@ export function createEntitySignal<
         value: entity,
         beforeSubject,
         afterSubject,
+        subjectPositions: deriveSubjectPositions(id, entity),
       };
       storage.delete(id);
       subjectIds.delete(id);
@@ -1500,6 +1564,7 @@ export function createEntitySignal<
             value: entity,
             beforeSubject: neighborSubjects.get(id)?.beforeSubject,
             afterSubject: neighborSubjects.get(id)?.afterSubject,
+            subjectPositions: deriveSubjectPositions(id, entity),
           })
         );
       }
