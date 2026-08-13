@@ -6,13 +6,21 @@ import type { PositionId, ReversalResult } from './causal-types';
 import type { EffectApplicationPort } from './effect-applier';
 import { applyReversalPlan } from './effect-applier';
 import { planConfirmedReapply } from './reapply-planner';
+import type { RealizationContext } from './realization-context';
 import type { TurnStore } from './turn-store';
 
 export type RedoConfirmedResult = ReversalResult<
   | { readonly kind: 'outside-boundary' }
   | { readonly kind: 'frontier-blocked' }
   | { readonly kind: 'history-evicted' }
+  | { readonly kind: 'structural-drift' }
 >;
+
+export interface RedoConfirmedPort extends EffectApplicationPort {
+  validateEffects?(
+    effects: Parameters<EffectApplicationPort['applyAtomically']>[0]
+  ): Extract<RedoConfirmedResult, { readonly ok: false }>['refusal'] | undefined;
+}
 
 export interface RedoConfirmedAtOptions {
   readonly authority: PositionId;
@@ -25,7 +33,8 @@ export interface RedoConfirmedAtOptions {
     | 'commitPreparedReapply'
   >;
   readonly topology: Pick<PositionRegistry, 'contains'>;
-  readonly port: EffectApplicationPort;
+  readonly port: RedoConfirmedPort;
+  readonly realizationContext: RealizationContext;
 }
 
 export interface RedoConfirmedDependencies {
@@ -57,9 +66,15 @@ export function redoConfirmedAt(
   const reapply = dependencies.planConfirmedReapply({
     turnId: assessment.turnId,
     store: options.store,
+    realizationContext: options.realizationContext,
   });
   if (!reapply.ok) {
     return reapply;
+  }
+
+  const validationRefusal = options.port.validateEffects?.(reapply.plan.effects);
+  if (validationRefusal) {
+    return { ok: false, refusal: validationRefusal };
   }
 
   const transition = options.appliedHistory.prepareReapplyConfirmedTurn(

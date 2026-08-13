@@ -12,6 +12,7 @@ export interface CausalEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: StructuralEffect;
+  readonly subjectPositions?: readonly PositionId[];
 }
 
 export interface CausalTurn {
@@ -25,6 +26,9 @@ export interface ReversalEffect {
   readonly owner: PositionId;
   readonly before: unknown;
   readonly after: unknown;
+  readonly subjectId?: unknown;
+  readonly structural?: StructuralEffect;
+  readonly subjectState?: Readonly<Record<string, unknown>>;
 }
 
 export interface ConfirmedReversalPlan {

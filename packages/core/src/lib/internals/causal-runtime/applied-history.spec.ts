@@ -8,6 +8,28 @@ const P_THEME = 6 as PositionId;
 const P_NOTIFICATIONS = 9 as PositionId;
 
 describe('AppliedHistory', () => {
+  it('refuses admitting a pending turn into the confirmed applied projection', () => {
+    const store = new TurnStore();
+    const history = new AppliedHistory(store);
+
+    const pending = store.admitPending({
+      id: 1,
+      effects: [{ owner: P_FIRST_NAME, before: 'A', after: 'B' }],
+    });
+
+    expect(store.getTurn(pending.id)).toBeUndefined();
+    expect(store.getPendingTurn(pending.id)).toEqual(pending);
+    expect(history.admitConfirmed(pending.id)).toEqual({
+      ok: false,
+      reason: 'history-evicted',
+    });
+    expect(history.inspect()).toEqual({
+      appliedTurnIds: [],
+      redoTurnIds: [],
+      frontiers: {},
+    });
+  });
+
   it('distinguishes canonical confirmed history from current applied history after undo bookkeeping', () => {
     const store = new TurnStore();
     const history = new AppliedHistory(store);

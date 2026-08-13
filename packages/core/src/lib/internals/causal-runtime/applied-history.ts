@@ -12,6 +12,11 @@ export interface PreparedAppliedHistoryUnapply {
   readonly turnId: TurnId;
 }
 
+export interface PreparedAppliedHistoryConfirmation {
+  readonly turnId: TurnId;
+  readonly participants: readonly PositionId[];
+}
+
 type PrepareAppliedHistoryUnapplyResult =
   | { readonly ok: true; readonly transition: PreparedAppliedHistoryUnapply }
   | {
@@ -21,6 +26,11 @@ type PrepareAppliedHistoryUnapplyResult =
 
 export interface PreparedAppliedHistoryReapply {
   readonly turnId: TurnId;
+}
+
+export interface EvictedConfirmedTurnDisposition {
+  readonly wasApplied: boolean;
+  readonly wasRedoable: boolean;
 }
 
 type PrepareAppliedHistoryReapplyResult =
@@ -50,12 +60,32 @@ export class AppliedHistory {
       return { ok: false, reason: 'history-evicted' };
     }
 
-    this.appliedTurnIds.push(turnId);
-    if (this.redoTurnIds.length > 0) {
-      this.invalidateOverlappingRedoTurns(turn.participants);
-    }
+    const transition = this.prepareAdmitConfirmedTurn({
+      turnId,
+      participants: turn.participants,
+    });
+    this.commitPreparedAdmitConfirmed(transition);
 
     return { ok: true };
+  }
+
+  prepareAdmitConfirmedTurn(turn: {
+    readonly turnId: TurnId;
+    readonly participants: readonly PositionId[];
+  }): PreparedAppliedHistoryConfirmation {
+    return {
+      turnId: turn.turnId,
+      participants: [...turn.participants],
+    };
+  }
+
+  commitPreparedAdmitConfirmed(
+    transition: PreparedAppliedHistoryConfirmation
+  ): void {
+    this.insertAppliedTurnCanonical(transition.turnId);
+    if (this.redoTurnIds.length > 0) {
+      this.invalidateOverlappingRedoTurns(transition.participants);
+    }
   }
 
   prepareUnapplyConfirmedTurn(
@@ -145,6 +175,24 @@ export class AppliedHistory {
 
   getRedoTurnIds(): readonly TurnId[] {
     return [...this.redoTurnIds];
+  }
+
+  forgetRetainedTurn(turnId: TurnId): EvictedConfirmedTurnDisposition {
+    const wasApplied = this.appliedTurnIds.includes(turnId);
+    const wasRedoable = this.redoTurnIds.includes(turnId);
+
+    if (wasApplied) {
+      this.removeAppliedTurn(turnId);
+    }
+
+    if (wasRedoable) {
+      this.redoTurnIds.splice(this.redoTurnIds.indexOf(turnId), 1);
+    }
+
+    return {
+      wasApplied,
+      wasRedoable,
+    };
   }
 
   getFrontier(positionId: PositionId): TurnId | undefined {

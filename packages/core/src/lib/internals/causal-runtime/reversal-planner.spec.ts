@@ -1,6 +1,7 @@
 import { createPositionRegistry } from '../position-registry';
 
 import type { PositionId } from './causal-types';
+import { AppliedHistory } from './applied-history';
 import { assessConfirmedUndo } from './authority-assessment';
 import { planConfirmedReversal } from './reversal-planner';
 import { TurnStore } from './turn-store';
@@ -112,6 +113,7 @@ describe('planConfirmedReversal', () => {
   it('is not invoked when authority assessment already refuses', () => {
     const { topology, positions } = buildTopology();
     const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
 
     store.admitConfirmed({
       id: 1,
@@ -128,6 +130,7 @@ describe('planConfirmedReversal', () => {
         },
       ],
     });
+    expect(appliedHistory.admitConfirmed(1)).toEqual({ ok: true });
     store.admitConfirmed({
       id: 2,
       effects: [
@@ -143,12 +146,14 @@ describe('planConfirmedReversal', () => {
         },
       ],
     });
+    expect(appliedHistory.admitConfirmed(2)).toEqual({ ok: true });
 
     const planner = vi.fn(planConfirmedReversal);
     const before = store.inspect();
     const assessment = assessConfirmedUndo({
       authority: positions.profile,
       store,
+      appliedHistory,
       topology,
     });
 

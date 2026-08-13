@@ -2,6 +2,7 @@ import type { PositionId, ReversalEffect } from './causal-types';
 import { AppliedHistory } from './applied-history';
 import { undoConfirmedAt } from './confirmed-undo';
 import { createPositionRegistry, type PositionRegistry } from '../position-registry';
+import { createRealizationContextSource } from './realization-context';
 import { TurnStore } from './turn-store';
 
 const P_ROOT = 1 as PositionId;
@@ -35,6 +36,15 @@ describe('undoConfirmedAt', () => {
     const storeBefore = store.inspect();
     const appliedBefore = appliedHistory.inspect();
     const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [P_FIRST_NAME, 'Ada'],
+        [P_LAST_NAME, 'Lovelace'],
+        [P_THEME, 'light'],
+      ]),
+      store,
+      appliedHistory,
+    });
 
     expect(
       undoConfirmedAt({
@@ -43,6 +53,7 @@ describe('undoConfirmedAt', () => {
         appliedHistory,
         topology,
         port: { applyAtomically },
+        realizationContext,
       })
     ).toEqual({ ok: false, refusal: { kind: 'frontier-blocked' } });
 
@@ -63,6 +74,11 @@ describe('undoConfirmedAt', () => {
     const storeBefore = store.inspect();
     const appliedBefore = appliedHistory.inspect();
     const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([[P_FIRST_NAME, 'Ada']]),
+      store,
+      appliedHistory,
+    });
     const refusingAppliedHistory = {
       getAppliedTurnIds: () => appliedHistory.getAppliedTurnIds(),
       getFrontier: (positionId: PositionId) => appliedHistory.getFrontier(positionId),
@@ -81,6 +97,7 @@ describe('undoConfirmedAt', () => {
           appliedHistory: refusingAppliedHistory,
           topology,
           port: { applyAtomically },
+          realizationContext,
         },
         {
           assessConfirmedUndo: () => ({ ok: true, turnId: 1 }),
@@ -113,6 +130,11 @@ describe('undoConfirmedAt', () => {
     const storeBefore = store.inspect();
     const appliedBefore = appliedHistory.inspect();
     const failure = new Error('atomic silent application failed');
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([[P_FIRST_NAME, 'Ada']]),
+      store,
+      appliedHistory,
+    });
 
     expect(() =>
       undoConfirmedAt({
@@ -120,6 +142,7 @@ describe('undoConfirmedAt', () => {
         store,
         appliedHistory,
         topology,
+        realizationContext,
         port: {
           applyAtomically: () => {
             throw failure;
@@ -150,6 +173,14 @@ describe('undoConfirmedAt', () => {
     expect(appliedHistory.admitConfirmed(2)).toEqual({ ok: true });
 
     const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [P_FIRST_NAME, 'Ada'],
+        [P_LAST_NAME, 'Lovelace'],
+      ]),
+      store,
+      appliedHistory,
+    });
 
     expect(
       undoConfirmedAt({
@@ -158,6 +189,7 @@ describe('undoConfirmedAt', () => {
         appliedHistory,
         topology,
         port: { applyAtomically },
+        realizationContext,
       })
     ).toEqual({ ok: true, turnId: 2 });
 

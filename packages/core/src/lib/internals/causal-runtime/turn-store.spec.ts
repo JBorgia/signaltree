@@ -98,7 +98,7 @@ describe('TurnStore', () => {
       participants: [P_FIRST_NAME],
       state: 'pending',
     });
-    expect(store.getTurn(2)).toEqual(pending);
+    expect(store.getTurn(2)).toBeUndefined();
     expect(store.getPendingTurn(2)).toEqual(pending);
     expect(store.getPendingTurns()).toEqual([pending]);
     expect(store.getPendingTurnIds()).toEqual([2]);
@@ -111,6 +111,82 @@ describe('TurnStore', () => {
       positionIndex: {},
       frontiers: {},
     });
+  });
+
+  it('rejects duplicate live TurnIds across pending and confirmed lifecycle states', () => {
+    const store = new TurnStore();
+
+    store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'Ada',
+          after: 'Grace',
+        },
+      ],
+    });
+
+    expect(() =>
+      store.admitPending({
+        id: 1,
+        effects: [
+          {
+            owner: P_THEME,
+            before: 'light',
+            after: 'dark',
+          },
+        ],
+      })
+    ).toThrow('Turn 1 already exists');
+
+    expect(() =>
+      store.admitConfirmed({
+        id: 1,
+        effects: [
+          {
+            owner: P_THEME,
+            before: 'light',
+            after: 'dark',
+          },
+        ],
+      })
+    ).toThrow('Turn 1 already exists');
+
+    expect(store.getPendingTurn(1)?.state).toBe('pending');
+    expect(store.getTurns()).toEqual([]);
+  });
+
+  it('rejects duplicate confirmed admissions', () => {
+    const store = new TurnStore();
+
+    store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'Ada',
+          after: 'Grace',
+        },
+      ],
+    });
+
+    expect(() =>
+      store.admitConfirmed({
+        id: 1,
+        effects: [
+          {
+            owner: P_THEME,
+            before: 'light',
+            after: 'dark',
+          },
+        ],
+      })
+    ).toThrow('Turn 1 already exists');
+
+    expect(store.getTurns().map(({ id }) => id)).toEqual([1]);
+    expect(store.getTurnIdsForPosition(P_FIRST_NAME)).toEqual([1]);
+    expect(store.getTurnIdsForPosition(P_THEME)).toEqual([]);
   });
 
   it('confirms a pending turn into canonical confirmed order and removes it from pending', () => {
@@ -159,6 +235,52 @@ describe('TurnStore', () => {
     expect(store.getTurnIdsForPosition(P_THEME)).toEqual([2]);
     expect(store.getFrontier(P_FIRST_NAME)).toBe(1);
     expect(store.getFrontier(P_THEME)).toBe(2);
+  });
+
+  it('keeps pending state intact when promotion collides with an existing confirmed TurnId', () => {
+    const store = new TurnStore();
+
+    store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_THEME,
+          before: 'light',
+          after: 'dark',
+        },
+      ],
+    });
+
+    const pendingTurns = store as unknown as {
+      pendingTurns: Map<number, unknown>;
+    };
+    pendingTurns.pendingTurns.set(1, {
+      id: 1,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'Ada',
+          after: 'Grace',
+        },
+      ],
+      participants: [P_FIRST_NAME],
+      state: 'pending',
+    });
+
+    expect(() => store.confirmPending(1)).toThrow('Turn 1 already exists');
+    expect(store.getPendingTurn(1)).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'Ada',
+          after: 'Grace',
+        },
+      ],
+      participants: [P_FIRST_NAME],
+      state: 'pending',
+    });
+    expect(store.getTurns().map(({ id }) => id)).toEqual([1]);
   });
 
   it('discards a pending turn without changing confirmed history', () => {

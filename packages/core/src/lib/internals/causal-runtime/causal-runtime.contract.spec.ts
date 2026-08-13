@@ -42,6 +42,10 @@ type RollbackResult = ReversalResult<
   | { readonly kind: 'history-evicted' }
 >;
 
+type PendingLifecycleResult = ReversalResult<
+  | { readonly kind: 'history-evicted' }
+>;
+
 interface RuntimeSnapshot {
   values: Record<string, unknown>;
   confirmedTurnIds: number[];
@@ -105,8 +109,8 @@ class ContractRuntime {
 
   confirmTurn(effects: readonly CausalEffect[]): CausalTurn {
     const turn = this.createTurn(effects, 'confirmed');
-    this.confirmedTurns.push(turn);
-    this.appliedTurnIds.push(turn.id);
+    this.insertConfirmedTurn(turn);
+    this.insertAppliedTurn(turn.id);
     if (this.redoTurns.length > 0) {
       this.invalidateOverlappingRedoTurns(turn.participants);
     }
@@ -121,6 +125,37 @@ class ContractRuntime {
     this.pendingTurns.push(turn);
     this.recomputeDerivedState();
     return turn;
+  }
+
+  confirmPendingTurn(turnId: number): PendingLifecycleResult {
+    const turn = this.pendingTurns.find(({ id }) => id === turnId);
+    if (!turn) {
+      return { ok: false, refusal: { kind: 'history-evicted' } };
+    }
+
+    this.pendingTurns = this.pendingTurns.filter(({ id }) => id !== turnId);
+    const confirmedTurn: CausalTurn = {
+      ...turn,
+      state: 'confirmed',
+    };
+    this.insertConfirmedTurn(confirmedTurn);
+    this.insertAppliedTurn(confirmedTurn.id);
+    if (this.redoTurns.length > 0) {
+      this.invalidateOverlappingRedoTurns(confirmedTurn.participants);
+    }
+
+    this.recomputeDerivedState();
+    return { ok: true, turnId: confirmedTurn.id };
+  }
+
+  discardPending(turnId: number): PendingLifecycleResult {
+    const turn = this.pendingTurns.find(({ id }) => id === turnId);
+    if (!turn) {
+      return { ok: false, refusal: { kind: 'history-evicted' } };
+    }
+
+    this.pendingTurns = this.pendingTurns.filter(({ id }) => id !== turnId);
+    return { ok: true, turnId };
   }
 
   applyUncapturedMutation(owner: PositionId, after: unknown): void {
@@ -341,23 +376,78 @@ class ContractRuntime {
   private createConfirmedReversalEffects(
     turn: CausalTurn
   ): readonly ReversalEffect[] {
+    const projectedValues = this.computeValues(
+      this.appliedTurnIds.filter((turnId) => turnId !== turn.id)
+    );
+    const firstEffectIndexByOwner = new Map<PositionId, number>();
+    turn.effects.forEach((effect, index) => {
+      if (!firstEffectIndexByOwner.has(effect.owner)) {
+        firstEffectIndexByOwner.set(effect.owner, index);
+      }
+    });
+    const currentByOwner = new Map<PositionId, unknown>();
+
     return [...turn.effects]
       .reverse()
-      .map(({ owner, before, after }) => ({
-        owner,
-        before: after,
-        after: before,
-      }));
+      .map((effect) => {
+        const originalIndex = turn.effects.indexOf(effect);
+        const before = currentByOwner.has(effect.owner)
+          ? currentByOwner.get(effect.owner)
+          : this.currentValues[effect.owner];
+        const after = firstEffectIndexByOwner.get(effect.owner) === originalIndex
+          ? projectedValues[effect.owner]
+          : effect.before;
+
+        currentByOwner.set(effect.owner, after);
+
+        return {
+          owner: effect.owner,
+          before,
+          after,
+        };
+      });
   }
 
   private createConfirmedReapplyEffects(
     turn: CausalTurn
   ): readonly ReversalEffect[] {
-    return turn.effects.map(({ owner, before, after }) => ({
-      owner,
-      before,
-      after,
-    }));
+    const currentByOwner = new Map<PositionId, unknown>();
+
+    return turn.effects.map((effect) => {
+      const before = currentByOwner.has(effect.owner)
+        ? currentByOwner.get(effect.owner)
+        : this.currentValues[effect.owner];
+
+      currentByOwner.set(effect.owner, effect.after);
+
+      return {
+        owner: effect.owner,
+        before,
+        after: effect.after,
+      };
+    });
+  }
+
+  private computeValues(appliedTurnIds: readonly number[]): Record<string, unknown> {
+    const values = { ...this.baselineValues };
+    const activeConfirmedTurns = appliedTurnIds
+      .map((turnId) => this.confirmedTurns.find(({ id }) => id === turnId))
+      .filter((turn): turn is CausalTurn => turn !== undefined);
+    const activeTurns = [...activeConfirmedTurns, ...this.pendingTurns].sort(
+      (left, right) => left.id - right.id
+    );
+
+    for (const turn of activeTurns) {
+      for (const effect of turn.effects) {
+        values[effect.owner] = effect.after;
+      }
+    }
+
+    for (const [owner, value] of Object.entries(this.uncapturedValues)) {
+      values[owner] = value;
+    }
+
+    return values;
   }
 
   private enforceCapacity(): void {
@@ -386,6 +476,19 @@ class ContractRuntime {
     )?.id;
   }
 
+  private insertConfirmedTurn(turn: CausalTurn): void {
+    const insertionIndex = this.confirmedTurns.findIndex(
+      (confirmedTurn) => confirmedTurn.id > turn.id
+    );
+
+    if (insertionIndex === -1) {
+      this.confirmedTurns.push(turn);
+      return;
+    }
+
+    this.confirmedTurns.splice(insertionIndex, 0, turn);
+  }
+
   private insertAppliedTurn(turnId: number): void {
     if (this.appliedTurnIds.includes(turnId)) {
       return;
@@ -404,27 +507,13 @@ class ContractRuntime {
   }
 
   private recomputeDerivedState(): void {
-    const values = { ...this.baselineValues };
+    this.currentValues = this.computeValues(this.appliedTurnIds);
+    this.frontiers = {};
+    this.positionIndex = {};
+
     const activeConfirmedTurns = this.appliedTurnIds
       .map((turnId) => this.confirmedTurns.find(({ id }) => id === turnId))
       .filter((turn): turn is CausalTurn => turn !== undefined);
-    const activeTurns = [...activeConfirmedTurns, ...this.pendingTurns].sort(
-      (left, right) => left.id - right.id
-    );
-
-    for (const turn of activeTurns) {
-      for (const effect of turn.effects) {
-        values[effect.owner] = effect.after;
-      }
-    }
-
-    for (const [owner, value] of Object.entries(this.uncapturedValues)) {
-      values[owner] = value;
-    }
-
-    this.currentValues = values;
-    this.frontiers = {};
-    this.positionIndex = {};
 
     for (const turn of activeConfirmedTurns) {
       for (const participant of turn.participants) {
@@ -776,6 +865,169 @@ describe('CausalRuntime contract', () => {
     expect(runtime.assessUndo(P_ROOT, turn.id)).toBe('frontier-blocked');
   });
 
+  it('admits a pending turn as speculative but realized state while confirmed history stays unchanged', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+    const store = new TurnStore();
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+
+    expect(pendingTurn.state).toBe('pending');
+    expect(runtime.inspect()).toEqual({
+      values: {
+        [P_FIRST_NAME]: 'B',
+      },
+      confirmedTurnIds: [],
+      appliedTurnIds: [],
+      pendingTurnIds: [pendingTurn.id],
+      redoTurnIds: [],
+      frontiers: {},
+      positionIndex: {},
+    });
+    expectConfirmedStoreToMatchRuntime(runtime, store);
+  });
+
+  it('confirms a pending turn into confirmed and applied history without reapplying its physical effect', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+    const store = new TurnStore();
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+    const beforeConfirmation = runtime.inspect();
+
+    expect(runtime.confirmPendingTurn(pendingTurn.id)).toEqual({
+      ok: true,
+      turnId: pendingTurn.id,
+    });
+    store.admitConfirmed({
+      id: pendingTurn.id,
+      effects: pendingTurn.effects,
+    });
+
+    expect(beforeConfirmation.values).toEqual({
+      [P_FIRST_NAME]: 'B',
+    });
+    expect(runtime.inspect()).toEqual({
+      values: {
+        [P_FIRST_NAME]: 'B',
+      },
+      confirmedTurnIds: [pendingTurn.id],
+      appliedTurnIds: [pendingTurn.id],
+      pendingTurnIds: [],
+      redoTurnIds: [],
+      frontiers: {
+        [P_FIRST_NAME]: pendingTurn.id,
+      },
+      positionIndex: {
+        [P_FIRST_NAME]: [pendingTurn.id],
+      },
+    });
+    expectConfirmedStoreToMatchRuntime(runtime, store);
+  });
+
+  it('confirmation supersedes an overlapping redo branch without reapplying state', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+
+    const t0 = runtime.confirmTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+    expect(runtime.undoAt(P_PROFILE)).toEqual({
+      ok: true,
+      turnId: t0.id,
+    });
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'C',
+      },
+    ]);
+    const beforeConfirmation = runtime.inspect();
+
+    expect(beforeConfirmation).toEqual({
+      values: {
+        [P_FIRST_NAME]: 'C',
+      },
+      confirmedTurnIds: [t0.id],
+      appliedTurnIds: [],
+      pendingTurnIds: [pendingTurn.id],
+      redoTurnIds: [t0.id],
+      frontiers: {},
+      positionIndex: {},
+    });
+
+    expect(runtime.confirmPendingTurn(pendingTurn.id)).toEqual({
+      ok: true,
+      turnId: pendingTurn.id,
+    });
+    expect(runtime.inspect()).toEqual({
+      values: {
+        [P_FIRST_NAME]: 'C',
+      },
+      confirmedTurnIds: [t0.id, pendingTurn.id],
+      appliedTurnIds: [pendingTurn.id],
+      pendingTurnIds: [],
+      redoTurnIds: [],
+      frontiers: {
+        [P_FIRST_NAME]: pendingTurn.id,
+      },
+      positionIndex: {
+        [P_FIRST_NAME]: [pendingTurn.id],
+      },
+    });
+  });
+
+  it('keeps raw pending discard distinct from semantic rollback by leaving realized state intact', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+
+    expect(runtime.discardPending(pendingTurn.id)).toEqual({
+      ok: true,
+      turnId: pendingTurn.id,
+    });
+    expect(runtime.inspect()).toEqual({
+      values: {
+        [P_FIRST_NAME]: 'B',
+      },
+      confirmedTurnIds: [],
+      appliedTurnIds: [],
+      pendingTurnIds: [],
+      redoTurnIds: [],
+      frontiers: {},
+      positionIndex: {},
+    });
+  });
+
   it('rolls back a pending scalar turn without erasing legitimate later confirmed work', () => {
     const runtime = createRuntime({
       [P_FIRST_NAME]: 'A',
@@ -803,6 +1055,214 @@ describe('CausalRuntime contract', () => {
     });
     expect(runtime.inspect().values).toEqual({
       [P_FIRST_NAME]: 'C',
+    });
+  });
+
+  it('does not resurrect rejected speculative contribution when a later confirmed turn is undone', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+    const store = new TurnStore();
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+    const confirmedTurn = runtime.confirmTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'B',
+        after: 'C',
+      },
+    ]);
+    store.admitConfirmed({
+      id: confirmedTurn.id,
+      effects: confirmedTurn.effects,
+    });
+
+    expect(runtime.rollback(pendingTurn.id)).toEqual({
+      ok: true,
+      turnId: pendingTurn.id,
+    });
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'C',
+    });
+
+    const undoApplyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+
+    expect(
+      runtime.undoConfirmedOperation(P_PROFILE, {
+        onApplyAtomically: undoApplyAtomically,
+      })
+    ).toEqual({
+      ok: true,
+      turnId: confirmedTurn.id,
+    });
+    expect(undoApplyAtomically).toHaveBeenCalledWith([
+      {
+        owner: P_FIRST_NAME,
+        before: 'C',
+        after: 'A',
+      },
+    ]);
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'A',
+    });
+    expect(store.getTurn(confirmedTurn.id)).toEqual({
+      id: confirmedTurn.id,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'B',
+          after: 'C',
+        },
+      ],
+      participants: [P_FIRST_NAME],
+      state: 'confirmed',
+    });
+
+    const redoApplyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+
+    expect(
+      runtime.redoConfirmedOperation(P_PROFILE, confirmedTurn.id, {
+        onApplyAtomically: redoApplyAtomically,
+      })
+    ).toEqual({
+      ok: true,
+      turnId: confirmedTurn.id,
+    });
+    expect(redoApplyAtomically).toHaveBeenCalledWith([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'C',
+      },
+    ]);
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'C',
+    });
+    expect(store.getTurn(confirmedTurn.id)).toEqual({
+      id: confirmedTurn.id,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'B',
+          after: 'C',
+        },
+      ],
+      participants: [P_FIRST_NAME],
+      state: 'confirmed',
+    });
+  });
+
+  it('rewrites only the external causal boundary while preserving same-position effect order within a confirmed turn', () => {
+    const runtime = createRuntime({
+      [P_FIRST_NAME]: 'A',
+    });
+    const store = new TurnStore();
+
+    const pendingTurn = runtime.addPendingTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'B',
+      },
+    ]);
+    const confirmedTurn = runtime.confirmTurn([
+      {
+        owner: P_FIRST_NAME,
+        before: 'B',
+        after: 'C',
+      },
+      {
+        owner: P_FIRST_NAME,
+        before: 'C',
+        after: 'D',
+      },
+    ]);
+    store.admitConfirmed({
+      id: confirmedTurn.id,
+      effects: confirmedTurn.effects,
+    });
+
+    expect(runtime.rollback(pendingTurn.id)).toEqual({
+      ok: true,
+      turnId: pendingTurn.id,
+    });
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'D',
+    });
+
+    const undoApplyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+
+    expect(
+      runtime.undoConfirmedOperation(P_PROFILE, {
+        onApplyAtomically: undoApplyAtomically,
+      })
+    ).toEqual({
+      ok: true,
+      turnId: confirmedTurn.id,
+    });
+    expect(undoApplyAtomically).toHaveBeenCalledWith([
+      {
+        owner: P_FIRST_NAME,
+        before: 'D',
+        after: 'C',
+      },
+      {
+        owner: P_FIRST_NAME,
+        before: 'C',
+        after: 'A',
+      },
+    ]);
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'A',
+    });
+
+    const redoApplyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+
+    expect(
+      runtime.redoConfirmedOperation(P_PROFILE, confirmedTurn.id, {
+        onApplyAtomically: redoApplyAtomically,
+      })
+    ).toEqual({
+      ok: true,
+      turnId: confirmedTurn.id,
+    });
+    expect(redoApplyAtomically).toHaveBeenCalledWith([
+      {
+        owner: P_FIRST_NAME,
+        before: 'A',
+        after: 'C',
+      },
+      {
+        owner: P_FIRST_NAME,
+        before: 'C',
+        after: 'D',
+      },
+    ]);
+    expect(runtime.inspect().values).toEqual({
+      [P_FIRST_NAME]: 'D',
+    });
+    expect(store.getTurn(confirmedTurn.id)).toEqual({
+      id: confirmedTurn.id,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'B',
+          after: 'C',
+        },
+        {
+          owner: P_FIRST_NAME,
+          before: 'C',
+          after: 'D',
+        },
+      ],
+      participants: [P_FIRST_NAME],
+      state: 'confirmed',
     });
   });
 
