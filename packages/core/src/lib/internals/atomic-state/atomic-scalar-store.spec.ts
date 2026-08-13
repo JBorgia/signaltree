@@ -358,4 +358,54 @@ describe('atomic scalar store spike', () => {
     expect(store.snapshot()).toEqual({ a: 'A', b: 'B-live' });
     expect(store.publicationCount()).toBe(1);
   });
+
+  it('does not allow a committed frame to publish again', () => {
+    const store = createAtomicScalarStore({ count: 1 });
+    const count = store.writable('count');
+    const frame = store.beginFrame();
+
+    frame.set(count, 2);
+    frame.commit();
+
+    expect(store.snapshot()).toEqual({ count: 2 });
+    expect(store.publicationCount()).toBe(1);
+
+    expect(() => frame.commit()).toThrow('AtomicScalarFrame is already closed.');
+    expect(store.snapshot()).toEqual({ count: 2 });
+    expect(store.publicationCount()).toBe(1);
+  });
+
+  it('does not allow a discarded frame to publish later', () => {
+    const store = createAtomicScalarStore({ count: 1 });
+    const count = store.writable('count');
+    const frame = store.beginFrame();
+
+    frame.set(count, 2);
+    frame.discard();
+
+    expect(store.snapshot()).toEqual({ count: 1 });
+    expect(store.publicationCount()).toBe(0);
+
+    expect(() => frame.commit()).toThrow('AtomicScalarFrame is already closed.');
+    expect(store.snapshot()).toEqual({ count: 1 });
+    expect(store.publicationCount()).toBe(0);
+  });
+
+  it('consumes a stale frame so it cannot publish on a later retry', () => {
+    const store = createAtomicScalarStore({ a: 'A', b: 'B' });
+    const a = store.writable('a');
+    const b = store.writable('b');
+    const frame = store.beginFrame();
+
+    frame.set(a, 'A2');
+    b.set('B2');
+
+    expect(() => frame.commit()).toThrow(StaleAtomicScalarFrameError);
+    expect(store.snapshot()).toEqual({ a: 'A', b: 'B2' });
+    expect(store.publicationCount()).toBe(1);
+
+    expect(() => frame.commit()).toThrow('AtomicScalarFrame is already closed.');
+    expect(store.snapshot()).toEqual({ a: 'A', b: 'B2' });
+    expect(store.publicationCount()).toBe(1);
+  });
 });
