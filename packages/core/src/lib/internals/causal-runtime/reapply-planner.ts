@@ -6,7 +6,7 @@ export type ConfirmedReapplyPlanningResult =
   | { readonly ok: true; readonly plan: ConfirmedReapplyPlan }
   | {
       readonly ok: false;
-      readonly refusal: Extract<ReversalResult['refusal'], { kind: 'history-evicted' }>;
+      readonly refusal: Extract<Extract<ReversalResult, { readonly ok: false }>['refusal'], { kind: 'history-evicted' }>;
     };
 
 export interface PlanConfirmedReapplyOptions {
@@ -35,7 +35,7 @@ export function planConfirmedReapply(
 function createReapplyEffects(
   turn: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>,
   realizationContext?: RealizationContext
-): readonly ConfirmedReapplyPlan['effects'] {
+): ConfirmedReapplyPlan['effects'] {
   if (!realizationContext) {
     return turn.effects.map(
       ({ owner, before, after, subjectId, structural, subjectPositions }) => ({

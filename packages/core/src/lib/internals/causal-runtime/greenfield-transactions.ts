@@ -40,12 +40,6 @@ export interface CreateGreenfieldTransactionDraftOptions {
   readonly abortPendingTurn?: (turnId: TurnId) => RollbackPendingResult;
 }
 
-interface DraftScalarEffect {
-  readonly owner: PositionId;
-  readonly before: unknown;
-  readonly after: unknown;
-}
-
 type DraftState = GreenfieldTransactionLifecycle;
 
 class DefaultGreenfieldTransactionDraft implements GreenfieldTransactionDraft {
@@ -133,7 +127,7 @@ export function createGreenfieldTransactionDraft(
 
 function normalizeDraftEffects(
   effects: readonly ExplicitTransactionEffect[]
-): readonly CausalTurn['effects'] {
+): CausalTurn['effects'] {
   const normalizedEffects: Array<CausalTurn['effects'][number]> = [];
   const scalarIndexByOwner = new Map<PositionId, number>();
 

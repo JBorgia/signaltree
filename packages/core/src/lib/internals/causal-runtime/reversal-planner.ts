@@ -6,7 +6,7 @@ export type ConfirmedReversalPlanningResult =
   | { readonly ok: true; readonly plan: ConfirmedReversalPlan }
   | {
       readonly ok: false;
-      readonly refusal: Extract<ReversalResult['refusal'], { kind: 'history-evicted' }>;
+      readonly refusal: Extract<Extract<ReversalResult, { readonly ok: false }>['refusal'], { kind: 'history-evicted' }>;
     };
 
 export interface PlanConfirmedReversalOptions {
@@ -35,7 +35,7 @@ export function planConfirmedReversal(
 function createReversalEffects(
   turn: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>,
   realizationContext?: RealizationContext
-): readonly ConfirmedReversalPlan['effects'] {
+): ConfirmedReversalPlan['effects'] {
   if (!realizationContext) {
     return [...turn.effects]
       .reverse()
@@ -90,7 +90,7 @@ function createReversalEffects(
 
 function deriveUndoStructural(
   structural: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number]['structural']
-) {
+): NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number]['structural'] {
   switch (structural) {
     case 'add':
       return 'remove';
