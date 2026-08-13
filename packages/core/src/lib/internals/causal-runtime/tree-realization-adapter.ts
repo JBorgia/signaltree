@@ -1,6 +1,8 @@
 import type { ISignalTree, PositionId, StructuralHistoryEffect, UpdateMetadata } from '../../types';
+import { getPathNotifier } from '../../path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../write-context';
 import { getOwnedPositionIds } from '../owned-mutation';
+import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-runtime';
 import { visitTree } from '../visit-tree';
 
 import type { ReversalEffect, ReversalRefusal } from './causal-types';
@@ -87,8 +89,71 @@ export function createTreeRealizationAdapter(
       return undefined;
     },
     applyAtomically(effects) {
+      const scalarFrame = planScalarFrame(options.tree, options.descriptors, effects);
+      if (scalarFrame) {
+        scalarFrame.commit();
+        return;
+      }
+
       for (const effect of effects) {
         applyEffect(options.tree, options.descriptors, effect);
+      }
+    },
+  };
+}
+
+function planScalarFrame(
+  tree: ISignalTree<object>,
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  effects: readonly ReversalEffect[]
+): { commit(): void } | undefined {
+  if (effects.length === 0 || effects.some((effect) => effect.structural)) {
+    return undefined;
+  }
+
+  const scalarSlotRuntime =
+    getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
+  if (!scalarSlotRuntime) {
+    return undefined;
+  }
+
+  const frame = scalarSlotRuntime.beginFrame();
+  for (const effect of effects) {
+    const slotIndex = scalarSlotRuntime.resolveScalarSlot(effect.owner);
+    if (slotIndex === undefined) {
+      return undefined;
+    }
+
+    frame.set(slotIndex, effect.after);
+  }
+
+  return {
+    commit(): void {
+      frame.commit();
+
+      for (const effect of effects) {
+        const descriptor = descriptors.get(effect.owner);
+        if (!descriptor?.path) {
+          continue;
+        }
+
+        getPathNotifier().notify(
+          descriptor.path,
+          effect.after,
+          effect.before,
+          descriptor.ownerPath ?? descriptor.path,
+          typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+          [effect.owner],
+          {
+            ...(getActiveWriteContext() ?? {}),
+            intent: 'system',
+            source: 'system',
+            causalMode: 'realization',
+            positionIds: [effect.owner],
+            subjectIds:
+              typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+          }
+        );
       }
     },
   };

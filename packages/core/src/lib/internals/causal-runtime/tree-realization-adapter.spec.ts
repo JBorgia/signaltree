@@ -8,6 +8,7 @@ import type { ISignalTree, UpdateMetadata } from '../../types';
 import { timeTravel } from '../../../enhancers/time-travel/time-travel';
 import { transactions } from '../../../enhancers/transactions/transactions';
 import { getOwnedPositionIds } from '../owned-mutation';
+import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-runtime';
 
 import { createTransactionCaptureBridge } from './transaction-capture-bridge';
 import {
@@ -930,7 +931,7 @@ describe('tree realization adapter', () => {
     expect(tree.__transactions.getConfirmedTurnCount()).toBe(0);
   });
 
-  it.skip('atomicity spike: commit-time failure after one valid scalar write leaks live publication', () => {
+  it('atomicity spike: pre-commit scalar staging failure leaves state and notifications unchanged', () => {
       const tree = signalTree({ a: 'A', b: 'B' }).with(timeTravel()) as ISignalTree<{
         a: { (): string; set(value: string): void };
         b: { (): string; set(value: string): void };
@@ -960,6 +961,11 @@ describe('tree realization adapter', () => {
         tree: tree as ISignalTree<object>,
         descriptors,
       });
+      const scalarSlotRuntime =
+        getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
+      if (!scalarSlotRuntime) {
+        throw new Error('Expected scalar slot runtime for atomicity test');
+      }
       const observedNotifications: Array<{ path: string; value: unknown; prev: unknown }> = [];
       const unsubscribe = getPathNotifier().subscribe(
         '**',
@@ -971,11 +977,16 @@ describe('tree realization adapter', () => {
       );
 
       const baselineHistory = tree.getHistory().length;
-      const injectedFailure = new Error('Injected scalar commit failure');
-      const bSetSpy = vi
-        .spyOn(tree.$.b, 'set')
-        .mockImplementation(() => {
-          throw injectedFailure;
+      const injectedFailure = new Error('Injected scalar staging failure');
+      const originalResolve = scalarSlotRuntime.resolveScalarSlot.bind(scalarSlotRuntime);
+      const resolveSpy = vi
+        .spyOn(scalarSlotRuntime, 'resolveScalarSlot')
+        .mockImplementation((positionId) => {
+          if (positionId === bOwner) {
+            throw injectedFailure;
+          }
+
+          return originalResolve(positionId);
         });
 
       expect(
@@ -1000,7 +1011,7 @@ describe('tree realization adapter', () => {
       expect(observedNotifications).toEqual([]);
 
       unsubscribe();
-      bSetSpy.mockRestore();
+        resolveSpy.mockRestore();
   });
 
   it('validates the full effect set before any mutation and refuses structural drift without partial application', () => {

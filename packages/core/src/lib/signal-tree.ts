@@ -26,6 +26,11 @@ import {
   type MutationCaptureRuntime,
 } from './internals/mutation-capture-runtime';
 import {
+  createTreeScalarSlotRuntime,
+  defineTreeScalarSlotRuntime,
+  type TreeScalarSlotRuntime,
+} from './internals/tree-scalar-slot-runtime';
+import {
   collectRequestedTreeCapabilities,
   resolveTreeCapabilities,
 } from './internals/tree-capabilities';
@@ -870,6 +875,7 @@ function createSignalStore<T>(
   materializationContext: MaterializationContext,
   buildPlan: TreeBuildPlan,
   captureRuntime: MutationCaptureRuntime,
+  scalarSlotRuntime: TreeScalarSlotRuntime | undefined,
   positionIds?: readonly number[],
   /**
    * Dot-path to this node, used ONLY to name the leaf in ST2027. Threaded
@@ -878,38 +884,52 @@ function createSignalStore<T>(
    */
   path = ''
 ): TreeNode<T> {
+  const createLeafSignal = <TValue>(
+    value: TValue,
+    leafPath: string,
+    leafPositionIds: readonly number[] | undefined,
+    equal: (a: unknown, b: unknown) => boolean
+  ): WritableSignal<TValue> => {
+    if (scalarSlotRuntime && leafPositionIds?.[0] !== undefined) {
+      return scalarSlotRuntime.createLeaf(
+        value,
+        equal as (current: TValue, next: TValue) => boolean,
+        leafPositionIds[0]
+      );
+    }
+
+    return signal(value, { equal });
+  };
+
   // Primitives, null, undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    const leaf = signal(obj, {
-      equal:
-        typeof ngDevMode === 'undefined' || ngDevMode
-          ? leafEqual(equalityFn, path)
-          : equalityFn,
-    });
+    const equal =
+      typeof ngDevMode === 'undefined' || ngDevMode
+        ? leafEqual(equalityFn, path)
+        : equalityFn;
+    const leaf = createLeafSignal(obj, path, positionIds, equal);
     finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
 
   // Arrays
   if (Array.isArray(obj)) {
-    const leaf = signal(obj, {
-      equal:
-        typeof ngDevMode === 'undefined' || ngDevMode
-          ? leafEqual(equalityFn, path)
-          : equalityFn,
-    });
+    const equal =
+      typeof ngDevMode === 'undefined' || ngDevMode
+        ? leafEqual(equalityFn, path)
+        : equalityFn;
+    const leaf = createLeafSignal(obj, path, positionIds, equal);
     finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
 
   // Built-in objects (Date, Map, Set, etc.)
   if (isBuiltInObject(obj)) {
-    const leaf = signal(obj, {
-      equal:
-        typeof ngDevMode === 'undefined' || ngDevMode
-          ? leafEqual(equalityFn, path)
-          : equalityFn,
-    });
+    const equal =
+      typeof ngDevMode === 'undefined' || ngDevMode
+        ? leafEqual(equalityFn, path)
+        : equalityFn;
+    const leaf = createLeafSignal(obj, path, positionIds, equal);
     finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
@@ -1012,16 +1032,16 @@ function createSignalStore<T>(
 
     // Null, undefined, primitives
     if (value === null || value === undefined || typeof value !== 'object') {
-      const leaf = signal(value, {
-        equal:
-          typeof ngDevMode === 'undefined' || ngDevMode
-            ? leafEqual(equalityFn, childPath)
-            : equalityFn,
-      });
+      const childPositionIds = getChildPositionIds();
+      const equal =
+        typeof ngDevMode === 'undefined' || ngDevMode
+          ? leafEqual(equalityFn, childPath)
+          : equalityFn;
+      const leaf = createLeafSignal(value, childPath, childPositionIds, equal);
       finalizeLeafSignal(
         leaf,
         childPath,
-        getChildPositionIds(),
+        childPositionIds,
         buildPlan,
         captureRuntime
       );
@@ -1035,16 +1055,16 @@ function createSignalStore<T>(
         warnMarkerInArray(key, value);
         warnEntityArrayLeaf(key, value);
       }
-      const leaf = signal(value, {
-        equal:
-          typeof ngDevMode === 'undefined' || ngDevMode
-            ? leafEqual(equalityFn, childPath)
-            : equalityFn,
-      });
+      const childPositionIds = getChildPositionIds();
+      const equal =
+        typeof ngDevMode === 'undefined' || ngDevMode
+          ? leafEqual(equalityFn, childPath)
+          : equalityFn;
+      const leaf = createLeafSignal(value, childPath, childPositionIds, equal);
       finalizeLeafSignal(
         leaf,
         childPath,
-        getChildPositionIds(),
+        childPositionIds,
         buildPlan,
         captureRuntime
       );
@@ -1059,6 +1079,7 @@ function createSignalStore<T>(
       materializationContext,
       buildPlan,
       captureRuntime,
+      scalarSlotRuntime,
       getChildPositionIds(),
       // Folds to '' in production — the path exists only to name a leaf in
       // ST2027, so a prod build should not spend a string concat per node
@@ -1120,6 +1141,9 @@ function create<T extends object>(
   // Create signal store
   let signalState: TreeNode<T>;
   let disposeLazy: (() => void) | undefined;
+  const scalarSlotRuntime = buildPlan.has('causal-runtime')
+    ? createTreeScalarSlotRuntime()
+    : undefined;
   const rootPositionIds = materializationContext.positionTopologyEnabled
     ? [materializationContext.allocatePositionId()]
     : undefined;
@@ -1149,6 +1173,7 @@ function create<T extends object>(
         materializationContext,
         buildPlan,
         captureRuntime,
+        scalarSlotRuntime,
         rootPositionIds
       );
       disposeLazy = undefined;
@@ -1160,6 +1185,7 @@ function create<T extends object>(
       materializationContext,
       buildPlan,
       captureRuntime,
+      scalarSlotRuntime,
       rootPositionIds
     );
   }
@@ -1201,6 +1227,10 @@ function create<T extends object>(
       signalState as object,
       materializationContext.positionRegistry
     );
+  }
+  if (scalarSlotRuntime && scalarSlotRuntime.slotCount() > 0) {
+    defineTreeScalarSlotRuntime(tree as object, scalarSlotRuntime);
+    defineTreeScalarSlotRuntime(signalState as object, scalarSlotRuntime);
   }
 
   // Lifecycle: cleanup registry and destroyed flag
