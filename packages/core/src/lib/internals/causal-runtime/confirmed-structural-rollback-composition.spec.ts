@@ -1164,7 +1164,7 @@ describe('confirmed structural undo/redo composition', () => {
     expect(appliedHistory.inspect()).toEqual(appliedBefore);
   });
 
-  it('keeps a confirmed remove redoable when redo validation refuses with structural-drift', () => {
+  it('keeps a confirmed remove redoable when redo validation detects a different subject at the same structural key', () => {
     const topology = createPositionRegistry();
     const root = topology.allocate();
     const profile = topology.allocate(root);
@@ -1229,7 +1229,32 @@ describe('confirmed structural undo/redo composition', () => {
     ).toEqual({ ok: true, turnId: confirmed.id });
 
     const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
-    const validateEffects = vi.fn(() => ({ kind: 'structural-drift' as const }));
+    const validateEffects = vi.fn((effects: readonly ReversalEffect[]) => {
+      expect(effects).toEqual([
+        {
+          owner: P_DRIVER_NAME,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: SUBJECT_DRIVER,
+          structural: undefined,
+        },
+        {
+          owner: P_DRIVER_KEY,
+          before: 'A',
+          after: undefined,
+          subjectId: SUBJECT_DRIVER,
+          structural: 'remove',
+          subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME, P_DRIVER_ENABLED],
+        },
+      ]);
+
+      // External uncaptured drift: the key/path still points at A, but it now
+      // identifies a different semantic subject than the authored remove expects.
+      const actualSubjectAtKey = SUBJECT_OTHER_DRIVER;
+      expect(actualSubjectAtKey).not.toBe(SUBJECT_DRIVER);
+
+      return { kind: 'structural-drift' as const };
+    });
     const appliedBefore = appliedHistory.inspect();
     const storeBefore = store.inspect();
 
@@ -1245,23 +1270,6 @@ describe('confirmed structural undo/redo composition', () => {
     ).toEqual({ ok: false, refusal: { kind: 'structural-drift' } });
 
     expect(validateEffects).toHaveBeenCalledTimes(1);
-    expect(validateEffects).toHaveBeenCalledWith([
-      {
-        owner: P_DRIVER_NAME,
-        before: 'Alice',
-        after: 'Alicia',
-        subjectId: SUBJECT_DRIVER,
-        structural: undefined,
-      },
-      {
-        owner: P_DRIVER_KEY,
-        before: 'A',
-        after: undefined,
-        subjectId: SUBJECT_DRIVER,
-        structural: 'remove',
-        subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME, P_DRIVER_ENABLED],
-      },
-    ]);
     expect(applyAtomically).not.toHaveBeenCalled();
     expect(store.inspect()).toEqual(storeBefore);
     expect(appliedHistory.inspect()).toEqual(appliedBefore);
