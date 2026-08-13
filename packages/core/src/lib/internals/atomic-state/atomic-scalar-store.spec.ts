@@ -2,9 +2,25 @@ import { computed, isSignal } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 
 import {
+  type AtomicScalarFrame,
   createAtomicScalarStore,
   StaleAtomicScalarFrameError,
 } from './atomic-scalar-store';
+
+type ResolvedWrite<TSnapshot extends Record<string, unknown>> = {
+  leaf: ReturnType<ReturnType<typeof createAtomicScalarStore<TSnapshot>>['writablePath']>;
+  value: unknown;
+};
+
+function commitResolvedWrites<TSnapshot extends Record<string, unknown>>(
+  frame: AtomicScalarFrame<TSnapshot>,
+  writes: readonly ResolvedWrite<TSnapshot>[]
+): void {
+  for (const write of writes) {
+    frame.set(write.leaf as never, write.value as never);
+  }
+  frame.commit();
+}
 
 describe('atomic scalar store spike', () => {
   it('keeps staged writes invisible until commit', () => {
@@ -229,5 +245,117 @@ describe('atomic scalar store spike', () => {
 
     expect(store.writablePath<string>(['profile', 'name'])).toBe(name);
     expect(name()).toBe('Alicia');
+  });
+
+  it('applies sibling nested writes against the latest staged snapshot in frame order', () => {
+    const store = createAtomicScalarStore({
+      profile: { name: 'Alice', enabled: true },
+    });
+    const name = store.writablePath<string>(['profile', 'name']);
+    const enabled = store.writablePath<boolean>(['profile', 'enabled']);
+    const frame = store.beginFrame();
+
+    frame.set(name, 'Alicia');
+    frame.set(enabled, false);
+    frame.commit();
+
+    expect(store.snapshot()).toEqual({
+      profile: { name: 'Alicia', enabled: false },
+    });
+  });
+
+  it('lets a later parent write override an earlier child write in the same frame', () => {
+    const store = createAtomicScalarStore({
+      profile: { name: 'Alice', enabled: true },
+    });
+    const profile = store.writablePath<{ name: string; enabled: boolean }>(['profile']);
+    const name = store.writablePath<string>(['profile', 'name']);
+    const frame = store.beginFrame();
+
+    frame.set(name, 'Alicia');
+    frame.set(profile, { name: 'Bob', enabled: false });
+    frame.commit();
+
+    expect(store.snapshot()).toEqual({
+      profile: { name: 'Bob', enabled: false },
+    });
+  });
+
+  it('lets a later child write refine an earlier parent write in the same frame', () => {
+    const store = createAtomicScalarStore({
+      profile: { name: 'Alice', enabled: true },
+    });
+    const profile = store.writablePath<{ name: string; enabled: boolean }>(['profile']);
+    const name = store.writablePath<string>(['profile', 'name']);
+    const frame = store.beginFrame();
+
+    frame.set(profile, { name: 'Bob', enabled: false });
+    frame.set(name, 'Alicia');
+    frame.commit();
+
+    expect(store.snapshot()).toEqual({
+      profile: { name: 'Alicia', enabled: false },
+    });
+  });
+
+  it('frame update uses the latest staged value, not the committed value', () => {
+    const store = createAtomicScalarStore({ count: 1 });
+    const count = store.writable('count');
+    const frame = store.beginFrame();
+
+    frame.set(count, 2);
+    frame.update(count, (current) => current + 1);
+
+    expect(count()).toBe(1);
+
+    frame.commit();
+
+    expect(count()).toBe(3);
+    expect(store.snapshot()).toEqual({ count: 3 });
+  });
+
+  it('can commit a realization-shaped batch over already-resolved leaf refs with one publication', () => {
+    const store = createAtomicScalarStore({
+      a: 'A',
+      b: 'B',
+    });
+    const a = store.writable('a');
+    const b = store.writable('b');
+    const pair = computed(() => `${a()}|${b()}`);
+    const writes: readonly ResolvedWrite<{ a: string; b: string }>[] = [
+      { leaf: a, value: 'A2' },
+      { leaf: b, value: 'B2' },
+    ];
+
+    commitResolvedWrites(store.beginFrame(), writes);
+
+    expect(store.publicationCount()).toBe(1);
+    expect(pair()).toBe('A2|B2');
+    expect(store.writable('a')).toBe(a);
+    expect(store.writable('b')).toBe(b);
+  });
+
+  it('refuses a stale realization-shaped batch and preserves the intervening live write', () => {
+    const store = createAtomicScalarStore({
+      a: 'A',
+      b: 'B',
+    });
+    const a = store.writable('a');
+    const b = store.writable('b');
+    const writes: readonly ResolvedWrite<{ a: string; b: string }>[] = [
+      { leaf: a, value: 'A2' },
+      { leaf: b, value: 'B2' },
+    ];
+    const frame = store.beginFrame();
+
+    for (const write of writes) {
+      frame.set(write.leaf as never, write.value as never);
+    }
+
+    b.set('B-live');
+
+    expect(() => frame.commit()).toThrow(StaleAtomicScalarFrameError);
+    expect(store.snapshot()).toEqual({ a: 'A', b: 'B-live' });
+    expect(store.publicationCount()).toBe(1);
   });
 });
