@@ -7,6 +7,8 @@ const P_FIRST_NAME = 3 as PositionId;
 const P_LAST_NAME = 4 as PositionId;
 const P_SETTINGS = 5 as PositionId;
 const P_THEME = 6 as PositionId;
+const P_ENABLED = 7 as PositionId;
+const P_LOCAL = 8 as PositionId;
 
 describe('TurnStore', () => {
   it('admits one confirmed turn canonically and indexes only participating owners', () => {
@@ -377,6 +379,51 @@ describe('TurnStore', () => {
       frontiers: {
         [P_THEME]: 2,
         [P_FIRST_NAME]: 3,
+      },
+    });
+  });
+
+  it('does not derive participants, indexes, or frontiers from structural coverage alone', () => {
+    const store = new TurnStore();
+
+    const turn = store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_LAST_NAME,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: 'profile-1',
+        },
+        {
+          owner: P_FIRST_NAME,
+          before: 'A',
+          after: undefined,
+          subjectId: 'profile-1',
+          structural: 'remove',
+          subjectPositions: [P_FIRST_NAME, P_LAST_NAME, P_ENABLED, P_LOCAL],
+        },
+      ],
+    });
+
+    expect(turn.participants).toEqual([P_LAST_NAME, P_FIRST_NAME]);
+    expect(store.getTurnIdsForPosition(P_FIRST_NAME)).toEqual([1]);
+    expect(store.getTurnIdsForPosition(P_LAST_NAME)).toEqual([1]);
+    expect(store.getTurnIdsForPosition(P_ENABLED)).toEqual([]);
+    expect(store.getTurnIdsForPosition(P_LOCAL)).toEqual([]);
+    expect(store.getFrontier(P_FIRST_NAME)).toBe(1);
+    expect(store.getFrontier(P_LAST_NAME)).toBe(1);
+    expect(store.getFrontier(P_ENABLED)).toBeUndefined();
+    expect(store.getFrontier(P_LOCAL)).toBeUndefined();
+    expect(store.inspect()).toEqual({
+      turnIds: [1],
+      positionIndex: {
+        [P_LAST_NAME]: [1],
+        [P_FIRST_NAME]: [1],
+      },
+      frontiers: {
+        [P_LAST_NAME]: 1,
+        [P_FIRST_NAME]: 1,
       },
     });
   });

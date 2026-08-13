@@ -2,6 +2,7 @@ import { createPositionRegistry } from '../position-registry';
 
 import type { PositionId } from './causal-types';
 import { AppliedHistory } from './applied-history';
+import { createRealizationContextSource } from './realization-context';
 import { assessConfirmedUndo } from './authority-assessment';
 import { planConfirmedReversal } from './reversal-planner';
 import { TurnStore } from './turn-store';
@@ -31,6 +32,32 @@ const buildTopology = () => {
     positions: Record<string, PositionId>;
   };
 };
+
+const buildStructuralTopology = () => {
+  const topology = createPositionRegistry();
+
+  const root = topology.allocate();
+  const profile = topology.allocate(root);
+  const key = topology.allocate(profile);
+  const name = topology.allocate(profile);
+  const enabled = topology.allocate(profile);
+
+  return {
+    topology,
+    positions: {
+      root,
+      profile,
+      key,
+      name,
+      enabled,
+    },
+  } satisfies {
+    topology: ReturnType<typeof createPositionRegistry>;
+    positions: Record<string, PositionId>;
+  };
+};
+
+const SUBJECT_PROFILE = 'profile-1';
 
 describe('planConfirmedReversal', () => {
   it('produces a pure scalar reversal plan in reverse effect order', () => {
@@ -168,5 +195,196 @@ describe('planConfirmedReversal', () => {
 
     expect(planner).not.toHaveBeenCalled();
     expect(store.inspect()).toEqual(before);
+  });
+
+  it('plans confirmed remove undo from the surviving external boundary across structural coverage', () => {
+    const { positions } = buildStructuralTopology();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [positions.key, 'A'],
+        [positions.name, 'Alice'],
+        [positions.enabled, true],
+      ]),
+      store,
+      appliedHistory,
+    });
+
+    store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: positions.key,
+          before: 'A',
+          after: undefined,
+          subjectId: SUBJECT_PROFILE,
+          structural: 'remove',
+          subjectPositions: [positions.key, positions.name, positions.enabled],
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(1)).toEqual({ ok: true });
+
+    expect(planConfirmedReversal({ turnId: 1, store, realizationContext })).toEqual({
+      ok: true,
+      plan: {
+        turnId: 1,
+        effects: [
+          {
+            owner: positions.key,
+            before: undefined,
+            after: 'A',
+            subjectId: SUBJECT_PROFILE,
+            structural: 'add',
+            subjectPositions: [positions.key, positions.name, positions.enabled],
+            subjectState: {
+              [positions.name]: 'Alice',
+              [positions.enabled]: true,
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it('overlays same-turn prefix values onto the surviving external remove boundary', () => {
+    const { positions } = buildStructuralTopology();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [positions.key, 'A'],
+        [positions.name, 'Alice'],
+        [positions.enabled, true],
+      ]),
+      store,
+      appliedHistory,
+    });
+
+    store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: positions.name,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: SUBJECT_PROFILE,
+        },
+        {
+          owner: positions.key,
+          before: 'A',
+          after: undefined,
+          subjectId: SUBJECT_PROFILE,
+          structural: 'remove',
+          subjectPositions: [positions.key, positions.name, positions.enabled],
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(1)).toEqual({ ok: true });
+
+    expect(planConfirmedReversal({ turnId: 1, store, realizationContext })).toEqual({
+      ok: true,
+      plan: {
+        turnId: 1,
+        effects: [
+          {
+            owner: positions.key,
+            before: undefined,
+            after: 'A',
+            subjectId: SUBJECT_PROFILE,
+            structural: 'add',
+            subjectPositions: [positions.key, positions.name, positions.enabled],
+            subjectState: {
+              [positions.name]: 'Alicia',
+              [positions.enabled]: true,
+            },
+          },
+          {
+            owner: positions.name,
+            before: 'Alicia',
+            after: 'Alice',
+            subjectId: SUBJECT_PROFILE,
+            structural: undefined,
+          },
+        ],
+      },
+    });
+  });
+
+  it('uses the current surviving external boundary rather than stale canonical predecessor values', () => {
+    const { positions } = buildStructuralTopology();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [positions.key, 'A'],
+        [positions.name, 'Alice'],
+        [positions.enabled, false],
+      ]),
+      store,
+      appliedHistory,
+    });
+
+    store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: positions.enabled,
+          before: false,
+          after: true,
+          subjectId: SUBJECT_PROFILE,
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(1)).toEqual({ ok: true });
+    store.admitConfirmed({
+      id: 2,
+      effects: [
+        {
+          owner: positions.name,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: SUBJECT_PROFILE,
+        },
+        {
+          owner: positions.key,
+          before: 'A',
+          after: undefined,
+          subjectId: SUBJECT_PROFILE,
+          structural: 'remove',
+          subjectPositions: [positions.key, positions.name, positions.enabled],
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(2)).toEqual({ ok: true });
+
+    expect(planConfirmedReversal({ turnId: 2, store, realizationContext })).toEqual({
+      ok: true,
+      plan: {
+        turnId: 2,
+        effects: [
+          {
+            owner: positions.key,
+            before: undefined,
+            after: 'A',
+            subjectId: SUBJECT_PROFILE,
+            structural: 'add',
+            subjectPositions: [positions.key, positions.name, positions.enabled],
+            subjectState: {
+              [positions.name]: 'Alicia',
+              [positions.enabled]: true,
+            },
+          },
+          {
+            owner: positions.name,
+            before: 'Alicia',
+            after: 'Alice',
+            subjectId: SUBJECT_PROFILE,
+            structural: undefined,
+          },
+        ],
+      },
+    });
   });
 });

@@ -12,6 +12,8 @@ const buildTopology = () => {
   const profile = topology.allocate(root);
   const firstName = topology.allocate(profile);
   const lastName = topology.allocate(profile);
+  const enabled = topology.allocate(profile);
+  const local = topology.allocate(profile);
   const settings = topology.allocate(root);
   const theme = topology.allocate(settings);
 
@@ -22,6 +24,8 @@ const buildTopology = () => {
       profile,
       firstName,
       lastName,
+      enabled,
+      local,
       settings,
       theme,
     },
@@ -272,6 +276,62 @@ describe('assessConfirmedUndo', () => {
     ).toEqual({
       ok: true,
       turnId: 2,
+    });
+  });
+
+  it('does not let structural coverage expand undo authority beyond actual participants', () => {
+    const { topology, positions } = buildTopology();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    const turn = store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: positions.lastName,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: 'profile-1',
+        },
+        {
+          owner: positions.firstName,
+          before: 'A',
+          after: undefined,
+          subjectId: 'profile-1',
+          structural: 'remove',
+          subjectPositions: [
+            positions.firstName,
+            positions.lastName,
+            positions.enabled,
+            positions.local,
+          ],
+        },
+      ],
+    });
+    appliedHistory.admitConfirmed(turn.id);
+
+    expect(
+      assessConfirmedUndo({
+        authority: positions.enabled,
+        store,
+        appliedHistory,
+        topology,
+      })
+    ).toEqual({
+      ok: false,
+      refusal: { kind: 'outside-boundary' },
+    });
+
+    expect(
+      assessConfirmedUndo({
+        authority: positions.profile,
+        store,
+        appliedHistory,
+        topology,
+      })
+    ).toEqual({
+      ok: true,
+      turnId: 1,
     });
   });
 });
