@@ -10,7 +10,18 @@ const RUN_TIMING = process.env['ST_PERF'] === '1';
 const timingDescribe = describe.runIf(RUN_TIMING);
 const OUTPUT_FILE = process.env['ST_PERF_OUTPUT_FILE'];
 
-const SIZES = [1, 10, 100, 1_000] as const;
+type TreeState = Record<string, unknown>;
+type Path = readonly string[];
+type FrameWrite = { path: Path; value: unknown };
+type Scenario = {
+  name: string;
+  stateFactory: () => TreeState;
+  targetPath: Path;
+  foreignPath: Path;
+  frameWrites: readonly FrameWrite[];
+};
+
+const FLAT_SIZES = [1, 10, 100, 1_000] as const;
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -42,33 +53,135 @@ function buildFlatState(size: number): Record<string, number> {
   return state;
 }
 
-function leafKey(size: number): string {
-  return `leaf_${Math.floor(size / 2)}`;
+function readPath(root: unknown, path: Path): any {
+  let current = root as Record<string, unknown>;
+  for (const segment of path) {
+    current = current[segment] as Record<string, unknown>;
+  }
+  return current;
 }
 
-function foreignKey(size: number): string {
-  return 'leaf_0';
+function incrementValue(value: unknown): unknown {
+  if (typeof value === 'number') {
+    return value + 1;
+  }
+  if (typeof value === 'boolean') {
+    return !value;
+  }
+  if (typeof value === 'string') {
+    return `${value}!`;
+  }
+  throw new Error('Unsupported benchmark leaf type.');
 }
 
-type NativeHarness = ReturnType<typeof createNativeHarness>;
-type AtomicHarness = ReturnType<typeof createAtomicHarness>;
+function buildScenarios(): readonly Scenario[] {
+  const flatScenarios = FLAT_SIZES.map((size) => ({
+    name: `flat-${size}`,
+    stateFactory: () => buildFlatState(size),
+    targetPath: [`leaf_${Math.floor(size / 2)}`],
+    foreignPath: ['leaf_0'],
+    frameWrites: [
+      { path: [`leaf_${Math.floor(size / 2)}`], value: size + 1 },
+      {
+        path: [`leaf_${Math.min(Math.floor(size / 2) + 1, size - 1)}`],
+        value: size + 2,
+      },
+    ],
+  }));
 
-function createNativeHarness(size: number) {
-  const tree = signalTree(buildFlatState(size));
-  const target = tree.$[leafKey(size)]!;
-  const foreign = tree.$[foreignKey(size)]!;
+  const nestedScenario: Scenario = {
+    name: 'nested-profile',
+    stateFactory: () => ({
+      profile: {
+        identity: {
+          score: 1,
+          alias: 'alice',
+          enabled: true,
+          rank: 3,
+        },
+        preferences: {
+          theme: 'light',
+          compact: false,
+        },
+      },
+      dashboard: {
+        counters: {
+          visits: 4,
+          alerts: 2,
+        },
+        flags: {
+          loading: false,
+        },
+      },
+      session: {
+        active: true,
+        tenant: 'demo',
+      },
+    }),
+    targetPath: ['profile', 'identity', 'score'],
+    foreignPath: ['dashboard', 'flags', 'loading'],
+    frameWrites: [
+      { path: ['profile', 'identity', 'score'], value: 2 },
+      { path: ['profile', 'identity', 'enabled'], value: false },
+    ],
+  };
+
+  const appScenario: Scenario = {
+    name: 'app-shaped-small',
+    stateFactory: () => ({
+      session: {
+        userId: 42,
+        tenant: 'north',
+        authenticated: true,
+      },
+      filters: {
+        region: 'west',
+        search: '',
+        includeClosed: false,
+      },
+      dashboard: {
+        zoom: 1,
+        chartMode: 'day',
+        selection: 'all',
+      },
+      inspector: {
+        open: false,
+        tab: 'summary',
+        itemId: 9,
+      },
+      featureFlags: {
+        planner: true,
+        realtime: true,
+        audit: false,
+      },
+    }),
+    targetPath: ['dashboard', 'zoom'],
+    foreignPath: ['inspector', 'open'],
+    frameWrites: [
+      { path: ['dashboard', 'zoom'], value: 2 },
+      { path: ['dashboard', 'chartMode'], value: 'week' },
+    ],
+  };
+
+  return [...flatScenarios, nestedScenario, appScenario];
+}
+
+function createNativeHarness(scenario: Scenario) {
+  const tree = signalTree(scenario.stateFactory());
+  const target = readPath(tree.$, scenario.targetPath);
+  const foreign = readPath(tree.$, scenario.foreignPath);
   return {
-    read(): number {
+    read(): unknown {
       return target();
     },
-    set(next: number): void {
+    set(next: unknown): void {
       target.set(next);
     },
     update(): void {
-      target.update((value) => value + 1);
+      target.update((value: unknown) => incrementValue(value));
     },
     unrelatedConsumerRuns(): number | null {
-      if (size === 1) {
+      if (scenario.targetPath.join('.') === scenario.foreignPath.join('.')) {
         return null;
       }
       let runs = 0;
@@ -87,23 +200,23 @@ function createNativeHarness(size: number) {
   };
 }
 
-function createAtomicHarness(size: number) {
-  const prototype = createAtomicSignalTreePrototype(buildFlatState(size));
+function createAtomicHarness(scenario: Scenario) {
+  const prototype = createAtomicSignalTreePrototype(scenario.stateFactory());
   const tree = prototype.tree;
-  const target = tree.$[leafKey(size)]!;
-  const foreign = tree.$[foreignKey(size)]!;
+  const target = readPath(tree.$, scenario.targetPath);
+  const foreign = readPath(tree.$, scenario.foreignPath);
   return {
-    read(): number {
+    read(): unknown {
       return target();
     },
-    set(next: number): void {
+    set(next: unknown): void {
       target.set(next);
     },
     update(): void {
-      target.update((value) => value + 1);
+      target.update((value: unknown) => incrementValue(value));
     },
     unrelatedConsumerRuns(): number | null {
-      if (size === 1) {
+      if (scenario.targetPath.join('.') === scenario.foreignPath.join('.')) {
         return null;
       }
       let runs = 0;
@@ -116,23 +229,33 @@ function createAtomicHarness(size: number) {
       consumer();
       return runs;
     },
+    frameCommit(): void {
+      const frame = prototype.beginFrame();
+      for (const write of scenario.frameWrites) {
+        frame.set(readPath(tree.$, write.path), write.value as never);
+      }
+      frame.commit();
+    },
+    rootRevision(): number {
+      return prototype.revision();
+    },
   };
 }
 
-function timeConstruction(size: number): { nativeMs: number; atomicMs: number } {
+function timeConstruction(scenario: Scenario): { nativeMs: number; atomicMs: number } {
   const nativeMs = benchmark(() => {
-    const harness = createNativeHarness(size);
+    const harness = createNativeHarness(scenario);
     harness.destroy();
   });
   const atomicMs = benchmark(() => {
-    createAtomicHarness(size);
+    createAtomicHarness(scenario);
   });
   return { nativeMs, atomicMs };
 }
 
-function timeLeafRead(size: number): { nativeMs: number; atomicMs: number } {
-  const native = createNativeHarness(size);
-  const atomic = createAtomicHarness(size);
+function timeLeafRead(scenario: Scenario): { nativeMs: number; atomicMs: number } {
+  const native = createNativeHarness(scenario);
+  const atomic = createAtomicHarness(scenario);
 
   const nativeMs = benchmark(() => {
     for (let index = 0; index < 10_000; index++) {
@@ -149,18 +272,18 @@ function timeLeafRead(size: number): { nativeMs: number; atomicMs: number } {
   return { nativeMs, atomicMs };
 }
 
-function timeLeafSet(size: number): { nativeMs: number; atomicMs: number } {
-  const native = createNativeHarness(size);
-  const atomic = createAtomicHarness(size);
-  let nativeValue = 0;
-  let atomicValue = 0;
+function timeLeafSet(scenario: Scenario): { nativeMs: number; atomicMs: number } {
+  const native = createNativeHarness(scenario);
+  const atomic = createAtomicHarness(scenario);
+  let nativeValue = native.read();
+  let atomicValue = atomic.read();
 
   const nativeMs = benchmark(() => {
-    nativeValue ^= 1;
+    nativeValue = incrementValue(nativeValue);
     native.set(nativeValue);
   });
   const atomicMs = benchmark(() => {
-    atomicValue ^= 1;
+    atomicValue = incrementValue(atomicValue);
     atomic.set(atomicValue);
   });
 
@@ -168,9 +291,9 @@ function timeLeafSet(size: number): { nativeMs: number; atomicMs: number } {
   return { nativeMs, atomicMs };
 }
 
-function timeLeafUpdate(size: number): { nativeMs: number; atomicMs: number } {
-  const native = createNativeHarness(size);
-  const atomic = createAtomicHarness(size);
+function timeLeafUpdate(scenario: Scenario): { nativeMs: number; atomicMs: number } {
+  const native = createNativeHarness(scenario);
+  const atomic = createAtomicHarness(scenario);
 
   const nativeMs = benchmark(() => {
     native.update();
@@ -183,22 +306,30 @@ function timeLeafUpdate(size: number): { nativeMs: number; atomicMs: number } {
   return { nativeMs, atomicMs };
 }
 
+function timeAtomicFrameCommit(scenario: Scenario): number {
+  return benchmark(() => {
+    const atomic = createAtomicHarness(scenario);
+    atomic.frameCommit();
+  });
+}
+
 timingDescribe('Benchmark: atomic signal tree prototype', () => {
   it('reports native vs atomic-backed timings and unrelated-consumer invalidation', () => {
-    const rows = SIZES.map((size) => {
-      const construction = timeConstruction(size);
-      const read = timeLeafRead(size);
-      const set = timeLeafSet(size);
-      const update = timeLeafUpdate(size);
-      const nativeInvalidation = createNativeHarness(size);
-      const atomicInvalidation = createAtomicHarness(size);
+    const rows = buildScenarios().map((scenario) => {
+      const construction = timeConstruction(scenario);
+      const read = timeLeafRead(scenario);
+      const set = timeLeafSet(scenario);
+      const update = timeLeafUpdate(scenario);
+      const atomicFrameCommitMs = timeAtomicFrameCommit(scenario);
+      const nativeInvalidation = createNativeHarness(scenario);
+      const atomicInvalidation = createAtomicHarness(scenario);
       const nativeRuns = nativeInvalidation.unrelatedConsumerRuns();
       const atomicRuns = atomicInvalidation.unrelatedConsumerRuns();
 
       nativeInvalidation.destroy();
 
       return {
-        size,
+        scenario: scenario.name,
         nativeConstructMs: construction.nativeMs.toFixed(4),
         atomicConstructMs: construction.atomicMs.toFixed(4),
         nativeReadMs: read.nativeMs.toFixed(4),
@@ -207,6 +338,7 @@ timingDescribe('Benchmark: atomic signal tree prototype', () => {
         atomicSetMs: atomicMsToString(set.atomicMs),
         nativeUpdateMs: update.nativeMs.toFixed(4),
         atomicUpdateMs: atomicMsToString(update.atomicMs),
+        atomicFrameCommitMs: atomicMsToString(atomicFrameCommitMs),
         nativeUnrelatedConsumerRuns: nativeRuns,
         atomicUnrelatedConsumerRuns: atomicRuns,
       };
