@@ -10,7 +10,14 @@ type ScalarSnapshot = Record<string, unknown>;
 type AtomicLeaf<TSnapshot extends ScalarSnapshot, TKey extends keyof TSnapshot> =
   WritableSignal<TSnapshot[TKey]>;
 
-const LEAF_KEY = new WeakMap<WritableSignal<unknown>, PropertyKey>();
+const LEAF_PATH = new WeakMap<WritableSignal<unknown>, readonly PropertyKey[]>();
+
+export class StaleAtomicScalarFrameError extends Error {
+  constructor() {
+    super('AtomicScalarFrame base revision is stale.');
+    this.name = 'StaleAtomicScalarFrameError';
+  }
+}
 
 export interface AtomicScalarFrame<TSnapshot extends ScalarSnapshot> {
   set<TKey extends keyof TSnapshot>(
@@ -28,9 +35,11 @@ export interface AtomicScalarFrame<TSnapshot extends ScalarSnapshot> {
 export interface AtomicScalarStore<TSnapshot extends ScalarSnapshot> {
   readonly snapshot: Signal<TSnapshot>;
   publicationCount(): number;
+  revision(): number;
   writable<TKey extends keyof TSnapshot>(
     key: TKey
   ): AtomicLeaf<TSnapshot, TKey>;
+  writablePath<TValue>(path: readonly PropertyKey[]): WritableSignal<TValue>;
   beginFrame(): AtomicScalarFrame<TSnapshot>;
 }
 
@@ -56,39 +65,79 @@ function patchSnapshotValue<
   };
 }
 
-function resolveLeafKey<TSnapshot extends ScalarSnapshot, TKey extends keyof TSnapshot>(
-  leaf: AtomicLeaf<TSnapshot, TKey>
-): TKey {
-  const key = LEAF_KEY.get(leaf as WritableSignal<unknown>);
-  if (key === undefined) {
+function isObjectRecord(value: unknown): value is Record<PropertyKey, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function readPathValue(snapshot: unknown, path: readonly PropertyKey[]): unknown {
+  let current = snapshot;
+  for (const segment of path) {
+    if (!isObjectRecord(current)) {
+      throw new Error(`AtomicScalarStore path ${path.join('.')} is not addressable.`);
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
+function patchPathValue(
+  current: unknown,
+  path: readonly PropertyKey[],
+  value: unknown
+): unknown {
+  if (path.length === 0) {
+    return Object.is(current, value) ? current : value;
+  }
+
+  if (!isObjectRecord(current)) {
+    throw new Error(`AtomicScalarStore path ${path.join('.')} is not writable.`);
+  }
+
+  const [segment, ...rest] = path;
+  const nextChild = patchPathValue(current[segment], rest, value);
+
+  if (Object.is(nextChild, current[segment])) {
+    return current;
+  }
+
+  return {
+    ...current,
+    [segment]: nextChild,
+  };
+}
+
+function pathKey(path: readonly PropertyKey[]): string {
+  return path.map(String).join('\u001f');
+}
+
+function resolveLeafPath(leaf: WritableSignal<unknown>): readonly PropertyKey[] {
+  const path = LEAF_PATH.get(leaf);
+  if (!path) {
     throw new Error('AtomicScalarFrame received a leaf from a different store.');
   }
 
-  return key as TKey;
+  return path;
 }
 
-function createWritableLeaf<
-  TSnapshot extends ScalarSnapshot,
-  TKey extends keyof TSnapshot,
->(
-  key: TKey,
+function createWritableLeaf<TSnapshot extends ScalarSnapshot, TValue>(
+  path: readonly PropertyKey[],
   committedSnapshot: Signal<TSnapshot>,
   publishSnapshot: (nextSnapshot: TSnapshot) => void
-): AtomicLeaf<TSnapshot, TKey> {
-  const leaf = linkedSignal(() => committedSnapshot()[key]);
-  LEAF_KEY.set(leaf as WritableSignal<unknown>, key);
+): WritableSignal<TValue> {
+  const leaf = linkedSignal(() => readPathValue(committedSnapshot(), path)) as WritableSignal<unknown>;
+  LEAF_PATH.set(leaf, [...path]);
 
-  leaf.set = (value: TSnapshot[TKey]) => {
-    publishSnapshot(patchSnapshotValue(committedSnapshot(), key, value));
+  leaf.set = (value: TValue) => {
+    publishSnapshot(patchPathValue(committedSnapshot(), path, value) as TSnapshot);
   };
 
-  leaf.update = (updater: (value: TSnapshot[TKey]) => TSnapshot[TKey]) => {
+  leaf.update = (updater: (value: TValue) => TValue) => {
     const currentSnapshot = committedSnapshot();
-    const nextValue = updater(currentSnapshot[key]);
-    publishSnapshot(patchSnapshotValue(currentSnapshot, key, nextValue));
+    const nextValue = updater(readPathValue(currentSnapshot, path) as TValue);
+    publishSnapshot(patchPathValue(currentSnapshot, path, nextValue) as TSnapshot);
   };
 
-  return leaf as AtomicLeaf<TSnapshot, TKey>;
+  return leaf as WritableSignal<TValue>;
 }
 
 class AtomicScalarFrameImpl<TSnapshot extends ScalarSnapshot>
@@ -99,6 +148,8 @@ class AtomicScalarFrameImpl<TSnapshot extends ScalarSnapshot>
 
   constructor(
     private readonly baseSnapshot: TSnapshot,
+    private readonly baseRevision: number,
+    private readonly getCommittedRevision: () => number,
     private readonly commitSnapshot: SnapshotPublisher<TSnapshot>
   ) {
     this.stagedSnapshot = { ...baseSnapshot };
@@ -109,8 +160,8 @@ class AtomicScalarFrameImpl<TSnapshot extends ScalarSnapshot>
     value: TSnapshot[TKey]
   ): void {
     this.assertOpen();
-    const key = resolveLeafKey(leaf);
-    this.stagedSnapshot = patchSnapshotValue(this.stagedSnapshot, key, value);
+    const path = resolveLeafPath(leaf as WritableSignal<unknown>);
+    this.stagedSnapshot = patchPathValue(this.stagedSnapshot, path, value) as TSnapshot;
   }
 
   update<TKey extends keyof TSnapshot>(
@@ -118,9 +169,9 @@ class AtomicScalarFrameImpl<TSnapshot extends ScalarSnapshot>
     updater: (value: TSnapshot[TKey]) => TSnapshot[TKey]
   ): void {
     this.assertOpen();
-    const key = resolveLeafKey(leaf);
-    const nextValue = updater(this.stagedSnapshot[key]);
-    this.stagedSnapshot = patchSnapshotValue(this.stagedSnapshot, key, nextValue);
+    const path = resolveLeafPath(leaf as WritableSignal<unknown>);
+    const nextValue = updater(readPathValue(this.stagedSnapshot, path) as TSnapshot[TKey]);
+    this.stagedSnapshot = patchPathValue(this.stagedSnapshot, path, nextValue) as TSnapshot;
   }
 
   discard(): void {
@@ -132,6 +183,10 @@ class AtomicScalarFrameImpl<TSnapshot extends ScalarSnapshot>
   commit(): void {
     this.assertOpen();
     this.closed = true;
+
+    if (this.getCommittedRevision() !== this.baseRevision) {
+      throw new StaleAtomicScalarFrameError();
+    }
 
     if (this.stagedSnapshot !== this.baseSnapshot) {
       this.commitSnapshot.set(this.stagedSnapshot);
@@ -150,8 +205,9 @@ export function createAtomicScalarStore<TSnapshot extends ScalarSnapshot>(
 ): AtomicScalarStore<TSnapshot> {
   const committedSnapshot = signal(initialSnapshot);
   let publishCount = 0;
+  let revision = 0;
 
-  const leaves = new Map<keyof TSnapshot, WritableSignal<unknown>>();
+  const leaves = new Map<string, WritableSignal<unknown>>();
 
   const publishSnapshot = (nextSnapshot: TSnapshot): void => {
     if (Object.is(committedSnapshot(), nextSnapshot)) {
@@ -159,6 +215,7 @@ export function createAtomicScalarStore<TSnapshot extends ScalarSnapshot>(
     }
 
     publishCount++;
+    revision++;
     committedSnapshot.set(nextSnapshot);
   };
 
@@ -167,19 +224,46 @@ export function createAtomicScalarStore<TSnapshot extends ScalarSnapshot>(
     publicationCount(): number {
       return publishCount;
     },
+    revision(): number {
+      return revision;
+    },
     writable<TKey extends keyof TSnapshot>(key: TKey): AtomicLeaf<TSnapshot, TKey> {
-      const existing = leaves.get(key);
+      const keyPath = [key] as const;
+      const existing = leaves.get(pathKey(keyPath));
       if (existing) {
         return existing as AtomicLeaf<TSnapshot, TKey>;
       }
 
-      const leaf = createWritableLeaf(key, committedSnapshot.asReadonly(), publishSnapshot);
+      const leaf = createWritableLeaf<TSnapshot, TSnapshot[TKey]>(
+        keyPath,
+        committedSnapshot.asReadonly(),
+        publishSnapshot
+      );
 
-      leaves.set(key, leaf as WritableSignal<unknown>);
+      leaves.set(pathKey(keyPath), leaf as WritableSignal<unknown>);
+      return leaf as AtomicLeaf<TSnapshot, TKey>;
+    },
+    writablePath<TValue>(path: readonly PropertyKey[]): WritableSignal<TValue> {
+      const existing = leaves.get(pathKey(path));
+      if (existing) {
+        return existing as WritableSignal<TValue>;
+      }
+
+      const leaf = createWritableLeaf<TSnapshot, TValue>(
+        path,
+        committedSnapshot.asReadonly(),
+        publishSnapshot
+      );
+      leaves.set(pathKey(path), leaf as WritableSignal<unknown>);
       return leaf;
     },
     beginFrame(): AtomicScalarFrame<TSnapshot> {
-      return new AtomicScalarFrameImpl(committedSnapshot(), { set: publishSnapshot });
+      return new AtomicScalarFrameImpl(
+        committedSnapshot(),
+        revision,
+        () => revision,
+        { set: publishSnapshot }
+      );
     },
   };
 }
