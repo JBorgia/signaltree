@@ -110,15 +110,67 @@ function createPendingRollbackEffects(
         return firstEffectIndexByOwner.get(effect.owner) === index;
       }
     )
-    .map((effect) => ({
-      owner: effect.owner,
-      before: realizationContext.getCurrentValue(effect.owner),
-      after: realizationContext.getValueWithoutPendingTurn(turn.id, effect.owner),
-      subjectId: effect.subjectId,
-      structural: deriveCompensationStructuralEffect(effect.structural),
-      subjectState: deriveSubjectState(turn, effect, turn.id, realizationContext),
-    }))
+    .map((effect) =>
+      createPendingRollbackEffect(effect, turn.id, realizationContext, turn)
+    )
     .filter((effect) => effect.before !== effect.after);
+}
+
+function createPendingRollbackEffect(
+  effect: CausalTurn['effects'][number],
+  turnId: TurnId,
+  realizationContext: RealizationContext,
+  turn: CausalTurn
+): ReversalEffect {
+  const structural = deriveCompensationStructuralEffect(effect.structural);
+
+  if (effect.structural !== undefined) {
+    return {
+      owner: effect.owner,
+      before: deriveStructuralRollbackBefore(effect),
+      after: deriveStructuralRollbackAfter(effect),
+      subjectId: effect.subjectId,
+      structural,
+      subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
+    };
+  }
+
+  return {
+    owner: effect.owner,
+    before: realizationContext.getCurrentValue(effect.owner),
+    after: realizationContext.getValueWithoutPendingTurn(turnId, effect.owner),
+    subjectId: effect.subjectId,
+    structural,
+    subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
+  };
+}
+
+function deriveStructuralRollbackBefore(
+  effect: CausalTurn['effects'][number]
+): unknown {
+  switch (effect.structural) {
+    case 'add':
+    case 'rekey':
+      return effect.after;
+    case 'remove':
+      return effect.after;
+    default:
+      return effect.before;
+  }
+}
+
+function deriveStructuralRollbackAfter(
+  effect: CausalTurn['effects'][number]
+): unknown {
+  switch (effect.structural) {
+    case 'add':
+      return effect.before;
+    case 'remove':
+    case 'rekey':
+      return effect.before;
+    default:
+      return effect.after;
+  }
 }
 
 function deriveSubjectState(

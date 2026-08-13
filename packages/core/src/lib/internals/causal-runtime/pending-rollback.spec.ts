@@ -13,6 +13,7 @@ const P_THEME = 5 as PositionId;
 const P_DRIVER_KEY = 6 as PositionId;
 const P_DRIVER_NAME = 7 as PositionId;
 const SUBJECT_DRIVER = 'driver-1';
+const SUBJECT_DRIVER_TWO = 'driver-2';
 
 describe('rollbackPendingTurnAt', () => {
   it('leaves all state untouched when the pending turn is missing', () => {
@@ -563,6 +564,80 @@ describe('rollbackPendingTurnAt', () => {
     expect(store.hasPendingTurn(pendingNameUpdate.id)).toBe(true);
     expect(values.get(P_DRIVER_KEY)).toBe('driver-1');
     expect(values.get(P_DRIVER_NAME)).toBe('Alicia');
+  });
+
+  it('rolls back sibling pending removes as two independent structural restorations even when they share one owner position', () => {
+    const { store, appliedHistory, topology } = createPendingRollbackContext();
+
+    const pending = store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_KEY,
+          before: 'driver-1',
+          after: undefined,
+          subjectId: SUBJECT_DRIVER,
+          structural: 'remove',
+          subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME],
+        },
+        {
+          owner: P_DRIVER_KEY,
+          before: 'driver-2',
+          after: undefined,
+          subjectId: SUBJECT_DRIVER_TWO,
+          structural: 'remove',
+          subjectPositions: [P_DRIVER_KEY],
+        },
+      ],
+    });
+
+    const applyAtomically = vi.fn((effects: readonly ReversalEffect[]) => {
+      expect(effects).toEqual([
+        {
+          owner: P_DRIVER_KEY,
+          before: undefined,
+          after: 'driver-1',
+          subjectId: SUBJECT_DRIVER,
+          structural: 'add',
+          subjectState: {
+            [P_DRIVER_NAME]: 'Alice',
+          },
+        },
+        {
+          owner: P_DRIVER_KEY,
+          before: undefined,
+          after: 'driver-2',
+          subjectId: SUBJECT_DRIVER_TWO,
+          structural: 'add',
+          subjectState: undefined,
+        },
+      ]);
+    });
+
+    expect(
+      rollbackPendingTurnAt({
+        authority: P_ROOT,
+        turnId: pending.id,
+        store,
+        topology,
+        port: { applyAtomically },
+        realizationContext: {
+          getCurrentValue: () => undefined,
+          getValueWithoutConfirmedTurn: (_turnId, positionId) =>
+            positionId === P_DRIVER_NAME ? 'Alice' : undefined,
+          getValueWithoutPendingTurn: (_turnId, positionId) =>
+            positionId === P_DRIVER_NAME ? 'Alice' : undefined,
+        },
+      })
+    ).toEqual({ ok: true, turnId: pending.id });
+
+    expect(store.hasPendingTurn(pending.id)).toBe(false);
+    expect(applyAtomically).toHaveBeenCalledTimes(1);
+    expect(appliedHistory.inspect()).toEqual({
+      appliedTurnIds: [],
+      redoTurnIds: [],
+      frontiers: {},
+    });
   });
 
   it('refuses later pending structural dependency after a pending rekey without changing state', () => {
