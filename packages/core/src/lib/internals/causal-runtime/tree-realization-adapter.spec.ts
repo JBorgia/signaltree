@@ -930,6 +930,79 @@ describe('tree realization adapter', () => {
     expect(tree.__transactions.getConfirmedTurnCount()).toBe(0);
   });
 
+  it.skip('atomicity spike: commit-time failure after one valid scalar write leaks live publication', () => {
+      const tree = signalTree({ a: 'A', b: 'B' }).with(timeTravel()) as ISignalTree<{
+        a: { (): string; set(value: string): void };
+        b: { (): string; set(value: string): void };
+      }> & {
+        getHistory(): unknown[];
+      };
+
+      const aOwner = getOwnedPositionIds(tree.$.a)?.[0];
+      const bOwner = getOwnedPositionIds(tree.$.b)?.[0];
+      if (aOwner === undefined || bOwner === undefined) {
+        throw new Error('Expected owned positions for scalar atomicity test');
+      }
+
+      const descriptors = new Map<number, TreeRealizationDescriptor>();
+      rememberTreeRealizationDescriptor({
+        descriptors,
+        path: 'a',
+        positionIds: [aOwner],
+      });
+      rememberTreeRealizationDescriptor({
+        descriptors,
+        path: 'b',
+        positionIds: [bOwner],
+      });
+
+      const adapter = createTreeRealizationAdapter({
+        tree: tree as ISignalTree<object>,
+        descriptors,
+      });
+      const observedNotifications: Array<{ path: string; value: unknown; prev: unknown }> = [];
+      const unsubscribe = getPathNotifier().subscribe(
+        '**',
+        (value, prev, path) => {
+          if (path === 'a' || path === 'b') {
+            observedNotifications.push({ path, value, prev });
+          }
+        }
+      );
+
+      const baselineHistory = tree.getHistory().length;
+      const injectedFailure = new Error('Injected scalar commit failure');
+      const bSetSpy = vi
+        .spyOn(tree.$.b, 'set')
+        .mockImplementation(() => {
+          throw injectedFailure;
+        });
+
+      expect(
+        adapter.validateEffects([
+          { owner: aOwner, before: 'A', after: 'A2' },
+          { owner: bOwner, before: 'B', after: 'B2' },
+        ])
+      ).toBeUndefined();
+
+      expect(() =>
+        adapter.applyAtomically([
+          { owner: aOwner, before: 'A', after: 'A2' },
+          { owner: bOwner, before: 'B', after: 'B2' },
+        ])
+      ).toThrow(injectedFailure);
+
+      getPathNotifier().flushSync();
+
+      expect(tree.$.a()).toBe('A');
+      expect(tree.$.b()).toBe('B');
+      expect(tree.getHistory().length).toBe(baselineHistory);
+      expect(observedNotifications).toEqual([]);
+
+      unsubscribe();
+      bSetSpy.mockRestore();
+  });
+
   it('validates the full effect set before any mutation and refuses structural drift without partial application', () => {
     const tree = signalTree({
       profile: { name: 'Alice' },
