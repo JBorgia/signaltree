@@ -120,6 +120,11 @@ const LEGACY_TREE_BUILD_PLAN = createTreeBuildPlan(
   'property'
 );
 
+// Public signalTree() now has one default scalar substrate: tree-owned slots
+// with Angular tokens as the reactive adapter. Optional capabilities layer
+// additional metadata/runtime services on top; they no longer choose between
+// fundamentally different scalar storage implementations.
+
 function finalizeLeafSignal<TValue>(
   leaf: WritableSignal<TValue>,
   path: string,
