@@ -32,7 +32,6 @@ function track<T>(read: () => T) {
   return { runs: () => runs, read: () => c() };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRows = any;
 
 describe('SignalTree reactivity contract', () => {

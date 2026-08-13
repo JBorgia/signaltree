@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Exhaustive compile-time typing assertions for enhancer chaining
 // This file uses type-level assertions only. It must compile without errors.
 

@@ -134,6 +134,52 @@ describe('recordHistory: false — present everywhere ELSE', () => {
 });
 
 describe('recordHistory: false — undo is PARTIAL, by design', () => {
+  it('keeps the excluded collection out of confirmed turn participation', async () => {
+    const tree = signalTree({
+      rows: entityMap<Row, number>({
+        selectId: (r) => r.id,
+        recordHistory: false,
+      }),
+      n: 0,
+    }).with(timeTravel());
+    tree.$.rows.setAll(rows(3));
+    await flush();
+
+    (tree as unknown as (v: object) => void)({ n: 1 });
+    await flush();
+    tree.$.rows.addOne({ id: 99, value: 99 });
+    (tree as unknown as (v: object) => void)({ n: 2 });
+    await flush();
+
+    const manager = (tree as unknown as {
+      __timeTravel: {
+        getTurns(): Array<{
+          id: number;
+          __positionIds?: number[];
+          __effects?: Array<{ ownerPath?: string; path?: string }>;
+        }>;
+        getFrontier(positionId: number): number;
+        getAppliedTurnIdsForPosition(positionId: number): number[];
+      };
+    }).__timeTravel;
+    const rowsPositionId = (tree.$.rows as { __positionIds?: number[] }).__positionIds?.[0];
+    const countPositionId = (tree.$.n as { __positionIds?: number[] }).__positionIds?.[0];
+    const latestTurn = manager.getTurns().at(-1);
+
+    expect(rowsPositionId).toBeTypeOf('number');
+    expect(countPositionId).toBeTypeOf('number');
+    expect(latestTurn?.__positionIds).not.toContain(rowsPositionId);
+    expect(latestTurn?.__positionIds).toContain(countPositionId);
+    expect(latestTurn?.__effects?.some((effect) => effect.ownerPath === 'rows')).toBe(
+      false
+    );
+    expect(latestTurn?.__effects?.some((effect) => effect.path?.startsWith('rows'))).toBe(
+      false
+    );
+    expect(manager.getAppliedTurnIdsForPosition(rowsPositionId as number)).toEqual([]);
+    expect(manager.getFrontier(rowsPositionId as number)).toBe(0);
+  });
+
   it('undo reverts other state but NOT the excluded collection', async () => {
     // The documented trade, pinned so it can never become an accidental
     // regression: "a partial restore is worse than a failed one" is a lesson

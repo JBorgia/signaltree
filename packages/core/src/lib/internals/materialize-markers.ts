@@ -1,5 +1,9 @@
 import { computed, isSignal, type Signal } from '@angular/core';
 
+import {
+  createPositionRegistry,
+  type PositionRegistry,
+} from './position-registry';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor, isTraversableNode } from '../utils';
 
@@ -54,13 +58,25 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
 export type HydrateMode = 'merge' | 'restore' | 'rehydrate' | 'transfer';
 
 export interface MaterializationContext {
-  allocatePositionId: () => number;
+  positionRegistry: PositionRegistry;
+  positionTopologyEnabled: boolean;
+  hasCapability: (capability: 'mutation-capture' | 'position-topology') => boolean;
+  allocatePositionId: (parentPositionId?: number) => number;
 }
 
-export function createMaterializationContext(): MaterializationContext {
-  let nextPositionId = 1;
+export function createMaterializationContext(
+  positionTopologyEnabled = true,
+  hasCapability: (capability: 'mutation-capture' | 'position-topology') => boolean =
+    (capability) =>
+      capability === 'position-topology' ? positionTopologyEnabled : true
+): MaterializationContext {
+  const positionRegistry = createPositionRegistry();
   return {
-    allocatePositionId: () => nextPositionId++,
+    positionRegistry,
+    positionTopologyEnabled,
+    hasCapability,
+    allocatePositionId: (parentPositionId?: number) =>
+      positionRegistry.allocate(parentPositionId),
   };
 }
 
@@ -70,7 +86,8 @@ interface MarkerProcessor {
     marker: unknown,
     notifier: PathNotifier,
     path: string,
-    context: MaterializationContext
+    context: MaterializationContext,
+    parentPositionId?: number
   ) => unknown;
   /**
    * Live node → the payload that represents its STATE. Anything the node can
@@ -335,7 +352,8 @@ export function registerMarkerProcessor<T, R>(
     marker: T,
     notifier: PathNotifier,
     path: string,
-    context: MaterializationContext
+    context: MaterializationContext,
+    parentPositionId?: number
   ) => R,
   hooks?: {
     snapshot?: (node: R) => unknown;
@@ -369,7 +387,8 @@ export function registerBuiltinMarkerProcessor<T, R>(
     marker: T,
     notifier: PathNotifier,
     path: string,
-    context: MaterializationContext
+    context: MaterializationContext,
+    parentPositionId?: number
   ) => R,
   hooks?: {
     snapshot?: (node: R) => unknown;
@@ -610,11 +629,15 @@ export function materializeMarkers(
     for (const processor of MARKER_PROCESSORS) {
       if (processor.check(value)) {
         try {
+          const parentPositionId = (
+            node as { __positionIds?: number[] }
+          ).__positionIds?.[0];
           const materialized = processor.create(
             value,
             getNotifier(),
             pathString,
-            context
+            context,
+            parentPositionId
           );
           // Stamp the owning processor so lookup is an O(1) property read
           // rather than a scan over every registered marker. Non-enumerable so

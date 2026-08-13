@@ -17,7 +17,7 @@
  * Main factory function to create a SignalTree
  * @see {@link signalTree}
  */
-export { signalTree } from './lib/signal-tree';
+export { plannedSignalTree, signalTree } from './lib/signal-tree';
 
 /**
  * Wrap a tree factory in an injectable Angular service (the idiomatic Angular
@@ -158,7 +158,10 @@ export { derivedFrom } from './lib/internals/derived-types';
 export { linked, type LinkedOptions } from './lib/linked';
 
 // Builder types (v7)
-export type { SignalTreeBuilder } from './lib/internals/builder-types';
+export type {
+  SignalTreeBuilder,
+  SignalTreePlanBuilder,
+} from './lib/internals/builder-types';
 
 // ============================================
 // MARKER EXPORTS

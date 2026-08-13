@@ -104,8 +104,9 @@ production, this cost is simply the price of the feature, and it is small.
 signalTree(state).with(timeTravel({ maxHistorySize: 50 }));
 ```
 
-Verified: 20 writes against `maxHistorySize: 5` leaves a history of 5. This is
-your direct control over the `entries` half of `entries x width`.
+Verified: 20 writes against `maxHistorySize: 5` leaves 5 reversible turns and 5
+spendable undo steps. This is your direct control over the retained-turn half of
+history memory.
 
 ### 2. Scope what is recorded — `recordHistory: false`
 

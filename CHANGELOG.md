@@ -135,11 +135,11 @@
   `@signaltree/events` (including the `EntitySnapshotAccessor` interface that mirrors it).
 
 - **[ST2032]** — `timeTravel({ maxHistorySize })` below 2, or non-finite, cannot support
-  undo and now says so. `maxHistorySize` is a buffer LENGTH, not a step count: N entries
-  yield N-1 undo steps. MEASURED after 10 writes — omitted: 10, 5: 4, 2: 1, **1: 0,
-  0: 0**. `0` reads as "no limit" and `1` reads as "one step"; both left `canUndo()`
-  permanently false, and `NaN` was silently unbounded because `length > NaN` is never
-  true. Any such value now falls back to 50 and reports ST2032.
+  undo and now says so. Valid values now keep their literal meaning: `maxHistorySize: 5`
+  retains 5 reversible turns and therefore 5 spendable undos. `0` reads as "no limit"
+  and `1` reads as "one step"; both used to leave `canUndo()` permanently false, and
+  `NaN` was silently unbounded because `length > NaN` is never true. Any such value now
+  falls back to 50 and reports ST2032.
 
 ### Added
 

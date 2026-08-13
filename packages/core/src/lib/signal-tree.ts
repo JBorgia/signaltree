@@ -1,8 +1,12 @@
 import { isSignal, signal, untracked, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
+import { resolveEnhancerOrder } from '../enhancers';
 import { batchScope } from './internals/batch-scope';
-import { SignalTreeBuilder } from './internals/builder-types';
+import {
+  SignalTreeBuilder,
+  SignalTreePlanBuilder,
+} from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
 import {
   createMaterializationContext,
@@ -10,6 +14,21 @@ import {
   isRegisteredMarker,
   materializeMarkers,
 } from './internals/materialize-markers';
+import { definePositionRegistry } from './internals/position-registry';
+import {
+  defineOwnedOwnerPath,
+  defineOwnedPositionIds,
+  wrapOwnedWritableSignal,
+} from './internals/owned-mutation';
+import {
+  createMutationCaptureRuntime,
+  MUTATION_CAPTURE_RUNTIME,
+  type MutationCaptureRuntime,
+} from './internals/mutation-capture-runtime';
+import {
+  collectRequestedTreeCapabilities,
+  resolveTreeCapabilities,
+} from './internals/tree-capabilities';
 import type { MaterializationContext } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isComparedMarker } from './markers/compared';
@@ -31,7 +50,9 @@ import type {
   NodeAccessor,
   EntityMapMarker,
   ISignalTree,
+  EnhancerWithMeta,
   EnhancerMeta,
+  TreeCapability,
 } from './types';
 
 import { ENHANCER_META } from './types';
@@ -64,10 +85,84 @@ const ENTITY_ARRAY_WARN_CAP = 256;
  * snapshot.
  */
 const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
+const PLANNED_TREE_BUILD_SYMBOL = Symbol.for('SignalTree:PlannedBuild');
+// =============================================================================
 
-// =============================================================================
-// TYPE GUARDS
-// =============================================================================
+type TreeBuildPlan = {
+  requestedCapabilities: readonly TreeCapability[];
+  capabilities: readonly TreeCapability[];
+  has(capability: TreeCapability): boolean;
+  leafMetadataStorage: 'property' | 'sidecar';
+};
+
+function createTreeBuildPlan(
+  requestedCapabilities: readonly TreeCapability[],
+  leafMetadataStorage: 'property' | 'sidecar'
+): TreeBuildPlan {
+  const resolved = resolveTreeCapabilities(requestedCapabilities);
+  return {
+    requestedCapabilities: resolved.requestedCapabilities,
+    capabilities: resolved.resolvedCapabilities,
+    has(capability: TreeCapability): boolean {
+      return resolved.resolvedCapabilities.includes(capability);
+    },
+    leafMetadataStorage,
+  };
+}
+
+const LEGACY_TREE_BUILD_PLAN = createTreeBuildPlan(
+  ['causal-runtime', 'temporal-snapshots'],
+  'property'
+);
+
+function finalizeLeafSignal<TValue>(
+  leaf: WritableSignal<TValue>,
+  path: string,
+  positionIds: readonly number[] | undefined,
+  buildPlan: TreeBuildPlan,
+  captureRuntime: MutationCaptureRuntime
+): void {
+  if (buildPlan.has('mutation-capture')) {
+    wrapOwnedWritableSignal(leaf, {
+      path,
+      ownerPath: path,
+      positionIds,
+      metadataStorage: buildPlan.leafMetadataStorage,
+      captureRuntime,
+    });
+    return;
+  }
+
+  if (buildPlan.has('position-topology')) {
+    defineOwnedPositionIds(leaf as object, positionIds);
+  }
+}
+
+function getEnhancerMeta(
+  enhancer: unknown
+): EnhancerMeta | undefined {
+  return (
+    (enhancer as Record<symbol, EnhancerMeta | undefined>)[ENHANCER_META] ??
+    (enhancer as { metadata?: EnhancerMeta }).metadata
+  );
+}
+
+function buildTreePlan(
+  enhancers: EnhancerWithMeta<unknown>[]
+): TreeBuildPlan {
+  const requestedCapabilities = collectRequestedTreeCapabilities(
+    enhancers.map((enhancer) => getEnhancerMeta(enhancer))
+  );
+  return createTreeBuildPlan(requestedCapabilities, 'sidecar');
+}
+
+function materializeTreeMarkers<T extends object>(
+  tree: ISignalTree<T>,
+  materializationContext: MaterializationContext
+): void {
+  materializeMarkers(tree.$, undefined, [], materializationContext);
+  _recordTreeConstruction();
+}
 
 export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
   return (
@@ -218,7 +313,11 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
  * When derived state is merged into a namespace and then processed by
  * materializeMarkers(), it needs to replace markers with their signal forms.
  */
-function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
+function makeNodeAccessor<T>(
+  store: TreeNode<T>,
+  ownerPath?: string,
+  positionIds?: readonly number[]
+): NodeAccessor<T> {
   // Declared as a METHOD SHORTHAND, not `function () {}`, and this is
   // load-bearing. A node carries the user's state keys as its own enumerable
   // properties, so every own property name a function already has is a name
@@ -277,6 +376,14 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
       writable: true,
       configurable: true,
     });
+  }
+
+  if (positionIds && positionIds.length > 0) {
+    defineOwnedPositionIds(accessor as object, positionIds);
+  }
+
+  if (ownerPath !== undefined) {
+    defineOwnedOwnerPath(accessor as object, ownerPath);
   }
 
   return accessor;
@@ -745,24 +852,24 @@ function leafEqual(
   };
 }
 
-function definePositionIds(
-  node: object,
+function wrapLeafSignal<TValue>(
+  leaf: WritableSignal<TValue>,
+  path: string,
   positionIds: readonly number[] | undefined
 ): void {
-  if (!positionIds || positionIds.length === 0) {
-    return;
-  }
-
-  Object.defineProperty(node, '__positionIds', {
-    get: () => [...positionIds],
-    enumerable: false,
-    configurable: true,
+  wrapOwnedWritableSignal(leaf, {
+    path,
+    ownerPath: path,
+    positionIds,
   });
 }
 
 function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
+  materializationContext: MaterializationContext,
+  buildPlan: TreeBuildPlan,
+  captureRuntime: MutationCaptureRuntime,
   positionIds?: readonly number[],
   /**
    * Dot-path to this node, used ONLY to name the leaf in ST2027. Threaded
@@ -779,7 +886,7 @@ function createSignalStore<T>(
           ? leafEqual(equalityFn, path)
           : equalityFn,
     });
-    definePositionIds(leaf as object, positionIds);
+    finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
 
@@ -791,7 +898,7 @@ function createSignalStore<T>(
           ? leafEqual(equalityFn, path)
           : equalityFn,
     });
-    definePositionIds(leaf as object, positionIds);
+    finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
 
@@ -803,7 +910,7 @@ function createSignalStore<T>(
           ? leafEqual(equalityFn, path)
           : equalityFn,
     });
-    definePositionIds(leaf as object, positionIds);
+    finalizeLeafSignal(leaf, path, positionIds, buildPlan, captureRuntime);
     return leaf as unknown as TreeNode<T>;
   }
 
@@ -811,6 +918,17 @@ function createSignalStore<T>(
   const store: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const childPath = path ? `${path}.${key}` : key;
+    let childPositionIds: number[] | undefined;
+    const getChildPositionIds = (): number[] | undefined => {
+      if (!materializationContext.positionTopologyEnabled) {
+        return undefined;
+      }
+
+      return (childPositionIds ??= [
+        materializationContext.allocatePositionId(positionIds?.[0]),
+      ]);
+    };
     // SECURITY: every `store[key] = …` below is a plain assignment, so a key
     // named `__proto__` invokes the Object.prototype SETTER on the store rather
     // than adding a property. `JSON.parse` creates a real own `__proto__` key,
@@ -851,7 +969,7 @@ function createSignalStore<T>(
       const leaf = signal(value.value, {
         equal: value.equal as (a: unknown, b: unknown) => boolean,
       });
-      definePositionIds(leaf as object, positionIds);
+      wrapLeafSignal(leaf, childPath, getChildPositionIds());
       store[key] = leaf;
       continue;
     }
@@ -897,10 +1015,16 @@ function createSignalStore<T>(
       const leaf = signal(value, {
         equal:
           typeof ngDevMode === 'undefined' || ngDevMode
-            ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
+            ? leafEqual(equalityFn, childPath)
             : equalityFn,
       });
-      definePositionIds(leaf as object, positionIds);
+      finalizeLeafSignal(
+        leaf,
+        childPath,
+        getChildPositionIds(),
+        buildPlan,
+        captureRuntime
+      );
       store[key] = leaf;
       continue;
     }
@@ -914,10 +1038,16 @@ function createSignalStore<T>(
       const leaf = signal(value, {
         equal:
           typeof ngDevMode === 'undefined' || ngDevMode
-            ? leafEqual(equalityFn, path ? `${path}.${key}` : key)
+            ? leafEqual(equalityFn, childPath)
             : equalityFn,
       });
-      definePositionIds(leaf as object, positionIds);
+      finalizeLeafSignal(
+        leaf,
+        childPath,
+        getChildPositionIds(),
+        buildPlan,
+        captureRuntime
+      );
       store[key] = leaf;
       continue;
     }
@@ -926,7 +1056,10 @@ function createSignalStore<T>(
     const nested = createSignalStore(
       value,
       equalityFn,
-      positionIds,
+      materializationContext,
+      buildPlan,
+      captureRuntime,
+      getChildPositionIds(),
       // Folds to '' in production — the path exists only to name a leaf in
       // ST2027, so a prod build should not spend a string concat per node
       // building one nothing will read.
@@ -936,7 +1069,7 @@ function createSignalStore<T>(
           : key
         : ''
     );
-    store[key] = makeNodeAccessor(nested);
+    store[key] = makeNodeAccessor(nested, childPath, getChildPositionIds());
   }
 
   // Register as memoisable. Only stores built here are reactive all the way
@@ -954,7 +1087,9 @@ function createSignalStore<T>(
 function create<T extends object>(
   initialState: T,
   config: TreeConfig,
-  materializationContext: MaterializationContext
+  materializationContext: MaterializationContext,
+  buildPlan: TreeBuildPlan = LEGACY_TREE_BUILD_PLAN,
+  captureRuntime: MutationCaptureRuntime = createMutationCaptureRuntime()
 ): ISignalTree<T> {
   if (initialState === null || initialState === undefined) {
     throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
@@ -985,7 +1120,9 @@ function create<T extends object>(
   // Create signal store
   let signalState: TreeNode<T>;
   let disposeLazy: (() => void) | undefined;
-  const rootPositionIds = [materializationContext.allocatePositionId()];
+  const rootPositionIds = materializationContext.positionTopologyEnabled
+    ? [materializationContext.allocatePositionId()]
+    : undefined;
 
   // Configure global PathNotifier batching based on tree config (opt-out via config.batchUpdates=false)
   // Default: batching enabled unless explicitly disabled
@@ -1006,11 +1143,25 @@ function create<T extends object>(
       if (typeof ngDevMode === 'undefined' || ngDevMode) {
         console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
       }
-      signalState = createSignalStore(initialState, equalityFn, rootPositionIds);
+      signalState = createSignalStore(
+        initialState,
+        equalityFn,
+        materializationContext,
+        buildPlan,
+        captureRuntime,
+        rootPositionIds
+      );
       disposeLazy = undefined;
     }
   } else {
-    signalState = createSignalStore(initialState, equalityFn, rootPositionIds);
+    signalState = createSignalStore(
+      initialState,
+      equalityFn,
+      materializationContext,
+      buildPlan,
+      captureRuntime,
+      rootPositionIds
+    );
   }
 
   // Create root callable function
@@ -1030,6 +1181,27 @@ function create<T extends object>(
 
   // Mark as NodeAccessor
   (tree as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
+  (tree as unknown as Record<symbol, MutationCaptureRuntime>)[
+    MUTATION_CAPTURE_RUNTIME
+  ] = captureRuntime;
+  if (rootPositionIds) {
+    defineOwnedPositionIds(tree as object, rootPositionIds);
+    defineOwnedPositionIds(signalState as object, rootPositionIds);
+  }
+  if (buildPlan.has('mutation-capture')) {
+    defineOwnedOwnerPath(tree as object, '');
+    defineOwnedOwnerPath(signalState as object, '');
+  }
+  if (materializationContext.positionTopologyEnabled) {
+    definePositionRegistry(
+      tree as object,
+      materializationContext.positionRegistry
+    );
+    definePositionRegistry(
+      signalState as object,
+      materializationContext.positionRegistry
+    );
+  }
 
   // Lifecycle: cleanup registry and destroyed flag
   const cleanupFns: Array<() => void> = [];
@@ -1305,8 +1477,18 @@ export function signalTree<T extends object, TDerived extends object>(
   const isFactory = typeof configOrDerived === 'function';
   const config: TreeConfig = isFactory ? {} : configOrDerived ?? {};
 
-  const materializationContext = createMaterializationContext();
-  const baseTree = create(initialState, config, materializationContext);
+  const materializationContext = createMaterializationContext(
+    true,
+    (capability) => LEGACY_TREE_BUILD_PLAN.has(capability)
+  );
+  const captureRuntime = createMutationCaptureRuntime();
+  const baseTree = create(
+    initialState,
+    config,
+    materializationContext,
+    LEGACY_TREE_BUILD_PLAN,
+    captureRuntime
+  );
   const builder = createBuilder<T, TreeNode<T>>(
     baseTree,
     materializationContext
@@ -1320,6 +1502,95 @@ export function signalTree<T extends object, TDerived extends object>(
   }
 
   return builder;
+}
+
+export function plannedSignalTree<T extends object>(
+  initialState: T,
+  config: TreeConfig = {}
+): SignalTreePlanBuilder<T> {
+  return createPlannedBuilder(initialState, config);
+}
+
+function createPlannedBuilder<TSource extends object, TAdded extends object = object>(
+  initialState: TSource,
+  config: TreeConfig,
+  enhancers: EnhancerWithMeta<unknown>[] = []
+): SignalTreePlanBuilder<TSource, TAdded> {
+  let builtTree: (ISignalTree<TSource> & TAdded) | undefined;
+
+  const planner: SignalTreePlanBuilder<TSource, TAdded> = {
+    with<TNextAdded>(
+      enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TNextAdded
+    ): SignalTreePlanBuilder<TSource, TAdded & TNextAdded> {
+      if (builtTree) {
+        throw new Error(
+          'SignalTree: plannedSignalTree() cannot add capabilities after build().'
+        );
+      }
+
+      return createPlannedBuilder<TSource, TAdded & TNextAdded>(
+        initialState,
+        config,
+        [...enhancers, enhancer as EnhancerWithMeta<unknown>]
+      );
+    },
+
+    build(): ISignalTree<TSource> & TAdded {
+      if (builtTree) {
+        return builtTree;
+      }
+
+      const orderedEnhancers = resolveEnhancerOrder(
+        [...enhancers],
+        new Set<string>(),
+        Boolean(config.debugMode)
+      );
+      const buildPlan = buildTreePlan(orderedEnhancers);
+      const materializationContext = createMaterializationContext(
+        buildPlan.has('position-topology'),
+        (capability) => buildPlan.has(capability)
+      );
+      const captureRuntime = createMutationCaptureRuntime();
+
+      let tree = create(
+        initialState,
+        config,
+        materializationContext,
+        buildPlan,
+        captureRuntime
+      ) as ISignalTree<TSource>;
+
+      materializeTreeMarkers(tree, materializationContext);
+
+      for (const enhancer of orderedEnhancers) {
+        tree = tree.with(
+          enhancer as (tree: ISignalTree<TSource>) => ISignalTree<TSource>
+        );
+      }
+
+      Object.defineProperty(tree, 'with', {
+        value: () => {
+          throw new Error(
+            'SignalTree: Capabilities are fixed at build() time for plannedSignalTree().'
+          );
+        },
+        enumerable: false,
+        writable: false,
+        configurable: true,
+      });
+
+      Object.defineProperty(tree, PLANNED_TREE_BUILD_SYMBOL, {
+        value: buildPlan,
+        enumerable: false,
+        configurable: true,
+      });
+
+      builtTree = tree as ISignalTree<TSource> & TAdded;
+      return builtTree;
+    },
+  };
+
+  return planner;
 }
 
 // =============================================================================

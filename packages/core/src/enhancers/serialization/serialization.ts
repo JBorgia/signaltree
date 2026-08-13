@@ -1281,5 +1281,5 @@ export function persistence(
 export function applySerialization<T extends Record<string, unknown>>(
   tree: ISignalTree<T>
 ): ISignalTree<T> & SerializationMethods {
-  return serialization()(tree as any) as ISignalTree<T> & SerializationMethods;
+  return serialization()(tree) as ISignalTree<T> & SerializationMethods;
 }

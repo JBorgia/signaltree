@@ -207,9 +207,9 @@ describe('6d — maxHistorySize validation (FIXED in 14.1.1)', () => {
     return spent;
   };
 
-  it('N entries yields N-1 undo steps', async () => {
-    expect(await usableSteps(2)).toBe(1);
-    expect(await usableSteps(5)).toBe(4);
+  it('maxHistorySize N retains N undoable turns', async () => {
+    expect(await usableSteps(2)).toBe(2);
+    expect(await usableSteps(5)).toBe(5);
   });
 
   it.each([0, 1, -1, Number.NaN, Number.POSITIVE_INFINITY])(

@@ -112,3 +112,14 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
     factory: ($: TAccum) => TDerived
   ): SignalTreeBuilder<TSource, TAccum & ProcessDerived<TDerived>>;
 }
+
+export interface SignalTreePlanBuilder<
+  TSource extends object,
+  TAdded extends object = object,
+> {
+  with<TNextAdded>(
+    enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TNextAdded
+  ): SignalTreePlanBuilder<TSource, TAdded & TNextAdded>;
+
+  build(): ISignalTree<TSource> & TAdded;
+}

@@ -1,3 +1,4 @@
+import { computed } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 
 import { entityMap } from '../../lib/markers/entity-map';
@@ -9,6 +10,19 @@ import { signalTree } from '../../lib/signal-tree';
 import { SignalTreeRollbackError } from '../../lib/types';
 import { transactions } from '../transactions/transactions';
 import { enableTimeTravel, timeTravel, withTimeTravel } from './time-travel';
+
+type ScopedAuthorityNode = {
+  __positionIds?: number[];
+};
+
+type InternalTimeTravelManager = {
+  undoAt(positionId: number): boolean;
+  redoAt(positionId: number): boolean;
+  canUndoAt(positionId: number): boolean;
+  canRedoAt(positionId: number): boolean;
+  containsPosition(authorityPositionId: number, participantPositionId: number): boolean;
+  getFrontier(positionId: number): number;
+};
 
 describe('time-travel enhancer', () => {
   const expectRollbackError = (
@@ -3554,9 +3568,11 @@ describe('time-travel enhancer', () => {
     expect(t.getFrontier(rekeyPositionId)).toBe(0);
   });
 
-  it('uses one root PositionId for ordinary scalar turns and undoes them through one frontier', async () => {
+  it('gives top-level scalar turns distinct participant positions under a shared root authority', async () => {
     const store = signalTree({ count: 0, title: 'A' }).with(timeTravel());
     const t = (store as any).__timeTravel;
+    const rootPositionId = (store.$ as unknown as ScopedAuthorityNode)
+      .__positionIds?.[0] as number;
 
     store.$.count.set(1);
     await Promise.resolve();
@@ -3572,24 +3588,139 @@ describe('time-travel enhancer', () => {
     const firstPositionId = firstTurn.__positionIds?.[0] as number;
     const secondPositionId = secondTurn.__positionIds?.[0] as number;
 
-    expect(firstPositionId).toBe(secondPositionId);
-    expect(t.getAppliedTurnIdsForPosition(firstPositionId)).toEqual([
-      firstTurn.id,
+    expect(firstPositionId).not.toBe(secondPositionId);
+    expect(t.containsPosition(rootPositionId, firstPositionId)).toBe(true);
+    expect(t.containsPosition(rootPositionId, secondPositionId)).toBe(true);
+    expect(t.getAppliedTurnIdsForPosition(rootPositionId)).toEqual([]);
+    expect(t.getAppliedTurnIdsForPosition(firstPositionId)).toEqual([firstTurn.id]);
+    expect(t.getAppliedTurnIdsForPosition(secondPositionId)).toEqual([
       secondTurn.id,
     ]);
-    expect(t.getFrontier(firstPositionId)).toBe(2);
+    expect(t.getFrontier(rootPositionId)).toBe(0);
+    expect(t.getFrontier(firstPositionId)).toBe(1);
+    expect(t.getFrontier(secondPositionId)).toBe(1);
 
     store.undo();
     expect(store.$.count()).toBe(1);
     expect(store.$.title()).toBe('A');
+    expect(t.getFrontier(rootPositionId)).toBe(0);
     expect(t.getFrontier(firstPositionId)).toBe(1);
+    expect(t.getFrontier(secondPositionId)).toBe(0);
 
     store.undo();
     expect(store.$.count()).toBe(0);
+    expect(t.getFrontier(rootPositionId)).toBe(0);
     expect(t.getFrontier(firstPositionId)).toBe(0);
+    expect(t.getFrontier(secondPositionId)).toBe(0);
   });
 
-  it('indexes one root callable partial update as one P_root turn with two scalar effects and atomic undo/redo', async () => {
+  it('recomputes derived state without adding a second causal effect or frontier movement', async () => {
+    const store = signalTree({
+      profile: {
+        firstName: 'Jonathan',
+        lastName: 'Borgia',
+      },
+    })
+      .derived(($) => ({
+        profile: {
+          fullName: computed(
+            () => `${$.profile.firstName()} ${$.profile.lastName()}`
+          ),
+        },
+      }))
+      .with(timeTravel());
+    const t = (store as any).__timeTravel;
+    const fullName = store.$.profile.fullName as {
+      (): string;
+      __positionIds?: number[];
+      __ownerPath?: string;
+    };
+
+    expect(fullName()).toBe('Jonathan Borgia');
+    expect(fullName.__positionIds).toBeUndefined();
+    expect(fullName.__ownerPath).toBeUndefined();
+
+    t.resetHistory();
+    const baselineHistoryCount = t.getHistory().length;
+    const baselineTurnCount = t.getTurns().length;
+
+    store.$.profile.firstName.set('Jon');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const turn = t.getTurns().at(-1) as {
+      id: number;
+      __ownerPaths?: string[];
+      __positionIds?: number[];
+      __effects?: Array<{
+        kind: string;
+        path: string;
+        before: unknown;
+        after: unknown;
+      }>;
+    };
+    const positionId = turn.__positionIds?.[0] as number;
+
+    expect(store.$.profile.firstName()).toBe('Jon');
+    expect(fullName()).toBe('Jon Borgia');
+    expect(t.getHistory()).toHaveLength(baselineHistoryCount + 1);
+    expect(t.getTurns()).toHaveLength(baselineTurnCount + 1);
+    expect(turn.__ownerPaths).toEqual(['profile.firstName']);
+    expect(turn.__positionIds).toHaveLength(1);
+    expect(turn.__effects).toHaveLength(1);
+    expect(turn.__effects?.[0]).toMatchObject({
+      kind: 'set',
+      path: 'profile.firstName',
+      before: 'Jonathan',
+      after: 'Jon',
+    });
+    expect(t.getFrontier(positionId)).toBe(1);
+  });
+
+  it('undoes the source write while derived state recomputes without its own history entry', async () => {
+    const store = signalTree({
+      profile: {
+        firstName: 'Jonathan',
+        lastName: 'Borgia',
+      },
+    })
+      .derived(($) => ({
+        profile: {
+          fullName: computed(
+            () => `${$.profile.firstName()} ${$.profile.lastName()}`
+          ),
+        },
+      }))
+      .with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+    const baselineHistoryCount = t.getHistory().length;
+    const baselineTurnCount = t.getTurns().length;
+
+    store.$.profile.firstName.set('Jon');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const turn = t.getTurns().at(-1) as { __positionIds?: number[] };
+    const positionId = turn.__positionIds?.[0] as number;
+
+    expect(store.$.profile.fullName()).toBe('Jon Borgia');
+    expect(t.getHistory()).toHaveLength(baselineHistoryCount + 1);
+    expect(t.getTurns()).toHaveLength(baselineTurnCount + 1);
+    expect(t.getFrontier(positionId)).toBe(1);
+
+    store.undo();
+
+    expect(store.$.profile.firstName()).toBe('Jonathan');
+    expect(store.$.profile.fullName()).toBe('Jonathan Borgia');
+    expect(t.getHistory()).toHaveLength(baselineHistoryCount + 1);
+    expect(t.getTurns()).toHaveLength(baselineTurnCount + 1);
+    expect(t.getFrontier(positionId)).toBe(0);
+    expect(store.canUndo()).toBe(false);
+  });
+
+  it('indexes one root callable partial update under descendant owner positions and keeps undo/redo atomic', async () => {
     const store = signalTree({ count: 1, title: 'A' }).with(timeTravel());
     const t = (store as any).__timeTravel;
 
@@ -3613,38 +3744,200 @@ describe('time-travel enhancer', () => {
         position: number;
       }>;
     };
-    const positionId = turn.__positionIds?.[0] as number;
+    const positions = [...new Set(turn.__effects?.map((effect) => effect.position) ?? [])].sort(
+      (left, right) => left - right
+    );
 
     expect(indexedTurns).toHaveLength(1);
-    expect(turn.__positionIds).toEqual([positionId]);
+    expect(turn.__positionIds?.slice().sort((left, right) => left - right)).toEqual(
+      positions
+    );
     expect(turn.__effects).toHaveLength(2);
     expect(turn.__effects?.map((effect) => effect.path).sort()).toEqual([
       'count',
       'title',
     ]);
     expect(turn.__effects?.every((effect) => effect.kind === 'set')).toBe(true);
-    expect(turn.__effects?.every((effect) => effect.position === positionId)).toBe(
-      true
-    );
+    expect(positions).toHaveLength(2);
     expect(turn.__effects).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: 'count', before: 1, after: 2 }),
         expect.objectContaining({ path: 'title', before: 'A', after: 'B' }),
       ])
     );
-    expect(t.getFrontier(positionId)).toBe(1);
+    expect(positions.every((positionId) => t.getFrontier(positionId) === 1)).toBe(true);
 
     store.undo();
 
     expect(store.$.count()).toBe(1);
     expect(store.$.title()).toBe('A');
-    expect(t.getFrontier(positionId)).toBe(0);
+    expect(positions.every((positionId) => t.getFrontier(positionId) === 0)).toBe(true);
 
     store.redo();
 
     expect(store.$.count()).toBe(2);
     expect(store.$.title()).toBe('B');
-    expect(t.getFrontier(positionId)).toBe(1);
+    expect(positions.every((positionId) => t.getFrontier(positionId) === 1)).toBe(true);
+  });
+
+  it('refuses descendant authority for a multi-position turn and lets the containing branch undo atomically', async () => {
+    const store = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel as InternalTimeTravelManager;
+    const profile = store.$.profile as unknown as ScopedAuthorityNode & {
+      firstName: ScopedAuthorityNode & { (): string; set(value: string): void };
+      lastName: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+
+    store.transaction(() => {
+      profile.firstName.set('Jane');
+      profile.lastName.set('Jones');
+    }).confirm();
+
+    const profilePositionId = profile.__positionIds?.[0] as number;
+    const firstNamePositionId = profile.firstName.__positionIds?.[0] as number;
+    const lastNamePositionId = profile.lastName.__positionIds?.[0] as number;
+
+    expect(t.canUndoAt(firstNamePositionId)).toBe(false);
+    expect(t.canUndoAt(lastNamePositionId)).toBe(false);
+    expect(t.canUndoAt(profilePositionId)).toBe(true);
+    expect(store.canUndo()).toBe(true);
+
+    expect(t.undoAt(firstNamePositionId)).toBe(false);
+    expect(profile.firstName()).toBe('Jane');
+    expect(profile.lastName()).toBe('Jones');
+    expect(t.getFrontier(firstNamePositionId)).toBe(1);
+    expect(t.getFrontier(lastNamePositionId)).toBe(1);
+    expect(t.canRedoAt(firstNamePositionId)).toBe(false);
+    expect(t.canRedoAt(profilePositionId)).toBe(false);
+
+    expect(t.undoAt(profilePositionId)).toBe(true);
+    expect(profile.firstName()).toBe('John');
+    expect(profile.lastName()).toBe('Smith');
+    expect(t.getFrontier(firstNamePositionId)).toBe(0);
+    expect(t.getFrontier(lastNamePositionId)).toBe(0);
+
+    expect(t.redoAt(profilePositionId)).toBe(true);
+    expect(profile.firstName()).toBe('Jane');
+    expect(profile.lastName()).toBe('Jones');
+  });
+
+  it('allows single-position turns to undo at leaf, branch, and root authority', async () => {
+    const store = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel as InternalTimeTravelManager;
+    const profile = store.$.profile as unknown as ScopedAuthorityNode & {
+      firstName: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+    const profilePositionId = profile.__positionIds?.[0] as number;
+    const firstNamePositionId = profile.firstName.__positionIds?.[0] as number;
+
+    profile.firstName.set('Jane');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(t.canUndoAt(firstNamePositionId)).toBe(true);
+    expect(t.canUndoAt(profilePositionId)).toBe(true);
+    expect(store.canUndo()).toBe(true);
+
+    expect(t.undoAt(firstNamePositionId)).toBe(true);
+    expect(profile.firstName()).toBe('John');
+
+    expect(t.redoAt(firstNamePositionId)).toBe(true);
+    expect(profile.firstName()).toBe('Jane');
+
+    expect(t.undoAt(profilePositionId)).toBe(true);
+    expect(profile.firstName()).toBe('John');
+
+    store.redo();
+    expect(profile.firstName()).toBe('Jane');
+  });
+
+  it('refuses cross-domain turns below the lowest common ancestor and leaves state neutral on refusal', async () => {
+    const store = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+      settings: { theme: 'light' },
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel as InternalTimeTravelManager;
+    const profile = store.$.profile as unknown as ScopedAuthorityNode & {
+      firstName: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+    const settings = store.$.settings as unknown as ScopedAuthorityNode & {
+      theme: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+
+    store.transaction(() => {
+      profile.firstName.set('Jane');
+      settings.theme.set('dark');
+    }).confirm();
+
+    const profilePositionId = profile.__positionIds?.[0] as number;
+    const settingsPositionId = settings.__positionIds?.[0] as number;
+    const firstNamePositionId = profile.firstName.__positionIds?.[0] as number;
+    const themePositionId = settings.theme.__positionIds?.[0] as number;
+
+    expect(t.containsPosition(firstNamePositionId, firstNamePositionId)).toBe(true);
+    expect(t.containsPosition(firstNamePositionId, themePositionId)).toBe(false);
+    expect(t.canUndoAt(profilePositionId)).toBe(false);
+    expect(t.canUndoAt(settingsPositionId)).toBe(false);
+
+    expect(t.undoAt(profilePositionId)).toBe(false);
+    expect(profile.firstName()).toBe('Jane');
+    expect(settings.theme()).toBe('dark');
+    expect(t.getFrontier(firstNamePositionId)).toBe(1);
+    expect(t.getFrontier(themePositionId)).toBe(1);
+
+    store.undo();
+    expect(profile.firstName()).toBe('John');
+    expect(settings.theme()).toBe('light');
+  });
+
+  it('refuses a contained historical turn when a later cross-boundary turn has advanced the frontier', async () => {
+    const store = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+      settings: { theme: 'light' },
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel as InternalTimeTravelManager;
+    const profile = store.$.profile as unknown as ScopedAuthorityNode & {
+      firstName: ScopedAuthorityNode & { (): string; set(value: string): void };
+      lastName: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+    const settings = store.$.settings as unknown as ScopedAuthorityNode & {
+      theme: ScopedAuthorityNode & { (): string; set(value: string): void };
+    };
+
+    store.transaction(() => {
+      profile.firstName.set('Ada');
+      profile.lastName.set('Lovelace');
+    }).confirm();
+
+    store.transaction(() => {
+      profile.firstName.set('Grace');
+      settings.theme.set('dark');
+    }).confirm();
+
+    const profilePositionId = profile.__positionIds?.[0] as number;
+    const firstNamePositionId = profile.firstName.__positionIds?.[0] as number;
+    const lastNamePositionId = profile.lastName.__positionIds?.[0] as number;
+    const themePositionId = settings.theme.__positionIds?.[0] as number;
+    const beforeRedoFirstName = t.canRedoAt(firstNamePositionId);
+    const beforeRedoLastName = t.canRedoAt(lastNamePositionId);
+    const beforeRedoTheme = t.canRedoAt(themePositionId);
+
+    expect(t.canUndoAt(profilePositionId)).toBe(false);
+    expect(t.undoAt(profilePositionId)).toBe(false);
+
+    expect(profile.firstName()).toBe('Grace');
+    expect(profile.lastName()).toBe('Lovelace');
+    expect(settings.theme()).toBe('dark');
+    expect(t.getFrontier(firstNamePositionId)).toBe(2);
+    expect(t.getFrontier(lastNamePositionId)).toBe(1);
+    expect(t.getFrontier(themePositionId)).toBe(1);
+    expect(t.canRedoAt(firstNamePositionId)).toBe(beforeRedoFirstName);
+    expect(t.canRedoAt(lastNamePositionId)).toBe(beforeRedoLastName);
+    expect(t.canRedoAt(themePositionId)).toBe(beforeRedoTheme);
   });
 
   it('routes public redo through turn frontiers for a single scalar write', async () => {

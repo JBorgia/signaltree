@@ -97,6 +97,9 @@ export function createEntitySignal<
   basePath: string,
   options?: {
     positionIdAllocator?: EntityPositionIdAllocator;
+    ownerMetadataEnabled?: boolean;
+    subjectMetadataEnabled?: boolean;
+    positionMetadataEnabled?: boolean;
   }
 ): EntitySignal<E, K> {
   // ==================
@@ -170,11 +173,16 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<K, WritableSignal<E | undefined>>();
   const subjectIds = new Map<K, number>();
+  const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
+  const subjectMetadataEnabled =
+    options?.subjectMetadataEnabled ?? ownerMetadataEnabled;
+  const positionMetadataEnabled = options?.positionMetadataEnabled ?? true;
   const positionId = (
     options?.positionIdAllocator ??
-    entityPositionIdAllocatorOverride ??
-    standaloneEntityPositionIdAllocator
-  )();
+    (positionMetadataEnabled
+      ? entityPositionIdAllocatorOverride ?? standaloneEntityPositionIdAllocator
+      : undefined)
+  )?.();
   let nextSubjectId = 1;
   let lastSubjectIds: number[] | undefined;
 
@@ -742,24 +750,30 @@ export function createEntitySignal<
         asReadonly: () => fieldSignal,
       });
 
-      Object.defineProperty(fieldSignal, '__ownerPath', {
-        get: () => `${basePath}.${String(id)}`,
-        enumerable: false,
-        configurable: true,
-      });
-      Object.defineProperty(fieldSignal, '__subjectIds', {
-        get: () => {
-          const subjectId = subjectIds.get(id);
-          return subjectId === undefined ? undefined : [subjectId];
-        },
-        enumerable: false,
-        configurable: true,
-      });
-      Object.defineProperty(fieldSignal, '__positionIds', {
-        get: getPositionIds,
-        enumerable: false,
-        configurable: true,
-      });
+      if (ownerMetadataEnabled) {
+        Object.defineProperty(fieldSignal, '__ownerPath', {
+          get: () => `${basePath}.${String(id)}`,
+          enumerable: false,
+          configurable: true,
+        });
+      }
+      if (subjectMetadataEnabled) {
+        Object.defineProperty(fieldSignal, '__subjectIds', {
+          get: () => {
+            const subjectId = subjectIds.get(id);
+            return subjectId === undefined ? undefined : [subjectId];
+          },
+          enumerable: false,
+          configurable: true,
+        });
+      }
+      if (positionMetadataEnabled) {
+        Object.defineProperty(fieldSignal, '__positionIds', {
+          get: getPositionIds,
+          enumerable: false,
+          configurable: true,
+        });
+      }
 
       Object.defineProperty(node, key, {
         get: () => fieldSignal,
@@ -1459,19 +1473,6 @@ export function createEntitySignal<
       // Delete all entities without triggering per-entity signal updates
       const subjectIdsForWrite = rememberSubjectIds(ids);
 
-      for (let i = 0; i < entitiesToRemove.length; i++) {
-        const { id, entity } = entitiesToRemove[i];
-        const anchors = neighborSubjects.get(id) ?? {};
-        const historyEffect: PendingHistoryEffect = {
-          kind: 'remove',
-          subject: subjectIdsForWrite[i],
-          key: id,
-          value: entity,
-          beforeSubject: anchors.beforeSubject,
-          afterSubject: anchors.afterSubject,
-        };
-      }
-
       for (const { id } of entitiesToRemove) {
         storage.delete(id);
         subjectIds.delete(id);
@@ -1786,16 +1787,20 @@ export function createEntitySignal<
       configurable: true,
     });
   }
-  Object.defineProperty(api, '__subjectIds', {
-    get: () => lastSubjectIds,
-    enumerable: false,
-    configurable: true,
-  });
-  Object.defineProperty(api, '__positionIds', {
-    get: getPositionIds,
-    enumerable: false,
-    configurable: true,
-  });
+  if (subjectMetadataEnabled) {
+    Object.defineProperty(api, '__subjectIds', {
+      get: () => lastSubjectIds,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  if (positionMetadataEnabled) {
+    Object.defineProperty(api, '__positionIds', {
+      get: getPositionIds,
+      enumerable: false,
+      configurable: true,
+    });
+  }
   Object.defineProperty(api, '__findKeyBySubjectId', {
     value: findKeyBySubjectId,
     enumerable: false,

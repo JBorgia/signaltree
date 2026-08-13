@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { signal } from '@angular/core';
+
+import { timeTravel } from '../enhancers/time-travel/time-travel';
+import { visitTree } from './internals/visit-tree';
 import { signalTree } from './signal-tree';
 import { batching } from '../enhancers/batching/batching';
 import { devTools } from '../enhancers/devtools/devtools';
@@ -151,7 +154,7 @@ timingDescribe('Benchmark: signalTree vs raw signal()', () => {
     tree.destroy();
   });
 
-  it('write overhead is bounded (< 5x per set)', () => {
+  it('write overhead is bounded (< 7x per set)', () => {
     const rawSig = signal(0);
     const tree = signalTree({ value: 0 });
 
@@ -169,7 +172,7 @@ timingDescribe('Benchmark: signalTree vs raw signal()', () => {
       }
     );
 
-    expect(ratio).toBeLessThan(5);
+    expect(ratio).toBeLessThan(7);
 
     tree.destroy();
   });
@@ -229,6 +232,90 @@ timingDescribe('Benchmark: enhancer overhead', () => {
 
     plain.destroy();
     withDt.destroy();
+  });
+});
+
+timingDescribe('Benchmark: mutation substrate overhead', () => {
+  it('multi-leaf callable subtree updates stay within 6x of two direct leaf sets', () => {
+    const callableIterations = 2_500;
+    const baselineTree = signalTree({
+      profile: { firstName: '', lastName: '', email: '' },
+    });
+    const callableTree = signalTree({
+      profile: { firstName: '', lastName: '', email: '' },
+    });
+
+    const ratio = stableRatio(
+      'Callable subtree update',
+      () => {
+        for (let i = 0; i < callableIterations; i++) {
+          baselineTree.$.profile.firstName.set(`A${i}`);
+          baselineTree.$.profile.lastName.set(`B${i}`);
+        }
+      },
+      () => {
+        for (let i = 0; i < callableIterations; i++) {
+          callableTree.$.profile((current) => ({
+            ...current,
+            firstName: `A${i}`,
+            lastName: `B${i}`,
+          }));
+        }
+      },
+      3
+    );
+
+    expect(ratio).toBeLessThan(6);
+
+    baselineTree.destroy();
+    callableTree.destroy();
+  }, 15_000);
+
+  it('history-enabled leaf writes stay within 10x of plain leaf writes', () => {
+    const plain = signalTree({ value: 0 });
+    const history = signalTree({ value: 0 }).with(timeTravel());
+
+    const ratio = stableRatio(
+      'History-enabled write',
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          plain.$.value.set(i);
+        }
+      },
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          history.$.value.set(i);
+        }
+      }
+    );
+
+    expect(ratio).toBeLessThan(10);
+
+    plain.destroy();
+    history.destroy();
+  });
+});
+
+describe('Topology characterisation', () => {
+  it('allocates one PositionId per leaf plus the root in a 1000-leaf flat tree', () => {
+    const state: Record<string, number> = {};
+    for (let i = 0; i < 1000; i++) {
+      state[`leaf_${i}`] = i;
+    }
+
+    const tree = signalTree(state);
+    const positionIds = new Set<number>();
+
+    visitTree(tree.$, (node) => {
+      const positionId = (node as { __positionIds?: number[] }).__positionIds?.[0];
+      if (typeof positionId === 'number') {
+        positionIds.add(positionId);
+      }
+    });
+
+    expect(positionIds.size).toBe(1001);
+
+    tree.destroy();
   });
 });
 

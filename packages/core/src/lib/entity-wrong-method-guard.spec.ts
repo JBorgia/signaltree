@@ -15,7 +15,6 @@ interface Row {
 
 function rows() {
   const tree = signalTree({ rows: entityMap<Row, number>() });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return tree.$.rows as any;
 }
 

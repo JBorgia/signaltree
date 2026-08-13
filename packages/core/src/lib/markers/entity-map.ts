@@ -261,13 +261,22 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
     entityMapRegistered = true;
     registerBuiltinMarkerProcessor(
       isEntityMapMarker as (value: unknown) => value is InternalMarker,
-      (marker, notifier, path, context) => {
+      (marker, notifier, path, context, parentPositionId) => {
         const cfg = marker.__entityMapConfig ?? {};
+        const hasPositionTopology = context.hasCapability('position-topology');
+        const hasMutationCapture = context.hasCapability('mutation-capture');
         const entitySignal = createEntitySignal(
           cfg as EntityConfig<Record<string, unknown>, string | number>,
           notifier,
           path,
-          { positionIdAllocator: context.allocatePositionId }
+          {
+            positionIdAllocator: hasPositionTopology
+              ? () => context.allocatePositionId(parentPositionId)
+              : () => undefined,
+            ownerMetadataEnabled: hasMutationCapture,
+            subjectMetadataEnabled: hasMutationCapture,
+            positionMetadataEnabled: hasPositionTopology,
+          }
         );
 
         // Computed slices

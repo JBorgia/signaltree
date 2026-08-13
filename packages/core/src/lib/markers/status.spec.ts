@@ -8,6 +8,7 @@ import {
   status,
   STATUS_MARKER,
 } from '../markers/status';
+import { getPathNotifier, resetPathNotifier } from '../path-notifier';
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../types';
 
@@ -450,6 +451,71 @@ describe('status() marker', () => {
       // Update and verify
       tree.$.tickets.status.setLoaded();
       expect(tree.$.tickets.isReady()).toBe(true);
+    });
+
+    it('emits direct status source writes through the canonical notifier path with attribution', async () => {
+      resetPathNotifier();
+      const notifier = getPathNotifier();
+      const owner = {};
+      const seen: Array<{
+        path: string;
+        ownerPath?: string;
+        positionIds?: number[];
+        meta?: Record<string, unknown>;
+      }> = [];
+      const unsubscribe = notifier.subscribe(
+        'job.*',
+        (_value, _prev, path, ownerPath, _source, _subjectIds, positionIds, meta) => {
+          seen.push({
+            path,
+            ownerPath,
+            positionIds,
+            meta: meta as Record<string, unknown> | undefined,
+          });
+        }
+      );
+
+      const tree = signalTree({ job: status() });
+      const { withWriteContext } = await import('../write-context');
+
+      withWriteContext(
+        {
+          intent: 'system',
+          source: 'serialization',
+          transactionId: 7,
+          transactionOwner: owner,
+        },
+        () => {
+          tree.$.job.state.set(LoadingState.Loading);
+        }
+      );
+
+      await Promise.resolve();
+      unsubscribe();
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({
+        path: 'job.state',
+        ownerPath: 'job',
+        meta: {
+          intent: 'system',
+          source: 'serialization',
+          transactionId: 7,
+          transactionOwner: owner,
+          mutationIntent: 'replace',
+        },
+      });
+      expect(seen[0].positionIds).toHaveLength(1);
+    });
+
+    it('does not allocate notifier work for status writes when nobody is observing', () => {
+      resetPathNotifier();
+      const notifier = getPathNotifier();
+      const tree = signalTree({ job: status() });
+
+      tree.$.job.state.set(LoadingState.Loading);
+
+      expect(notifier.hasPending()).toBe(false);
     });
   });
 

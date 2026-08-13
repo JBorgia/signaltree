@@ -175,13 +175,17 @@ describe('entityMap() marker', () => {
         users: entityMap<User, number>(),
       });
 
+      const firstRootPositionIds = (firstTree.$ as any).__positionIds as number[];
       const firstUsersPositionIds = (firstTree.$.users as any).__positionIds as number[];
       const firstOrdersPositionIds = (firstTree.$.orders as any).__positionIds as number[];
+      const secondRootPositionIds = (secondTree.$ as any).__positionIds as number[];
       const secondUsersPositionIds = (secondTree.$.users as any).__positionIds as number[];
 
-      expect(firstUsersPositionIds).toEqual([1]);
-      expect(firstOrdersPositionIds).toEqual([2]);
-      expect(secondUsersPositionIds).toEqual([1]);
+      expect(firstRootPositionIds).toEqual([1]);
+      expect(secondRootPositionIds).toEqual([1]);
+      expect(firstUsersPositionIds).toEqual(secondUsersPositionIds);
+      expect(firstUsersPositionIds[0]).toBeGreaterThan(firstRootPositionIds[0]);
+      expect(firstOrdersPositionIds[0]).toBe(firstUsersPositionIds[0] + 1);
     });
   });
 });

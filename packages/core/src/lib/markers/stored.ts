@@ -1,5 +1,12 @@
 import { signal, untracked } from '@angular/core';
 import { reportTreeError } from '../internals/error-reporter';
+import {
+  defineIntrinsicMutationEmitter,
+  defineOwnedOwnerPath,
+  defineOwnedPositionIds,
+  runOwnedMutation,
+  wrapOwnedWritableSignal,
+} from '../internals/owned-mutation';
 
 import { getActiveWriteContext } from '../write-context';
 
@@ -586,7 +593,15 @@ export function flushAllStoredSignals(): void {
  * @returns Fully functional StoredSignal with persistence
  */
 export function createStoredSignal<T>(
-  marker: StoredMarker<T>
+  marker: StoredMarker<T>,
+  _notifier?: unknown,
+  path?: string,
+  context?: {
+    positionTopologyEnabled?: boolean;
+    hasCapability?: (capability: 'mutation-capture' | 'position-topology') => boolean;
+    allocatePositionId: (parentPositionId?: number) => number;
+  },
+  parentPositionId?: number
 ): StoredSignal<T> {
   const {
     key,
@@ -612,6 +627,18 @@ export function createStoredSignal<T>(
       : null;
 
   const currentVersion = version;
+  const hasPositionTopology =
+    context?.hasCapability?.('position-topology') ??
+    context?.positionTopologyEnabled !== false;
+  const hasMutationCapture =
+    context?.hasCapability?.('mutation-capture') ?? Boolean(path);
+  const positionIds =
+    !hasPositionTopology
+      ? undefined
+      : context
+      ? [context.allocatePositionId(parentPositionId)]
+      : undefined;
+  const ownerPath = path;
 
   // Monotonic count of committed writes - used to drop a deferred migration
   // persist that would otherwise clobber data written after it was scheduled.
@@ -844,20 +871,43 @@ export function createStoredSignal<T>(
   // `schema/matcher` and `ng-forms` all already handle a real signal.
   const storedSignal = sig as unknown as StoredSignal<T>;
 
+  if (positionIds) {
+    defineOwnedPositionIds(storedSignal as object, positionIds);
+  }
+  if (ownerPath && hasMutationCapture) {
+    defineOwnedOwnerPath(storedSignal as object, ownerPath);
+    defineIntrinsicMutationEmitter(storedSignal as object);
+  }
+
   // Capture the raw signal writers BEFORE overriding them, so the persisting
   // versions below don't recurse into themselves.
   const rawSet = sig.set.bind(sig);
 
-  storedSignal.set = (value: T): void => {
-    rawSet(value); // Immediate signal update
-    saveToStorage(value); // Debounced storage write
-  };
+  if (ownerPath && hasMutationCapture) {
+    wrapOwnedWritableSignal(sig, {
+      path: ownerPath,
+      ownerPath,
+      positionIds,
+    }, {
+      afterSet: (value) => {
+        saveToStorage(value);
+      },
+      afterUpdate: (_before, after) => {
+        saveToStorage(after);
+      },
+    });
+  } else {
+    storedSignal.set = (value: T): void => {
+      rawSet(value);
+      saveToStorage(value);
+    };
 
-  storedSignal.update = (fn: (current: T) => T): void => {
-    const newValue = fn(untracked(() => sig()));
-    rawSet(newValue); // Immediate signal update
-    saveToStorage(newValue); // Debounced storage write
-  };
+    storedSignal.update = (fn: (current: T) => T): void => {
+      const newValue = fn(untracked(() => sig()));
+      rawSet(newValue);
+      saveToStorage(newValue);
+    };
+  }
 
   storedSignal.clear = (): void => {
     // Cancel BOTH deferred write paths. The debounce/maxWait timers are
@@ -867,7 +917,21 @@ export function createStoredSignal<T>(
     // later — the key comes back and the signal disagrees with storage.
     cancelPending();
     writeGeneration++;
-    rawSet(defaultValue);
+    if (ownerPath && hasMutationCapture) {
+      runOwnedMutation(
+        sig,
+        () => rawSet(defaultValue),
+        {
+          path: ownerPath,
+          ownerPath,
+          positionIds,
+        },
+        'set',
+        'replace'
+      );
+    } else {
+      rawSet(defaultValue);
+    }
     if (storage) {
       try {
         storage.removeItem(key);
@@ -887,7 +951,22 @@ export function createStoredSignal<T>(
     // earlier deferred write — timer or migration microtask — may land after it.
     cancelPending();
     writeGeneration++;
-    rawSet(loadFromStorage());
+    const nextValue = loadFromStorage();
+    if (ownerPath && hasMutationCapture) {
+      runOwnedMutation(
+        sig,
+        () => rawSet(nextValue),
+        {
+          path: ownerPath,
+          ownerPath,
+          positionIds,
+        },
+        'set',
+        'replace'
+      );
+    } else {
+      rawSet(nextValue);
+    }
     return lastLoadResult;
   };
 

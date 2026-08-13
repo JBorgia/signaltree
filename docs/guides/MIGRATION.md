@@ -1,269 +1,4 @@
-# SignalTree Migration Guide
-
-> **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
-
-## 14.0.0
-
-> The largest breaking release since v9, and almost all of it fails at COMPILE
-> time by design — the one change that could have been silent (a leaf call that
-> did nothing) is now a type error precisely because it used to fail invisibly.
-> Full detail, every symbol, and a checklist:
-> [`docs/guides/migration-v13-v14.md`](migration-v13-v14.md).
->
-> **Landing on 14.1.1?** That release renames and removes API the 13→14 page does not
-> cover (`map()` → `asMap()`, `treeName` → `name`, `pauseRecording()` removed, and
-> more). Read [`migration-v14-v14.1.md`](migration-v14-v14.1.md) as well — from 13.x
-> you need both pages, and from 14.0.0 you need only that one.
-
-**Breaking:**
-
-- **Calling a leaf is no longer a setter.** `tree.$.count(5)` is TS2554; use
-  `.set()` / `.update()`. Branches and the root are unchanged.
-- **`@signaltree/callable-syntax` is deleted.** No replacement.
-- **25 authoring symbols moved to `@signaltree/core/authoring`** — the reader
-  allowlists, marker brands, marker and structural guards, `parsePath`,
-  `SIGNAL_TREE_CONSTANTS`/`_MESSAGES`. Import path only; nothing changed shape.
-- **`effects()` removed** — use Angular's `effect()`, which accepts
-  `{ injector }`.
-- **`enableSerialization` / `applyPersistence` / `deepCloneJSON` removed** —
-they were reachable from no entry point.
-<!-- measured: the updateOptimized() figures below were benchmarked before @signaltree/enterprise was removed in 14.0.0. The package is unpublished, so they cannot be re-run. Context: docs/archive/BENCHMARK_ANALYSIS-enterprise-era.md -->
-
-- **`@signaltree/enterprise` is no longer published.** Deprecated in 13.5.0,
-  removed here. Use `tree.updateAndReport()` from core — built in, no enhancer,
-  and measured FASTER in every workload (`updateOptimized()` was ~7x slower at
-  2,000 leaves when 10% change, ~160x when all do, and silently dropped writes
-  targeting arrays). 13.x stays on npm, deprecated, for existing lockfiles; it
-  will not get a 14-compatible release because it imports symbols that moved to
-  `/authoring`. There is no `onPathChange` replacement in core.
-- **Snapshot payloads carry values, not machinery.** `tree({ rows: [...] })`
-  with a bare array now applies rather than silently doing nothing.
-
-**Worth knowing (not breaking):** `canUndo()`/`canRedo()`/`getHistory()` are
-reactive now — an undo button in a zoneless app previously never enabled. And
-ST2026 warns when an inline predicate defeats the `where()`/`find()` memo:
-0.30 ms hoisted against 33.8 ms inline over 5,000 reads of a 1,000-entity
-collection (`node tools/bench-predicate-memo.mjs --reads 5000`).
-
-## 13.2.0 (unreleased)
-
-> One behavior change: `signalForm()`'s `nativeErrors` option now defaults to
-> `true`, so built-in validator failures bridged into Angular Signal Forms are
-> Angular's branded error classes rather than plain `{ kind, message }` objects.
-> Plus one pure-upside type fix (`.computed()` slice names). Full detail and
-> before/after: [`docs/guides/migration-v13.2.md`](migration-v13.2.md).
-
-**Behavior change (one option default) — in a minor, deliberately:**
-
-- `signalForm(marker, { nativeErrors })` defaults to `true` (was `false`) — the
-  flip announced in 11.6.0 and deferred through 12.x/13.x, with a dev-mode notice
-  running the whole time. `kind` and `message` are present in both shapes, so code
-  reading only those keeps working; narrowing on the plain shape, serializing
-  errors, or deep-equalling them in tests is what needs updating. Pass
-  `nativeErrors: false` to keep the pre-13.2 plain objects. Custom/untagged
-  validators are unaffected (`{ kind: 'signalTree', message }` in both modes).
-
-**Additive:**
-
-- `entityMap().computed()` slice names are typed on `tree.$` — delete any
-  `(tree.$.x as any).sliceName()` casts the old docs told you to write.
-
-**Dev-mode notice:**
-
-- The one-time `console.info` about the _upcoming_ flip now reports the
-  _completed_ one (kept because the change lands in a minor; `ngDevMode`-gated,
-  silenced by setting the option either way).
-
-## 13.0.0
-
-> RFC 0007's packaging principle applied: two capabilities that never
-> depended on `@angular/forms` move from `@signaltree/ng-forms` to
-> `@signaltree/core`, plus a new signal-native undo/redo feature for `form()`
-> and an events↔`entityMap` bridge. Full detail and before/after examples:
-> [`docs/guides/migration-v12-v13.md`](migration-v12-v13.md).
-
-**Breaking (one import-path move):**
-
-- `createAuditTracker`/`createAuditCallback` + `AuditEntry`/`AuditMetadata`/
-  `AuditTrackerConfig` moved from `@signaltree/ng-forms` to
-  `@signaltree/core`. Old path (`@signaltree/ng-forms/audit`) still works,
-  `@deprecated`.
-
-**New (additive):**
-
-- `history()` (`@signaltree/core`) — signal-native undo/redo for `form()`
-  markers: `form({ history: history({ capacity, exclude }) })`. Drives a
-  bound `signalForm()` field tree from the same engine; a raw object on
-  `history` throws `[ST2006]`.
-- `entityEventHandler(entities, mapping)` / `applyOptimisticEntityChange(entities, id, change)`
-  (`@signaltree/events/angular`) — map an event batch onto `entityMap`'s
-  batch ops, and derive an optimistic-update `rollback` closure automatically.
-
-**Deprecated, not removed:**
-
-- `withFormHistory` (`@signaltree/ng-forms`) — use `history()` on the `form()`
-  marker instead; retained for `createFormTree` users.
-- `createWizardForm` (`@signaltree/ng-forms`) — use the `form()` marker's
-  built-in `wizard` config instead (`signalForm()`-compatible); retained for
-  `createFormTree` users.
-
-All packages bumped to **13.0.0** (`@signaltree/shared` was at 9.2.2, now
-aligned).
-
-## 11.0.0
-
-> **Two breaking changes, both mechanical and both opt-in surfaces.** The v11 theme: SignalTree's optional/heavy subsystems — security validation and lazy/memory — are now explicitly opt-in so they tree-shake out of bundles that don't use them. The bare-tree floor drops ~29% (7.5KB → 5.3KB gzip). If you pass neither `security` nor `lazy` to `signalTree(...)` and don't ship `devTools()` to production, **nothing changes for you** — upgrade and move on.
-
-### 1. `security` config must be wrapped with `security()`
-
-<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
-
-The `security` option used to take a raw `SecurityValidatorConfig`. Because `signalTree()` statically referenced the `SecurityValidator` class, the validator (~1KB gzip) shipped in **every** bundle even when no app used it — the opposite of what the `@signaltree/core/security` subpath was meant to achieve. In v11 the validator is **injected**: `signalTree` only calls an opt-in feature, so the validator is tree-shaken out unless you import it.
-
-**Before (≤10.x):**
-
-```ts
-import { signalTree } from '@signaltree/core';
-
-const tree = signalTree(state, {
-  security: { preventXSS: true, maxStringLength: 10_000 },
-});
-```
-
-**After (11.0.0):**
-
-```ts
-import { signalTree } from '@signaltree/core';
-import { security } from '@signaltree/core/security';
-
-const tree = signalTree(state, {
-  security: security({ preventXSS: true, maxStringLength: 10_000 }),
-});
-```
-
-`SecurityPresets` move the same way:
-
-```ts
-// Before
-signalTree(state, { security: SecurityPresets.strict().getConfig() });
-// After
-import { security, SecurityPresets } from '@signaltree/core/security';
-signalTree(state, { security: security(SecurityPresets.strict().getConfig()) });
-```
-
-The config shape, validation behavior, and construction-time timing are **unchanged** — only the wrapper and import path differ. TypeScript will flag every call site that needs updating (the option's type changed from `SecurityValidatorConfig` to `SecurityFeature`).
-
-### 2. Lazy signals are now opt-in via `lazy()`
-
-<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
-
-Lazy signal creation used to switch on automatically for large state (>50 estimated nodes). Because `signalTree()` statically imported the lazy Proxy machinery + `SignalMemoryManager` to do that, ~2.6KB shipped in **every** bundle — even trees that never went lazy. In v11 lazy is injected, so it tree-shakes out unless you opt in.
-
-**Only affects you if** you relied on automatic lazy mode for large trees, or set `useLazySignals: true`. If so, inject the feature:
-
-```ts
-// Before (≤10.x) — automatic for large state, or:
-const tree = signalTree(largeState, { useLazySignals: true });
-
-// After (11.0.0)
-import { lazy } from '@signaltree/core/lazy';
-const tree = signalTree(largeState, { lazy: lazy() }); // auto-threshold applies
-const forced = signalTree(state, { lazy: lazy(), useLazySignals: true }); // force lazy
-```
-
-Once `lazy: lazy()` is present, the size threshold and `useLazySignals`/`debugMode` overrides behave exactly as before. Without it, trees are always eager — functionally identical for reads/writes, just signals created up front. Most apps (small/medium state) never needed lazy mode and require **no change**.
-
-### 3. Removed deprecated aliases (`is`-prefix predicates + `tree.state`)
-
-Two sets of long-deprecated (since v10.3 / v10) aliases were removed. Both are mechanical find-and-replace; TypeScript flags every site.
-
-| Removed                                                          | Use instead                                                     |
-| ---------------------------------------------------------------- | --------------------------------------------------------------- |
-| `status().isLoading` / `.isLoaded` / `.isError` / `.isNotLoaded` | `.loading` / `.loaded` / `.hasError` / `.notLoaded`             |
-| `entityMap().isEmpty`                                            | `.empty`                                                        |
-| `tree.state`                                                     | `tree.$` (same reference — `state` was always an alias for `$`) |
-
-```ts
-// Before                          // After
-tree.$.load.isLoading();
-tree.$.load.loading();
-tree.$.users.isEmpty();
-tree.$.users.empty();
-tree.state.user.name();
-tree.$.user.name();
-```
-
-For a non-reactive full snapshot, call `tree()` (unchanged).
-
-### Also in 11.0.0 (no action required)
-
-<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
-
-- **New `defineStore()`** — wrap a tree factory in an injectable Angular service: `export const CounterStore = defineStore(() => signalTree({ count: 0 }))`, then `inject(CounterStore)`. The idiomatic DI entry point (comparable to NgRx SignalStore's `signalStore()`); `destroy()` is tied to the injector's `DestroyRef`. Purely additive — existing tree usage is unchanged.
-- **New `linked()`** — derived-but-writable signal for `.derived()`, comparable to NgRx `withLinkedState` (wraps Angular's `linkedSignal`). `linked({ source: () => $.options(), computation: (opts, prev): Opt | undefined => ... })` gives a value that derives from a source, is user-writable (`.set()`), and re-derives on source change (sticky selection). Purely additive.
-- **Bundle floor reduced ~29%** — injecting both `SecurityValidator` and the lazy/memory machinery drops the bare-tree floor 7.5KB → **5.3KB gzip** (~8.1KB with `entityMap` in use). A blocking CI budget gate prevents silent regressions.
-- **`devTools()` fully prod-stripped** — production builds (`ngDevMode` false) tree-shake the entire devtools implementation, so `.with(devTools())` no longer ships ~12KB to prod (a devtools-using tree drops ~11.3KB → 5.1KB gzip). Dev builds are unchanged — full devtools as before.
-- **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as _capability-per-KB + zero-deps_, not "smallest". See measured numbers in the benchmark.
-- Includes the 10.5.0/10.6.0 additions (body-granular `entityMap`, `sortComparer`, `[ST####]` error codes, dev-mode guardrails) and the published-package fixes for `@signaltree/guardrails`.
-
-## 9.0.1
-
-> **Why a patch?** v9.0.0 was only just released; adoption of the removed APIs is minimal. These changes are technically breaking but shipped as `9.0.1`. Pin to `9.0.0` if you were using `memoization()` or preset factories and need time to migrate.
-
-### Memoization enhancer removed
-
-The `memoization()` enhancer and all preset variants (`shallowMemoization`, `lightweightMemoization`, `computedMemoization`, `selectorMemoization`, `highPerformanceMemoization`) have been removed. Use Angular's built-in `computed()` instead — it provides equivalent caching behavior with zero runtime overhead and smaller bundles.
-
-**Before (9.0.0):**
-
-```ts
-import { signalTree, memoization, batching } from '@signaltree/core';
-
-const tree = signalTree(state).with(batching()).with(memoization());
-
-const totalPrice = tree.memoize((s) => s.cart.items.reduce((n, i) => n + i.price, 0), 'totalPrice');
-```
-
-**After (9.0.1):**
-
-```ts
-import { computed } from '@angular/core';
-import { signalTree, batching } from '@signaltree/core';
-
-const tree = signalTree(state).with(batching());
-
-const totalPrice = computed(() => tree.$.cart.items().reduce((n, i) => n + i.price, 0));
-```
-
-### Preset factories and subpath export removed
-
-- `@signaltree/core/presets` subpath is gone.
-- `TREE_PRESETS`, `createDevTree()`, `createProdTree()`, `createMinimalTree()` and other preset helpers are removed. Compose enhancers directly with `.with()`.
-
-### Guardrails: `maxRecomputations` budget removed
-
-`GuardrailsConfig.budgets.maxRecomputations` has been dropped (the feature relied on the deleted memoization accounting). Remove it from your config:
-
-```ts
-// Before
-guardrails({ budgets: { maxUpdateTime: 16, maxRecomputations: 100 } });
-
-// After
-guardrails({ budgets: { maxUpdateTime: 16 } });
-```
-
-`RuntimeStats.recomputationCount` and `recomputationsPerSecond` still exist as always-`0` fields for backwards-compatible consumers.
-
-### Upgrade checklist
-
-1. Remove `memoization` / preset factory imports from `@signaltree/core`.
-2. Replace `.with(memoization())` calls with Angular `computed()` at the consumer site.
-3. Remove `maxRecomputations` from any guardrails `budgets` config.
-4. Drop `@signaltree/core/presets` from your `package.json` / imports.
-
----
-
-## v4.0.0 Package Consolidation
+# Migration Guide: v4.0.0 Package Consolidation
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
@@ -296,6 +31,7 @@ The following standalone packages are **no longer maintained** and have been con
 These packages remain separate:
 
 - ✅ `@signaltree/ng-forms` - Angular forms integration (still separate)
+- ✅ `@signaltree/callable-syntax` - Optional DX enhancement (still separate)
 
 ---
 
@@ -354,8 +90,8 @@ import { signalTree, batching, memoization, withDevtools, withTimeTravel, serial
 The **API remains 100% compatible** - only import statements change. Your existing code should work without modifications:
 
 ```typescript
-// Your existing code works exactly the same — chain `.with()` calls (one enhancer per call)
-const tree = signalTree(state).with(batching()).with(memoization()).with(withDevtools());
+// Your existing code works exactly the same
+const tree = signalTree(state).with(batching(), memoization(), withDevtools());
 ```
 
 ---
@@ -372,7 +108,7 @@ import { signalTree } from '@signaltree/core';
 import { batching } from '@signaltree/batching';
 import { memoization } from '@signaltree/memoization';
 
-const tree = signalTree(state).with(batching()).with(memoization());
+const tree = signalTree(state).with(batching(), memoization());
 ```
 
 **After:**
@@ -381,7 +117,7 @@ const tree = signalTree(state).with(batching()).with(memoization());
 // ✅ v4.0.0+
 import { signalTree, batching, memoization } from '@signaltree/core';
 
-const tree = signalTree(state).with(batching()).with(memoization());
+const tree = signalTree(state).with(batching(), memoization());
 ```
 
 ### Example 2: Full Stack with DevTools
@@ -397,7 +133,7 @@ import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { entities } from '@signaltree/entities';
 
-const tree = signalTree(state).with(batching()).with(memoization()).with(entities()).with(withTimeTravel()).with(withDevtools());
+const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
 ```
 
 **After:**
@@ -406,7 +142,7 @@ const tree = signalTree(state).with(batching()).with(memoization()).with(entitie
 // ✅ v4.0.0+
 import { signalTree, batching, memoization, withDevtools, withTimeTravel, entities } from '@signaltree/core';
 
-const tree = signalTree(state).with(batching()).with(memoization()).with(entities()).with(withTimeTravel()).with(withDevtools());
+const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
 ```
 
 ### Example 3: E-commerce Preset
@@ -504,8 +240,6 @@ echo "sed -i '' 's/@signaltree\\/batching/@signaltree\\/core/g' your-file.ts"
 
 ### 1. Smaller Bundle Size
 
-<!-- measured: point-in-time record of a past release. The versions being compared are not installable side by side any more, so no generator can re-derive these; they are history, not a live claim. -->
-
 **16.2% reduction** when using multiple enhancers:
 
 - **Before (v3.x)**: ~27.50KB (core + 3 enhancers)
@@ -599,9 +333,9 @@ Module '"@signaltree/core"' has no exported member 'batching'.
 
 If you encounter issues during migration:
 
-1. **Check the changelog**: [CHANGELOG.md](../../CHANGELOG.md)
+1. **Check the changelog**: [CHANGELOG.md](./CHANGELOG.md)
 2. **Open an issue**: [GitHub Issues](https://github.com/JBorgia/signaltree/issues)
-3. **Review documentation**: [README.md](../../README.md)
+3. **Review documentation**: [README.md](./README.md)
 
 ---
 
@@ -615,42 +349,67 @@ If you encounter issues during migration:
 
 ## ng-forms: Angular 17-19 Legacy Bridge Deprecation
 
-> **⚠️ Outdated section (kept for history).** This was written against the old
-> v5→v6 version plan; that scheme never shipped — the project is now at **v11**
-> and `@signaltree/ng-forms` targets Angular `^20 || ^21`. The "v6.0" milestones
-> below did not execute as described. For the current supported-Angular range
-> and any remaining legacy-bridge behavior, treat the
-> [`@signaltree/ng-forms` package README](../../packages/ng-forms/README.md) as
-> authoritative, not this section.
+### Overview
 
-### ng-forms: classic Reactive Forms bridge
+The `@signaltree/ng-forms` package includes a **manual bidirectional bridge** for Angular 17-19 compatibility. This bridge will be **removed in v6.0** when Angular 21 is released.
 
-There is no Angular `connect()` API — it has never existed in any Angular
-version. The actual sync mechanism between `createFormTree` and Angular's
-classic `FormGroup` is `createFormTree`'s own **manual bidirectional bridge**:
-an effect that pushes tree signal writes into the `FormGroup`, and a
-`valueChanges` subscription that pushes form edits back into the tree's
-signals. That bridge is the real and only sync path — not a fallback for a
-missing native API — and it works unchanged on Angular 20, 21, and 22.
+**Timeline:**
 
-`createFormTree` itself is **deprecated**: it targets classic Reactive Forms.
-The supported paths going forward are:
+- **v5.x** (Current): Legacy bridge functional, deprecation warning in dev mode
+- **v6.0** (Planned): Legacy bridge removed, Angular 20.3+ required
 
-- **`form()` marker + `signalForm()`** — the signal-native path, built on
-  Angular's real `@angular/forms/signals` primitives (`SignalFormControl`,
-  Angular 21.2+). Prefer this for new code.
-- **`formBridge()`** — if you need interop with an existing classic
-  `FormGroup`.
+### Who is Affected?
 
-`createFormTree` keeps working as-is on Angular 20/21/22; there is no
-announced removal, just a preference for the signal-native path above.
+If you're using `@signaltree/ng-forms` with **Angular 17, 18, or 19**, you'll see this console warning in development:
+
+```
+[@signaltree/ng-forms] Legacy Angular 17-19 support is deprecated and will be removed in v6.0.
+Please upgrade to Angular 20.3+ to use native Signal Forms. See MIGRATION.md for the upgrade path.
+```
+
+### Migration Path
+
+**Option 1: Upgrade to Angular 20.3+ (Recommended)**
+
+Angular 20.3+ includes native Signal Forms with the `connect()` API. `@signaltree/ng-forms` will automatically use this API when available.
+
+```bash
+# Upgrade Angular
+ng update @angular/core @angular/cli --next
+
+# Verify version (should be 20.3+)
+ng version
+```
+
+No code changes required - `@signaltree/ng-forms` will detect and use the native API.
+
+**Option 2: Stay on Angular 17-19 (Temporary)**
+
+If you cannot upgrade immediately:
+
+1. The legacy bridge will continue working in v5.x
+2. You can suppress the warning by acknowledging the deprecation
+3. Plan to upgrade before v6.0 release
+
+**Suppressing the Warning** (not recommended):
+
+```typescript
+// Only if you understand the deprecation and have a migration plan
+if (globalThis && typeof globalThis === 'object') {
+  (globalThis as any).__signaltreeNgFormsLegacyAck = true;
+}
+```
+
+### What Changes in v6.0?
+
+- **Minimum Angular version**: 20.3+
+- **Removed**: Manual bidirectional bridge code
+- **Required**: Native Angular Signal Forms (`FormControl.connect()`)
+- **Benefit**: Smaller bundle size, better performance, native Angular integration
 
 ### Testing the Upgrade
 
-The manual bridge works the same across Angular 20, 21, and 22 — no upgrade
-is required for it to keep functioning. If you're moving to the signal-native
-path, migrate call sites from `createFormTree` to `form()` + `signalForm()`
-and verify:
+After upgrading to Angular 20.3+:
 
 1. Verify no deprecation warnings in console
 2. Test form bindings work correctly

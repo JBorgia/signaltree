@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { batching } from './batching/batching';
 import { timeTravel } from './time-travel/time-travel';
 import { devTools } from './devtools/devtools';
+import { signalTree } from '../lib/signal-tree';
 
 /**
  * Phase 6: Enhancer cleanup tests
@@ -54,6 +55,8 @@ function createMockTree() {
   return tree;
 }
 
+const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 describe('enhancer cleanup registration', () => {
   it('batching registers cleanup', () => {
     const tree = createMockTree();
@@ -61,10 +64,16 @@ describe('enhancer cleanup registration', () => {
     expect(tree.__cleanupFns.length).toBeGreaterThan(0);
   });
 
-  it('timeTravel registers cleanup', () => {
-    const tree = createMockTree();
-    timeTravel()(tree);
-    expect(tree.__cleanupFns.length).toBeGreaterThan(0);
+  it('timeTravel registers cleanup', async () => {
+    const tree = signalTree({ count: 0, name: '' }).with(timeTravel());
+
+    tree.$.count.set(1);
+    await flush();
+    expect(tree.getHistory().length).toBeGreaterThan(1);
+
+    tree.destroy();
+
+    expect(tree.getHistory().length).toBeLessThanOrEqual(1);
   });
 
   it('devTools registers cleanup (enabled=false)', () => {
@@ -98,14 +107,15 @@ describe('destroy() clears enhancer resources', () => {
   });
 
   it('timeTravel: clears history on destroy', () => {
-    const tree = createMockTree();
-    const enhanced = timeTravel({ maxHistorySize: 50 })(tree);
+    const enhanced = signalTree({ count: 0, name: '' }).with(
+      timeTravel({ maxHistorySize: 50 })
+    );
 
     // Make some changes
-    tree({ count: 1, name: '' });
-    tree({ count: 2, name: '' });
+    enhanced.$.count.set(1);
+    enhanced.$.count.set(2);
 
-    tree.destroy();
+    enhanced.destroy();
 
     // After destroy, history should be reset
     // The reset adds 1 initial entry

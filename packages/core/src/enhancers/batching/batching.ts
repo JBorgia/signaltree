@@ -9,6 +9,17 @@ import type {
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
+type ChangeDetectionAwareTree = {
+  __notifyChangeDetection?: () => void;
+};
+
+type BatchWrappedNode = Record<string, unknown> & {
+  set?: (value: unknown) => void;
+  update?: (updater: (value: unknown) => unknown) => void;
+  __batchingWrapped?: boolean;
+  __batchingUpdateWrapped?: boolean;
+};
+
 /**
  * Batching enhancer for SignalTree.
  *
@@ -105,9 +116,7 @@ export function batching(
       // Trigger Angular change detection if available
       // In Angular 17+, signals automatically notify
       // This is a hook for custom CD strategies
-      if ((tree as any).__notifyChangeDetection) {
-        (tree as any).__notifyChangeDetection();
-      }
+      (tree as ChangeDetectionAwareTree).__notifyChangeDetection?.();
     };
 
     /**
@@ -143,15 +152,19 @@ export function batching(
      * fire a spurious `[ST2002]` warning. The `.set` read and the `'update' in
      * node` has-trap guard below match the previous behavior exactly.
      */
-    const wrapSignalSetters = (rootNode: any): void => {
+    const wrapSignalSetters = (rootNode: Record<string, unknown>): void => {
       visitTree(
         rootNode,
-        (node: any, path) => {
+        (node, path) => {
+          const wrappedNode = node as BatchWrappedNode;
           // If this node has a set method, wrap it.
-          if (typeof node.set === 'function' && !node.__batchingWrapped) {
-            const originalSet = node.set.bind(node);
+          if (
+            typeof wrappedNode.set === 'function' &&
+            !wrappedNode.__batchingWrapped
+          ) {
+            const originalSet = wrappedNode.set.bind(wrappedNode);
 
-            node.set = (value: any) => {
+            wrappedNode.set = (value: unknown) => {
               if (inCoalesce) {
                 coalescedUpdates.set(path, () => originalSet(value));
               } else {
@@ -162,20 +175,20 @@ export function batching(
               }
             };
 
-            node.__batchingWrapped = true;
+            wrappedNode.__batchingWrapped = true;
           }
 
           // `'update' in node` FIRST: a bare `node.update` read on an entityMap
           // proxy hits its get-trap and fires a spurious [ST2002] warning; the
           // `in` check goes through the has-trap (no warning).
           if (
-            'update' in node &&
-            typeof node.update === 'function' &&
-            !node.__batchingUpdateWrapped
+            'update' in wrappedNode &&
+            typeof wrappedNode.update === 'function' &&
+            !wrappedNode.__batchingUpdateWrapped
           ) {
-            const originalUpdate = node.update.bind(node);
+            const originalUpdate = wrappedNode.update.bind(wrappedNode);
 
-            node.update = (updater: any) => {
+            wrappedNode.update = (updater: (value: unknown) => unknown) => {
               // An updater is a read-modify-write, so it CANNOT be coalesced:
               // `update(v => v + 1)` three times means +3, and keeping only the
               // last one means +1. Coalescing is sound for `set` (last value wins
@@ -206,7 +219,7 @@ export function batching(
               }
             };
 
-            node.__batchingUpdateWrapped = true;
+            wrappedNode.__batchingUpdateWrapped = true;
           }
 
           return true; // always recurse (a wrapped node still has children)
@@ -220,7 +233,7 @@ export function batching(
 
     // Wrap the tree's $ proxy
     if (tree.$) {
-      wrapSignalSetters(tree.$);
+      wrapSignalSetters(tree.$ as Record<string, unknown>);
     }
 
     // ========================================

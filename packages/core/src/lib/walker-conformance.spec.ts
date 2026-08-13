@@ -28,8 +28,7 @@ import {
   signalTree,
   status,
 } from '../index';
-// interceptLeafSignals moved off the root barrel to /authoring in v12.
-import { interceptLeafSignals } from './internals/intercept-leaf-signals';
+import { getPathNotifier, resetPathNotifier } from './path-notifier';
 import { loader } from './markers/loader';
 
 interface Member extends Record<string, unknown> {
@@ -125,17 +124,19 @@ describe('walker conformance — core subsystems on a deep callable-branch tree'
     );
   });
 
-  it('interceptLeafSignals observes a write five branches deep', () => {
+  it('PathNotifier observes a write five branches deep', async () => {
+    resetPathNotifier();
     const tree = signalTree(makeDeepState());
     const paths: string[] = [];
-    const restore = interceptLeafSignals(tree.$, (path) => {
+    const unsubscribe = getPathNotifier().subscribe('**', (_next, _prev, path) => {
       paths.push(path);
     });
 
     tree.$.org.teams.alpha.lead.profile.score.set(42);
+    await Promise.resolve();
 
     expect(paths).toContain('org.teams.alpha.lead.profile.score');
-    restore();
+    unsubscribe();
   });
 
   it('invalidateTag finds a tagged collection nested past a built-in leaf sibling', async () => {

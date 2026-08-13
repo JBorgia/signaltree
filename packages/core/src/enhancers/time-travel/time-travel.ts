@@ -3,12 +3,19 @@ import { signal } from '@angular/core';
 import {
   deepEqual,
   HISTORY_EXCLUDED,
+  isTraversableNode,
   prunedEqual,
   pruneHistoryExcluded,
   snapshotState,
 } from '../../lib/utils';
 import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
+import { getMutationCaptureRuntime } from '../../lib/internals/mutation-capture-runtime';
+import {
+  createPositionRegistry,
+  getPositionRegistry,
+  type PositionRegistry,
+} from '../../lib/internals/position-registry';
 import { visitTree } from '../../lib/internals/visit-tree';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
@@ -437,6 +444,7 @@ class TimeTravelManager<T> {
 
   constructor(
     private tree: ISignalTree<T>,
+    private positionRegistry: PositionRegistry,
     private config: TimeTravelConfig = {},
     private restoreStateFn?: (state: T) => void,
     private applyEffectsFn?: (
@@ -821,6 +829,101 @@ class TimeTravelManager<T> {
     return [...(this.positionTurnIds.get(positionId) ?? [])];
   }
 
+  containsPosition(authorityPositionId: number, participantPositionId: number): boolean {
+    return this.positionRegistry.contains(
+      authorityPositionId,
+      participantPositionId
+    );
+  }
+
+  turnIsContainedBy(turnId: number, authorityPositionId: number): boolean {
+    const turn = this.turns.get(turnId) ?? this.pendingTurns.get(turnId);
+    if (!turn) {
+      return false;
+    }
+
+    return (turn.__positionIds ?? []).every((participantPositionId) =>
+      this.containsPosition(authorityPositionId, participantPositionId)
+    );
+  }
+
+  private getContainedPositionIds(authorityPositionId: number): number[] {
+    const contained = new Set<number>([authorityPositionId]);
+
+    for (const positionId of this.positionTurnIds.keys()) {
+      if (this.containsPosition(authorityPositionId, positionId)) {
+        contained.add(positionId);
+      }
+    }
+
+    return [...contained].sort((left, right) => left - right);
+  }
+
+  private resolveContainedUndoClosure(authorityPositionId: number): number[] {
+    let seedPositionId: number | undefined;
+    let seedTurn: CanonicalTurn<T> | undefined;
+
+    for (const positionId of this.getContainedPositionIds(authorityPositionId)) {
+      const turnIds = this.positionTurnIds.get(positionId) ?? [];
+      const frontier = this.getFrontier(positionId);
+      if (frontier <= 0) {
+        continue;
+      }
+
+      const candidateTurn = this.turns.get(turnIds[frontier - 1]);
+      if (
+        candidateTurn &&
+        (!seedTurn ||
+          (candidateTurn.historyIndex ?? -1) > (seedTurn.historyIndex ?? -1))
+      ) {
+        seedTurn = candidateTurn;
+        seedPositionId = positionId;
+      }
+    }
+
+    if (seedPositionId === undefined) {
+      return [];
+    }
+
+    const closure = this.resolveUndoClosure(seedPositionId);
+    return closure.every((turnId) => this.turnIsContainedBy(turnId, authorityPositionId))
+      ? closure
+      : [];
+  }
+
+  private resolveContainedRedoClosure(authorityPositionId: number): number[] {
+    let seedPositionId: number | undefined;
+    let seedTurn: CanonicalTurn<T> | undefined;
+
+    for (const positionId of this.getContainedPositionIds(authorityPositionId)) {
+      const turnIds = this.positionTurnIds.get(positionId) ?? [];
+      const frontier = this.getFrontier(positionId);
+      if (frontier >= turnIds.length) {
+        continue;
+      }
+
+      const candidateTurn = this.turns.get(turnIds[frontier]);
+      if (
+        candidateTurn &&
+        (!seedTurn ||
+          (candidateTurn.historyIndex ?? Number.POSITIVE_INFINITY) <
+            (seedTurn.historyIndex ?? Number.POSITIVE_INFINITY))
+      ) {
+        seedTurn = candidateTurn;
+        seedPositionId = positionId;
+      }
+    }
+
+    if (seedPositionId === undefined) {
+      return [];
+    }
+
+    const closure = this.resolveRedoClosure(seedPositionId);
+    return closure.every((turnId) => this.turnIsContainedBy(turnId, authorityPositionId))
+      ? closure
+      : [];
+  }
+
   getFrontier(positionId: number): number {
     return this.positionFrontiers.get(positionId) ?? 0;
   }
@@ -1111,32 +1214,42 @@ class TimeTravelManager<T> {
     return closure;
   }
 
-  canUndoPosition(positionId: number): boolean {
+  canUndoAt(positionId: number): boolean {
     this.frontierVersion();
-    return this.resolveUndoClosure(positionId).length > 0;
+    return this.resolveContainedUndoClosure(positionId).length > 0;
   }
 
-  canRedoPosition(positionId: number): boolean {
+  canRedoAt(positionId: number): boolean {
     this.frontierVersion();
-    return this.resolveRedoClosure(positionId).length > 0;
+    return this.resolveContainedRedoClosure(positionId).length > 0;
   }
 
-  undoScoped(positionId: number): boolean {
-    if (!this.canUndoPosition(positionId)) {
+  undoAt(positionId: number): boolean {
+    if (!this.canUndoAt(positionId)) {
       return false;
     }
 
     this.restoreVisibleStateToConfirmed();
-    return this.undoPosition(positionId).length > 0;
+    const closure = this.resolveContainedUndoClosure(positionId);
+    if (closure.length === 0) {
+      return false;
+    }
+
+    return this.undoPosition(closure[0] === undefined ? positionId : (this.turns.get(closure[0])?.__positionIds?.find((candidatePositionId) => this.containsPosition(positionId, candidatePositionId)) ?? positionId)).length > 0;
   }
 
-  redoScoped(positionId: number): boolean {
-    if (!this.canRedoPosition(positionId)) {
+  redoAt(positionId: number): boolean {
+    if (!this.canRedoAt(positionId)) {
       return false;
     }
 
     this.restoreVisibleStateToConfirmed();
-    return this.redoPosition(positionId).length > 0;
+    const closure = this.resolveContainedRedoClosure(positionId);
+    if (closure.length === 0) {
+      return false;
+    }
+
+    return this.redoPosition(closure[0] === undefined ? positionId : (this.turns.get(closure[0])?.__positionIds?.find((candidatePositionId) => this.containsPosition(positionId, candidatePositionId)) ?? positionId)).length > 0;
   }
 
   private getLatestAppliedTurn(): CanonicalTurn<T> | undefined {
@@ -1606,8 +1719,11 @@ export function createScopedHistoryAuthority<T extends Record<string, unknown>>(
   const positionId = options.positionId ?? 1;
   const snapshot = signal(options.read());
   const historyTree = { $: snapshot.asReadonly() } as unknown as ISignalTree<T>;
+  const positionRegistry = createPositionRegistry();
+  positionRegistry.allocate();
   const manager = new TimeTravelManager(
     historyTree,
+    positionRegistry,
     {
       maxHistorySize: Math.max(2, options.maxHistoryEntries ?? 2),
       includePayload: false,
@@ -1662,7 +1778,7 @@ export function createScopedHistoryAuthority<T extends Record<string, unknown>>(
       manager.addEntry('INIT');
     },
     undo(): boolean {
-      const changed = manager.undoScoped(positionId);
+      const changed = manager.undoAt(positionId);
       if (changed) {
         lastRecorded = options.read();
         snapshot.set(lastRecorded);
@@ -1670,7 +1786,7 @@ export function createScopedHistoryAuthority<T extends Record<string, unknown>>(
       return changed;
     },
     redo(): boolean {
-      const changed = manager.redoScoped(positionId);
+      const changed = manager.redoAt(positionId);
       if (changed) {
         lastRecorded = options.read();
         snapshot.set(lastRecorded);
@@ -1678,10 +1794,10 @@ export function createScopedHistoryAuthority<T extends Record<string, unknown>>(
       return changed;
     },
     canUndo(): boolean {
-      return manager.canUndoPosition(positionId);
+      return manager.canUndoAt(positionId);
     },
     canRedo(): boolean {
-      return manager.canRedoPosition(positionId);
+      return manager.canRedoAt(positionId);
     },
   };
 }
@@ -1947,7 +2063,7 @@ export function timeTravel(
       const segments = path.split('.');
       for (let i = 0; i < segments.length; i++) {
         const segment = segments[i];
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         const next = (cursor as Record<string, unknown>)[segment] as {
@@ -1978,13 +2094,13 @@ export function timeTravel(
       const ownerSegments = ownerPath.split('.');
       let cursor: unknown = root;
       for (const segment of ownerSegments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
       }
 
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+      if (!isTraversableNode(cursor)) {
         throw new Error(`Cannot resolve owner path from ${path}`);
       }
 
@@ -2017,13 +2133,13 @@ export function timeTravel(
       const ownerSegments = ownerPath.split('.');
       let cursor: unknown = root;
       for (const segment of ownerSegments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
       }
 
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+      if (!isTraversableNode(cursor)) {
         throw new Error(`Cannot resolve owner path from ${path}`);
       }
 
@@ -2044,7 +2160,7 @@ export function timeTravel(
     ): { set?: (value: unknown) => void } => {
       let cursor: unknown = root;
       for (const segment of path.split('.')) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve scoped undo path ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
@@ -2066,7 +2182,7 @@ export function timeTravel(
       const ownerSegments = ownerPath.split('.');
       let cursor: unknown = root;
       for (const segment of ownerSegments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
@@ -2103,17 +2219,13 @@ export function timeTravel(
         };
       }
 
-      const ownedRoot =
-        cursor && (typeof cursor === 'object' || typeof cursor === 'function')
-          ? ((cursor as Record<string, unknown>)['$'] ?? cursor)
-          : cursor;
+      const ownedRoot = isTraversableNode(cursor)
+        ? ((cursor as Record<string, unknown>)['$'] ?? cursor)
+        : cursor;
 
       let leafCursor: unknown = ownedRoot;
       for (const segment of suffixSegments) {
-        if (
-          !leafCursor ||
-          (typeof leafCursor !== 'object' && typeof leafCursor !== 'function')
-        ) {
+        if (!isTraversableNode(leafCursor)) {
           throw new Error(`Cannot resolve scoped undo path ${path}`);
         }
         leafCursor = (leafCursor as Record<string, unknown>)[segment];
@@ -2397,9 +2509,17 @@ export function timeTravel(
       }
     };
 
+    const positionRegistry = getPositionRegistry(tree.$);
+    if (!positionRegistry) {
+      throw new Error(
+        'SignalTree: timeTravel() requires a tree-owned PositionRegistry.'
+      );
+    }
+
     // Create time travel manager with restoration function
     const timeTravelManager = new TimeTravelManager(
       tree,
+      positionRegistry,
       config,
       (state: T) => {
         isRestoring = true;
@@ -2470,7 +2590,7 @@ export function timeTravel(
       const segments = ownerPath.split('.');
       let cursor: unknown = (tree as ISignalTree<T>).$ as Record<string, unknown>;
       for (const segment of segments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           return undefined;
         }
         cursor = (cursor as Record<string, unknown>)[segment];
@@ -2479,6 +2599,40 @@ export function timeTravel(
       const resolved = (cursor as { __positionIds?: number[] } | undefined)
         ?.__positionIds?.[0];
       return typeof resolved === 'number' ? resolved : undefined;
+    };
+    const resolveLiveNodeAtPath = (path?: string): unknown => {
+      if (!path) {
+        return undefined;
+      }
+
+      const segments = path.split('.');
+      let cursor: unknown = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+      for (const segment of segments) {
+        if (!isTraversableNode(cursor)) {
+          return undefined;
+        }
+        cursor = (cursor as Record<string, unknown>)[segment];
+      }
+
+      return cursor;
+    };
+    const isHistoryExcludedCapture = (
+      ownerPath?: string,
+      path?: string
+    ): boolean => {
+      const ownerNode = resolveLiveNodeAtPath(ownerPath);
+      if (
+        ownerNode &&
+        (ownerNode as Record<symbol, unknown>)[HISTORY_EXCLUDED] === true
+      ) {
+        return true;
+      }
+
+      const liveNode = resolveLiveNodeAtPath(path);
+      return Boolean(
+        liveNode &&
+          (liveNode as Record<symbol, unknown>)[HISTORY_EXCLUDED] === true
+      );
     };
     const effectKey = (effect: TurnEffect): string => {
       switch (effect.kind) {
@@ -2635,6 +2789,10 @@ export function timeTravel(
       subjectIds?: number[],
       positionIds?: number[]
     ): void => {
+      if (isHistoryExcludedCapture(ownerPath, path)) {
+        return;
+      }
+
       bucket.ownerPaths.add(ownerPath ?? path);
       for (const subjectId of subjectIds ?? []) {
         bucket.subjectIds.add(subjectId);
@@ -2735,6 +2893,7 @@ export function timeTravel(
     let unsubscribeFlush: (() => void) | null = null;
     let unsubscribeNotifications: (() => void) | null = null;
     let unsubscribeReset: (() => void) | null = null;
+    const releaseCapture = getMutationCaptureRuntime(tree)?.activateCapture();
     try {
       const notifier = getPathNotifier();
       if (notifier) {
@@ -2907,15 +3066,17 @@ export function timeTravel(
           if (transactionId !== undefined) {
             return result;
           }
-          // Preserve the synchronous history contract for explicit root writes,
-          // but attach the leaf-level effects they already generated so a
-          // batched flush does not win the dedupe race with an unindexed turn.
           const notifier = getPathNotifier();
+          // Root writes must still commit synchronously. Under the intrinsic
+          // leaf substrate, the leaf effects now arrive through the notifier,
+          // so flush them immediately and let the normal flush hook record the
+          // indexed turn.
           if (notifier?.isBatchingEnabled()) {
-            suppressNextFlushRecord = true;
+            notifier.flushSync();
+          } else {
+            selfDirty = false;
+            recordCaptureBucket(pendingCapture, 'update');
           }
-          selfDirty = false;
-          recordCaptureBucket(pendingCapture, 'update');
         }
 
         return result;
@@ -3075,7 +3236,7 @@ export function timeTravel(
       timeTravelManager;
 
     visitTree((enhancedTree as ISignalTree<T>).$, (node) => {
-      const formNode = node as {
+      const scopedNode = node as {
         __positionIds?: number[];
         history?: {
           __bindSharedAuthority?: (authority: {
@@ -3086,17 +3247,17 @@ export function timeTravel(
           }) => void;
         };
       };
-      const positionId = formNode.__positionIds?.[0];
+      const positionId = scopedNode.__positionIds?.[0];
 
       if (
         typeof positionId === 'number' &&
-        typeof formNode.history?.__bindSharedAuthority === 'function'
+        typeof scopedNode.history?.__bindSharedAuthority === 'function'
       ) {
-        formNode.history.__bindSharedAuthority({
-          undo: () => timeTravelManager.undoScoped(positionId),
-          redo: () => timeTravelManager.redoScoped(positionId),
-          canUndo: () => timeTravelManager.canUndoPosition(positionId),
-          canRedo: () => timeTravelManager.canRedoPosition(positionId),
+        scopedNode.history.__bindSharedAuthority({
+          undo: () => timeTravelManager.undoAt(positionId),
+          redo: () => timeTravelManager.redoAt(positionId),
+          canUndo: () => timeTravelManager.canUndoAt(positionId),
+          canRedo: () => timeTravelManager.canRedoAt(positionId),
         });
         return false;
       }
@@ -3132,6 +3293,7 @@ export function timeTravel(
         unsubscribeNotifications = null;
         unsubscribeReset = null;
         restoreLeafInterceptors = null;
+        releaseCapture?.();
         timeTravelManager.resetHistory();
       });
     }
@@ -3139,7 +3301,11 @@ export function timeTravel(
     return enhancedTree as unknown as ISignalTree<T> & TimeTravelMethods<T>;
   };
 
-  const meta: EnhancerMeta = { name: 'timeTravel', provides: ['timeTravel'] };
+  const meta: EnhancerMeta = {
+    name: 'timeTravel',
+    provides: ['timeTravel'],
+    capabilities: ['causal-runtime', 'temporal-snapshots'],
+  };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
   return enhancerFn;

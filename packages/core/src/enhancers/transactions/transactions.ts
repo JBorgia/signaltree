@@ -8,7 +8,9 @@ import type {
 
 import { ENHANCER_META, SignalTreeRollbackError } from '../../lib/types';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
+import { getMutationCaptureRuntime } from '../../lib/internals/mutation-capture-runtime';
 import { getPathNotifier } from '../../lib/path-notifier';
+import { isTraversableNode } from '../../lib/utils';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
 
 type TurnEffectBase = {
@@ -92,11 +94,6 @@ type CaptureBucket = {
   effects: PendingEffectMap;
 };
 
-type CollectionHistoryEffect =
-  | CollectionAddEffect
-  | CollectionRemoveEffect
-  | CollectionRekeyEffect;
-
 type EntityCollectionLookupNode = {
   byIdOrFail: (id: string | number) => Record<string, unknown>;
 };
@@ -116,12 +113,6 @@ type EntityCollectionNode = EntityCollectionLookupNode & {
 };
 
 type HistoryAwareCollectionNode = EntityCollectionNode;
-
-type OwnerResolution = {
-  ownerNode: EntityCollectionLookupNode;
-  entityId: string | number;
-  fieldSegments: string[];
-};
 
 type CollectionResolution = {
   ownerNode: HistoryAwareCollectionNode;
@@ -673,7 +664,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
     const segments = ownerPath.split('.');
     let cursor: unknown = tree.$ as Record<string, unknown>;
     for (const segment of segments) {
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+      if (!isTraversableNode(cursor)) {
         return undefined;
       }
       cursor = (cursor as Record<string, unknown>)[segment];
@@ -896,6 +887,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
     transaction(fn: () => void): PendingTransaction {
       const activeMeta = getActiveWriteContext();
       const notifier = getPathNotifier();
+      const captureRuntime = getMutationCaptureRuntime(tree);
       if (typeof activeMeta?.transactionId === 'number') {
         throw new Error('Nested transaction is not supported');
       }
@@ -903,6 +895,10 @@ export function getOrCreateInternalTransactionRuntime<T>(
       notifier?.flushSync();
       const transactionId = nextTransactionId++;
       pendingTransactions.set(transactionId, createCaptureBucket());
+
+      const releaseCapture = captureRuntime?.activateCapture();
+      let primaryError: unknown;
+      let cleanupError: unknown;
 
       try {
         withWriteContext(
@@ -914,12 +910,29 @@ export function getOrCreateInternalTransactionRuntime<T>(
           fn
         );
       } catch (error) {
+        primaryError = error;
         notifier?.flushSync();
         const transactionEffects = drainTransactionEffects(transactionId);
         if (transactionEffects.length > 0) {
           applyRuntimeScopedEffects(transactionEffects, 'undo');
         }
-        throw error;
+      } finally {
+        try {
+          releaseCapture?.();
+        } catch (error) {
+          if (primaryError !== undefined) {
+            reportCleanupFailure('transaction capture release after failure', error);
+          } else {
+            cleanupError = error;
+          }
+        }
+      }
+
+      if (primaryError !== undefined) {
+        throw primaryError;
+      }
+      if (cleanupError !== undefined) {
+        throw cleanupError;
       }
 
       notifier?.flushSync();
@@ -1010,20 +1023,35 @@ export function getOrCreateInternalTransactionRuntime<T>(
     },
   };
 
+  const reportCleanupFailure = (step: string, error: unknown): void => {
+    console.error(
+      `SignalTree: transactions() cleanup failed during ${step}.`,
+      error
+    );
+  };
+
   if (typeof tree.registerCleanup === 'function') {
     tree.registerCleanup(() => {
       try {
         unsubscribeFlush?.();
-      } catch {}
+      } catch (error) {
+        reportCleanupFailure('flush unsubscription', error);
+      }
       try {
         unsubscribeNotifications?.();
-      } catch {}
+      } catch (error) {
+        reportCleanupFailure('notification unsubscription', error);
+      }
       try {
         unsubscribeReset?.();
-      } catch {}
+      } catch (error) {
+        reportCleanupFailure('reset unsubscription', error);
+      }
       try {
         restoreLeafInterceptors?.();
-      } catch {}
+      } catch (error) {
+        reportCleanupFailure('leaf interceptor teardown', error);
+      }
       unsubscribeFlush = null;
       unsubscribeNotifications = null;
       unsubscribeReset = null;
@@ -1050,13 +1078,13 @@ export function transactions(): <T>(
       const ownerSegments = ownerPath.split('.');
       let cursor: unknown = root;
       for (const segment of ownerSegments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
       }
 
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+      if (!isTraversableNode(cursor)) {
         throw new Error(`Cannot resolve owner path from ${path}`);
       }
 
@@ -1089,13 +1117,13 @@ export function transactions(): <T>(
       const ownerSegments = ownerPath.split('.');
       let cursor: unknown = root;
       for (const segment of ownerSegments) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve owner path from ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
       }
 
-      if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+      if (!isTraversableNode(cursor)) {
         throw new Error(`Cannot resolve owner path from ${path}`);
       }
 
@@ -1116,7 +1144,7 @@ export function transactions(): <T>(
     ): { set?: (value: unknown) => void } => {
       let cursor: unknown = root;
       for (const segment of path.split('.')) {
-        if (!cursor || (typeof cursor !== 'object' && typeof cursor !== 'function')) {
+        if (!isTraversableNode(cursor)) {
           throw new Error(`Cannot resolve scoped undo path ${path}`);
         }
         cursor = (cursor as Record<string, unknown>)[segment];
@@ -1359,6 +1387,7 @@ export function transactions(): <T>(
   const meta: EnhancerMeta = {
     name: 'transactions',
     provides: ['transactions'],
+    capabilities: ['causal-runtime'],
   };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;

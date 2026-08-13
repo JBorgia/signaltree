@@ -13,7 +13,6 @@ describe('SecurityValidator Integration', () => {
       expect(() => {
         signalTree(
           { name: 'x' },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           { security: { preventXSS: true } as any }
         );
       }).toThrow(/ST1031/);

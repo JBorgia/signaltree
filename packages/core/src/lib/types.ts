@@ -71,6 +71,37 @@ export type StructuralHistoryEffect =
       afterKey: string | number;
     };
 
+export type PositionId = number;
+
+export type MutationKind =
+  | 'set'
+  | 'update'
+  | 'insert'
+  | 'remove'
+  | 'move'
+  | 'rekey'
+  | 'replace';
+
+export interface WriteAttribution {
+  intent?: UpdateMetadata['intent'];
+  source?: UpdateMetadata['source'];
+  transactionId?: number;
+  transactionOwner?: object;
+  mutationIntent?: UpdateMetadata['mutationIntent'];
+}
+
+export interface MutationEnvelope<T = unknown> {
+  readonly positionId: PositionId;
+  readonly path: readonly PropertyKey[];
+  readonly ownerPath?: readonly PropertyKey[];
+  readonly before: T;
+  readonly after: T;
+  readonly kind: MutationKind;
+  readonly subjectId?: number;
+  readonly structural?: StructuralHistoryEffect;
+  readonly attribution?: WriteAttribution;
+}
+
 // Time travel enhancer configuration (canonical)
 export interface TimeTravelConfig {
   /** Enable/disable time travel (default: true) */
@@ -272,8 +303,8 @@ export type TreeNode<T> = {
     : T[K] extends
         | Date
         | RegExp
-        | Map<any, any>
-        | Set<any>
+      | Map<unknown, unknown>
+      | Set<unknown>
         | Error
         | ((...args: unknown[]) => unknown)
     ? CallableWritableSignal<T[K]> // Built-in objects → treat as atomic values
@@ -739,7 +770,7 @@ export interface FormHistorySharedAuthority {
  * signal `signalForm()` uses as its `FieldTree` model — undo/redo drive BOTH
  * the marker API and any bound Angular Signal Forms field from one engine.
  */
-export interface FormHistoryApi<T> {
+export interface FormHistoryApi<_T> {
   /** Revert to the previous recorded state (no-op if none). */
   undo(): void;
   /** Re-apply the next state after an undo (no-op if none). */
@@ -1355,19 +1386,26 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * that have already accumulated methods from previous enhancers.
  */
 export type Enhancer<TAdded> = (
-  tree: ISignalTree<any>
-) => ISignalTree<any> & TAdded;
+  tree: ISignalTree<unknown>
+) => ISignalTree<unknown> & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {
   metadata?: EnhancerMeta;
 };
 
+export type TreeCapability =
+  | 'mutation-capture'
+  | 'position-topology'
+  | 'causal-runtime'
+  | 'temporal-snapshots';
+
 /** Metadata for enhancer ordering and debugging */
 export interface EnhancerMeta {
   name?: string;
   requires?: string[];
   provides?: string[];
+  capabilities?: TreeCapability[];
   description?: string;
 }
 

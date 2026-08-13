@@ -17,6 +17,7 @@ import type {
   DevToolsConfig,
   DevToolsMethods,
   EnhancerMeta,
+  TreeNode,
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
@@ -112,6 +113,30 @@ type DevToolsAction = {
   type: string;
   payload?: unknown;
   meta?: DevToolsActionMeta;
+};
+
+type ReduxDevToolsConnection = {
+  send: (action: unknown, state: unknown) => void;
+  subscribe?: (listener: (message: unknown) => void) => void | (() => void);
+  disconnect?: () => void;
+  unsubscribe?: () => void;
+  init?: (state: unknown) => void;
+};
+
+type ReduxDevToolsExtension = {
+  connect: (config: Record<string, unknown>) => ReduxDevToolsConnection;
+};
+
+type DevToolsRegistryHost = typeof globalThis & {
+  __REDUX_DEVTOOLS_EXTENSION__?: ReduxDevToolsExtension;
+  [GLOBAL_GROUPS_KEY]?: Map<string, DevToolsGroup>;
+  [GLOBAL_MARKER_KEY]?: string;
+  [GLOBAL_CONNECTIONS_KEY]?: Map<string, DevToolsConnectionEntry>;
+};
+
+type LiftedStatePayload = {
+  computedStates?: Array<{ state?: unknown }>;
+  currentStateIndex?: number;
 };
 
 // ============================================================================
@@ -501,8 +526,8 @@ function buildDevToolsAction(
 const GLOBAL_GROUPS_KEY = '__SIGNALTREE_DEVTOOLS_GROUPS__';
 const GLOBAL_MARKER_KEY = '__SIGNALTREE_DEVTOOLS_GLOBAL_MARKER__';
 
-function getRegistryHost(): any {
-  return typeof window !== 'undefined' ? window : globalThis;
+function getRegistryHost(): DevToolsRegistryHost {
+  return (typeof window !== 'undefined' ? window : globalThis) as DevToolsRegistryHost;
 }
 
 function ensureGlobalMarker(): string {
@@ -552,8 +577,8 @@ const GLOBAL_CONNECTIONS_KEY = '__SIGNALTREE_DEVTOOLS_CONNECTIONS__';
 
 interface DevToolsConnectionEntry {
   status: 'connecting' | 'connected';
-  connection: any;
-  tools: any;
+  connection: ReduxDevToolsConnection | null;
+  tools: Pick<ReduxDevToolsConnection, 'send' | 'subscribe'> | null;
   subscribed: boolean;
   unsubscribe: (() => void) | null;
   waiters: Set<(entry: DevToolsConnectionEntry) => void>;
@@ -574,8 +599,9 @@ function getOrCreateDevToolsGroup(
   groupId: string,
   displayName: string
 ): DevToolsGroup {
-  if (devToolsGroups.has(groupId)) {
-    return devToolsGroups.get(groupId)!;
+  const existingGroup = devToolsGroups.get(groupId);
+  if (existingGroup) {
+    return existingGroup;
   }
 
   const trees = new Map<
@@ -597,14 +623,14 @@ function getOrCreateDevToolsGroup(
   const lastSerialized = new Map<string, unknown>();
   const pendingPathsByTree = new Map<string, string[]>();
 
-  let browserDevToolsConnection: any = null;
-  let browserDevTools: any = null;
+  let browserDevToolsConnection: ReduxDevToolsConnection | null = null;
+  let browserDevTools: Pick<ReduxDevToolsConnection, 'send' | 'subscribe'> | null = null;
   let unsubscribeDevTools: (() => void) | null = null;
   let isConnected = false;
   let isApplyingExternalState = false;
 
   let sendScheduled = false;
-  let sendTimer: any = null;
+  let sendTimer: ReturnType<typeof setTimeout> | null = null;
   let lastSendAt = 0;
   let sendRateLimitMs = 0;
 
@@ -667,13 +693,14 @@ function getOrCreateDevToolsGroup(
     browserDevTools.send('@@INIT', aggregated);
   };
 
-  const applyExternalState = (state: any) => {
+  const applyExternalState = (state: unknown) => {
     if (state === undefined || state === null) return;
     isApplyingExternalState = true;
     try {
+      const stateByTree = state as Record<string, unknown>;
       for (const [treeKey, tree] of trees) {
         if (!tree.enableTimeTravel) continue;
-        const treeState = state?.[treeKey];
+        const treeState = stateByTree[treeKey];
         if (treeState !== undefined) {
           tree.applyExternalState(treeState);
         }
@@ -687,7 +714,7 @@ function getOrCreateDevToolsGroup(
     }
   };
 
-  const handleDevToolsMessage = (message: any) => {
+  const handleDevToolsMessage = (message: unknown) => {
     if (!message || typeof message !== 'object') return;
     const msg = message as {
       type?: unknown;
@@ -742,7 +769,7 @@ function getOrCreateDevToolsGroup(
     }
 
     if (actionType === 'IMPORT_STATE') {
-      const lifted = msg.payload?.nextLiftedState as any;
+      const lifted = msg.payload?.nextLiftedState as LiftedStatePayload | undefined;
       const computedStates = Array.isArray(lifted?.computedStates)
         ? lifted.computedStates
         : [];
@@ -751,7 +778,7 @@ function getOrCreateDevToolsGroup(
           ? lifted.currentStateIndex
           : computedStates.length - 1;
       const index = Math.max(0, Math.min(indexRaw, computedStates.length - 1));
-      const entry = computedStates[index] as any;
+      const entry = computedStates[index];
       const nextState = parseDevToolsState(entry?.state);
       applyExternalState(nextState);
       sendInit();
@@ -779,7 +806,11 @@ function getOrCreateDevToolsGroup(
     });
 
     try {
-      const devToolsExt = (window as any)['__REDUX_DEVTOOLS_EXTENSION__'];
+      const devToolsExt = getRegistryHost().__REDUX_DEVTOOLS_EXTENSION__;
+      if (!devToolsExt) {
+        devToolsConnections.delete(groupId);
+        return;
+      }
       const connection = devToolsExt.connect({
         name: displayName,
         instanceId: groupId,
@@ -828,7 +859,7 @@ function getOrCreateDevToolsGroup(
 
       sendInit();
       isConnected = true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       devToolsConnections.delete(groupId);
       console.warn('[SignalTree] Failed to connect to Redux DevTools:', e);
     }
@@ -1154,16 +1185,8 @@ export function createDevToolsEnhancer(
     >();
 
     // Browser DevTools integration
-    let browserDevToolsConnection: {
-      send: (action: unknown, state: unknown) => void;
-      subscribe?: (listener: (message: unknown) => void) => void | (() => void);
-      disconnect?: () => void;
-      unsubscribe?: () => void;
-    } | null = null;
-    let browserDevTools: {
-      send: (action: unknown, state: unknown) => void;
-      subscribe?: (listener: (message: unknown) => void) => void | (() => void);
-    } | null = null;
+    let browserDevToolsConnection: ReduxDevToolsConnection | null = null;
+    let browserDevTools: Pick<ReduxDevToolsConnection, 'send' | 'subscribe'> | null = null;
     let isConnected = false;
     let isApplyingExternalState = false;
     let unsubscribeDevTools: (() => void) | null = null;
@@ -1200,7 +1223,7 @@ export function createDevToolsEnhancer(
     const readSnapshot = (): unknown => {
       try {
         if ('$' in tree) {
-          return snapshotState((tree as ISignalTree<T>).$ as any);
+          return snapshotState((tree as ISignalTree<T>).$ as TreeNode<T>);
         }
       } catch {
         // fall back to tree call
@@ -1438,7 +1461,7 @@ export function createDevToolsEnhancer(
         // context is synchronous, so applyState's recursive calls inherit it.
         withWriteContext({ intent: 'system', source: 'devtools' }, () => {
           if ('$' in tree) {
-            applyState((tree as ISignalTree<T>).$ as any, state as T);
+            applyState((tree as ISignalTree<T>).$ as TreeNode<T>, state as T);
           } else {
             originalTreeCall(state as T);
           }
@@ -1516,7 +1539,7 @@ export function createDevToolsEnhancer(
       }
 
       if (actionType === 'IMPORT_STATE') {
-        const lifted = msg.payload?.nextLiftedState as any;
+        const lifted = msg.payload?.nextLiftedState as LiftedStatePayload | undefined;
         const computedStates = Array.isArray(lifted?.computedStates)
           ? lifted.computedStates
           : [];
@@ -1528,7 +1551,7 @@ export function createDevToolsEnhancer(
           0,
           Math.min(indexRaw, computedStates.length - 1)
         );
-        const entry = computedStates[index] as any;
+        const entry = computedStates[index];
         const nextState = parseDevToolsState(entry?.state);
         applyExternalState(nextState);
         sendInit();
@@ -1581,16 +1604,11 @@ export function createDevToolsEnhancer(
       });
 
       try {
-        const devToolsExt = (window as any)['__REDUX_DEVTOOLS_EXTENSION__'] as {
-          connect: (config: Record<string, unknown>) => {
-            send: (action: unknown, state: unknown) => void;
-            subscribe?: (
-              listener: (message: unknown) => void
-            ) => void | (() => void);
-            disconnect?: () => void;
-            unsubscribe?: () => void;
-          };
-        };
+        const devToolsExt = getRegistryHost().__REDUX_DEVTOOLS_EXTENSION__;
+        if (!devToolsExt) {
+          devToolsConnections.delete(groupId);
+          return;
+        }
         const connection = devToolsExt.connect({
           name: displayName,
           instanceId: groupId,
@@ -1926,7 +1944,7 @@ export function createDevToolsEnhancer(
           // to a single @@INIT action with the provided (empty) state.
           if (browserDevToolsConnection) {
             try {
-              (browserDevToolsConnection as any).init({});
+              browserDevToolsConnection.init?.({});
             } catch {
               // ignore
             }

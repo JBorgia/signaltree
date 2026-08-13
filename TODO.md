@@ -444,7 +444,7 @@ load-bearing one stands.** Re-run from scratch against the built package with
   ⚠️ **CORRECTED 2026-08-11 — "worst case" is exactly backwards, and 0.896 does not
   reproduce.** Re-run with `tools/bench-retention-arms.mjs` (baseline after seeding):
   the scalar arm is **0.298 MB** at 50k, not 0.896, and 0.896 has not reproduced
-  under any baselining method (baselining *before* seeding gives 7.62 MB, because
+  under any baselining method (baselining _before_ seeding gives 7.62 MB, because
   then the collection is inside the arm). The reference-sharing insight stands — it
   is the durable finding — but 19.38 MB is a **floor, not a worst case**: one
   changed row and fifty different changed rows retain the same 19.38 MB, and
@@ -452,6 +452,7 @@ load-bearing one stands.** Re-run from scratch against the built package with
   `entries × (width × ~8 B + changedRows × ~40 B)`, and the second was missing
   everywhere. The "sits nearer 0.9 than 19.6" conclusion survives in direction
   (mixed workloads are cheap) but the ceiling it implied was 5.9× too low.
+
 - **Recording slope PARTIALLY reproduced.** Collection column reproduces in shape
   and within ~2× (31.8/66.9/255 → 18.8/49.8/215 µs per recorded entry). The scalar
   column does not: measured **flat** in collection width (10.8 → 11.3 µs) where the
@@ -982,3 +983,147 @@ undo.
 from 2026-08-04; three releases have shipped since. Most is probably done, but
 marking it executed without checking each item is how 0012 came to claim it had not
 shipped when it had.
+
+## 10. Planned-lifecycle marker classification before any more parity work
+
+The construction substrate is now proven across the major writable families:
+
+- plain writable state
+- `status()`
+- `stored()`
+- `entityMap()`
+- derived non-authoring semantics
+
+Two consequences are decided.
+
+**1. `plannedSignalTree().derived(...)` is builder debt, not runtime debt.**
+
+Derived state is already semantically correct under the causal runtime: source
+writes record one canonical effect/turn/frontier move, derived recomputation
+records none, and undo restores the source while derived values come back only
+through reactivity. What is still missing is the PLANNED construction surface.
+The greenfield builder needs a configuration-phase `.derived(...)` that installs
+derived computations before exposure while requesting NO causal capability.
+
+**2. Do not auto-migrate the remaining markers. Classify them first.**
+
+Use these buckets:
+
+- **A. State authors** — authoritative application-state mutations. These need
+  planned specialization and, when requested, the canonical mutation substrate.
+- **B. Reactive consequences** — derived/validation/aggregate projections. These
+  may need planned construction, but they must not author turns/frontiers/history.
+- **C. Controllers/resources** — async orchestration, loaders, freshness,
+  invalidation, external lifecycle. Decompose into state + consequence + control
+  rather than preserving a monolithic legacy marker by default.
+
+Current classification from the code as it exists:
+
+- **`compared()`** — A scalar writable LEAF variant, not a new family. It only
+  swaps leaf equality (`signal-tree.ts` intercepts it before marker processing),
+  so it rides the plain writable substrate rather than demanding separate planned
+  lifecycle work.
+- **`form()`** — mixed legacy composite. `values` are authoritative domain
+  state and causal candidates. `touched` is WRITTEN interaction state, but it
+  is not a default causal-history participant under the greenfield model.
+  `dirty`, `valid`, `errors`, `errorList` are reactive consequences; wizard,
+  submit, persistence and the old history facade are controllers around that
+  state. Keep it off the greenfield critical path — Angular Signal Forms is
+  still the destination, so it should not shape the substrate.
+- **`asyncSource()`** — controller/resource abstraction with authored visible
+  data plus status (`loading`/`error`) around an external loader. It captures
+  visible value for undo/restore but declines `rehydrate`, which is exactly the
+  smell of a resource/controller split rather than a pure state family.
+- **`asyncQuery()`** — controller/resource abstraction. Its `input` is authored
+  state, but results/load/error are source-driven query lifecycle, and the marker
+  snapshots value without restoring it. Treat it as orchestration around state,
+  not as an automatic causal-state family.
+- **`entityMap` loader surface** (`loader()` / `entity-loader.ts`) — controller
+  attached to an already-proven state author. The collection rows remain bucket A;
+  freshness, invalidation, persistence, and revalidation policy are bucket C.
+
+After this classification pass, the next substrate gate is the mixed-family
+falsifier, not more marker-by-marker parity. Use one turn spanning scalar,
+`entityMap` rekey, `status()`, and `stored()`; require one PositionRegistry, one
+capture runtime, one causal representation, no fake common owner, and no
+family-specific branching in the rollback engine.
+
+## 11. Producer/mutation substrate is strategically proven; stabilize before kernel work
+
+The mixed-family success/refusal pair is the final producer-side falsifier.
+Freeze these as established invariants and stop adding producer parity work.
+
+Established invariants:
+
+- Producers emit CANONICAL semantic effects, not feature-specific history
+  records.
+- One turn may span heterogeneous state families without introducing
+  family-specific rollback semantics.
+- Rollback removes only the rejected turn's surviving speculative
+  contribution.
+- Legitimate later writes survive.
+- Structural dependency can make compensation unsafe, in which case rollback
+  refuses atomically.
+- Persistence follows surviving state; it is not an independent causal author.
+- Subject identity, ownership identity, and physical path remain distinct.
+
+Current proof status:
+
+- capability planner — GREEN
+- planned lifecycle — GREEN
+- tree-local Position topology — GREEN
+- plain producer — GREEN
+- `status()` producer — GREEN
+- `stored()` producer — GREEN
+- `entityMap()` structural producer — GREEN
+- derived non-authoring — GREEN
+- mixed heterogeneous turn — GREEN
+- surgical mixed rollback — GREEN
+- unsafe mixed rollback refusal — GREEN
+- family-independent rollback engine — GREEN
+
+Next phase is STABILIZATION, not more producer work. Close it in roughly this
+order:
+
+1. Remove benchmark semantic switches from production paths; keep only one
+   production topology/capture semantics.
+2. Resolve the known full-suite failures, including the deferred scalar-frontier
+   failure.
+3. Get lint green.
+4. Keep the corrected `maxHistorySize` meaning: capacity `N` retains `N`
+   reversible turns and therefore up to `N` undo operations. Update docs,
+   migration notes, and changelog rather than restoring the old `N-1` defect.
+5. Replace silent cleanup `catch {}` paths with observable cleanup failure
+   reporting that does not mask the primary operation failure.
+6. Classify/fix the environment-specific stored test failures so the suite can
+   go green.
+7. Keep `plannedSignalTree().derived(...)` recorded as construction/API debt;
+   it is not a blocker unless removing the legacy builder path requires it.
+
+Only after that green checkpoint, design a greenfield `CausalRuntime` rather
+than extracting pieces from `TimeTravelManager`. The frozen contract for that
+next phase is [causal-runtime-contract.md](docs/architecture/causal-runtime-contract.md).
+
+Kernel sketch to preserve:
+
+- `CausalRuntime`
+- `PositionRegistry`
+- `TurnStore` — pending turns, confirmed turns, indexes, retention, redo
+  truncation
+- `Frontiers`
+- `Attribution` — transaction/turn grouping
+- `ReversalEngine` — historical undo, speculative rollback, supersession,
+  dependency/conflict classification
+- `Authority` — containment and prefix/frontier eligibility
+
+Consumers/projections after the kernel:
+
+- `transactions()` — speculative lifecycle projection
+- scoped undo/redo — confirmed-turn reversal projection
+- `timeTravel()` — causal projection plus separate temporal snapshot
+  projection
+- DevTools — inspection projection
+- provenance — inspection/query projection
+
+Preserve the semantic distinction between speculative rollback, historical
+undo, and temporal rewind even if they share representation under the kernel.

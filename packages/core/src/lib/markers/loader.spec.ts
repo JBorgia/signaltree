@@ -114,7 +114,6 @@ describe('raw load: fn (removed in v12) fails closed', () => {
   it('throws [ST2004] rather than silently no-op when load is a raw function', () => {
     expect(() =>
       signalTree({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         plants: entityMap<Plant, string>({
           selectId,
           load: (() => of([P1])) as any,

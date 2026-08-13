@@ -4,6 +4,12 @@ import {
   registerBuiltinMarkerProcessor,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
+import {
+  defineIntrinsicMutationEmitter,
+  defineOwnedOwnerPath,
+  defineOwnedPositionIds,
+  wrapOwnedWritableSignal,
+} from '../internals/owned-mutation';
 
 // =============================================================================
 // SYMBOL & ENUM
@@ -304,11 +310,40 @@ export function createStatusSignal<E = Error>(
   marker: StatusMarker<E>,
   _notifier?: unknown,
   path?: string,
-  context?: { allocatePositionId: () => number }
+  context?: {
+    positionTopologyEnabled?: boolean;
+    hasCapability?: (capability: 'mutation-capture' | 'position-topology') => boolean;
+    allocatePositionId: (parentPositionId?: number) => number;
+  },
+  parentPositionId?: number
 ): StatusSignal<E> {
   const stateSignal = signal<LoadingState>(marker.initialState);
   const errorSignal = signal<E | null>(null);
-  const positionIds = context ? [context.allocatePositionId()] : undefined;
+  const hasPositionTopology =
+    context?.hasCapability?.('position-topology') ??
+    context?.positionTopologyEnabled !== false;
+  const hasMutationCapture =
+    context?.hasCapability?.('mutation-capture') ?? Boolean(path);
+  const positionIds =
+    !hasPositionTopology
+      ? undefined
+      : context
+      ? [context.allocatePositionId(parentPositionId)]
+      : undefined;
+  const ownerPath = path ?? '';
+
+  if (path && hasMutationCapture) {
+    wrapOwnedWritableSignal(stateSignal, {
+      path: `${path}.state`,
+      ownerPath,
+      positionIds,
+    });
+    wrapOwnedWritableSignal(errorSignal, {
+      path: `${path}.error`,
+      ownerPath,
+      positionIds,
+    });
+  }
 
   // Lazy computed signals — one per predicate, created on first access (no
   // duplicate computation, no double allocation).
@@ -415,19 +450,12 @@ export function createStatusSignal<E = Error>(
   };
 
   if (positionIds) {
-    Object.defineProperty(api, '__positionIds', {
-      get: () => [...positionIds],
-      enumerable: false,
-      configurable: true,
-    });
+    defineOwnedPositionIds(api, positionIds);
   }
 
-  if (path) {
-    Object.defineProperty(api, '__ownerPath', {
-      value: path,
-      enumerable: false,
-      configurable: true,
-    });
+  if (path && hasMutationCapture) {
+    defineOwnedOwnerPath(api, path);
+    defineIntrinsicMutationEmitter(api);
   }
 
   return api;

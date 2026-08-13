@@ -192,6 +192,28 @@ SignalTree's value proposition centers on three pillars:
 2. **Invisible Infrastructure**: Users work directly with entities, not thinking about underlying systems
 3. **Callable Signal Syntax**: Clean, intuitive API without boilerplate
 
+### What Is Actually Stable
+
+The product constraint is the post-construction reactive JSON surface, not any
+particular setup ritual.
+
+Stable:
+
+- `tree.$.profile.firstName()`
+- `tree.$.profile.firstName.set('Jane')`
+- `tree.$.settings.theme()`
+- natural dot traversal over JSON-shaped state
+
+Negotiable:
+
+- `signalTree(...)` call shape
+- `.with(...)` chaining
+- builder lifecycle
+- capability declaration syntax
+- enhancer installation timing
+
+In other words: setup is disposable; reactive JSON dot notation is the product.
+
 Any architectural decision should preserve these principles.
 
 ---

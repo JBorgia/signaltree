@@ -844,6 +844,16 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   if (snapshot === null || snapshot === undefined) return;
   if (typeof snapshot !== 'object') return;
 
+  type EntitySignalLike = {
+    setAll?: (values: unknown[]) => void;
+  };
+  type SnapshotWithAll = {
+    all?: unknown;
+  };
+  type CallableTarget = ((value: unknown) => unknown) & {
+    set?: (value: unknown) => void;
+  };
+
   // A rehydrated tree has NO REQUEST IN FLIGHT.
   //
   // `LOADING` describes an in-flight operation, and an operation cannot survive
@@ -873,13 +883,15 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   if (
     stateNode &&
     typeof stateNode === 'object' &&
-    typeof (stateNode as any).setAll === 'function' &&
+    typeof (stateNode as EntitySignalLike).setAll === 'function' &&
     snapshot &&
     typeof snapshot === 'object' &&
-    Array.isArray((snapshot as any).all)
+    Array.isArray((snapshot as SnapshotWithAll).all)
   ) {
     try {
-      (stateNode as any).setAll((snapshot as any).all);
+      (stateNode as EntitySignalLike).setAll?.(
+        (snapshot as SnapshotWithAll).all as unknown[]
+      );
       return;
     } catch {
       // fall back to generic application
@@ -919,28 +931,28 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
         try {
           applyState(
             target as unknown as TreeNode<unknown>,
-            val as unknown as any
+            val as Record<string, unknown>
           );
         } catch {
           try {
-            (target as any)(val);
+            (target as CallableTarget)(val);
           } catch {
             // swallow
           }
         }
       } else {
         try {
-          (target as any)(val);
+          (target as CallableTarget)(val);
         } catch {
           // ignore
         }
       }
     } else if (isSignal(target)) {
       try {
-        (target as any).set?.(val);
+        (target as CallableTarget).set?.(val);
       } catch {
         try {
-          (target as any)(val);
+          (target as CallableTarget)(val);
         } catch {
           // ignore
         }
@@ -956,7 +968,7 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
       try {
         applyState(
           target as unknown as TreeNode<unknown>,
-          val as unknown as any
+          val as Record<string, unknown>
         );
       } catch {
         try {

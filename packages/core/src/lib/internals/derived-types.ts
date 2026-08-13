@@ -144,9 +144,9 @@ export function derivedFrom<TTree extends { $: object }>(): <
   TReturn extends object
 >(
   fn: ($: TTree['$']) => TReturn
-) => ($: any) => TReturn {
+) => ($: TTree['$']) => TReturn {
   // Return a function that takes the actual derived function
   // This allows TTree to be specified explicitly while TReturn is inferred
   return <TReturn extends object>(fn: ($: TTree['$']) => TReturn) =>
-    fn as ($: any) => TReturn;
+    fn as ($: TTree['$']) => TReturn;
 }

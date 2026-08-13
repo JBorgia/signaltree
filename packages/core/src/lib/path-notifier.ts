@@ -11,7 +11,7 @@
 
 import { getActiveWriteContext } from './write-context';
 
-import type { UpdateMetadata } from './types';
+import type { MutationEnvelope, UpdateMetadata } from './types';
 
 export type PathNotifierHandler = (
   value: unknown,
@@ -51,6 +51,9 @@ type PendingEntry = {
 };
 
 type PendingSlot = PendingEntry | PendingEntry[];
+
+const joinPathSegments = (path: readonly PropertyKey[]): string =>
+  path.map((segment) => String(segment)).join('.');
 
 const materializeDeliveryMeta = (
   meta?: UpdateMetadata
@@ -101,6 +104,30 @@ export class PathNotifier {
 
   isBatchingEnabled(): boolean {
     return this.batchingEnabled;
+  }
+
+  hasObservers(): boolean {
+    return (
+      this.subscribers.size > 0 ||
+      this.interceptors.size > 0 ||
+      this.flushCallbacks.size > 0
+    );
+  }
+
+  emitMutation(envelope: MutationEnvelope): { blocked: boolean; value: unknown } {
+    const ownerPath = envelope.ownerPath ?? envelope.path;
+    return this.notify(
+      joinPathSegments(envelope.path),
+      envelope.after,
+      envelope.before,
+      joinPathSegments(ownerPath),
+      envelope.subjectId === undefined ? undefined : [envelope.subjectId],
+      [envelope.positionId],
+      {
+        ...(envelope.attribution ?? {}),
+        historyEffect: envelope.structural,
+      }
+    );
   }
 
   /** @internal Bench/test-only hook to isolate batching-key overhead. */
@@ -444,6 +471,10 @@ export class PathNotifier {
       return false;
     }
 
+    if (this.crossesScalarIntentBoundary(left, right)) {
+      return false;
+    }
+
     if (this.batchIdentityMode === 'path-position') {
       return left.positionId === right.positionId;
     }
@@ -458,6 +489,16 @@ export class PathNotifier {
     const leftStructural = left.meta?.historyEffect !== undefined;
     const rightStructural = right.meta?.historyEffect !== undefined;
     return leftStructural !== rightStructural;
+  }
+
+  private crossesScalarIntentBoundary(left: PendingEntry, right: PendingEntry): boolean {
+    const leftIntent = left.meta?.mutationIntent;
+    const rightIntent = right.meta?.mutationIntent;
+    return (
+      leftIntent !== undefined &&
+      rightIntent !== undefined &&
+      leftIntent !== rightIntent
+    );
   }
 
   private coalesceEntry(target: PendingEntry, next: PendingEntry): void {

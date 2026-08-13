@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { signalTree } from '../../lib/signal-tree';
-import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
-import { resetPathNotifier } from '../../lib/path-notifier';
+import { getPathNotifier, resetPathNotifier } from '../../lib/path-notifier';
 import type { UpdateMetadata } from '../../lib/types';
 import { timeTravel } from './time-travel';
 
@@ -24,13 +23,13 @@ describe('time-travel — replay writes carry source: time-travel (PR1)', () => 
     (store as any).$.count.set(2);
     await Promise.resolve();
 
-    // Attach a second leaf interceptor AFTER time-travel has already wrapped
-    // the signals. Our wrap sits outside time-travel's, so it observes every
-    // .set() including replay writes from restoreState.
     const captured: Array<{ path: string; meta?: UpdateMetadata }> = [];
-    const restore = interceptLeafSignals(
-      (store as any).$,
-      (path, _next, _prev, meta) => {
+    const unsubscribe = getPathNotifier().subscribe(
+      'count',
+      (_next, _prev, path, _ownerPath, source, _subjectIds, _positionIds, meta) => {
+        if (source !== 'time-travel') {
+          return;
+        }
         captured.push({ path, meta });
       }
     );
@@ -42,7 +41,7 @@ describe('time-travel — replay writes carry source: time-travel (PR1)', () => 
     t.undo();
     await Promise.resolve();
 
-    restore();
+    unsubscribe();
 
     // At least one leaf write must have fired during undo. Every replay
     // write carries the time-travel context (no plain user writes happen
@@ -68,9 +67,12 @@ describe('time-travel — replay writes carry source: time-travel (PR1)', () => 
     await Promise.resolve();
 
     const captured: Array<{ path: string; meta?: UpdateMetadata }> = [];
-    const restore = interceptLeafSignals(
-      (store as any).$,
-      (path, _next, _prev, meta) => {
+    const unsubscribe = getPathNotifier().subscribe(
+      '**',
+      (_next, _prev, path, _ownerPath, source, _subjectIds, _positionIds, meta) => {
+        if (source !== 'time-travel') {
+          return;
+        }
         captured.push({ path, meta });
       }
     );
@@ -79,7 +81,7 @@ describe('time-travel — replay writes carry source: time-travel (PR1)', () => 
     t.jumpTo(0); // jump to initial state
     await Promise.resolve();
 
-    restore();
+    unsubscribe();
 
     expect(captured.length).toBeGreaterThanOrEqual(1);
     for (const c of captured) {
@@ -88,25 +90,28 @@ describe('time-travel — replay writes carry source: time-travel (PR1)', () => 
     }
   });
 
-  it('regular user writes (no withWriteContext) carry undefined meta', async () => {
+  it('regular user writes carry canonical mutation metadata without a time-travel source', async () => {
     resetPathNotifier();
 
     const store = signalTree({ count: 0 }).with(timeTravel());
 
     const captured: Array<{ path: string; meta?: UpdateMetadata }> = [];
-    const restore = interceptLeafSignals(
-      (store as any).$,
-      (path, _next, _prev, meta) => {
-        captured.push({ path, meta });
+    const unsubscribe = getPathNotifier().subscribe(
+      'count',
+      (_next, _prev, path, _ownerPath, source, _subjectIds, _positionIds, meta) => {
+        captured.push({ path, meta: source === undefined ? meta : undefined });
       }
     );
 
     (store as any).$.count.set(5);
     await Promise.resolve();
 
-    restore();
+    unsubscribe();
 
     expect(captured.length).toBeGreaterThanOrEqual(1);
-    expect(captured[0].meta).toBeUndefined();
+    expect(captured[0].path).toBe('count');
+    expect(captured[0].meta?.source).toBeUndefined();
+    expect(captured[0].meta?.intent).toBeUndefined();
+    expect(captured[0].meta?.mutationIntent).toBe('replace');
   });
 });

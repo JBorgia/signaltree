@@ -54,6 +54,7 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     expect(list[0].meta).toEqual({
       intent: 'hydrate',
       source: 'serialization',
+      mutationIntent: 'replace',
     });
 
     restore();
@@ -69,7 +70,10 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     });
 
     expect(list).toHaveLength(1);
-    expect(list[0].meta).toEqual({ intent: 'user' });
+    expect(list[0].meta).toEqual({
+      intent: 'user',
+      mutationIntent: 'derive',
+    });
     expect(list[0].ownerPath).toBe('count');
     expect(list[0].next).toBe(11);
     expect(list[0].prev).toBe(10);
@@ -85,7 +89,7 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     tree.count.set(5); // no context
 
     expect(list).toHaveLength(1);
-    expect(list[0].meta).toBeUndefined();
+    expect(list[0].meta).toEqual({ mutationIntent: 'replace' });
     expect(list[0].ownerPath).toBe('count');
 
     restore();
@@ -125,16 +129,8 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     tree.$.load.setLoading();
     tree.$.theme.set('dark');
 
-    expect(list.map((entry) => entry.ownerPath)).toEqual([
-      'rows',
-      'load',
-      'theme',
-    ]);
-    expect(list.map((entry) => entry.path)).toEqual([
-      'rows',
-      'load',
-      'theme',
-    ]);
+    expect(list.map((entry) => entry.ownerPath)).toEqual(['rows']);
+    expect(list.map((entry) => entry.path)).toEqual(['rows']);
 
     restore();
   });
@@ -150,8 +146,14 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     });
 
     expect(list).toHaveLength(2);
-    expect(list[0].meta).toEqual({ intent: 'bulk' });
-    expect(list[1].meta).toEqual({ intent: 'bulk' });
+    expect(list[0].meta).toEqual({
+      intent: 'bulk',
+      mutationIntent: 'replace',
+    });
+    expect(list[1].meta).toEqual({
+      intent: 'bulk',
+      mutationIntent: 'replace',
+    });
 
     restore();
   });
@@ -169,8 +171,14 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     });
 
     expect(list).toHaveLength(2);
-    expect(list[0].meta).toEqual({ intent: 'hydrate' });
-    expect(list[1].meta).toEqual({ intent: 'user' });
+    expect(list[0].meta).toEqual({
+      intent: 'hydrate',
+      mutationIntent: 'replace',
+    });
+    expect(list[1].meta).toEqual({
+      intent: 'user',
+      mutationIntent: 'replace',
+    });
 
     restore();
   });

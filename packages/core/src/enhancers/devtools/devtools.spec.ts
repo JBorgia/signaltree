@@ -273,11 +273,11 @@ describe('devTools enhancer (v6 API)', () => {
 
       expect(send).toHaveBeenCalledTimes(1);
       expect(send.mock.calls[0][0]).toMatchObject({
-        type: 'SignalTree/load',
-        payload: 'load',
+        type: 'SignalTree/load.state',
+        payload: 'load.state',
         meta: {
           source: 'path-notifier',
-          paths: ['load'],
+          paths: ['load.state'],
           timestamp: expect.any(Number),
         },
       });

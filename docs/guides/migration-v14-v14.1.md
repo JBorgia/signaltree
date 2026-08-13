@@ -160,8 +160,10 @@ Use `byId(id)`, which returns `undefined` for a missing row, and handle it.
   now **replaces** instead of merging. `updateOne(id, changes)` still merges and is
   unchanged — it is the patch half of the surface. If you relied on the callable
   merging, move to `updateOne`.
-- **`maxHistorySize` is validated.** `0`, `1`, negatives, `NaN` and `Infinity` used to
-  silently disable undo; they now report **ST2032** and fall back to the default of 50.
+- **`maxHistorySize` is validated and now keeps its literal meaning.** `0`, `1`,
+  negatives, `NaN` and `Infinity` used to silently disable undo; they now report
+  **ST2032** and fall back to the default of 50. Valid values now retain that many
+  reversible turns, so `maxHistorySize: 5` means 5 spendable undos.
 - **`coalesce()` no longer loses updater writes.** An updater is a read-modify-write,
   so `update(v => v + 1)` three times means `+3`; coalescing kept only the last, which
   meant `+1`.

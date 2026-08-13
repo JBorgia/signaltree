@@ -118,7 +118,7 @@ describe('form history()', () => {
     expect(tree.$.theme()).toBe('dark');
   });
 
-  it('routes form.undo() through shared turns without splitting a mixed turn', async () => {
+  it('refuses form-scoped undo for a mixed turn that is not fully contained', async () => {
     const tree = signalTree({
       profile: form<{ name: string }>({
         initial: { name: '' },
@@ -140,14 +140,27 @@ describe('form history()', () => {
     tree.$.theme.set('dark');
     await flush();
 
+    expect(p.history?.canUndo()).toBe(false);
     p.history?.undo();
+
+    expect(p().name).toBe('Jon');
+    expect(tree.$.orders.byIdOrFail(7).status()).toBe('queued');
+    expect(tree.$.theme()).toBe('dark');
+
+    tree.undo();
+
+    expect(p().name).toBe('Jon');
+    expect(tree.$.orders.byIdOrFail(7).status()).toBe('queued');
+    expect(tree.$.theme()).toBe('light');
+
+    tree.undo();
 
     expect(p().name).toBe('');
     expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
-    expect(tree.$.theme()).toBe('dark');
+    expect(tree.$.theme()).toBe('light');
   });
 
-  it('derives form canUndo/canRedo from shared scoped history, even when another api path moves the turn frontier', async () => {
+  it('derives form canUndo/canRedo from contained shared history only, even when another api path moves the turn frontier', async () => {
     const tree = signalTree({
       profile: form<{ name: string }>({
         initial: { name: '' },
@@ -166,7 +179,7 @@ describe('form history()', () => {
     tree.$.orders.byIdOrFail(7).status.set('queued');
     await flush();
 
-    expect(p.history?.canUndo()).toBe(true);
+    expect(p.history?.canUndo()).toBe(false);
     expect(p.history?.canRedo()).toBe(false);
 
     tree.undo();
@@ -174,7 +187,7 @@ describe('form history()', () => {
     expect(p().name).toBe('');
     expect(tree.$.orders.byIdOrFail(7).status()).toBe('new');
     expect(p.history?.canUndo()).toBe(false);
-    expect(p.history?.canRedo()).toBe(true);
+    expect(p.history?.canRedo()).toBe(false);
   });
 
   it('reconstructs form values and existing touched state from shared causality after an unrelated turn intervenes', async () => {

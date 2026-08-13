@@ -41,6 +41,14 @@ export default [
     },
   },
   {
+    files: ['packages/core/src/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
     // Ban hand-rolled traversable-node guards outside the shared predicate.
     // NodeAccessors and leaf signals are `typeof 'function'`; a walker guard
     // that pairs a typeof-'object' check with a typeof-'function' check in one

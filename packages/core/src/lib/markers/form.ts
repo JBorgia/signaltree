@@ -428,11 +428,20 @@ export function createFormSignal<T extends Record<string, unknown>>(
   marker: FormMarker<T>,
   notifier?: PathNotifier,
   path?: string,
-  context?: { allocatePositionId: () => number }
+  context?: {
+    positionTopologyEnabled?: boolean;
+    allocatePositionId: (parentPositionId?: number) => number;
+  },
+  parentPositionId?: number
 ): FormSignal<T> {
   const config = marker.config;
   const initial = config.initial;
-  const positionIds = context ? [context.allocatePositionId()] : undefined;
+  const positionIds =
+    context?.positionTopologyEnabled === false
+      ? undefined
+      : context
+      ? [context.allocatePositionId(parentPositionId)]
+      : undefined;
 
   // ==================
   // CORE STATE

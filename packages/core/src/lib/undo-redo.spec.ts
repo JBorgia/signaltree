@@ -205,4 +205,20 @@ describe('undo/redo deliberately does NOT restore in-flight state', () => {
     tree.undo();
     expect(tree.$.j.state()).toBe(LoadingState.Loading);
   });
+
+  it('undoes direct status source-signal writes as one owned turn', async () => {
+    const tree = signalTree({ j: status() }).with(timeTravel());
+
+    tree.$.j.state.set(LoadingState.Error);
+    tree.$.j.error.set(new Error('boom'));
+    await flush();
+
+    expect(tree.$.j.state()).toBe(LoadingState.Error);
+    expect(tree.$.j.error()?.message).toBe('boom');
+
+    tree.undo();
+
+    expect(tree.$.j.state()).toBe(LoadingState.NotLoaded);
+    expect(tree.$.j.error()).toBe(null);
+  });
 });

@@ -1,6 +1,8 @@
 import { computed } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 
+import { visitTree } from './internals/visit-tree';
+import { getPositionRegistry } from './internals/position-registry';
 import { signalTree } from './signal-tree';
 
 /**
@@ -178,5 +180,82 @@ describe('incremental materialisation', () => {
     );
     expect(shared).toHaveLength(49);
     expect(after.r25.c25).toBe(999);
+  });
+
+  it('preserves descendant PositionIds across branch replacement and callable subtree writes', () => {
+    const tree = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+      settings: { theme: 'light' },
+    });
+
+    const collect = () => ({
+      profile: (tree.$.profile as unknown as { __positionIds?: number[] }).__positionIds?.[0],
+      firstName: (
+        tree.$.profile.firstName as unknown as { __positionIds?: number[] }
+      ).__positionIds?.[0],
+      lastName: (
+        tree.$.profile.lastName as unknown as { __positionIds?: number[] }
+      ).__positionIds?.[0],
+      settings: (tree.$.settings as unknown as { __positionIds?: number[] }).__positionIds?.[0],
+      theme: (
+        tree.$.settings.theme as unknown as { __positionIds?: number[] }
+      ).__positionIds?.[0],
+    });
+
+    const before = collect();
+
+    tree.$.profile({ firstName: 'Ada', lastName: 'Lovelace' });
+    expect(collect()).toEqual(before);
+
+    tree.$.profile((current) => ({ ...current, firstName: 'Grace' }));
+    expect(collect()).toEqual(before);
+
+    tree({ profile: { firstName: 'Katherine', lastName: 'Johnson' } });
+    expect(collect()).toEqual(before);
+  });
+
+  it('records structural parentage in the tree-owned PositionRegistry', () => {
+    const tree = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+      settings: { theme: 'light' },
+    });
+    const registry = getPositionRegistry(tree.$);
+
+    expect(registry).toBeDefined();
+
+    const rootPositionId = (
+      tree.$ as unknown as { __positionIds?: number[] }
+    ).__positionIds?.[0] as number;
+    const profilePositionId = (
+      tree.$.profile as unknown as { __positionIds?: number[] }
+    ).__positionIds?.[0] as number;
+    const firstNamePositionId = (
+      tree.$.profile.firstName as unknown as { __positionIds?: number[] }
+    ).__positionIds?.[0] as number;
+    const themePositionId = (
+      tree.$.settings.theme as unknown as { __positionIds?: number[] }
+    ).__positionIds?.[0] as number;
+
+    expect(registry?.parentOf(profilePositionId)).toBe(rootPositionId);
+    expect(registry?.parentOf(firstNamePositionId)).toBe(profilePositionId);
+    expect(registry?.contains(profilePositionId, firstNamePositionId)).toBe(true);
+    expect(registry?.contains(profilePositionId, themePositionId)).toBe(false);
+  });
+
+  it('stamps one PositionId per materialized descendant', () => {
+    const tree = signalTree({
+      profile: { firstName: 'John', lastName: 'Smith' },
+      settings: { theme: 'light' },
+    });
+    const positionIds = new Set<number>();
+
+    visitTree(tree.$, (node) => {
+      const positionId = (node as { __positionIds?: number[] }).__positionIds?.[0];
+      if (typeof positionId === 'number') {
+        positionIds.add(positionId);
+      }
+    });
+
+    expect(positionIds.size).toBe(6);
   });
 });

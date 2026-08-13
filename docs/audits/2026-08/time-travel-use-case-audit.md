@@ -81,14 +81,8 @@ left `canRedo() === false`.
 
 ### 5. Bounded memory in a long session ✅
 
-20 writes at `maxHistorySize: 5` → 4 undos spendable, ending at `n === 16`, **not**
-`0`. The oldest entries were evicted, which is the feature.
-
-⚠️ 4 steps, not 5 — but the history really does hold 5 **entries**, exactly as
-`maxHistorySize: 5` says and as the guide documents. The oldest entry is the state
-you land on rather than a step you spend, so N entries yields N−1 steps. Nothing in
-the docs is wrong here and no sample needs renumbering; the conversion is what goes
-unsaid. See case 28.
+20 writes at `maxHistorySize: 5` → 5 undos spendable. The bounded-history control now
+matches the user-facing unit directly: retained reversible turns.
 
 ### 6. Not recording cursor/hover/selection churn ✅
 

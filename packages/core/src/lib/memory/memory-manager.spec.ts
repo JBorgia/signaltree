@@ -254,11 +254,9 @@ describe('SignalMemoryManager', () => {
 
     it('should work without FinalizationRegistry', () => {
       // Save original
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const originalFR = (globalThis as any).FinalizationRegistry;
 
       // Temporarily remove FinalizationRegistry
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any).FinalizationRegistry = undefined;
 
       const manager = new SignalMemoryManager({ enableAutoCleanup: true });
@@ -269,7 +267,6 @@ describe('SignalMemoryManager', () => {
       expect(retrieved).toBeDefined();
 
       // Restore
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any).FinalizationRegistry = originalFR;
     });
 

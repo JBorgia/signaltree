@@ -1,6 +1,12 @@
 import type { UpdateMetadata } from '../types';
 import { isTraversableNode } from '../utils';
 import { getNodeProcessor, snapshotMarkerNode } from './materialize-markers';
+import {
+  getOwnedOwnerPath,
+  getOwnedPositionIds,
+  getOwnedSubjectIds,
+  hasIntrinsicMutationEmitter,
+} from './owned-mutation';
 import { getActiveWriteContext } from '../write-context';
 
 import { visitTree } from './visit-tree';
@@ -58,24 +64,15 @@ export function interceptLeafSignals(
   });
 
   const getOwnerPath = (node: unknown, path: string): string => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ((node as any)?.__ownerPath as string | undefined) ?? path;
+    return getOwnedOwnerPath(node) ?? path;
   };
 
   const getSubjectIds = (node: unknown): number[] | undefined => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subjectIds = (node as any)?.__subjectIds as
-      | number[]
-      | undefined;
-    return subjectIds ? [...subjectIds] : undefined;
+    return getOwnedSubjectIds(node);
   };
 
   const getPositionIds = (node: unknown): number[] | undefined => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const positionIds = (node as any)?.__positionIds as
-      | number[]
-      | undefined;
-    return positionIds ? [...positionIds] : undefined;
+    return getOwnedPositionIds(node);
   };
 
   const wrapWritableSignal = (
@@ -140,7 +137,7 @@ export function interceptLeafSignals(
     ownerPath: string,
     seen = new WeakSet<object>()
   ): void => {
-    if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+    if (!isTraversableNode(node)) {
       return;
     }
     const ref = node as object;
@@ -236,9 +233,13 @@ export function interceptLeafSignals(
           const isEntityCollection = 'add' in node || 'remove' in node;
           if (isEntityCollection) return false; // collection notifies itself
 
-          const proc = getNodeProcessor(node);
-          wrapWritableSignal(node, path);
+          const hasOwnedMutationEmitter = hasIntrinsicMutationEmitter(node);
+          if (hasOwnedMutationEmitter) {
+            return false;
+          }
 
+          wrapWritableSignal(node, path);
+          const proc = getNodeProcessor(node);
           if (proc && isTraversableNode(node)) {
             for (const method of ['clear', 'reload', 'reset', 'refresh']) {
               wrapMutator(node as Record<string, unknown>, method, path);
@@ -261,6 +262,9 @@ export function interceptLeafSignals(
         // Collections are excluded on purpose above: `entityMap` notifies for
         // itself, which is exactly why its undo worked while the form's did not.
         const proc = getNodeProcessor(node);
+        if (proc && hasIntrinsicMutationEmitter(node)) {
+          return false;
+        }
         // NOT `typeof node === 'function'`: markers materialise to different
         // shapes — `form` is a callable, `entityMap` and `status` are plain
         // objects — and requiring callability silently skipped the two that are
