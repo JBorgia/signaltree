@@ -217,6 +217,77 @@ describe('undoConfirmedAt', () => {
       { owner: P_FIRST_NAME, before: 'Joan', after: 'Grace' },
     ]);
   });
+
+  it('ignores later canonical structural consumers once they are redoable rather than applied', () => {
+    const { store, appliedHistory, topology } = createConfirmedUndoContext();
+
+    const first = store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_FIRST_NAME,
+          before: 'A',
+          after: 'B',
+          subjectId: 'driver-1',
+          structural: 'rekey',
+        },
+      ],
+    });
+    const second = store.admitConfirmed({
+      id: 2,
+      effects: [
+        {
+          owner: P_THEME,
+          before: undefined,
+          after: 'A',
+          subjectId: 'driver-2',
+          structural: 'add',
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(first.id)).toEqual({ ok: true });
+    expect(appliedHistory.admitConfirmed(second.id)).toEqual({ ok: true });
+    expect(appliedHistory.moveConfirmedTurnToRedo(second.id)).toEqual({ ok: true });
+
+    const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+    const validateEffects = vi.fn();
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [P_FIRST_NAME, 'A'],
+        [P_THEME, undefined],
+      ]),
+      store,
+      appliedHistory,
+    });
+
+    expect(
+      undoConfirmedAt({
+        authority: P_PROFILE,
+        store,
+        appliedHistory,
+        topology,
+        port: { applyAtomically, validateEffects },
+        realizationContext,
+      })
+    ).toEqual({ ok: true, turnId: first.id });
+
+    expect(validateEffects).toHaveBeenCalledTimes(1);
+    expect(applyAtomically).toHaveBeenCalledTimes(1);
+    expect(applyAtomically).toHaveBeenCalledWith([
+      {
+        owner: P_FIRST_NAME,
+        before: 'B',
+        after: 'A',
+        subjectId: 'driver-1',
+        structural: 'rekey',
+      },
+    ]);
+    expect(appliedHistory.inspect()).toEqual({
+      appliedTurnIds: [],
+      redoTurnIds: [1, 2],
+      frontiers: {},
+    });
+  });
 });
 
 function createConfirmedUndoContext(): {
