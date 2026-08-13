@@ -1,3 +1,5 @@
+import { effect } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { entityMap } from '../../markers/entity-map';
@@ -332,6 +334,96 @@ describe('tree realization adapter', () => {
     getPathNotifier().flushSync();
 
     expect(tree.$.users.byIdOrFail('u2').name()).toBe('Alicia');
+  });
+
+  it('commits mixed realization rekey and scalar publication coherently without relying on notifier batching', () => {
+    const notifier = getPathNotifier();
+    const previousBatching = notifier.isBatchingEnabled();
+    notifier.setBatchingEnabled(false);
+
+    try {
+      TestBed.runInInjectionContext(() => {
+        const tree = signalTree({
+          users: entityMap<{ id: string; name: string }, string>({
+            selectId: (user) => user.id,
+          }),
+        }) as ISignalTree<{
+          users: {
+            addOne(user: { id: string; name: string }): void;
+            changeId(from: string, to: string): void;
+            ids(): string[];
+            byIdOrFail(id: string): {
+              name: {
+                (): string;
+                set(value: string): void;
+                __subjectIds?: number[];
+              };
+            };
+          };
+        }>;
+
+        tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+
+        const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+        const nameLeaf = tree.$.users.byIdOrFail('u1').name;
+        const scalarOwner = getOwnedPositionIds(nameLeaf)?.[0];
+        const subjectId = nameLeaf.__subjectIds?.[0];
+        if (
+          structuralOwner === undefined ||
+          scalarOwner === undefined ||
+          subjectId === undefined
+        ) {
+          throw new Error('Expected structural and scalar ownership metadata');
+        }
+
+        const descriptors = new Map<number, TreeRealizationDescriptor>();
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'users.u1',
+          ownerPath: 'users',
+          positionIds: [structuralOwner],
+        });
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'users.u1.name',
+          ownerPath: 'users.u1',
+          positionIds: [scalarOwner],
+        });
+
+        const adapter = createTreeRealizationAdapter({
+          tree: tree as ISignalTree<object>,
+          descriptors,
+        });
+
+        const seen: string[] = [];
+        effect(() => {
+          seen.push(`${tree.$.users.ids()[0]}|${nameLeaf()}`);
+        });
+        TestBed.flushEffects();
+
+        adapter.applyAtomically([
+          {
+            owner: structuralOwner,
+            before: 'u1',
+            after: 'u2',
+            subjectId,
+            structural: 'rekey',
+          },
+          {
+            owner: scalarOwner,
+            before: 'Alice',
+            after: 'Alicia',
+            subjectId,
+          },
+        ]);
+        TestBed.flushEffects();
+
+        expect(tree.$.users.byIdOrFail('u2').name()).toBe('Alicia');
+        expect(seen).toEqual(['u1|Alice', 'u2|Alicia']);
+      });
+    } finally {
+      notifier.setBatchingEnabled(previousBatching);
+    }
   });
 
   it('realizes structural remove and add from owner-level producer metadata', () => {

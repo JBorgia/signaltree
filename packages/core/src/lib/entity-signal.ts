@@ -173,7 +173,7 @@ export function createEntitySignal<
    * Materialized lazily (on first `byId`/node access) and kept O(1) per
    * mutation by only syncing the entities that actually changed.
    */
-  const entitySignals = new Map<K, WritableSignal<E | undefined>>();
+  const entitySignals = new Map<number, WritableSignal<E | undefined>>();
   const subjectIds = new Map<K, number>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
@@ -333,31 +333,77 @@ export function createEntitySignal<
     );
   }
 
-  /**
-   * ids retired by `changeId`, mapped to their replacement. Dev-only, and the
-   * ONLY reason it exists is ST2031: without it a node held across a rekey
-   * cannot distinguish "removed" from "renamed", and the two want different
-   * advice. Never read in production — the write is cheap and unconditional
-   * because a `Map.set` per `changeId` call is not a hot path.
-   */
-  const rekeyed = new Map<K, K>();
-  const rekeyReported = new Set<K>();
+  /** Subjects that have moved to a new key and must not fall back to the old one. */
+  const rekeyedSubjects = new Set<number>();
 
-  /** @internal ST2031. Reported once per retired id. */
-  function reportRekeyedRead(from: K, to: K): void {
-    if (rekeyReported.has(from)) return;
-    rekeyReported.add(from);
-    console.warn(
-      `SignalTree: reading a node held from byId(${String(from)}) after ` +
-        `changeId(${String(from)}, ${String(
-          to
-        )}) — it resolves undefined and ` +
-        `always will. changeId drops the old per-entity signal on purpose: ` +
-        `aliasing it would share one signal with a future addOne({ id: ` +
-        `${String(from)} }), which is a worse failure than this one. Re-read ` +
-        `with byId(${String(to)}), or hold the id and call byId(id()) at the ` +
-        `point of use rather than holding the node across a rekey. [ST2031]`
-    );
+  function planRekey(from: K, to: K): {
+    commit(): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  } {
+    const entity = storage.get(from);
+    if (!entity) {
+      throw new Error(`Entity with id ${String(from)} not found`);
+    }
+    if (from === to) {
+      return {
+        commit(): void {
+          // no-op
+        },
+        publish(): void {
+          // no-op
+        },
+      };
+    }
+    if (storage.has(to)) {
+      throw new Error(`Cannot change id to ${String(to)}: already in use`);
+    }
+
+    const subjectId = allocateSubjectId(from);
+    const historyEffect: PendingHistoryEffect = {
+      kind: 'rekey',
+      subject: subjectId,
+      beforeKey: from,
+      afterKey: to,
+      subjectPositions: deriveSubjectPositions(from, entity),
+    };
+
+    return {
+      commit(): void {
+        const entries = Array.from(storage.entries());
+        storage.clear();
+        for (const [key, value] of entries) {
+          if (key === from) {
+            storage.set(to, value);
+          } else {
+            storage.set(key, value);
+          }
+        }
+
+        if (activeIdSignal() === from) {
+          activeIdSignal.set(to);
+        }
+
+        transferSubjectId(from, to);
+        rekeyedSubjects.add(subjectId);
+        syncEntitySignal(to);
+        updateSignals();
+      },
+      publish(metaOverride?: UpdateMetadata): void {
+        const meta = metaOverride ?? getActiveWriteContext();
+        pathNotifier.notify(
+          `${basePath}.${String(to)}`,
+          entity,
+          entity,
+          basePath,
+          [subjectId],
+          getPositionIdsForNotify(),
+          {
+            ...(meta ?? {}),
+            historyEffect,
+          }
+        );
+      },
+    };
   }
 
   /** Active-entity selection. See the `activeId`/`activeEntity` accessors. */
@@ -383,12 +429,21 @@ export function createEntitySignal<
     updateSignals();
   }
 
+  function resolveSubjectId(id: K): number | undefined {
+    return subjectIds.get(id);
+  }
+
   /** Get (or lazily create) the per-entity signal, seeded from storage. */
   function getEntitySignal(id: K): WritableSignal<E | undefined> {
-    let s = entitySignals.get(id);
+    const subjectId = resolveSubjectId(id);
+    if (subjectId === undefined) {
+      return signal<E | undefined>(storage.get(id));
+    }
+
+    let s = entitySignals.get(subjectId);
     if (!s) {
       s = signal<E | undefined>(storage.get(id));
-      entitySignals.set(id, s);
+      entitySignals.set(subjectId, s);
     }
     return s;
   }
@@ -498,7 +553,7 @@ export function createEntitySignal<
 
     subjectIds.set(key, subjectId);
     lastSubjectIds = [subjectId];
-    nodeCache.delete(key);
+    invalidateNodeCache(key);
     syncEntitySignal(key);
     updateSignals();
     pathNotifier.notify(
@@ -560,7 +615,7 @@ export function createEntitySignal<
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
-    nodeCache.delete(id);
+      invalidateNodeCache(id);
     syncEntitySignal(id);
     updateSignals();
 
@@ -587,7 +642,12 @@ export function createEntitySignal<
    * single-entity writes O(1) regardless of collection size.
    */
   function syncEntitySignal(id: K): void {
-    const s = entitySignals.get(id);
+    const subjectId = resolveSubjectId(id);
+    if (subjectId === undefined) {
+      return;
+    }
+
+    const s = entitySignals.get(subjectId);
     if (s) s.set(storage.get(id));
   }
 
@@ -599,10 +659,15 @@ export function createEntitySignal<
    * fresh signal.
    */
   function removeEntitySignal(id: K): void {
-    const s = entitySignals.get(id);
+    const subjectId = resolveSubjectId(id);
+    if (subjectId === undefined) {
+      return;
+    }
+
+    const s = entitySignals.get(subjectId);
     if (s) {
       s.set(undefined);
-      entitySignals.delete(id);
+      entitySignals.delete(subjectId);
     }
   }
 
@@ -642,15 +707,24 @@ export function createEntitySignal<
    * caller holds the node, the WeakRef cannot be cleared, so the existing
    * behaviour is unchanged for every reference anyone can actually observe.
    */
-  const nodeCache = new Map<K, WeakRef<EntityNode<E>>>();
+  const nodeCache = new Map<number, WeakRef<EntityNode<E>>>();
   const nodeFinalizer =
     typeof FinalizationRegistry === 'function'
-      ? new FinalizationRegistry<K>((id) => {
+      ? new FinalizationRegistry<number>((subjectId) => {
           // Only drop the slot if it is still the dead ref — a later byId()
           // may already have installed a live replacement.
-          if (nodeCache.get(id)?.deref() === undefined) nodeCache.delete(id);
+          if (nodeCache.get(subjectId)?.deref() === undefined) {
+            nodeCache.delete(subjectId);
+          }
         })
       : null;
+
+  function invalidateNodeCache(id: K): void {
+    const subjectId = resolveSubjectId(id);
+    if (subjectId !== undefined) {
+      nodeCache.delete(subjectId);
+    }
+  }
 
   /** Cached `empty` computed — created on first access. */
   let cachedEmpty: Signal<boolean> | null = null;
@@ -707,7 +781,7 @@ export function createEntitySignal<
     version.update((v) => v + 1);
   }
 
-  function createEntityNode(id: K, entity: E): EntityNode<E> {
+  function createEntityNode(subjectId: number, initialKey: K, entity: E): EntityNode<E> {
     // Entity-level callable:
     //   node()           → reads current entity (reactive via mapSignal)
     //   node(value)      → full entity REPLACE (throws if entity removed)
@@ -744,38 +818,39 @@ export function createEntitySignal<
     // `getEntitySignal` re-materialises from storage when absent, so a node
     // held across a removal reads `undefined` while the entity is gone and
     // starts reading again the moment it comes back.
-    const entitySig = () => {
-      const value = getEntitySignal(id)();
-      // ST2031 — a node held across `changeId` resolves undefined forever, and
-      // silently. `changeId` deliberately drops the old per-entity signal rather
-      // than aliasing it (aliasing would be shared with a future
-      // `addOne({ id: from })`, a worse failure) — so this is correct behaviour
-      // that is impossible to debug from the call site. A long-lived
-      // `selectById(tempId)` closing over the pre-server id is the shape that
-      // hits it.
-      if (
-        value === undefined &&
-        (typeof ngDevMode === 'undefined' || ngDevMode) &&
-        rekeyed.has(id)
-      ) {
-        reportRekeyedRead(id, rekeyed.get(id) as K);
+    const currentKey = (): K | undefined => {
+      const liveKey = findKeyBySubjectId(subjectId);
+      if (liveKey !== undefined) {
+        return liveKey;
       }
-      return value;
+
+      return !rekeyedSubjects.has(subjectId) && storage.has(initialKey)
+        ? initialKey
+        : undefined;
+    };
+
+    const entitySig = () => {
+      const key = currentKey();
+      return key === undefined ? undefined : getEntitySignal(key)();
     };
 
     const node = ((valueOrUpdater?: E | ((current: E) => E)): E | undefined => {
       if (valueOrUpdater === undefined) {
         return entitySig();
       }
-      const current = storage.get(id);
+      const key = currentKey();
+      if (key === undefined) {
+        throw new Error(`Entity with subject ${String(subjectId)} not found`);
+      }
+      const current = storage.get(key);
       if (current === undefined) {
-        throw new Error(`Entity with id ${String(id)} not found`);
+        throw new Error(`Entity with id ${String(key)} not found`);
       }
       const next =
         typeof valueOrUpdater === 'function'
           ? (valueOrUpdater as (c: E) => E)(current)
           : (valueOrUpdater as E);
-      api.replaceOne(id, next);
+      api.replaceOne(key, next);
       return undefined;
     }) as unknown as EntityNode<E>;
 
@@ -789,12 +864,20 @@ export function createEntitySignal<
 
       Object.assign(fieldSignal, {
         set: (value: E[typeof fieldKey]) => {
-          api.updateOne(id, { [fieldKey]: value } as Partial<E>);
+          const key = currentKey();
+          if (key === undefined) {
+            throw new Error(`Entity with subject ${String(subjectId)} not found`);
+          }
+          api.updateOne(key, { [fieldKey]: value } as Partial<E>);
         },
         update: (
           fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]
         ) => {
-          api.updateOne(id, {
+          const key = currentKey();
+          if (key === undefined) {
+            throw new Error(`Entity with subject ${String(subjectId)} not found`);
+          }
+          api.updateOne(key, {
             [fieldKey]: fn(entitySig()?.[fieldKey]),
           } as Partial<E>);
         },
@@ -803,17 +886,17 @@ export function createEntitySignal<
 
       if (ownerMetadataEnabled) {
         Object.defineProperty(fieldSignal, '__ownerPath', {
-          get: () => `${basePath}.${String(id)}`,
+          get: () => {
+            const key = currentKey();
+            return key === undefined ? undefined : `${basePath}.${String(key)}`;
+          },
           enumerable: false,
           configurable: true,
         });
       }
       if (subjectMetadataEnabled) {
         Object.defineProperty(fieldSignal, '__subjectIds', {
-          get: () => {
-            const subjectId = subjectIds.get(id);
-            return subjectId === undefined ? undefined : [subjectId];
-          },
+          get: () => [subjectId],
           enumerable: false,
           configurable: true,
         });
@@ -837,11 +920,16 @@ export function createEntitySignal<
   }
 
   function getOrCreateNode(id: K, entity: E): EntityNode<E> {
-    let node = nodeCache.get(id)?.deref();
+    const subjectId = resolveSubjectId(id);
+    if (subjectId === undefined) {
+      throw new Error(`Entity with id ${String(id)} has no subject id`);
+    }
+
+    let node = nodeCache.get(subjectId)?.deref();
     if (!node) {
-      node = createEntityNode(id, entity);
-      nodeCache.set(id, new WeakRef(node));
-      nodeFinalizer?.register(node, id);
+      node = createEntityNode(subjectId, id, entity);
+      nodeCache.set(subjectId, new WeakRef(node));
+      nodeFinalizer?.register(node, subjectId);
     }
     return node;
   }
@@ -1093,64 +1181,16 @@ export function createEntitySignal<
      * keyed by the old id moves together: storage (keeping list position), the
      * per-entity signal, the node cache, and the active-entity selection.
      *
-     * ⚠️ A node already HELD from `byId(oldId)` does not follow the change — it
-     * resolves to `undefined` afterwards. A node closes over its id, so making
-     * it follow would mean aliasing the old key to the same signal, and a later
-     * `addOne({ id: oldId })` would then silently share one signal between two
-     * different entities. Re-read with `byId(newId)` after changing an id.
-     *
-     * That is a smaller guarantee than remove-then-add gives you — which is
-     * none — but it is worth stating precisely rather than implying identity
-     * survives. What this buys over remove-then-add is list position, the
-     * active selection, and not churning every other row's signals.
+    * Held row/field references follow the rekey by SUBJECT identity rather than
+    * by the old key. The old lookup disappears, but already-materialized row
+    * state, metadata, and field signals remain attached to the same subject.
+    * That keeps list position, active selection, and row-local reactivity while
+    * still allowing the freed id to be reused by a different subject.
      */
     changeId(from: K, to: K): void {
-      const entity = storage.get(from);
-      if (!entity) {
-        throw new Error(`Entity with id ${String(from)} not found`);
-      }
-      if (from === to) return;
-      if (storage.has(to)) {
-        throw new Error(`Cannot change id to ${String(to)}: already in use`);
-      }
-
-      // Rebuild in order so the row keeps its position.
-      const entries = Array.from(storage.entries());
-      storage.clear();
-      for (const [key, value] of entries) {
-        if (key === from) storage.set(to, value);
-        else storage.set(key, value);
-      }
-
-      // Drop the old per-entity signal rather than aliasing it to the new key:
-      // an alias would be shared with a future `addOne({ id: from })`, which is
-      // a worse failure than a stale node resolving to undefined.
-      entitySignals.delete(from);
-      nodeCache.delete(from);
-      nodeCache.delete(to);
-      if (activeIdSignal() === from) activeIdSignal.set(to);
-      // ST2031's evidence. Dev-only in effect: nothing reads it in production.
-      rekeyed.set(from, to);
-      const subjectIdsForWrite = [transferSubjectId(from, to)];
-      const historyEffect: PendingHistoryEffect = {
-        kind: 'rekey',
-        subject: subjectIdsForWrite[0],
-        beforeKey: from,
-        afterKey: to,
-        subjectPositions: deriveSubjectPositions(to, entity),
-      };
-
-      syncEntitySignal(to);
-      updateSignals();
-      pathNotifier.notify(
-        `${basePath}.${String(to)}`,
-        entity,
-        entity,
-        basePath,
-        subjectIdsForWrite,
-        getPositionIdsForNotify(),
-        createStructuralHistoryMeta(historyEffect)
-      );
+      const planned = planRekey(from, to);
+      planned.commit();
+      planned.publish();
     },
 
     addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
@@ -1197,7 +1237,8 @@ export function createEntitySignal<
         }
 
         storage.set(id, transformedEntity);
-        nodeCache.delete(id);
+        allocateSubjectId(id);
+        invalidateNodeCache(id);
         syncEntitySignal(id);
         processedIds.push(id);
         addedEntities.push({ id, entity: transformedEntity });
@@ -1276,7 +1317,7 @@ export function createEntitySignal<
       const finalUpdated = { ...entity, ...transformedChanges };
       storage.set(id, finalUpdated);
       const subjectIdsForWrite = rememberSubjectIds([id]);
-      nodeCache.delete(id);
+      invalidateNodeCache(id);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1334,7 +1375,7 @@ export function createEntitySignal<
       }
 
       storage.set(id, next);
-      nodeCache.delete(id);
+  invalidateNodeCache(id);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1389,7 +1430,7 @@ export function createEntitySignal<
 
         const finalUpdated = { ...entity, ...transformedChanges };
         storage.set(id, finalUpdated);
-        nodeCache.delete(id);
+        invalidateNodeCache(id);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -1476,10 +1517,10 @@ export function createEntitySignal<
         afterSubject,
         subjectPositions: deriveSubjectPositions(id, entity),
       };
+      invalidateNodeCache(id);
+      removeEntitySignal(id);
       storage.delete(id);
       subjectIds.delete(id);
-      nodeCache.delete(id);
-      removeEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
@@ -1508,12 +1549,14 @@ export function createEntitySignal<
         K,
         { beforeSubject?: number; afterSubject?: number }
       >();
+      const subjectPositionsById = new Map<K, readonly PositionId[] | undefined>();
       for (const id of ids) {
         const entity = storage.get(id);
         if (!entity) {
           throw new Error(`Entity with id ${String(id)} not found`);
         }
         neighborSubjects.set(id, getNeighborSubjects(id));
+        subjectPositionsById.set(id, deriveSubjectPositions(id, entity));
 
         // Run interceptors
         for (const handler of interceptHandlers) {
@@ -1539,10 +1582,10 @@ export function createEntitySignal<
       const subjectIdsForWrite = rememberSubjectIds(ids);
 
       for (const { id } of entitiesToRemove) {
+        invalidateNodeCache(id);
+        removeEntitySignal(id);
         storage.delete(id);
         subjectIds.delete(id);
-        nodeCache.delete(id);
-        removeEntitySignal(id);
       }
 
       // Single signal update after all entities are removed
@@ -1565,7 +1608,7 @@ export function createEntitySignal<
             value: deepClone(entity),
             beforeSubject: neighborSubjects.get(id)?.beforeSubject,
             afterSubject: neighborSubjects.get(id)?.afterSubject,
-            subjectPositions: deriveSubjectPositions(id, entity),
+            subjectPositions: subjectPositionsById.get(id),
           })
         );
       }
@@ -1643,7 +1686,8 @@ export function createEntitySignal<
           handler.onAdd?.(entity, ctx);
         }
         storage.set(id, transformedEntity);
-        nodeCache.delete(id);
+        allocateSubjectId(id);
+        invalidateNodeCache(id);
         syncEntitySignal(id);
         addedEntities.push({ id, entity: transformedEntity });
       }
@@ -1675,7 +1719,7 @@ export function createEntitySignal<
         }
         const finalUpdated = { ...prev, ...transformedChanges };
         storage.set(id, finalUpdated);
-        nodeCache.delete(id);
+        invalidateNodeCache(id);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -1874,6 +1918,11 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__restoreOne', {
     value: restoreOne,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planRekey', {
+    value: planRekey,
     enumerable: false,
     configurable: true,
   });

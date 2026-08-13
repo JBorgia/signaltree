@@ -13,6 +13,13 @@ type CollectionNode = {
   byIdOrFail(id: string | number): unknown;
   changeId(from: string | number, to: string | number): void;
   removeOne(id: string | number): void;
+  __planRekey?(
+    from: string | number,
+    to: string | number
+  ): {
+    commit(): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  };
   __findKeyBySubjectId?(subjectId: number): string | number | undefined;
   __restoreOne?(
     key: string | number,
@@ -89,6 +96,16 @@ export function createTreeRealizationAdapter(
       return undefined;
     },
     applyAtomically(effects) {
+      const heterogeneousFrame = planHeterogeneousFrame(
+        options.tree,
+        options.descriptors,
+        effects
+      );
+      if (heterogeneousFrame) {
+        heterogeneousFrame.commit();
+        return;
+      }
+
       const scalarFrame = planScalarFrame(options.tree, options.descriptors, effects);
       if (scalarFrame) {
         scalarFrame.commit();
@@ -97,6 +114,108 @@ export function createTreeRealizationAdapter(
 
       for (const effect of effects) {
         applyEffect(options.tree, options.descriptors, effect);
+      }
+    },
+  };
+}
+
+function planHeterogeneousFrame(
+  tree: ISignalTree<object>,
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  effects: readonly ReversalEffect[]
+): { commit(): void } | undefined {
+  if (
+    effects.length === 0 ||
+    !effects.some((effect) => effect.structural === 'rekey') ||
+    effects.some((effect) => effect.structural && effect.structural !== 'rekey')
+  ) {
+    return undefined;
+  }
+
+  const scalarSlotRuntime =
+    getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
+  if (!scalarSlotRuntime) {
+    return undefined;
+  }
+
+  const scalarEffects = effects.filter((effect) => !effect.structural);
+  const rekeyEffects = effects.filter(
+    (effect): effect is ReversalEffect & { structural: 'rekey' } =>
+      effect.structural === 'rekey'
+  );
+
+  const scalarFrame = scalarSlotRuntime.beginFrame();
+  const plannedRekeys: Array<{
+    effect: ReversalEffect & { structural: 'rekey' };
+    plan: { commit(): void; publish(metaOverride?: UpdateMetadata): void };
+  }> = [];
+
+  for (const effect of scalarEffects) {
+    const slotIndex = scalarSlotRuntime.resolveScalarSlot(effect.owner);
+    if (slotIndex === undefined) {
+      return undefined;
+    }
+    scalarFrame.set(slotIndex, effect.after);
+  }
+
+  for (const effect of rekeyEffects) {
+    const liveNode = resolveLiveNodeByPositionId(tree, effect.owner);
+    if (!isCollectionNode(liveNode) || typeof liveNode.__planRekey !== 'function') {
+      return undefined;
+    }
+
+    plannedRekeys.push({
+      effect,
+      plan: liveNode.__planRekey(
+        effect.before as string | number,
+        effect.after as string | number
+      ),
+    });
+  }
+
+  return {
+    commit(): void {
+      for (const { plan } of plannedRekeys) {
+        plan.commit();
+      }
+
+      scalarFrame.commit();
+
+      for (const { effect, plan } of plannedRekeys) {
+        plan.publish({
+          ...(getActiveWriteContext() ?? {}),
+          intent: 'system',
+          source: 'system',
+          causalMode: 'realization',
+          positionIds: [effect.owner],
+          subjectIds:
+            typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+        });
+      }
+
+      for (const effect of scalarEffects) {
+        const descriptor = descriptors.get(effect.owner);
+        if (!descriptor?.path) {
+          continue;
+        }
+
+        getPathNotifier().notify(
+          descriptor.path,
+          effect.after,
+          effect.before,
+          descriptor.ownerPath ?? descriptor.path,
+          typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+          [effect.owner],
+          {
+            ...(getActiveWriteContext() ?? {}),
+            intent: 'system',
+            source: 'system',
+            causalMode: 'realization',
+            positionIds: [effect.owner],
+            subjectIds:
+              typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
+          }
+        );
       }
     },
   };

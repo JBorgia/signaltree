@@ -189,25 +189,50 @@ describe('changeId', () => {
     expect(() => mk().$.r.changeId(2, 3)).toThrow(/already in use/);
   });
 
-  describe('the documented limitation', () => {
-    it('a node held from the OLD id resolves to undefined', () => {
-      // Not an oversight. A node closes over its id, so making it follow would
-      // mean aliasing the old key to the same signal — and the next test is why
-      // that would be worse.
+  describe('held references across rekey', () => {
+    it('a node held from the old id follows the same subject across changeId', () => {
       const t = mk();
       const held = t.$.r.byId(1);
       expect(held?.().v).toBe(1);
 
       t.$.r.changeId(1, 100);
 
-      expect(held?.()).toBeUndefined();
+      expect(held?.().v).toBe(1);
+      expect(t.$.r.byId(100)).toBe(held);
       expect(t.$.r.byId(100)?.().v).toBe(1);
     });
 
+    it('preserves field reference, SubjectId, PositionId, and owner path across changeId', () => {
+      const t = mk();
+      const held = t.$.r.byIdOrFail(1);
+      const field = held.v as typeof held.v & {
+        __subjectIds?: number[];
+        __positionIds?: number[];
+        __ownerPath?: string;
+      };
+      const beforeSubject = field.__subjectIds?.[0];
+      const beforePosition = field.__positionIds?.[0];
+
+      t.$.r.changeId(1, 100);
+
+      const after = t.$.r.byIdOrFail(100);
+      const afterField = after.v as typeof after.v & {
+        __subjectIds?: number[];
+        __positionIds?: number[];
+        __ownerPath?: string;
+      };
+
+      expect(after).toBe(held);
+      expect(afterField).toBe(field);
+      expect(afterField()).toBe(1);
+      expect(afterField.__subjectIds?.[0]).toBe(beforeSubject);
+      expect(afterField.__positionIds?.[0]).toBe(beforePosition);
+      expect(afterField.__ownerPath).toBe('r.100');
+    });
+
     it('the freed id can be reused, and the two rows stay isolated', () => {
-      // This is what an alias would have broken: one signal shared between two
-      // different entities, which is a silent data-corruption bug rather than a
-      // visibly empty node.
+      // Subject-owned row identity must still let the retired key name a NEW
+      // subject without corrupting the rekeyed row.
       const t = mk();
       t.$.r.changeId(1, 100);
       t.$.r.addOne({ id: 1, v: 555 });

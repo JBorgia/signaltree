@@ -58,7 +58,11 @@ class RekeyTableFrameImpl<K extends StructuralKey> implements RekeyTableFrame<K>
       }
     }
 
-    this.staged.set(subjectId, { fromKey, toKey });
+    const existing = this.staged.get(subjectId);
+    this.staged.set(subjectId, {
+      fromKey: existing?.fromKey ?? fromKey,
+      toKey,
+    });
   }
 
   discard(): void {
