@@ -254,6 +254,52 @@ describe('PathNotifier (batching)', () => {
     expect(seen).toHaveBeenCalledWith('C', 'A', 'rows.7.name', 'rows', [17], [3], 'authoring');
   });
 
+  it('still coalesces ordinary authoring writes across unrelated interleaving paths', async () => {
+    const notifier = new PathNotifier();
+    const seen = vi.fn();
+
+    notifier.subscribe(
+      '**',
+      (value, prev, path, ownerPath, _source, subjectIds, positionIds, meta) => {
+        seen(value, prev, path, ownerPath, subjectIds, positionIds, meta?.causalMode);
+      }
+    );
+
+    notifier.notify('rows.7.name', 'B', 'A', 'rows', [17], [3], {
+      mutationIntent: 'replace',
+    });
+    notifier.notify('rows.8.name', 'Y', 'X', 'rows', [18], [4], {
+      mutationIntent: 'replace',
+    });
+    notifier.notify('rows.7.name', 'C', 'B', 'rows', [17], [3], {
+      mutationIntent: 'replace',
+    });
+
+    await Promise.resolve();
+
+    expect(seen).toHaveBeenCalledTimes(2);
+    expect(seen).toHaveBeenNthCalledWith(
+      1,
+      'C',
+      'A',
+      'rows.7.name',
+      'rows',
+      [17],
+      [3],
+      undefined
+    );
+    expect(seen).toHaveBeenNthCalledWith(
+      2,
+      'Y',
+      'X',
+      'rows.8.name',
+      'rows',
+      [18],
+      [4],
+      undefined
+    );
+  });
+
   it('preserves rekey metadata on the structural notification only when a later same-subject set happens in the same flush', async () => {
     const rekeyedEntity = { id: 42, name: 'pending' };
     const seen = await captureNotifications((notifier) => {
