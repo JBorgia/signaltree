@@ -37,13 +37,16 @@ function createReapplyEffects(
   realizationContext?: RealizationContext
 ): readonly ConfirmedReapplyPlan['effects'] {
   if (!realizationContext) {
-    return turn.effects.map(({ owner, before, after, subjectId, structural }) => ({
+    return turn.effects.map(
+      ({ owner, before, after, subjectId, structural, subjectPositions }) => ({
       owner,
       before,
       after,
       subjectId,
       structural,
-    }));
+      subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
+    })
+    );
   }
 
   const currentByOwner = new Map<number, unknown>();
@@ -61,6 +64,7 @@ function createReapplyEffects(
       after: effect.after,
       subjectId: effect.subjectId,
       structural: effect.structural,
+      subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
     };
   });
 }

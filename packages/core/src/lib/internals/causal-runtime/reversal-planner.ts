@@ -39,12 +39,14 @@ function createReversalEffects(
   if (!realizationContext) {
     return [...turn.effects]
       .reverse()
-      .map(({ owner, before, after, subjectId, structural }) => ({
+      .map(({ owner, before, after, subjectId, structural, subjectPositions }) => ({
         owner,
         before: after,
         after: before,
         subjectId,
-        structural,
+        structural: deriveUndoStructural(structural),
+        subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
+        subjectState: undefined,
       }));
   }
 
@@ -65,14 +67,96 @@ function createReversalEffects(
       ? realizationContext.getValueWithoutConfirmedTurn(turn.id, effect.owner)
       : effect.before;
 
-    currentByOwner.set(effect.owner, after);
-
-    return {
+    const reversedEffect = {
       owner: effect.owner,
       before,
       after,
       subjectId: effect.subjectId,
-      structural: effect.structural,
+      structural: deriveUndoStructural(effect.structural),
+      subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
+      subjectState: deriveUndoSubjectState({
+        turn,
+        effect,
+        originalIndex,
+        realizationContext,
+      }),
     };
+
+    seedCurrentBoundary(currentByOwner, reversedEffect);
+
+    return reversedEffect;
   });
+}
+
+function deriveUndoStructural(
+  structural: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number]['structural']
+) {
+  switch (structural) {
+    case 'add':
+      return 'remove';
+    case 'remove':
+      return 'add';
+    case 'rekey':
+      return 'rekey';
+    default:
+      return undefined;
+  }
+}
+
+function deriveUndoSubjectState(options: {
+  turn: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>;
+  effect: NonNullable<ReturnType<Pick<TurnStore, 'getTurn'>['getTurn']>>['effects'][number];
+  originalIndex: number;
+  realizationContext: RealizationContext;
+}): Readonly<Record<string, unknown>> | undefined {
+  const { effect, originalIndex, realizationContext, turn } = options;
+  if (effect.structural !== 'remove' || effect.subjectId === undefined || !effect.subjectPositions) {
+    return undefined;
+  }
+
+  const priorSameSubjectEffects = turn.effects.filter(
+    (candidateEffect, index) =>
+      index < originalIndex && candidateEffect.subjectId === effect.subjectId
+  );
+  const relevantPositions = effect.subjectPositions.filter(
+    (positionId) => positionId !== effect.owner
+  );
+  if (relevantPositions.length === 0) {
+    return undefined;
+  }
+
+  const values = new Map<number, unknown>();
+  for (const positionId of relevantPositions) {
+    values.set(
+      positionId,
+      realizationContext.getValueWithoutConfirmedTurn(turn.id, positionId)
+    );
+  }
+
+  for (const priorEffect of priorSameSubjectEffects) {
+    if (
+      priorEffect.subjectId === effect.subjectId &&
+      values.has(priorEffect.owner)
+    ) {
+      values.set(priorEffect.owner, priorEffect.after);
+    }
+  }
+
+  const entries = [...values.entries()].filter(([, value]) => value !== undefined);
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries.map(([positionId, value]) => [String(positionId), value]));
+}
+
+function seedCurrentBoundary(
+  currentByOwner: Map<number, unknown>,
+  effect: ConfirmedReversalPlan['effects'][number]
+): void {
+  currentByOwner.set(effect.owner, effect.after);
+
+  for (const [positionId, value] of Object.entries(effect.subjectState ?? {})) {
+    currentByOwner.set(Number(positionId), value);
+  }
 }

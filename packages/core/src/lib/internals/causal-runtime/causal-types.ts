@@ -12,6 +12,9 @@ export interface CausalEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: StructuralEffect;
+  // Structural coverage for an authored existence transition. These positions may
+  // supply payload needed to physically realize add/remove without becoming
+  // independent value participants in the turn.
   readonly subjectPositions?: readonly PositionId[];
 }
 
@@ -28,6 +31,9 @@ export interface ReversalEffect {
   readonly after: unknown;
   readonly subjectId?: unknown;
   readonly structural?: StructuralEffect;
+  // Structural coverage carried forward so reversal can reconstruct the physical
+  // subject boundary at the structural effect boundary.
+  readonly subjectPositions?: readonly PositionId[];
   readonly subjectState?: Readonly<Record<string, unknown>>;
 }
 

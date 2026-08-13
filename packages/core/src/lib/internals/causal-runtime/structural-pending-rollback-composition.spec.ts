@@ -568,6 +568,7 @@ describe('structural pending rollback production composition', () => {
           subjectState: {
             [P_DRIVER_NAME]: 'Alice',
             [P_DRIVER_ENABLED]: true,
+            [P_DRIVER_LOCAL]: 'uncaptured',
           },
         },
       ],
@@ -575,7 +576,7 @@ describe('structural pending rollback production composition', () => {
     expect(values.get(P_DRIVER_KEY)).toBe('A');
     expect(values.get(P_DRIVER_NAME)).toBe('Alice');
     expect(values.get(P_DRIVER_ENABLED)).toBe(true);
-    expect(values.get(P_DRIVER_LOCAL)).toBeUndefined();
+    expect(values.get(P_DRIVER_LOCAL)).toBe('uncaptured');
     expect(values.get(P_THEME)).toBe('dark');
     expect(store.hasPendingTurn(pending.id)).toBe(false);
     expect(appliedHistory.inspect()).toEqual({
@@ -587,17 +588,23 @@ describe('structural pending rollback production composition', () => {
     });
   });
 
-  it('restores the pre-turn subject state when a pending turn mutates and then removes the same subject', () => {
+  it('restores the full pre-turn structural coverage when a pending turn mutates and then removes the same subject', () => {
     const topology = createPositionRegistry();
     const root = topology.allocate();
     const profile = topology.allocate(root);
     const driverKey = topology.allocate(profile);
     const driverName = topology.allocate(profile);
+    const settings = topology.allocate(root);
+    const theme = topology.allocate(settings);
+    const driverEnabled = topology.allocate(profile);
 
     expect(root).toBe(P_ROOT);
     expect(profile).toBe(P_PROFILE);
     expect(driverKey).toBe(P_DRIVER_KEY);
     expect(driverName).toBe(P_DRIVER_NAME);
+    expect(settings).toBe(P_SETTINGS);
+    expect(theme).toBe(P_THEME);
+    expect(driverEnabled).toBe(P_DRIVER_ENABLED);
 
     const store = new TurnStore();
     const appliedHistory = new AppliedHistory(store);
@@ -605,6 +612,7 @@ describe('structural pending rollback production composition', () => {
       baselineValues: new Map([
         [P_DRIVER_KEY, 'A'],
         [P_DRIVER_NAME, 'Alice'],
+        [P_DRIVER_ENABLED, true],
       ]),
       store,
       appliedHistory,
@@ -624,7 +632,7 @@ describe('structural pending rollback production composition', () => {
           after: undefined,
           subjectId: SUBJECT_DRIVER,
           structural: 'remove',
-          subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME],
+          subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME, P_DRIVER_ENABLED],
         },
       ],
     });
@@ -632,6 +640,7 @@ describe('structural pending rollback production composition', () => {
     const values = new Map<PositionId, unknown>([
       [P_DRIVER_KEY, undefined],
       [P_DRIVER_NAME, undefined],
+      [P_DRIVER_ENABLED, undefined],
     ]);
     const appliedEffects: Array<
       Array<
@@ -697,12 +706,14 @@ describe('structural pending rollback production composition', () => {
           subjectId: SUBJECT_DRIVER,
           subjectState: {
             [P_DRIVER_NAME]: 'Alice',
+            [P_DRIVER_ENABLED]: true,
           },
         },
       ],
     ]);
     expect(values.get(P_DRIVER_KEY)).toBe('A');
     expect(values.get(P_DRIVER_NAME)).toBe('Alice');
+    expect(values.get(P_DRIVER_ENABLED)).toBe(true);
     expect(store.hasPendingTurn(pending.id)).toBe(false);
   });
 

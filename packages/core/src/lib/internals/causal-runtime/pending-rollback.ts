@@ -131,16 +131,8 @@ function deriveSubjectState(
     return undefined;
   }
 
-  const participatingPositions = new Set(
-    turn.effects
-      .filter((candidateEffect) => candidateEffect.subjectId === effect.subjectId)
-      .map(({ owner }) => owner)
-  );
-
   const entries = effect.subjectPositions
-    .filter(
-      (positionId) => positionId !== effect.owner && participatingPositions.has(positionId)
-    )
+    .filter((positionId) => positionId !== effect.owner)
     .map((positionId) => [
       String(positionId),
       realizationContext.getValueWithoutPendingTurn(turnId, positionId),
