@@ -1163,6 +1163,109 @@ describe('confirmed structural undo/redo composition', () => {
     expect(store.inspect()).toEqual(storeBefore);
     expect(appliedHistory.inspect()).toEqual(appliedBefore);
   });
+
+  it('keeps a confirmed remove redoable when redo validation refuses with structural-drift', () => {
+    const topology = createPositionRegistry();
+    const root = topology.allocate();
+    const profile = topology.allocate(root);
+    const driverKey = topology.allocate(profile);
+    const driverName = topology.allocate(profile);
+    const driverEnabled = topology.allocate(profile);
+
+    expect(root).toBe(P_ROOT);
+    expect(profile).toBe(P_PROFILE);
+    expect(driverKey).toBe(P_DRIVER_KEY);
+    expect(driverName).toBe(P_DRIVER_NAME);
+    expect(driverEnabled).toBe(P_DRIVER_ENABLED);
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map([
+        [P_DRIVER_KEY, 'A'],
+        [P_DRIVER_NAME, 'Alice'],
+        [P_DRIVER_ENABLED, true],
+      ]),
+      store,
+      appliedHistory,
+    });
+    const confirmed = store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_NAME,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId: SUBJECT_DRIVER,
+        },
+        {
+          owner: P_DRIVER_KEY,
+          before: 'A',
+          after: undefined,
+          subjectId: SUBJECT_DRIVER,
+          structural: 'remove',
+          subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME, P_DRIVER_ENABLED],
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(confirmed.id)).toEqual({ ok: true });
+
+    const values = new Map<PositionId, unknown>([
+      [P_DRIVER_KEY, undefined],
+      [P_DRIVER_NAME, undefined],
+      [P_DRIVER_ENABLED, undefined],
+    ]);
+    const port = createStructuralPort(values, []);
+
+    expect(
+      undoConfirmedAt({
+        authority: P_PROFILE,
+        store,
+        appliedHistory,
+        topology,
+        port,
+        realizationContext,
+      })
+    ).toEqual({ ok: true, turnId: confirmed.id });
+
+    const applyAtomically = vi.fn<void, [readonly ReversalEffect[]]>();
+    const validateEffects = vi.fn(() => ({ kind: 'structural-drift' as const }));
+    const appliedBefore = appliedHistory.inspect();
+    const storeBefore = store.inspect();
+
+    expect(
+      redoConfirmedAt({
+        authority: P_PROFILE,
+        store,
+        appliedHistory,
+        topology,
+        port: { applyAtomically, validateEffects },
+        realizationContext,
+      })
+    ).toEqual({ ok: false, refusal: { kind: 'structural-drift' } });
+
+    expect(validateEffects).toHaveBeenCalledTimes(1);
+    expect(validateEffects).toHaveBeenCalledWith([
+      {
+        owner: P_DRIVER_NAME,
+        before: 'Alice',
+        after: 'Alicia',
+        subjectId: SUBJECT_DRIVER,
+        structural: undefined,
+      },
+      {
+        owner: P_DRIVER_KEY,
+        before: 'A',
+        after: undefined,
+        subjectId: SUBJECT_DRIVER,
+        structural: 'remove',
+        subjectPositions: [P_DRIVER_KEY, P_DRIVER_NAME, P_DRIVER_ENABLED],
+      },
+    ]);
+    expect(applyAtomically).not.toHaveBeenCalled();
+    expect(store.inspect()).toEqual(storeBefore);
+    expect(appliedHistory.inspect()).toEqual(appliedBefore);
+  });
 });
 
 function createStructuralPort(
