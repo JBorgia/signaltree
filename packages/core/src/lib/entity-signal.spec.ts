@@ -1,7 +1,7 @@
-import { isSignal } from '@angular/core';
+import { computed, isSignal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEntitySignal } from './entity-signal';
+import { createEntitySignal, planEntitySubjectReclamation } from './entity-signal';
 import { PathNotifier } from './path-notifier';
 
 // Minimal PathNotifier stub
@@ -13,6 +13,8 @@ const pathNotifier = {
 
 type SubjectInventoryApi = {
   __inspectSubjectResources?: (subjectId: number) => unknown;
+  __planSubjectReclamation?: (subjectId: number) => unknown;
+  __retireSubjectRetainedValueBackingForTesting?: (subjectId: number) => void;
   __restoreOne?: (
     key: number,
     entity: { id: number; name: string; active: boolean },
@@ -239,6 +241,130 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+  });
+
+  it('plans conservatively for a tombstoned subject until retained value backing dependency is resolved', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const subjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    expect(
+      planEntitySubjectReclamation(
+        internal.__inspectSubjectResources?.(subjectId) as ReturnType<
+          typeof internal.__inspectSubjectResources
+        >
+      )
+    ).toEqual({
+      subjectId,
+      eligible: false,
+      retire: [],
+      retain: [
+        'subject-lifetime-record',
+        'retained-value-backing',
+        'subject-activation-channel',
+        'row-facade',
+        'field-facades',
+        'ownership-metadata',
+      ],
+      unresolved: [],
+    });
+
+    api.removeOne(1);
+
+    expect(internal.__planSubjectReclamation?.(subjectId)).toEqual({
+      subjectId,
+      eligible: true,
+      retire: [],
+      retain: [
+        'subject-lifetime-record',
+        'retained-value-backing',
+        'subject-activation-channel',
+        'row-facade',
+        'field-facades',
+        'ownership-metadata',
+      ],
+      unresolved: [
+        {
+          resource: 'retained-value-backing',
+          reason: 'terminal-facade-dependency-unknown',
+        },
+      ],
+    });
+  });
+
+  it('proves terminal held facades do not depend on retained value backing once the subject is tombstoned', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldRow = api.byIdOrFail(1);
+    const heldName = heldRow.name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    let rowRuns = 0;
+    let nameRuns = 0;
+    const observedRow = computed(() => {
+      rowRuns++;
+      return heldRow()?.name ?? 'absent';
+    });
+    const observedName = computed(() => {
+      nameRuns++;
+      return heldName() ?? 'absent';
+    });
+
+    expect(observedRow()).toBe('Alice');
+    expect(observedName()).toBe('Alice');
+    expect(rowRuns).toBe(1);
+    expect(nameRuns).toBe(1);
+
+    api.removeOne(1);
+
+    expect(observedRow()).toBe('absent');
+    expect(observedName()).toBe('absent');
+    expect(rowRuns).toBe(2);
+    expect(nameRuns).toBe(2);
+
+    api.addOne({ id: 1, name: 'Bob', active: false });
+
+    expect(observedRow()).toBe('absent');
+    expect(observedName()).toBe('absent');
+    expect(rowRuns).toBe(2);
+    expect(nameRuns).toBe(2);
+
+    internal.__retireSubjectRetainedValueBackingForTesting?.(subjectId);
+
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(observedRow()).toBe('absent');
+    expect(observedName()).toBe('absent');
+    expect(rowRuns).toBe(2);
+    expect(nameRuns).toBe(2);
+
+    api.removeOne(1);
+    internal.__restoreOne?.(1, { id: 1, name: 'Alice', active: true }, subjectId);
+
+    expect(observedRow()).toBe('Alice');
+    expect(observedName()).toBe('Alice');
+    expect(rowRuns).toBe(3);
+    expect(nameRuns).toBe(3);
   });
 });
 

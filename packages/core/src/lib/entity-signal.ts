@@ -71,6 +71,77 @@ export type EntitySubjectPhysicalInventory<K extends string | number> = {
     | undefined;
 };
 
+export type EntitySubjectReclamationResource =
+  | 'subject-lifetime-record'
+  | 'retained-value-backing'
+  | 'subject-activation-channel'
+  | 'row-facade'
+  | 'field-facades'
+  | 'ownership-metadata';
+
+export type EntitySubjectReclamationUnresolved = {
+  resource: EntitySubjectReclamationResource;
+  reason: 'terminal-facade-dependency-unknown';
+};
+
+export type EntitySubjectReclamationPlan = {
+  subjectId: number;
+  eligible: boolean;
+  retire: readonly EntitySubjectReclamationResource[];
+  retain: readonly EntitySubjectReclamationResource[];
+  unresolved: readonly EntitySubjectReclamationUnresolved[];
+};
+
+export function planEntitySubjectReclamation<K extends string | number>(
+  inventory: EntitySubjectPhysicalInventory<K>
+): EntitySubjectReclamationPlan {
+  const retain: EntitySubjectReclamationResource[] = [];
+
+  if (inventory.retainedSubjectState) {
+    retain.push('subject-lifetime-record');
+  }
+  if (inventory.retainedValueBacking) {
+    retain.push('retained-value-backing');
+  }
+  if (inventory.activationToken) {
+    retain.push('subject-activation-channel');
+  }
+  if (inventory.nodeFacadeMaterialized) {
+    retain.push('row-facade');
+  }
+  if (inventory.fieldFacadesMaterialized.length > 0) {
+    retain.push('field-facades');
+  }
+  if ((inventory.positionIds?.length ?? 0) > 0) {
+    retain.push('ownership-metadata');
+  }
+
+  if (inventory.state !== 'tombstoned') {
+    return {
+      subjectId: inventory.subjectId,
+      eligible: false,
+      retire: [],
+      retain,
+      unresolved: [],
+    };
+  }
+
+  return {
+    subjectId: inventory.subjectId,
+    eligible: true,
+    retire: [],
+    retain,
+    unresolved: inventory.retainedValueBacking
+      ? [
+          {
+            resource: 'retained-value-backing',
+            reason: 'terminal-facade-dependency-unknown',
+          },
+        ]
+      : [],
+  };
+}
+
 /**
  * EntitySignal Implementation (Composition Pattern)
  *
@@ -1001,6 +1072,17 @@ export function createEntitySignal<
         ? { kind: 'retained-entity-signal' }
         : undefined,
     };
+  }
+
+  function retireSubjectRetainedValueBackingForTesting(subjectId: number): void {
+    const subjectState = resolveSubjectState(subjectId);
+    if (!subjectState || subjectState.active) {
+      throw new Error(
+        `Subject ${String(subjectId)} must be tombstoned before retiring retained value backing.`
+      );
+    }
+
+    entitySignals.delete(subjectId);
   }
 
   // ==================
@@ -2004,6 +2086,19 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__inspectSubjectResources', {
     value: inspectSubjectResources,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planSubjectReclamation', {
+    value: (subjectId: number) => {
+      const inventory = inspectSubjectResources(subjectId);
+      return inventory ? planEntitySubjectReclamation(inventory) : undefined;
+    },
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__retireSubjectRetainedValueBackingForTesting', {
+    value: retireSubjectRetainedValueBackingForTesting,
     enumerable: false,
     configurable: true,
   });
