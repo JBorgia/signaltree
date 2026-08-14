@@ -1580,10 +1580,15 @@ describe('addMany() mode option (F-011)', () => {
 
   it('does not partially add when upsertMany later fails in the update phase', () => {
     const api = makeApi();
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+    };
     api.addOne({ id: 1, name: 'original' });
+    api.addOne({ id: 2, name: 'second' });
     api.intercept({
       onUpdate: (id, _changes, ctx) => {
-        if (id === 1) {
+        if (id === 2) {
           ctx.block('blocked update');
         }
       },
@@ -1591,14 +1596,100 @@ describe('addMany() mode option (F-011)', () => {
 
     expect(() =>
       api.upsertMany([
+        { id: 1, name: 'updated original' },
+        { id: 3, name: 'new add one' },
+        { id: 4, name: 'new add two' },
         { id: 2, name: 'new add' },
-        { id: 1, name: 'blocked update' },
+        { id: 2, name: 'blocked update' },
       ])
     ).toThrow('blocked update');
 
-    expect(api.count()).toBe(1);
+    expect(api.count()).toBe(2);
     expect(api.byIdOrFail(1).name()).toBe('original');
-    expect(api.byId(2)).toBeUndefined();
+    expect(api.byIdOrFail(2).name()).toBe('second');
+    expect(api.byId(3)).toBeUndefined();
+    expect(api.byId(4)).toBeUndefined();
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([
+      [1, { id: 1, name: 'original' }],
+      [2, { id: 2, name: 'second' }],
+    ]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([
+      [1, { id: 1, name: 'original' }],
+      [2, { id: 2, name: 'second' }],
+    ]);
+
+    api.addOne({ id: 5, name: 'after failure' });
+    expect(api.byIdOrFail(5).name.__subjectIds?.[0]).toBe(3);
+  });
+
+  it('upsertMany commits mixed existing and fresh subjects while preserving fresh allocation order', () => {
+    const api = makeApi();
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+      __clearStorageProjectionForTesting?: () => void;
+      __rebuildStorageProjectionForTesting?: () => void;
+    };
+
+    api.addOne({ id: 1, name: 'A' });
+    api.addOne({ id: 2, name: 'B' });
+
+    const ids = api.upsertMany([
+      { id: 3, name: 'C' },
+      { id: 1, name: 'A updated' },
+      { id: 4, name: 'D' },
+      { id: 2, name: 'B updated' },
+    ]);
+
+    expect(ids).toEqual([3, 4, 1, 2]);
+    expect(api.ids()).toEqual([1, 2, 3, 4]);
+    expect(api.byIdOrFail(1).name()).toBe('A updated');
+    expect(api.byIdOrFail(2).name()).toBe('B updated');
+    expect(api.byIdOrFail(3).name()).toBe('C');
+    expect(api.byIdOrFail(4).name()).toBe('D');
+    expect(api.byIdOrFail(1).name.__subjectIds?.[0]).toBe(1);
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(2);
+    expect(api.byIdOrFail(3).name.__subjectIds?.[0]).toBe(3);
+    expect(api.byIdOrFail(4).name.__subjectIds?.[0]).toBe(4);
+
+    const expectedEntries = [
+      [1, { id: 1, name: 'A updated' }],
+      [2, { id: 2, name: 'B updated' }],
+      [3, { id: 3, name: 'C' }],
+      [4, { id: 4, name: 'D' }],
+    ] as const;
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__clearStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__rebuildStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
   });
 
   it('does not partially remove, update, or allocate when a later setAll arrival blocks', () => {

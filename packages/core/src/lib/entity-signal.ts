@@ -2205,13 +2205,17 @@ export function createEntitySignal<
 
       // Separate adds from updates
       const toAdd: Array<{ entity: E; id: K }> = [];
-      const toUpdate: Array<{ entity: E; id: K; prev: E }> = [];
+      const toUpdate: Array<{ entity: E; id: K; prev: E; subjectId: number }> = [];
 
       for (const entity of entities) {
         const id = deriveId(entity, opts);
         const existing = getProjectedEntity(id);
         if (existing !== undefined) {
-          toUpdate.push({ entity, id, prev: existing });
+          const subjectId = resolveSubjectId(id);
+          if (subjectId === undefined) {
+            throw new Error(`Entity with id ${String(id)} has no subject id`);
+          }
+          toUpdate.push({ entity, id, prev: existing, subjectId });
         } else {
           toAdd.push({ entity, id });
         }
@@ -2222,49 +2226,63 @@ export function createEntitySignal<
         entity: interceptAddedEntity(entity),
       }));
 
-      const stagedUpdates = toUpdate.map(({ entity, id, prev }) => {
+      const stagedUpdates = toUpdate.map(({ entity, id, prev, subjectId }) => {
         const transformedChanges = interceptUpdatedEntity(id, entity);
         return {
           id,
+          subjectId,
           prev,
           transformedChanges,
           finalUpdated: { ...prev, ...transformedChanges },
         };
       });
 
+      const freshSubjectIds = commitFreshSubjects(stagedAdds.map(({ id }) => id));
+      const addedSubjectIdsByKey = new Map<K, number>();
+      for (let i = 0; i < stagedAdds.length; i++) {
+        addedSubjectIdsByKey.set(stagedAdds[i].id, freshSubjectIds[i]);
+      }
+
       // Process adds
-      const addedEntities: Array<{ id: K; entity: E }> = [];
+      const addedEntities: Array<{ id: K; entity: E; subjectId: number }> = [];
       for (const { entity: transformedEntity, id } of stagedAdds) {
-        const subjectId = allocateSubjectId(id);
-        storage.set(id, transformedEntity);
+        const subjectId = addedSubjectIdsByKey.get(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
         valueStore.retainSubjectValue(subjectId, transformedEntity);
+        storage.set(id, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
-        addedEntities.push({ id, entity: transformedEntity });
+        addedEntities.push({ id, entity: transformedEntity, subjectId });
       }
 
       const updatedEntities: Array<{
         id: K;
+        subjectId: number;
         prev: E;
         finalUpdated: E;
         transformedChanges: Partial<E>;
       }> = [];
-      for (const { id, prev, finalUpdated, transformedChanges } of stagedUpdates) {
+      for (const {
+        id,
+        subjectId,
+        prev,
+        finalUpdated,
+        transformedChanges,
+      } of stagedUpdates) {
+        valueStore.retainSubjectValue(subjectId, finalUpdated);
         storage.set(id, finalUpdated);
-        valueStore.retainValueForKey(id, finalUpdated);
         syncEntitySignal(id);
-        updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
+        updatedEntities.push({ id, subjectId, prev, finalUpdated, transformedChanges });
       }
 
       // Single signal update after all entities are processed
       updateSignals();
 
-      const addedSubjectIdsForWrite = rememberSubjectIds(
-        addedEntities.map(({ id }) => id)
-      );
-      const updatedSubjectIdsForWrite = rememberSubjectIds(
-        updatedEntities.map(({ id }) => id)
-      );
+      const addedSubjectIdsForWrite = addedEntities.map(({ subjectId }) => subjectId);
+      const updatedSubjectIdsForWrite = updatedEntities.map(({ subjectId }) => subjectId);
+      lastSubjectIds = [...addedSubjectIdsForWrite, ...updatedSubjectIdsForWrite];
 
       // Notify PathNotifier for added entities
       for (let i = 0; i < addedEntities.length; i++) {
