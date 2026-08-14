@@ -6,6 +6,7 @@ import type { PositionId } from '../../types';
 import { AppliedHistory } from './applied-history';
 import { TurnStore } from './turn-store';
 import {
+  reclaimAvailableSubjects,
   reclaimSubject,
   type SubjectReclamationPhysicalOwner,
 } from './subject-reclamation-coordinator';
@@ -13,6 +14,7 @@ import {
 type User = { id: number; name: string; active: boolean };
 
 type SubjectReclamationApi = ReturnType<typeof createEntitySignal<User, number>> & {
+  __listSubjectReclamationCandidates?: () => readonly number[];
   __inspectSubjectResources?: (subjectId: number) => unknown;
   __prepareSubjectReclamation?: (
     subjectId: number,
@@ -305,5 +307,94 @@ describe('subject reclamation coordinator', () => {
       retired: ['retained-value-backing'],
     });
     expect(heldName()).toBeUndefined();
+  });
+
+  it('reclaims all tombstoned candidates through the same fresh coordinator flow', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    api.addOne({ id: 2, name: 'Bob', active: true });
+    api.addOne({ id: 3, name: 'Cara', active: true });
+
+    const heldOne = api.byIdOrFail(1).name;
+    const heldTwo = api.byIdOrFail(2).name;
+    const subjectOne = heldOne.__subjectIds?.[0];
+    const subjectTwo = heldTwo.__subjectIds?.[0];
+    if (subjectOne === undefined || subjectTwo === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.removeOne(1);
+    api.removeOne(2);
+
+    store.admitPending({
+      id: 11,
+      effects: [
+        {
+          owner: 4 as PositionId,
+          before: 'Bob',
+          after: 'Bobby',
+          subjectId: subjectTwo,
+        },
+      ],
+    });
+
+    const notifyCountBefore = notify.mock.calls.length;
+    const result = reclaimAvailableSubjects({
+      owner: api as unknown as SubjectReclamationPhysicalOwner,
+      store,
+      appliedHistory,
+    });
+
+    expect(result.candidateSubjectIds).toEqual([subjectOne, subjectTwo]);
+    expect(result.results.get(subjectOne)).toEqual({
+      ok: true,
+      kind: 'reclaimed',
+      retired: ['retained-value-backing'],
+    });
+    expect(result.results.get(subjectTwo)).toEqual({
+      ok: false,
+      kind: 'blocked',
+      blockers: [
+        {
+          kind: 'pending-reference',
+          turnId: 11,
+          state: 'pending',
+          structural: undefined,
+        },
+      ],
+    });
+
+    expect(api.__inspectSubjectResources?.(subjectOne)).toEqual({
+      subjectId: subjectOne,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldOne.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(api.__inspectSubjectResources?.(subjectTwo)).toEqual({
+      subjectId: subjectTwo,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldTwo.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
   });
 });
