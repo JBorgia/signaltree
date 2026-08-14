@@ -1,6 +1,11 @@
-import { workspaceRoot } from '@nx/devkit';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
+const workspaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../..'
+);
 
 /**
  * Adjusts the Nx-generated Rollup configuration so each library emits

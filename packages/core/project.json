@@ -15,43 +15,16 @@
   "implicitDependencies": [],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "dependsOn": ["^build"],
-      "options": {
-        "main": "packages/core/src/index.ts",
-        "additionalEntryPoints": [
-          "packages/core/src/security.ts",
-          "packages/core/src/lazy.ts",
-          "packages/core/src/edit-session.ts",
-          "packages/core/src/storage.ts",
-          "packages/core/src/authoring.ts"
-        ],
-        "tsConfig": "packages/core/tsconfig.lib.prod.json",
-        "outputPath": "dist/packages/core",
-        "format": ["esm"],
-        "assets": [
-          {
-            "input": "packages/core",
-            "glob": "README.md",
-            "output": "."
-          },
-          {
-            "input": "packages/core",
-            "glob": "package.json",
-            "output": "."
-          },
-          {
-            "input": "packages/core/src",
-            "glob": "**/*.d.ts",
-            "output": "./src"
-          }
-        ],
-        "rollupConfig": "packages/core/rollup.config.mjs",
-        "deleteOutputPath": true,
-        "buildLibsFromSource": true,
-        "generatePackageJson": false
-      }
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["rollup"]
+        }
+      ]
     },
     "nx-release-publish": {
       "options": {

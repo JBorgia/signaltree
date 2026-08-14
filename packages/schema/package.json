@@ -28,7 +28,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "nx build schema",
+    "build:workspace": "nx build schema",
     "test": "nx test schema",
     "lint": "nx lint schema",
     "test:watch": "nx test schema --watch",

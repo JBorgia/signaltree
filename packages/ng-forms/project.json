@@ -14,45 +14,16 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
-      "options": {
-        "main": "packages/ng-forms/src/index.ts",
-        "tsConfig": "packages/ng-forms/tsconfig.lib.prod.json",
-        "outputPath": "dist/packages/ng-forms",
-        "format": ["esm"],
-        "additionalEntryPoints": [
-          "packages/ng-forms/src/core/ng-forms.ts",
-          "packages/ng-forms/src/core/validators.ts",
-          "packages/ng-forms/src/core/async-validators.ts",
-          "packages/ng-forms/src/history/history.ts",
-          "packages/ng-forms/src/enhancer/form-bridge.ts",
-          "packages/ng-forms/src/audit/audit.ts",
-          "packages/ng-forms/src/wizard/wizard.ts",
-          "packages/ng-forms/src/signals/index.ts"
-        ],
-        "assets": [
-          {
-            "input": "packages/ng-forms",
-            "glob": "README.md",
-            "output": "."
-          },
-          {
-            "input": "packages/ng-forms",
-            "glob": "package.json",
-            "output": "."
-          },
-          {
-            "input": "packages/ng-forms/src",
-            "glob": "**/*.d.ts",
-            "output": "./src"
-          }
-        ],
-        "rollupConfig": "packages/ng-forms/rollup.config.mjs",
-        "deleteOutputPath": true,
-        "buildLibsFromSource": true,
-        "generatePackageJson": false
-      }
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["rollup"]
+        }
+      ]
     },
     "nx-release-publish": {
       "options": {

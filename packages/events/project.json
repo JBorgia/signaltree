@@ -15,58 +15,19 @@
   "implicitDependencies": ["core"],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "dependsOn": ["^build"],
-      "options": {
-        "main": "packages/events/src/index.ts",
-        "tsConfig": "packages/events/tsconfig.lib.prod.json",
-        "outputPath": "dist/packages/events",
-        "format": ["esm"],
-        "additionalEntryPoints": [
-          "packages/events/src/nestjs/index.ts",
-          "packages/events/src/angular/index.ts",
-          "packages/events/src/testing/index.ts"
-        ],
-        "rollupConfig": "packages/events/rollup.config.mjs",
-        "generateExportsField": false,
-        "assets": [
-          {
-            "input": "packages/events",
-            "glob": "README.md",
-            "output": "."
-          },
-          {
-            "input": "packages/events",
-            "glob": "package.json",
-            "output": "."
-          },
-          {
-            "input": "packages/events/src",
-            "glob": "**/*.d.ts",
-            "output": "./src"
-          }
-        ],
-        "external": [
-          "@angular/core",
-          "@signaltree/core",
-          "@nestjs/common",
-          "@nestjs/core",
-          "bullmq",
-          "ioredis",
-          "socket.io-client",
-          "zod",
-          "tslib",
-          "rxjs"
-        ],
-        "deleteOutputPath": true,
-        "generatePackageJson": false
-      },
       "configurations": {
-        "production": {
-          "tsConfig": "packages/events/tsconfig.lib.prod.json"
+        "production": {}
+      },
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["rollup"]
         }
-      }
+      ]
     },
     "nx-release-publish": {
       "options": {

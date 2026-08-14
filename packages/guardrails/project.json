@@ -13,47 +13,16 @@
   "implicitDependencies": ["core"],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "dependsOn": ["^build"],
-      "options": {
-        "main": "packages/guardrails/src/index.ts",
-        "tsConfig": "packages/guardrails/tsconfig.lib.prod.json",
-        "outputPath": "dist/packages/guardrails",
-        "format": ["esm"],
-        "additionalEntryPoints": [
-          "packages/guardrails/src/factories/index.ts",
-          "packages/guardrails/src/noop.ts",
-          "packages/guardrails/src/lib/guardrails.ts",
-          "packages/guardrails/src/lib/rules.ts"
-        ],
-        "assets": [
-          {
-            "input": "packages/guardrails",
-            "glob": "README.md",
-            "output": "."
-          },
-          {
-            "input": "packages/guardrails",
-            "glob": "CHANGELOG.md",
-            "output": "."
-          },
-          {
-            "input": "packages/guardrails",
-            "glob": "package.json",
-            "output": "."
-          },
-          {
-            "input": "packages/guardrails/src",
-            "glob": "**/*.d.ts",
-            "output": "./src"
-          }
-        ],
-        "rollupConfig": "packages/guardrails/rollup.config.mjs",
-        "deleteOutputPath": true,
-        "buildLibsFromSource": true,
-        "generatePackageJson": false
-      }
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["rollup"]
+        }
+      ]
     },
     "nx-release-publish": {
       "options": {

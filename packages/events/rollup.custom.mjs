@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { workspaceRoot } from '@nx/devkit';
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(packageRoot, '../..');
 const srcRoot = path.join(packageRoot, 'src');
 
 /**
@@ -15,21 +15,23 @@ export default (config, options = {}) => {
   // Merge additionalEntryPoints into config.input
   const additionalEntryPoints = options.additionalEntryPoints || [];
   const mergedInput = {};
-  
+
   // Always ensure main entry point is included
   const mainEntryPoint = path.join(packageRoot, 'src', 'index.ts');
   mergedInput['index'] = mainEntryPoint;
-  
+
   for (const entryPoint of additionalEntryPoints) {
     const fullPath = path.join(workspaceRoot, entryPoint);
     // Extract the entry name from the path (e.g., 'nestjs/index.ts' -> 'nestjs')
     const relativePath = path.relative(srcRoot, fullPath);
-    const entryName = relativePath.replace(/\/index\.[jt]sx?$/, '').replace(/\.[jt]sx?$/, '');
+    const entryName = relativePath
+      .replace(/\/index\.[jt]sx?$/, '')
+      .replace(/\.[jt]sx?$/, '');
     mergedInput[entryName] = fullPath;
   }
-  
+
   const targetRoot = path.join(workspaceRoot, options.outputPath);
-  
+
   const normalizeForOutput = (moduleId) => {
     if (!moduleId) return null;
     const fromSrc = path.relative(srcRoot, moduleId);
@@ -49,8 +51,14 @@ export default (config, options = {}) => {
   const esmOutput = {
     dir: targetRoot,
     format: 'esm',
-    entryFileNames: (chunkInfo) => toOutputPath(chunkInfo.facadeModuleId, chunkInfo.name, 'js'),
-    chunkFileNames: (chunkInfo) => toOutputPath(chunkInfo.facadeModuleId ?? chunkInfo.moduleIds?.[0], chunkInfo.name, 'js'),
+    entryFileNames: (chunkInfo) =>
+      toOutputPath(chunkInfo.facadeModuleId, chunkInfo.name, 'js'),
+    chunkFileNames: (chunkInfo) =>
+      toOutputPath(
+        chunkInfo.facadeModuleId ?? chunkInfo.moduleIds?.[0],
+        chunkInfo.name,
+        'js'
+      ),
     exports: 'named',
     preserveModules: true,
     preserveModulesRoot: srcRoot,

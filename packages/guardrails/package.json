@@ -50,7 +50,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "nx build guardrails",
+    "build:workspace": "nx build guardrails",
     "test": "nx test guardrails",
     "lint": "nx lint guardrails",
     "test:watch": "nx test guardrails --watch",

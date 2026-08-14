@@ -15,44 +15,16 @@
   "implicitDependencies": ["core"],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "dependsOn": ["^build"],
-      "options": {
-        "main": "packages/realtime/src/index.ts",
-        "tsConfig": "packages/realtime/tsconfig.lib.prod.json",
-        "outputPath": "dist/packages/realtime",
-        "format": ["esm"],
-        "additionalEntryPoints": ["packages/realtime/src/supabase/index.ts"],
-        "assets": [
-          {
-            "input": "packages/realtime",
-            "glob": "README.md",
-            "output": "."
-          },
-          {
-            "input": "packages/realtime",
-            "glob": "package.json",
-            "output": "."
-          },
-          {
-            "input": "packages/realtime/src",
-            "glob": "**/*.d.ts",
-            "output": "./src"
-          }
-        ],
-        "external": [
-          "@angular/core",
-          "@signaltree/core",
-          "@supabase/supabase-js",
-          "firebase",
-          "tslib",
-          "rxjs"
-        ],
-        "rollupConfig": "packages/realtime/rollup.config.mjs",
-        "deleteOutputPath": true,
-        "generatePackageJson": false
-      }
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["rollup"]
+        }
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
