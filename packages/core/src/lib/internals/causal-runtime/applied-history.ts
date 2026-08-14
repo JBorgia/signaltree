@@ -81,11 +81,13 @@ export class AppliedHistory {
 
   commitPreparedAdmitConfirmed(
     transition: PreparedAppliedHistoryConfirmation
-  ): void {
+  ): readonly TurnId[] {
     this.insertAppliedTurnCanonical(transition.turnId);
     if (this.redoTurnIds.length > 0) {
-      this.invalidateOverlappingRedoTurns(transition.participants);
+      return this.invalidateOverlappingRedoTurns(transition.participants);
     }
+
+    return [];
   }
 
   prepareUnapplyConfirmedTurn(
@@ -268,8 +270,16 @@ export class AppliedHistory {
 
   private invalidateOverlappingRedoTurns(
     participants: readonly PositionId[]
-  ): void {
+  ): readonly TurnId[] {
     const participantSet = new Set(participants);
+    const invalidatedTurnIds = this.redoTurnIds.filter((turnId) => {
+      const turn = this.store.getTurn(turnId);
+      if (!turn) {
+        return true;
+      }
+
+      return turn.participants.some((participant) => participantSet.has(participant));
+    });
 
     this.redoTurnIds.splice(
       0,
@@ -285,5 +295,7 @@ export class AppliedHistory {
         );
       })
     );
+
+    return invalidatedTurnIds;
   }
 }

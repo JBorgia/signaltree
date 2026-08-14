@@ -1,7 +1,13 @@
 import type { AppliedHistory } from './applied-history';
-import type { ReversalResult, TurnId } from './causal-types';
+import type { CausalTurn, ReversalResult, TurnId } from './causal-types';
 import type { RealizationContextSource } from './realization-context';
 import type { TurnStore } from './turn-store';
+
+export interface PendingConfirmationMaintenanceHint {
+  readonly forgottenConfirmedTurnIds: readonly TurnId[];
+  readonly invalidatedRedoTurnIds: readonly TurnId[];
+  readonly settledPendingSubjectReference: boolean;
+}
 
 export interface ConfirmPendingTurnAtOptions {
   readonly turnId: TurnId;
@@ -14,10 +20,12 @@ export interface ConfirmPendingTurnAtOptions {
     'prepareAdmitConfirmedTurn' | 'commitPreparedAdmitConfirmed'
   >;
   readonly retentionObserver?: Pick<RealizationContextSource, 'consumeForgottenConfirmedTurns'>;
-  readonly onConfirmedTurnsForgotten?: (turns: readonly { readonly id: TurnId }[]) => void;
-  readonly reportRetentionObserverError?: (
+  readonly onMaintenanceMayBeUseful?: (
+    hint: PendingConfirmationMaintenanceHint
+  ) => void;
+  readonly reportMaintenanceObserverError?: (
     error: unknown,
-    turns: readonly { readonly id: TurnId }[]
+    hint: PendingConfirmationMaintenanceHint
   ) => void;
 }
 
@@ -37,19 +45,26 @@ export function confirmPendingTurnAt(
     participants: prepared.transition.pendingTurn.participants,
   });
 
-  options.appliedHistory.commitPreparedAdmitConfirmed(preparedAppliedHistory);
+  const invalidatedRedoTurnIds = options.appliedHistory.commitPreparedAdmitConfirmed(
+    preparedAppliedHistory
+  );
 
   const confirmedTurn = options.store.commitPreparedConfirmPending(
     prepared.transition
   );
 
   const forgottenTurns = options.retentionObserver?.consumeForgottenConfirmedTurns() ?? [];
-  if (forgottenTurns.length > 0 && options.onConfirmedTurnsForgotten) {
+  const maintenanceHint = deriveMaintenanceHint(
+    prepared.transition.pendingTurn,
+    forgottenTurns,
+    invalidatedRedoTurnIds
+  );
+  if (maintenanceHint && options.onMaintenanceMayBeUseful) {
     try {
-      options.onConfirmedTurnsForgotten(forgottenTurns);
+      options.onMaintenanceMayBeUseful(maintenanceHint);
     } catch (error) {
-      if (options.reportRetentionObserverError) {
-        options.reportRetentionObserverError(error, forgottenTurns);
+      if (options.reportMaintenanceObserverError) {
+        options.reportMaintenanceObserverError(error, maintenanceHint);
       } else {
         queueMicrotask(() => {
           throw normalizeError(error);
@@ -61,6 +76,30 @@ export function confirmPendingTurnAt(
   return {
     ok: true,
     turnId: confirmedTurn.id,
+  };
+}
+
+function deriveMaintenanceHint(
+  pendingTurn: CausalTurn,
+  forgottenTurns: readonly { readonly id: TurnId }[],
+  invalidatedRedoTurnIds: readonly TurnId[]
+): PendingConfirmationMaintenanceHint | undefined {
+  const settledPendingSubjectReference = pendingTurn.effects.some(
+    (effect) => effect.subjectId !== undefined
+  );
+
+  if (
+    forgottenTurns.length === 0 &&
+    invalidatedRedoTurnIds.length === 0 &&
+    !settledPendingSubjectReference
+  ) {
+    return undefined;
+  }
+
+  return {
+    forgottenConfirmedTurnIds: forgottenTurns.map(({ id }) => id),
+    invalidatedRedoTurnIds: [...invalidatedRedoTurnIds],
+    settledPendingSubjectReference,
   };
 }
 

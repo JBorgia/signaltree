@@ -283,7 +283,7 @@ describe('pending confirmation', () => {
         store,
         appliedHistory,
         retentionObserver: source,
-        onConfirmedTurnsForgotten: () => {
+        onMaintenanceMayBeUseful: () => {
           maintenanceResults.push(
             runPhysicalMaintenance({
               owner: owner as any,
@@ -312,6 +312,235 @@ describe('pending confirmation', () => {
     expect(store.getPendingTurnIds()).toEqual([]);
     expect(store.getTurns()).toEqual([]);
     expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+    expect(heldName()).toBeUndefined();
+    expect(owner.byIdOrFail(2).name()).toBe('Bob');
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('runs physical maintenance when pending scalar subject reference settles into non-blocking confirmed history', () => {
+    type User = { id: number; name: string; active: boolean };
+
+    const notify = vi.fn();
+    const owner = createEntitySignal<User, number>(
+      { selectId: (user) => user.id },
+      { notify } as any,
+      'users'
+    );
+    const internal = owner as typeof owner & {
+      __inspectSubjectResources?: (subjectId: number) => unknown;
+    };
+
+    owner.addOne({ id: 1, name: 'Alice', active: true });
+    owner.addOne({ id: 2, name: 'Bob', active: false });
+    const heldName = owner.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    owner.removeOne(1);
+    const notifyCountBefore = notify.mock.calls.length;
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const source = createRealizationContextSource({
+      store,
+      appliedHistory,
+    });
+
+    store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_KEY,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId,
+        },
+      ],
+    });
+
+    const maintenanceHints: unknown[] = [];
+    const maintenanceResults: unknown[] = [];
+
+    expect(
+      confirmPendingTurnAt({
+        turnId: 1,
+        store,
+        appliedHistory,
+        retentionObserver: source,
+        onMaintenanceMayBeUseful: (hint) => {
+          maintenanceHints.push(hint);
+          maintenanceResults.push(
+            runPhysicalMaintenance({
+              owner: owner as any,
+              store,
+              appliedHistory,
+            })
+          );
+        },
+      })
+    ).toEqual({
+      ok: true,
+      turnId: 1,
+    });
+
+    expect(maintenanceHints).toEqual([
+      {
+        forgottenConfirmedTurnIds: [],
+        invalidatedRedoTurnIds: [],
+        settledPendingSubjectReference: true,
+      },
+    ]);
+    expect(maintenanceResults).toEqual([
+      {
+        candidateSubjectIds: [subjectId],
+        reclaimed: [subjectId],
+        alreadyRetired: [],
+        blocked: [],
+        causalDrift: [],
+        physicalDrift: [],
+        physicalPlanUnavailable: [],
+      },
+    ]);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns().map(({ id }) => id)).toEqual([1]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([1]);
+    expect(heldName()).toBeUndefined();
+    expect(owner.byIdOrFail(2).name()).toBe('Bob');
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('runs physical maintenance when confirmation invalidates a redoable restore path without forgetting history', () => {
+    type User = { id: number; name: string; active: boolean };
+
+    const notify = vi.fn();
+    const owner = createEntitySignal<User, number>(
+      { selectId: (user) => user.id },
+      { notify } as any,
+      'users'
+    );
+    const internal = owner as typeof owner & {
+      __inspectSubjectResources?: (subjectId: number) => unknown;
+    };
+
+    owner.addOne({ id: 1, name: 'Alice', active: true });
+    owner.addOne({ id: 2, name: 'Bob', active: false });
+    const heldName = owner.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    owner.removeOne(1);
+    const notifyCountBefore = notify.mock.calls.length;
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const source = createRealizationContextSource({
+      store,
+      appliedHistory,
+    });
+
+    const redoableAdd = store.admitConfirmed({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_KEY,
+          before: undefined,
+          after: 1,
+          subjectId,
+          structural: 'add',
+        },
+      ],
+    });
+    expect(appliedHistory.admitConfirmed(redoableAdd.id)).toEqual({ ok: true });
+    expect(appliedHistory.moveConfirmedTurnToRedo(redoableAdd.id)).toEqual({ ok: true });
+
+    store.admitPending({
+      id: 2,
+      effects: [
+        {
+          owner: P_DRIVER_KEY,
+          before: 1,
+          after: 2,
+        },
+      ],
+    });
+
+    const maintenanceHints: unknown[] = [];
+    const maintenanceResults: unknown[] = [];
+
+    expect(
+      confirmPendingTurnAt({
+        turnId: 2,
+        store,
+        appliedHistory,
+        retentionObserver: source,
+        onMaintenanceMayBeUseful: (hint) => {
+          maintenanceHints.push(hint);
+          maintenanceResults.push(
+            runPhysicalMaintenance({
+              owner: owner as any,
+              store,
+              appliedHistory,
+            })
+          );
+        },
+      })
+    ).toEqual({
+      ok: true,
+      turnId: 2,
+    });
+
+    expect(maintenanceHints).toEqual([
+      {
+        forgottenConfirmedTurnIds: [],
+        invalidatedRedoTurnIds: [1],
+        settledPendingSubjectReference: false,
+      },
+    ]);
+    expect(maintenanceResults).toEqual([
+      {
+        candidateSubjectIds: [subjectId],
+        reclaimed: [subjectId],
+        alreadyRetired: [],
+        blocked: [],
+        causalDrift: [],
+        physicalDrift: [],
+        physicalPlanUnavailable: [],
+      },
+    ]);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns().map(({ id }) => id)).toEqual([1, 2]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([2]);
+    expect(appliedHistory.getRedoTurnIds()).toEqual([]);
     expect(heldName()).toBeUndefined();
     expect(owner.byIdOrFail(2).name()).toBe('Bob');
     expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
