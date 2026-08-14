@@ -866,6 +866,10 @@ export function createEntitySignal<
     return subjectId;
   }
 
+  function commitFreshSubjects(ids: readonly K[]): number[] {
+    return ids.map((id) => commitFreshSubject(id));
+  }
+
   function rememberSubjectIds(ids: K[]): number[] {
     const resolved = ids.map((id) => allocateSubjectId(id));
     lastSubjectIds = resolved;
@@ -1712,10 +1716,15 @@ export function createEntitySignal<
       const mode = opts?.mode ?? 'strict';
 
       // First pass: validate/filter based on mode
-      const toProcess: Array<{ entity: E; id: K }> = [];
+      const toProcess: Array<{
+        entity: E;
+        id: K;
+        existingSubjectId?: number;
+      }> = [];
       for (const entity of entities) {
         const id = deriveId(entity, opts);
-        if (structuralStore.hasActiveKey(id)) {
+        const existingSubjectId = structuralStore.subjectIdForKey(id);
+        if (existingSubjectId !== undefined) {
           if (mode === 'strict') {
             throw new Error(`Entity with id ${String(id)} already exists`);
           } else if (mode === 'skip') {
@@ -1723,40 +1732,63 @@ export function createEntitySignal<
           }
           // 'overwrite': fall through — storage.set below replaces the existing entry
         }
-        toProcess.push({ entity, id });
+        toProcess.push({ entity, id, existingSubjectId });
       }
 
       if (toProcess.length === 0) return [];
 
       // Stage all add work before mutating runtime state so a later failure
       // cannot partially allocate fresh subject lifetimes.
-      const stagedAdds = toProcess.map(({ entity, id }) => ({
+      const stagedAdds = toProcess.map(({ entity, id, existingSubjectId }) => ({
         id,
         entity: interceptAddedEntity(entity),
+        existingSubjectId,
       }));
+
+      const freshIds = stagedAdds
+        .filter(({ existingSubjectId }) => existingSubjectId === undefined)
+        .map(({ id }) => id);
+      const freshSubjectIds = commitFreshSubjects(freshIds);
+      const subjectIdsByKey = new Map<K, number>();
+      let freshIndex = 0;
+      for (const { id, existingSubjectId } of stagedAdds) {
+        const subjectId =
+          existingSubjectId ?? freshSubjectIds[freshIndex++];
+        subjectIdsByKey.set(id, subjectId);
+      }
 
       // Process all entities without triggering per-entity signal updates
       const processedIds: K[] = [];
-      const addedEntities: Array<{ id: K; entity: E }> = [];
+      const addedEntities: Array<{ id: K; entity: E; subjectId: number }> = [];
 
       for (const { entity: transformedEntity, id } of stagedAdds) {
-        const subjectId = allocateSubjectId(id);
+        const subjectId = subjectIdsByKey.get(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
         storage.set(id, transformedEntity);
         valueStore.retainSubjectValue(subjectId, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
         processedIds.push(id);
-        addedEntities.push({ id, entity: transformedEntity });
+        addedEntities.push({ id, entity: transformedEntity, subjectId });
       }
 
       // Single signal update after all entities are processed
       updateSignals();
 
-      const subjectIdsForWrite = rememberSubjectIds(processedIds);
+      const subjectIdsForWrite = processedIds.map((id) => {
+        const subjectId = subjectIdsByKey.get(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
+        return subjectId;
+      });
+      lastSubjectIds = subjectIdsForWrite;
 
       const previousKeys = structuralStore
         .activeKeysSnapshot()
-        .slice(0, -processedIds.length);
+        .slice(0, -freshIds.length);
 
       // Notify PathNotifier for each processed entity
       for (let i = 0; i < addedEntities.length; i++) {

@@ -1488,6 +1488,10 @@ describe('addMany() mode option (F-011)', () => {
 
   it('does not partially allocate or publish when a later addMany interceptor blocks', () => {
     const api = makeApi();
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+    };
     api.intercept({
       onAdd: (entity, ctx) => {
         if (entity.name === 'blocked') {
@@ -1506,9 +1510,72 @@ describe('addMany() mode option (F-011)', () => {
     expect(api.count()).toBe(0);
     expect(api.byId(1)).toBeUndefined();
     expect(api.byId(2)).toBeUndefined();
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([]);
 
     api.addOne({ id: 3, name: 'after failure' });
     expect(api.byIdOrFail(3).name.__subjectIds?.[0]).toBe(1);
+  });
+
+  it('commits fresh addMany subjects in authored order and rebuilds projection from owners', () => {
+    const api = makeApi();
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+      __clearStorageProjectionForTesting?: () => void;
+      __rebuildStorageProjectionForTesting?: () => void;
+    };
+
+    const ids = api.addMany([
+      { id: 3, name: 'C' },
+      { id: 1, name: 'A' },
+      { id: 2, name: 'B' },
+    ]);
+
+    expect(ids).toEqual([3, 1, 2]);
+    expect(api.ids()).toEqual([3, 1, 2]);
+    expect(api.byIdOrFail(3).name.__subjectIds?.[0]).toBe(1);
+    expect(api.byIdOrFail(1).name.__subjectIds?.[0]).toBe(2);
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(3);
+
+    const expectedEntries = [
+      [3, { id: 3, name: 'C' }],
+      [1, { id: 1, name: 'A' }],
+      [2, { id: 2, name: 'B' }],
+    ] as const;
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__clearStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__rebuildStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(Array.from(api.asMap().entries())).toEqual(expectedEntries);
   });
 
   it('does not partially add when upsertMany later fails in the update phase', () => {
