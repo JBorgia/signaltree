@@ -899,6 +899,9 @@ describe('entity subject physical inventory', () => {
       },
     });
     expect(internal.__listSubjectReclamationCandidates?.()).toEqual([foreignSubjectId]);
+
+    api.addOne({ id: 2, name: 'Cara', active: true });
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(foreignSubjectId + 1);
   });
 
   it('replaces subject-owned value without changing structural identity or facades', () => {

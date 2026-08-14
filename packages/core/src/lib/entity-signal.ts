@@ -6,6 +6,7 @@ import {
   type PreparedFreshSubject,
   type PreparedKeyTransfer,
   type PreparedRetainedValueRetirement,
+  type PreparedSubjectRestore,
   type PreparedSubjectTombstone,
   type PreparedValueReplacement,
 } from './physical/entity-mutation-frame';
@@ -17,7 +18,7 @@ import {
 } from './physical/structural-store';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
-import { HISTORY_EXCLUDED } from './utils';
+import { HISTORY_EXCLUDED, isTraversableNode } from './utils';
 
 // Angular's global dev-mode flag (defined by the Angular CLI; undefined in
 // plain test/node contexts, treated as dev there).
@@ -397,20 +398,13 @@ export function createEntitySignal<
     positions: Set<PositionId>,
     seen = new WeakSet<object>()
   ): void {
-    const direct =
-      typeof node === 'object' || typeof node === 'function'
-        ? (node as { __positionIds?: readonly number[] }).__positionIds
-        : undefined;
-    for (const positionId of direct ?? []) {
-      positions.add(positionId as PositionId);
+    if (!isTraversableNode(node)) {
+      return;
     }
 
-    if (
-      node === null ||
-      node === undefined ||
-      (typeof node !== 'object' && typeof node !== 'function')
-    ) {
-      return;
+    const direct = (node as { __positionIds?: readonly number[] }).__positionIds;
+    for (const positionId of direct ?? []) {
+      positions.add(positionId as PositionId);
     }
 
     const ref = node as object;
@@ -696,13 +690,6 @@ export function createEntitySignal<
     return structuralStore.neighborSubjectsForKey(id);
   }
 
-  function resolveRestoreIndex(
-    beforeSubject?: number,
-    afterSubject?: number
-  ): number {
-    return structuralStore.restoreIndexForSubjects(beforeSubject, afterSubject);
-  }
-
   function restoreOne(
     key: K,
     entity: E,
@@ -721,16 +708,21 @@ export function createEntitySignal<
       );
     }
 
-    structuralStore.restoreSubject(
-      subjectId,
+    const restoration: PreparedSubjectRestore<K, E> = {
+      kind: 'restore-subject',
       key,
+      subjectId,
+      restoreAllowed: state?.restoreAllowed ?? true,
       beforeSubject,
       afterSubject,
-      state?.restoreAllowed ?? true
-    );
-    valueStore.retainSubjectValue(subjectId, entity);
-    publishSubjectPhysicalChange(subjectId);
-    rebuildStorageProjection();
+      realizedValue: entity,
+    };
+    const frame = createEntityMutationFrame();
+    frame.stageSubjectRestore(restoration);
+    const result = frame.commit();
+    for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+      publishSubjectPhysicalChange(changedSubjectId);
+    }
     lastSubjectIds = [subjectId];
     syncEntitySignal(key);
     updateSignals();
@@ -869,25 +861,11 @@ export function createEntitySignal<
   }
 
   /**
-   * Release one entity's signal on removal: notify current observers that the
-   * entity is gone (set undefined), then drop it from the map so churning
-   * collections don't accumulate one signal per id ever removed. Held field
-   * references stay valid (read undefined); a later byId() after re-add gets a
-   * fresh signal.
+   * Release one subject's entity signal on removal: notify current observers
+   * that the entity is gone (set undefined). The signal itself is kept keyed by
+   * SubjectId so held field references stay valid (they read undefined) and a
+   * restore of the same subject re-publishes through the same signal.
    */
-  function removeEntitySignal(id: K): void {
-    const subjectId = resolveSubjectId(id);
-    if (subjectId === undefined) {
-      return;
-    }
-
-    const s = entitySignals.get(subjectId);
-    if (s) {
-      s.set(undefined);
-      entitySignals.delete(subjectId);
-    }
-  }
-
   function tombstoneSubjectSignal(subjectId: number): void {
     entitySignals.get(subjectId)?.set(undefined);
   }

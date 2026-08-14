@@ -40,6 +40,19 @@ export type PreparedFreshSubject<
   nextValue: E;
 };
 
+export type PreparedSubjectRestore<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = {
+  kind: 'restore-subject';
+  key: K;
+  subjectId: number;
+  restoreAllowed: boolean;
+  beforeSubject?: number;
+  afterSubject?: number;
+  realizedValue?: E;
+};
+
 export type PreparedEntityPhysicalMutation<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -48,7 +61,8 @@ export type PreparedEntityPhysicalMutation<
   | PreparedRetainedValueRetirement
   | PreparedKeyTransfer<K>
   | PreparedSubjectTombstone<K>
-  | PreparedFreshSubject<K, E>;
+  | PreparedFreshSubject<K, E>
+  | PreparedSubjectRestore<K, E>;
 
 export type EntityMutationCommitResult = {
   physicallyChangedSubjectIds: readonly number[];
@@ -87,6 +101,10 @@ export class EntityMutationFrame<
     this.mutations.push(freshSubject);
   }
 
+  stageSubjectRestore(restoration: PreparedSubjectRestore<K, E>): void {
+    this.mutations.push(restoration);
+  }
+
   commit(): EntityMutationCommitResult {
     const physicallyChangedSubjectIds = new Set<number>();
     const allocatedSubjectIds: number[] = [];
@@ -98,6 +116,25 @@ export class EntityMutationFrame<
         this.structuralStore.createSubject(subjectId, mutation.key);
         this.valueStore.retainSubjectValue(subjectId, mutation.nextValue);
         allocatedSubjectIds.push(subjectId);
+        requiresProjectionRebuild = true;
+        continue;
+      }
+
+      if (mutation.kind === 'restore-subject') {
+        this.structuralStore.restoreSubject(
+          mutation.subjectId,
+          mutation.key,
+          mutation.beforeSubject,
+          mutation.afterSubject,
+          mutation.restoreAllowed
+        );
+        if (mutation.realizedValue !== undefined) {
+          this.valueStore.retainSubjectValue(
+            mutation.subjectId,
+            mutation.realizedValue
+          );
+        }
+        physicallyChangedSubjectIds.add(mutation.subjectId);
         requiresProjectionRebuild = true;
         continue;
       }
