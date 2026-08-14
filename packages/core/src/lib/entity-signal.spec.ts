@@ -14,6 +14,16 @@ const pathNotifier = {
 type SubjectInventoryApi = {
   __listSubjectReclamationCandidates?: () => readonly number[];
   __inspectSubjectResources?: (subjectId: number) => unknown;
+  __snapshotStorageProjectionForTesting?: () => ReadonlyMap<
+    number,
+    { id: number; name: string; active: boolean }
+  >;
+  __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<
+    number,
+    { id: number; name: string; active: boolean }
+  >;
+  __clearStorageProjectionForTesting?: () => void;
+  __rebuildStorageProjectionForTesting?: () => void;
   __planSubjectReclamation?: (
     subjectId: number,
     options: { causallyEligible: boolean }
@@ -950,6 +960,70 @@ describe('entity subject physical inventory', () => {
       },
     });
     expect(internal.__listSubjectReclamationCandidates?.()).toEqual([]);
+  });
+
+  it('reconstructs the materialized projection exactly from structural and value ownership', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    api.addOne({ id: 2, name: 'Bob', active: false });
+    api.addOne({ id: 3, name: 'Cara', active: true });
+
+    const subjectOne = api.byIdOrFail(1).name.__subjectIds?.[0];
+    const subjectThree = api.byIdOrFail(3).name.__subjectIds?.[0];
+    if (subjectOne === undefined || subjectThree === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.updateOne(1, { name: 'Alicia' });
+    api.changeId(2, 4);
+    api.removeOne(3);
+    internal.__restoreOne?.(5, { id: 5, name: 'Cara', active: true }, subjectThree);
+    api.removeOne(1);
+    api.addOne({ id: 1, name: 'Delta', active: false });
+
+    const replacementSubject = api.byIdOrFail(1).name.__subjectIds?.[0];
+    if (replacementSubject === undefined) {
+      throw new Error('Expected subject metadata for replacement field');
+    }
+
+    expect(replacementSubject).not.toBe(subjectOne);
+
+    const expectedEntries = [
+      [4, { id: 2, name: 'Bob', active: false }],
+      [5, { id: 5, name: 'Cara', active: true }],
+      [1, { id: 1, name: 'Delta', active: false }],
+    ] as const;
+
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(Array.from(api.asMap().entries())).toEqual(expectedEntries);
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectOne]);
+
+    internal.__clearStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__rebuildStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(Array.from(api.asMap().entries())).toEqual(expectedEntries);
   });
 
   it('keeps retained backing on subject identity rather than key reuse', () => {

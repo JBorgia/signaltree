@@ -225,6 +225,9 @@ export function createEntitySignal<
   // ==================
 
   /** Core storage: entity ID -> entity */
+  // Derived materialized projection only.
+  // Authoritative structural state lives in structuralStore.
+  // Authoritative subject values live in valueStore.
   const storage = new Map<K, E>();
 
   /**
@@ -272,6 +275,18 @@ export function createEntitySignal<
     for (const [id, entity] of getProjectedEntries()) {
       storage.set(id, entity);
     }
+  }
+
+  function snapshotStorageProjection(): ReadonlyMap<K, E> {
+    return new Map(storage);
+  }
+
+  function rebuildActiveProjectionFromOwners(): ReadonlyMap<K, E> {
+    return new Map(getProjectedEntries());
+  }
+
+  function clearStorageProjectionForTesting(): void {
+    storage.clear();
   }
 
   /** Reactive signals for queries — all derived, none eagerly maintained. */
@@ -2638,6 +2653,26 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__listSubjectReclamationCandidates', {
     value: listSubjectReclamationCandidates,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__snapshotStorageProjectionForTesting', {
+    value: snapshotStorageProjection,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__rebuildActiveProjectionFromOwnersForTesting', {
+    value: rebuildActiveProjectionFromOwners,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__clearStorageProjectionForTesting', {
+    value: clearStorageProjectionForTesting,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__rebuildStorageProjectionForTesting', {
+    value: rebuildStorageProjection,
     enumerable: false,
     configurable: true,
   });
