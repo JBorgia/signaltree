@@ -891,6 +891,67 @@ describe('entity subject physical inventory', () => {
     expect(internal.__listSubjectReclamationCandidates?.()).toEqual([foreignSubjectId]);
   });
 
+  it('replaces subject-owned value without changing structural identity or facades', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addMany([
+      { id: 1, name: 'Jon', active: true },
+      { id: 2, name: 'Other', active: false },
+      { id: 3, name: 'Third', active: true },
+    ]);
+
+    const heldRow = api.byIdOrFail(2);
+    const heldField = heldRow.name;
+    const subjectId = heldField.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    expect(api.ids()).toEqual([1, 2, 3]);
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.replaceOne(2, { id: 2, name: 'Jonathan', active: true });
+
+    const replacedRow = api.byIdOrFail(2);
+    expect(api.ids()).toEqual([1, 2, 3]);
+    expect(replacedRow).toBe(heldRow);
+    expect(replacedRow.name).toBe(heldField);
+    expect(replacedRow.name()).toBe('Jonathan');
+    expect(replacedRow.active()).toBe(true);
+    expect(replacedRow.name.__subjectIds?.[0]).toBe(subjectId);
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([]);
+  });
+
   it('keeps retained backing on subject identity rather than key reuse', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;

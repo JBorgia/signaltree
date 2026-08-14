@@ -66,10 +66,10 @@ export type EntitySubjectPhysicalInventory<K extends string | number> = {
   fieldFacadesMaterialized: readonly string[];
   positionIds: readonly PositionId[] | undefined;
   retainedValueBacking:
-    | {
-        kind: 'retained-entity-signal';
-      }
-    | undefined;
+  | {
+    kind: 'retained-entity-signal';
+  }
+  | undefined;
 };
 
 export type EntitySubjectReclamationResource =
@@ -400,14 +400,14 @@ export function createEntitySignal<
         beforeSubject === undefined
           ? -1
           : this.activeKeys.findIndex(
-              (key) => this.subjectIdForKey(key) === beforeSubject
-            );
+            (key) => this.subjectIdForKey(key) === beforeSubject
+          );
       const afterIndex =
         afterSubject === undefined
           ? -1
           : this.activeKeys.findIndex(
-              (key) => this.subjectIdForKey(key) === afterSubject
-            );
+            (key) => this.subjectIdForKey(key) === afterSubject
+          );
 
       if (beforeIndex !== -1 && afterIndex !== -1 && beforeIndex < afterIndex) {
         return beforeIndex + 1;
@@ -687,13 +687,13 @@ export function createEntitySignal<
     );
     console.warn(
       `SignalTree: \`${method}()\` received ${window.count} DIFFERENT functions ` +
-        `with identical source in ${Math.round(now - window.start)}ms ` +
-        `(~${perSecond}/second) — a rate only change detection produces. ` +
-        `Results are memoised per predicate IDENTITY, so an inline arrow misses ` +
-        `the cache every cycle and re-scans the collection: measured at 75x a ` +
-        `hoisted predicate over 1,000 entities. Hoist it to a stable reference ` +
-        `(a class field or module constant) and call ` +
-        `\`${method}(thePredicate)()\`. Source: ${source.slice(0, 80)} [ST2026]`
+      `with identical source in ${Math.round(now - window.start)}ms ` +
+      `(~${perSecond}/second) — a rate only change detection produces. ` +
+      `Results are memoised per predicate IDENTITY, so an inline arrow misses ` +
+      `the cache every cycle and re-scans the collection: measured at 75x a ` +
+      `hoisted predicate over 1,000 entities. Hoist it to a stable reference ` +
+      `(a class field or module constant) and call ` +
+      `\`${method}(thePredicate)()\`. Source: ${source.slice(0, 80)} [ST2026]`
     );
   }
 
@@ -992,12 +992,12 @@ export function createEntitySignal<
       kind: 'add',
       subject: subjectIdsForWrite[0],
       key: id,
-        value: deepClone(transformedEntity),
+      value: deepClone(transformedEntity),
       beforeSubject:
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
-      invalidateNodeCache(id);
+    invalidateNodeCache(id);
     syncEntitySignal(id);
     updateSignals();
 
@@ -1097,12 +1097,12 @@ export function createEntitySignal<
   const nodeFinalizer =
     typeof FinalizationRegistry === 'function'
       ? new FinalizationRegistry<number>((subjectId) => {
-          // Only drop the slot if it is still the dead ref — a later byId()
-          // may already have installed a live replacement.
-          if (nodeCache.get(subjectId)?.deref() === undefined) {
-            nodeCache.delete(subjectId);
-          }
-        })
+        // Only drop the slot if it is still the dead ref — a later byId()
+        // may already have installed a live replacement.
+        if (nodeCache.get(subjectId)?.deref() === undefined) {
+          nodeCache.delete(subjectId);
+        }
+      })
       : null;
 
   function invalidateNodeCache(id: K): void {
@@ -1139,14 +1139,13 @@ export function createEntitySignal<
     ) {
       warnedMissingId = true;
       console.warn(
-        `SignalTree entityMap${
-          basePath ? ` at "${basePath}"` : ''
+        `SignalTree entityMap${basePath ? ` at "${basePath}"` : ''
         }: an entity ` +
-          `resolved to id=${String(
-            id
-          )}. Entities need a stable key — give them ` +
-          `an \`id\` field or pass entityMap({ selectId: (e) => e.yourKey }). ` +
-          `Without it, entities collide under a single key. [ST2001]`
+        `resolved to id=${String(
+          id
+        )}. Entities need a stable key — give them ` +
+        `an \`id\` field or pass entityMap({ selectId: (e) => e.yourKey }). ` +
+        `Without it, entities collide under a single key. [ST2001]`
       );
     }
     return id;
@@ -1328,8 +1327,8 @@ export function createEntitySignal<
       node === undefined
         ? []
         : Object.keys(node as Record<string, unknown>).filter((key) =>
-            typeof (node as Record<string, unknown>)[key] === 'function'
-          ).sort((left, right) => left.localeCompare(right));
+          typeof (node as Record<string, unknown>)[key] === 'function'
+        ).sort((left, right) => left.localeCompare(right));
 
     return {
       subjectId,
@@ -1803,9 +1802,9 @@ export function createEntitySignal<
       }
 
       const finalUpdated = { ...entity, ...transformedChanges };
-      storage.set(id, finalUpdated);
       const subjectIdsForWrite = rememberSubjectIds([id]);
       valueStore.retainSubjectValue(subjectIdsForWrite[0], finalUpdated);
+      storage.set(id, finalUpdated);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1862,8 +1861,8 @@ export function createEntitySignal<
         handler.onUpdate?.(id, entity as Partial<E>, ctx);
       }
 
-        storage.set(id, next);
-        valueStore.retainValueForKey(id, next);
+      valueStore.retainValueForKey(id, next);
+      storage.set(id, next);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1917,8 +1916,8 @@ export function createEntitySignal<
         }
 
         const finalUpdated = { ...entity, ...transformedChanges };
-        storage.set(id, finalUpdated);
         valueStore.retainValueForKey(id, finalUpdated);
+        storage.set(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -2283,24 +2282,24 @@ export function createEntitySignal<
         const id = deriveId(entity, opts);
         const transformedEntity = currentIds.has(id)
           ? (() => {
-              let replacement = entity;
-              for (const handler of interceptHandlers) {
-                const ctx: InterceptContext<Partial<E>> = {
-                  block: (reason?: string) => {
-                    throw new Error(
-                      `Cannot replace entity: ${reason || 'blocked by interceptor'}`
-                    );
-                  },
-                  transform: (value: Partial<E>) => {
-                    replacement = value as E;
-                  },
-                  blocked: false,
-                  blockReason: undefined,
-                };
-                handler.onUpdate?.(id, entity as Partial<E>, ctx);
-              }
-              return replacement;
-            })()
+            let replacement = entity;
+            for (const handler of interceptHandlers) {
+              const ctx: InterceptContext<Partial<E>> = {
+                block: (reason?: string) => {
+                  throw new Error(
+                    `Cannot replace entity: ${reason || 'blocked by interceptor'}`
+                  );
+                },
+                transform: (value: Partial<E>) => {
+                  replacement = value as E;
+                },
+                blocked: false,
+                blockReason: undefined,
+              };
+              handler.onUpdate?.(id, entity as Partial<E>, ctx);
+            }
+            return replacement;
+          })()
           : interceptAddedEntity(entity);
 
         if (!stagedIncomingById.has(id)) {
@@ -2695,7 +2694,7 @@ export function createEntitySignal<
         warnedWrongMethods.add(prop);
         console.warn(
           `SignalTree entityMap has no \`.${prop}()\`. Did you mean: ` +
-            `${WRONG_ENTITY_METHODS[prop]}? [ST2002]`
+          `${WRONG_ENTITY_METHODS[prop]}? [ST2002]`
         );
       }
       // All other access goes directly to api
