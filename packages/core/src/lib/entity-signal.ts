@@ -54,6 +54,23 @@ export function setEntityPositionIdNotifyEnabledForTesting(
   entityPositionIdNotifyEnabled = enabled;
 }
 
+export type EntitySubjectPhysicalInventory<K extends string | number> = {
+  subjectId: number;
+  state: 'active' | 'tombstoned';
+  activeKey: K | undefined;
+  retainedSubjectState: boolean;
+  entitySignal: boolean;
+  activationToken: boolean;
+  nodeFacadeMaterialized: boolean;
+  fieldFacadesMaterialized: readonly string[];
+  positionIds: readonly PositionId[] | undefined;
+  retainedValueBacking:
+    | {
+        kind: 'retained-entity-signal';
+      }
+    | undefined;
+};
+
 /**
  * EntitySignal Implementation (Composition Pattern)
  *
@@ -952,6 +969,38 @@ export function createEntitySignal<
       nodeFinalizer?.register(node, subjectId);
     }
     return node;
+  }
+
+  function inspectSubjectResources(
+    subjectId: number
+  ): EntitySubjectPhysicalInventory<K> | undefined {
+    const subjectState = resolveSubjectState(subjectId);
+    if (!subjectState) {
+      return undefined;
+    }
+
+    const node = nodeCache.get(subjectId)?.deref();
+    const fieldFacadesMaterialized =
+      node === undefined
+        ? []
+        : Object.keys(node as Record<string, unknown>).filter((key) =>
+            typeof (node as Record<string, unknown>)[key] === 'function'
+          ).sort((left, right) => left.localeCompare(right));
+
+    return {
+      subjectId,
+      state: subjectState.active ? 'active' : 'tombstoned',
+      activeKey: subjectState.active ? subjectState.key : undefined,
+      retainedSubjectState: subjectStates.has(subjectId),
+      entitySignal: entitySignals.has(subjectId),
+      activationToken: subjectStateSignals.has(subjectId),
+      nodeFacadeMaterialized: node !== undefined,
+      fieldFacadesMaterialized,
+      positionIds: getPositionIds(),
+      retainedValueBacking: entitySignals.has(subjectId)
+        ? { kind: 'retained-entity-signal' }
+        : undefined,
+    };
   }
 
   // ==================
@@ -1950,6 +1999,11 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__planRekey', {
     value: planRekey,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__inspectSubjectResources', {
+    value: inspectSubjectResources,
     enumerable: false,
     configurable: true,
   });

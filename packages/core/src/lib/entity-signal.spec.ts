@@ -11,6 +11,17 @@ const pathNotifier = {
   },
 } as any;
 
+type SubjectInventoryApi = {
+  __inspectSubjectResources?: (subjectId: number) => unknown;
+  __restoreOne?: (
+    key: number,
+    entity: { id: number; name: string; active: boolean },
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ) => void;
+};
+
 describe('EntityNode field writes (Option B+ computed-based shim)', () => {
   type User = { id: number; name: string; active: boolean };
 
@@ -115,6 +126,119 @@ describe('EntityNode field writes (Option B+ computed-based shim)', () => {
     expect(() =>
       (node as unknown as (v: User) => void)({ id: 1, name: 'Bob', active: false })
     ).toThrow('not found');
+  });
+});
+
+describe('entity subject physical inventory', () => {
+  type User = { id: number; name: string; active: boolean };
+
+  function makeApi() {
+    return createEntitySignal<User, number>(
+      { selectId: (u) => u.id },
+      pathNotifier,
+      'users'
+    );
+  }
+
+  it('describes a tombstoned subject shell separately from active key reuse and same-subject restore', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldRow = api.byIdOrFail(1);
+    const heldField = heldRow.name;
+    const subjectId = heldField.__subjectIds?.[0];
+    const positionIds = heldField.__positionIds;
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'active',
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.removeOne(1);
+
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.addOne({ id: 1, name: 'Bob', active: false });
+    const foreignSubjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
+    expect(foreignSubjectId).not.toBe(subjectId);
+
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__inspectSubjectResources?.(foreignSubjectId as number)).toEqual({
+      subjectId: foreignSubjectId,
+      state: 'active',
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.removeOne(1);
+    internal.__restoreOne?.(1, { id: 1, name: 'Alice', active: true }, subjectId);
+
+    const restored = api.byIdOrFail(1);
+    expect(restored).toBe(heldRow);
+    expect(restored.name).toBe(heldField);
+    expect(restored.name.__subjectIds?.[0]).toBe(subjectId);
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'active',
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
   });
 });
 
