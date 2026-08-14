@@ -267,6 +267,13 @@ export function createEntitySignal<
     return getProjectedEntries().map(([, entity]) => entity);
   }
 
+  function rebuildStorageProjection(): void {
+    storage.clear();
+    for (const [id, entity] of getProjectedEntries()) {
+      storage.set(id, entity);
+    }
+  }
+
   /** Reactive signals for queries — all derived, none eagerly maintained. */
   const allSignal: Signal<E[]> = computed(() => {
     version();
@@ -726,22 +733,14 @@ export function createEntitySignal<
 
     return {
       commit(): void {
-        const entries = Array.from(storage.entries());
-        storage.clear();
-        for (const [key, value] of entries) {
-          if (key === from) {
-            storage.set(to, value);
-          } else {
-            storage.set(key, value);
-          }
-        }
+        transferSubjectId(from, to);
+        rekeyedSubjects.add(subjectId);
+        rebuildStorageProjection();
 
         if (activeIdSignal() === from) {
           activeIdSignal.set(to);
         }
 
-        transferSubjectId(from, to);
-        rekeyedSubjects.add(subjectId);
         syncEntitySignal(to);
         updateSignals();
       },
