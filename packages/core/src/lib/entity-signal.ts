@@ -248,10 +248,29 @@ export function createEntitySignal<
    */
   const version = signal(0);
 
+  function getProjectedEntity(id: K): E | undefined {
+    return valueStore.backingForKey(id);
+  }
+
+  function getProjectedEntries(): Array<readonly [K, E]> {
+    const entries: Array<readonly [K, E]> = [];
+    for (const id of structuralStore.activeKeysSnapshot()) {
+      const entity = getProjectedEntity(id);
+      if (entity !== undefined) {
+        entries.push([id, entity] as const);
+      }
+    }
+    return entries;
+  }
+
+  function getProjectedEntities(): E[] {
+    return getProjectedEntries().map(([, entity]) => entity);
+  }
+
   /** Reactive signals for queries — all derived, none eagerly maintained. */
   const allSignal: Signal<E[]> = computed(() => {
     version();
-    const entities = Array.from(storage.values());
+    const entities = getProjectedEntities();
     // `sortComparer` gives `all`/`ids` a stable sorted order (parity with
     // @ngrx/entity); `map` keeps insertion order.
     if (config.sortComparer) entities.sort(config.sortComparer);
@@ -260,19 +279,19 @@ export function createEntitySignal<
   const countSignal: Signal<number> = computed(() => {
     version();
     // O(1) — this used to be `entities.length` on a freshly built array.
-    return storage.size;
+    return structuralStore.activeKeyCount();
   });
   const idsSignal: Signal<K[]> = computed(() => {
     version();
     return config.sortComparer
       ? allSignal().map((e) => selectId(e))
-      : Array.from(storage.keys());
+      : [...structuralStore.activeKeysSnapshot()];
   });
   const mapSignal: Signal<ReadonlyMap<K, E>> = computed(() => {
     version();
     // Still a copy: callers may hold the result across mutations and must not
     // see it change underneath them. But it is paid on read, not on write.
-    return new Map(storage);
+    return new Map(getProjectedEntries());
   });
 
   /**
@@ -324,6 +343,15 @@ export function createEntitySignal<
     activeKeyForSubject(subjectId: number): K | undefined {
       const state = this.stateForSubject(subjectId);
       return state?.active ? state.key : undefined;
+    },
+    hasActiveKey(key: K): boolean {
+      return this.subjectIds.has(key);
+    },
+    activeKeyCount(): number {
+      return this.activeKeys.length;
+    },
+    activeKeysSnapshot(): readonly K[] {
+      return [...this.activeKeys];
     },
     firstActiveKey(): K | undefined {
       return this.activeKeys[0];
@@ -478,6 +506,10 @@ export function createEntitySignal<
     retainedEntities: new Map<number, E>(),
     backingForSubject(subjectId: number): E | undefined {
       return this.retainedEntities.get(subjectId);
+    },
+    backingForKey(key: K): E | undefined {
+      const subjectId = structuralStore.subjectIdForKey(key);
+      return subjectId === undefined ? undefined : this.backingForSubject(subjectId);
     },
     retainSubjectValue(subjectId: number, entity: E): void {
       this.retainedEntities.set(subjectId, entity);
@@ -665,7 +697,7 @@ export function createEntitySignal<
     commit(): void;
     publish(metaOverride?: UpdateMetadata): void;
   } {
-    const entity = storage.get(from);
+    const entity = getProjectedEntity(from);
     if (!entity) {
       throw new Error(`Entity with id ${String(from)} not found`);
     }
@@ -679,7 +711,7 @@ export function createEntitySignal<
         },
       };
     }
-    if (storage.has(to)) {
+    if (structuralStore.hasActiveKey(to)) {
       throw new Error(`Cannot change id to ${String(to)}: already in use`);
     }
 
@@ -855,7 +887,7 @@ export function createEntitySignal<
     beforeSubject?: number,
     afterSubject?: number
   ): void {
-    if (storage.has(key)) {
+    if (structuralStore.hasActiveKey(key)) {
       throw new Error(`Entity with id ${String(key)} already exists`);
     }
 
@@ -953,9 +985,9 @@ export function createEntitySignal<
     opts?: AddOptions<E, K>
   ): { id: K; historyEffect: PendingAddHistoryEffect } {
     const id = deriveId(entity, opts);
-    const previousKeys = Array.from(storage.keys());
+    const previousKeys = [...structuralStore.activeKeysSnapshot()];
 
-    if (storage.has(id)) {
+    if (structuralStore.hasActiveKey(id)) {
       throw new Error(`Entity with id ${String(id)} already exists`);
     }
 
@@ -1200,7 +1232,7 @@ export function createEntitySignal<
       if (key === undefined) {
         throw new Error(`Entity with subject ${String(subjectId)} not found`);
       }
-      const current = storage.get(key);
+      const current = getProjectedEntity(key);
       if (current === undefined) {
         throw new Error(`Entity with id ${String(key)} not found`);
       }
@@ -1428,7 +1460,7 @@ export function createEntitySignal<
     // ==================
 
     byId(id: K): EntityNode<E> | undefined {
-      if (storage.has(id)) {
+      if (structuralStore.hasActiveKey(id)) {
         // Present: subscribe to the PER-ENTITY signal only, so callers re-run
         // when THIS entity changes but not when others do (body-granular).
         // Materialized lazily here — bounded by the number of live entities.
@@ -1512,7 +1544,10 @@ export function createEntitySignal<
     },
 
     has(id: K): Signal<boolean> {
-      return computed(() => mapSignal().has(id));
+      return computed(() => {
+        version();
+        return structuralStore.hasActiveKey(id);
+      });
     },
 
     // Bare canonical name (the `.isEmpty` alias was removed in v11).
@@ -1559,7 +1594,7 @@ export function createEntitySignal<
         if (config.sortComparer) return allSignal().filter(predicate);
         version();
         const out: E[] = [];
-        for (const entity of storage.values()) {
+        for (const entity of getProjectedEntities()) {
           if (predicate(entity)) out.push(entity);
         }
         return out;
@@ -1592,7 +1627,7 @@ export function createEntitySignal<
       const s = computed(() => {
         if (config.sortComparer) return allSignal().find(predicate);
         version();
-        for (const entity of storage.values()) {
+        for (const entity of getProjectedEntities()) {
           if (predicate(entity)) return entity;
         }
         return undefined;
@@ -1612,7 +1647,7 @@ export function createEntitySignal<
     /**
      * Insert at the FRONT, reusing `addOne` and then moving the entry.
      *
-     * The storage map is insertion-ordered and JS gives no way to unshift one,
+        if (structuralStore.hasActiveKey(id)) {
      * so the entry order is rebuilt — O(n) in the number of entities. That is
      * still markedly cheaper than the `setAll([entity, ...existing])` this
      * replaces, which rebuilds the storage map AND resets every per-entity
@@ -1670,7 +1705,7 @@ export function createEntitySignal<
       const toProcess: Array<{ entity: E; id: K }> = [];
       for (const entity of entities) {
         const id = deriveId(entity, opts);
-        if (storage.has(id)) {
+        if (structuralStore.hasActiveKey(id)) {
           if (mode === 'strict') {
             throw new Error(`Entity with id ${String(id)} already exists`);
           } else if (mode === 'skip') {
@@ -1709,7 +1744,9 @@ export function createEntitySignal<
 
       const subjectIdsForWrite = rememberSubjectIds(processedIds);
 
-      const previousKeys = Array.from(storage.keys()).slice(0, -processedIds.length);
+      const previousKeys = structuralStore
+        .activeKeysSnapshot()
+        .slice(0, -processedIds.length);
 
       // Notify PathNotifier for each processed entity
       for (let i = 0; i < addedEntities.length; i++) {
@@ -1749,7 +1786,7 @@ export function createEntitySignal<
     // ==================
 
     updateOne(id: K, changes: Partial<E>): void {
-      const entity = storage.get(id);
+      const entity = getProjectedEntity(id);
       if (!entity) {
         throw new Error(`Entity with id ${String(id)} not found`);
       }
@@ -1812,7 +1849,7 @@ export function createEntitySignal<
      * wrong-slot write built into it. This one cannot drift.
      */
     replaceOne(id: K, entity: E): void {
-      const prev = storage.get(id);
+      const prev = getProjectedEntity(id);
       if (!prev) {
         throw new Error(`Entity with id ${String(id)} not found`);
       }
@@ -1834,8 +1871,8 @@ export function createEntitySignal<
         handler.onUpdate?.(id, entity as Partial<E>, ctx);
       }
 
-      storage.set(id, next);
-  valueStore.retainValueForKey(id, next);
+        storage.set(id, next);
+        valueStore.retainValueForKey(id, next);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1864,7 +1901,7 @@ export function createEntitySignal<
       }> = [];
 
       for (const id of ids) {
-        const entity = storage.get(id);
+        const entity = getProjectedEntity(id);
         if (!entity) {
           throw new Error(`Entity with id ${String(id)} not found`);
         }
@@ -1927,7 +1964,7 @@ export function createEntitySignal<
       changes: Partial<E>
     ): number {
       const idsToUpdate: K[] = [];
-      for (const [id, entity] of storage) {
+      for (const [id, entity] of getProjectedEntries()) {
         if (predicate(entity)) {
           idsToUpdate.push(id);
         }
@@ -1943,7 +1980,7 @@ export function createEntitySignal<
     // ==================
 
     removeOne(id: K): void {
-      const entity = storage.get(id);
+      const entity = getProjectedEntity(id);
       if (!entity) {
         throw new Error(`Entity with id ${String(id)} not found`);
       }
@@ -2016,7 +2053,7 @@ export function createEntitySignal<
       >();
       const subjectPositionsById = new Map<K, readonly PositionId[] | undefined>();
       for (const id of ids) {
-        const entity = storage.get(id);
+        const entity = getProjectedEntity(id);
         if (!entity) {
           throw new Error(`Entity with id ${String(id)} not found`);
         }
@@ -2098,7 +2135,7 @@ export function createEntitySignal<
 
     removeWhere(predicate: (entity: E) => boolean): number {
       const idsToRemove: K[] = [];
-      for (const [id, entity] of storage) {
+      for (const [id, entity] of getProjectedEntries()) {
         if (predicate(entity)) {
           idsToRemove.push(id);
         }
@@ -2115,7 +2152,7 @@ export function createEntitySignal<
 
     upsertOne(entity: E, opts?: AddOptions<E, K>): K {
       const id = deriveId(entity, opts);
-      if (storage.has(id)) {
+      if (structuralStore.hasActiveKey(id)) {
         api.updateOne(id, entity);
       } else {
         api.addOne(entity, opts);
@@ -2132,7 +2169,7 @@ export function createEntitySignal<
 
       for (const entity of entities) {
         const id = deriveId(entity, opts);
-        const existing = storage.get(id);
+        const existing = getProjectedEntity(id);
         if (existing !== undefined) {
           toUpdate.push({ entity, id, prev: existing });
         } else {
@@ -2248,7 +2285,7 @@ export function createEntitySignal<
     },
 
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
-      const currentEntries = Array.from(storage.entries());
+      const currentEntries = getProjectedEntries();
       const currentIds = new Set(currentEntries.map(([id]) => id));
       const stagedIncomingIds: K[] = [];
       const stagedIncomingById = new Map<K, E>();
@@ -2313,7 +2350,7 @@ export function createEntitySignal<
       const stagedUpdates = stagedIncomingIds
         .filter((id) => currentIds.has(id))
         .map((id) => {
-          const prev = storage.get(id);
+          const prev = getProjectedEntity(id);
           const entity = stagedIncomingById.get(id);
           if (prev === undefined || entity === undefined) {
             throw new Error(`Entity with id ${String(id)} not found`);
