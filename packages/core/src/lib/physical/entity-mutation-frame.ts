@@ -97,8 +97,8 @@ export class EntityMutationFrame<
         const subjectId = this.structuralStore.allocateFreshSubjectId();
         this.structuralStore.createSubject(subjectId, mutation.key);
         this.valueStore.retainSubjectValue(subjectId, mutation.nextValue);
-        this.materializedProjection.replaceEntry(mutation.key, mutation.nextValue);
         allocatedSubjectIds.push(subjectId);
+        requiresProjectionRebuild = true;
         continue;
       }
 

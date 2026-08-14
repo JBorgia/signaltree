@@ -1530,6 +1530,7 @@ export function createEntitySignal<
 
     addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
       const mode = opts?.mode ?? 'strict';
+      const previousKeys = [...structuralStore.activeKeysSnapshot()];
 
       // First pass: validate/filter based on mode
       const toProcess: Array<{
@@ -1561,10 +1562,27 @@ export function createEntitySignal<
         existingSubjectId,
       }));
 
-      const freshIds = stagedAdds
-        .filter(({ existingSubjectId }) => existingSubjectId === undefined)
-        .map(({ id }) => id);
-      const freshSubjectIds = commitFreshSubjects(freshIds);
+      const frame = createEntityMutationFrame();
+      for (const { id, entity: transformedEntity, existingSubjectId } of stagedAdds) {
+        if (existingSubjectId === undefined) {
+          frame.stageFreshSubject({
+            kind: 'create-fresh-subject',
+            key: id,
+            nextValue: transformedEntity,
+          });
+          continue;
+        }
+
+        frame.stageValueReplacement({
+          kind: 'replace-value',
+          key: id,
+          subjectId: existingSubjectId,
+          nextValue: transformedEntity,
+        });
+      }
+
+      const result = frame.commit();
+      const freshSubjectIds = result.allocatedSubjectIds;
       const subjectIdsByKey = new Map<K, number>();
       let freshIndex = 0;
       for (const { id, existingSubjectId } of stagedAdds) {
@@ -1577,13 +1595,14 @@ export function createEntitySignal<
       const processedIds: K[] = [];
       const addedEntities: Array<{ id: K; entity: E; subjectId: number }> = [];
 
-      for (const { entity: transformedEntity, id } of stagedAdds) {
+      for (const { entity: transformedEntity, id, existingSubjectId } of stagedAdds) {
         const subjectId = subjectIdsByKey.get(id);
         if (subjectId === undefined) {
           throw new Error(`Entity with id ${String(id)} has no subject id`);
         }
-        writeStorageProjectionEntry(id, transformedEntity);
-        valueStore.retainSubjectValue(subjectId, transformedEntity);
+        if (existingSubjectId === undefined) {
+          getSubjectStateSignal(subjectId);
+        }
         invalidateNodeCache(id);
         syncEntitySignal(id);
         processedIds.push(id);
@@ -1601,10 +1620,6 @@ export function createEntitySignal<
         return subjectId;
       });
       lastSubjectIds = subjectIdsForWrite;
-
-      const previousKeys = structuralStore
-        .activeKeysSnapshot()
-        .slice(0, -freshIds.length);
 
       // Notify PathNotifier for each processed entity
       for (let i = 0; i < addedEntities.length; i++) {
