@@ -130,13 +130,8 @@ describe('entityMap — collection queries are lazily derived (13.5.0)', () => {
   });
 });
 
-describe('entityMap — a held node reference survives collection churn', () => {
-  it('reads again after the entity is removed and re-added', () => {
-    // Holding a reference to a nested position is the capability SignalTree has
-    // that immutable stores do not. Capturing the per-entity signal once made a
-    // held node permanently dead across remove -> re-add: removal deletes the
-    // signal, the re-add creates a new one, and the held reference kept reading
-    // the orphan — undefined forever, while a fresh byId() worked.
+describe('entityMap — tombstoned subjects stay distinct from later key reuse', () => {
+  it('does not let a held node revive when the same key is reused by a new subject', () => {
     const tree = signalTree({
       rows: entityMap<{ id: number; v: string }, number>({
         selectId: (r) => r.id,
@@ -151,11 +146,11 @@ describe('entityMap — a held node reference survives collection churn', () => 
     expect(held?.()).toBeUndefined(); // gone, correctly
 
     tree.$.rows.addOne({ id: 1, v: 'b' });
-    expect(held?.().v).toBe('b'); // and it comes back
-    expect(tree.$.rows.byId(1)?.().v).toBe('b');
+    expect(held?.()).toBeUndefined(); // tombstoned subject stays absent
+    expect(tree.$.rows.byId(1)?.().v).toBe('b'); // fresh lookup sees the new subject
   });
 
-  it('a held FIELD reference also recovers', () => {
+  it('a held FIELD reference also stays absent across key reuse by a new subject', () => {
     const tree = signalTree({
       rows: entityMap<{ id: number; v: string }, number>({
         selectId: (r) => r.id,
@@ -169,6 +164,7 @@ describe('entityMap — a held node reference survives collection churn', () => 
     tree.$.rows.removeOne(1);
     tree.$.rows.addOne({ id: 1, v: 'b' });
 
-    expect(field()).toBe('b');
+    expect(field()).toBeUndefined();
+    expect(tree.$.rows.byId(1)?.v()).toBe('b');
   });
 });

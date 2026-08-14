@@ -175,6 +175,8 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<number, WritableSignal<E | undefined>>();
   const subjectIds = new Map<K, number>();
+  const subjectStates = new Map<number, { active: boolean; key?: K }>();
+  const subjectStateSignals = new Map<number, WritableSignal<number>>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
     options?.subjectMetadataEnabled ?? ownerMetadataEnabled;
@@ -433,6 +435,12 @@ export function createEntitySignal<
     return subjectIds.get(id);
   }
 
+  function resolveSubjectState(subjectId: number):
+    | { active: boolean; key?: K }
+    | undefined {
+    return subjectStates.get(subjectId);
+  }
+
   /** Get (or lazily create) the per-entity signal, seeded from storage. */
   function getEntitySignal(id: K): WritableSignal<E | undefined> {
     const subjectId = resolveSubjectId(id);
@@ -448,6 +456,19 @@ export function createEntitySignal<
     return s;
   }
 
+  function getSubjectStateSignal(subjectId: number): WritableSignal<number> {
+    let s = subjectStateSignals.get(subjectId);
+    if (!s) {
+      s = signal(0);
+      subjectStateSignals.set(subjectId, s);
+    }
+    return s;
+  }
+
+  function bumpSubjectStateSignal(subjectId: number): void {
+    getSubjectStateSignal(subjectId).update((value) => value + 1);
+  }
+
   function allocateSubjectId(id: K): number {
     const existing = subjectIds.get(id);
     if (existing !== undefined) {
@@ -456,6 +477,8 @@ export function createEntitySignal<
 
     const subjectId = nextSubjectId++;
     subjectIds.set(id, subjectId);
+    subjectStates.set(subjectId, { active: true, key: id });
+    getSubjectStateSignal(subjectId);
     return subjectId;
   }
 
@@ -469,18 +492,15 @@ export function createEntitySignal<
     const subjectId = allocateSubjectId(from);
     subjectIds.delete(from);
     subjectIds.set(to, subjectId);
+    subjectStates.set(subjectId, { active: true, key: to });
+    bumpSubjectStateSignal(subjectId);
     lastSubjectIds = [subjectId];
     return subjectId;
   }
 
   function findKeyBySubjectId(subjectId: number): K | undefined {
-    for (const [key, candidateSubjectId] of subjectIds.entries()) {
-      if (candidateSubjectId === subjectId) {
-        return key;
-      }
-    }
-
-    return undefined;
+    const state = resolveSubjectState(subjectId);
+    return state?.active ? state.key : undefined;
   }
 
   function getNeighborSubjects(id: K): {
@@ -552,8 +572,9 @@ export function createEntitySignal<
     }
 
     subjectIds.set(key, subjectId);
+    subjectStates.set(subjectId, { active: true, key });
+    bumpSubjectStateSignal(subjectId);
     lastSubjectIds = [subjectId];
-    invalidateNodeCache(key);
     syncEntitySignal(key);
     updateSignals();
     pathNotifier.notify(
@@ -669,6 +690,10 @@ export function createEntitySignal<
       s.set(undefined);
       entitySignals.delete(subjectId);
     }
+  }
+
+  function tombstoneSubjectSignal(subjectId: number): void {
+    entitySignals.get(subjectId)?.set(undefined);
   }
 
   /**
@@ -815,18 +840,13 @@ export function createEntitySignal<
     // capability this library has and its competitors do not, so it must
     // survive the collection churning underneath it.
     //
-    // `getEntitySignal` re-materialises from storage when absent, so a node
-    // held across a removal reads `undefined` while the entity is gone and
-    // starts reading again the moment it comes back.
+    // Subject reachability is now independent from subject retention. A
+    // removed subject becomes structurally unreachable by clearing its active
+    // key binding, while the retained subject id, signal, and cached node can
+    // survive until a separate restoration or reclamation decision.
     const currentKey = (): K | undefined => {
-      const liveKey = findKeyBySubjectId(subjectId);
-      if (liveKey !== undefined) {
-        return liveKey;
-      }
-
-      return !rekeyedSubjects.has(subjectId) && storage.has(initialKey)
-        ? initialKey
-        : undefined;
+      getSubjectStateSignal(subjectId)();
+      return findKeyBySubjectId(subjectId);
     };
 
     const entitySig = () => {
@@ -1317,7 +1337,6 @@ export function createEntitySignal<
       const finalUpdated = { ...entity, ...transformedChanges };
       storage.set(id, finalUpdated);
       const subjectIdsForWrite = rememberSubjectIds([id]);
-      invalidateNodeCache(id);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1375,7 +1394,6 @@ export function createEntitySignal<
       }
 
       storage.set(id, next);
-  invalidateNodeCache(id);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1430,7 +1448,6 @@ export function createEntitySignal<
 
         const finalUpdated = { ...entity, ...transformedChanges };
         storage.set(id, finalUpdated);
-        invalidateNodeCache(id);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -1517,10 +1534,11 @@ export function createEntitySignal<
         afterSubject,
         subjectPositions: deriveSubjectPositions(id, entity),
       };
-      invalidateNodeCache(id);
-      removeEntitySignal(id);
+      tombstoneSubjectSignal(subjectIdsForWrite[0]);
       storage.delete(id);
       subjectIds.delete(id);
+      subjectStates.set(subjectIdsForWrite[0], { active: false });
+      bumpSubjectStateSignal(subjectIdsForWrite[0]);
       updateSignals();
 
       // Notify PathNotifier
@@ -1582,10 +1600,16 @@ export function createEntitySignal<
       const subjectIdsForWrite = rememberSubjectIds(ids);
 
       for (const { id } of entitiesToRemove) {
-        invalidateNodeCache(id);
-        removeEntitySignal(id);
+        const subjectId = subjectIds.get(id);
+        if (subjectId !== undefined) {
+          tombstoneSubjectSignal(subjectId);
+        }
         storage.delete(id);
         subjectIds.delete(id);
+        if (subjectId !== undefined) {
+          subjectStates.set(subjectId, { active: false });
+          bumpSubjectStateSignal(subjectId);
+        }
       }
 
       // Single signal update after all entities are removed
@@ -1719,7 +1743,6 @@ export function createEntitySignal<
         }
         const finalUpdated = { ...prev, ...transformedChanges };
         storage.set(id, finalUpdated);
-        invalidateNodeCache(id);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -1784,6 +1807,8 @@ export function createEntitySignal<
     clear(): void {
       storage.clear();
       subjectIds.clear();
+      subjectStates.clear();
+      subjectStateSignals.clear();
       lastSubjectIds = undefined;
       nodeCache.clear();
       resetEntitySignals();
@@ -1794,6 +1819,8 @@ export function createEntitySignal<
       // Clear storage without triggering intermediate signal updates
       storage.clear();
       subjectIds.clear();
+      subjectStates.clear();
+      subjectStateSignals.clear();
       lastSubjectIds = undefined;
       nodeCache.clear();
 

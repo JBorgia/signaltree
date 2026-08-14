@@ -50,9 +50,9 @@ describe('a HELD node behaves exactly as before', () => {
     expect(node?.().v).toBe(99);
   });
 
-  it('a held node survives remove then re-add — the churn case', () => {
-    // Pinned separately in entity-granular-reactivity.spec.ts; repeated here
-    // because a weak cache is exactly the change that could regress it.
+  it('a held node stays tombstoned when the same key is later reused', () => {
+    // Weak caching must not revive the removed subject if a later add reuses
+    // the same key for a different subject.
     const tree = mk();
     const node = tree.$.rows.byId(2);
     expect(node?.().v).toBe(2);
@@ -60,6 +60,7 @@ describe('a HELD node behaves exactly as before', () => {
     tree.$.rows.removeOne(2);
     tree.$.rows.addOne({ id: 2, v: 42 });
 
+    expect(node?.()).toBeUndefined();
     expect(tree.$.rows.byId(2)?.().v).toBe(42);
   });
 

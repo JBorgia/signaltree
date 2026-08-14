@@ -114,4 +114,129 @@ describe('heterogeneous physical frame prototype', () => {
     expect(prototype.keyForSubject(1)).toBe('C');
     expect(prototype.subjectForKey('B')).toBeUndefined();
   });
+
+  it('keeps a staged remove invisible until commit and publishes absence only afterward', () => {
+    TestBed.runInInjectionContext(() => {
+      const prototype = createHeterogeneousPhysicalFramePrototype([
+        { key: 'A', subjectId: 1, name: 'Alice' },
+      ]);
+      const name = prototype.name(1);
+      const seen: string[] = [];
+
+      effect(() => {
+        const key = prototype.keyForSubject(1);
+        seen.push(key === undefined ? 'absent' : `${key}|${name()}`);
+      });
+      TestBed.flushEffects();
+
+      const frame = prototype.beginFrame();
+      frame.remove(1, 'A');
+
+      expect(prototype.isActive(1)).toBe(true);
+      expect(prototype.keyForSubject(1)).toBe('A');
+      expect(prototype.hasKey('A')).toBe(true);
+      expect(seen).toEqual(['A|Alice']);
+
+      frame.commit();
+
+      expect(prototype.isActive(1)).toBe(false);
+      expect(prototype.keyForSubject(1)).toBeUndefined();
+      expect(prototype.hasKey('A')).toBe(false);
+      expect(seen).toEqual(['A|Alice']);
+
+      TestBed.flushEffects();
+
+      expect(seen).toEqual(['A|Alice', 'absent']);
+    });
+  });
+
+  it('retains SubjectId and scalar slot state across a committed remove', () => {
+    const prototype = createHeterogeneousPhysicalFramePrototype([
+      { key: 'A', subjectId: 1, name: 'Alice' },
+    ]);
+    const name = prototype.name(1);
+    const slot = prototype.slotIndexForSubject(1);
+
+    const frame = prototype.beginFrame();
+    frame.remove(1, 'A');
+    frame.commit();
+
+    expect(prototype.isActive(1)).toBe(false);
+    expect(prototype.keyForSubject(1)).toBeUndefined();
+    expect(prototype.slotIndexForSubject(1)).toBe(slot);
+    expect(name()).toBe('Alice');
+  });
+
+  it('never exposes a partially modified reachable subject during remove plus scalar mutation', () => {
+    TestBed.runInInjectionContext(() => {
+      const prototype = createHeterogeneousPhysicalFramePrototype([
+        { key: 'A', subjectId: 1, name: 'Alice' },
+      ]);
+      const name = prototype.name(1);
+      const seen: string[] = [];
+
+      effect(() => {
+        const key = prototype.keyForSubject(1);
+        seen.push(key === undefined ? 'absent' : `${key}|${name()}`);
+      });
+      TestBed.flushEffects();
+
+      const frame = prototype.beginFrame();
+      frame.remove(1, 'A');
+      frame.setName(1, 'Alicia');
+      frame.commit();
+
+      expect(prototype.isActive(1)).toBe(false);
+      expect(name()).toBe('Alicia');
+
+      TestBed.flushEffects();
+
+      expect(seen).toEqual(['A|Alice', 'absent']);
+    });
+  });
+
+  it('key reuse by a different subject does not revive the tombstoned subject', () => {
+    const prototype = createHeterogeneousPhysicalFramePrototype([
+      { key: 'A', subjectId: 1, name: 'Alice' },
+      { key: 'C', subjectId: 2, name: 'Carol' },
+    ]);
+    const heldName = prototype.name(1);
+    const firstSlot = prototype.slotIndexForSubject(1);
+
+    const frame = prototype.beginFrame();
+    frame.remove(1, 'A');
+    frame.rekey(2, 'C', 'A');
+    frame.commit();
+
+    expect(prototype.isActive(1)).toBe(false);
+    expect(prototype.keyForSubject(1)).toBeUndefined();
+    expect(prototype.subjectForKey('A')).toBe(2);
+    expect(prototype.slotIndexForSubject(1)).toBe(firstSlot);
+    expect(heldName()).toBe('Alice');
+  });
+
+  it('restores the same subject with its retained scalar state and relative order', () => {
+    const prototype = createHeterogeneousPhysicalFramePrototype([
+      { key: 'A', subjectId: 1, name: 'Alice' },
+      { key: 'C', subjectId: 2, name: 'Carol' },
+    ]);
+    const slot = prototype.slotIndexForSubject(1);
+    const name = prototype.name(1);
+
+    const removeFrame = prototype.beginFrame();
+    removeFrame.remove(1, 'A');
+    removeFrame.setName(1, 'Alicia');
+    removeFrame.commit();
+
+    const restoreFrame = prototype.beginFrame();
+    restoreFrame.restore(1, 'B');
+    restoreFrame.commit();
+
+    expect(prototype.isActive(1)).toBe(true);
+    expect(prototype.keyForSubject(1)).toBe('B');
+    expect(prototype.subjectForKey('B')).toBe(1);
+    expect(prototype.slotIndexForSubject(1)).toBe(slot);
+    expect(name()).toBe('Alicia');
+    expect(prototype.orderedKeys()).toEqual(['B', 'C']);
+  });
 });

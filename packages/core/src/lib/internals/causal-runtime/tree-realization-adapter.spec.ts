@@ -9,7 +9,7 @@ import { signalTree } from '../../signal-tree';
 import type { ISignalTree, UpdateMetadata } from '../../types';
 import { timeTravel } from '../../../enhancers/time-travel/time-travel';
 import { transactions } from '../../../enhancers/transactions/transactions';
-import { getOwnedPositionIds } from '../owned-mutation';
+import { getOwnedPositionIds, getOwnedSubjectIds, getOwnedOwnerPath } from '../owned-mutation';
 import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-runtime';
 
 import { createTransactionCaptureBridge } from './transaction-capture-bridge';
@@ -728,6 +728,111 @@ describe('tree realization adapter', () => {
     expect(tree.$.users.ids()).toEqual(['u1']);
     expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alicia');
     expect(tree.$.users.byIdOrFail('u1').enabled()).toBe(false);
+  });
+
+  it('reactivates the exact held row and field when restoring the same tombstoned subject', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string; enabled: boolean }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string; enabled: boolean }): void;
+        removeOne(id: string): void;
+        byIdOrFail(id: string): ((() => { id: string; name: string; enabled: boolean } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+          enabled: (() => boolean | undefined);
+        });
+        ids(): string[];
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice', enabled: true });
+    getPathNotifier().flushSync();
+
+    const owner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldRow = tree.$.users.byIdOrFail('u1');
+    const heldName = heldRow.name;
+    heldRow();
+    heldName();
+    const subjectId = getOwnedSubjectIds(heldName)?.[0];
+    const positionId = getOwnedPositionIds(heldName)?.[0];
+    const ownerPath = getOwnedOwnerPath(heldName);
+    if (owner === undefined || subjectId === undefined || positionId === undefined) {
+      throw new Error('Expected subject and position metadata');
+    }
+
+    tree.$.users.removeOne('u1');
+    getPathNotifier().flushSync();
+
+    expect(heldRow()).toBeUndefined();
+    expect(heldName()).toBeUndefined();
+    expect(tree.$.users.ids()).toEqual([]);
+
+    tree.$.users.addOne({ id: 'u1', name: 'Bob', enabled: false });
+    getPathNotifier().flushSync();
+
+    expect(heldRow()).toBeUndefined();
+    expect(heldName()).toBeUndefined();
+    expect(tree.$.users.byIdOrFail('u1')).not.toBe(heldRow);
+    expect(tree.$.users.byIdOrFail('u1').name).not.toBe(heldName);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Bob');
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors: new Map(),
+    });
+
+    expect(
+      adapter.validateEffects([
+        {
+          owner,
+          before: undefined,
+          after: 'u2',
+          subjectId,
+          structural: 'add',
+          structuralContext: {
+            kind: 'remove',
+            subject: subjectId,
+            key: 'u1',
+            value: { id: 'u1', name: 'Alicia', enabled: true },
+            subjectPositions: [owner, positionId],
+          },
+        },
+      ])
+    ).toBeUndefined();
+
+    adapter.applyAtomically([
+      {
+        owner,
+        before: undefined,
+        after: 'u2',
+        subjectId,
+        structural: 'add',
+        structuralContext: {
+          kind: 'remove',
+          subject: subjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Alicia', enabled: true },
+          subjectPositions: [owner, positionId],
+        },
+      },
+    ]);
+    getPathNotifier().flushSync();
+
+    const restoredRow = tree.$.users.byIdOrFail('u2');
+    const restoredName = restoredRow.name;
+
+    expect(tree.$.users.ids()).toEqual(['u1', 'u2']);
+    expect(restoredRow).toBe(heldRow);
+    expect(restoredName).toBe(heldName);
+    expect(restoredName()).toBe('Alicia');
+    expect(restoredName.__subjectIds?.[0]).toBe(subjectId);
+    expect(getOwnedPositionIds(restoredName)?.[0]).toBe(positionId);
+    expect(getOwnedOwnerPath(restoredName)).toBe('users.u2');
+    expect(ownerPath).toBe('users.u1');
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Bob');
+    expect(tree.$.users.byIdOrFail('u1').name).not.toBe(restoredName);
   });
 
   it('still emits canonical notifier traffic during realization, proving non-authoring is a broader seam than the adapter', () => {

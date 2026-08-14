@@ -5,6 +5,11 @@ type SubjectId = number;
 
 type ScalarLeaf<T> = WritableSignal<T>;
 
+type SubjectState<K extends StructuralKey> = {
+  active: boolean;
+  key?: K;
+};
+
 type Entry<K extends StructuralKey> = {
   key: K;
   subjectId: SubjectId;
@@ -14,13 +19,16 @@ type Entry<K extends StructuralKey> = {
 export interface HeterogeneousPhysicalFrame<K extends StructuralKey> {
   setName(subjectId: SubjectId, value: string): void;
   updateName(subjectId: SubjectId, updater: (value: string) => string): void;
+  remove(subjectId: SubjectId, fromKey: K): void;
   rekey(subjectId: SubjectId, fromKey: K, toKey: K): void;
+  restore(subjectId: SubjectId, toKey: K): void;
   discard(): void;
   commit(): void;
 }
 
 export interface HeterogeneousPhysicalFramePrototype<K extends StructuralKey> {
   name(subjectId: SubjectId): ScalarLeaf<string>;
+  isActive(subjectId: SubjectId): boolean;
   slotIndexForSubject(subjectId: SubjectId): number | undefined;
   hasKey(key: K): boolean;
   subjectForKey(key: K): SubjectId | undefined;
@@ -36,19 +44,19 @@ class HeterogeneousPhysicalFrameImpl<K extends StructuralKey>
 {
   private closed = false;
   private readonly stagedScalar = new Map<number, string>();
-  private readonly stagedRekeys = new Map<SubjectId, { fromKey: K; toKey: K }>();
+  private readonly stagedStructural = new Map<SubjectId, SubjectState<K>>();
 
   constructor(
     private readonly baseRevision: number,
     private readonly currentRevision: () => number,
+    private readonly allSubjectIds: readonly SubjectId[],
     private readonly resolveSlotIndex: (subjectId: SubjectId) => number | undefined,
     private readonly readScalarValue: (slotIndex: number) => string,
-    private readonly keyForSubject: (subjectId: SubjectId) => K | undefined,
-    private readonly subjectForKey: (key: K) => SubjectId | undefined,
+    private readonly readSubjectState: (subjectId: SubjectId) => SubjectState<K> | undefined,
     private readonly hasSubject: (subjectId: SubjectId) => boolean,
     private readonly commitPrepared: (prepared: {
       readonly scalar: ReadonlyMap<number, string>;
-      readonly rekeys: ReadonlyMap<SubjectId, { fromKey: K; toKey: K }>;
+      readonly structural: ReadonlyMap<SubjectId, SubjectState<K>>;
     }) => void
   ) {}
 
@@ -67,34 +75,56 @@ class HeterogeneousPhysicalFrameImpl<K extends StructuralKey>
     this.stagedScalar.set(slotIndex, updater(current ?? ''));
   }
 
+  remove(subjectId: SubjectId, fromKey: K): void {
+    this.assertOpen();
+    const current = this.requireActiveState(subjectId, fromKey);
+    this.stagedStructural.set(subjectId, {
+      ...current,
+      active: false,
+      key: undefined,
+    });
+  }
+
   rekey(subjectId: SubjectId, fromKey: K, toKey: K): void {
     this.assertOpen();
     if (!this.hasSubject(subjectId)) {
       throw new Error(`Unknown subject ${String(subjectId)}.`);
     }
 
-    const currentKey = this.stagedRekeys.get(subjectId)?.toKey ?? this.keyForSubject(subjectId);
-    if (currentKey !== fromKey) {
-      throw new Error(
-        `Subject ${String(subjectId)} is not currently bound to key ${String(fromKey)}.`
-      );
-    }
+    this.requireActiveState(subjectId, fromKey);
 
-    const occupyingSubject = this.subjectForKey(toKey);
+    const occupyingSubject = this.findEffectiveSubjectForKey(toKey);
     if (occupyingSubject !== undefined && occupyingSubject !== subjectId) {
       throw new Error(`Key ${String(toKey)} is already occupied by subject ${String(occupyingSubject)}.`);
     }
 
-    for (const [candidateSubjectId, candidate] of this.stagedRekeys.entries()) {
-      if (candidateSubjectId !== subjectId && candidate.toKey === toKey) {
-        throw new Error(`Key ${String(toKey)} is already staged for another subject.`);
-      }
+    this.stagedStructural.set(subjectId, {
+      active: true,
+      key: toKey,
+    });
+  }
+
+  restore(subjectId: SubjectId, toKey: K): void {
+    this.assertOpen();
+    if (!this.hasSubject(subjectId)) {
+      throw new Error(`Unknown subject ${String(subjectId)}.`);
     }
 
-    const existing = this.stagedRekeys.get(subjectId);
-    this.stagedRekeys.set(subjectId, {
-      fromKey: existing?.fromKey ?? fromKey,
-      toKey,
+    const current = this.readEffectiveState(subjectId);
+    if (!current || current.active) {
+      throw new Error(
+        `Subject ${String(subjectId)} is not currently tombstoned.`
+      );
+    }
+
+    const occupyingSubject = this.findEffectiveSubjectForKey(toKey);
+    if (occupyingSubject !== undefined && occupyingSubject !== subjectId) {
+      throw new Error(`Key ${String(toKey)} is already occupied by subject ${String(occupyingSubject)}.`);
+    }
+
+    this.stagedStructural.set(subjectId, {
+      active: true,
+      key: toKey,
     });
   }
 
@@ -102,7 +132,7 @@ class HeterogeneousPhysicalFrameImpl<K extends StructuralKey>
     this.assertOpen();
     this.closed = true;
     this.stagedScalar.clear();
-    this.stagedRekeys.clear();
+    this.stagedStructural.clear();
   }
 
   commit(): void {
@@ -113,14 +143,57 @@ class HeterogeneousPhysicalFrameImpl<K extends StructuralKey>
       throw new Error('HeterogeneousPhysicalFrame base revision is stale.');
     }
 
-    if (this.stagedScalar.size === 0 && this.stagedRekeys.size === 0) {
+    if (this.stagedScalar.size === 0 && this.stagedStructural.size === 0) {
       return;
     }
 
     this.commitPrepared({
       scalar: this.stagedScalar,
-      rekeys: this.stagedRekeys,
+      structural: this.stagedStructural,
     });
+  }
+
+  private readEffectiveState(subjectId: SubjectId): SubjectState<K> | undefined {
+    return this.stagedStructural.get(subjectId) ?? this.readSubjectState(subjectId);
+  }
+
+  private findEffectiveSubjectForKey(key: K): SubjectId | undefined {
+    for (const [subjectId, state] of this.stagedStructural.entries()) {
+      if (state.active && state.key === key) {
+        return subjectId;
+      }
+    }
+
+    for (const [subjectId, state] of this.stagedStructural.entries()) {
+      const committed = this.readSubjectState(subjectId);
+      if (committed?.active && committed.key === key && !state.active) {
+        return undefined;
+      }
+    }
+
+    for (const subjectId of this.allSubjectIds) {
+      const staged = this.stagedStructural.get(subjectId);
+      if (staged !== undefined) {
+        continue;
+      }
+
+      const committed = this.readSubjectState(subjectId);
+      if (committed?.active && committed.key === key) {
+        return subjectId;
+      }
+    }
+
+    return undefined;
+  }
+
+  private requireActiveState(subjectId: SubjectId, expectedKey: K): SubjectState<K> {
+    const current = this.readEffectiveState(subjectId);
+    if (!current?.active || current.key !== expectedKey) {
+      throw new Error(
+        `Subject ${String(subjectId)} is not currently bound to key ${String(expectedKey)}.`
+      );
+    }
+    return current;
   }
 
   private requireSlotIndex(subjectId: SubjectId): number {
@@ -142,8 +215,8 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
   entries: ReadonlyArray<Entry<K>>
 ): HeterogeneousPhysicalFramePrototype<K> {
   const subjectByKey = new Map<K, SubjectId>();
-  const keyBySubject = new Map<SubjectId, K>();
-  const orderedKeys: K[] = [];
+  const subjectStates = new Map<SubjectId, SubjectState<K>>();
+  const orderedSubjects: SubjectId[] = [];
 
   const scalarValues: string[] = [];
   const scalarTokens: Array<WritableSignal<number>> = [];
@@ -157,7 +230,7 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
     if (subjectByKey.has(entry.key)) {
       throw new Error(`Duplicate key ${String(entry.key)}.`);
     }
-    if (keyBySubject.has(entry.subjectId)) {
+    if (subjectStates.has(entry.subjectId)) {
       throw new Error(`Duplicate subject ${String(entry.subjectId)}.`);
     }
 
@@ -167,8 +240,8 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
     slotIndexBySubject.set(entry.subjectId, slotIndex);
 
     subjectByKey.set(entry.key, entry.subjectId);
-    keyBySubject.set(entry.subjectId, entry.key);
-    orderedKeys.push(entry.key);
+    subjectStates.set(entry.subjectId, { active: true, key: entry.key });
+    orderedSubjects.push(entry.subjectId);
   }
 
   const publishScalarSlot = (slotIndex: number): void => {
@@ -198,7 +271,10 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
 
   const orderedKeysSignal = linkedSignal(() => {
     structuralToken();
-    return [...orderedKeys] as readonly K[];
+    return orderedSubjects
+      .map((subjectId) => subjectStates.get(subjectId))
+      .filter((state): state is SubjectState<K> & { key: K } => Boolean(state?.active && state.key !== undefined))
+      .map((state) => state.key) as readonly K[];
   });
 
   const api: HeterogeneousPhysicalFramePrototype<K> = {
@@ -217,6 +293,10 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
       scalarLeaves.set(subjectId, leaf);
       return leaf;
     },
+    isActive(subjectId: SubjectId): boolean {
+      structuralToken();
+      return subjectStates.get(subjectId)?.active ?? false;
+    },
     slotIndexForSubject(subjectId: SubjectId): number | undefined {
       return slotIndexBySubject.get(subjectId);
     },
@@ -230,7 +310,7 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
     },
     keyForSubject(subjectId: SubjectId): K | undefined {
       structuralToken();
-      return keyBySubject.get(subjectId);
+      return subjectStates.get(subjectId)?.key;
     },
     orderedKeys(): readonly K[] {
       return orderedKeysSignal();
@@ -242,12 +322,12 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
       return new HeterogeneousPhysicalFrameImpl(
         revision,
         () => revision,
+        orderedSubjects,
         (subjectId) => slotIndexBySubject.get(subjectId),
         (slotIndex) => scalarValues[slotIndex],
-        (subjectId) => keyBySubject.get(subjectId),
-        (key) => subjectByKey.get(key),
+        (subjectId) => subjectStates.get(subjectId),
         (subjectId) => slotIndexBySubject.has(subjectId),
-        ({ scalar, rekeys }) => {
+        ({ scalar, structural }) => {
           const changedScalarSlots: number[] = [];
           let structuralChanged = false;
 
@@ -259,35 +339,50 @@ export function createHeterogeneousPhysicalFramePrototype<K extends StructuralKe
             changedScalarSlots.push(slotIndex);
           }
 
-          for (const [subjectId, { fromKey, toKey }] of rekeys.entries()) {
-            const currentKey = keyBySubject.get(subjectId);
-            if (currentKey !== fromKey) {
-              throw new Error(
-                `Subject ${String(subjectId)} drifted before commit: expected ${String(fromKey)}, got ${String(currentKey)}.`
-              );
+          for (const [subjectId, nextState] of structural.entries()) {
+            const currentState = subjectStates.get(subjectId);
+            if (!currentState) {
+              throw new Error(`Unknown subject ${String(subjectId)} at commit.`);
             }
 
-            const occupyingSubject = subjectByKey.get(toKey);
-            if (occupyingSubject !== undefined && occupyingSubject !== subjectId) {
-              throw new Error(
-                `Key ${String(toKey)} became occupied by subject ${String(occupyingSubject)} before commit.`
-              );
-            }
-
-            if (fromKey === toKey) {
+            if (
+              currentState.active === nextState.active &&
+              currentState.key === nextState.key
+            ) {
               continue;
             }
 
-            subjectByKey.delete(fromKey);
-            subjectByKey.set(toKey, subjectId);
-            keyBySubject.set(subjectId, toKey);
-
-            const orderIndex = orderedKeys.indexOf(fromKey);
-            if (orderIndex === -1) {
-              throw new Error(`Ordered key ${String(fromKey)} is missing.`);
+            if (currentState.active && currentState.key !== undefined) {
+              const currentOwner = subjectByKey.get(currentState.key);
+              if (currentOwner !== subjectId) {
+                throw new Error(
+                  `Subject ${String(subjectId)} drifted before commit: expected ${String(currentState.key)}, got ${String(currentOwner)}.`
+                );
+              }
             }
 
-            orderedKeys[orderIndex] = toKey;
+            if (nextState.active && nextState.key !== undefined) {
+              const occupyingSubject = subjectByKey.get(nextState.key);
+              if (occupyingSubject !== undefined && occupyingSubject !== subjectId) {
+                throw new Error(
+                  `Key ${String(nextState.key)} became occupied by subject ${String(occupyingSubject)} before commit.`
+                );
+              }
+            }
+
+            if (currentState.active && currentState.key !== undefined) {
+              subjectByKey.delete(currentState.key);
+            }
+
+            subjectStates.set(subjectId, {
+              active: nextState.active,
+              key: nextState.key,
+            });
+
+            if (nextState.active && nextState.key !== undefined) {
+              subjectByKey.set(nextState.key, subjectId);
+            }
+
             structuralChanged = true;
           }
 
