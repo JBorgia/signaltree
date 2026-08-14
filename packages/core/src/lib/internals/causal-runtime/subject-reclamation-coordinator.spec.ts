@@ -598,9 +598,9 @@ describe('subject reclamation coordinator', () => {
         appliedHistory,
       })
     ).toEqual({
-      candidateSubjectIds: [subjectId],
+      candidateSubjectIds: [],
       reclaimed: [],
-      alreadyRetired: [subjectId],
+      alreadyRetired: [],
       blocked: [],
       causalDrift: [],
       physicalDrift: [],

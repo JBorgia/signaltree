@@ -12,6 +12,7 @@ const pathNotifier = {
 } as any;
 
 type SubjectInventoryApi = {
+  __listSubjectReclamationCandidates?: () => readonly number[];
   __inspectSubjectResources?: (subjectId: number) => unknown;
   __planSubjectReclamation?: (
     subjectId: number,
@@ -178,6 +179,7 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([]);
 
     api.removeOne(1);
 
@@ -196,6 +198,7 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectId]);
 
     api.addOne({ id: 1, name: 'Bob', active: false });
     const foreignSubjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
@@ -216,6 +219,7 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectId]);
     expect(internal.__inspectSubjectResources?.(foreignSubjectId as number)).toEqual({
       subjectId: foreignSubjectId,
       state: 'active',
@@ -231,6 +235,7 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectId]);
 
     api.removeOne(1);
     internal.__restoreOne?.(1, { id: 1, name: 'Alice', active: true }, subjectId);
@@ -254,6 +259,50 @@ describe('entity subject physical inventory', () => {
         kind: 'retained-entity-signal',
       },
     });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([foreignSubjectId as number]);
+  });
+
+  it('discovers only tombstoned subjects that still retain value backing', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    api.addOne({ id: 2, name: 'Bob', active: false });
+
+    const heldOne = api.byIdOrFail(1).name;
+    const heldTwo = api.byIdOrFail(2).name;
+    const subjectOne = heldOne.__subjectIds?.[0];
+    const subjectTwo = heldTwo.__subjectIds?.[0];
+    if (subjectOne === undefined || subjectTwo === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.removeOne(1);
+    api.removeOne(2);
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([
+      subjectOne,
+      subjectTwo,
+    ]);
+
+    internal.__retireSubjectRetainedValueBackingForTesting?.(subjectOne);
+
+    expect(internal.__inspectSubjectResources?.(subjectOne)).toEqual({
+      subjectId: subjectOne,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldOne.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectTwo]);
+
+    internal.__restoreOne?.(1, { id: 1, name: 'Alice', active: true }, subjectOne);
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectTwo]);
   });
 
   it('retires retained value backing only when the subject is tombstoned and causally eligible', () => {

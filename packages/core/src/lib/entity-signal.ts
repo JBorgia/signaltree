@@ -1134,7 +1134,9 @@ export function createEntitySignal<
 
   function listSubjectReclamationCandidates(): readonly number[] {
     return [...subjectStates.entries()]
-      .filter(([, subjectState]) => !subjectState.active)
+      .filter(
+        ([subjectId, subjectState]) => !subjectState.active && entitySignals.has(subjectId)
+      )
       .map(([subjectId]) => subjectId)
       .sort((left, right) => left - right);
   }
