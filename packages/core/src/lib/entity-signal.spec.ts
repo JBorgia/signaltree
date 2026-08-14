@@ -645,6 +645,69 @@ describe('entity subject physical inventory', () => {
       },
     });
   });
+
+  it('setAll preserves active survivors while historical key reuse allocates fresh identity', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    api.addOne({ id: 2, name: 'Bob', active: false });
+
+    const heldRowA = api.byIdOrFail(1);
+    const heldRowB = api.byIdOrFail(2);
+    const heldFieldA = heldRowA.name;
+    const heldFieldB = heldRowB.name;
+    const subjectA = heldFieldA.__subjectIds?.[0];
+    const subjectB = heldFieldB.__subjectIds?.[0];
+    if (subjectA === undefined || subjectB === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.removeOne(1);
+
+    api.setAll([
+      { id: 2, name: 'Bobby', active: true },
+      { id: 1, name: 'Alicia', active: false },
+      { id: 3, name: 'Cara', active: true },
+    ]);
+
+    const activeTwo = api.byIdOrFail(2);
+    const activeOne = api.byIdOrFail(1);
+    const activeThree = api.byIdOrFail(3);
+    const subjectOneAfter = activeOne.name.__subjectIds?.[0];
+    const subjectTwoAfter = activeTwo.name.__subjectIds?.[0];
+    const subjectThreeAfter = activeThree.name.__subjectIds?.[0];
+
+    expect(activeTwo).toBe(heldRowB);
+    expect(activeTwo.name).toBe(heldFieldB);
+    expect(subjectTwoAfter).toBe(subjectB);
+    expect(activeTwo.name()).toBe('Bobby');
+
+    expect(subjectOneAfter).not.toBe(subjectA);
+    expect(activeOne).not.toBe(heldRowA);
+    expect(activeOne.name).not.toBe(heldFieldA);
+    expect(heldRowA()).toBeUndefined();
+    expect(heldFieldA()).toBeUndefined();
+
+    expect(subjectThreeAfter).not.toBe(subjectA);
+    expect(subjectThreeAfter).not.toBe(subjectB);
+
+    expect(internal.__inspectSubjectResources?.(subjectA)).toEqual({
+      subjectId: subjectA,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldFieldA.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+  });
 });
 
 describe('addMany() mode option (F-011)', () => {
@@ -960,7 +1023,7 @@ describe('owner PositionId allocation', () => {
       positionIds: call[5] as number[] | undefined,
     }));
 
-    expect(calls).toHaveLength(12);
+    expect(calls).toHaveLength(14);
     expect(calls.every((call) => call.ownerPath === 'rows')).toBe(true);
     expect(calls.every((call) => call.positionIds?.[0] === ownerPositionIds[0])).toBe(true);
 
@@ -968,19 +1031,24 @@ describe('owner PositionId allocation', () => {
     const updateManySubjects = calls.slice(2, 4).map((call) => call.subjectId);
     const removeManySubjects = calls.slice(4, 6).map((call) => call.subjectId);
     const secondAddSubjects = calls.slice(6, 8).map((call) => call.subjectId);
-    const setAllSubjects = calls.slice(8, 10).map((call) => call.subjectId);
-    const upsertSubjects = calls.slice(10, 12).map((call) => call.subjectId);
-    const subjectByPath = new Map(calls.map((call) => [call.path, call.subjectId]));
+    const setAllRemovedSubjects = calls.slice(8, 10).map((call) => call.subjectId);
+    const setAllAddedSubjects = calls.slice(10, 12).map((call) => call.subjectId);
+    const upsertSubjects = calls.slice(12, 14).map((call) => call.subjectId);
 
     expect(new Set(firstAddSubjects).size).toBe(2);
     expect(updateManySubjects).toEqual(firstAddSubjects);
     expect(removeManySubjects).toEqual(firstAddSubjects);
     expect(secondAddSubjects).not.toEqual(firstAddSubjects);
-    expect(new Set(setAllSubjects).size).toBe(2);
-    expect(subjectByPath.get('rows.3')).toBe(setAllSubjects[0]);
-    expect(setAllSubjects).not.toContain(subjectByPath.get('rows.5'));
+    expect(setAllRemovedSubjects).toEqual(secondAddSubjects);
+    expect(new Set(setAllAddedSubjects).size).toBe(2);
+    expect(setAllAddedSubjects).not.toEqual(secondAddSubjects);
+    expect(upsertSubjects[1]).toBe(setAllAddedSubjects[0]);
+    expect(upsertSubjects[0]).not.toBe(setAllAddedSubjects[0]);
+    expect(upsertSubjects[0]).not.toBe(setAllAddedSubjects[1]);
     expect(new Set(upsertSubjects).size).toBe(2);
     expect(calls.map((call) => call.path)).toEqual([
+      'rows.1',
+      'rows.2',
       'rows.1',
       'rows.2',
       'rows.1',

@@ -2083,58 +2083,188 @@ export function createEntitySignal<
     },
 
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
-      const stagedAdds = entities.map((entity) => ({
-        id: deriveId(entity, opts),
-        entity: interceptAddedEntity(entity),
-      }));
+      const currentEntries = Array.from(storage.entries());
+      const currentIds = new Set(currentEntries.map(([id]) => id));
+      const stagedIncomingIds: K[] = [];
+      const stagedIncomingById = new Map<K, E>();
 
-      // Clear storage without triggering intermediate signal updates
-      storage.clear();
-      subjectIds.clear();
-      subjectStates.clear();
-      subjectStateSignals.clear();
-      subjectRevisions.clear();
-      lastSubjectIds = undefined;
-      nodeCache.clear();
+      for (const entity of entities) {
+        const id = deriveId(entity, opts);
+        const transformedEntity = currentIds.has(id)
+          ? (() => {
+              let replacement = entity;
+              for (const handler of interceptHandlers) {
+                const ctx: InterceptContext<Partial<E>> = {
+                  block: (reason?: string) => {
+                    throw new Error(
+                      `Cannot replace entity: ${reason || 'blocked by interceptor'}`
+                    );
+                  },
+                  transform: (value: Partial<E>) => {
+                    replacement = value as E;
+                  },
+                  blocked: false,
+                  blockReason: undefined,
+                };
+                handler.onUpdate?.(id, entity as Partial<E>, ctx);
+              }
+              return replacement;
+            })()
+          : interceptAddedEntity(entity);
 
-      // Add all entities without triggering per-entity signal updates
-      const addedIds: K[] = [];
-      for (const { id, entity: transformedEntity } of stagedAdds) {
-        storage.set(id, transformedEntity);
-        addedIds.push(id);
+        if (!stagedIncomingById.has(id)) {
+          stagedIncomingIds.push(id);
+        }
+        stagedIncomingById.set(id, transformedEntity);
       }
 
-      // Single signal update after all entities are added. setAll is a full
-      // replace: release every materialized per-entity signal (surviving
-      // entities re-materialize lazily on next byId) so memory returns to
-      // baseline instead of retaining one signal per id ever seen.
-      resetEntitySignals();
+      const stagedRemovals = currentEntries
+        .filter(([id]) => !stagedIncomingById.has(id))
+        .map(([id, entity]) => {
+          for (const handler of interceptHandlers) {
+            const ctx: InterceptContext<void> = {
+              block: (reason?: string) => {
+                throw new Error(
+                  `Cannot remove entity: ${reason || 'blocked by interceptor'}`
+                );
+              },
+              transform: () => {
+                // void transform - no transformation possible
+              },
+              blocked: false,
+              blockReason: undefined,
+            };
+            handler.onRemove?.(id, entity, ctx);
+          }
+
+          const subjectId = subjectIds.get(id);
+          return {
+            id,
+            entity,
+            subjectId,
+          };
+        });
+
+      const stagedUpdates = stagedIncomingIds
+        .filter((id) => currentIds.has(id))
+        .map((id) => {
+          const prev = storage.get(id);
+          const entity = stagedIncomingById.get(id);
+          if (prev === undefined || entity === undefined) {
+            throw new Error(`Entity with id ${String(id)} not found`);
+          }
+
+          return {
+            id,
+            prev,
+            entity,
+            subjectId: subjectIds.get(id),
+          };
+        });
+
+      const stagedAdds = stagedIncomingIds
+        .filter((id) => !currentIds.has(id))
+        .map((id) => {
+          const entity = stagedIncomingById.get(id);
+          if (entity === undefined) {
+            throw new Error(`Entity with id ${String(id)} not found`);
+          }
+
+          return { id, entity };
+        });
+
+      for (const { subjectId } of stagedRemovals) {
+        if (subjectId === undefined) {
+          continue;
+        }
+        tombstoneSubjectSignal(subjectId);
+        subjectIds.delete(stagedRemovals.find((entry) => entry.subjectId === subjectId)?.id as K);
+        const currentState = resolveSubjectState(subjectId);
+        subjectStates.set(subjectId, {
+          active: false,
+          restoreAllowed: currentState?.restoreAllowed ?? true,
+        });
+        publishSubjectPhysicalChange(subjectId);
+      }
+
+      storage.clear();
+
+      for (const { id, entity } of stagedUpdates) {
+        storage.set(id, entity);
+        syncEntitySignal(id);
+      }
+
+      const addedSubjectIds: number[] = [];
+      for (const { id, entity } of stagedAdds) {
+        storage.set(id, entity);
+        const subjectId = allocateSubjectId(id);
+        addedSubjectIds.push(subjectId);
+        syncEntitySignal(id);
+      }
+
+      for (const id of stagedIncomingIds) {
+        const entity = stagedIncomingById.get(id);
+        if (entity !== undefined && !storage.has(id)) {
+          storage.set(id, entity);
+        }
+      }
+
+      lastSubjectIds = stagedIncomingIds
+        .map((id) => resolveSubjectId(id))
+        .filter((subjectId): subjectId is number => subjectId !== undefined);
+
       updateSignals();
 
-      const subjectIdsForWrite = rememberSubjectIds(addedIds);
+      for (const { id, entity, subjectId } of stagedRemovals) {
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          undefined,
+          entity,
+          basePath,
+          subjectId === undefined ? undefined : [subjectId],
+          getPositionIdsForNotify()
+        );
+      }
 
-      // Notify PathNotifier for each added entity
-      for (let i = 0; i < addedIds.length; i++) {
-        const id = addedIds[i];
-        const entity = storage.get(id);
+      for (const { id, prev, entity, subjectId } of stagedUpdates) {
+        pathNotifier.notify(
+          `${basePath}.${String(id)}`,
+          entity,
+          prev,
+          basePath,
+          subjectId === undefined ? undefined : [subjectId],
+          getPositionIdsForNotify(),
+          getActiveWriteContext()
+        );
+      }
+
+      for (let i = 0; i < stagedAdds.length; i++) {
+        const { id, entity } = stagedAdds[i];
         pathNotifier.notify(
           `${basePath}.${String(id)}`,
           entity,
           undefined,
           basePath,
-          [subjectIdsForWrite[i]],
+          [addedSubjectIds[i]],
           getPositionIdsForNotify()
         );
       }
 
-      // Run tap handlers for each added entity
-      for (let i = 0; i < addedIds.length; i++) {
-        const id = addedIds[i];
-        const entity = storage.get(id);
-        if (entity) {
-          for (const handler of tapHandlers) {
-            handler.onAdd?.(entity, id);
-          }
+      for (const { id, entity } of stagedRemovals) {
+        for (const handler of tapHandlers) {
+          handler.onRemove?.(id, entity);
+        }
+      }
+
+      for (const { id, entity } of stagedAdds) {
+        for (const handler of tapHandlers) {
+          handler.onAdd?.(entity, id);
+        }
+      }
+
+      for (const { id, entity } of stagedUpdates) {
+        for (const handler of tapHandlers) {
+          handler.onUpdate?.(id, entity as Partial<E>, entity);
         }
       }
     },
