@@ -12,6 +12,7 @@ import {
 import type { TurnStore } from './turn-store';
 
 export interface SubjectReclamationPhysicalOwner {
+  __listSubjectReclamationCandidates(): readonly number[];
   __prepareSubjectReclamation(
     subjectId: number,
     options: EntitySubjectReclamationPlanningOptions
@@ -203,5 +204,32 @@ export function reclaimAvailableSubjects(
     causalDrift,
     physicalDrift,
     physicalPlanUnavailable,
+  };
+}
+
+export interface RunPhysicalMaintenanceOptions {
+  readonly owner: SubjectReclamationPhysicalOwner;
+  readonly store: Pick<TurnStore, 'getTurns' | 'getPendingTurns'>;
+  readonly appliedHistory: Pick<AppliedHistory, 'getAppliedTurnIds' | 'getRedoTurnIds'>;
+}
+
+export interface RunPhysicalMaintenanceResult extends ReclaimAvailableSubjectsResult {
+  readonly candidateSubjectIds: readonly number[];
+}
+
+export function runPhysicalMaintenance(
+  options: RunPhysicalMaintenanceOptions
+): RunPhysicalMaintenanceResult {
+  const candidateSubjectIds = options.owner.__listSubjectReclamationCandidates();
+  const results = reclaimAvailableSubjects({
+    subjectIds: candidateSubjectIds,
+    owner: options.owner,
+    store: options.store,
+    appliedHistory: options.appliedHistory,
+  });
+
+  return {
+    candidateSubjectIds,
+    ...results,
   };
 }

@@ -8,12 +8,14 @@ import { TurnStore } from './turn-store';
 import {
   reclaimAvailableSubjects,
   reclaimSubject,
+  runPhysicalMaintenance,
   type SubjectReclamationPhysicalOwner,
 } from './subject-reclamation-coordinator';
 
 type User = { id: number; name: string; active: boolean };
 
 type SubjectReclamationApi = ReturnType<typeof createEntitySignal<User, number>> & {
+  __listSubjectReclamationCandidates?: () => readonly number[];
   __inspectSubjectResources?: (subjectId: number) => unknown;
   __prepareSubjectReclamation?: (
     subjectId: number,
@@ -457,5 +459,234 @@ describe('subject reclamation coordinator', () => {
       },
     });
     expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('runs physical maintenance as a synchronous no-op when no tombstoned candidates exist', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const notifyCountBefore = notify.mock.calls.length;
+
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [],
+      reclaimed: [],
+      alreadyRetired: [],
+      blocked: [],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('runs physical maintenance with the same mixed outcomes as the explicit sweep', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    api.addOne({ id: 2, name: 'Bob', active: true });
+    api.addOne({ id: 3, name: 'Cara', active: true });
+
+    const heldOne = api.byIdOrFail(1).name;
+    const heldTwo = api.byIdOrFail(2).name;
+    const subjectOne = heldOne.__subjectIds?.[0];
+    const subjectTwo = heldTwo.__subjectIds?.[0];
+    if (subjectOne === undefined || subjectTwo === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.removeOne(1);
+    api.removeOne(2);
+
+    store.admitPending({
+      id: 12,
+      effects: [
+        {
+          owner: 4 as PositionId,
+          before: 'Bob',
+          after: 'Bobby',
+          subjectId: subjectTwo,
+        },
+      ],
+    });
+
+    const turnsBefore = store.getTurns();
+    const pendingBefore = store.getPendingTurns();
+    const appliedBefore = appliedHistory.getAppliedTurnIds();
+    const redoBefore = appliedHistory.getRedoTurnIds();
+    const notifyCountBefore = notify.mock.calls.length;
+
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectOne, subjectTwo],
+      reclaimed: [subjectOne],
+      alreadyRetired: [],
+      blocked: [
+        {
+          subjectId: subjectTwo,
+          blockers: [
+            {
+              kind: 'pending-reference',
+              turnId: 12,
+              state: 'pending',
+              structural: undefined,
+            },
+          ],
+        },
+      ],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+
+    expect(store.getTurns()).toEqual(turnsBefore);
+    expect(store.getPendingTurns()).toEqual(pendingBefore);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual(appliedBefore);
+    expect(appliedHistory.getRedoTurnIds()).toEqual(redoBefore);
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('runs physical maintenance idempotently across repeated invocations without new state', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldName = api.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    api.removeOne(1);
+
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectId],
+      reclaimed: [subjectId],
+      alreadyRetired: [],
+      blocked: [],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+
+    const notifyCountBeforeSecond = notify.mock.calls.length;
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectId],
+      reclaimed: [],
+      alreadyRetired: [subjectId],
+      blocked: [],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+    expect(heldName()).toBeUndefined();
+    expect(notify.mock.calls).toHaveLength(notifyCountBeforeSecond);
+  });
+
+  it('reclaims a previously blocked tombstone on the next maintenance run after pending settlement', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldName = api.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    api.removeOne(1);
+    store.admitPending({
+      id: 13,
+      effects: [
+        {
+          owner: 4 as PositionId,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId,
+        },
+      ],
+    });
+
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectId],
+      reclaimed: [],
+      alreadyRetired: [],
+      blocked: [
+        {
+          subjectId,
+          blockers: [
+            {
+              kind: 'pending-reference',
+              turnId: 13,
+              state: 'pending',
+              structural: undefined,
+            },
+          ],
+        },
+      ],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+
+    const notifyCountBeforeSecond = notify.mock.calls.length;
+    expect(store.confirmPending(13)?.state).toBe('confirmed');
+    expect(appliedHistory.admitConfirmed(13)).toEqual({ ok: true });
+    expect(appliedHistory.forgetRetainedTurn(13)).toEqual({
+      wasApplied: true,
+      wasRedoable: false,
+    });
+
+    expect(
+      runPhysicalMaintenance({
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectId],
+      reclaimed: [subjectId],
+      alreadyRetired: [],
+      blocked: [],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+    expect(heldName()).toBeUndefined();
+    expect(notify.mock.calls).toHaveLength(notifyCountBeforeSecond);
   });
 });
