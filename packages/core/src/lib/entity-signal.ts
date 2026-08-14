@@ -290,13 +290,217 @@ export function createEntitySignal<
    * mutation by only syncing the entities that actually changed.
    */
   const entitySignals = new Map<number, WritableSignal<E | undefined>>();
-  const subjectIds = new Map<K, number>();
-  const subjectStates = new Map<
-    number,
-    { active: boolean; key?: K; restoreAllowed: boolean }
-  >();
+  type SubjectLifetimeRecord = {
+    active: boolean;
+    key?: K;
+    restoreAllowed: boolean;
+  };
+  const structuralStore = {
+    subjectIds: new Map<K, number>(),
+    subjectStates: new Map<number, SubjectLifetimeRecord>(),
+    subjectRevisions: new Map<number, number>(),
+    nextSubjectId: 1,
+    activeKeys: [] as K[],
+    allocateFreshSubjectId(): number {
+      const subjectId = this.nextSubjectId;
+      this.nextSubjectId += 1;
+      return subjectId;
+    },
+    subjectIdForKey(key: K): number | undefined {
+      return this.subjectIds.get(key);
+    },
+    stateForSubject(subjectId: number): SubjectLifetimeRecord | undefined {
+      return this.subjectStates.get(subjectId);
+    },
+    hasSubject(subjectId: number): boolean {
+      return this.subjectStates.has(subjectId);
+    },
+    subjectRevision(subjectId: number): number {
+      return this.subjectRevisions.get(subjectId) ?? 0;
+    },
+    bumpSubjectRevision(subjectId: number): void {
+      this.subjectRevisions.set(subjectId, this.subjectRevision(subjectId) + 1);
+    },
+    activeKeyForSubject(subjectId: number): K | undefined {
+      const state = this.stateForSubject(subjectId);
+      return state?.active ? state.key : undefined;
+    },
+    firstActiveKey(): K | undefined {
+      return this.activeKeys[0];
+    },
+    activeIndexForKey(key: K): number {
+      return this.activeKeys.indexOf(key);
+    },
+    insertActiveKeyAt(key: K, index: number): void {
+      const existingIndex = this.activeIndexForKey(key);
+      if (existingIndex !== -1) {
+        this.activeKeys.splice(existingIndex, 1);
+      }
+
+      const targetIndex = Math.max(0, Math.min(index, this.activeKeys.length));
+      this.activeKeys.splice(targetIndex, 0, key);
+    },
+    appendActiveKey(key: K): void {
+      this.insertActiveKeyAt(key, this.activeKeys.length);
+    },
+    removeActiveKey(key: K): void {
+      const existingIndex = this.activeIndexForKey(key);
+      if (existingIndex !== -1) {
+        this.activeKeys.splice(existingIndex, 1);
+      }
+    },
+    moveKeysToFront(keys: readonly K[]): void {
+      const moving = new Set(keys);
+      const rest = this.activeKeys.filter((key) => !moving.has(key));
+      this.activeKeys = [...keys, ...rest];
+    },
+    reorderActiveKeys(keys: readonly K[]): void {
+      this.activeKeys = [...keys];
+    },
+    restoreIndexForSubjects(
+      beforeSubject?: number,
+      afterSubject?: number
+    ): number {
+      const beforeIndex =
+        beforeSubject === undefined
+          ? -1
+          : this.activeKeys.findIndex(
+              (key) => this.subjectIdForKey(key) === beforeSubject
+            );
+      const afterIndex =
+        afterSubject === undefined
+          ? -1
+          : this.activeKeys.findIndex(
+              (key) => this.subjectIdForKey(key) === afterSubject
+            );
+
+      if (beforeIndex !== -1 && afterIndex !== -1 && beforeIndex < afterIndex) {
+        return beforeIndex + 1;
+      }
+      if (afterIndex !== -1) {
+        return afterIndex;
+      }
+      if (beforeIndex !== -1) {
+        return beforeIndex + 1;
+      }
+      return this.activeKeys.length;
+    },
+    neighborSubjectsForKey(key: K): {
+      beforeSubject?: number;
+      afterSubject?: number;
+    } {
+      const index = this.activeIndexForKey(key);
+      if (index === -1) {
+        return {};
+      }
+
+      const beforeKey = index > 0 ? this.activeKeys[index - 1] : undefined;
+      const afterKey =
+        index < this.activeKeys.length - 1 ? this.activeKeys[index + 1] : undefined;
+
+      return {
+        beforeSubject:
+          beforeKey === undefined ? undefined : this.subjectIdForKey(beforeKey),
+        afterSubject:
+          afterKey === undefined ? undefined : this.subjectIdForKey(afterKey),
+      };
+    },
+    tombstonedSubjectsWithRetainedBacking(): readonly number[] {
+      return [...this.subjectStates.entries()]
+        .filter(
+          ([subjectId, subjectState]) =>
+            !subjectState.active && valueStore.hasRetainedValueBacking(subjectId)
+        )
+        .map(([subjectId]) => subjectId)
+        .sort((left, right) => left - right);
+    },
+    activateSubject(subjectId: number, key: K, restoreAllowed = true): void {
+      this.subjectIds.set(key, subjectId);
+      this.subjectStates.set(subjectId, {
+        active: true,
+        key,
+        restoreAllowed,
+      });
+    },
+    createSubject(subjectId: number, key: K): void {
+      this.activateSubject(subjectId, key);
+      this.subjectRevisions.set(subjectId, 0);
+      this.appendActiveKey(key);
+    },
+    transferSubject(subjectId: number, from: K, to: K, restoreAllowed = true): void {
+      const activeIndex = this.activeIndexForKey(from);
+      this.subjectIds.delete(from);
+      this.activateSubject(subjectId, to, restoreAllowed);
+      if (activeIndex === -1) {
+        this.appendActiveKey(to);
+      } else {
+        this.activeKeys.splice(activeIndex, 1, to);
+      }
+    },
+    tombstoneSubject(
+      subjectId: number,
+      key: K,
+      restoreAllowed: boolean
+    ): void {
+      this.subjectIds.delete(key);
+      this.removeActiveKey(key);
+      this.subjectStates.set(subjectId, {
+        active: false,
+        restoreAllowed,
+      });
+    },
+    restoreSubject(
+      subjectId: number,
+      key: K,
+      beforeSubject?: number,
+      afterSubject?: number,
+      restoreAllowed = true
+    ): void {
+      const restoreIndex = this.restoreIndexForSubjects(beforeSubject, afterSubject);
+      this.activateSubject(subjectId, key, restoreAllowed);
+      this.insertActiveKeyAt(key, restoreIndex);
+    },
+    retireSubject(subjectId: number): void {
+      this.subjectStates.set(subjectId, {
+        active: false,
+        restoreAllowed: false,
+      });
+    },
+    clear(): void {
+      this.subjectIds.clear();
+      this.subjectStates.clear();
+      this.subjectRevisions.clear();
+      this.activeKeys = [];
+      this.nextSubjectId = 1;
+    },
+  };
+  const valueStore = {
+    retainedEntities: new Map<number, E>(),
+    backingForSubject(subjectId: number): E | undefined {
+      return this.retainedEntities.get(subjectId);
+    },
+    retainSubjectValue(subjectId: number, entity: E): void {
+      this.retainedEntities.set(subjectId, entity);
+    },
+    retainValueForKey(key: K, entity: E): number {
+      const subjectId = structuralStore.subjectIdForKey(key);
+      if (subjectId === undefined) {
+        throw new Error(`Entity with id ${String(key)} has no subject id`);
+      }
+      this.retainSubjectValue(subjectId, entity);
+      return subjectId;
+    },
+    hasRetainedValueBacking(subjectId: number): boolean {
+      return this.retainedEntities.has(subjectId);
+    },
+    retireSubjectValue(subjectId: number): boolean {
+      return this.retainedEntities.delete(subjectId);
+    },
+    clear(): void {
+      this.retainedEntities.clear();
+    },
+  };
   const subjectStateSignals = new Map<number, WritableSignal<number>>();
-  const subjectRevisions = new Map<number, number>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
     options?.subjectMetadataEnabled ?? ownerMetadataEnabled;
@@ -307,7 +511,6 @@ export function createEntitySignal<
       ? entityPositionIdAllocatorOverride ?? standaloneEntityPositionIdAllocator
       : undefined)
   )?.();
-  let nextSubjectId = 1;
   let lastSubjectIds: number[] | undefined;
 
   type PendingHistoryEffect = StructuralHistoryEffect;
@@ -540,6 +743,7 @@ export function createEntitySignal<
    * signals pick the new order up from the version bump.
    */
   function moveToFront(ids: K[]): void {
+    structuralStore.moveKeysToFront(ids);
     const moving = new Set(ids);
     const rest = Array.from(storage.entries()).filter(([k]) => !moving.has(k));
     const front = ids
@@ -552,21 +756,19 @@ export function createEntitySignal<
   }
 
   function resolveSubjectId(id: K): number | undefined {
-    return subjectIds.get(id);
+    return structuralStore.subjectIdForKey(id);
   }
 
-  function resolveSubjectState(subjectId: number):
-    | { active: boolean; key?: K; restoreAllowed: boolean }
-    | undefined {
-    return subjectStates.get(subjectId);
+  function resolveSubjectState(subjectId: number): SubjectLifetimeRecord | undefined {
+    return structuralStore.stateForSubject(subjectId);
   }
 
   function getSubjectRevision(subjectId: number): number {
-    return subjectRevisions.get(subjectId) ?? 0;
+    return structuralStore.subjectRevision(subjectId);
   }
 
   function bumpSubjectRevision(subjectId: number): void {
-    subjectRevisions.set(subjectId, getSubjectRevision(subjectId) + 1);
+    structuralStore.bumpSubjectRevision(subjectId);
   }
 
   /** Get (or lazily create) the per-entity signal, seeded from storage. */
@@ -578,7 +780,7 @@ export function createEntitySignal<
 
     let s = entitySignals.get(subjectId);
     if (!s) {
-      s = signal<E | undefined>(storage.get(id));
+      s = signal<E | undefined>(valueStore.backingForSubject(subjectId));
       entitySignals.set(subjectId, s);
     }
     return s;
@@ -603,15 +805,13 @@ export function createEntitySignal<
   }
 
   function allocateSubjectId(id: K): number {
-    const existing = subjectIds.get(id);
+    const existing = structuralStore.subjectIdForKey(id);
     if (existing !== undefined) {
       return existing;
     }
 
-    const subjectId = nextSubjectId++;
-    subjectIds.set(id, subjectId);
-    subjectStates.set(subjectId, { active: true, key: id, restoreAllowed: true });
-    subjectRevisions.set(subjectId, 0);
+    const subjectId = structuralStore.allocateFreshSubjectId();
+    structuralStore.createSubject(subjectId, id);
     getSubjectStateSignal(subjectId);
     return subjectId;
   }
@@ -624,65 +824,28 @@ export function createEntitySignal<
 
   function transferSubjectId(from: K, to: K): number {
     const subjectId = allocateSubjectId(from);
-    subjectIds.delete(from);
-    subjectIds.set(to, subjectId);
-    subjectStates.set(subjectId, { active: true, key: to, restoreAllowed: true });
+    structuralStore.transferSubject(subjectId, from, to);
     publishSubjectPhysicalChange(subjectId);
     lastSubjectIds = [subjectId];
     return subjectId;
   }
 
   function findKeyBySubjectId(subjectId: number): K | undefined {
-    const state = resolveSubjectState(subjectId);
-    return state?.active ? state.key : undefined;
+    return structuralStore.activeKeyForSubject(subjectId);
   }
 
   function getNeighborSubjects(id: K): {
     beforeSubject?: number;
     afterSubject?: number;
   } {
-    const keys = Array.from(storage.keys());
-    const index = keys.indexOf(id);
-    if (index === -1) {
-      return {};
-    }
-
-    const beforeKey = index > 0 ? keys[index - 1] : undefined;
-    const afterKey = index < keys.length - 1 ? keys[index + 1] : undefined;
-
-    return {
-      beforeSubject:
-        beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
-      afterSubject: afterKey === undefined ? undefined : allocateSubjectId(afterKey),
-    };
+    return structuralStore.neighborSubjectsForKey(id);
   }
 
   function resolveRestoreIndex(
-    entries: Array<readonly [K, E]>,
     beforeSubject?: number,
     afterSubject?: number
   ): number {
-    const beforeIndex =
-      beforeSubject === undefined
-        ? -1
-        : entries.findIndex(
-            ([key]) => subjectIds.get(key) === beforeSubject
-          );
-    const afterIndex =
-      afterSubject === undefined
-        ? -1
-        : entries.findIndex(([key]) => subjectIds.get(key) === afterSubject);
-
-    if (beforeIndex !== -1 && afterIndex !== -1 && beforeIndex < afterIndex) {
-      return beforeIndex + 1;
-    }
-    if (afterIndex !== -1) {
-      return afterIndex;
-    }
-    if (beforeIndex !== -1) {
-      return beforeIndex + 1;
-    }
-    return entries.length;
+    return structuralStore.restoreIndexForSubjects(beforeSubject, afterSubject);
   }
 
   function restoreOne(
@@ -697,7 +860,7 @@ export function createEntitySignal<
     }
 
     const entries = Array.from(storage.entries());
-    const restoreIndex = resolveRestoreIndex(entries, beforeSubject, afterSubject);
+  const restoreIndex = resolveRestoreIndex(beforeSubject, afterSubject);
     entries.splice(restoreIndex, 0, [key, entity]);
 
     storage.clear();
@@ -712,12 +875,14 @@ export function createEntitySignal<
       );
     }
 
-    subjectIds.set(key, subjectId);
-    subjectStates.set(subjectId, {
-      active: true,
+    structuralStore.restoreSubject(
+      subjectId,
       key,
-      restoreAllowed: state?.restoreAllowed ?? true,
-    });
+      beforeSubject,
+      afterSubject,
+      state?.restoreAllowed ?? true
+    );
+    valueStore.retainSubjectValue(subjectId, entity);
     publishSubjectPhysicalChange(subjectId);
     lastSubjectIds = [subjectId];
     syncEntitySignal(key);
@@ -796,8 +961,9 @@ export function createEntitySignal<
 
     const transformedEntity = interceptAddedEntity(entity);
 
-    storage.set(id, transformedEntity);
     const subjectIdsForWrite = rememberSubjectIds([id]);
+    storage.set(id, transformedEntity);
+    valueStore.retainSubjectValue(subjectIdsForWrite[0], transformedEntity);
     const beforeKey = previousKeys.at(-1);
     const historyEffect: PendingAddHistoryEffect = {
       kind: 'add',
@@ -841,7 +1007,7 @@ export function createEntitySignal<
     }
 
     const s = entitySignals.get(subjectId);
-    if (s) s.set(storage.get(id));
+    if (s) s.set(valueStore.backingForSubject(subjectId));
   }
 
   /**
@@ -1147,25 +1313,20 @@ export function createEntitySignal<
       state: subjectState.active ? 'active' : 'tombstoned',
       subjectRevision: getSubjectRevision(subjectId),
       activeKey: subjectState.active ? subjectState.key : undefined,
-      retainedSubjectState: subjectStates.has(subjectId),
+      retainedSubjectState: structuralStore.hasSubject(subjectId),
       entitySignal: entitySignals.has(subjectId),
       activationToken: subjectStateSignals.has(subjectId),
       nodeFacadeMaterialized: node !== undefined,
       fieldFacadesMaterialized,
       positionIds: getPositionIds(),
-      retainedValueBacking: entitySignals.has(subjectId)
+      retainedValueBacking: valueStore.hasRetainedValueBacking(subjectId)
         ? { kind: 'retained-entity-signal' }
         : undefined,
     };
   }
 
   function listSubjectReclamationCandidates(): readonly number[] {
-    return [...subjectStates.entries()]
-      .filter(
-        ([subjectId, subjectState]) => !subjectState.active && entitySignals.has(subjectId)
-      )
-      .map(([subjectId]) => subjectId)
-      .sort((left, right) => left - right);
+    return structuralStore.tombstonedSubjectsWithRetainedBacking();
   }
 
   function prepareSubjectReclamation(
@@ -1219,11 +1380,9 @@ export function createEntitySignal<
     let mutated = false;
     for (const resource of prepared.retire) {
       if (resource === 'retained-value-backing') {
-        const hadBacking = entitySignals.delete(prepared.subjectId);
-        subjectStates.set(prepared.subjectId, {
-          active: false,
-          restoreAllowed: false,
-        });
+        const hadBacking = valueStore.retireSubjectValue(prepared.subjectId);
+        entitySignals.delete(prepared.subjectId);
+        structuralStore.retireSubject(prepared.subjectId);
         mutated = hadBacking || mutated;
       }
     }
@@ -1241,6 +1400,7 @@ export function createEntitySignal<
       );
     }
 
+    valueStore.retireSubjectValue(subjectId);
     entitySignals.delete(subjectId);
   }
 
@@ -1463,7 +1623,7 @@ export function createEntitySignal<
      * interceptors, notifier and tap handlers on exactly one path.
      */
     prependOne(entity: E, opts?: AddOptions<E, K>): K {
-      const previousFirstKey = Array.from(storage.keys())[0];
+      const previousFirstKey = structuralStore.firstActiveKey();
       const { id, historyEffect } = addOneWithHistoryEffect(entity, opts);
       moveToFront([id]);
       rewritePendingAddEffect(
@@ -1535,8 +1695,9 @@ export function createEntitySignal<
       const addedEntities: Array<{ id: K; entity: E }> = [];
 
       for (const { entity: transformedEntity, id } of stagedAdds) {
+        const subjectId = allocateSubjectId(id);
         storage.set(id, transformedEntity);
-        allocateSubjectId(id);
+        valueStore.retainSubjectValue(subjectId, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
         processedIds.push(id);
@@ -1616,6 +1777,7 @@ export function createEntitySignal<
       const finalUpdated = { ...entity, ...transformedChanges };
       storage.set(id, finalUpdated);
       const subjectIdsForWrite = rememberSubjectIds([id]);
+      valueStore.retainSubjectValue(subjectIdsForWrite[0], finalUpdated);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1673,6 +1835,7 @@ export function createEntitySignal<
       }
 
       storage.set(id, next);
+  valueStore.retainValueForKey(id, next);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1727,6 +1890,7 @@ export function createEntitySignal<
 
         const finalUpdated = { ...entity, ...transformedChanges };
         storage.set(id, finalUpdated);
+        valueStore.retainValueForKey(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -1815,12 +1979,12 @@ export function createEntitySignal<
       };
       tombstoneSubjectSignal(subjectIdsForWrite[0]);
       storage.delete(id);
-      subjectIds.delete(id);
       const currentState = resolveSubjectState(subjectIdsForWrite[0]);
-      subjectStates.set(subjectIdsForWrite[0], {
-        active: false,
-        restoreAllowed: currentState?.restoreAllowed ?? true,
-      });
+      structuralStore.tombstoneSubject(
+        subjectIdsForWrite[0],
+        id,
+        currentState?.restoreAllowed ?? true
+      );
       publishSubjectPhysicalChange(subjectIdsForWrite[0]);
       updateSignals();
 
@@ -1883,18 +2047,18 @@ export function createEntitySignal<
       const subjectIdsForWrite = rememberSubjectIds(ids);
 
       for (const { id } of entitiesToRemove) {
-        const subjectId = subjectIds.get(id);
+        const subjectId = resolveSubjectId(id);
         if (subjectId !== undefined) {
           tombstoneSubjectSignal(subjectId);
         }
         storage.delete(id);
-        subjectIds.delete(id);
         if (subjectId !== undefined) {
           const currentState = resolveSubjectState(subjectId);
-          subjectStates.set(subjectId, {
-            active: false,
-            restoreAllowed: currentState?.restoreAllowed ?? true,
-          });
+          structuralStore.tombstoneSubject(
+            subjectId,
+            id,
+            currentState?.restoreAllowed ?? true
+          );
           publishSubjectPhysicalChange(subjectId);
         }
       }
@@ -1994,8 +2158,9 @@ export function createEntitySignal<
       // Process adds
       const addedEntities: Array<{ id: K; entity: E }> = [];
       for (const { entity: transformedEntity, id } of stagedAdds) {
+        const subjectId = allocateSubjectId(id);
         storage.set(id, transformedEntity);
-        allocateSubjectId(id);
+        valueStore.retainSubjectValue(subjectId, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
         addedEntities.push({ id, entity: transformedEntity });
@@ -2009,6 +2174,7 @@ export function createEntitySignal<
       }> = [];
       for (const { id, prev, finalUpdated, transformedChanges } of stagedUpdates) {
         storage.set(id, finalUpdated);
+        valueStore.retainValueForKey(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -2072,10 +2238,9 @@ export function createEntitySignal<
 
     clear(): void {
       storage.clear();
-      subjectIds.clear();
-      subjectStates.clear();
+      structuralStore.clear();
+      valueStore.clear();
       subjectStateSignals.clear();
-      subjectRevisions.clear();
       lastSubjectIds = undefined;
       nodeCache.clear();
       resetEntitySignals();
@@ -2137,7 +2302,7 @@ export function createEntitySignal<
             handler.onRemove?.(id, entity, ctx);
           }
 
-          const subjectId = subjectIds.get(id);
+          const subjectId = resolveSubjectId(id);
           return {
             id,
             entity,
@@ -2158,7 +2323,7 @@ export function createEntitySignal<
             id,
             prev,
             entity,
-            subjectId: subjectIds.get(id),
+            subjectId: resolveSubjectId(id),
           };
         });
       const survivingOriginalIds = new Set(stagedUpdates.map(({ id }) => id));
@@ -2193,7 +2358,7 @@ export function createEntitySignal<
           for (let index = currentIndex - 1; index >= 0; index -= 1) {
             const neighborId = currentEntries[index]?.[0];
             if (neighborId !== undefined && survivingOriginalIds.has(neighborId)) {
-              beforeSubject = subjectIds.get(neighborId);
+              beforeSubject = resolveSubjectId(neighborId);
               break;
             }
           }
@@ -2205,7 +2370,7 @@ export function createEntitySignal<
           ) {
             const neighborId = currentEntries[index]?.[0];
             if (neighborId !== undefined && survivingOriginalIds.has(neighborId)) {
-              afterSubject = subjectIds.get(neighborId);
+              afterSubject = resolveSubjectId(neighborId);
               break;
             }
           }
@@ -2227,12 +2392,12 @@ export function createEntitySignal<
           continue;
         }
         tombstoneSubjectSignal(subjectId);
-        subjectIds.delete(id);
         const currentState = resolveSubjectState(subjectId);
-        subjectStates.set(subjectId, {
-          active: false,
-          restoreAllowed: currentState?.restoreAllowed ?? true,
-        });
+        structuralStore.tombstoneSubject(
+          subjectId,
+          id,
+          currentState?.restoreAllowed ?? true
+        );
         publishSubjectPhysicalChange(subjectId);
       }
 
@@ -2250,18 +2415,22 @@ export function createEntitySignal<
         const updatedEntity = stagedUpdateById.get(id);
         if (updatedEntity !== undefined) {
           storage.set(id, updatedEntity);
+          valueStore.retainValueForKey(id, updatedEntity);
           syncEntitySignal(id);
           continue;
         }
 
         const addedEntity = stagedAddById.get(id);
         if (addedEntity !== undefined) {
-          storage.set(id, addedEntity);
           const subjectId = allocateSubjectId(id);
+          storage.set(id, addedEntity);
+          valueStore.retainSubjectValue(subjectId, addedEntity);
           addedSubjectIds.push(subjectId);
           syncEntitySignal(id);
         }
       }
+
+      structuralStore.reorderActiveKeys(stagedIncomingIds);
 
       lastSubjectIds = stagedIncomingIds
         .map((id) => resolveSubjectId(id))

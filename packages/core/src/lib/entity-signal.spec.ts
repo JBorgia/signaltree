@@ -552,6 +552,193 @@ describe('entity subject physical inventory', () => {
     expect(api.byIdOrFail(1).name()).toBe('Alice');
   });
 
+  it('tracks physical structural lifecycle across rekey, tombstone, foreign reuse, restore, and retained-backing retirement', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const originalRow = api.byIdOrFail(1);
+    const originalField = originalRow.name;
+    const originalSubjectId = originalField.__subjectIds?.[0];
+    if (originalSubjectId === undefined) {
+      throw new Error('Expected subject metadata for original field');
+    }
+
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.changeId(1, 2);
+
+    expect(api.byId(1)).toBeUndefined();
+    expect(api.byIdOrFail(2)).toBe(originalRow);
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'active',
+      subjectRevision: 1,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.updateOne(2, { active: false });
+
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'active',
+      subjectRevision: 1,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.removeOne(2);
+
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([
+      originalSubjectId,
+    ]);
+
+    api.addOne({ id: 2, name: 'Bob', active: true });
+    const foreignSubjectId = api.byIdOrFail(2).name.__subjectIds?.[0];
+    if (foreignSubjectId === undefined) {
+      throw new Error('Expected subject metadata for foreign field');
+    }
+    expect(foreignSubjectId).not.toBe(originalSubjectId);
+
+    expect(internal.__inspectSubjectResources?.(foreignSubjectId)).toEqual({
+      subjectId: foreignSubjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.removeOne(2);
+
+    expect(internal.__inspectSubjectResources?.(foreignSubjectId)).toEqual({
+      subjectId: foreignSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    internal.__restoreOne?.(2, { id: 1, name: 'Alice', active: true }, originalSubjectId);
+
+    expect(api.byIdOrFail(2)).toBe(originalRow);
+    expect(api.byIdOrFail(2).name).toBe(originalField);
+    expect(api.byIdOrFail(2).name()).toBe('Alice');
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'active',
+      subjectRevision: 3,
+      activeKey: 2,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    api.removeOne(2);
+
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 4,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    const prepared = internal.__prepareSubjectReclamation?.(originalSubjectId, {
+      causallyEligible: true,
+    });
+    internal.__applyPreparedSubjectReclamation?.(prepared);
+
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 5,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: undefined,
+    });
+  });
+
   it('allocates a fresh subject lifetime when adding at a retired subject key', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;
