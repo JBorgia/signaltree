@@ -2,6 +2,7 @@ import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import { deepClone } from '@signaltree/shared';
 
 import { EntityValueStore } from './physical/entity-value-store';
+import { MaterializedEntityProjection } from './physical/materialized-entity-projection';
 import {
   StructuralStore,
   type SubjectLifetimeRecord,
@@ -229,11 +230,10 @@ export function createEntitySignal<
   // CLOSURE STATE (no `this` needed)
   // ==================
 
-  /** Core storage: entity ID -> entity */
   // Derived materialized projection only.
   // Authoritative structural state lives in structuralStore.
   // Authoritative subject values live in valueStore.
-  const storage = new Map<K, E>();
+  const materializedProjection = new MaterializedEntityProjection<K, E>();
 
   /**
    * Collection version. Bumped once per mutation; every collection query below
@@ -276,18 +276,15 @@ export function createEntitySignal<
   }
 
   function rebuildStorageProjection(): void {
-    storage.clear();
-    for (const [id, entity] of getProjectedEntries()) {
-      storage.set(id, entity);
-    }
+    materializedProjection.rebuild(structuralStore, valueStore);
   }
 
   function writeStorageProjectionEntry(id: K, entity: E): void {
-    storage.set(id, entity);
+    materializedProjection.replaceEntry(id, entity);
   }
 
   function snapshotStorageProjection(): ReadonlyMap<K, E> {
-    return new Map(storage);
+    return materializedProjection.snapshot();
   }
 
   function rebuildActiveProjectionFromOwners(): ReadonlyMap<K, E> {
@@ -295,7 +292,7 @@ export function createEntitySignal<
   }
 
   function clearStorageProjectionForTesting(): void {
-    storage.clear();
+    materializedProjection.clearForTesting();
   }
 
   /** Reactive signals for queries — all derived, none eagerly maintained. */
