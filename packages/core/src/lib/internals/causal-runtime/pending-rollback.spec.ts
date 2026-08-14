@@ -510,7 +510,7 @@ describe('rollbackPendingTurnAt', () => {
           getValueWithoutConfirmedTurn: () => 'Alice',
           getValueWithoutPendingTurn: () => 'Alice',
         },
-        onPendingTurnDiscarded: () => {
+        onMaintenanceMayBeUseful: () => {
           pendingIdsDuringMaintenance.push([...store.getPendingTurnIds()]);
           maintenanceResults.push(
             runPhysicalMaintenance({
@@ -608,7 +608,7 @@ describe('rollbackPendingTurnAt', () => {
           getValueWithoutConfirmedTurn: () => 'Alice',
           getValueWithoutPendingTurn: () => 'Alice',
         },
-        onPendingTurnDiscarded: maintenanceCallback,
+        onMaintenanceMayBeUseful: maintenanceCallback,
       })
     ).toThrow(failure);
 

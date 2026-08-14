@@ -36,6 +36,8 @@ export interface RollbackPendingTurnAtOptions {
   readonly topology: Pick<PositionRegistry, 'contains'>;
   readonly port: PendingRollbackPort;
   readonly realizationContext: RealizationContext;
+  readonly onMaintenanceMayBeUseful?: (turn: CausalTurn) => void;
+  readonly reportMaintenanceObserverError?: (error: unknown, turn: CausalTurn) => void;
   readonly onPendingTurnDiscarded?: (turn: CausalTurn) => void;
   readonly reportDiscardObserverError?: (error: unknown, turn: CausalTurn) => void;
 }
@@ -76,12 +78,17 @@ export function rollbackPendingTurnAt(
     transition.transition
   );
 
-  if (discardedTurn && options.onPendingTurnDiscarded) {
+  const maintenanceObserver =
+    options.onMaintenanceMayBeUseful ?? options.onPendingTurnDiscarded;
+  const maintenanceErrorObserver =
+    options.reportMaintenanceObserverError ?? options.reportDiscardObserverError;
+
+  if (discardedTurn && maintenanceObserver) {
     try {
-      options.onPendingTurnDiscarded(discardedTurn);
+      maintenanceObserver(discardedTurn);
     } catch (error) {
-      if (options.reportDiscardObserverError) {
-        options.reportDiscardObserverError(error, discardedTurn);
+      if (maintenanceErrorObserver) {
+        maintenanceErrorObserver(error, discardedTurn);
       } else {
         queueMicrotask(() => {
           throw normalizeError(error);
