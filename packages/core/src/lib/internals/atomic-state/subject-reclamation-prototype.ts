@@ -184,7 +184,7 @@ export function createSubjectReclamationPrototype<K extends StructuralKey>(
           return undefined;
         }
         return { id: record.key, name: currentName };
-      }) as RowFacade<K>;
+      }) as unknown as RowFacade<K>;
 
       Object.defineProperty(row, 'name', {
         value: name,
