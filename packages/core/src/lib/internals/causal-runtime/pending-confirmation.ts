@@ -1,5 +1,6 @@
 import type { AppliedHistory } from './applied-history';
 import type { ReversalResult, TurnId } from './causal-types';
+import type { RealizationContextSource } from './realization-context';
 import type { TurnStore } from './turn-store';
 
 export interface ConfirmPendingTurnAtOptions {
@@ -12,6 +13,12 @@ export interface ConfirmPendingTurnAtOptions {
     AppliedHistory,
     'prepareAdmitConfirmedTurn' | 'commitPreparedAdmitConfirmed'
   >;
+  readonly retentionObserver?: Pick<RealizationContextSource, 'consumeForgottenConfirmedTurns'>;
+  readonly onConfirmedTurnsForgotten?: (turns: readonly { readonly id: TurnId }[]) => void;
+  readonly reportRetentionObserverError?: (
+    error: unknown,
+    turns: readonly { readonly id: TurnId }[]
+  ) => void;
 }
 
 export function confirmPendingTurnAt(
@@ -36,8 +43,31 @@ export function confirmPendingTurnAt(
     prepared.transition
   );
 
+  const forgottenTurns = options.retentionObserver?.consumeForgottenConfirmedTurns() ?? [];
+  if (forgottenTurns.length > 0 && options.onConfirmedTurnsForgotten) {
+    try {
+      options.onConfirmedTurnsForgotten(forgottenTurns);
+    } catch (error) {
+      if (options.reportRetentionObserverError) {
+        options.reportRetentionObserverError(error, forgottenTurns);
+      } else {
+        queueMicrotask(() => {
+          throw normalizeError(error);
+        });
+      }
+    }
+  }
+
   return {
     ok: true,
     turnId: confirmedTurn.id,
   };
+}
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(String(error));
 }

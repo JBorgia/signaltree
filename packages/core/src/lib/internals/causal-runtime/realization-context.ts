@@ -1,6 +1,9 @@
 import type { PositionId, TurnId, CausalTurn } from './causal-types';
 
-import type { AppliedHistory } from './applied-history';
+import type {
+  AppliedHistory,
+  EvictedConfirmedTurnDisposition,
+} from './applied-history';
 import type { TurnStore } from './turn-store';
 
 export interface RealizationContext {
@@ -11,6 +14,7 @@ export interface RealizationContext {
 
 export interface RealizationContextSource extends RealizationContext {
   retainEvictedConfirmedTurn(turn: CausalTurn): void;
+  consumeForgottenConfirmedTurns(): readonly CausalTurn[];
 }
 
 export interface CreateRealizationContextSourceOptions {
@@ -22,6 +26,7 @@ export interface CreateRealizationContextSourceOptions {
 
 class ProjectionRealizationContextSource implements RealizationContextSource {
   private readonly baselineValues = new Map<PositionId, unknown>();
+  private readonly forgottenConfirmedTurns: CausalTurn[] = [];
 
   constructor(private readonly options: CreateRealizationContextSourceOptions) {
     for (const [positionId, value] of options.baselineValues ?? []) {
@@ -43,13 +48,23 @@ class ProjectionRealizationContextSource implements RealizationContextSource {
 
   retainEvictedConfirmedTurn(turn: CausalTurn): void {
     const disposition = this.options.appliedHistory.forgetRetainedTurn(turn.id);
-    if (!disposition.wasApplied) {
+    if (!disposition.wasApplied && !disposition.wasRedoable) {
       return;
     }
 
-    for (const effect of turn.effects) {
-      this.baselineValues.set(effect.owner, effect.after);
+    if (disposition.wasApplied) {
+      for (const effect of turn.effects) {
+        this.baselineValues.set(effect.owner, effect.after);
+      }
     }
+
+    this.forgottenConfirmedTurns.push(copyTurn(turn));
+  }
+
+  consumeForgottenConfirmedTurns(): readonly CausalTurn[] {
+    const forgotten = this.forgottenConfirmedTurns.map(copyTurn);
+    this.forgottenConfirmedTurns.length = 0;
+    return forgotten;
   }
 
   private computeValues(
@@ -87,4 +102,15 @@ export function createRealizationContextSource(
   options: CreateRealizationContextSourceOptions
 ): RealizationContextSource {
   return new ProjectionRealizationContextSource(options);
+}
+
+function copyTurn(turn: CausalTurn): CausalTurn {
+  return {
+    ...turn,
+    effects: turn.effects.map((effect) => ({
+      ...effect,
+      subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
+    })),
+    participants: [...turn.participants],
+  };
 }

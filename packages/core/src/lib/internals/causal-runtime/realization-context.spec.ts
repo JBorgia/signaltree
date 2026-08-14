@@ -132,4 +132,42 @@ describe('realization context source', () => {
     expect(source.getCurrentValue(P_FIRST_NAME)).toBe('C');
     expect(source.getValueWithoutConfirmedTurn(t2.id, P_FIRST_NAME)).toBe('A');
   });
+
+  it('captures forgotten confirmed turns as a consumable quiescent snapshot', () => {
+    let source:
+      | ReturnType<typeof createRealizationContextSource>
+      | undefined;
+    const store = new TurnStore({
+      capacity: 1,
+      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+    });
+    const appliedHistory = new AppliedHistory(store);
+    source = createRealizationContextSource({
+      baselineValues: new Map([[P_FIRST_NAME, 'A']]),
+      store,
+      appliedHistory,
+    });
+
+    const first = store.admitConfirmed({
+      id: 1,
+      effects: [{ owner: P_FIRST_NAME, before: 'A', after: 'B' }],
+    });
+    expect(appliedHistory.admitConfirmed(first.id)).toEqual({ ok: true });
+
+    const second = store.admitConfirmed({
+      id: 2,
+      effects: [{ owner: P_FIRST_NAME, before: 'B', after: 'C' }],
+    });
+    expect(appliedHistory.admitConfirmed(second.id)).toEqual({ ok: true });
+
+    expect(source.consumeForgottenConfirmedTurns()).toEqual([
+      {
+        id: 1,
+        effects: [{ owner: P_FIRST_NAME, before: 'A', after: 'B' }],
+        participants: [P_FIRST_NAME],
+        state: 'confirmed',
+      },
+    ]);
+    expect(source.consumeForgottenConfirmedTurns()).toEqual([]);
+  });
 });
