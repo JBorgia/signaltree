@@ -3,6 +3,7 @@ import { deepClone } from '@signaltree/shared';
 
 import {
   EntityMutationFrame,
+  type PreparedFreshSubject,
   type PreparedKeyTransfer,
   type PreparedRetainedValueRetirement,
   type PreparedSubjectTombstone,
@@ -807,7 +808,19 @@ export function createEntitySignal<
 
     const transformedEntity = interceptAddedEntity(entity);
 
-    const subjectId = commitFreshSubject(id);
+    const frame = createEntityMutationFrame();
+    const freshSubject: PreparedFreshSubject<K, E> = {
+      kind: 'create-fresh-subject',
+      key: id,
+      nextValue: transformedEntity,
+    };
+    frame.stageFreshSubject(freshSubject);
+    const result = frame.commit();
+    const subjectId = result.allocatedSubjectIds[0];
+    if (subjectId === undefined) {
+      throw new Error(`Fresh subject allocation for ${String(id)} did not commit.`);
+    }
+    getSubjectStateSignal(subjectId);
     const beforeKey = previousKeys.at(-1);
     const historyEffect: PendingAddHistoryEffect = {
       kind: 'add',
@@ -818,8 +831,6 @@ export function createEntitySignal<
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
-    valueStore.retainSubjectValue(subjectId, transformedEntity);
-    writeStorageProjectionEntry(id, transformedEntity);
     lastSubjectIds = [subjectId];
     invalidateNodeCache(id);
     syncEntitySignal(id);

@@ -31,6 +31,15 @@ export type PreparedSubjectTombstone<K extends string | number> = {
   restoreAllowed: boolean;
 };
 
+export type PreparedFreshSubject<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = {
+  kind: 'create-fresh-subject';
+  key: K;
+  nextValue: E;
+};
+
 export type PreparedEntityPhysicalMutation<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -38,10 +47,12 @@ export type PreparedEntityPhysicalMutation<
   | PreparedValueReplacement<K, E>
   | PreparedRetainedValueRetirement
   | PreparedKeyTransfer<K>
-  | PreparedSubjectTombstone<K>;
+  | PreparedSubjectTombstone<K>
+  | PreparedFreshSubject<K, E>;
 
 export type EntityMutationCommitResult = {
   physicallyChangedSubjectIds: readonly number[];
+  allocatedSubjectIds: readonly number[];
 };
 
 export class EntityMutationFrame<
@@ -72,11 +83,25 @@ export class EntityMutationFrame<
     this.mutations.push(tombstone);
   }
 
+  stageFreshSubject(freshSubject: PreparedFreshSubject<K, E>): void {
+    this.mutations.push(freshSubject);
+  }
+
   commit(): EntityMutationCommitResult {
     const physicallyChangedSubjectIds = new Set<number>();
+    const allocatedSubjectIds: number[] = [];
     let requiresProjectionRebuild = false;
 
     for (const mutation of this.mutations) {
+      if (mutation.kind === 'create-fresh-subject') {
+        const subjectId = this.structuralStore.allocateFreshSubjectId();
+        this.structuralStore.createSubject(subjectId, mutation.key);
+        this.valueStore.retainSubjectValue(subjectId, mutation.nextValue);
+        this.materializedProjection.replaceEntry(mutation.key, mutation.nextValue);
+        allocatedSubjectIds.push(subjectId);
+        continue;
+      }
+
       if (mutation.kind === 'replace-value') {
         this.valueStore.retainSubjectValue(
           mutation.subjectId,
@@ -126,6 +151,7 @@ export class EntityMutationFrame<
 
     return {
       physicallyChangedSubjectIds: [...physicallyChangedSubjectIds],
+      allocatedSubjectIds,
     };
   }
 }
