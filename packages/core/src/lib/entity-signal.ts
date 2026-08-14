@@ -57,6 +57,7 @@ export function setEntityPositionIdNotifyEnabledForTesting(
 export type EntitySubjectPhysicalInventory<K extends string | number> = {
   subjectId: number;
   state: 'active' | 'tombstoned';
+  subjectRevision: number;
   activeKey: K | undefined;
   retainedSubjectState: boolean;
   entitySignal: boolean;
@@ -90,6 +91,14 @@ export type EntitySubjectReclamationPlan = {
   retire: readonly EntitySubjectReclamationResource[];
   retain: readonly EntitySubjectReclamationResource[];
   unresolved: readonly EntitySubjectReclamationUnresolved[];
+};
+
+export type PreparedEntitySubjectReclamation = {
+  subjectId: number;
+  expectedLifetime: 'tombstoned';
+  expectedSubjectRevision: number;
+  retire: readonly EntitySubjectReclamationResource[];
+  retain: readonly EntitySubjectReclamationResource[];
 };
 
 export type EntitySubjectReclamationPlanningOptions = {
@@ -282,8 +291,12 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<number, WritableSignal<E | undefined>>();
   const subjectIds = new Map<K, number>();
-  const subjectStates = new Map<number, { active: boolean; key?: K }>();
+  const subjectStates = new Map<
+    number,
+    { active: boolean; key?: K; restoreAllowed: boolean }
+  >();
   const subjectStateSignals = new Map<number, WritableSignal<number>>();
+  const subjectRevisions = new Map<number, number>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
     options?.subjectMetadataEnabled ?? ownerMetadataEnabled;
@@ -543,9 +556,17 @@ export function createEntitySignal<
   }
 
   function resolveSubjectState(subjectId: number):
-    | { active: boolean; key?: K }
+    | { active: boolean; key?: K; restoreAllowed: boolean }
     | undefined {
     return subjectStates.get(subjectId);
+  }
+
+  function getSubjectRevision(subjectId: number): number {
+    return subjectRevisions.get(subjectId) ?? 0;
+  }
+
+  function bumpSubjectRevision(subjectId: number): void {
+    subjectRevisions.set(subjectId, getSubjectRevision(subjectId) + 1);
   }
 
   /** Get (or lazily create) the per-entity signal, seeded from storage. */
@@ -576,6 +597,11 @@ export function createEntitySignal<
     getSubjectStateSignal(subjectId).update((value) => value + 1);
   }
 
+  function publishSubjectPhysicalChange(subjectId: number): void {
+    bumpSubjectRevision(subjectId);
+    bumpSubjectStateSignal(subjectId);
+  }
+
   function allocateSubjectId(id: K): number {
     const existing = subjectIds.get(id);
     if (existing !== undefined) {
@@ -584,7 +610,8 @@ export function createEntitySignal<
 
     const subjectId = nextSubjectId++;
     subjectIds.set(id, subjectId);
-    subjectStates.set(subjectId, { active: true, key: id });
+    subjectStates.set(subjectId, { active: true, key: id, restoreAllowed: true });
+    subjectRevisions.set(subjectId, 0);
     getSubjectStateSignal(subjectId);
     return subjectId;
   }
@@ -599,8 +626,8 @@ export function createEntitySignal<
     const subjectId = allocateSubjectId(from);
     subjectIds.delete(from);
     subjectIds.set(to, subjectId);
-    subjectStates.set(subjectId, { active: true, key: to });
-    bumpSubjectStateSignal(subjectId);
+    subjectStates.set(subjectId, { active: true, key: to, restoreAllowed: true });
+    publishSubjectPhysicalChange(subjectId);
     lastSubjectIds = [subjectId];
     return subjectId;
   }
@@ -678,9 +705,20 @@ export function createEntitySignal<
       storage.set(entryKey, entryValue);
     }
 
+    const state = resolveSubjectState(subjectId);
+    if (state && !state.restoreAllowed) {
+      throw new Error(
+        `Subject ${String(subjectId)} has retired backing and cannot be restored.`
+      );
+    }
+
     subjectIds.set(key, subjectId);
-    subjectStates.set(subjectId, { active: true, key });
-    bumpSubjectStateSignal(subjectId);
+    subjectStates.set(subjectId, {
+      active: true,
+      key,
+      restoreAllowed: state?.restoreAllowed ?? true,
+    });
+    publishSubjectPhysicalChange(subjectId);
     lastSubjectIds = [subjectId];
     syncEntitySignal(key);
     updateSignals();
@@ -1080,6 +1118,7 @@ export function createEntitySignal<
     return {
       subjectId,
       state: subjectState.active ? 'active' : 'tombstoned',
+      subjectRevision: getSubjectRevision(subjectId),
       activeKey: subjectState.active ? subjectState.key : undefined,
       retainedSubjectState: subjectStates.has(subjectId),
       entitySignal: entitySignals.has(subjectId),
@@ -1091,6 +1130,71 @@ export function createEntitySignal<
         ? { kind: 'retained-entity-signal' }
         : undefined,
     };
+  }
+
+  function prepareSubjectReclamation(
+    subjectId: number,
+    options: EntitySubjectReclamationPlanningOptions
+  ): PreparedEntitySubjectReclamation | undefined {
+    const inventory = inspectSubjectResources(subjectId);
+    if (!inventory) {
+      return undefined;
+    }
+
+    const plan = planEntitySubjectReclamation(inventory, options);
+    if (!plan.eligible) {
+      return undefined;
+    }
+
+    return {
+      subjectId,
+      expectedLifetime: 'tombstoned',
+      expectedSubjectRevision: inventory.subjectRevision,
+      retire: plan.retire,
+      retain: plan.retain,
+    };
+  }
+
+  function applyPreparedSubjectReclamation(
+    prepared: PreparedEntitySubjectReclamation
+  ): void {
+    const state = resolveSubjectState(prepared.subjectId);
+    if (prepared.expectedLifetime !== 'tombstoned') {
+      throw new Error(
+        `Prepared reclamation for subject ${String(prepared.subjectId)} has an unsupported expected lifetime.`
+      );
+    }
+    if (!state) {
+      throw new Error(
+        `Prepared reclamation for subject ${String(prepared.subjectId)} no longer matches active lifetime state.`
+      );
+    }
+    if (getSubjectRevision(prepared.subjectId) !== prepared.expectedSubjectRevision) {
+      throw new Error(
+        `Prepared reclamation for subject ${String(prepared.subjectId)} is stale.`
+      );
+    }
+    if (state.active) {
+      throw new Error(
+        `Prepared reclamation for subject ${String(prepared.subjectId)} no longer matches active lifetime state.`
+      );
+    }
+
+    let mutated = false;
+    for (const resource of prepared.retire) {
+      if (resource === 'retained-value-backing') {
+        const hadBacking = entitySignals.delete(prepared.subjectId);
+        subjectStates.set(prepared.subjectId, {
+          active: false,
+          restoreAllowed: false,
+        });
+        mutated = hadBacking || mutated;
+      }
+    }
+
+    if (mutated) {
+      publishSubjectPhysicalChange(prepared.subjectId);
+    }
   }
 
   function retireSubjectRetainedValueBackingForTesting(subjectId: number): void {
@@ -1687,8 +1791,12 @@ export function createEntitySignal<
       tombstoneSubjectSignal(subjectIdsForWrite[0]);
       storage.delete(id);
       subjectIds.delete(id);
-      subjectStates.set(subjectIdsForWrite[0], { active: false });
-      bumpSubjectStateSignal(subjectIdsForWrite[0]);
+      const currentState = resolveSubjectState(subjectIdsForWrite[0]);
+      subjectStates.set(subjectIdsForWrite[0], {
+        active: false,
+        restoreAllowed: currentState?.restoreAllowed ?? true,
+      });
+      publishSubjectPhysicalChange(subjectIdsForWrite[0]);
       updateSignals();
 
       // Notify PathNotifier
@@ -1757,8 +1865,12 @@ export function createEntitySignal<
         storage.delete(id);
         subjectIds.delete(id);
         if (subjectId !== undefined) {
-          subjectStates.set(subjectId, { active: false });
-          bumpSubjectStateSignal(subjectId);
+          const currentState = resolveSubjectState(subjectId);
+          subjectStates.set(subjectId, {
+            active: false,
+            restoreAllowed: currentState?.restoreAllowed ?? true,
+          });
+          publishSubjectPhysicalChange(subjectId);
         }
       }
 
@@ -1959,6 +2071,7 @@ export function createEntitySignal<
       subjectIds.clear();
       subjectStates.clear();
       subjectStateSignals.clear();
+      subjectRevisions.clear();
       lastSubjectIds = undefined;
       nodeCache.clear();
       resetEntitySignals();
@@ -1971,6 +2084,7 @@ export function createEntitySignal<
       subjectIds.clear();
       subjectStates.clear();
       subjectStateSignals.clear();
+      subjectRevisions.clear();
       lastSubjectIds = undefined;
       nodeCache.clear();
 
@@ -2116,6 +2230,16 @@ export function createEntitySignal<
       const inventory = inspectSubjectResources(subjectId);
       return inventory ? planEntitySubjectReclamation(inventory, options) : undefined;
     },
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__prepareSubjectReclamation', {
+    value: prepareSubjectReclamation,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__applyPreparedSubjectReclamation', {
+    value: applyPreparedSubjectReclamation,
     enumerable: false,
     configurable: true,
   });
