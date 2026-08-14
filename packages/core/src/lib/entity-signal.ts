@@ -1,6 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import { deepClone } from '@signaltree/shared';
 
+import { EntityValueStore } from './physical/entity-value-store';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
 import { HISTORY_EXCLUDED } from './utils';
@@ -528,36 +529,9 @@ export function createEntitySignal<
       this.nextSubjectId = 1;
     },
   };
-  const valueStore = {
-    retainedEntities: new Map<number, E>(),
-    backingForSubject(subjectId: number): E | undefined {
-      return this.retainedEntities.get(subjectId);
-    },
-    backingForKey(key: K): E | undefined {
-      const subjectId = structuralStore.subjectIdForKey(key);
-      return subjectId === undefined ? undefined : this.backingForSubject(subjectId);
-    },
-    retainSubjectValue(subjectId: number, entity: E): void {
-      this.retainedEntities.set(subjectId, entity);
-    },
-    retainValueForKey(key: K, entity: E): number {
-      const subjectId = structuralStore.subjectIdForKey(key);
-      if (subjectId === undefined) {
-        throw new Error(`Entity with id ${String(key)} has no subject id`);
-      }
-      this.retainSubjectValue(subjectId, entity);
-      return subjectId;
-    },
-    hasRetainedValueBacking(subjectId: number): boolean {
-      return this.retainedEntities.has(subjectId);
-    },
-    retireSubjectValue(subjectId: number): boolean {
-      return this.retainedEntities.delete(subjectId);
-    },
-    clear(): void {
-      this.retainedEntities.clear();
-    },
-  };
+  const valueStore = new EntityValueStore<E, K>((key) =>
+    structuralStore.subjectIdForKey(key)
+  );
   const subjectStateSignals = new Map<number, WritableSignal<number>>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
