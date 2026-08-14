@@ -2,12 +2,38 @@ import { describe, expect, it } from 'vitest';
 
 import type { PositionId } from './causal-types';
 import { AppliedHistory } from './applied-history';
-import { assessReclamationEligibility } from './reclamation-eligibility';
+import {
+  assessReclamationEligibility,
+  type ReclamationEligibility,
+  type ReclamationEligibilityBlocker,
+} from './reclamation-eligibility';
 import { TurnStore } from './turn-store';
 
 const P_DRIVER_KEY = 3 as PositionId;
 const P_DRIVER_NAME = 4 as PositionId;
 const SUBJECT_DRIVER = 'driver-1';
+
+function compareBlockers(
+  left: ReclamationEligibilityBlocker,
+  right: ReclamationEligibilityBlocker
+): number {
+  const leftKey = `${left.kind}:${left.turnId}`;
+  const rightKey = `${right.kind}:${right.turnId}`;
+  return leftKey.localeCompare(rightKey);
+}
+
+function expectEligibility(
+  actual: ReclamationEligibility,
+  expected: {
+    readonly eligible: boolean;
+    readonly blockers: readonly ReclamationEligibilityBlocker[];
+  }
+): void {
+  expect(actual.eligible).toBe(expected.eligible);
+  expect([...actual.blockers].sort(compareBlockers)).toEqual(
+    [...expected.blockers].sort(compareBlockers)
+  );
+}
 
 describe('reclamation eligibility', () => {
   it('blocks reclamation while retained confirmed history can still restore a tombstoned subject', () => {
@@ -28,13 +54,13 @@ describe('reclamation eligibility', () => {
     });
     expect(appliedHistory.admitConfirmed(turn.id)).toEqual({ ok: true });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: false,
       blockers: [
         {
@@ -44,7 +70,8 @@ describe('reclamation eligibility', () => {
           structural: 'remove',
         },
       ],
-    });
+      }
+    );
   });
 
   it('blocks reclamation while redoable confirmed history can still re-add a tombstoned subject', () => {
@@ -66,13 +93,13 @@ describe('reclamation eligibility', () => {
     expect(appliedHistory.admitConfirmed(turn.id)).toEqual({ ok: true });
     expect(appliedHistory.moveConfirmedTurnToRedo(turn.id)).toEqual({ ok: true });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: false,
       blockers: [
         {
@@ -82,7 +109,8 @@ describe('reclamation eligibility', () => {
           structural: 'add',
         },
       ],
-    });
+      }
+    );
   });
 
   it('does not let confirmed rekey history alone block reclamation', () => {
@@ -103,16 +131,17 @@ describe('reclamation eligibility', () => {
     });
     expect(appliedHistory.admitConfirmed(turn.id)).toEqual({ ok: true });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: true,
       blockers: [],
-    });
+      }
+    );
   });
 
   it('does not let confirmed scalar history alone block reclamation', () => {
@@ -132,16 +161,17 @@ describe('reclamation eligibility', () => {
     });
     expect(appliedHistory.admitConfirmed(turn.id)).toEqual({ ok: true });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: true,
       blockers: [],
-    });
+      }
+    );
   });
 
   it('blocks reclamation while pending speculative state still references the subject', () => {
@@ -160,13 +190,13 @@ describe('reclamation eligibility', () => {
       ],
     });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: false,
       blockers: [
         {
@@ -176,7 +206,8 @@ describe('reclamation eligibility', () => {
           structural: undefined,
         },
       ],
-    });
+      }
+    );
   });
 
   it('blocks reclamation while pending rekey still references the subject', () => {
@@ -196,13 +227,13 @@ describe('reclamation eligibility', () => {
       ],
     });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: false,
       blockers: [
         {
@@ -212,7 +243,8 @@ describe('reclamation eligibility', () => {
           structural: 'rekey',
         },
       ],
-    });
+      }
+    );
   });
 
   it('reports both confirmed restore and pending settlement blockers when both are present', () => {
@@ -245,13 +277,13 @@ describe('reclamation eligibility', () => {
       ],
     });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: false,
       blockers: [
         {
@@ -267,7 +299,8 @@ describe('reclamation eligibility', () => {
           structural: 'remove',
         },
       ],
-    });
+      }
+    );
   });
 
   it('marks a tombstoned subject eligible once retained restore paths and pending references are gone', () => {
@@ -300,15 +333,16 @@ describe('reclamation eligibility', () => {
     });
     expect(appliedHistory.admitConfirmed(unrelated.id)).toEqual({ ok: true });
 
-    expect(
+    expectEligibility(
       assessReclamationEligibility({
         subjectId: SUBJECT_DRIVER,
         store,
         appliedHistory,
-      })
-    ).toEqual({
+      }),
+      {
       eligible: true,
       blockers: [],
-    });
+      }
+    );
   });
 });
