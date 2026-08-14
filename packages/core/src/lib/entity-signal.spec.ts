@@ -1639,7 +1639,6 @@ describe('addMany() mode option (F-011)', () => {
 
     api.addOne({ id: 1, name: 'A' });
     api.addOne({ id: 2, name: 'B' });
-
     const ids = api.upsertMany([
       { id: 3, name: 'C' },
       { id: 1, name: 'A updated' },
@@ -1690,6 +1689,142 @@ describe('addMany() mode option (F-011)', () => {
     expect(
       Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
     ).toEqual(expectedEntries);
+  });
+
+  it('removeMany tombstones the whole prepared subject batch while retaining backing and held facades', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addMany([
+      { id: 1, name: 'Alice', active: true },
+      { id: 2, name: 'Bob', active: false },
+      { id: 3, name: 'Cara', active: true },
+      { id: 4, name: 'Dora', active: false },
+    ]);
+
+    const heldRowTwo = api.byIdOrFail(2);
+    const heldFieldTwo = heldRowTwo.name;
+    const heldRowFour = api.byIdOrFail(4);
+    const heldFieldFour = heldRowFour.name;
+    const subjectTwo = heldFieldTwo.__subjectIds?.[0];
+    const subjectFour = heldFieldFour.__subjectIds?.[0];
+    if (subjectTwo === undefined || subjectFour === undefined) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.removeMany([2, 4]);
+
+    expect(api.ids()).toEqual([1, 3]);
+    expect(api.byId(2)).toBeUndefined();
+    expect(api.byId(4)).toBeUndefined();
+    expect(heldRowTwo()).toBeUndefined();
+    expect(heldFieldTwo()).toBeUndefined();
+    expect(heldRowFour()).toBeUndefined();
+    expect(heldFieldFour()).toBeUndefined();
+    expect(internal.__inspectSubjectResources?.(subjectTwo)).toEqual({
+      subjectId: subjectTwo,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldFieldTwo.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__inspectSubjectResources?.(subjectFour)).toEqual({
+      subjectId: subjectFour,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldFieldFour.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([
+      subjectTwo,
+      subjectFour,
+    ]);
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([
+      [1, { id: 1, name: 'Alice', active: true }],
+      [3, { id: 3, name: 'Cara', active: true }],
+    ]);
+  });
+
+  it('clear empties active projection without deleting retained subject lifetimes or values', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addMany([
+      { id: 1, name: 'Alice', active: true },
+      { id: 2, name: 'Bob', active: false },
+      { id: 3, name: 'Cara', active: true },
+    ]);
+
+    const heldRows = [api.byIdOrFail(1), api.byIdOrFail(2), api.byIdOrFail(3)];
+    const heldFields = heldRows.map((row) => row.name);
+    const subjectIds = heldFields.map((field) => field.__subjectIds?.[0]);
+    if (subjectIds.some((subjectId) => subjectId === undefined)) {
+      throw new Error('Expected subject metadata for held fields');
+    }
+
+    api.clear();
+
+    expect(api.empty()).toBe(true);
+    expect(api.ids()).toEqual([]);
+    expect(api.count()).toBe(0);
+    expect(api.byId(1)).toBeUndefined();
+    expect(api.byId(2)).toBeUndefined();
+    expect(api.byId(3)).toBeUndefined();
+    expect(heldRows.map((row) => row())).toEqual([undefined, undefined, undefined]);
+    expect(heldFields.map((field) => field())).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+
+    for (let i = 0; i < subjectIds.length; i++) {
+      const subjectId = subjectIds[i] as number;
+      expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+        subjectId,
+        state: 'tombstoned',
+        subjectRevision: 1,
+        activeKey: undefined,
+        retainedSubjectState: true,
+        entitySignal: false,
+        activationToken: true,
+        nodeFacadeMaterialized: true,
+        fieldFacadesMaterialized: ['active', 'id', 'name'],
+        positionIds: heldFields[i].__positionIds,
+        retainedValueBacking: {
+          kind: 'retained-entity-signal',
+        },
+      });
+    }
+
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual(
+      subjectIds as number[]
+    );
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([]);
   });
 
   it('does not partially remove, update, or allocate when a later setAll arrival blocks', () => {

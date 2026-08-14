@@ -2088,19 +2088,25 @@ export function createEntitySignal<
       if (ids.length === 0) return;
 
       // Collect entities and run interceptors first
-      const entitiesToRemove: Array<{ id: K; entity: E }> = [];
-      const neighborSubjects = new Map<
-        K,
-        { beforeSubject?: number; afterSubject?: number }
-      >();
-      const subjectPositionsById = new Map<K, readonly PositionId[] | undefined>();
+      const preparedRemovals: Array<{
+        id: K;
+        entity: E;
+        subjectId: number;
+        beforeSubject?: number;
+        afterSubject?: number;
+        subjectPositions?: readonly PositionId[];
+      }> = [];
       for (const id of ids) {
         const entity = getProjectedEntity(id);
         if (!entity) {
           throw new Error(`Entity with id ${String(id)} not found`);
         }
-        neighborSubjects.set(id, getNeighborSubjects(id));
-        subjectPositionsById.set(id, deriveSubjectPositions(id, entity));
+        const subjectId = resolveSubjectId(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
+        const { beforeSubject, afterSubject } = getNeighborSubjects(id);
+        const subjectPositions = deriveSubjectPositions(id, entity);
 
         // Run interceptors
         for (const handler of interceptHandlers) {
@@ -2119,15 +2125,20 @@ export function createEntitySignal<
           handler.onRemove?.(id, entity, ctx);
         }
 
-        entitiesToRemove.push({ id, entity });
+        preparedRemovals.push({
+          id,
+          entity,
+          subjectId,
+          beforeSubject,
+          afterSubject,
+          subjectPositions,
+        });
       }
 
-      // Delete all entities without triggering per-entity signal updates
-      const subjectIdsForWrite = rememberSubjectIds(ids);
+      const subjectIdsForWrite = preparedRemovals.map(({ subjectId }) => subjectId);
+      lastSubjectIds = subjectIdsForWrite;
 
-      for (let i = 0; i < entitiesToRemove.length; i++) {
-        const { id } = entitiesToRemove[i];
-        const subjectId = subjectIdsForWrite[i];
+      for (const { id, subjectId } of preparedRemovals) {
         const currentState = resolveSubjectState(subjectId);
         structuralStore.tombstoneSubject(
           subjectId,
@@ -2144,8 +2155,14 @@ export function createEntitySignal<
       updateSignals();
 
       // Notify PathNotifier for each removed entity
-      for (let i = 0; i < entitiesToRemove.length; i++) {
-        const { id, entity } = entitiesToRemove[i];
+      for (let i = 0; i < preparedRemovals.length; i++) {
+        const {
+          id,
+          entity,
+          beforeSubject,
+          afterSubject,
+          subjectPositions,
+        } = preparedRemovals[i];
         pathNotifier.notify(
           `${basePath}.${String(id)}`,
           undefined,
@@ -2158,15 +2175,15 @@ export function createEntitySignal<
             subject: subjectIdsForWrite[i],
             key: id,
             value: deepClone(entity),
-            beforeSubject: neighborSubjects.get(id)?.beforeSubject,
-            afterSubject: neighborSubjects.get(id)?.afterSubject,
-            subjectPositions: subjectPositionsById.get(id),
+            beforeSubject,
+            afterSubject,
+            subjectPositions,
           })
         );
       }
 
       // Run tap handlers for each removed entity
-      for (const { id, entity } of entitiesToRemove) {
+      for (const { id, entity } of preparedRemovals) {
         for (const handler of tapHandlers) {
           handler.onRemove?.(id, entity);
         }
@@ -2332,12 +2349,28 @@ export function createEntitySignal<
     // ==================
 
     clear(): void {
-      storage.clear();
-      structuralStore.clear();
-      valueStore.clear();
-      subjectStateSignals.clear();
-      lastSubjectIds = undefined;
-      nodeCache.clear();
+      const activeIds = structuralStore.activeKeysSnapshot();
+      const activeSubjects = activeIds.map((id) => {
+        const subjectId = resolveSubjectId(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
+        return { id, subjectId };
+      });
+
+      for (const { id, subjectId } of activeSubjects) {
+        const currentState = resolveSubjectState(subjectId);
+        structuralStore.tombstoneSubject(
+          subjectId,
+          id,
+          currentState?.restoreAllowed ?? true
+        );
+        publishSubjectPhysicalChange(subjectId);
+      }
+
+      rebuildStorageProjection();
+      activeIdSignal.set(undefined);
+      lastSubjectIds = activeSubjects.map(({ subjectId }) => subjectId);
       resetEntitySignals();
       updateSignals();
     },
