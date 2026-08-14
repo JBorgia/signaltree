@@ -36,6 +36,8 @@ export interface RollbackPendingTurnAtOptions {
   readonly topology: Pick<PositionRegistry, 'contains'>;
   readonly port: PendingRollbackPort;
   readonly realizationContext: RealizationContext;
+  readonly onPendingTurnDiscarded?: (turn: CausalTurn) => void;
+  readonly reportDiscardObserverError?: (error: unknown, turn: CausalTurn) => void;
 }
 
 export function rollbackPendingTurnAt(
@@ -70,7 +72,24 @@ export function rollbackPendingTurnAt(
   }
 
   options.port.applyAtomically(effects);
-  options.store.commitPreparedDiscardPending(transition.transition);
+  const discardedTurn = options.store.commitPreparedDiscardPending(
+    transition.transition
+  );
+
+  if (discardedTurn && options.onPendingTurnDiscarded) {
+    try {
+      options.onPendingTurnDiscarded(discardedTurn);
+    } catch (error) {
+      if (options.reportDiscardObserverError) {
+        options.reportDiscardObserverError(error, discardedTurn);
+      } else {
+        queueMicrotask(() => {
+          throw normalizeError(error);
+        });
+      }
+    }
+  }
+
   return { ok: true, turnId: turn.id };
 }
 
@@ -287,4 +306,12 @@ function mapDiscardFailure(
   }
 
   return { ok: false, refusal: { kind: 'history-evicted' } };
+}
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(String(error));
 }

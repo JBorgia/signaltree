@@ -1,8 +1,10 @@
+import { createEntitySignal } from '../../entity-signal';
 import type { PositionId, ReversalEffect } from './causal-types';
 import { AppliedHistory } from './applied-history';
 import { rollbackPendingTurnAt } from './pending-rollback';
 import { createPositionRegistry, type PositionRegistry } from '../position-registry';
 import { createRealizationContextSource } from './realization-context';
+import { runPhysicalMaintenance } from './subject-reclamation-coordinator';
 import { TurnStore } from './turn-store';
 
 const P_ROOT = 1 as PositionId;
@@ -413,6 +415,221 @@ describe('rollbackPendingTurnAt', () => {
     expect(store.inspect()).toEqual(storeBefore);
     expect(store.getPendingTurnIds()).toEqual(pendingBefore);
     expect(appliedHistory.inspect()).toEqual(appliedBefore);
+  });
+
+  it('runs physical maintenance after a pending blocker is discarded at the quiescent rollback boundary', () => {
+    type User = { id: number; name: string; active: boolean };
+
+    const { store, appliedHistory, topology } = createPendingRollbackContext();
+    const notify = vi.fn();
+    const owner = createEntitySignal<User, number>(
+      { selectId: (user) => user.id },
+      { notify } as any,
+      'users'
+    );
+    const internal = owner as typeof owner & {
+      __inspectSubjectResources?: (subjectId: number) => unknown;
+    };
+
+    owner.addOne({ id: 1, name: 'Alice', active: true });
+    owner.addOne({ id: 2, name: 'Bob', active: false });
+    const heldName = owner.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    owner.removeOne(1);
+    const pending = store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_NAME,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId,
+        },
+      ],
+    });
+
+    expect(
+      runPhysicalMaintenance({
+        owner: owner as any,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      candidateSubjectIds: [subjectId],
+      reclaimed: [],
+      alreadyRetired: [],
+      blocked: [
+        {
+          subjectId,
+          blockers: [
+            {
+              kind: 'pending-reference',
+              turnId: pending.id,
+              state: 'pending',
+              structural: undefined,
+            },
+          ],
+        },
+      ],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
+    });
+
+    const notifyCountBefore = notify.mock.calls.length;
+    const maintenanceResults: unknown[] = [];
+    const pendingIdsDuringMaintenance: number[][] = [];
+
+    expect(
+      rollbackPendingTurnAt({
+        authority: P_ROOT,
+        turnId: pending.id,
+        store,
+        topology,
+        port: {
+          applyAtomically: vi.fn((effects: readonly ReversalEffect[]) => {
+            expect(effects).toEqual([
+              {
+                owner: P_DRIVER_NAME,
+                before: 'Alicia',
+                after: 'Alice',
+                subjectId,
+                structural: undefined,
+                structuralContext: undefined,
+                subjectState: undefined,
+              },
+            ]);
+          }),
+        },
+        realizationContext: {
+          getCurrentValue: () => 'Alicia',
+          getValueWithoutConfirmedTurn: () => 'Alice',
+          getValueWithoutPendingTurn: () => 'Alice',
+        },
+        onPendingTurnDiscarded: () => {
+          pendingIdsDuringMaintenance.push([...store.getPendingTurnIds()]);
+          maintenanceResults.push(
+            runPhysicalMaintenance({
+              owner: owner as any,
+              store,
+              appliedHistory,
+            })
+          );
+        },
+      })
+    ).toEqual({ ok: true, turnId: pending.id });
+
+    expect(pendingIdsDuringMaintenance).toEqual([[]]);
+    expect(maintenanceResults).toEqual([
+      {
+        candidateSubjectIds: [subjectId],
+        reclaimed: [subjectId],
+        alreadyRetired: [],
+        blocked: [],
+        causalDrift: [],
+        physicalDrift: [],
+        physicalPlanUnavailable: [],
+      },
+    ]);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(heldName()).toBeUndefined();
+    expect(owner.byIdOrFail(2).name()).toBe('Bob');
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+  });
+
+  it('does not run maintenance when pending rollback realization fails before discard settles', () => {
+    type User = { id: number; name: string; active: boolean };
+
+    const { store, appliedHistory, topology } = createPendingRollbackContext();
+    const notify = vi.fn();
+    const owner = createEntitySignal<User, number>(
+      { selectId: (user) => user.id },
+      { notify } as any,
+      'users'
+    );
+    const internal = owner as typeof owner & {
+      __inspectSubjectResources?: (subjectId: number) => unknown;
+    };
+
+    owner.addOne({ id: 1, name: 'Alice', active: true });
+    const heldName = owner.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    owner.removeOne(1);
+    const pending = store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_NAME,
+          before: 'Alice',
+          after: 'Alicia',
+          subjectId,
+        },
+      ],
+    });
+
+    const notifyCountBefore = notify.mock.calls.length;
+    const maintenanceCallback = vi.fn();
+    const failure = new Error('atomic silent application failed');
+
+    expect(() =>
+      rollbackPendingTurnAt({
+        authority: P_ROOT,
+        turnId: pending.id,
+        store,
+        topology,
+        port: {
+          applyAtomically: () => {
+            throw failure;
+          },
+        },
+        realizationContext: {
+          getCurrentValue: () => 'Alicia',
+          getValueWithoutConfirmedTurn: () => 'Alice',
+          getValueWithoutPendingTurn: () => 'Alice',
+        },
+        onPendingTurnDiscarded: maintenanceCallback,
+      })
+    ).toThrow(failure);
+
+    expect(maintenanceCallback).not.toHaveBeenCalled();
+    expect(store.getPendingTurnIds()).toEqual([pending.id]);
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
   });
 
   it('allows scalar follow-up after a pending rekey while refusing no structural dependency', () => {
