@@ -1355,6 +1355,145 @@ describe('entity subject physical inventory', () => {
       },
     });
   });
+
+  it('setAll commits one heterogeneous final graph and rebuilds projection from owners', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'A1', active: true });
+    api.addOne({ id: 2, name: 'B1', active: false });
+    api.addOne({ id: 3, name: 'C1', active: true });
+    api.addOne({ id: 5, name: 'E1', active: false });
+    api.addOne({ id: 4, name: 'D-old', active: true });
+    const historicalDRow = api.byIdOrFail(4);
+    const historicalDField = historicalDRow.name;
+    const historicalDSubject = historicalDField.__subjectIds?.[0];
+    if (historicalDSubject === undefined) {
+      throw new Error('Expected subject metadata for historical D');
+    }
+    api.removeOne(4);
+
+    const heldFieldA = api.byIdOrFail(1).name;
+    const heldFieldB = api.byIdOrFail(2).name;
+    const heldFieldC = api.byIdOrFail(3).name;
+    const heldFieldE = api.byIdOrFail(5).name;
+    const subjectA = heldFieldA.__subjectIds?.[0];
+    const subjectB = heldFieldB.__subjectIds?.[0];
+    const subjectC = heldFieldC.__subjectIds?.[0];
+    const subjectE = heldFieldE.__subjectIds?.[0];
+    if (
+      subjectA === undefined ||
+      subjectB === undefined ||
+      subjectC === undefined ||
+      subjectE === undefined
+    ) {
+      throw new Error('Expected subject metadata for active rows');
+    }
+
+    api.setAll([
+      { id: 3, name: 'C2', active: false },
+      { id: 4, name: 'Dnew', active: true },
+      { id: 1, name: 'A2', active: false },
+      { id: 6, name: 'F1', active: true },
+    ]);
+
+    const subjectDAfter = api.byIdOrFail(4).name.__subjectIds?.[0];
+    const subjectFAfter = api.byIdOrFail(6).name.__subjectIds?.[0];
+    if (subjectDAfter === undefined || subjectFAfter === undefined) {
+      throw new Error('Expected subject metadata for fresh setAll arrivals');
+    }
+
+    expect(api.ids()).toEqual([3, 4, 1, 6]);
+    expect(api.byIdOrFail(3).name.__subjectIds?.[0]).toBe(subjectC);
+    expect(api.byIdOrFail(1).name.__subjectIds?.[0]).toBe(subjectA);
+    expect(subjectDAfter).not.toBe(historicalDSubject);
+    expect(subjectFAfter).toBe(subjectDAfter + 1);
+    expect(api.byIdOrFail(3).name()).toBe('C2');
+    expect(api.byIdOrFail(4).name()).toBe('Dnew');
+    expect(api.byIdOrFail(1).name()).toBe('A2');
+    expect(api.byIdOrFail(6).name()).toBe('F1');
+    expect(api.byId(2)).toBeUndefined();
+    expect(api.byId(5)).toBeUndefined();
+
+    expect(internal.__inspectSubjectResources?.(subjectB)).toEqual({
+      subjectId: subjectB,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldFieldB.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__inspectSubjectResources?.(subjectE)).toEqual({
+      subjectId: subjectE,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldFieldE.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__inspectSubjectResources?.(historicalDSubject)).toEqual({
+      subjectId: historicalDSubject,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: historicalDField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+
+    const expectedEntries = [
+      [3, { id: 3, name: 'C2', active: false }],
+      [4, { id: 4, name: 'Dnew', active: true }],
+      [1, { id: 1, name: 'A2', active: false }],
+      [6, { id: 6, name: 'F1', active: true }],
+    ] as const;
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__clearStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual(expectedEntries);
+
+    internal.__rebuildStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual(expectedEntries);
+  });
 });
 
 describe('addMany() mode option (F-011)', () => {
@@ -1834,6 +1973,10 @@ describe('addMany() mode option (F-011)', () => {
       { notify } as any,
       'items'
     );
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+    };
 
     api.addOne({ id: 1, name: 'Alice' });
     api.addOne({ id: 2, name: 'Bob' });
@@ -1863,6 +2006,20 @@ describe('addMany() mode option (F-011)', () => {
     expect(api.byIdOrFail(1).name.__subjectIds?.[0]).toBe(subjectOne);
     expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(subjectTwo);
     expect(api.byId(3)).toBeUndefined();
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([
+      [1, { id: 1, name: 'Alice' }],
+      [2, { id: 2, name: 'Bob' }],
+    ]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([
+      [1, { id: 1, name: 'Alice' }],
+      [2, { id: 2, name: 'Bob' }],
+    ]);
     expect(notify.mock.calls).toHaveLength(notifyCountBefore);
 
     api.addOne({ id: 4, name: 'after failure' });

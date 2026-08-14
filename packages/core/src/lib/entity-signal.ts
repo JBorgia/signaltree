@@ -2431,6 +2431,9 @@ export function createEntitySignal<
           }
 
           const subjectId = resolveSubjectId(id);
+          if (subjectId === undefined) {
+            throw new Error(`Entity with id ${String(id)} has no subject id`);
+          }
           return {
             id,
             entity,
@@ -2447,11 +2450,16 @@ export function createEntitySignal<
             throw new Error(`Entity with id ${String(id)} not found`);
           }
 
+          const subjectId = resolveSubjectId(id);
+          if (subjectId === undefined) {
+            throw new Error(`Entity with id ${String(id)} has no subject id`);
+          }
+
           return {
             id,
             prev,
             entity,
-            subjectId: resolveSubjectId(id),
+            subjectId,
           };
         });
       const survivingOriginalIds = new Set(stagedUpdates.map(({ id }) => id));
@@ -2471,12 +2479,14 @@ export function createEntitySignal<
         stagedIncomingIds.map((id, index) => [id, index] as const)
       );
 
+      const freshSubjectIds = commitFreshSubjects(stagedAdds.map(({ id }) => id));
+      const freshSubjectIdsByKey = new Map<K, number>();
+      for (let index = 0; index < stagedAdds.length; index += 1) {
+        freshSubjectIdsByKey.set(stagedAdds[index].id, freshSubjectIds[index]);
+      }
+
       const stagedRemovalHistoryEffects = stagedRemovals.map(
         ({ id, entity, subjectId }) => {
-          if (subjectId === undefined) {
-            return undefined;
-          }
-
           const currentIndex = currentEntries.findIndex(
             ([entryId]) => entryId === id
           );
@@ -2516,9 +2526,6 @@ export function createEntitySignal<
       );
 
       for (const { id, subjectId } of stagedRemovals) {
-        if (subjectId === undefined) {
-          continue;
-        }
         tombstoneSubjectSignal(subjectId);
         const currentState = resolveSubjectState(subjectId);
         structuralStore.tombstoneSubject(
@@ -2529,40 +2536,32 @@ export function createEntitySignal<
         publishSubjectPhysicalChange(subjectId);
       }
 
-      storage.clear();
+      for (const { subjectId, entity } of stagedUpdates) {
+        valueStore.retainSubjectValue(subjectId, entity);
+      }
 
-      const stagedUpdateById = new Map(
-        stagedUpdates.map(({ id, entity }) => [id, entity] as const)
-      );
-      const stagedAddById = new Map(
-        stagedAdds.map(({ id, entity }) => [id, entity] as const)
-      );
-
-      const addedSubjectIds: number[] = [];
-      for (const id of stagedIncomingIds) {
-        const updatedEntity = stagedUpdateById.get(id);
-        if (updatedEntity !== undefined) {
-          storage.set(id, updatedEntity);
-          valueStore.retainValueForKey(id, updatedEntity);
-          syncEntitySignal(id);
-          continue;
+      const addedSubjectIds = stagedAdds.map(({ id, entity }) => {
+        const subjectId = freshSubjectIdsByKey.get(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
         }
+        valueStore.retainSubjectValue(subjectId, entity);
+        syncEntitySignal(id);
+        return subjectId;
+      });
 
-        const addedEntity = stagedAddById.get(id);
-        if (addedEntity !== undefined) {
-          const subjectId = allocateSubjectId(id);
-          storage.set(id, addedEntity);
-          valueStore.retainSubjectValue(subjectId, addedEntity);
-          addedSubjectIds.push(subjectId);
-          syncEntitySignal(id);
-        }
+      for (const { id } of stagedUpdates) {
+        syncEntitySignal(id);
       }
 
       structuralStore.reorderActiveKeys(stagedIncomingIds);
+      rebuildStorageProjection();
 
-      lastSubjectIds = stagedIncomingIds
-        .map((id) => resolveSubjectId(id))
-        .filter((subjectId): subjectId is number => subjectId !== undefined);
+      lastSubjectIds = [
+        ...stagedRemovals.map(({ subjectId }) => subjectId),
+        ...stagedUpdates.map(({ subjectId }) => subjectId),
+        ...addedSubjectIds,
+      ];
 
       const stagedAddHistoryEffects = stagedAdds.map(({ id, entity }, index) => {
         const subjectId = addedSubjectIds[index];
@@ -2617,9 +2616,9 @@ export function createEntitySignal<
           undefined,
           entity,
           basePath,
-          subjectId === undefined ? undefined : [subjectId],
+          [subjectId],
           getPositionIdsForNotify(),
-          historyEffect ? createStructuralHistoryMeta(historyEffect) : undefined
+          createStructuralHistoryMeta(historyEffect)
         );
       }
 
