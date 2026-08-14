@@ -437,6 +437,103 @@ describe('pending confirmation', () => {
     expect(notify.mock.calls).toHaveLength(notifyCountBefore);
   });
 
+  it('permits a conservative maintenance hint when a settled subject reference remains blocked', () => {
+    type User = { id: number; name: string; active: boolean };
+
+    const notify = vi.fn();
+    const owner = createEntitySignal<User, number>(
+      { selectId: (user) => user.id },
+      { notify } as any,
+      'users'
+    );
+
+    owner.addOne({ id: 1, name: 'Alice', active: true });
+    const heldName = owner.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    owner.removeOne(1);
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const source = createRealizationContextSource({
+      store,
+      appliedHistory,
+    });
+
+    store.admitPending({
+      id: 1,
+      effects: [
+        {
+          owner: P_DRIVER_KEY,
+          before: 1,
+          after: undefined,
+          subjectId,
+          structural: 'remove',
+        },
+      ],
+    });
+
+    const maintenanceHints: unknown[] = [];
+    const maintenanceResults: unknown[] = [];
+
+    expect(
+      confirmPendingTurnAt({
+        turnId: 1,
+        store,
+        appliedHistory,
+        retentionObserver: source,
+        onMaintenanceMayBeUseful: (hint) => {
+          maintenanceHints.push(hint);
+          maintenanceResults.push(
+            runPhysicalMaintenance({
+              owner: owner as any,
+              store,
+              appliedHistory,
+            })
+          );
+        },
+      })
+    ).toEqual({
+      ok: true,
+      turnId: 1,
+    });
+
+    expect(maintenanceHints).toEqual([
+      {
+        forgottenConfirmedTurnIds: [],
+        invalidatedRedoTurnIds: [],
+        settledPendingSubjectReference: true,
+      },
+    ]);
+    expect(maintenanceResults).toEqual([
+      {
+        candidateSubjectIds: [subjectId],
+        reclaimed: [],
+        alreadyRetired: [],
+        blocked: [
+          {
+            subjectId,
+            blockers: [
+              {
+                kind: 'confirmed-restore-path',
+                turnId: 1,
+                state: 'confirmed-applied',
+                structural: 'remove',
+              },
+            ],
+          },
+        ],
+        causalDrift: [],
+        physicalDrift: [],
+        physicalPlanUnavailable: [],
+      },
+    ]);
+    expect(heldName()).toBeUndefined();
+  });
+
   it('runs physical maintenance when confirmation invalidates a redoable restore path without forgetting history', () => {
     type User = { id: number; name: string; active: boolean };
 

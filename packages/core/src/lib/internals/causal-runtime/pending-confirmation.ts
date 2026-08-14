@@ -3,6 +3,8 @@ import type { CausalTurn, ReversalResult, TurnId } from './causal-types';
 import type { RealizationContextSource } from './realization-context';
 import type { TurnStore } from './turn-store';
 
+// Hints are conservative invalidations at a quiescent boundary, not eligibility
+// decisions. Fresh maintenance may still discover the subject remains blocked.
 export interface PendingConfirmationMaintenanceHint {
   readonly forgottenConfirmedTurnIds: readonly TurnId[];
   readonly invalidatedRedoTurnIds: readonly TurnId[];
