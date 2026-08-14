@@ -552,6 +552,57 @@ describe('entity subject physical inventory', () => {
     expect(api.byIdOrFail(1).name()).toBe('Alice');
   });
 
+  it('allocates a fresh subject lifetime when adding at a retired subject key', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldRow = api.byIdOrFail(1);
+    const heldField = heldRow.name;
+    const retiredSubjectId = heldField.__subjectIds?.[0];
+    if (retiredSubjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    api.removeOne(1);
+    internal.__retireSubjectRetainedValueBackingForTesting?.(retiredSubjectId);
+
+    api.addOne({ id: 1, name: 'Bob', active: false });
+    const freshSubjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
+
+    expect(freshSubjectId).not.toBe(retiredSubjectId);
+    expect(heldRow()).toBeUndefined();
+    expect(heldField()).toBeUndefined();
+    expect(internal.__inspectSubjectResources?.(retiredSubjectId)).toEqual({
+      subjectId: retiredSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldField.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(internal.__inspectSubjectResources?.(freshSubjectId as number)).toEqual({
+      subjectId: freshSubjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+  });
+
   it('refuses malformed prepared reclamation for an active subject before mutation', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;
@@ -638,6 +689,54 @@ describe('addMany() mode option (F-011)', () => {
     const ids = api.addMany([{ id: 1, name: 'B' }], { mode: 'skip' });
     expect(ids).toEqual([]);
     expect(api.count()).toBe(1);
+  });
+
+  it('does not partially allocate or publish when a later addMany interceptor blocks', () => {
+    const api = makeApi();
+    api.intercept({
+      onAdd: (entity, ctx) => {
+        if (entity.name === 'blocked') {
+          ctx.block('blocked by test');
+        }
+      },
+    });
+
+    expect(() =>
+      api.addMany([
+        { id: 1, name: 'first' },
+        { id: 2, name: 'blocked' },
+      ])
+    ).toThrow('blocked by test');
+
+    expect(api.count()).toBe(0);
+    expect(api.byId(1)).toBeUndefined();
+    expect(api.byId(2)).toBeUndefined();
+
+    api.addOne({ id: 3, name: 'after failure' });
+    expect(api.byIdOrFail(3).name.__subjectIds?.[0]).toBe(1);
+  });
+
+  it('does not partially add when upsertMany later fails in the update phase', () => {
+    const api = makeApi();
+    api.addOne({ id: 1, name: 'original' });
+    api.intercept({
+      onUpdate: (id, _changes, ctx) => {
+        if (id === 1) {
+          ctx.block('blocked update');
+        }
+      },
+    });
+
+    expect(() =>
+      api.upsertMany([
+        { id: 2, name: 'new add' },
+        { id: 1, name: 'blocked update' },
+      ])
+    ).toThrow('blocked update');
+
+    expect(api.count()).toBe(1);
+    expect(api.byIdOrFail(1).name()).toBe('original');
+    expect(api.byId(2)).toBeUndefined();
   });
 });
 

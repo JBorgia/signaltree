@@ -741,17 +741,7 @@ export function createEntitySignal<
     effect.afterSubject = afterSubject;
   }
 
-  function addOneWithHistoryEffect(
-    entity: E,
-    opts?: AddOptions<E, K>
-  ): { id: K; historyEffect: PendingAddHistoryEffect } {
-    const id = deriveId(entity, opts);
-    const previousKeys = Array.from(storage.keys());
-
-    if (storage.has(id)) {
-      throw new Error(`Entity with id ${String(id)} already exists`);
-    }
-
+  function interceptAddedEntity(entity: E): E {
     let transformedEntity = entity;
     for (const handler of interceptHandlers) {
       const ctx: InterceptContext<E> = {
@@ -768,6 +758,43 @@ export function createEntitySignal<
       };
       handler.onAdd?.(entity, ctx);
     }
+
+    return transformedEntity;
+  }
+
+  function interceptUpdatedEntity(id: K, changes: Partial<E>): Partial<E> {
+    let transformedChanges = changes;
+    for (const handler of interceptHandlers) {
+      const ctx: InterceptContext<Partial<E>> = {
+        block: (reason?: string) => {
+          throw new Error(
+            `Cannot update entity: ${reason || 'blocked by interceptor'}`
+          );
+        },
+        transform: (value: Partial<E>) => {
+          transformedChanges = value;
+        },
+        blocked: false,
+        blockReason: undefined,
+      };
+      handler.onUpdate?.(id, changes, ctx);
+    }
+
+    return transformedChanges;
+  }
+
+  function addOneWithHistoryEffect(
+    entity: E,
+    opts?: AddOptions<E, K>
+  ): { id: K; historyEffect: PendingAddHistoryEffect } {
+    const id = deriveId(entity, opts);
+    const previousKeys = Array.from(storage.keys());
+
+    if (storage.has(id)) {
+      throw new Error(`Entity with id ${String(id)} already exists`);
+    }
+
+    const transformedEntity = interceptAddedEntity(entity);
 
     storage.set(id, transformedEntity);
     const subjectIdsForWrite = rememberSubjectIds([id]);
@@ -1496,29 +1523,18 @@ export function createEntitySignal<
 
       if (toProcess.length === 0) return [];
 
+      // Stage all add work before mutating runtime state so a later failure
+      // cannot partially allocate fresh subject lifetimes.
+      const stagedAdds = toProcess.map(({ entity, id }) => ({
+        id,
+        entity: interceptAddedEntity(entity),
+      }));
+
       // Process all entities without triggering per-entity signal updates
       const processedIds: K[] = [];
       const addedEntities: Array<{ id: K; entity: E }> = [];
 
-      for (const { entity, id } of toProcess) {
-        // Run interceptors
-        let transformedEntity = entity;
-        for (const handler of interceptHandlers) {
-          const ctx: InterceptContext<E> = {
-            block: (reason?: string) => {
-              throw new Error(
-                `Cannot add entity: ${reason || 'blocked by interceptor'}`
-              );
-            },
-            transform: (value: E) => {
-              transformedEntity = value;
-            },
-            blocked: false,
-            blockReason: undefined,
-          };
-          handler.onAdd?.(entity, ctx);
-        }
-
+      for (const { entity: transformedEntity, id } of stagedAdds) {
         storage.set(id, transformedEntity);
         allocateSubjectId(id);
         invalidateNodeCache(id);
@@ -1960,26 +1976,24 @@ export function createEntitySignal<
         }
       }
 
+      const stagedAdds = toAdd.map(({ entity, id }) => ({
+        id,
+        entity: interceptAddedEntity(entity),
+      }));
+
+      const stagedUpdates = toUpdate.map(({ entity, id, prev }) => {
+        const transformedChanges = interceptUpdatedEntity(id, entity);
+        return {
+          id,
+          prev,
+          transformedChanges,
+          finalUpdated: { ...prev, ...transformedChanges },
+        };
+      });
+
       // Process adds
       const addedEntities: Array<{ id: K; entity: E }> = [];
-      for (const { entity, id } of toAdd) {
-        // Run interceptors
-        let transformedEntity = entity;
-        for (const handler of interceptHandlers) {
-          const ctx: InterceptContext<E> = {
-            block: (reason?: string) => {
-              throw new Error(
-                `Cannot add entity: ${reason || 'blocked by interceptor'}`
-              );
-            },
-            transform: (value: E) => {
-              transformedEntity = value;
-            },
-            blocked: false,
-            blockReason: undefined,
-          };
-          handler.onAdd?.(entity, ctx);
-        }
+      for (const { entity: transformedEntity, id } of stagedAdds) {
         storage.set(id, transformedEntity);
         allocateSubjectId(id);
         invalidateNodeCache(id);
@@ -1987,32 +2001,13 @@ export function createEntitySignal<
         addedEntities.push({ id, entity: transformedEntity });
       }
 
-      // Process updates
       const updatedEntities: Array<{
         id: K;
         prev: E;
         finalUpdated: E;
         transformedChanges: Partial<E>;
       }> = [];
-      for (const { entity, id, prev } of toUpdate) {
-        // Run interceptors
-        let transformedChanges: Partial<E> = entity;
-        for (const handler of interceptHandlers) {
-          const ctx: InterceptContext<Partial<E>> = {
-            block: (reason?: string) => {
-              throw new Error(
-                `Cannot update entity: ${reason || 'blocked by interceptor'}`
-              );
-            },
-            transform: (value: Partial<E>) => {
-              transformedChanges = value;
-            },
-            blocked: false,
-            blockReason: undefined,
-          };
-          handler.onUpdate?.(id, entity, ctx);
-        }
-        const finalUpdated = { ...prev, ...transformedChanges };
+      for (const { id, prev, finalUpdated, transformedChanges } of stagedUpdates) {
         storage.set(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
@@ -2088,6 +2083,11 @@ export function createEntitySignal<
     },
 
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
+      const stagedAdds = entities.map((entity) => ({
+        id: deriveId(entity, opts),
+        entity: interceptAddedEntity(entity),
+      }));
+
       // Clear storage without triggering intermediate signal updates
       storage.clear();
       subjectIds.clear();
@@ -2099,27 +2099,7 @@ export function createEntitySignal<
 
       // Add all entities without triggering per-entity signal updates
       const addedIds: K[] = [];
-      for (const entity of entities) {
-        const id = deriveId(entity, opts);
-
-        // Run interceptors
-        let transformedEntity = entity;
-        for (const handler of interceptHandlers) {
-          const ctx: InterceptContext<E> = {
-            block: (reason?: string) => {
-              throw new Error(
-                `Cannot add entity: ${reason || 'blocked by interceptor'}`
-              );
-            },
-            transform: (value: E) => {
-              transformedEntity = value;
-            },
-            blocked: false,
-            blockReason: undefined,
-          };
-          handler.onAdd?.(entity, ctx);
-        }
-
+      for (const { id, entity: transformedEntity } of stagedAdds) {
         storage.set(id, transformedEntity);
         addedIds.push(id);
       }
