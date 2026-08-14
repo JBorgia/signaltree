@@ -19,6 +19,7 @@ import {
   rememberTreeRealizationDescriptor,
   type TreeRealizationDescriptor,
 } from './tree-realization-adapter';
+import { redoConfirmedAt } from './confirmed-redo';
 import { undoConfirmedAt } from './confirmed-undo';
 import { TurnStore } from './turn-store';
 
@@ -91,6 +92,7 @@ const createLiveDraftHarness = (
           path,
           ownerPath,
           positionIds,
+          subjectIds,
           meta,
         });
       }
@@ -1529,6 +1531,185 @@ describe('greenfield transactions', () => {
     expect(tree.$.users.ids()).toEqual(['u1']);
     expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
     expect(tree.$.users.byIdOrFail('u1').enabled()).toBe(true);
+  });
+
+  it('authors setAll as one canonical remove-set-add turn and replays the same fresh subject on redo', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        setAll(users: Array<{ id: string; name: string }>): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          (): { id: string; name: string } | undefined;
+          name: (() => string | undefined) & { __subjectIds?: number[] };
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'c', name: 'Stale Carol' });
+    getPathNotifier().flushSync();
+
+    const historicalCNode = tree.$.users.byIdOrFail('c');
+    const historicalCName = historicalCNode.name;
+    const historicalCSubject = historicalCName.__subjectIds?.[0];
+    if (historicalCSubject === undefined) {
+      throw new Error('Expected historical subject metadata for key reuse proof');
+    }
+
+    tree.$.users.removeOne('c');
+    getPathNotifier().flushSync();
+    tree.$.users.addOne({ id: 'a', name: 'Alice' });
+    tree.$.users.addOne({ id: 'b', name: 'Bob' });
+    getPathNotifier().flushSync();
+
+    const subjectA = tree.$.users.byIdOrFail('a').name.__subjectIds?.[0];
+    const subjectB = tree.$.users.byIdOrFail('b').name.__subjectIds?.[0];
+    if (subjectA === undefined || subjectB === undefined) {
+      throw new Error('Expected active subject metadata before setAll');
+    }
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const draft = createGreenfieldTransactionDraft({ turnId: 1, store, appliedHistory });
+    const harness = createLiveDraftHarness(draft, 1);
+
+    harness.write(() => {
+      tree.$.users.setAll([
+        { id: 'b', name: 'Bobby' },
+        { id: 'c', name: 'Carol' },
+      ]);
+    });
+    harness.flush();
+
+    const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
+    const freshCSubject = tree.$.users.byIdOrFail('c').name.__subjectIds?.[0];
+    if (freshCSubject === undefined) {
+      throw new Error('Expected fresh subject metadata for setAll arrival');
+    }
+
+    expect(freshCSubject).not.toBe(historicalCSubject);
+    expect(freshCSubject).not.toBe(subjectA);
+    expect(freshCSubject).not.toBe(subjectB);
+    expect(historicalCNode()).toBeUndefined();
+    expect(historicalCName()).toBeUndefined();
+
+    expect(draft.seal()).toEqual({
+      id: 1,
+      effects: [
+        {
+          owner: usersOwner,
+          before: 'a',
+          after: undefined,
+          subjectId: subjectA,
+          structural: 'remove',
+          structuralContext: {
+            kind: 'remove',
+            subject: subjectA,
+            key: 'a',
+            value: { id: 'a', name: 'Alice' },
+            beforeSubject: undefined,
+            afterSubject: subjectB,
+            subjectPositions: [usersOwner],
+          },
+          subjectPositions: [usersOwner],
+        },
+        {
+          owner: usersOwner,
+          before: { id: 'b', name: 'Bob' },
+          after: { id: 'b', name: 'Bobby' },
+          subjectId: subjectB,
+        },
+        {
+          owner: usersOwner,
+          before: undefined,
+          after: 'c',
+          subjectId: freshCSubject,
+          structural: 'add',
+          structuralContext: {
+            kind: 'add',
+            subject: freshCSubject,
+            key: 'c',
+            value: { id: 'c', name: 'Carol' },
+            beforeSubject: subjectB,
+            afterSubject: undefined,
+            subjectPositions: [usersOwner],
+          },
+          subjectPositions: [usersOwner],
+        },
+      ],
+      participants: [usersOwner],
+      state: 'pending',
+    });
+
+    expect(draft.confirm()).toEqual({ ok: true, turnId: 1 });
+    expect(store.getTurns().map(({ id }) => id)).toEqual([1]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([1]);
+
+    harness.dispose();
+
+    const topology = getPositionRegistry(tree.$);
+    if (!topology) {
+      throw new Error('Expected tree position registry');
+    }
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors: harness.descriptors,
+    });
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map(),
+      store,
+      appliedHistory,
+    });
+
+    expect(
+      undoConfirmedAt({
+        authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+        store,
+        appliedHistory,
+        topology,
+        port: adapter,
+        realizationContext,
+      })
+    ).toEqual({ ok: true, turnId: 1 });
+
+    expect(tree.$.users.ids()).toEqual(['a', 'b']);
+    expect(tree.$.users.byIdOrFail('a').name()).toBe('Alice');
+    expect(tree.$.users.byIdOrFail('b').name()).toBe('Bob');
+    expect(tree.$.users.byIdOrFail('a').name.__subjectIds?.[0]).toBe(subjectA);
+    expect(tree.$.users.byIdOrFail('b').name.__subjectIds?.[0]).toBe(subjectB);
+    expect(historicalCNode()).toBeUndefined();
+    expect(historicalCName()).toBeUndefined();
+
+    expect(
+      redoConfirmedAt({
+        authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+        store,
+        appliedHistory,
+        topology,
+        port: adapter,
+        realizationContext,
+      })
+    ).toEqual({ ok: true, turnId: 1 });
+
+    expect(tree.$.users.ids()).toEqual(['b', 'c']);
+    expect(tree.$.users.byIdOrFail('b').name()).toBe('Bobby');
+    expect(tree.$.users.byIdOrFail('b').name.__subjectIds?.[0]).toBe(subjectB);
+    expect(tree.$.users.byIdOrFail('c').name()).toBe('Carol');
+    expect(tree.$.users.byIdOrFail('c').name.__subjectIds?.[0]).toBe(
+      freshCSubject
+    );
+    expect(tree.$.users.byIdOrFail('c').name.__subjectIds?.[0]).not.toBe(
+      historicalCSubject
+    );
+    expect(historicalCNode()).toBeUndefined();
+    expect(historicalCName()).toBeUndefined();
   });
 
   it('restores the authored structural snapshot rather than a later-mutated detached entity alias', () => {

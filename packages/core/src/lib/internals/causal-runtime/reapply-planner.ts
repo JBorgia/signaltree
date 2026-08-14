@@ -53,6 +53,18 @@ function createReapplyEffects(
   const currentByOwner = new Map<number, unknown>();
 
   return turn.effects.map((effect) => {
+    if (effect.structural !== undefined) {
+      return {
+        owner: effect.owner,
+        before: effect.before,
+        after: effect.after,
+        subjectId: effect.subjectId,
+        structural: effect.structural,
+        structuralContext: effect.structuralContext,
+        subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
+      };
+    }
+
     const before = currentByOwner.has(effect.owner)
       ? currentByOwner.get(effect.owner)
       : realizationContext.getCurrentValue(effect.owner);
@@ -64,7 +76,7 @@ function createReapplyEffects(
       before,
       after: effect.after,
       subjectId: effect.subjectId,
-      structural: effect.structural,
+      structural: undefined,
       structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
     };

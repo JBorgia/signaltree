@@ -2161,6 +2161,7 @@ export function createEntitySignal<
             subjectId: subjectIds.get(id),
           };
         });
+      const survivingOriginalIds = new Set(stagedUpdates.map(({ id }) => id));
 
       const stagedAdds = stagedIncomingIds
         .filter((id) => !currentIds.has(id))
@@ -2173,12 +2174,60 @@ export function createEntitySignal<
           return { id, entity };
         });
 
-      for (const { subjectId } of stagedRemovals) {
+      const finalIndexById = new Map(
+        stagedIncomingIds.map((id, index) => [id, index] as const)
+      );
+
+      const stagedRemovalHistoryEffects = stagedRemovals.map(
+        ({ id, entity, subjectId }) => {
+          if (subjectId === undefined) {
+            return undefined;
+          }
+
+          const currentIndex = currentEntries.findIndex(
+            ([entryId]) => entryId === id
+          );
+          let beforeSubject: number | undefined;
+          let afterSubject: number | undefined;
+
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const neighborId = currentEntries[index]?.[0];
+            if (neighborId !== undefined && survivingOriginalIds.has(neighborId)) {
+              beforeSubject = subjectIds.get(neighborId);
+              break;
+            }
+          }
+
+          for (
+            let index = currentIndex + 1;
+            index < currentEntries.length;
+            index += 1
+          ) {
+            const neighborId = currentEntries[index]?.[0];
+            if (neighborId !== undefined && survivingOriginalIds.has(neighborId)) {
+              afterSubject = subjectIds.get(neighborId);
+              break;
+            }
+          }
+
+          return {
+            kind: 'remove' as const,
+            subject: subjectId,
+            key: id,
+            value: deepClone(entity),
+            beforeSubject,
+            afterSubject,
+            subjectPositions: deriveSubjectPositions(id, entity),
+          };
+        }
+      );
+
+      for (const { id, subjectId } of stagedRemovals) {
         if (subjectId === undefined) {
           continue;
         }
         tombstoneSubjectSignal(subjectId);
-        subjectIds.delete(stagedRemovals.find((entry) => entry.subjectId === subjectId)?.id as K);
+        subjectIds.delete(id);
         const currentState = resolveSubjectState(subjectId);
         subjectStates.set(subjectId, {
           active: false,
@@ -2189,23 +2238,28 @@ export function createEntitySignal<
 
       storage.clear();
 
-      for (const { id, entity } of stagedUpdates) {
-        storage.set(id, entity);
-        syncEntitySignal(id);
-      }
+      const stagedUpdateById = new Map(
+        stagedUpdates.map(({ id, entity }) => [id, entity] as const)
+      );
+      const stagedAddById = new Map(
+        stagedAdds.map(({ id, entity }) => [id, entity] as const)
+      );
 
       const addedSubjectIds: number[] = [];
-      for (const { id, entity } of stagedAdds) {
-        storage.set(id, entity);
-        const subjectId = allocateSubjectId(id);
-        addedSubjectIds.push(subjectId);
-        syncEntitySignal(id);
-      }
-
       for (const id of stagedIncomingIds) {
-        const entity = stagedIncomingById.get(id);
-        if (entity !== undefined && !storage.has(id)) {
-          storage.set(id, entity);
+        const updatedEntity = stagedUpdateById.get(id);
+        if (updatedEntity !== undefined) {
+          storage.set(id, updatedEntity);
+          syncEntitySignal(id);
+          continue;
+        }
+
+        const addedEntity = stagedAddById.get(id);
+        if (addedEntity !== undefined) {
+          storage.set(id, addedEntity);
+          const subjectId = allocateSubjectId(id);
+          addedSubjectIds.push(subjectId);
+          syncEntitySignal(id);
         }
       }
 
@@ -2213,16 +2267,62 @@ export function createEntitySignal<
         .map((id) => resolveSubjectId(id))
         .filter((subjectId): subjectId is number => subjectId !== undefined);
 
+      const stagedAddHistoryEffects = stagedAdds.map(({ id, entity }, index) => {
+        const subjectId = addedSubjectIds[index];
+        const finalIndex = finalIndexById.get(id) ?? -1;
+        let beforeSubject: number | undefined;
+        let afterSubject: number | undefined;
+
+        for (let cursor = finalIndex - 1; cursor >= 0; cursor -= 1) {
+          const neighborId = stagedIncomingIds[cursor];
+          if (neighborId === undefined) {
+            continue;
+          }
+          beforeSubject = resolveSubjectId(neighborId);
+          if (beforeSubject !== undefined) {
+            break;
+          }
+        }
+
+        for (
+          let cursor = finalIndex + 1;
+          cursor < stagedIncomingIds.length;
+          cursor += 1
+        ) {
+          const neighborId = stagedIncomingIds[cursor];
+          if (neighborId === undefined) {
+            continue;
+          }
+          afterSubject = resolveSubjectId(neighborId);
+          if (afterSubject !== undefined) {
+            break;
+          }
+        }
+
+        return {
+          kind: 'add' as const,
+          subject: subjectId,
+          key: id,
+          value: deepClone(entity),
+          beforeSubject,
+          afterSubject,
+          subjectPositions: deriveSubjectPositions(id, entity),
+        };
+      });
+
       updateSignals();
 
-      for (const { id, entity, subjectId } of stagedRemovals) {
+      for (let index = 0; index < stagedRemovals.length; index += 1) {
+        const { id, entity, subjectId } = stagedRemovals[index];
+        const historyEffect = stagedRemovalHistoryEffects[index];
         pathNotifier.notify(
           `${basePath}.${String(id)}`,
           undefined,
           entity,
           basePath,
           subjectId === undefined ? undefined : [subjectId],
-          getPositionIdsForNotify()
+          getPositionIdsForNotify(),
+          historyEffect ? createStructuralHistoryMeta(historyEffect) : undefined
         );
       }
 
@@ -2246,7 +2346,8 @@ export function createEntitySignal<
           undefined,
           basePath,
           [addedSubjectIds[i]],
-          getPositionIdsForNotify()
+          getPositionIdsForNotify(),
+          createStructuralHistoryMeta(stagedAddHistoryEffects[i])
         );
       }
 

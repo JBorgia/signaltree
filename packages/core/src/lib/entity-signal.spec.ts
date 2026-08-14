@@ -851,6 +851,48 @@ describe('addMany() mode option (F-011)', () => {
     expect(api.byIdOrFail(1).name()).toBe('original');
     expect(api.byId(2)).toBeUndefined();
   });
+
+  it('does not partially remove, update, or allocate when a later setAll arrival blocks', () => {
+    const notify = vi.fn();
+    const api = createEntitySignal<Item, number>(
+      { selectId: (item) => item.id },
+      { notify } as any,
+      'items'
+    );
+
+    api.addOne({ id: 1, name: 'Alice' });
+    api.addOne({ id: 2, name: 'Bob' });
+    const subjectOne = api.byIdOrFail(1).name.__subjectIds?.[0];
+    const subjectTwo = api.byIdOrFail(2).name.__subjectIds?.[0];
+    const notifyCountBefore = notify.mock.calls.length;
+
+    api.intercept({
+      onAdd: (entity, ctx) => {
+        if (entity.name === 'blocked') {
+          ctx.block('blocked by test');
+        }
+      },
+    });
+
+    expect(() =>
+      api.setAll([
+        { id: 2, name: 'Bobby' },
+        { id: 3, name: 'blocked' },
+      ])
+    ).toThrow('blocked by test');
+
+    expect(api.count()).toBe(2);
+    expect(api.ids()).toEqual([1, 2]);
+    expect(api.byIdOrFail(1).name()).toBe('Alice');
+    expect(api.byIdOrFail(2).name()).toBe('Bob');
+    expect(api.byIdOrFail(1).name.__subjectIds?.[0]).toBe(subjectOne);
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(subjectTwo);
+    expect(api.byId(3)).toBeUndefined();
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+
+    api.addOne({ id: 4, name: 'after failure' });
+    expect(api.byIdOrFail(4).name.__subjectIds?.[0]).toBe(3);
+  });
 });
 
 describe('EntitySignal predicate caching', () => {
@@ -1208,6 +1250,65 @@ describe('structural history effect delivery', () => {
         subjectPositions: event.positionIds,
       });
     }
+  });
+
+  it('authors setAll as a structural diff over active subjects', () => {
+    const { seenA, seenB } = observeStructuralMutation((api, resetSeen) => {
+      api.addOne({ id: 1, name: 'historical' });
+      api.addOne({ id: 2, name: 'survivor' });
+      api.addOne({ id: 4, name: 'removed by setAll' });
+      api.removeOne(1);
+      resetSeen();
+      api.setAll([
+        { id: 2, name: 'survivor updated' },
+        { id: 1, name: 'fresh reuse' },
+        { id: 3, name: 'fresh arrival' },
+      ]);
+    });
+
+    expect(seenA).toHaveLength(4);
+    expect(seenB).toHaveLength(4);
+
+    const removeEvent = seenA.find((event) => event.path === 'rows.4');
+    const survivorEvent = seenA.find((event) => event.path === 'rows.2');
+    const reusedKeyEvent = seenA.find((event) => event.path === 'rows.1');
+    const freshArrivalEvent = seenA.find((event) => event.path === 'rows.3');
+
+    expect(removeEvent).toMatchObject({
+      historyEffect: {
+        kind: 'remove',
+        key: 4,
+        subject: removeEvent?.subjectIds?.[0],
+        subjectPositions: removeEvent?.positionIds,
+      },
+    });
+    expect(survivorEvent?.historyEffect).toBeUndefined();
+    expect(reusedKeyEvent).toMatchObject({
+      historyEffect: {
+        kind: 'add',
+        key: 1,
+        subject: reusedKeyEvent?.subjectIds?.[0],
+        subjectPositions: reusedKeyEvent?.positionIds,
+      },
+    });
+    expect(freshArrivalEvent).toMatchObject({
+      historyEffect: {
+        kind: 'add',
+        key: 3,
+        subject: freshArrivalEvent?.subjectIds?.[0],
+        subjectPositions: freshArrivalEvent?.positionIds,
+      },
+    });
+
+    expect(removeEvent?.historyEffect).toBe(
+      seenB.find((event) => event.path === 'rows.4')?.historyEffect
+    );
+    expect(reusedKeyEvent?.historyEffect).toBe(
+      seenB.find((event) => event.path === 'rows.1')?.historyEffect
+    );
+    expect(freshArrivalEvent?.historyEffect).toBe(
+      seenB.find((event) => event.path === 'rows.3')?.historyEffect
+    );
   });
 });
 

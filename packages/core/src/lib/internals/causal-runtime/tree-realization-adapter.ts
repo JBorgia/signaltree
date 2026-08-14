@@ -34,10 +34,20 @@ type WritableLeaf = {
   set(value: unknown): void;
 };
 
+type WritableEntityNode = {
+  (value: unknown): void;
+};
+
+type SubjectRealizationDescriptor = {
+  path: string;
+  ownerPath: string;
+};
+
 export interface TreeRealizationDescriptor {
   readonly path?: string;
   readonly ownerPath?: string;
   readonly structuralHistoryEffects?: ReadonlyMap<string, StructuralHistoryEffect>;
+  readonly subjectDescriptors?: ReadonlyMap<string, SubjectRealizationDescriptor>;
 }
 
 export interface RememberTreeRealizationDescriptorOptions {
@@ -45,6 +55,7 @@ export interface RememberTreeRealizationDescriptorOptions {
   readonly path: string;
   readonly ownerPath?: string;
   readonly positionIds?: readonly number[];
+  readonly subjectIds?: readonly number[];
   readonly meta?: UpdateMetadata;
 }
 
@@ -63,6 +74,7 @@ export function rememberTreeRealizationDescriptor(
 
   const existing = options.descriptors.get(owner);
   const structuralHistoryEffects = new Map(existing?.structuralHistoryEffects ?? []);
+  const subjectDescriptors = new Map(existing?.subjectDescriptors ?? []);
   if (options.meta?.historyEffect) {
     structuralHistoryEffects.set(
       toStructuralHistoryEffectKey(options.meta.historyEffect),
@@ -70,10 +82,20 @@ export function rememberTreeRealizationDescriptor(
     );
   }
 
+  const subjectId = options.subjectIds?.[0];
+  const ownerPath = options.ownerPath ?? options.path;
+  if (typeof subjectId === 'number') {
+    subjectDescriptors.set(String(subjectId), {
+      path: options.path,
+      ownerPath,
+    });
+  }
+
   options.descriptors.set(owner, {
     path: options.path,
-    ownerPath: options.ownerPath ?? options.path,
+    ownerPath,
     structuralHistoryEffects,
+    subjectDescriptors,
   });
 }
 
@@ -294,9 +316,8 @@ function canApplyEffect(
   }
 
   if (!effect.structural) {
-    return isWritableLeaf(
-      resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode)
-    );
+    const target = resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode);
+    return isWritableLeaf(target) || isWritableEntityNode(target);
   }
 
   const ownerNode = liveNode;
@@ -331,7 +352,7 @@ function canApplyEffect(
         return false;
       }
 
-      return getStructuralRestoreEffect(descriptor, effect)?.kind === 'remove';
+      return getStructuralAddEffect(descriptor, effect) !== undefined;
     }
   }
 }
@@ -363,12 +384,20 @@ function applyEffect(
     },
     () => {
       if (!effect.structural) {
-        const leaf = resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode);
-        if (!isWritableLeaf(leaf)) {
-          throw new Error(`Missing live leaf for owner ${String(effect.owner)}`);
+        const target = resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode);
+        if (isWritableLeaf(target)) {
+          target.set(effect.after);
+          return;
         }
 
-        leaf.set(effect.after);
+        if (isWritableEntityNode(target)) {
+          target(effect.after);
+          return;
+        }
+
+        if (!isWritableLeaf(target)) {
+          throw new Error(`Missing live leaf for owner ${String(effect.owner)}`);
+        }
         return;
       }
 
@@ -388,8 +417,8 @@ function applyEffect(
           ownerNode.removeOne(effect.before as string | number);
           return;
         case 'add': {
-          const historyEffect = getStructuralRestoreEffect(descriptor, effect);
-          if (!historyEffect || historyEffect.kind !== 'remove') {
+          const historyEffect = getStructuralAddEffect(descriptor, effect);
+          if (!historyEffect) {
             throw new Error(
               `Missing structural restore metadata for owner ${String(effect.owner)}`
             );
@@ -403,7 +432,7 @@ function applyEffect(
             historyEffect.afterSubject
           );
           applySubjectState(tree, ownerNode, effect);
-          return;
+      return getStructuralAddEffect(descriptor, effect) !== undefined;
         }
       }
     }
@@ -460,6 +489,30 @@ function resolveLiveScalarNode(
     return undefined;
   }
 
+  const subjectDescriptor = descriptor.subjectDescriptors?.get(
+    String(effect.subjectId)
+  );
+  const subjectPath = subjectDescriptor?.path;
+  const subjectOwnerPath = subjectDescriptor?.ownerPath;
+  const rowNode = liveNode.byIdOrFail(currentKey);
+
+  if (subjectPath === `${subjectOwnerPath}.${String(currentKey)}`) {
+    return rowNode;
+  }
+
+  if (
+    subjectPath?.startsWith(`${subjectOwnerPath}.${String(currentKey)}.`)
+  ) {
+    return resolveNodeAtPath(
+      rowNode as Record<string, unknown>,
+      subjectPath.slice(`${subjectOwnerPath}.${String(currentKey)}.`.length)
+    );
+  }
+
+  if (descriptor.path === `${descriptor.ownerPath}.${String(currentKey)}`) {
+    return liveNode.byIdOrFail(currentKey);
+  }
+
   const fieldSuffix = descriptor.path.startsWith(`${descriptor.ownerPath}.`)
     ? descriptor.path.slice(descriptor.ownerPath.length + 1)
     : undefined;
@@ -467,7 +520,6 @@ function resolveLiveScalarNode(
     return undefined;
   }
 
-  const rowNode = liveNode.byIdOrFail(currentKey);
   return resolveNodeAtPath(
     rowNode as Record<string, unknown>,
     fieldSuffix
@@ -547,27 +599,32 @@ function resolveNodeAtPath(
   return cursor;
 }
 
-function getStructuralRestoreEffect(
+function getStructuralAddEffect(
   descriptor: TreeRealizationDescriptor | undefined,
   effect: ReversalEffect
-): StructuralHistoryEffect | undefined {
+): Extract<StructuralHistoryEffect, { kind: 'add' | 'remove' }> | undefined {
   if (effect.structural !== 'add' || typeof effect.subjectId !== 'number') {
     return undefined;
   }
 
   if (isStructuralHistoryEffect(effect.structuralContext)) {
-    return effect.structuralContext.kind === 'remove'
+    return effect.structuralContext.kind === 'remove' ||
+      effect.structuralContext.kind === 'add'
       ? effect.structuralContext
       : undefined;
   }
 
-  return descriptor?.structuralHistoryEffects?.get(
-    toStructuralRestoreLookupKey(effect)
+  const removeEffect = descriptor?.structuralHistoryEffects?.get(
+    `remove:${String(effect.subjectId)}:${String(effect.after)}`
   );
-}
+  if (removeEffect?.kind === 'remove') {
+    return removeEffect;
+  }
 
-function toStructuralRestoreLookupKey(effect: ReversalEffect): string {
-  return `remove:${String(effect.subjectId)}:${String(effect.after)}`;
+  const addEffect = descriptor?.structuralHistoryEffects?.get(
+    `add:${String(effect.subjectId)}:${String(effect.after)}`
+  );
+  return addEffect?.kind === 'add' ? addEffect : undefined;
 }
 
 function toStructuralHistoryEffectKey(effect: StructuralHistoryEffect): string {
@@ -586,6 +643,14 @@ function isWritableLeaf(value: unknown): value is WritableLeaf {
       typeof value === 'function' &&
       'set' in (value as object) &&
       typeof (value as { set?: unknown }).set === 'function'
+  );
+}
+
+function isWritableEntityNode(value: unknown): value is WritableEntityNode {
+  return Boolean(
+    value &&
+      typeof value === 'function' &&
+      !('set' in (value as object))
   );
 }
 
