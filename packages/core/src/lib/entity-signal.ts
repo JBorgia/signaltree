@@ -257,7 +257,10 @@ export function createEntitySignal<
   const version = signal(0);
 
   function getProjectedEntity(id: K): E | undefined {
-    return valueStore.backingForKey(id);
+    const subjectId = structuralStore.subjectIdForKey(id);
+    return subjectId === undefined
+      ? undefined
+      : valueStore.backingForSubject(subjectId);
   }
 
   function getProjectedEntries(): Array<readonly [K, E]> {
@@ -338,9 +341,7 @@ export function createEntitySignal<
    */
   const entitySignals = new Map<number, WritableSignal<E | undefined>>();
   const structuralStore = new StructuralStore<K>();
-  const valueStore = new EntityValueStore<E, K>((key) =>
-    structuralStore.subjectIdForKey(key)
-  );
+  const valueStore = new EntityValueStore<E>();
   const subjectStateSignals = new Map<number, WritableSignal<number>>();
   const ownerMetadataEnabled = options?.ownerMetadataEnabled ?? true;
   const subjectMetadataEnabled =
@@ -1697,8 +1698,13 @@ export function createEntitySignal<
         handler.onUpdate?.(id, entity as Partial<E>, ctx);
       }
 
-        valueStore.retainValueForKey(id, next);
-        writeStorageProjectionEntry(id, next);
+      const subjectId = structuralStore.subjectIdForKey(id);
+      if (subjectId === undefined) {
+        throw new Error(`Entity with id ${String(id)} has no subject id`);
+      }
+
+      valueStore.retainSubjectValue(subjectId, next);
+      writeStorageProjectionEntry(id, next);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1752,7 +1758,12 @@ export function createEntitySignal<
         }
 
         const finalUpdated = { ...entity, ...transformedChanges };
-        valueStore.retainValueForKey(id, finalUpdated);
+        const subjectId = structuralStore.subjectIdForKey(id);
+        if (subjectId === undefined) {
+          throw new Error(`Entity with id ${String(id)} has no subject id`);
+        }
+
+        valueStore.retainSubjectValue(subjectId, finalUpdated);
         writeStorageProjectionEntry(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });

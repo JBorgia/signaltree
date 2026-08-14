@@ -21,11 +21,15 @@ export class MaterializedEntityProjection<
 
   rebuild(
     structuralStore: StructuralStore<K>,
-    valueStore: EntityValueStore<E, K>
+    valueStore: EntityValueStore<E>
   ): void {
     this.storage.clear();
     for (const key of structuralStore.activeKeysSnapshot()) {
-      const value = valueStore.backingForKey(key);
+      const subjectId = structuralStore.subjectIdForKey(key);
+      const value =
+        subjectId === undefined
+          ? undefined
+          : valueStore.backingForSubject(subjectId);
       if (value !== undefined) {
         this.storage.set(key, value);
       }
