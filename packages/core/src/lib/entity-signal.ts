@@ -92,8 +92,13 @@ export type EntitySubjectReclamationPlan = {
   unresolved: readonly EntitySubjectReclamationUnresolved[];
 };
 
+export type EntitySubjectReclamationPlanningOptions = {
+  causallyEligible: boolean;
+};
+
 export function planEntitySubjectReclamation<K extends string | number>(
-  inventory: EntitySubjectPhysicalInventory<K>
+  inventory: EntitySubjectPhysicalInventory<K>,
+  options: EntitySubjectReclamationPlanningOptions
 ): EntitySubjectReclamationPlan {
   const retain: EntitySubjectReclamationResource[] = [];
 
@@ -126,19 +131,33 @@ export function planEntitySubjectReclamation<K extends string | number>(
     };
   }
 
+  if (!options.causallyEligible) {
+    return {
+      subjectId: inventory.subjectId,
+      eligible: false,
+      retire: [],
+      retain,
+      unresolved: [],
+    };
+  }
+
+  const retire: EntitySubjectReclamationResource[] = [];
+  const remaining = [...retain];
+
+  if (inventory.retainedValueBacking) {
+    retire.push('retained-value-backing');
+    const backingIndex = remaining.indexOf('retained-value-backing');
+    if (backingIndex !== -1) {
+      remaining.splice(backingIndex, 1);
+    }
+  }
+
   return {
     subjectId: inventory.subjectId,
     eligible: true,
-    retire: [],
-    retain,
-    unresolved: inventory.retainedValueBacking
-      ? [
-          {
-            resource: 'retained-value-backing',
-            reason: 'terminal-facade-dependency-unknown',
-          },
-        ]
-      : [],
+    retire,
+    retain: remaining,
+    unresolved: [],
   };
 }
 
@@ -2090,9 +2109,12 @@ export function createEntitySignal<
     configurable: true,
   });
   Object.defineProperty(api, '__planSubjectReclamation', {
-    value: (subjectId: number) => {
+    value: (
+      subjectId: number,
+      options: EntitySubjectReclamationPlanningOptions
+    ) => {
       const inventory = inspectSubjectResources(subjectId);
-      return inventory ? planEntitySubjectReclamation(inventory) : undefined;
+      return inventory ? planEntitySubjectReclamation(inventory, options) : undefined;
     },
     enumerable: false,
     configurable: true,

@@ -13,7 +13,10 @@ const pathNotifier = {
 
 type SubjectInventoryApi = {
   __inspectSubjectResources?: (subjectId: number) => unknown;
-  __planSubjectReclamation?: (subjectId: number) => unknown;
+  __planSubjectReclamation?: (
+    subjectId: number,
+    options: { causallyEligible: boolean }
+  ) => unknown;
   __retireSubjectRetainedValueBackingForTesting?: (subjectId: number) => void;
   __restoreOne?: (
     key: number,
@@ -243,7 +246,7 @@ describe('entity subject physical inventory', () => {
     });
   });
 
-  it('plans conservatively for a tombstoned subject until retained value backing dependency is resolved', () => {
+  it('retires retained value backing only when the subject is tombstoned and causally eligible', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;
 
@@ -257,7 +260,8 @@ describe('entity subject physical inventory', () => {
       planEntitySubjectReclamation(
         internal.__inspectSubjectResources?.(subjectId) as ReturnType<
           typeof internal.__inspectSubjectResources
-        >
+        >,
+        { causallyEligible: true }
       )
     ).toEqual({
       subjectId,
@@ -276,9 +280,13 @@ describe('entity subject physical inventory', () => {
 
     api.removeOne(1);
 
-    expect(internal.__planSubjectReclamation?.(subjectId)).toEqual({
+    expect(
+      internal.__planSubjectReclamation?.(subjectId, {
+        causallyEligible: false,
+      })
+    ).toEqual({
       subjectId,
-      eligible: true,
+      eligible: false,
       retire: [],
       retain: [
         'subject-lifetime-record',
@@ -288,12 +296,25 @@ describe('entity subject physical inventory', () => {
         'field-facades',
         'ownership-metadata',
       ],
-      unresolved: [
-        {
-          resource: 'retained-value-backing',
-          reason: 'terminal-facade-dependency-unknown',
-        },
+      unresolved: [],
+    });
+
+    expect(
+      internal.__planSubjectReclamation?.(subjectId, {
+        causallyEligible: true,
+      })
+    ).toEqual({
+      subjectId,
+      eligible: true,
+      retire: ['retained-value-backing'],
+      retain: [
+        'subject-lifetime-record',
+        'subject-activation-channel',
+        'row-facade',
+        'field-facades',
+        'ownership-metadata',
       ],
+      unresolved: [],
     });
   });
 
