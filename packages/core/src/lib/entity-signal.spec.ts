@@ -658,10 +658,60 @@ describe('addMany() mode option (F-011)', () => {
     );
   }
 
+  it('occupied addOne refusal leaves the subject namespace unchanged', () => {
+    const notify = vi.fn();
+    const api = createEntitySignal<Item, number>(
+      { selectId: (item) => item.id },
+      { notify } as any,
+      'items'
+    );
+
+    api.addOne({ id: 1, name: 'A' });
+    const notifyCountBefore = notify.mock.calls.length;
+
+    expect(() => api.addOne({ id: 1, name: 'duplicate' })).toThrow('already exists');
+
+    expect(api.count()).toBe(1);
+    expect(api.byIdOrFail(1).name()).toBe('A');
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+
+    api.addOne({ id: 2, name: 'B' });
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(2);
+  });
+
   it('strict (default) throws on duplicate', () => {
     const api = makeApi();
     api.addOne({ id: 1, name: 'A' });
     expect(() => api.addMany([{ id: 1, name: 'B' }, { id: 2, name: 'C' }])).toThrow('already exists');
+  });
+
+  it('strict late occupied addMany refusal leaves free keys absent and the allocator unchanged', () => {
+    const notify = vi.fn();
+    const api = createEntitySignal<Item, number>(
+      { selectId: (item) => item.id },
+      { notify } as any,
+      'items'
+    );
+
+    api.addOne({ id: 3, name: 'occupied' });
+    const notifyCountBefore = notify.mock.calls.length;
+
+    expect(() =>
+      api.addMany([
+        { id: 1, name: 'free A' },
+        { id: 2, name: 'free B' },
+        { id: 3, name: 'duplicate C' },
+      ])
+    ).toThrow('already exists');
+
+    expect(api.count()).toBe(1);
+    expect(api.byId(1)).toBeUndefined();
+    expect(api.byId(2)).toBeUndefined();
+    expect(api.byIdOrFail(3).name()).toBe('occupied');
+    expect(notify.mock.calls).toHaveLength(notifyCountBefore);
+
+    api.addOne({ id: 4, name: 'after refusal' });
+    expect(api.byIdOrFail(4).name.__subjectIds?.[0]).toBe(2);
   });
 
   it('skip silently omits duplicates and returns only newly added ids', () => {
