@@ -4,7 +4,10 @@ import { signalTree } from '../signal-tree';
 import type { ISignalTree } from '../types';
 
 import { getOwnedPositionIds } from './owned-mutation';
-import { getTreeScalarSlotRuntime } from './tree-scalar-slot-runtime';
+import {
+  createTreeScalarSlotRuntime,
+  getTreeScalarSlotRuntime,
+} from './tree-scalar-slot-runtime';
 
 describe('tree scalar slot runtime', () => {
   it('keeps the same PositionId bound to the same SlotIndex across scalar writes', () => {
@@ -91,5 +94,26 @@ describe('tree scalar slot runtime', () => {
     expect(afterSlot).toBe(beforeSlot);
     expect(tree.$.profile.name()).toBe('Alicia');
     expect(tree.$.profile.enabled()).toBe(false);
+  });
+
+  it('leaves all slot values and revision untouched when a later equality check throws during frame commit', () => {
+    const runtime = createTreeScalarSlotRuntime();
+    const stable = runtime.createLeaf('A', Object.is);
+    const throwsOnChange = runtime.createLeaf('B', (current, next) => {
+      if (!Object.is(current, next)) {
+        throw new Error('equality exploded');
+      }
+
+      return true;
+    });
+
+    const frame = runtime.beginFrame();
+    frame.set(0, 'A2');
+    frame.set(1, 'B2');
+
+    expect(() => frame.commit()).toThrow('equality exploded');
+    expect(stable()).toBe('A');
+    expect(throwsOnChange()).toBe('B');
+    expect(runtime.revision()).toBe(0);
   });
 });

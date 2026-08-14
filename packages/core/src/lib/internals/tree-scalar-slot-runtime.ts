@@ -94,7 +94,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
   };
 
   const commitSlots = (staged: ReadonlyMap<SlotIndex, unknown>): void => {
-    const changed: SlotIndex[] = [];
+    const changed: Array<{ slotIndex: SlotIndex; nextValue: unknown }> = [];
 
     for (const [slotIndex, nextValue] of staged) {
       assertSlotIndex(slotIndex);
@@ -102,17 +102,20 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
         continue;
       }
 
-      values[slotIndex] = nextValue;
-      changed.push(slotIndex);
+      changed.push({ slotIndex, nextValue });
     }
 
     if (changed.length === 0) {
       return;
     }
 
+    for (const { slotIndex, nextValue } of changed) {
+      values[slotIndex] = nextValue;
+    }
+
     revision += 1;
 
-    for (const slotIndex of changed) {
+    for (const { slotIndex } of changed) {
       tokens[slotIndex].update((value) => value + 1);
     }
   };
