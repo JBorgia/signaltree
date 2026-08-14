@@ -2,6 +2,10 @@ import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import { deepClone } from '@signaltree/shared';
 
 import { EntityValueStore } from './physical/entity-value-store';
+import {
+  StructuralStore,
+  type SubjectLifetimeRecord,
+} from './physical/structural-store';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
 import { HISTORY_EXCLUDED } from './utils';
@@ -336,199 +340,7 @@ export function createEntitySignal<
    * mutation by only syncing the entities that actually changed.
    */
   const entitySignals = new Map<number, WritableSignal<E | undefined>>();
-  type SubjectLifetimeRecord = {
-    active: boolean;
-    key?: K;
-    restoreAllowed: boolean;
-  };
-  const structuralStore = {
-    subjectIds: new Map<K, number>(),
-    subjectStates: new Map<number, SubjectLifetimeRecord>(),
-    subjectRevisions: new Map<number, number>(),
-    nextSubjectId: 1,
-    activeKeys: [] as K[],
-    allocateFreshSubjectId(): number {
-      const subjectId = this.nextSubjectId;
-      this.nextSubjectId += 1;
-      return subjectId;
-    },
-    subjectIdForKey(key: K): number | undefined {
-      return this.subjectIds.get(key);
-    },
-    stateForSubject(subjectId: number): SubjectLifetimeRecord | undefined {
-      return this.subjectStates.get(subjectId);
-    },
-    hasSubject(subjectId: number): boolean {
-      return this.subjectStates.has(subjectId);
-    },
-    subjectRevision(subjectId: number): number {
-      return this.subjectRevisions.get(subjectId) ?? 0;
-    },
-    bumpSubjectRevision(subjectId: number): void {
-      this.subjectRevisions.set(subjectId, this.subjectRevision(subjectId) + 1);
-    },
-    activeKeyForSubject(subjectId: number): K | undefined {
-      const state = this.stateForSubject(subjectId);
-      return state?.active ? state.key : undefined;
-    },
-    hasActiveKey(key: K): boolean {
-      return this.subjectIds.has(key);
-    },
-    activeKeyCount(): number {
-      return this.activeKeys.length;
-    },
-    activeKeysSnapshot(): readonly K[] {
-      return [...this.activeKeys];
-    },
-    firstActiveKey(): K | undefined {
-      return this.activeKeys[0];
-    },
-    activeIndexForKey(key: K): number {
-      return this.activeKeys.indexOf(key);
-    },
-    insertActiveKeyAt(key: K, index: number): void {
-      const existingIndex = this.activeIndexForKey(key);
-      if (existingIndex !== -1) {
-        this.activeKeys.splice(existingIndex, 1);
-      }
-
-      const targetIndex = Math.max(0, Math.min(index, this.activeKeys.length));
-      this.activeKeys.splice(targetIndex, 0, key);
-    },
-    appendActiveKey(key: K): void {
-      this.insertActiveKeyAt(key, this.activeKeys.length);
-    },
-    removeActiveKey(key: K): void {
-      const existingIndex = this.activeIndexForKey(key);
-      if (existingIndex !== -1) {
-        this.activeKeys.splice(existingIndex, 1);
-      }
-    },
-    moveKeysToFront(keys: readonly K[]): void {
-      const moving = new Set(keys);
-      const rest = this.activeKeys.filter((key) => !moving.has(key));
-      this.activeKeys = [...keys, ...rest];
-    },
-    reorderActiveKeys(keys: readonly K[]): void {
-      this.activeKeys = [...keys];
-    },
-    restoreIndexForSubjects(
-      beforeSubject?: number,
-      afterSubject?: number
-    ): number {
-      const beforeIndex =
-        beforeSubject === undefined
-          ? -1
-          : this.activeKeys.findIndex(
-            (key) => this.subjectIdForKey(key) === beforeSubject
-          );
-      const afterIndex =
-        afterSubject === undefined
-          ? -1
-          : this.activeKeys.findIndex(
-            (key) => this.subjectIdForKey(key) === afterSubject
-          );
-
-      if (beforeIndex !== -1 && afterIndex !== -1 && beforeIndex < afterIndex) {
-        return beforeIndex + 1;
-      }
-      if (afterIndex !== -1) {
-        return afterIndex;
-      }
-      if (beforeIndex !== -1) {
-        return beforeIndex + 1;
-      }
-      return this.activeKeys.length;
-    },
-    neighborSubjectsForKey(key: K): {
-      beforeSubject?: number;
-      afterSubject?: number;
-    } {
-      const index = this.activeIndexForKey(key);
-      if (index === -1) {
-        return {};
-      }
-
-      const beforeKey = index > 0 ? this.activeKeys[index - 1] : undefined;
-      const afterKey =
-        index < this.activeKeys.length - 1 ? this.activeKeys[index + 1] : undefined;
-
-      return {
-        beforeSubject:
-          beforeKey === undefined ? undefined : this.subjectIdForKey(beforeKey),
-        afterSubject:
-          afterKey === undefined ? undefined : this.subjectIdForKey(afterKey),
-      };
-    },
-    tombstonedSubjectsWithRetainedBacking(): readonly number[] {
-      return [...this.subjectStates.entries()]
-        .filter(
-          ([subjectId, subjectState]) =>
-            !subjectState.active && valueStore.hasRetainedValueBacking(subjectId)
-        )
-        .map(([subjectId]) => subjectId)
-        .sort((left, right) => left - right);
-    },
-    activateSubject(subjectId: number, key: K, restoreAllowed = true): void {
-      this.subjectIds.set(key, subjectId);
-      this.subjectStates.set(subjectId, {
-        active: true,
-        key,
-        restoreAllowed,
-      });
-    },
-    createSubject(subjectId: number, key: K): void {
-      this.activateSubject(subjectId, key);
-      this.subjectRevisions.set(subjectId, 0);
-      this.appendActiveKey(key);
-    },
-    transferSubject(subjectId: number, from: K, to: K, restoreAllowed = true): void {
-      const activeIndex = this.activeIndexForKey(from);
-      this.subjectIds.delete(from);
-      this.activateSubject(subjectId, to, restoreAllowed);
-      if (activeIndex === -1) {
-        this.appendActiveKey(to);
-      } else {
-        this.activeKeys.splice(activeIndex, 1, to);
-      }
-    },
-    tombstoneSubject(
-      subjectId: number,
-      key: K,
-      restoreAllowed: boolean
-    ): void {
-      this.subjectIds.delete(key);
-      this.removeActiveKey(key);
-      this.subjectStates.set(subjectId, {
-        active: false,
-        restoreAllowed,
-      });
-    },
-    restoreSubject(
-      subjectId: number,
-      key: K,
-      beforeSubject?: number,
-      afterSubject?: number,
-      restoreAllowed = true
-    ): void {
-      const restoreIndex = this.restoreIndexForSubjects(beforeSubject, afterSubject);
-      this.activateSubject(subjectId, key, restoreAllowed);
-      this.insertActiveKeyAt(key, restoreIndex);
-    },
-    retireSubject(subjectId: number): void {
-      this.subjectStates.set(subjectId, {
-        active: false,
-        restoreAllowed: false,
-      });
-    },
-    clear(): void {
-      this.subjectIds.clear();
-      this.subjectStates.clear();
-      this.subjectRevisions.clear();
-      this.activeKeys = [];
-      this.nextSubjectId = 1;
-    },
-  };
+  const structuralStore = new StructuralStore<K>();
   const valueStore = new EntityValueStore<E, K>((key) =>
     structuralStore.subjectIdForKey(key)
   );
@@ -776,7 +588,9 @@ export function createEntitySignal<
     return structuralStore.subjectIdForKey(id);
   }
 
-  function resolveSubjectState(subjectId: number): SubjectLifetimeRecord | undefined {
+  function resolveSubjectState(
+    subjectId: number
+  ): SubjectLifetimeRecord<K> | undefined {
     return structuralStore.stateForSubject(subjectId);
   }
 
@@ -1343,7 +1157,9 @@ export function createEntitySignal<
   }
 
   function listSubjectReclamationCandidates(): readonly number[] {
-    return structuralStore.tombstonedSubjectsWithRetainedBacking();
+    return structuralStore
+      .tombstonedSubjectsSnapshot()
+      .filter((subjectId) => valueStore.hasRetainedValueBacking(subjectId));
   }
 
   function prepareSubjectReclamation(
