@@ -1132,13 +1132,6 @@ export function createEntitySignal<
     };
   }
 
-  function listSubjectReclamationCandidates(): readonly number[] {
-    return [...subjectStates.entries()]
-      .filter(([, state]) => !state.active)
-      .map(([subjectId]) => subjectId)
-      .sort((left, right) => left - right);
-  }
-
   function prepareSubjectReclamation(
     subjectId: number,
     options: EntitySubjectReclamationPlanningOptions
@@ -2226,11 +2219,6 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__inspectSubjectResources', {
     value: inspectSubjectResources,
-    enumerable: false,
-    configurable: true,
-  });
-  Object.defineProperty(api, '__listSubjectReclamationCandidates', {
-    value: listSubjectReclamationCandidates,
     enumerable: false,
     configurable: true,
   });

@@ -12,7 +12,6 @@ import {
 import type { TurnStore } from './turn-store';
 
 export interface SubjectReclamationPhysicalOwner {
-  __listSubjectReclamationCandidates(): readonly number[];
   __prepareSubjectReclamation(
     subjectId: number,
     options: EntitySubjectReclamationPlanningOptions
@@ -38,6 +37,10 @@ export type ReclaimSubjectResult =
   | {
       readonly ok: false;
       readonly kind: 'physical-plan-unavailable';
+    }
+  | {
+      readonly ok: false;
+      readonly kind: 'already-retired';
     }
   | {
       readonly ok: false;
@@ -80,6 +83,12 @@ export function reclaimSubject(
       kind: 'physical-plan-unavailable',
     };
   }
+  if (prepared.retire.length === 0) {
+    return {
+      ok: false,
+      kind: 'already-retired',
+    };
+  }
 
   const finalAssessment = assessReclamationEligibility({
     subjectId: options.subjectId,
@@ -112,36 +121,87 @@ export function reclaimSubject(
 }
 
 export interface ReclaimAvailableSubjectsOptions {
+  readonly subjectIds: readonly number[];
   readonly owner: SubjectReclamationPhysicalOwner;
   readonly store: Pick<TurnStore, 'getTurns' | 'getPendingTurns'>;
   readonly appliedHistory: Pick<AppliedHistory, 'getAppliedTurnIds' | 'getRedoTurnIds'>;
 }
 
 export interface ReclaimAvailableSubjectsResult {
-  readonly candidateSubjectIds: readonly number[];
-  readonly results: ReadonlyMap<number, ReclaimSubjectResult>;
+  readonly reclaimed: readonly number[];
+  readonly alreadyRetired: readonly number[];
+  readonly blocked: readonly {
+    subjectId: number;
+    blockers: readonly ReclamationEligibilityBlocker[];
+  }[];
+  readonly causalDrift: readonly {
+    subjectId: number;
+    blockers: readonly ReclamationEligibilityBlocker[];
+  }[];
+  readonly physicalDrift: readonly {
+    subjectId: number;
+    message: string;
+  }[];
+  readonly physicalPlanUnavailable: readonly number[];
 }
 
 export function reclaimAvailableSubjects(
   options: ReclaimAvailableSubjectsOptions
 ): ReclaimAvailableSubjectsResult {
-  const candidateSubjectIds = options.owner.__listSubjectReclamationCandidates();
-  const results = new Map<number, ReclaimSubjectResult>();
+  const reclaimed: number[] = [];
+  const alreadyRetired: number[] = [];
+  const blocked: {
+    subjectId: number;
+    blockers: readonly ReclamationEligibilityBlocker[];
+  }[] = [];
+  const causalDrift: {
+    subjectId: number;
+    blockers: readonly ReclamationEligibilityBlocker[];
+  }[] = [];
+  const physicalDrift: {
+    subjectId: number;
+    message: string;
+  }[] = [];
+  const physicalPlanUnavailable: number[] = [];
 
-  for (const subjectId of candidateSubjectIds) {
-    results.set(
+  for (const subjectId of options.subjectIds) {
+    const result = reclaimSubject({
       subjectId,
-      reclaimSubject({
-        subjectId,
-        owner: options.owner,
-        store: options.store,
-        appliedHistory: options.appliedHistory,
-      })
-    );
+      owner: options.owner,
+      store: options.store,
+      appliedHistory: options.appliedHistory,
+    });
+
+    if (result.ok) {
+      reclaimed.push(subjectId);
+      continue;
+    }
+
+    switch (result.kind) {
+      case 'already-retired':
+        alreadyRetired.push(subjectId);
+        break;
+      case 'blocked':
+        blocked.push({ subjectId, blockers: result.blockers });
+        break;
+      case 'causal-drift':
+        causalDrift.push({ subjectId, blockers: result.blockers });
+        break;
+      case 'physical-drift':
+        physicalDrift.push({ subjectId, message: result.message });
+        break;
+      case 'physical-plan-unavailable':
+        physicalPlanUnavailable.push(subjectId);
+        break;
+    }
   }
 
   return {
-    candidateSubjectIds,
-    results,
+    reclaimed,
+    alreadyRetired,
+    blocked,
+    causalDrift,
+    physicalDrift,
+    physicalPlanUnavailable,
   };
 }

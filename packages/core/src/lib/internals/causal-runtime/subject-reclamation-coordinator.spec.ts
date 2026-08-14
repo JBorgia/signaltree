@@ -14,7 +14,6 @@ import {
 type User = { id: number; name: string; active: boolean };
 
 type SubjectReclamationApi = ReturnType<typeof createEntitySignal<User, number>> & {
-  __listSubjectReclamationCandidates?: () => readonly number[];
   __inspectSubjectResources?: (subjectId: number) => unknown;
   __prepareSubjectReclamation?: (
     subjectId: number,
@@ -309,7 +308,66 @@ describe('subject reclamation coordinator', () => {
     expect(heldName()).toBeUndefined();
   });
 
-  it('reclaims all tombstoned candidates through the same fresh coordinator flow', () => {
+  it('treats repeated reclamation of the same retired subject as a silent no-op', () => {
+    const { api, notify } = makeOwner();
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldName = api.byIdOrFail(1).name;
+    const subjectId = heldName.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    api.removeOne(1);
+    const notifyCountBeforeFirst = notify.mock.calls.length;
+
+    expect(
+      reclaimSubject({
+        subjectId,
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      ok: true,
+      kind: 'reclaimed',
+      retired: ['retained-value-backing'],
+    });
+
+    const notifyCountBeforeSecond = notify.mock.calls.length;
+    expect(
+      reclaimSubject({
+        subjectId,
+        owner: api as unknown as SubjectReclamationPhysicalOwner,
+        store,
+        appliedHistory,
+      })
+    ).toEqual({
+      ok: false,
+      kind: 'already-retired',
+    });
+
+    expect(api.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 2,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: false,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldName.__positionIds,
+      retainedValueBacking: undefined,
+    });
+    expect(heldName()).toBeUndefined();
+    expect(notify.mock.calls).toHaveLength(notifyCountBeforeSecond);
+    expect(notifyCountBeforeSecond).toBe(notifyCountBeforeFirst);
+  });
+
+  it('reclaims an explicit best-effort subject sweep without cross-subject rollback', () => {
     const { api, notify } = makeOwner();
     const store = new TurnStore();
     const appliedHistory = new AppliedHistory(store);
@@ -343,28 +401,31 @@ describe('subject reclamation coordinator', () => {
 
     const notifyCountBefore = notify.mock.calls.length;
     const result = reclaimAvailableSubjects({
+      subjectIds: [subjectOne, subjectTwo, subjectOne],
       owner: api as unknown as SubjectReclamationPhysicalOwner,
       store,
       appliedHistory,
     });
 
-    expect(result.candidateSubjectIds).toEqual([subjectOne, subjectTwo]);
-    expect(result.results.get(subjectOne)).toEqual({
-      ok: true,
-      kind: 'reclaimed',
-      retired: ['retained-value-backing'],
-    });
-    expect(result.results.get(subjectTwo)).toEqual({
-      ok: false,
-      kind: 'blocked',
-      blockers: [
+    expect(result).toEqual({
+      reclaimed: [subjectOne],
+      alreadyRetired: [subjectOne],
+      blocked: [
         {
-          kind: 'pending-reference',
-          turnId: 11,
-          state: 'pending',
-          structural: undefined,
+          subjectId: subjectTwo,
+          blockers: [
+            {
+              kind: 'pending-reference',
+              turnId: 11,
+              state: 'pending',
+              structural: undefined,
+            },
+          ],
         },
       ],
+      causalDrift: [],
+      physicalDrift: [],
+      physicalPlanUnavailable: [],
     });
 
     expect(api.__inspectSubjectResources?.(subjectOne)).toEqual({
