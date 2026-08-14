@@ -277,6 +277,10 @@ export function createEntitySignal<
     }
   }
 
+  function writeStorageProjectionEntry(id: K, entity: E): void {
+    storage.set(id, entity);
+  }
+
   function snapshotStorageProjection(): ReadonlyMap<K, E> {
     return new Map(storage);
   }
@@ -790,14 +794,7 @@ export function createEntitySignal<
    */
   function moveToFront(ids: K[]): void {
     structuralStore.moveKeysToFront(ids);
-    const moving = new Set(ids);
-    const rest = Array.from(storage.entries()).filter(([k]) => !moving.has(k));
-    const front = ids
-      .map((id) => [id, storage.get(id)] as const)
-      .filter(([, v]) => v !== undefined);
-    storage.clear();
-    for (const [k, v] of front) storage.set(k, v as E);
-    for (const [k, v] of rest) storage.set(k, v);
+    rebuildStorageProjection();
     updateSignals();
   }
 
@@ -821,7 +818,7 @@ export function createEntitySignal<
   function getEntitySignal(id: K): WritableSignal<E | undefined> {
     const subjectId = resolveSubjectId(id);
     if (subjectId === undefined) {
-      return signal<E | undefined>(storage.get(id));
+      return signal<E | undefined>(getProjectedEntity(id));
     }
 
     let s = entitySignals.get(subjectId);
@@ -1019,7 +1016,7 @@ export function createEntitySignal<
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
     valueStore.retainSubjectValue(subjectId, transformedEntity);
-    storage.set(id, transformedEntity);
+    writeStorageProjectionEntry(id, transformedEntity);
     lastSubjectIds = [subjectId];
     invalidateNodeCache(id);
     syncEntitySignal(id);
@@ -1730,7 +1727,7 @@ export function createEntitySignal<
           } else if (mode === 'skip') {
             continue;
           }
-          // 'overwrite': fall through — storage.set below replaces the existing entry
+          // 'overwrite': fall through — the projection helper below replaces the existing entry
         }
         toProcess.push({ entity, id, existingSubjectId });
       }
@@ -1766,7 +1763,7 @@ export function createEntitySignal<
         if (subjectId === undefined) {
           throw new Error(`Entity with id ${String(id)} has no subject id`);
         }
-        storage.set(id, transformedEntity);
+        writeStorageProjectionEntry(id, transformedEntity);
         valueStore.retainSubjectValue(subjectId, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
@@ -1856,7 +1853,7 @@ export function createEntitySignal<
       const finalUpdated = { ...entity, ...transformedChanges };
       const subjectIdsForWrite = rememberSubjectIds([id]);
       valueStore.retainSubjectValue(subjectIdsForWrite[0], finalUpdated);
-      storage.set(id, finalUpdated);
+      writeStorageProjectionEntry(id, finalUpdated);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1913,8 +1910,8 @@ export function createEntitySignal<
         handler.onUpdate?.(id, entity as Partial<E>, ctx);
       }
 
-      valueStore.retainValueForKey(id, next);
-      storage.set(id, next);
+        valueStore.retainValueForKey(id, next);
+        writeStorageProjectionEntry(id, next);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1969,7 +1966,7 @@ export function createEntitySignal<
 
         const finalUpdated = { ...entity, ...transformedChanges };
         valueStore.retainValueForKey(id, finalUpdated);
-        storage.set(id, finalUpdated);
+        writeStorageProjectionEntry(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
@@ -2268,7 +2265,7 @@ export function createEntitySignal<
           throw new Error(`Entity with id ${String(id)} has no subject id`);
         }
         valueStore.retainSubjectValue(subjectId, transformedEntity);
-        storage.set(id, transformedEntity);
+        writeStorageProjectionEntry(id, transformedEntity);
         invalidateNodeCache(id);
         syncEntitySignal(id);
         addedEntities.push({ id, entity: transformedEntity, subjectId });
@@ -2289,7 +2286,7 @@ export function createEntitySignal<
         transformedChanges,
       } of stagedUpdates) {
         valueStore.retainSubjectValue(subjectId, finalUpdated);
-        storage.set(id, finalUpdated);
+        writeStorageProjectionEntry(id, finalUpdated);
         syncEntitySignal(id);
         updatedEntities.push({ id, subjectId, prev, finalUpdated, transformedChanges });
       }
