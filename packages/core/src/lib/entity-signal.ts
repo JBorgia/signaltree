@@ -1,6 +1,13 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import { deepClone } from '@signaltree/shared';
 
+import {
+  EntityMutationFrame,
+  type PreparedKeyTransfer,
+  type PreparedRetainedValueRetirement,
+  type PreparedSubjectTombstone,
+  type PreparedValueReplacement,
+} from './physical/entity-mutation-frame';
 import { EntityValueStore } from './physical/entity-value-store';
 import { MaterializedEntityProjection } from './physical/materialized-entity-projection';
 import {
@@ -298,6 +305,14 @@ export function createEntitySignal<
     materializedProjection.clearForTesting();
   }
 
+  function createEntityMutationFrame(): EntityMutationFrame<K, E> {
+    return new EntityMutationFrame(
+      valueStore,
+      materializedProjection,
+      structuralStore
+    );
+  }
+
   /** Reactive signals for queries — all derived, none eagerly maintained. */
   const allSignal: Signal<E[]> = computed(() => {
     version();
@@ -536,9 +551,19 @@ export function createEntitySignal<
 
     return {
       commit(): void {
-        transferSubjectId(from, to);
+        const transfer: PreparedKeyTransfer<K> = {
+          kind: 'transfer-key',
+          fromKey: from,
+          toKey: to,
+          subjectId,
+        };
+        const frame = createEntityMutationFrame();
+        frame.stageKeyTransfer(transfer);
+        const result = frame.commit();
+        for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+          publishSubjectPhysicalChange(changedSubjectId);
+        }
         rekeyedSubjects.add(subjectId);
-        rebuildStorageProjection();
 
         if (activeIdSignal() === from) {
           activeIdSignal.set(to);
@@ -657,14 +682,6 @@ export function createEntitySignal<
     const resolved = ids.map((id) => allocateSubjectId(id));
     lastSubjectIds = resolved;
     return resolved;
-  }
-
-  function transferSubjectId(from: K, to: K): number {
-    const subjectId = allocateSubjectId(from);
-    structuralStore.transferSubject(subjectId, from, to);
-    publishSubjectPhysicalChange(subjectId);
-    lastSubjectIds = [subjectId];
-    return subjectId;
   }
 
   function findKeyBySubjectId(subjectId: number): K | undefined {
@@ -1208,18 +1225,21 @@ export function createEntitySignal<
       );
     }
 
-    let mutated = false;
+    const frame = createEntityMutationFrame();
     for (const resource of prepared.retire) {
       if (resource === 'retained-value-backing') {
-        const hadBacking = valueStore.retireSubjectValue(prepared.subjectId);
+        const retirement: PreparedRetainedValueRetirement = {
+          kind: 'retire-retained-value',
+          subjectId: prepared.subjectId,
+        };
+        frame.stageRetainedValueRetirement(retirement);
         entitySignals.delete(prepared.subjectId);
-        structuralStore.retireSubject(prepared.subjectId);
-        mutated = hadBacking || mutated;
       }
     }
 
-    if (mutated) {
-      publishSubjectPhysicalChange(prepared.subjectId);
+    const result = frame.commit();
+    for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+      publishSubjectPhysicalChange(changedSubjectId);
     }
   }
 
@@ -1640,8 +1660,15 @@ export function createEntitySignal<
 
       const finalUpdated = { ...entity, ...transformedChanges };
       const subjectIdsForWrite = rememberSubjectIds([id]);
-      valueStore.retainSubjectValue(subjectIdsForWrite[0], finalUpdated);
-      writeStorageProjectionEntry(id, finalUpdated);
+      const replacement: PreparedValueReplacement<K, E> = {
+        kind: 'replace-value',
+        key: id,
+        subjectId: subjectIdsForWrite[0],
+        nextValue: finalUpdated,
+      };
+      const frame = createEntityMutationFrame();
+      frame.stageValueReplacement(replacement);
+      frame.commit();
       syncEntitySignal(id);
       updateSignals();
 
@@ -1703,8 +1730,15 @@ export function createEntitySignal<
         throw new Error(`Entity with id ${String(id)} has no subject id`);
       }
 
-      valueStore.retainSubjectValue(subjectId, next);
-      writeStorageProjectionEntry(id, next);
+      const replacement: PreparedValueReplacement<K, E> = {
+        kind: 'replace-value',
+        key: id,
+        subjectId,
+        nextValue: next,
+      };
+      const frame = createEntityMutationFrame();
+      frame.stageValueReplacement(replacement);
+      frame.commit();
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1727,6 +1761,7 @@ export function createEntitySignal<
       // Collect entities and run interceptors first
       const updatedEntities: Array<{
         id: K;
+        subjectId: number;
         prev: E;
         finalUpdated: E;
         transformedChanges: Partial<E>;
@@ -1763,10 +1798,28 @@ export function createEntitySignal<
           throw new Error(`Entity with id ${String(id)} has no subject id`);
         }
 
-        valueStore.retainSubjectValue(subjectId, finalUpdated);
-        writeStorageProjectionEntry(id, finalUpdated);
+        updatedEntities.push({
+          id,
+          subjectId,
+          prev,
+          finalUpdated,
+          transformedChanges,
+        });
+      }
+
+      const frame = createEntityMutationFrame();
+      for (const { id, subjectId, finalUpdated } of updatedEntities) {
+        frame.stageValueReplacement({
+          kind: 'replace-value',
+          key: id,
+          subjectId,
+          nextValue: finalUpdated,
+        });
+      }
+      frame.commit();
+
+      for (const { id } of updatedEntities) {
         syncEntitySignal(id);
-        updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
 
       // Single signal update after all entities are updated
@@ -1852,14 +1905,19 @@ export function createEntitySignal<
         subjectPositions: deriveSubjectPositions(id, entity),
       };
       const currentState = resolveSubjectState(subjectIdsForWrite[0]);
-      structuralStore.tombstoneSubject(
-        subjectIdsForWrite[0],
-        id,
-        currentState?.restoreAllowed ?? true
-      );
-      publishSubjectPhysicalChange(subjectIdsForWrite[0]);
+      const tombstone: PreparedSubjectTombstone<K> = {
+        kind: 'tombstone-subject',
+        key: id,
+        subjectId: subjectIdsForWrite[0],
+        restoreAllowed: currentState?.restoreAllowed ?? true,
+      };
+      const frame = createEntityMutationFrame();
+      frame.stageSubjectTombstone(tombstone);
+      const result = frame.commit();
+      for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+        publishSubjectPhysicalChange(changedSubjectId);
+      }
       tombstoneSubjectSignal(subjectIdsForWrite[0]);
-      rebuildStorageProjection();
       updateSignals();
 
       // Notify PathNotifier
@@ -1933,18 +1991,26 @@ export function createEntitySignal<
       const subjectIdsForWrite = preparedRemovals.map(({ subjectId }) => subjectId);
       lastSubjectIds = subjectIdsForWrite;
 
+      const frame = createEntityMutationFrame();
+
       for (const { id, subjectId } of preparedRemovals) {
         const currentState = resolveSubjectState(subjectId);
-        structuralStore.tombstoneSubject(
+        frame.stageSubjectTombstone({
+          kind: 'tombstone-subject',
+          key: id,
           subjectId,
-          id,
-          currentState?.restoreAllowed ?? true
-        );
-        publishSubjectPhysicalChange(subjectId);
-        tombstoneSubjectSignal(subjectId);
+          restoreAllowed: currentState?.restoreAllowed ?? true,
+        });
       }
 
-      rebuildStorageProjection();
+      const result = frame.commit();
+      for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+        publishSubjectPhysicalChange(changedSubjectId);
+      }
+
+      for (const { subjectId } of preparedRemovals) {
+        tombstoneSubjectSignal(subjectId);
+      }
 
       // Single signal update after all entities are removed
       updateSignals();
