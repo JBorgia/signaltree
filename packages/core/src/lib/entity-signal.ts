@@ -890,15 +890,6 @@ export function createEntitySignal<
       throw new Error(`Entity with id ${String(key)} already exists`);
     }
 
-    const entries = Array.from(storage.entries());
-  const restoreIndex = resolveRestoreIndex(beforeSubject, afterSubject);
-    entries.splice(restoreIndex, 0, [key, entity]);
-
-    storage.clear();
-    for (const [entryKey, entryValue] of entries) {
-      storage.set(entryKey, entryValue);
-    }
-
     const state = resolveSubjectState(subjectId);
     if (state && !state.restoreAllowed) {
       throw new Error(
@@ -915,6 +906,7 @@ export function createEntitySignal<
     );
     valueStore.retainSubjectValue(subjectId, entity);
     publishSubjectPhysicalChange(subjectId);
+    rebuildStorageProjection();
     lastSubjectIds = [subjectId];
     syncEntitySignal(key);
     updateSignals();
@@ -2013,8 +2005,6 @@ export function createEntitySignal<
         afterSubject,
         subjectPositions: deriveSubjectPositions(id, entity),
       };
-      tombstoneSubjectSignal(subjectIdsForWrite[0]);
-      storage.delete(id);
       const currentState = resolveSubjectState(subjectIdsForWrite[0]);
       structuralStore.tombstoneSubject(
         subjectIdsForWrite[0],
@@ -2022,6 +2012,8 @@ export function createEntitySignal<
         currentState?.restoreAllowed ?? true
       );
       publishSubjectPhysicalChange(subjectIdsForWrite[0]);
+      tombstoneSubjectSignal(subjectIdsForWrite[0]);
+      rebuildStorageProjection();
       updateSignals();
 
       // Notify PathNotifier
@@ -2082,22 +2074,20 @@ export function createEntitySignal<
       // Delete all entities without triggering per-entity signal updates
       const subjectIdsForWrite = rememberSubjectIds(ids);
 
-      for (const { id } of entitiesToRemove) {
-        const subjectId = resolveSubjectId(id);
-        if (subjectId !== undefined) {
-          tombstoneSubjectSignal(subjectId);
-        }
-        storage.delete(id);
-        if (subjectId !== undefined) {
-          const currentState = resolveSubjectState(subjectId);
-          structuralStore.tombstoneSubject(
-            subjectId,
-            id,
-            currentState?.restoreAllowed ?? true
-          );
-          publishSubjectPhysicalChange(subjectId);
-        }
+      for (let i = 0; i < entitiesToRemove.length; i++) {
+        const { id } = entitiesToRemove[i];
+        const subjectId = subjectIdsForWrite[i];
+        const currentState = resolveSubjectState(subjectId);
+        structuralStore.tombstoneSubject(
+          subjectId,
+          id,
+          currentState?.restoreAllowed ?? true
+        );
+        publishSubjectPhysicalChange(subjectId);
+        tombstoneSubjectSignal(subjectId);
       }
+
+      rebuildStorageProjection();
 
       // Single signal update after all entities are removed
       updateSignals();

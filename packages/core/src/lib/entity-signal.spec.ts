@@ -792,6 +792,105 @@ describe('entity subject physical inventory', () => {
     });
   });
 
+  it('removes structural reachability without changing subject-backed value ownership', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const heldRow = api.byIdOrFail(1);
+    const heldField = heldRow.name;
+    const subjectId = heldField.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for held field');
+    }
+
+    api.removeOne(1);
+
+    expect(api.byId(1)).toBeUndefined();
+    expect(heldRow()).toBeUndefined();
+    expect(heldField()).toBeUndefined();
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: heldField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([subjectId]);
+  });
+
+  it('restores structural reachability without reading replacement-key history', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+    const originalRow = api.byIdOrFail(1);
+    const originalField = originalRow.name;
+    const originalSubjectId = originalField.__subjectIds?.[0];
+    if (originalSubjectId === undefined) {
+      throw new Error('Expected subject metadata for original field');
+    }
+
+    api.removeOne(1);
+
+    api.addOne({ id: 1, name: 'Bob', active: false });
+    const foreignSubjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
+    if (foreignSubjectId === undefined) {
+      throw new Error('Expected subject metadata for foreign field');
+    }
+
+    api.removeOne(1);
+    internal.__restoreOne?.(
+      1,
+      { id: 1, name: 'Alice', active: true },
+      originalSubjectId
+    );
+
+    const restoredRow = api.byIdOrFail(1);
+    expect(restoredRow).toBe(originalRow);
+    expect(restoredRow.name).toBe(originalField);
+    expect(restoredRow.name()).toBe('Alice');
+    expect(internal.__inspectSubjectResources?.(originalSubjectId)).toEqual({
+      subjectId: originalSubjectId,
+      state: 'active',
+      subjectRevision: 2,
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__inspectSubjectResources?.(foreignSubjectId)).toEqual({
+      subjectId: foreignSubjectId,
+      state: 'tombstoned',
+      subjectRevision: 1,
+      activeKey: undefined,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: originalField.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(internal.__listSubjectReclamationCandidates?.()).toEqual([foreignSubjectId]);
+  });
+
   it('keeps retained backing on subject identity rather than key reuse', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;
