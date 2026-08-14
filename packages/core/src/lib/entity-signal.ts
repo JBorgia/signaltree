@@ -856,6 +856,10 @@ export function createEntitySignal<
       return existing;
     }
 
+    return commitFreshSubject(id);
+  }
+
+  function commitFreshSubject(id: K): number {
     const subjectId = structuralStore.allocateFreshSubjectId();
     structuralStore.createSubject(subjectId, id);
     getSubjectStateSignal(subjectId);
@@ -999,19 +1003,20 @@ export function createEntitySignal<
 
     const transformedEntity = interceptAddedEntity(entity);
 
-    const subjectIdsForWrite = rememberSubjectIds([id]);
-    storage.set(id, transformedEntity);
-    valueStore.retainSubjectValue(subjectIdsForWrite[0], transformedEntity);
+    const subjectId = commitFreshSubject(id);
     const beforeKey = previousKeys.at(-1);
     const historyEffect: PendingAddHistoryEffect = {
       kind: 'add',
-      subject: subjectIdsForWrite[0],
+      subject: subjectId,
       key: id,
       value: deepClone(transformedEntity),
       beforeSubject:
         beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
+    valueStore.retainSubjectValue(subjectId, transformedEntity);
+    storage.set(id, transformedEntity);
+    lastSubjectIds = [subjectId];
     invalidateNodeCache(id);
     syncEntitySignal(id);
     updateSignals();
@@ -1021,7 +1026,7 @@ export function createEntitySignal<
       transformedEntity,
       undefined,
       basePath,
-      subjectIdsForWrite,
+      [subjectId],
       getPositionIdsForNotify(),
       createStructuralHistoryMeta(historyEffect)
     );

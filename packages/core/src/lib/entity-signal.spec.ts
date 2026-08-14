@@ -1026,6 +1026,62 @@ describe('entity subject physical inventory', () => {
     expect(Array.from(api.asMap().entries())).toEqual(expectedEntries);
   });
 
+  it('adds one fresh subject-owned value before projection and can rebuild storage afterward', () => {
+    const api = makeApi();
+    const internal = api as typeof api & SubjectInventoryApi;
+
+    api.addOne({ id: 1, name: 'Alice', active: true });
+
+    const subjectId = api.byIdOrFail(1).name.__subjectIds?.[0];
+    if (subjectId === undefined) {
+      throw new Error('Expected subject metadata for added field');
+    }
+
+    expect(internal.__inspectSubjectResources?.(subjectId)).toEqual({
+      subjectId,
+      state: 'active',
+      subjectRevision: 0,
+      activeKey: 1,
+      retainedSubjectState: true,
+      entitySignal: true,
+      activationToken: true,
+      nodeFacadeMaterialized: true,
+      fieldFacadesMaterialized: ['active', 'id', 'name'],
+      positionIds: api.byIdOrFail(1).name.__positionIds,
+      retainedValueBacking: {
+        kind: 'retained-entity-signal',
+      },
+    });
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([[1, { id: 1, name: 'Alice', active: true }]]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([[1, { id: 1, name: 'Alice', active: true }]]);
+
+    internal.__clearStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([[1, { id: 1, name: 'Alice', active: true }]]);
+
+    internal.__rebuildStorageProjectionForTesting?.();
+
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([[1, { id: 1, name: 'Alice', active: true }]]);
+    expect(Array.from(api.asMap().entries())).toEqual([
+      [1, { id: 1, name: 'Alice', active: true }],
+    ]);
+  });
+
   it('keeps retained backing on subject identity rather than key reuse', () => {
     const api = makeApi();
     const internal = api as typeof api & SubjectInventoryApi;
@@ -1311,6 +1367,41 @@ describe('addMany() mode option (F-011)', () => {
       'items'
     );
   }
+
+  it('interceptor-blocked addOne leaves both authoritative stores and projection unchanged', () => {
+    const api = createEntitySignal<Item, number>(
+      { selectId: (item) => item.id },
+      pathNotifier,
+      'items'
+    );
+    const internal = api as typeof api & {
+      __snapshotStorageProjectionForTesting?: () => ReadonlyMap<number, Item>;
+      __rebuildActiveProjectionFromOwnersForTesting?: () => ReadonlyMap<number, Item>;
+    };
+
+    api.intercept({
+      onAdd: (entity, ctx) => {
+        if (entity.id === 1) {
+          ctx.block('blocked add');
+        }
+      },
+    });
+
+    expect(() => api.addOne({ id: 1, name: 'blocked' })).toThrow('blocked add');
+    expect(api.count()).toBe(0);
+    expect(api.byId(1)).toBeUndefined();
+    expect(
+      Array.from(internal.__snapshotStorageProjectionForTesting?.().entries() ?? [])
+    ).toEqual([]);
+    expect(
+      Array.from(
+        internal.__rebuildActiveProjectionFromOwnersForTesting?.().entries() ?? []
+      )
+    ).toEqual([]);
+
+    api.addOne({ id: 2, name: 'after block' });
+    expect(api.byIdOrFail(2).name.__subjectIds?.[0]).toBe(1);
+  });
 
   it('occupied addOne refusal leaves the subject namespace unchanged', () => {
     const notify = vi.fn();
