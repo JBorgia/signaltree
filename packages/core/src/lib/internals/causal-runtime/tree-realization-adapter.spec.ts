@@ -2890,6 +2890,187 @@ describe('tree realization adapter', () => {
     });
   });
 
+  it('retains held subject facades across same-key fresh replacement until the old subject is restored elsewhere', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Legacy' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldOldRow = tree.$.users.byIdOrFail('u1');
+    const heldOldName = heldOldRow.name;
+    heldOldRow();
+    heldOldName();
+    const oldNameOwner = getOwnedPositionIds(heldOldName)?.[0];
+    const oldSubjectId = heldOldName.__subjectIds?.[0];
+    if (
+      structuralOwner === undefined ||
+      oldNameOwner === undefined ||
+      oldSubjectId === undefined
+    ) {
+      throw new Error('Expected existing subject metadata');
+    }
+
+    const freshSubjectId = oldSubjectId + 20_000;
+    const freshNameOwner = freshSubjectId + 1;
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [oldSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'remove',
+          subject: oldSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Legacy' },
+          subjectPositions: [structuralOwner, oldNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [oldNameOwner],
+      subjectIds: [oldSubjectId],
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [freshSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: freshSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, freshNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [freshNameOwner],
+      subjectIds: [freshSubjectId],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __inspectSubjectResources?: (subjectId: number) => {
+        state: 'active' | 'tombstoned';
+        activeKey: string | undefined;
+      } | undefined;
+      __findKeyBySubjectId?: (subjectId: number) => string | number | undefined;
+    };
+    if (!collectionInternal.__inspectSubjectResources || !collectionInternal.__findKeyBySubjectId) {
+      throw new Error('Expected subject inventory hooks for held-facade characterization');
+    }
+
+    const removeOld = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: undefined,
+      subjectId: oldSubjectId,
+      structural: 'remove' as const,
+    };
+    const freshAdd = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: freshSubjectId,
+      structural: 'add' as const,
+      structuralContext: {
+        kind: 'add' as const,
+        subject: freshSubjectId,
+        key: 'u1',
+        value: { id: 'u1', name: 'Ada' },
+        subjectPositions: [structuralOwner, freshNameOwner],
+      },
+      subjectPositions: [structuralOwner, freshNameOwner],
+    };
+    const renameFresh = {
+      owner: freshNameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId: freshSubjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+    const restoreOldAtU2 = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u2',
+      subjectId: oldSubjectId,
+      structural: 'add' as const,
+    };
+
+    expect(
+      adapter.validateEffects([removeOld, freshAdd, renameFresh, restoreOldAtU2])
+    ).toBeUndefined();
+
+    adapter.applyAtomically([removeOld, freshAdd, renameFresh]);
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alicia');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(freshSubjectId);
+    expect(collectionInternal.__inspectSubjectResources(oldSubjectId)).toMatchObject({
+      state: 'tombstoned',
+      activeKey: undefined,
+    });
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toMatchObject({
+      state: 'active',
+      activeKey: 'u1',
+    });
+    expect(heldOldRow()).toBeUndefined();
+    expect(heldOldName()).toBeUndefined();
+    expect(heldOldName.__subjectIds?.[0]).toBe(oldSubjectId);
+
+    adapter.applyAtomically([restoreOldAtU2]);
+    getPathNotifier().flushSync();
+
+    const restoredOldRow = tree.$.users.byIdOrFail('u2');
+    const restoredOldName = restoredOldRow.name;
+
+    expect(tree.$.users.ids()).toEqual(['u1', 'u2']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alicia');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(freshSubjectId);
+    expect(tree.$.users.byIdOrFail('u2').name()).toBe('Legacy');
+    expect(tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0]).toBe(oldSubjectId);
+    expect(collectionInternal.__inspectSubjectResources(oldSubjectId)).toMatchObject({
+      state: 'active',
+      activeKey: 'u2',
+    });
+    expect(collectionInternal.__findKeyBySubjectId(oldSubjectId)).toBe('u2');
+    expect(restoredOldRow).toBe(heldOldRow);
+    expect(restoredOldName).toBe(heldOldName);
+    expect(heldOldName()).toBe('Legacy');
+    expect(heldOldName.__subjectIds?.[0]).toBe(oldSubjectId);
+    expect(getOwnedOwnerPath(heldOldName)).toBe('users.u2');
+  });
+
   it('validates known scalar positions with zero tree visits across 10 to 100k positions', () => {
     const stats = installProductionSubstrateStatsForTesting();
 
