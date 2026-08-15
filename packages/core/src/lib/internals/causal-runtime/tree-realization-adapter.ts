@@ -11,6 +11,7 @@ import { isTraversableNode } from '../../utils';
 import { visitTree } from '../visit-tree';
 
 import type { ReversalEffect, ReversalRefusal } from './causal-types';
+import { normalizeScopedValuePath } from './scoped-value-addressing';
 
 type StructuralDriftRefusal = Extract<ReversalRefusal, { readonly kind: 'structural-drift' }>;
 
@@ -522,7 +523,8 @@ function canApplyEffect(
     !descriptor &&
     !effect.structural &&
     !scalarSlotRuntime?.resolveScalarLeaf(effect.owner) &&
-    !hasInlineSubjectAddress(effect)
+    !hasInlineSubjectAddress(effect) &&
+    !hasInlineScopedAddress(effect)
   ) {
     return false;
   }
@@ -591,7 +593,8 @@ function applyEffect(
     !descriptor &&
     !effect.structural &&
     !scalarSlotRuntime?.resolveScalarLeaf(effect.owner) &&
-    !hasInlineSubjectAddress(effect)
+    !hasInlineSubjectAddress(effect) &&
+    !hasInlineScopedAddress(effect)
   ) {
     throw new Error(`Missing live descriptor for owner ${String(effect.owner)}`);
   }
@@ -704,13 +707,17 @@ function resolveLiveScalarNode(
   scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   effect: ReversalEffect
 ): unknown {
+  if (typeof effect.subjectId === 'number') {
+    return resolveCurrentSubjectTarget(tree, descriptor, effect.subjectId, effect);
+  }
+
+  if (hasInlineScopedAddress(effect)) {
+    return resolveCurrentScopedTarget(tree, descriptor, effect);
+  }
+
   const directLeaf = scalarSlotRuntime?.resolveScalarLeaf(effect.owner);
   if (directLeaf) {
     return directLeaf;
-  }
-
-  if (typeof effect.subjectId === 'number') {
-    return resolveCurrentSubjectTarget(tree, descriptor, effect.subjectId, effect);
   }
 
   if (!descriptor?.path) {
@@ -827,6 +834,10 @@ function resolveNotifyPath(
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
   effect: ReversalEffect
 ): string | undefined {
+  if (hasInlineScopedAddress(effect)) {
+    return effect.path;
+  }
+
   if (typeof effect.subjectId !== 'number') {
     return descriptor?.path;
   }
@@ -878,6 +889,16 @@ function hasInlineSubjectAddress(
   );
 }
 
+function hasInlineScopedAddress(
+  effect: ReversalEffect
+): effect is ReversalEffect & { path: string; ownerPath: string } {
+  return (
+    typeof effect.path === 'string' &&
+    typeof effect.ownerPath === 'string' &&
+    effect.path !== effect.ownerPath
+  );
+}
+
 function deriveCollectionPathFromEffect(
   effect: ReversalEffect
 ): string | undefined {
@@ -905,6 +926,58 @@ function deriveFieldPathFromEffect(
     effect.ownerPath,
     effect.subjectId as number,
     undefined
+  );
+}
+
+function resolveCurrentScopedTarget(
+  tree: ISignalTree<object>,
+  descriptor: TreeRealizationDescriptor | undefined,
+  effect: ReversalEffect & { path: string; ownerPath: string }
+): unknown {
+  const scopePath = effect.ownerPath ?? descriptor?.ownerPath;
+  if (!scopePath) {
+    return undefined;
+  }
+
+  const scopeNode = resolveNodeAtPath(
+    tree.$ as Record<string, unknown>,
+    scopePath
+  );
+  if (scopeNode === undefined) {
+    return undefined;
+  }
+
+  const relativePath = effect.path.startsWith(`${scopePath}.`)
+    ? effect.path.slice(scopePath.length + 1)
+    : '';
+  const normalizedRelativePath = normalizeScopedValuePath(relativePath);
+
+  if (normalizedRelativePath === '') {
+    return scopeNode;
+  }
+
+  const scopedFieldTree =
+    scopeNode && typeof scopeNode === 'function' && '$' in (scopeNode as object)
+      ? (scopeNode as { $?: unknown }).$
+      : undefined;
+
+  if (isTraversableNode(scopedFieldTree)) {
+    const scopedTarget = resolveNodeAtPath(
+      scopedFieldTree as Record<string, unknown>,
+      normalizedRelativePath
+    );
+    if (isWritableLeaf(scopedTarget) || isWritableEntityNode(scopedTarget)) {
+      return scopedTarget;
+    }
+  }
+
+  if (!isTraversableNode(scopeNode)) {
+    return undefined;
+  }
+
+  return resolveNodeAtPath(
+    scopeNode as Record<string, unknown>,
+    normalizedRelativePath
   );
 }
 

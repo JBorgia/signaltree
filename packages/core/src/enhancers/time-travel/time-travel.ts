@@ -16,6 +16,7 @@ import {
   getPositionRegistry,
   type PositionRegistry,
 } from '../../lib/internals/position-registry';
+import { normalizeScopedValuePath } from '../../lib/internals/causal-runtime/scoped-value-addressing';
 import {
   createTreeRealizationAdapter,
   defineTreeRealizationDescriptors,
@@ -242,16 +243,7 @@ function toReversalEffect(
 }
 
 function canRealizationPortApplyEffect(effect: TurnEffect): boolean {
-  return (
-    effect.kind === 'rekey' ||
-    (
-      effect.kind === 'set' &&
-      (
-        effect.subject !== undefined ||
-        effect.ownerPath === effect.path
-      )
-    )
-  );
+  return effect.kind === 'rekey' || effect.kind === 'set';
 }
 
 function canRealizationPortApplyTurn(effects: readonly TurnEffect[]): boolean {
@@ -2323,18 +2315,43 @@ export function timeTravel(
       }
 
       const suffixSegments = suffix.split('.');
+      const normalizedSuffix = normalizeScopedValuePath(suffix);
       const ownerNode = cursor as {
         $?: Record<string, unknown>;
         set?: (value: unknown) => void;
         __setTouchedSnapshot?: (value: Record<string, boolean>) => void;
       };
 
-      if (suffixSegments.length === 1 && suffixSegments[0] === 'values') {
+      if (normalizedSuffix !== suffix) {
         if (typeof ownerNode.set !== 'function') {
           throw new Error(`Unsupported scoped undo path ${path}`);
         }
+        if (normalizedSuffix === '') {
+          return {
+            set: (value: unknown) => ownerNode.set?.(value),
+          };
+        }
+
+        const ownedRoot = ownerNode.$;
+        if (!isTraversableNode(ownedRoot)) {
+          throw new Error(`Cannot resolve scoped undo path ${path}`);
+        }
+
+        let leafCursor: unknown = ownedRoot;
+        for (const segment of normalizedSuffix.split('.')) {
+          if (!isTraversableNode(leafCursor)) {
+            throw new Error(`Cannot resolve scoped undo path ${path}`);
+          }
+          leafCursor = (leafCursor as Record<string, unknown>)[segment];
+        }
+
+        const leaf = leafCursor as { set?: (value: unknown) => void };
+        if (typeof leaf?.set !== 'function') {
+          throw new Error(`Unsupported scoped undo path ${path}`);
+        }
+
         return {
-          set: (value: unknown) => ownerNode.set?.(value),
+          set: (value: unknown) => leaf.set?.(value),
         };
       }
 
@@ -2901,6 +2918,40 @@ export function timeTravel(
       subjectIds?: number[],
       positionIds?: number[]
     ): void => {
+      const enqueueScalarDiff = (
+        diffPath: string,
+        before: unknown,
+        after: unknown
+      ): void => {
+        const position = positionIds?.[0];
+        if (position === undefined || before === after) {
+          return;
+        }
+
+        if (isPlainRecord(before) && isPlainRecord(after)) {
+          const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+          for (const key of keys) {
+            enqueueScalarDiff(
+              `${diffPath}.${key}`,
+              before[key],
+              after[key]
+            );
+          }
+          return;
+        }
+
+        enqueueEffect(effectMap, {
+          kind: 'set',
+          path: diffPath,
+          ownerPath: ownerPath ?? path,
+          position,
+          subject: subjectIds?.[0],
+          before,
+          after,
+          mutationIntent: meta?.mutationIntent,
+        });
+      };
+
       const historyEffect = ownerPath
         ? buildTurnEffectFromHistory(ownerPath, path, meta, positionIds, subjectIds)
         : undefined;
@@ -2914,29 +2965,7 @@ export function timeTravel(
       }
 
       if (isPlainRecord(next) && isPlainRecord(prev)) {
-        const position = positionIds?.[0];
-        const subject = subjectIds?.[0];
-        if (position === undefined) {
-          return;
-        }
-        const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
-        for (const key of keys) {
-          const before = prev[key];
-          const after = next[key];
-          if (before === after) {
-            continue;
-          }
-          enqueueEffect(effectMap, {
-            kind: 'set',
-            path: `${path}.${key}`,
-            ownerPath: ownerPath ?? path,
-            position,
-            subject,
-            before,
-            after,
-            mutationIntent: meta?.mutationIntent,
-          });
-        }
+        enqueueScalarDiff(path, prev, next);
         return;
       }
 
@@ -2974,11 +3003,19 @@ export function timeTravel(
         return;
       }
 
+      const resolvedPositionIds =
+        positionIds && positionIds.length > 0
+          ? positionIds
+          : (() => {
+              const fallback = resolveOwnerPositionId(ownerPath);
+              return fallback === undefined ? [] : [fallback];
+            })();
+
       rememberTreeRealizationDescriptor({
         descriptors: realizationDescriptors,
         path,
         ownerPath,
-        positionIds,
+        positionIds: resolvedPositionIds,
         subjectIds,
         meta,
       });
@@ -2987,13 +3024,6 @@ export function timeTravel(
       for (const subjectId of subjectIds ?? []) {
         bucket.subjectIds.add(subjectId);
       }
-      const resolvedPositionIds =
-        positionIds && positionIds.length > 0
-          ? positionIds
-          : (() => {
-              const fallback = resolveOwnerPositionId(ownerPath);
-              return fallback === undefined ? [] : [fallback];
-            })();
       for (const positionId of resolvedPositionIds) {
         bucket.positionIds.add(positionId);
       }

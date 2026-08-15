@@ -3519,6 +3519,147 @@ describe('time-travel enhancer', () => {
     expect(t.getTurnStatus(secondTurn.id)).toBe('applied');
   });
 
+  it('realizes a simple form-scoped scalar turn through the tree-owned port', async () => {
+    const store = signalTree({
+      profile: form({ initial: { name: '' } }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+
+    store.$.profile.$.name.set('Ada');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const turn = t.getTurns().at(-1) as {
+      __effects?: Array<{
+        kind: string;
+        path: string;
+        ownerPath: string;
+        position: number;
+        before: unknown;
+        after: unknown;
+      }>;
+    };
+    expect(turn.__effects).toEqual([
+      expect.objectContaining({
+        kind: 'set',
+        path: 'profile.name',
+        ownerPath: 'profile',
+      }),
+    ]);
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    const capturedEffect = turn.__effects?.[0];
+    if (!capturedEffect) {
+      throw new Error('Expected captured form effect');
+    }
+
+    expect(
+      realizationPort.validateEffects([
+        {
+          owner: capturedEffect.position,
+          before: capturedEffect.after,
+          after: capturedEffect.before,
+          path: capturedEffect.path,
+          ownerPath: capturedEffect.ownerPath,
+        },
+      ])
+    ).toBeUndefined();
+
+    store.undo();
+
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    expect(store.$.profile().name).toBe('');
+
+    store.redo();
+
+    expect(applySpy).toHaveBeenCalledTimes(2);
+    expect(store.$.profile().name).toBe('Ada');
+  });
+
+  it('captures nested form writes at the exact nested path and replays them through the tree-owned port', async () => {
+    const store = signalTree({
+      profile: form({ initial: { address: { city: '', state: '' } } }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+
+    store.$.profile.$.address.city.set('Boston');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const turn = t.getTurns().at(-1) as {
+      __effects?: Array<{ kind: string; path: string }>;
+    };
+    expect(turn.__effects).toEqual([
+      expect.objectContaining({
+        kind: 'set',
+        path: 'profile.address.city',
+      }),
+    ]);
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    store.undo();
+
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    expect(store.$.profile().address.city).toBe('');
+    expect(store.$.profile().address.state).toBe('');
+
+    store.redo();
+
+    expect(applySpy).toHaveBeenCalledTimes(2);
+    expect(store.$.profile().address.city).toBe('Boston');
+    expect(store.$.profile().address.state).toBe('');
+  });
+
+  it('realizes a mixed root scalar plus form-scoped scalar turn entirely through the tree-owned port', async () => {
+    const store = signalTree({
+      profile: form({ initial: { name: '' } }),
+      theme: 'light',
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.theme.set('dark');
+      store.$.profile.$.name.set('Ada');
+    }).confirm();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    store.undo();
+
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    expect(store.$.theme()).toBe('light');
+    expect(store.$.profile().name).toBe('');
+
+    store.redo();
+
+    expect(applySpy).toHaveBeenCalledTimes(2);
+    expect(store.$.theme()).toBe('dark');
+    expect(store.$.profile().name).toBe('Ada');
+  });
+
   it('routes public undo through turn frontiers for collection add, remove, and rekey', async () => {
     const store = signalTree({
       rows: entityMap<{ id: number; name: string }, number>({
