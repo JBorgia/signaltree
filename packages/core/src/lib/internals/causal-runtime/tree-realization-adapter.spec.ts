@@ -10,7 +10,7 @@ import type { ISignalTree, UpdateMetadata } from '../../types';
 import { timeTravel } from '../../../enhancers/time-travel/time-travel';
 import { transactions } from '../../../enhancers/transactions/transactions';
 import { getOwnedPositionIds, getOwnedSubjectIds, getOwnedOwnerPath } from '../owned-mutation';
-import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-runtime';
+import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
 
 import { createTransactionCaptureBridge } from './transaction-capture-bridge';
 import {

@@ -1,26 +1,32 @@
-import { linkedSignal, signal, type WritableSignal } from '@angular/core';
-
 import type { PositionId } from '../types';
-import { isTraversableNode } from '../utils';
-
-const TREE_SCALAR_SLOT_RUNTIME = Symbol.for('SignalTree:ScalarSlotRuntime');
 
 type SlotIndex = number;
 type SlotEqualityFn = (current: unknown, next: unknown) => boolean;
+
+export interface ScalarSlotCommitResult {
+  readonly revision: number;
+  readonly changedSlots: readonly SlotIndex[];
+}
 
 export interface ScalarSlotMutationFrame {
   set(slotIndex: SlotIndex, value: unknown): void;
   update(slotIndex: SlotIndex, updater: (value: unknown) => unknown): void;
   discard(): void;
-  commit(): void;
+  commit(): ScalarSlotCommitResult;
 }
 
 export interface TreeScalarSlotRuntime {
-  createLeaf<T>(
+  createSlot<T>(
     initialValue: T,
     equal: (current: T, next: T) => boolean,
     positionId?: PositionId
-  ): WritableSignal<T>;
+  ): SlotIndex;
+  readSlot<T>(slotIndex: SlotIndex): T;
+  writeSlot<T>(slotIndex: SlotIndex, value: T): ScalarSlotCommitResult;
+  updateSlot<T>(
+    slotIndex: SlotIndex,
+    updater: (value: T) => T
+  ): ScalarSlotCommitResult;
   beginFrame(): ScalarSlotMutationFrame;
   resolveScalarSlot(positionId: PositionId): SlotIndex | undefined;
   revision(): number;
@@ -35,7 +41,9 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     private readonly baseRevision: number,
     private readonly getCommittedRevision: () => number,
     private readonly readValue: (slotIndex: SlotIndex) => unknown,
-    private readonly commitValues: (staged: ReadonlyMap<SlotIndex, unknown>) => void,
+    private readonly commitValues: (
+      staged: ReadonlyMap<SlotIndex, unknown>
+    ) => ScalarSlotCommitResult,
     private readonly assertSlotIndex: (slotIndex: SlotIndex) => void
   ) {}
 
@@ -60,7 +68,7 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     this.staged.clear();
   }
 
-  commit(): void {
+  commit(): ScalarSlotCommitResult {
     this.assertOpen();
     this.closed = true;
 
@@ -69,8 +77,13 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     }
 
     if (this.staged.size > 0) {
-      this.commitValues(this.staged);
+      return this.commitValues(this.staged);
     }
+
+    return {
+      revision: this.baseRevision,
+      changedSlots: [],
+    };
   }
 
   private assertOpen(): void {
@@ -83,7 +96,6 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
 export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
   const values: unknown[] = [];
   const equalities: SlotEqualityFn[] = [];
-  const tokens: WritableSignal<number>[] = [];
   const slotByPositionId = new Map<PositionId, SlotIndex>();
   let revision = 0;
 
@@ -93,7 +105,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     }
   };
 
-  const commitSlots = (staged: ReadonlyMap<SlotIndex, unknown>): void => {
+  const commitSlots = (
+    staged: ReadonlyMap<SlotIndex, unknown>
+  ): ScalarSlotCommitResult => {
     const changed: Array<{ slotIndex: SlotIndex; nextValue: unknown }> = [];
 
     for (const [slotIndex, nextValue] of staged) {
@@ -106,7 +120,10 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     }
 
     if (changed.length === 0) {
-      return;
+      return {
+        revision,
+        changedSlots: [],
+      };
     }
 
     for (const { slotIndex, nextValue } of changed) {
@@ -115,41 +132,44 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
 
     revision += 1;
 
-    for (const { slotIndex } of changed) {
-      tokens[slotIndex].update((value) => value + 1);
-    }
+    return {
+      revision,
+      changedSlots: changed.map(({ slotIndex }) => slotIndex),
+    };
   };
 
   return {
-    createLeaf<T>(
+    createSlot<T>(
       initialValue: T,
       equal: (current: T, next: T) => boolean,
       positionId?: PositionId
-    ): WritableSignal<T> {
+    ): SlotIndex {
       const slotIndex = values.length;
       values.push(initialValue);
       equalities.push(equal as SlotEqualityFn);
-      const token = signal(0);
-      tokens.push(token);
 
       if (positionId !== undefined) {
         slotByPositionId.set(positionId, slotIndex);
       }
 
-      const leaf = linkedSignal(() => {
-        token();
-        return values[slotIndex] as T;
-      }) as WritableSignal<T>;
-
-      leaf.set = (value: T) => {
-        commitSlots(new Map([[slotIndex, value]]));
-      };
-
-      leaf.update = (updater: (value: T) => T) => {
-        commitSlots(new Map([[slotIndex, updater(values[slotIndex] as T)]]));
-      };
-
-      return leaf;
+      return slotIndex;
+    },
+    readSlot<T>(slotIndex: SlotIndex): T {
+      assertSlotIndex(slotIndex);
+      return values[slotIndex] as T;
+    },
+    writeSlot<T>(slotIndex: SlotIndex, value: T): ScalarSlotCommitResult {
+      assertSlotIndex(slotIndex);
+      return commitSlots(new Map([[slotIndex, value]]));
+    },
+    updateSlot<T>(
+      slotIndex: SlotIndex,
+      updater: (value: T) => T
+    ): ScalarSlotCommitResult {
+      assertSlotIndex(slotIndex);
+      return commitSlots(
+        new Map([[slotIndex, updater(values[slotIndex] as T)]])
+      );
     },
     beginFrame(): ScalarSlotMutationFrame {
       return new ScalarSlotMutationFrameImpl(
@@ -170,27 +190,4 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       return values.length;
     },
   };
-}
-
-export function defineTreeScalarSlotRuntime(
-  node: object,
-  runtime: TreeScalarSlotRuntime
-): void {
-  Object.defineProperty(node, TREE_SCALAR_SLOT_RUNTIME, {
-    value: runtime,
-    enumerable: false,
-    configurable: true,
-  });
-}
-
-export function getTreeScalarSlotRuntime(
-  node: unknown
-): TreeScalarSlotRuntime | undefined {
-  if (!isTraversableNode(node)) {
-    return undefined;
-  }
-
-  return (node as Record<symbol, TreeScalarSlotRuntime | undefined>)[
-    TREE_SCALAR_SLOT_RUNTIME
-  ];
 }

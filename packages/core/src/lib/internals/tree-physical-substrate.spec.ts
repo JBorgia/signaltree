@@ -6,7 +6,7 @@ import { signalTree } from '../signal-tree';
 import type { ISignalTree } from '../types';
 
 import { getOwnedPositionIds } from './owned-mutation';
-import { getTreeScalarSlotRuntime } from './tree-scalar-slot-runtime';
+import { getTreeScalarSlotRuntime } from './tree-scalar-slot-angular-runtime';
 
 describe('tree physical substrate', () => {
   it('uses the slot-backed scalar substrate on the public signalTree path by default', () => {

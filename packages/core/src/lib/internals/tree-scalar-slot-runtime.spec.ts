@@ -5,9 +5,13 @@ import type { ISignalTree } from '../types';
 
 import { getOwnedPositionIds } from './owned-mutation';
 import {
+  createTreeScalarSlotRuntime as createTreeScalarSlotKernel,
+  type ScalarSlotCommitResult,
+} from './tree-scalar-slot-runtime';
+import {
   createTreeScalarSlotRuntime,
   getTreeScalarSlotRuntime,
-} from './tree-scalar-slot-runtime';
+} from './tree-scalar-slot-angular-runtime';
 
 describe('tree scalar slot runtime', () => {
   it('keeps the same PositionId bound to the same SlotIndex across scalar writes', () => {
@@ -97,6 +101,39 @@ describe('tree scalar slot runtime', () => {
   });
 
   it('leaves all slot values and revision untouched when a later equality check throws during frame commit', () => {
+    const runtime = createTreeScalarSlotKernel();
+    const stableSlot = runtime.createSlot('A', Object.is);
+    const throwsOnChangeSlot = runtime.createSlot('B', (current, next) => {
+      if (!Object.is(current, next)) {
+        throw new Error('equality exploded');
+      }
+
+      return true;
+    });
+    const frame = runtime.beginFrame();
+    frame.set(stableSlot, 'A2');
+    frame.set(throwsOnChangeSlot, 'B2');
+
+    expect(() => frame.commit()).toThrow('equality exploded');
+    expect(runtime.readSlot<string>(stableSlot)).toBe('A');
+    expect(runtime.readSlot<string>(throwsOnChangeSlot)).toBe('B');
+    expect(runtime.revision()).toBe(0);
+  });
+
+  it('returns framework-neutral commit results from the scalar slot kernel', () => {
+    const runtime = createTreeScalarSlotKernel();
+    const stableSlot = runtime.createSlot('A', Object.is);
+    const result = runtime.writeSlot(stableSlot, 'A2');
+
+    expect(result).toEqual<ScalarSlotCommitResult>({
+      revision: 1,
+      changedSlots: [stableSlot],
+    });
+    expect(runtime.readSlot<string>(stableSlot)).toBe('A2');
+    expect(runtime.revision()).toBe(1);
+  });
+
+  it('publishes leaf writes through the Angular adapter after kernel commit', () => {
     const runtime = createTreeScalarSlotRuntime();
     const stable = runtime.createLeaf('A', Object.is);
     const throwsOnChange = runtime.createLeaf('B', (current, next) => {

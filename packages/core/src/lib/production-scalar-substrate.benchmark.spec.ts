@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { timeTravel } from '../enhancers/time-travel/time-travel';
 
-import { getTreeScalarSlotRuntime } from './internals/tree-scalar-slot-runtime';
+import { getTreeScalarSlotRuntime } from './internals/tree-scalar-slot-angular-runtime';
 import { signalTree } from './signal-tree';
 import type { ISignalTree } from './types';
 

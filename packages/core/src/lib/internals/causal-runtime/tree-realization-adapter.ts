@@ -2,7 +2,7 @@ import type { ISignalTree, PositionId, StructuralHistoryEffect, UpdateMetadata }
 import { getPathNotifier } from '../../path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../write-context';
 import { getOwnedPositionIds } from '../owned-mutation';
-import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-runtime';
+import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
 import { visitTree } from '../visit-tree';
 
 import type { ReversalEffect, ReversalRefusal } from './causal-types';

@@ -29,7 +29,7 @@ import {
   createTreeScalarSlotRuntime,
   defineTreeScalarSlotRuntime,
   type TreeScalarSlotRuntime,
-} from './internals/tree-scalar-slot-runtime';
+} from './internals/tree-scalar-slot-angular-runtime';
 import {
   collectRequestedTreeCapabilities,
   resolveTreeCapabilities,
