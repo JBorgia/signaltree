@@ -1711,6 +1711,156 @@ describe('greenfield transactions', () => {
     liveHarness.dispose();
   });
 
+  it('proves the adapter can remove the fresh subject once the stale rollback remove is contextualized to the current key', () => {
+    const { tree, store, appliedHistory, liveDraft, liveHarness, abortWithPort } =
+      createLiveUsersAbortHarness();
+
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __findKeyBySubjectId?: (subjectId: number) => string | number | undefined;
+      __inspectSubjectResources?: (
+        subjectId: number
+      ) => { state: 'active' | 'tombstoned' } | undefined;
+    };
+    if (!collectionInternal.__findKeyBySubjectId) {
+      throw new Error('Expected subject lookup hook for rollback contextualization probe');
+    }
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+      tree.$.users.changeId('u2', 'u3');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(freshSubject).toBeTypeOf('number');
+
+    liveDraft.seal();
+
+    let staleRollbackEffect: Record<string, unknown> | undefined;
+    expect(
+      abortWithPort(1, {
+        validateEffects(effects) {
+          staleRollbackEffect = effects[0] ? { ...effects[0] } : undefined;
+          return { kind: 'structural-drift' };
+        },
+        applyAtomically() {
+          throw new Error('Expected validation refusal to stop stale rollback');
+        },
+      })
+    ).toEqual({ ok: false, refusal: { kind: 'structural-drift' } });
+
+    expect(staleRollbackEffect).toEqual(
+      expect.objectContaining({
+        before: 'u2',
+        after: undefined,
+        subjectId: freshSubject,
+        structural: 'remove',
+      })
+    );
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors: liveHarness.descriptors,
+    });
+    const contextualizedRollbackEffect = {
+      ...staleRollbackEffect,
+      before: 'u3',
+    };
+
+    expect(adapter.validateEffects([contextualizedRollbackEffect])).toBeUndefined();
+    adapter.applyAtomically([contextualizedRollbackEffect]);
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual([]);
+    expect(collectionInternal.__findKeyBySubjectId(freshSubject as number)).toBeUndefined();
+    expect(collectionInternal.__inspectSubjectResources?.(freshSubject as number)).toEqual(
+      expect.objectContaining({ state: 'tombstoned' })
+    );
+
+    tree.$.users.addOne({ id: 'u9', name: 'Zed' });
+    getPathNotifier().flushSync();
+    expect(tree.$.users.ids()).toEqual(['u9']);
+    expect(tree.$.users.byIdOrFail('u9').name.__subjectIds?.[0]).toBeGreaterThan(
+      freshSubject as number
+    );
+
+    liveHarness.dispose();
+  });
+
+  it('constructs fresh add plus rekey plus scalar rollback as the same stale pre-rekey remove frontier', () => {
+    const { tree, store, appliedHistory, liveDraft, liveHarness, abortWithPort } =
+      createLiveUsersAbortHarness();
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+      tree.$.users.changeId('u2', 'u3');
+      tree.$.users.byIdOrFail('u3').name.set('Cora');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(tree.$.users.byIdOrFail('u3').name()).toBe('Cora');
+    expect(freshSubject).toBeTypeOf('number');
+
+    const pendingTurn = liveDraft.seal();
+    expect(pendingTurn.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          before: undefined,
+          after: 'u2',
+          subjectId: freshSubject,
+          structural: 'add',
+        }),
+        expect.objectContaining({
+          before: 'u2',
+          after: 'u3',
+          subjectId: freshSubject,
+          structural: 'rekey',
+        }),
+        expect.objectContaining({
+          before: { id: 'u2', name: 'Bran' },
+          after: { id: 'u2', name: 'Cora' },
+          subjectId: freshSubject,
+        }),
+      ])
+    );
+
+    let capturedEffects: ReadonlyArray<Record<string, unknown>> | undefined;
+    const result = abortWithPort(1, {
+      validateEffects(effects) {
+        capturedEffects = effects.map((effect) => ({ ...effect }));
+        return { kind: 'structural-drift' };
+      },
+      applyAtomically() {
+        throw new Error('Expected validation refusal to stop rollback');
+      },
+    });
+
+    expect(result).toEqual({ ok: false, refusal: { kind: 'structural-drift' } });
+    expect(capturedEffects).toEqual([
+      expect.objectContaining({
+        before: 'u2',
+        after: undefined,
+        subjectId: freshSubject,
+        structural: 'remove',
+      }),
+    ]);
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(tree.$.users.byIdOrFail('u3').name()).toBe('Cora');
+    expect(tree.$.users.byIdOrFail('u3').name.__subjectIds?.[0]).toBe(
+      freshSubject
+    );
+    expect(store.getPendingTurnIds()).toEqual([1]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
   it('restores multiple removed subjects in one live transaction abort even when they share one collection owner', () => {
     resetPathNotifier();
     const tree = signalTree({
