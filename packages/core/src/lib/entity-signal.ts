@@ -854,6 +854,69 @@ export function createEntitySignal<
     };
   }
 
+  function planRemove(
+    key: K,
+    subjectId: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  } {
+    const entity = getProjectedEntity(key);
+    if (!entity) {
+      throw new Error(`Entity with id ${String(key)} not found`);
+    }
+
+    const { beforeSubject, afterSubject } = getNeighborSubjects(key);
+    const historyEffect: PendingHistoryEffect = {
+      kind: 'remove',
+      subject: subjectId,
+      key,
+      value: deepClone(entity),
+      beforeSubject,
+      afterSubject,
+      subjectPositions: deriveSubjectPositions(key, entity),
+    };
+    const currentState = resolveSubjectState(subjectId);
+    const tombstone: PreparedSubjectTombstone<K> = {
+      kind: 'tombstone-subject',
+      key,
+      subjectId,
+      restoreAllowed: currentState?.restoreAllowed ?? true,
+    };
+
+    return {
+      commit(options?: { advancePhysicalRevision?: boolean }): void {
+        const frame = createEntityMutationFrame();
+        frame.stageSubjectTombstone(tombstone);
+        const result = commitAndProjectEntityMutationFrame(frame, options);
+        for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+          publishSubjectPhysicalChange(changedSubjectId);
+        }
+        lastSubjectIds = [subjectId];
+        tombstoneSubjectSignal(subjectId);
+        updateSignals();
+      },
+      publish(metaOverride?: UpdateMetadata): void {
+        pathNotifier.notify(
+          `${basePath}.${String(key)}`,
+          undefined,
+          entity,
+          basePath,
+          [subjectId],
+          getPositionIdsForNotify(),
+          {
+            ...(metaOverride ?? getActiveWriteContext() ?? {}),
+            historyEffect,
+          }
+        );
+
+        for (const handler of tapHandlers) {
+          handler.onRemove?.(key, entity);
+        }
+      },
+    };
+  }
+
   function rewritePendingAddEffect(
     effect: PendingAddHistoryEffect,
     beforeSubject?: number,
@@ -2739,6 +2802,11 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__planPreparedRekey', {
     value: planPreparedRekey,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planRemove', {
+    value: planRemove,
     enumerable: false,
     configurable: true,
   });

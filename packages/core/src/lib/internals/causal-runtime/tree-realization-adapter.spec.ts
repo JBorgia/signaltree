@@ -1481,7 +1481,7 @@ describe('tree realization adapter', () => {
     ).toEqual({ kind: 'structural-drift' });
   });
 
-  it('keeps remove-restore-rekey refusal side-effect free when only live occupancy remains at the destination', () => {
+  it('realizes remove-restore-rekey when prepared vacancy overrides live occupancy', () => {
     const tree = signalTree({
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
@@ -1552,10 +1552,6 @@ describe('tree realization adapter', () => {
     const physicalCommitClock =
       getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
     const beforeRevision = physicalCommitClock?.revision();
-    const notifications: string[] = [];
-    const unsubscribe = getPathNotifier().subscribe('**', (_value, _prev, path) => {
-      notifications.push(path);
-    });
 
     const remove99 = {
       owner: structuralOwner,
@@ -1583,9 +1579,140 @@ describe('tree realization adapter', () => {
     expect(adapter.validateEffects([restore42, rekey42ToB])).toEqual({
       kind: 'structural-drift',
     });
-    expect(adapter.validateEffects([remove99, restore42, rekey42ToB])).toEqual({
-      kind: 'structural-drift',
+    expect(adapter.validateEffects([remove99, restore42, rekey42ToB])).toBeUndefined();
+
+    adapter.applyAtomically([remove99, restore42, rekey42ToB]);
+
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u2']);
+    expect(tree.$.users.byIdOrFail('u2').name()).toBe('Ada');
+    expect(heldRow99()).toBeUndefined();
+    expect(heldName99()).toBeUndefined();
+    expect(heldRow42()).toBeDefined();
+    expect(heldName42()).toBe('Ada');
+    expect(heldName42.__subjectIds?.[0]).toBe(subject42);
+    expect(physicalCommitClock?.revision()).toBe(
+      beforeRevision === undefined ? undefined : beforeRevision + 1
+    );
+  });
+
+  it('keeps prepared vacancy side-effect free when a later scalar effect refuses', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Ada' });
+    tree.$.users.addOne({ id: 'u2', name: 'Bea' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldRow42 = tree.$.users.byIdOrFail('u1');
+    const heldName42 = heldRow42.name;
+    heldRow42();
+    heldName42();
+    const nameOwner42 = getOwnedPositionIds(heldName42)?.[0];
+    const subject42 = heldName42.__subjectIds?.[0];
+
+    const heldRow99 = tree.$.users.byIdOrFail('u2');
+    const heldName99 = heldRow99.name;
+    heldRow99();
+    heldName99();
+    const subject99 = heldName99.__subjectIds?.[0];
+
+    if (
+      structuralOwner === undefined ||
+      nameOwner42 === undefined ||
+      subject42 === undefined ||
+      subject99 === undefined
+    ) {
+      throw new Error('Expected retained subject structural + scalar metadata');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [subject42],
+      meta: {
+        historyEffect: {
+          kind: 'remove',
+          subject: subject42,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, nameOwner42],
+        },
+      },
     });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.missing',
+      ownerPath: 'users.u1',
+      positionIds: [nameOwner42],
+      subjectIds: [subject42],
+    });
+
+    tree.$.users.removeOne('u1');
+    getPathNotifier().flushSync();
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const physicalCommitClock =
+      getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+    const beforeRevision = physicalCommitClock?.revision();
+    const notifications: string[] = [];
+    const unsubscribe = getPathNotifier().subscribe('**', (_value, _prev, path) => {
+      notifications.push(path);
+    });
+
+    const remove99 = {
+      owner: structuralOwner,
+      before: 'u2',
+      after: undefined,
+      subjectId: subject99,
+      structural: 'remove' as const,
+    };
+    const restore42 = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: subject42,
+      structural: 'add' as const,
+    };
+    const rekey42ToB = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: 'u2',
+      subjectId: subject42,
+      structural: 'rekey' as const,
+    };
+    const invalidScalarEffect = {
+      owner: nameOwner42,
+      before: undefined,
+      after: 'Alicia',
+      subjectId: subject42,
+      path: 'users.u1.missing',
+      ownerPath: 'users.u1',
+    };
+
+    expect(
+      adapter.validateEffects([remove99, restore42, rekey42ToB, invalidScalarEffect])
+    ).toEqual({ kind: 'structural-drift' });
 
     getPathNotifier().flushSync();
 

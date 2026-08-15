@@ -25,6 +25,13 @@ type CollectionNode = {
   byIdOrFail(id: string | number): unknown;
   changeId(from: string | number, to: string | number): void;
   removeOne(id: string | number): void;
+  __planRemove?(
+    key: string | number,
+    subjectId: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  };
   __planRestore?(
     key: string | number,
     entity: unknown,
@@ -73,7 +80,8 @@ type WritableEntityNode = {
 type PreparedSubjectRealization = {
   collectionPath: string;
   subjectId: number;
-  key: string | number;
+  reachable: boolean;
+  currentKey: string | number | undefined;
   value: unknown;
   subjectPositions?: readonly PositionId[];
 };
@@ -118,7 +126,8 @@ class PreparedRealizationContext {
     this.subjects.set(subjectId, {
       collectionPath,
       subjectId,
-      key,
+      reachable: true,
+      currentKey: key,
       value,
       subjectPositions,
     });
@@ -133,23 +142,43 @@ class PreparedRealizationContext {
 
     this.setOccupancy(
       existing.collectionPath,
-      existing.key,
+      existing.currentKey as string | number,
       'vacant'
     );
     this.setOccupancy(existing.collectionPath, key, subjectId);
 
     this.subjects.set(subjectId, {
       ...existing,
-      key,
+      reachable: true,
+      currentKey: key,
     });
   }
 
-  forgetSubject(subjectId: number): void {
+  rememberRemovedSubject(
+    subjectId: number,
+    collectionPath: string,
+    key: string | number,
+    value: unknown,
+    subjectPositions?: readonly PositionId[]
+  ): void {
     const existing = this.subjects.get(subjectId);
-    if (existing) {
-      this.setOccupancy(existing.collectionPath, existing.key, 'vacant');
+    const currentValue = existing?.value ?? value;
+    const currentPositions = existing?.subjectPositions ?? subjectPositions;
+
+    if (existing?.currentKey !== undefined) {
+      this.setOccupancy(existing.collectionPath, existing.currentKey, 'vacant');
+    } else {
+      this.setOccupancy(collectionPath, key, 'vacant');
     }
-    this.subjects.delete(subjectId);
+
+    this.subjects.set(subjectId, {
+      collectionPath,
+      subjectId,
+      reachable: false,
+      currentKey: undefined,
+      value: currentValue,
+      subjectPositions: currentPositions,
+    });
   }
 
   resolveSubject(subjectId: number): PreparedSubjectRealization | undefined {
@@ -433,10 +462,17 @@ function planHeterogeneousFrame(
   if (
     effects.length === 0 ||
     !effects.some(
-      (effect) => effect.structural === 'rekey' || effect.structural === 'add'
+      (effect) =>
+        effect.structural === 'rekey' ||
+        effect.structural === 'add' ||
+        effect.structural === 'remove'
     ) ||
     effects.some(
-      (effect) => effect.structural && effect.structural !== 'rekey' && effect.structural !== 'add'
+      (effect) =>
+        effect.structural &&
+        effect.structural !== 'rekey' &&
+        effect.structural !== 'add' &&
+        effect.structural !== 'remove'
     )
   ) {
     return undefined;
@@ -486,6 +522,13 @@ function planHeterogeneousFrame(
   }> = [];
   const plannedRekeys: Array<{
     effect: ReversalEffect & { structural: 'rekey' };
+    plan: {
+      commit(options?: { advancePhysicalRevision?: boolean }): void;
+      publish(metaOverride?: UpdateMetadata): void;
+    };
+  }> = [];
+  const plannedRemoves: Array<{
+    effect: ReversalEffect & { structural: 'remove'; subjectId: number };
     plan: {
       commit(options?: { advancePhysicalRevision?: boolean }): void;
       publish(metaOverride?: UpdateMetadata): void;
@@ -602,6 +645,33 @@ function planHeterogeneousFrame(
     }
   }
 
+  const removeEffects = effects.filter(
+    (effect): effect is ReversalEffect & { structural: 'remove'; subjectId: number } =>
+      effect.structural === 'remove' && typeof effect.subjectId === 'number'
+  );
+
+  for (const effect of removeEffects) {
+    const descriptor = descriptors.get(effect.owner);
+    const collectionNode = resolveCollectionNode(
+      tree,
+      descriptor,
+      structuralOwnerPaths,
+      effect
+    );
+    if (!collectionNode || typeof collectionNode.__planRemove !== 'function') {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
+    plannedRemoves.push({
+      effect,
+      plan: collectionNode.__planRemove(
+        effect.before as string | number,
+        effect.subjectId
+      ),
+    });
+  }
+
   return {
     commit(): void {
       if (
@@ -617,6 +687,10 @@ function planHeterogeneousFrame(
         publish: false,
       });
 
+      for (const { plan } of plannedRemoves) {
+        plan.commit({ advancePhysicalRevision: false });
+      }
+
       for (const { plan } of plannedRestores) {
         plan.commit({ advancePhysicalRevision: false });
       }
@@ -628,6 +702,17 @@ function planHeterogeneousFrame(
       physicalCommitClock?.advance();
       if (scalarCommitResult && scalarSlotRuntime) {
         scalarSlotRuntime.publishPrepared(scalarCommitResult);
+      }
+
+      for (const { effect, plan } of plannedRemoves) {
+        plan.publish({
+          ...(getActiveWriteContext() ?? {}),
+          intent: 'system',
+          source: 'system',
+          causalMode: 'realization',
+          positionIds: [effect.owner],
+          subjectIds: [effect.subjectId],
+        });
       }
 
       for (const { effect, plan } of plannedRestores) {
@@ -798,8 +883,7 @@ function canApplyEffect(
 
   const currentSubjectKey =
     typeof effect.subjectId === 'number'
-      ? preparedContext?.resolveSubject(effect.subjectId)?.key ??
-        ownerNode.__findKeyBySubjectId?.(effect.subjectId)
+      ? resolvePreparedOrLiveSubjectKey(ownerNode, preparedContext, effect.subjectId)
       : undefined;
   const collectionPath = resolveCollectionPath(
     descriptor,
@@ -1013,6 +1097,10 @@ function canResolvePreparedSubjectTarget(
     return false;
   }
 
+  if (!preparedSubject.reachable) {
+    return false;
+  }
+
   const fieldPathFromRow = resolveSubjectFieldPath(descriptor, effect);
   if (!fieldPathFromRow) {
     return false;
@@ -1072,7 +1160,29 @@ function isCollectionKeyOccupied(
   return hasCollectionKey(ownerNode, key);
 }
 
+function resolvePreparedOrLiveSubjectKey(
+  ownerNode: CollectionNode,
+  preparedContext: PreparedRealizationContext | undefined,
+  subjectId: number
+): string | number | undefined {
+  const preparedSubject = preparedContext?.resolveSubject(subjectId);
+  if (preparedSubject) {
+    return preparedSubject.currentKey;
+  }
+
+  return ownerNode.__findKeyBySubjectId?.(subjectId);
+}
+
+function snapshotCollectionEntityValue(
+  collectionNode: CollectionNode,
+  key: string | number
+): unknown {
+  const rowNode = collectionNode.byIdOrFail(key);
+  return typeof rowNode === 'function' ? rowNode() : rowNode;
+}
+
 function updatePreparedRealizationContext(
+  tree: ISignalTree<object>,
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
   preparedContext: PreparedRealizationContext,
@@ -1132,9 +1242,42 @@ function updatePreparedRealizationContext(
         effect.after as string | number
       );
       return;
-    case 'remove':
-      preparedContext.forgetSubject(effect.subjectId);
+    case 'remove': {
+      const collectionPath = resolveCollectionPath(
+        descriptor,
+        structuralOwnerPaths,
+        effect
+      );
+      if (!collectionPath) {
+        return;
+      }
+
+      const collectionNode = resolveCollectionNode(
+        tree,
+        descriptor,
+        structuralOwnerPaths,
+        effect
+      );
+      if (!collectionNode) {
+        return;
+      }
+
+      const liveValue = snapshotCollectionEntityValue(
+        collectionNode,
+        effect.before as string | number
+      );
+      if (liveValue === undefined) {
+        return;
+      }
+
+      preparedContext.rememberRemovedSubject(
+        effect.subjectId,
+        collectionPath,
+        effect.before as string | number,
+        liveValue
+      );
       return;
+    }
   }
 }
 
@@ -1161,6 +1304,7 @@ function buildPreparedRealizationContext(
     }
 
     updatePreparedRealizationContext(
+      tree,
       descriptors,
       structuralOwnerPaths,
       preparedContext,
