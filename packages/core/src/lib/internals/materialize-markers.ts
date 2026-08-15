@@ -4,6 +4,7 @@ import {
   createPositionRegistry,
   type PositionRegistry,
 } from './position-registry';
+import type { PhysicalCommitClock } from './physical-commit-clock';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor, isTraversableNode } from '../utils';
 
@@ -60,6 +61,7 @@ export type HydrateMode = 'merge' | 'restore' | 'rehydrate' | 'transfer';
 export interface MaterializationContext {
   positionRegistry: PositionRegistry;
   positionTopologyEnabled: boolean;
+  physicalCommitClock?: PhysicalCommitClock;
   hasCapability: (capability: 'mutation-capture' | 'position-topology') => boolean;
   allocatePositionId: (parentPositionId?: number) => number;
 }
@@ -68,12 +70,14 @@ export function createMaterializationContext(
   positionTopologyEnabled = true,
   hasCapability: (capability: 'mutation-capture' | 'position-topology') => boolean =
     (capability) =>
-      capability === 'position-topology' ? positionTopologyEnabled : true
+      capability === 'position-topology' ? positionTopologyEnabled : true,
+  physicalCommitClock?: PhysicalCommitClock
 ): MaterializationContext {
   const positionRegistry = createPositionRegistry();
   return {
     positionRegistry,
     positionTopologyEnabled,
+    physicalCommitClock,
     hasCapability,
     allocatePositionId: (parentPositionId?: number) =>
       positionRegistry.allocate(parentPositionId),

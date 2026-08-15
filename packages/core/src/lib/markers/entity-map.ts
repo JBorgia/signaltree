@@ -270,6 +270,7 @@ export function entityMap<E, K extends string | number = DefaultKey<E>>(
           notifier,
           path,
           {
+            physicalCommitClock: context.physicalCommitClock,
             positionIdAllocator: hasPositionTopology
               ? () => context.allocatePositionId(parentPositionId)
               : () => undefined,

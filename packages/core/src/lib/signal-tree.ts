@@ -31,6 +31,10 @@ import {
   type TreeScalarSlotRuntime,
 } from './internals/tree-scalar-slot-angular-runtime';
 import {
+  createPhysicalCommitClock,
+  definePhysicalCommitClock,
+} from './internals/physical-commit-clock';
+import {
   collectRequestedTreeCapabilities,
   resolveTreeCapabilities,
 } from './internals/tree-capabilities';
@@ -1147,7 +1151,7 @@ function create<T extends object>(
   let signalState: TreeNode<T>;
   let disposeLazy: (() => void) | undefined;
   const scalarSlotRuntime = buildPlan.has('causal-runtime')
-    ? createTreeScalarSlotRuntime()
+    ? createTreeScalarSlotRuntime(materializationContext.physicalCommitClock)
     : undefined;
   const rootPositionIds = materializationContext.positionTopologyEnabled
     ? [materializationContext.allocatePositionId()]
@@ -1231,6 +1235,16 @@ function create<T extends object>(
     definePositionRegistry(
       signalState as object,
       materializationContext.positionRegistry
+    );
+  }
+  if (materializationContext.physicalCommitClock) {
+    definePhysicalCommitClock(
+      tree as object,
+      materializationContext.physicalCommitClock
+    );
+    definePhysicalCommitClock(
+      signalState as object,
+      materializationContext.physicalCommitClock
     );
   }
   if (scalarSlotRuntime && scalarSlotRuntime.slotCount() > 0) {
@@ -1512,9 +1526,11 @@ export function signalTree<T extends object, TDerived extends object>(
   const isFactory = typeof configOrDerived === 'function';
   const config: TreeConfig = isFactory ? {} : configOrDerived ?? {};
 
+  const physicalCommitClock = createPhysicalCommitClock();
   const materializationContext = createMaterializationContext(
     true,
-    (capability) => LEGACY_TREE_BUILD_PLAN.has(capability)
+    (capability) => LEGACY_TREE_BUILD_PLAN.has(capability),
+    physicalCommitClock
   );
   const captureRuntime = createMutationCaptureRuntime();
   const baseTree = create(
@@ -1581,9 +1597,13 @@ function createPlannedBuilder<TSource extends object, TAdded extends object = ob
         Boolean(config.debugMode)
       );
       const buildPlan = buildTreePlan(orderedEnhancers);
+      const physicalCommitClock = buildPlan.has('causal-runtime')
+        ? createPhysicalCommitClock()
+        : undefined;
       const materializationContext = createMaterializationContext(
         buildPlan.has('position-topology'),
-        (capability) => buildPlan.has(capability)
+        (capability) => buildPlan.has(capability),
+        physicalCommitClock
       );
       const captureRuntime = createMutationCaptureRuntime();
 

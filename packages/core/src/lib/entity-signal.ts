@@ -19,6 +19,7 @@ import {
 import {
   defineOwnedOwnerPath,
 } from './internals/owned-mutation';
+import type { PhysicalCommitClock } from './internals/physical-commit-clock';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
 import { HISTORY_EXCLUDED, isTraversableNode } from './utils';
@@ -232,6 +233,7 @@ export function createEntitySignal<
   pathNotifier: PathNotifier,
   basePath: string,
   options?: {
+    physicalCommitClock?: PhysicalCommitClock;
     positionIdAllocator?: EntityPositionIdAllocator;
     ownerMetadataEnabled?: boolean;
     subjectMetadataEnabled?: boolean;
@@ -319,10 +321,14 @@ export function createEntitySignal<
   }
 
   function commitAndProjectEntityMutationFrame(
-    frame: EntityMutationFrame<K, E>
+    frame: EntityMutationFrame<K, E>,
+    options?: { advancePhysicalRevision?: boolean }
   ) {
     const result = frame.commit();
     frame.project(result);
+    if (options?.advancePhysicalRevision !== false) {
+      physicalCommitClock?.advance();
+    }
     return result;
   }
 
@@ -375,6 +381,7 @@ export function createEntitySignal<
   const subjectMetadataEnabled =
     options?.subjectMetadataEnabled ?? ownerMetadataEnabled;
   const positionMetadataEnabled = options?.positionMetadataEnabled ?? true;
+  const physicalCommitClock = options?.physicalCommitClock;
   const positionId = (
     options?.positionIdAllocator ??
     (positionMetadataEnabled
@@ -525,7 +532,7 @@ export function createEntitySignal<
   const rekeyedSubjects = new Set<number>();
 
   function planRekey(from: K, to: K): {
-    commit(): void;
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
     publish(metaOverride?: UpdateMetadata): void;
   } {
     const entity = getProjectedEntity(from);
@@ -556,7 +563,7 @@ export function createEntitySignal<
     };
 
     return {
-      commit(): void {
+      commit(options?: { advancePhysicalRevision?: boolean }): void {
         const transfer: PreparedKeyTransfer<K> = {
           kind: 'transfer-key',
           fromKey: from,
@@ -565,7 +572,7 @@ export function createEntitySignal<
         };
         const frame = createEntityMutationFrame();
         frame.stageKeyTransfer(transfer);
-        const result = commitAndProjectEntityMutationFrame(frame);
+        const result = commitAndProjectEntityMutationFrame(frame, options);
         for (const changedSubjectId of result.physicallyChangedSubjectIds) {
           publishSubjectPhysicalChange(changedSubjectId);
         }
@@ -610,6 +617,7 @@ export function createEntitySignal<
   function moveToFront(ids: K[]): void {
     structuralStore.moveKeysToFront(ids);
     rebuildStorageProjection();
+    physicalCommitClock?.advance();
     updateSignals();
   }
 

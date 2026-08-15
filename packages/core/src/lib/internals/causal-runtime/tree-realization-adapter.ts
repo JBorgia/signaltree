@@ -5,6 +5,7 @@ import {
   getOwnedOwnerPath,
   getOwnedPositionIds,
 } from '../owned-mutation';
+import { getPhysicalCommitClock } from '../physical-commit-clock';
 import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
 import { visitTree } from '../visit-tree';
 
@@ -20,7 +21,7 @@ type CollectionNode = {
     from: string | number,
     to: string | number
   ): {
-    commit(): void;
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
     publish(metaOverride?: UpdateMetadata): void;
   };
   __findKeyBySubjectId?(subjectId: number): string | number | undefined;
@@ -134,6 +135,8 @@ export function createTreeRealizationAdapter(
 } {
   const scalarSlotRuntime =
     getTreeScalarSlotRuntime(options.tree) ?? getTreeScalarSlotRuntime(options.tree.$);
+  const physicalCommitClock =
+    getPhysicalCommitClock(options.tree) ?? getPhysicalCommitClock(options.tree.$);
   const structuralOwnerPaths = indexStructuralOwnerPaths(options.tree.$);
 
   return {
@@ -160,6 +163,7 @@ export function createTreeRealizationAdapter(
         options.descriptors,
         structuralOwnerPaths,
         scalarSlotRuntime,
+        physicalCommitClock,
         effects
       );
       if (heterogeneousFrame) {
@@ -197,6 +201,7 @@ function planHeterogeneousFrame(
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
   scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
+  physicalCommitClock: ReturnType<typeof getPhysicalCommitClock>,
   effects: readonly ReversalEffect[]
 ): { commit(): void } | undefined {
   if (
@@ -216,11 +221,15 @@ function planHeterogeneousFrame(
     (effect): effect is ReversalEffect & { structural: 'rekey' } =>
       effect.structural === 'rekey'
   );
+  const baseRevision = scalarSlotRuntime.revision();
 
   const scalarFrame = scalarSlotRuntime.beginFrame();
   const plannedRekeys: Array<{
     effect: ReversalEffect & { structural: 'rekey' };
-    plan: { commit(): void; publish(metaOverride?: UpdateMetadata): void };
+    plan: {
+      commit(options?: { advancePhysicalRevision?: boolean }): void;
+      publish(metaOverride?: UpdateMetadata): void;
+    };
   }> = [];
 
   for (const effect of scalarEffects) {
@@ -257,11 +266,24 @@ function planHeterogeneousFrame(
 
   return {
     commit(): void {
-      for (const { plan } of plannedRekeys) {
-        plan.commit();
+      if (
+        physicalCommitClock &&
+        physicalCommitClock.revision() !== baseRevision
+      ) {
+        throw new Error('Heterogeneous realization base revision is stale.');
       }
 
-      scalarFrame.commit();
+      const scalarCommitResult = scalarFrame.commit({
+        advanceRevision: false,
+        publish: false,
+      });
+
+      for (const { plan } of plannedRekeys) {
+        plan.commit({ advancePhysicalRevision: false });
+      }
+
+      physicalCommitClock?.advance();
+      scalarSlotRuntime.publishPrepared(scalarCommitResult);
 
       for (const { effect, plan } of plannedRekeys) {
         plan.publish({

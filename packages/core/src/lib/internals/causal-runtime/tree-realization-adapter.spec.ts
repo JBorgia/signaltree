@@ -15,6 +15,7 @@ import {
   installProductionSubstrateStatsForTesting,
   resetProductionSubstrateStatsForTesting,
 } from '../production-substrate-stats';
+import { getPhysicalCommitClock } from '../physical-commit-clock';
 import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
 
 import { createTransactionCaptureBridge } from './transaction-capture-bridge';
@@ -650,7 +651,6 @@ describe('tree realization adapter', () => {
           tree: tree as ISignalTree<object>,
           descriptors,
         });
-
         const seen: string[] = [];
         effect(() => {
           seen.push(`${tree.$.users.ids()[0]}|${nameLeaf()}`);
@@ -1571,6 +1571,288 @@ describe('tree realization adapter', () => {
 
       unsubscribe();
         resolveSpy.mockRestore();
+  });
+
+  it('stales an open scalar frame after a structural rekey before commit', () => {
+    const tree = signalTree({
+      status: 'pending',
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      status: {
+        (): string;
+        set(value: string): void;
+      };
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        changeId(from: string, to: string): void;
+        byIdOrFail(id: string): {
+          name: {
+            (): string;
+            set(value: string): void;
+          };
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+    getPathNotifier().flushSync();
+
+    const owner = getOwnedPositionIds(tree.$.status)?.[0];
+    const scalarSlotRuntime =
+      getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
+    if (owner === undefined || !scalarSlotRuntime) {
+      throw new Error('Expected scalar slot runtime and owner metadata');
+    }
+
+    const slotIndex = scalarSlotRuntime.resolveScalarSlot(owner);
+    if (slotIndex === undefined) {
+      throw new Error('Expected scalar slot for entity field owner');
+    }
+
+    const frame = scalarSlotRuntime.beginFrame();
+    frame.set(slotIndex, 'Alicia');
+
+    tree.$.users.changeId('u1', 'u2');
+    getPathNotifier().flushSync();
+
+    expect(() => frame.commit()).toThrow(
+      'ScalarSlotMutationFrame base revision is stale.'
+    );
+    expect(tree.$.status()).toBe('pending');
+    expect(tree.$.users.byIdOrFail('u2').name()).toBe('Alice');
+  });
+
+  it('refuses a stale heterogeneous realization before any prepared structural mutation applies', () => {
+    const tree = signalTree({
+      other: 'unchanged',
+      status: 'pending',
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      other: { (): string; set(value: string): void };
+      status: { (): string; set(value: string): void };
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        changeId(from: string, to: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: {
+            (): string;
+            set(value: string): void;
+            __subjectIds?: number[];
+          };
+        };
+        __planRekey?: (
+          from: string,
+          to: string
+        ) => {
+          commit(): void;
+          publish(metaOverride?: UpdateMetadata): void;
+        };
+      };
+    }> & {
+      getHistory(): unknown[];
+    };
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const statusOwner = getOwnedPositionIds(tree.$.status)?.[0];
+    const nameLeaf = tree.$.users.byIdOrFail('u1').name;
+    const subjectId = nameLeaf.__subjectIds?.[0];
+    if (
+      structuralOwner === undefined ||
+      statusOwner === undefined ||
+      subjectId === undefined ||
+      !tree.$.users.__planRekey
+    ) {
+      throw new Error('Expected structural and scalar metadata for mixed stale test');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [subjectId],
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'status',
+      positionIds: [statusOwner],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const observedNotifications: Array<{ path: string; value: unknown; prev: unknown }> = [];
+    const unsubscribe = getPathNotifier().subscribe('**', (value, prev, path) => {
+      if (path === 'status' || path === 'users') {
+        observedNotifications.push({ path, value, prev });
+      }
+    });
+
+    const baselineHistory = tree.getHistory().length;
+    const scalarSlotRuntime =
+      getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
+    if (!scalarSlotRuntime) {
+      throw new Error('Expected scalar slot runtime for mixed stale test');
+    }
+
+    const originalBeginFrame = scalarSlotRuntime.beginFrame.bind(scalarSlotRuntime);
+    const beginFrameSpy = vi
+      .spyOn(scalarSlotRuntime, 'beginFrame')
+      .mockImplementation(() => {
+        const frame = originalBeginFrame();
+        return {
+          set: frame.set.bind(frame),
+          update: frame.update.bind(frame),
+          discard: frame.discard.bind(frame),
+          commit: (options) => {
+            tree.$.other.set('updated elsewhere');
+            return frame.commit(options);
+          },
+        };
+      });
+
+    expect(
+      adapter.validateEffects([
+        {
+          owner: structuralOwner,
+          before: 'u1',
+          after: 'u2',
+          subjectId,
+          structural: 'rekey',
+        },
+        { owner: statusOwner, before: 'pending', after: 'shipped' },
+      ])
+    ).toBeUndefined();
+
+    expect(() =>
+      adapter.applyAtomically([
+        {
+          owner: structuralOwner,
+          before: 'u1',
+          after: 'u2',
+          subjectId,
+          structural: 'rekey',
+        },
+        { owner: statusOwner, before: 'pending', after: 'shipped' },
+      ])
+    ).toThrow('ScalarSlotMutationFrame base revision is stale.');
+
+    getPathNotifier().flushSync();
+
+    expect(tree.$.other()).toBe('updated elsewhere');
+    expect(tree.$.status()).toBe('pending');
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
+    expect(tree.getHistory().length).toBe(baselineHistory + 1);
+    expect(observedNotifications).toEqual([]);
+
+    unsubscribe();
+    beginFrameSpy.mockRestore();
+  });
+
+  it('commits a root-scalar and structural realization under one shared physical revision', () => {
+    const notifier = getPathNotifier();
+    const previousBatching = notifier.isBatchingEnabled();
+    notifier.setBatchingEnabled(false);
+
+    try {
+      TestBed.runInInjectionContext(() => {
+        const tree = signalTree({
+          status: 'pending',
+          users: entityMap<{ id: string; name: string }, string>({
+            selectId: (user) => user.id,
+          }),
+        }) as ISignalTree<{
+          status: {
+            (): string;
+            set(value: string): void;
+          };
+          users: {
+            addOne(user: { id: string; name: string }): void;
+            ids(): string[];
+            byIdOrFail(id: string): {
+              name: {
+                (): string;
+                __subjectIds?: number[];
+              };
+            };
+          };
+        }>;
+
+        tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+
+        const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+        const statusOwner = getOwnedPositionIds(tree.$.status)?.[0];
+        const subjectId = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0];
+        if (
+          structuralOwner === undefined ||
+          statusOwner === undefined ||
+          subjectId === undefined
+        ) {
+          throw new Error('Expected structural and scalar ownership metadata');
+        }
+
+        const descriptors = new Map<number, TreeRealizationDescriptor>();
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'users.u1',
+          ownerPath: 'users',
+          positionIds: [structuralOwner],
+          subjectIds: [subjectId],
+        });
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'status',
+          positionIds: [statusOwner],
+        });
+
+        const adapter = createTreeRealizationAdapter({
+          tree: tree as ISignalTree<object>,
+          descriptors,
+        });
+        const physicalCommitClock =
+          getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+        const beforeRevision = physicalCommitClock?.revision();
+
+        const seen: string[] = [];
+        effect(() => {
+          seen.push(`${tree.$.users.ids()[0]}|${tree.$.status()}`);
+        });
+        TestBed.flushEffects();
+
+        adapter.applyAtomically([
+          {
+            owner: structuralOwner,
+            before: 'u1',
+            after: 'u2',
+            subjectId,
+            structural: 'rekey',
+          },
+          { owner: statusOwner, before: 'pending', after: 'shipped' },
+        ]);
+        TestBed.flushEffects();
+
+        expect(tree.$.users.ids()).toEqual(['u2']);
+        expect(tree.$.status()).toBe('shipped');
+        expect(seen).toEqual(['u1|pending', 'u2|shipped']);
+        expect(physicalCommitClock?.revision()).toBe(
+          beforeRevision === undefined ? undefined : beforeRevision + 1
+        );
+      });
+    } finally {
+      notifier.setBatchingEnabled(previousBatching);
+    }
   });
 
   it('validates the full effect set before any mutation and refuses structural drift without partial application', () => {

@@ -14,6 +14,7 @@ import {
   PRODUCTION_SUBSTRATE_STATS_ENABLED,
   recordProductionSubstrateStat,
 } from './production-substrate-stats';
+import type { PhysicalCommitClock } from './physical-commit-clock';
 
 const TREE_SCALAR_SLOT_RUNTIME = Symbol.for('SignalTree:ScalarSlotRuntime');
 
@@ -23,7 +24,7 @@ export interface ScalarSlotMutationFrame {
   set(slotIndex: SlotIndex, value: unknown): void;
   update(slotIndex: SlotIndex, updater: (value: unknown) => unknown): void;
   discard(): void;
-  commit(): void;
+  commit(options?: { advanceRevision?: boolean; publish?: boolean }): ScalarSlotCommitResult;
 }
 
 export interface TreeScalarSlotRuntime {
@@ -33,6 +34,7 @@ export interface TreeScalarSlotRuntime {
     positionId?: PositionId
   ): WritableSignal<T>;
   beginFrame(): ScalarSlotMutationFrame;
+  publishPrepared(result: ScalarSlotCommitResult): void;
   resolveScalarSlot(positionId: PositionId): SlotIndex | undefined;
   resolveScalarLeaf(positionId: PositionId): WritableSignal<unknown> | undefined;
   revision(): number;
@@ -99,9 +101,14 @@ class AngularScalarSlotMutationFrame implements ScalarSlotMutationFrame {
     this.frame.discard();
   }
 
-  commit(): void {
-    const result = this.frame.commit();
-    this.publication.publish(result);
+  commit(options?: { advanceRevision?: boolean; publish?: boolean }): ScalarSlotCommitResult {
+    const result = this.frame.commit({
+      advanceRevision: options?.advanceRevision,
+    });
+    if (options?.publish !== false) {
+      this.publication.publish(result);
+    }
+    return result;
   }
 }
 
@@ -126,8 +133,10 @@ function createAngularLeaf<T>(
   return leaf;
 }
 
-export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
-  const kernel = createTreeScalarSlotKernel();
+export function createTreeScalarSlotRuntime(
+  physicalCommitClock?: PhysicalCommitClock
+): TreeScalarSlotRuntime {
+  const kernel = createTreeScalarSlotKernel(physicalCommitClock);
   const publication = new AngularScalarSlotPublicationAdapter();
   const leafByPositionId = new Map<PositionId, WritableSignal<unknown>>();
 
@@ -146,6 +155,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     },
     beginFrame(): ScalarSlotMutationFrame {
       return new AngularScalarSlotMutationFrame(kernel.beginFrame(), publication);
+    },
+    publishPrepared(result: ScalarSlotCommitResult): void {
+      publication.publish(result);
     },
     resolveScalarSlot(positionId: PositionId): SlotIndex | undefined {
       return kernel.resolveScalarSlot(positionId);

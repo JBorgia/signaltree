@@ -1,4 +1,5 @@
 import type { PositionId } from '../types';
+import type { PhysicalCommitClock } from './physical-commit-clock';
 
 import {
   PRODUCTION_SUBSTRATE_STATS_ENABLED,
@@ -28,7 +29,7 @@ export interface ScalarSlotMutationFrame {
   set(slotIndex: SlotIndex, value: unknown): void;
   update(slotIndex: SlotIndex, updater: (value: unknown) => unknown): void;
   discard(): void;
-  commit(): ScalarSlotCommitResult;
+  commit(options?: { advanceRevision?: boolean }): ScalarSlotCommitResult;
 }
 
 export interface TreeScalarSlotRuntime {
@@ -58,7 +59,8 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     private readonly getCommittedRevision: () => number,
     private readonly readValue: (slotIndex: SlotIndex) => unknown,
     private readonly commitValues: (
-      staged: ReadonlyMap<SlotIndex, unknown>
+      staged: ReadonlyMap<SlotIndex, unknown>,
+      options?: { advanceRevision?: boolean }
     ) => ScalarSlotCommitResult,
     private readonly assertSlotIndex: (slotIndex: SlotIndex) => void
   ) {}
@@ -84,7 +86,7 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     this.staged.clear();
   }
 
-  commit(): ScalarSlotCommitResult {
+  commit(options?: { advanceRevision?: boolean }): ScalarSlotCommitResult {
     this.assertOpen();
     this.closed = true;
 
@@ -93,11 +95,11 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
     }
 
     if (this.staged.size > 0) {
-      return this.commitValues(this.staged);
+      return this.commitValues(this.staged, options);
     }
 
     return {
-      revision: this.baseRevision,
+      revision: this.getCommittedRevision(),
       changedSlots: [],
     };
   }
@@ -109,11 +111,26 @@ class ScalarSlotMutationFrameImpl implements ScalarSlotMutationFrame {
   }
 }
 
-export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
+export function createTreeScalarSlotRuntime(
+  physicalCommitClock?: PhysicalCommitClock
+): TreeScalarSlotRuntime {
   const values: unknown[] = [];
   const equalities: SlotEqualityFn[] = [];
   const slotByPositionId = new Map<PositionId, SlotIndex>();
   let revision = 0;
+
+  const getCommittedRevision = (): number =>
+    physicalCommitClock?.revision() ?? revision;
+
+  const advanceRevision = (): number => {
+    const nextRevision = physicalCommitClock?.advance();
+    if (nextRevision !== undefined) {
+      return nextRevision;
+    }
+
+    revision += 1;
+    return revision;
+  };
 
   const assertSlotIndex = (slotIndex: SlotIndex): void => {
     if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= values.length) {
@@ -122,7 +139,8 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
   };
 
   const commitSlots = (
-    staged: ReadonlyMap<SlotIndex, unknown>
+    staged: ReadonlyMap<SlotIndex, unknown>,
+    options?: { advanceRevision?: boolean }
   ): ScalarSlotCommitResult => {
     const changed: Array<{ slotIndex: SlotIndex; nextValue: unknown }> = [];
 
@@ -140,7 +158,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
 
     if (changed.length === 0) {
       return {
-        revision,
+        revision: getCommittedRevision(),
         changedSlots: [],
       };
     }
@@ -152,20 +170,27 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       recordProductionSubstrateStat('slotWrites', changed.length);
     }
 
-    revision += 1;
-    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+    const nextRevision =
+      options?.advanceRevision === false
+        ? getCommittedRevision()
+        : advanceRevision();
+    if (
+      options?.advanceRevision !== false &&
+      PRODUCTION_SUBSTRATE_STATS_ENABLED
+    ) {
       recordProductionSubstrateStat('revisionIncrements');
     }
 
     return {
-      revision,
+      revision: nextRevision,
       changedSlots: changed.map(({ slotIndex }) => slotIndex),
     };
   };
 
   const commitSlot = <T>(
     slotIndex: SlotIndex,
-    nextValue: T
+    nextValue: T,
+    options?: { advanceRevision?: boolean }
   ): SingleSlotCommitResult => {
     assertSlotIndex(slotIndex);
     if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
@@ -174,7 +199,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
 
     if (equalities[slotIndex](values[slotIndex], nextValue)) {
       return {
-        revision,
+        revision: getCommittedRevision(),
         changed: false,
       };
     }
@@ -183,13 +208,19 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
       recordProductionSubstrateStat('slotWrites');
     }
-    revision += 1;
-    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+    const nextRevision =
+      options?.advanceRevision === false
+        ? getCommittedRevision()
+        : advanceRevision();
+    if (
+      options?.advanceRevision !== false &&
+      PRODUCTION_SUBSTRATE_STATS_ENABLED
+    ) {
       recordProductionSubstrateStat('revisionIncrements');
     }
 
     return {
-      revision,
+      revision: nextRevision,
       changed: true,
       slot: slotIndex,
     };
@@ -230,8 +261,8 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     },
     beginFrame(): ScalarSlotMutationFrame {
       return new ScalarSlotMutationFrameImpl(
-        revision,
-        () => revision,
+        getCommittedRevision(),
+        getCommittedRevision,
         (slotIndex) => values[slotIndex],
         commitSlots,
         assertSlotIndex
@@ -244,7 +275,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       return slotByPositionId.get(positionId);
     },
     revision(): number {
-      return revision;
+      return getCommittedRevision();
     },
     slotCount(): number {
       return values.length;
