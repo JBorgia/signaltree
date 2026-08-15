@@ -498,19 +498,21 @@ describe('greenfield transactions', () => {
   });
 
   it('keeps transaction lifecycle confirmed after capacity-zero confirmation, and abort cannot reinterpret eviction as speculation', () => {
-    let realizationContext:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const realizationContextRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 0,
-      retainEvictedConfirmedTurn: (turn) => realizationContext?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) =>
+        realizationContextRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    realizationContext = createRealizationContextSource({
+    const realizationContext = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    realizationContextRef.current = realizationContext;
     const draft = createGreenfieldTransactionDraft({
       turnId: 1,
       store,
@@ -1079,15 +1081,15 @@ describe('greenfield transactions', () => {
 
     const store = new TurnStore();
     const appliedHistory = new AppliedHistory(store);
-    let liveHarness:
-      | ReturnType<typeof createLiveDraftHarness>
-      | undefined;
+    const liveHarnessRef: {
+      current?: ReturnType<typeof createLiveDraftHarness>;
+    } = {};
     const liveDraft = createGreenfieldTransactionDraft({
       turnId: 1,
       store,
       appliedHistory,
       abortPendingTurn: (turnId) => {
-        if (!liveHarness) {
+        if (!liveHarnessRef.current) {
           throw new Error('Live draft harness was not initialized');
         }
 
@@ -1096,12 +1098,13 @@ describe('greenfield transactions', () => {
           authority: getOwnedPositionIds(tree)?.[0] as PositionId,
           store,
           appliedHistory,
-          baselineValues: liveHarness.baselineValues,
-          descriptors: liveHarness.descriptors,
+          baselineValues: liveHarnessRef.current.baselineValues,
+          descriptors: liveHarnessRef.current.descriptors,
         })(turnId);
       },
     });
-    liveHarness = createLiveDraftHarness(liveDraft, 1);
+    const liveHarness = createLiveDraftHarness(liveDraft, 1);
+    liveHarnessRef.current = liveHarness;
 
     const originalSubject = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0];
 
@@ -1300,15 +1303,15 @@ describe('greenfield transactions', () => {
 
     const store = new TurnStore();
     const appliedHistory = new AppliedHistory(store);
-    let liveHarness:
-      | ReturnType<typeof createLiveDraftHarness>
-      | undefined;
+    const liveHarnessRef: {
+      current?: ReturnType<typeof createLiveDraftHarness>;
+    } = {};
     const liveDraft = createGreenfieldTransactionDraft({
       turnId: 1,
       store,
       appliedHistory,
       abortPendingTurn: (turnId) => {
-        if (!liveHarness) {
+        if (!liveHarnessRef.current) {
           throw new Error('Live draft harness was not initialized');
         }
 
@@ -1317,12 +1320,13 @@ describe('greenfield transactions', () => {
           authority: getOwnedPositionIds(tree)?.[0] as PositionId,
           store,
           appliedHistory,
-          baselineValues: liveHarness.baselineValues,
-          descriptors: liveHarness.descriptors,
+          baselineValues: liveHarnessRef.current.baselineValues,
+          descriptors: liveHarnessRef.current.descriptors,
         })(turnId);
       },
     });
-    liveHarness = createLiveDraftHarness(liveDraft, 1);
+    const liveHarness = createLiveDraftHarness(liveDraft, 1);
+    liveHarnessRef.current = liveHarness;
 
     const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
     const nameOwner = tree.$.users.byIdOrFail('u1').name.__positionIds?.[0] as PositionId;
@@ -1396,15 +1400,15 @@ describe('greenfield transactions', () => {
 
     const store = new TurnStore();
     const appliedHistory = new AppliedHistory(store);
-    let liveHarness:
-      | ReturnType<typeof createLiveDraftHarness>
-      | undefined;
+    const liveHarnessRef: {
+      current?: ReturnType<typeof createLiveDraftHarness>;
+    } = {};
     const liveDraft = createGreenfieldTransactionDraft({
       turnId: 1,
       store,
       appliedHistory,
       abortPendingTurn: (turnId) => {
-        if (!liveHarness) {
+        if (!liveHarnessRef.current) {
           throw new Error('Live draft harness was not initialized');
         }
 
@@ -1413,12 +1417,13 @@ describe('greenfield transactions', () => {
           authority: getOwnedPositionIds(tree)?.[0] as PositionId,
           store,
           appliedHistory,
-          baselineValues: liveHarness.baselineValues,
-          descriptors: liveHarness.descriptors,
+          baselineValues: liveHarnessRef.current.baselineValues,
+          descriptors: liveHarnessRef.current.descriptors,
         })(turnId);
       },
     });
-    liveHarness = createLiveDraftHarness(liveDraft, 1);
+    const liveHarness = createLiveDraftHarness(liveDraft, 1);
+    liveHarnessRef.current = liveHarness;
 
     const subjectOne = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0];
     const subjectTwo = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];

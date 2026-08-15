@@ -65,19 +65,20 @@ describe('realization context source', () => {
   });
 
   it('folds an evicted confirmed contribution into retained baseline only when it is still applied', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 1,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_FIRST_NAME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const t1 = store.admitConfirmed({
       id: 1,
@@ -99,19 +100,20 @@ describe('realization context source', () => {
   });
 
   it('does not fold an evicted confirmed contribution into retained baseline after it has been unapplied', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 1,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_FIRST_NAME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const t1 = store.admitConfirmed({
       id: 1,
@@ -134,19 +136,20 @@ describe('realization context source', () => {
   });
 
   it('captures forgotten confirmed turns as a consumable quiescent snapshot', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 1,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_FIRST_NAME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const first = store.admitConfirmed({
       id: 1,

@@ -11,19 +11,20 @@ const P_DRIVER_KEY = 3 as PositionId;
 
 describe('pending confirmation', () => {
   it('survives immediate retention by folding the confirmed contribution into baseline instead of restoring pending state', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 0,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     store.admitPending({
       id: 1,
@@ -42,19 +43,20 @@ describe('pending confirmation', () => {
   });
 
   it('folds evicted applied history into baseline while the newly confirmed pending turn remains confirmed and applied', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 1,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const earlier = store.admitConfirmed({
       id: 1,
@@ -79,19 +81,20 @@ describe('pending confirmation', () => {
   });
 
   it('does not fold an evicted unapplied contribution into baseline during confirmation retention', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 1,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const earlier = store.admitConfirmed({
       id: 1,
@@ -117,19 +120,20 @@ describe('pending confirmation', () => {
   });
 
   it('invalidates overlapping redo during confirmation even when retention removes older reversible history', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 2,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     const first = store.admitConfirmed({
       id: 1,
@@ -161,13 +165,13 @@ describe('pending confirmation', () => {
   });
 
   it('reports observer failures without reopening semantic commit', () => {
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const observerErrors: unknown[] = [];
     const store = new TurnStore({
       capacity: 0,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
       onEvictConfirmedTurn: () => {
         throw new Error('observer failure');
       },
@@ -176,11 +180,12 @@ describe('pending confirmation', () => {
       },
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       baselineValues: new Map([[P_THEME, 'A']]),
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     store.admitPending({
       id: 1,
@@ -222,18 +227,19 @@ describe('pending confirmation', () => {
     owner.removeOne(1);
     const notifyCountBefore = notify.mock.calls.length;
 
-    let source:
-      | ReturnType<typeof createRealizationContextSource>
-      | undefined;
+    const sourceRef: {
+      current?: ReturnType<typeof createRealizationContextSource>;
+    } = {};
     const store = new TurnStore({
       capacity: 0,
-      retainEvictedConfirmedTurn: (turn) => source?.retainEvictedConfirmedTurn(turn),
+      retainEvictedConfirmedTurn: (turn) => sourceRef.current?.retainEvictedConfirmedTurn(turn),
     });
     const appliedHistory = new AppliedHistory(store);
-    source = createRealizationContextSource({
+    const source = createRealizationContextSource({
       store,
       appliedHistory,
     });
+    sourceRef.current = source;
 
     store.admitPending({
       id: 1,

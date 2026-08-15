@@ -1,6 +1,6 @@
 import type { PositionRegistry } from '../position-registry';
 
-import type { AppliedHistory, PreparedAppliedHistoryUnapply } from './applied-history';
+import type { AppliedHistory } from './applied-history';
 import { assessConfirmedUndo } from './authority-assessment';
 import type { PositionId, ReversalResult } from './causal-types';
 import type { EffectApplicationPort } from './effect-applier';

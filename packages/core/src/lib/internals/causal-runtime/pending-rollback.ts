@@ -5,7 +5,6 @@ import type { EffectApplicationPort } from './effect-applier';
 import type { RealizationContext } from './realization-context';
 import type {
   PreparePendingTurnDiscardResult,
-  PreparedPendingTurnDiscard,
   TurnStore,
 } from './turn-store';
 

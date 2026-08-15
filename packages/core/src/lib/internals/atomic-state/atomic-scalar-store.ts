@@ -47,24 +47,6 @@ type SnapshotPublisher<TSnapshot extends ScalarSnapshot> = {
   set(nextSnapshot: TSnapshot): void;
 };
 
-function patchSnapshotValue<
-  TSnapshot extends ScalarSnapshot,
-  TKey extends keyof TSnapshot,
->(
-  current: TSnapshot,
-  key: TKey,
-  value: TSnapshot[TKey]
-): TSnapshot {
-  if (Object.is(current[key], value)) {
-    return current;
-  }
-
-  return {
-    ...current,
-    [key]: value,
-  };
-}
-
 function isObjectRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return value !== null && typeof value === 'object';
 }

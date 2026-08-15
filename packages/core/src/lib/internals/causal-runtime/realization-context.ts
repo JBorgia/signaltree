@@ -2,7 +2,6 @@ import type { PositionId, TurnId, CausalTurn } from './causal-types';
 
 import type {
   AppliedHistory,
-  EvictedConfirmedTurnDisposition,
 } from './applied-history';
 import type { TurnStore } from './turn-store';
 

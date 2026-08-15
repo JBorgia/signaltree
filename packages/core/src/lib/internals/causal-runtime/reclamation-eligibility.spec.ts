@@ -304,14 +304,15 @@ describe('reclamation eligibility', () => {
   });
 
   it('marks a tombstoned subject eligible once retained restore paths and pending references are gone', () => {
-    let appliedHistory: AppliedHistory | undefined;
+    const appliedHistoryRef: { current?: AppliedHistory } = {};
     const store = new TurnStore({
       capacity: 1,
       retainEvictedConfirmedTurn: (turn) => {
-        appliedHistory?.forgetRetainedTurn(turn.id);
+        appliedHistoryRef.current?.forgetRetainedTurn(turn.id);
       },
     });
-    appliedHistory = new AppliedHistory(store);
+    const appliedHistory = new AppliedHistory(store);
+    appliedHistoryRef.current = appliedHistory;
 
     const removed = store.admitConfirmed({
       id: 1,

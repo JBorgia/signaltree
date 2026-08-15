@@ -19,6 +19,7 @@ export default [
             '@signaltree/shared',
             'tslib',
             // Build-time dependencies (not runtime peer dependencies)
+            '@nx/rollup',
             '@rollup/plugin-commonjs',
             '@rollup/plugin-node-resolve',
             '@rollup/plugin-typescript',
