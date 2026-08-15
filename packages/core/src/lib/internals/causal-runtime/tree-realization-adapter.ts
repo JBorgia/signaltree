@@ -82,10 +82,30 @@ type PreparedOccupancyState = number | 'vacant';
 
 class PreparedRealizationContext {
   private readonly subjects = new Map<number, PreparedSubjectRealization>();
-  private readonly occupancy = new Map<string, PreparedOccupancyState>();
+  private readonly occupancy = new Map<
+    string,
+    Map<string | number, PreparedOccupancyState>
+  >();
 
-  private occupancyKey(collectionPath: string, key: string | number): string {
-    return `${collectionPath}::${String(key)}`;
+  private occupancyEntries(
+    collectionPath: string,
+    createIfMissing = false
+  ): Map<string | number, PreparedOccupancyState> | undefined {
+    let entries = this.occupancy.get(collectionPath);
+    if (!entries && createIfMissing) {
+      entries = new Map<string | number, PreparedOccupancyState>();
+      this.occupancy.set(collectionPath, entries);
+    }
+
+    return entries;
+  }
+
+  private setOccupancy(
+    collectionPath: string,
+    key: string | number,
+    state: PreparedOccupancyState
+  ): void {
+    this.occupancyEntries(collectionPath, true)?.set(key, state);
   }
 
   rememberRestoredSubject(
@@ -102,7 +122,7 @@ class PreparedRealizationContext {
       value,
       subjectPositions,
     });
-    this.occupancy.set(this.occupancyKey(collectionPath, key), subjectId);
+    this.setOccupancy(collectionPath, key, subjectId);
   }
 
   rememberRekeyedSubject(subjectId: number, key: string | number): void {
@@ -111,11 +131,12 @@ class PreparedRealizationContext {
       return;
     }
 
-    this.occupancy.set(
-      this.occupancyKey(existing.collectionPath, existing.key),
+    this.setOccupancy(
+      existing.collectionPath,
+      existing.key,
       'vacant'
     );
-    this.occupancy.set(this.occupancyKey(existing.collectionPath, key), subjectId);
+    this.setOccupancy(existing.collectionPath, key, subjectId);
 
     this.subjects.set(subjectId, {
       ...existing,
@@ -126,10 +147,7 @@ class PreparedRealizationContext {
   forgetSubject(subjectId: number): void {
     const existing = this.subjects.get(subjectId);
     if (existing) {
-      this.occupancy.set(
-        this.occupancyKey(existing.collectionPath, existing.key),
-        'vacant'
-      );
+      this.setOccupancy(existing.collectionPath, existing.key, 'vacant');
     }
     this.subjects.delete(subjectId);
   }
@@ -142,7 +160,7 @@ class PreparedRealizationContext {
     collectionPath: string,
     key: string | number
   ): PreparedOccupancyState | undefined {
-    return this.occupancy.get(this.occupancyKey(collectionPath, key));
+    return this.occupancyEntries(collectionPath)?.get(key);
   }
 }
 
