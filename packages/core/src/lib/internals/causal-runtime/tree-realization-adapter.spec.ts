@@ -2253,6 +2253,447 @@ describe('tree realization adapter', () => {
     );
   });
 
+  it('realizes fresh add plus later scalar without physically creating the subject during preparation', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    if (structuralOwner === undefined) {
+      throw new Error('Expected collection structural owner');
+    }
+
+    const freshSubjectId = 10_001;
+    const freshNameOwner = 10_002;
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [freshSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: freshSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, freshNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [freshNameOwner],
+      subjectIds: [freshSubjectId],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const physicalCommitClock =
+      getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+    const beforeRevision = physicalCommitClock?.revision();
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __inspectSubjectResources?: (subjectId: number) => {
+        state: 'active' | 'tombstoned';
+        activeKey: string | undefined;
+      } | undefined;
+      __findKeyBySubjectId?: (subjectId: number) => string | number | undefined;
+    };
+    if (!collectionInternal.__inspectSubjectResources || !collectionInternal.__findKeyBySubjectId) {
+      throw new Error('Expected subject inventory hooks for fresh add characterization');
+    }
+
+    const freshAdd = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: freshSubjectId,
+      structural: 'add' as const,
+      structuralContext: {
+        kind: 'add' as const,
+        subject: freshSubjectId,
+        key: 'u1',
+        value: { id: 'u1', name: 'Ada' },
+        subjectPositions: [structuralOwner, freshNameOwner],
+      },
+      subjectPositions: [structuralOwner, freshNameOwner],
+    };
+    const renameFresh = {
+      owner: freshNameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId: freshSubjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toBeUndefined();
+    expect(adapter.validateEffects([freshAdd, renameFresh])).toBeUndefined();
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toBeUndefined();
+    expect(collectionInternal.__findKeyBySubjectId(freshSubjectId)).toBeUndefined();
+    expect(physicalCommitClock?.revision()).toBe(beforeRevision);
+
+    adapter.applyAtomically([freshAdd, renameFresh]);
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alicia');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(freshSubjectId);
+    expect(collectionInternal.__findKeyBySubjectId(freshSubjectId)).toBe('u1');
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toMatchObject({
+      state: 'active',
+      activeKey: 'u1',
+    });
+    expect(physicalCommitClock?.revision()).toBe(
+      beforeRevision === undefined ? undefined : beforeRevision + 1
+    );
+  });
+
+  it('treats fresh add at a historical key as a new subject lifetime', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Legacy' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const oldName = tree.$.users.byIdOrFail('u1').name;
+    oldName();
+    const oldSubjectId = oldName.__subjectIds?.[0];
+    if (structuralOwner === undefined || oldSubjectId === undefined) {
+      throw new Error('Expected existing subject metadata');
+    }
+
+    tree.$.users.removeOne('u1');
+    getPathNotifier().flushSync();
+
+    const freshSubjectId = oldSubjectId + 10_000;
+    const freshNameOwner = freshSubjectId + 1;
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [freshSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: freshSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, freshNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [freshNameOwner],
+      subjectIds: [freshSubjectId],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __inspectSubjectResources?: (subjectId: number) => {
+        state: 'active' | 'tombstoned';
+        activeKey: string | undefined;
+      } | undefined;
+      __findKeyBySubjectId?: (subjectId: number) => string | number | undefined;
+    };
+    if (!collectionInternal.__inspectSubjectResources || !collectionInternal.__findKeyBySubjectId) {
+      throw new Error('Expected subject inventory hooks for historical key characterization');
+    }
+
+    const freshAdd = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: freshSubjectId,
+      structural: 'add' as const,
+      structuralContext: {
+        kind: 'add' as const,
+        subject: freshSubjectId,
+        key: 'u1',
+        value: { id: 'u1', name: 'Ada' },
+        subjectPositions: [structuralOwner, freshNameOwner],
+      },
+      subjectPositions: [structuralOwner, freshNameOwner],
+    };
+    const renameFresh = {
+      owner: freshNameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId: freshSubjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+
+    expect(adapter.validateEffects([freshAdd, renameFresh])).toBeUndefined();
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toBeUndefined();
+
+    adapter.applyAtomically([freshAdd, renameFresh]);
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alicia');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(freshSubjectId);
+    expect(collectionInternal.__findKeyBySubjectId(freshSubjectId)).toBe('u1');
+    expect(collectionInternal.__inspectSubjectResources(freshSubjectId)).toMatchObject({
+      state: 'active',
+      activeKey: 'u1',
+    });
+    expect(collectionInternal.__inspectSubjectResources(oldSubjectId)).toMatchObject({
+      state: 'tombstoned',
+      activeKey: undefined,
+    });
+  });
+
+  it('realizes fresh add followed by rekey and scalar against prepared future topology', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    if (structuralOwner === undefined) {
+      throw new Error('Expected collection structural owner');
+    }
+
+    const freshSubjectId = 10_101;
+    const freshNameOwner = 10_102;
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [freshSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: freshSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, freshNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [freshNameOwner],
+      subjectIds: [freshSubjectId],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __findKeyBySubjectId?: (subjectId: number) => string | number | undefined;
+    };
+    if (!collectionInternal.__findKeyBySubjectId) {
+      throw new Error('Expected subject lookup hook for fresh rekey characterization');
+    }
+
+    const freshAdd = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: freshSubjectId,
+      structural: 'add' as const,
+      structuralContext: {
+        kind: 'add' as const,
+        subject: freshSubjectId,
+        key: 'u1',
+        value: { id: 'u1', name: 'Ada' },
+        subjectPositions: [structuralOwner, freshNameOwner],
+      },
+      subjectPositions: [structuralOwner, freshNameOwner],
+    };
+    const rekeyFresh = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: 'u2',
+      subjectId: freshSubjectId,
+      structural: 'rekey' as const,
+    };
+    const renameFresh = {
+      owner: freshNameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId: freshSubjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+
+    expect(adapter.validateEffects([freshAdd, rekeyFresh, renameFresh])).toBeUndefined();
+
+    adapter.applyAtomically([freshAdd, rekeyFresh, renameFresh]);
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u2']);
+    expect(tree.$.users.byIdOrFail('u2').name()).toBe('Alicia');
+    expect(tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0]).toBe(freshSubjectId);
+    expect(collectionInternal.__findKeyBySubjectId(freshSubjectId)).toBe('u2');
+  });
+
+  it('keeps same-key replacement side-effect free when fresh add falls through restore planning', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Legacy' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldOldRow = tree.$.users.byIdOrFail('u1');
+    const heldOldName = heldOldRow.name;
+    heldOldRow();
+    heldOldName();
+    const oldSubjectId = heldOldName.__subjectIds?.[0];
+    if (structuralOwner === undefined || oldSubjectId === undefined) {
+      throw new Error('Expected existing subject metadata');
+    }
+
+    const freshSubjectId = oldSubjectId + 20_000;
+    const freshNameOwner = freshSubjectId + 1;
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [freshSubjectId],
+      meta: {
+        historyEffect: {
+          kind: 'add',
+          subject: freshSubjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, freshNameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [freshNameOwner],
+      subjectIds: [freshSubjectId],
+    });
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const physicalCommitClock =
+      getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+    const beforeRevision = physicalCommitClock?.revision();
+    const notifications: string[] = [];
+    const unsubscribe = getPathNotifier().subscribe('**', (_value, _prev, path) => {
+      notifications.push(path);
+    });
+
+    const removeOld = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: undefined,
+      subjectId: oldSubjectId,
+      structural: 'remove' as const,
+    };
+    const freshAdd = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId: freshSubjectId,
+      structural: 'add' as const,
+      structuralContext: {
+        kind: 'add' as const,
+        subject: freshSubjectId,
+        key: 'u1',
+        value: { id: 'u1', name: 'Ada' },
+        subjectPositions: [structuralOwner, freshNameOwner],
+      },
+      subjectPositions: [structuralOwner, freshNameOwner],
+    };
+    const renameFresh = {
+      owner: freshNameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId: freshSubjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+
+    expect(adapter.validateEffects([removeOld, freshAdd, renameFresh])).toBeUndefined();
+
+    expect(() => adapter.applyAtomically([removeOld, freshAdd, renameFresh])).toThrow(
+      'Entity with id u1 already exists'
+    );
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Legacy');
+    expect(heldOldRow()?.id).toBe('u1');
+    expect(heldOldName()).toBe('Legacy');
+    expect(heldOldName.__subjectIds?.[0]).toBe(oldSubjectId);
+    expect(physicalCommitClock?.revision()).toBe(beforeRevision);
+    expect(notifications).toEqual([]);
+
+    unsubscribe();
+  });
+
   it('validates known scalar positions with zero tree visits across 10 to 100k positions', () => {
     const stats = installProductionSubstrateStatsForTesting();
 
