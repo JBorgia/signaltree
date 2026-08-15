@@ -180,7 +180,7 @@ describe('transactions enhancer', () => {
     expect(store()).toEqual({ left: '', right: '', outside: 'stable' });
   });
 
-  it('fails mixed structural thrown rollback on the stale post-rekey path and leaves the optimistic turn committed', async () => {
+  it('fails mixed structural thrown rollback on the stale post-rekey path, leaves optimistic state live, and does not promote new confirmed history', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
@@ -217,6 +217,9 @@ describe('transactions enhancer', () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    const baselineConfirmed = store.__transactions.getConfirmedTurnCount();
+    const baselinePending = store.__transactions.getPendingTurnCount();
+
     const originalSubject = store.$.rows.byIdOrFail('b').name.__subjectIds?.[0] as
       | number
       | undefined;
@@ -232,7 +235,7 @@ describe('transactions enhancer', () => {
         store.$.rows.byIdOrFail('c').name.set('Charlie');
         throw new Error('boom');
       })
-    ).toThrow('Cannot resolve scoped undo path rows.c.name');
+    ).toThrow('SignalTree could not rollback the pending transaction');
 
     expect(originalSubject).toBe(1);
     expect(abortedFreshSubject).toBe(2);
@@ -245,8 +248,45 @@ describe('transactions enhancer', () => {
     expect(store.$.rows.byIdOrFail('c').name.__subjectIds?.[0]).toBe(
       abortedFreshSubject
     );
-    expect(store.__transactions.getConfirmedTurnCount()).toBe(1);
-    expect(store.__transactions.getPendingTurnCount()).toBe(0);
+    expect(store.__transactions.getConfirmedTurnCount()).toBe(baselineConfirmed);
+    expect(store.__transactions.getPendingTurnCount()).toBe(baselinePending);
+  });
+
+  it('preserves callback failure details when thrown transaction rollback itself fails', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    const { getOrCreateInternalTransactionRuntime } = await import(
+      './transactions'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({ count: 0 });
+    const runtime = getOrCreateInternalTransactionRuntime(store, () => {
+      throw new Error('rollback failed');
+    });
+
+    try {
+      runtime.transaction(() => {
+        store.$.count.set(1);
+        throw new Error('boom');
+      });
+      throw new Error('Expected thrown rollback to fail closed');
+    } catch (error) {
+      expect(error).toBeInstanceOf(SignalTreeRollbackError);
+      const rollbackError = error as SignalTreeRollbackError;
+      expect(rollbackError.cause).toMatchObject({
+        kind: 'effect-validation-failed',
+        pendingTurnId: 1,
+        errorMessage: 'rollback failed',
+        callbackError: expect.objectContaining({ message: 'boom' }),
+        cause: expect.objectContaining({ message: 'rollback failed' }),
+      });
+    }
+
+    expect(runtime.getConfirmedTurnCount()).toBe(0);
+    expect(runtime.getPendingTurnCount()).toBe(0);
   });
 
   it('keeps the primary transaction error when capture release cleanup also fails', async () => {

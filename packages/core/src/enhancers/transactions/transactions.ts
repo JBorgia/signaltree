@@ -87,6 +87,7 @@ type RollbackFailureCause =
       compensation: TurnEffect[];
       errorMessage: string;
       cause?: unknown;
+      callbackError?: unknown;
     };
 
 type PendingEffectMap = Map<string, TurnEffect>;
@@ -933,7 +934,21 @@ export function getOrCreateInternalTransactionRuntime<T>(
         notifier?.flushSync();
         const transactionEffects = drainTransactionEffects(transactionId);
         if (transactionEffects.length > 0) {
-          applyRuntimeScopedEffects(transactionEffects, 'undo');
+          try {
+            applyRuntimeScopedEffects(transactionEffects, 'undo');
+          } catch (rollbackError) {
+            primaryError = createRollbackError({
+              kind: 'effect-validation-failed',
+              pendingTurnId: transactionId,
+              compensation: transactionEffects,
+              errorMessage:
+                rollbackError instanceof Error
+                  ? rollbackError.message
+                  : 'Unknown rollback validation failure',
+              cause: rollbackError,
+              callbackError: error,
+            });
+          }
         }
       } finally {
         try {
