@@ -499,6 +499,48 @@ function planHeterogeneousFrame(
     return undefined;
   }
 
+  const removeKeysByEffect = new Map<
+    ReversalEffect & { structural: 'remove'; subjectId: number },
+    string | number
+  >();
+  const planningPreparedContext = new PreparedRealizationContext();
+  for (const effect of effects) {
+    if (
+      effect.structural === 'remove' &&
+      typeof effect.subjectId === 'number'
+    ) {
+      const descriptor = descriptors.get(effect.owner);
+      const collectionNode = resolveCollectionNode(
+        tree,
+        descriptor,
+        structuralOwnerPaths,
+        effect
+      );
+      if (!collectionNode) {
+        return undefined;
+      }
+
+      const effectiveRemoveKey = resolveEffectiveRemoveKey(
+        collectionNode,
+        planningPreparedContext,
+        effect
+      );
+      if (effectiveRemoveKey === undefined) {
+        return undefined;
+      }
+
+      removeKeysByEffect.set(effect, effectiveRemoveKey);
+    }
+
+    updatePreparedRealizationContext(
+      tree,
+      descriptors,
+      structuralOwnerPaths,
+      planningPreparedContext,
+      effect
+    );
+  }
+
   const preparedSubjectScalarEffects = scalarEffects.filter((effect) =>
     isPreparedSubjectScalarEffect(effect, preparedContext)
   );
@@ -707,12 +749,15 @@ function planHeterogeneousFrame(
       return undefined;
     }
 
+    const effectiveRemoveKey = removeKeysByEffect.get(effect);
+    if (effectiveRemoveKey === undefined) {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
     plannedRemoves.push({
       effect,
-      plan: collectionNode.__planRemove(
-        effect.before as string | number,
-        effect.subjectId
-      ),
+      plan: collectionNode.__planRemove(effectiveRemoveKey, effect.subjectId),
     });
   }
 
@@ -963,9 +1008,9 @@ function canApplyEffect(
     case 'remove':
       return (
         (typeof effect.subjectId === 'number'
-          ? currentSubjectKey === effect.before
+          ? resolveEffectiveRemoveKey(ownerNode, preparedContext, effect) !== undefined
           : hasCollectionKey(ownerNode, effect.before as string | number)) &&
-        (typeof effect.subjectId !== 'number' || currentSubjectKey === effect.before)
+        (typeof effect.subjectId !== 'number' || currentSubjectKey !== undefined)
       );
     case 'rekey':
       return (
@@ -1059,9 +1104,20 @@ function applyEffect(
             effect.after as string | number
           );
           return;
-        case 'remove':
-          ownerNode.removeOne(effect.before as string | number);
+        case 'remove': {
+          const effectiveRemoveKey =
+            typeof effect.subjectId === 'number'
+              ? resolveEffectiveRemoveKey(ownerNode, undefined, effect)
+              : (effect.before as string | number);
+          if (effectiveRemoveKey === undefined) {
+            throw new Error(
+              `Missing live structural subject for owner ${String(effect.owner)}`
+            );
+          }
+
+          ownerNode.removeOne(effectiveRemoveKey);
           return;
+        }
         case 'add': {
           const historyEffect = getStructuralAddEffect(descriptor, effect);
           if (!historyEffect) {
@@ -1232,6 +1288,14 @@ function resolvePreparedOrLiveSubjectKey(
   return ownerNode.__findKeyBySubjectId?.(subjectId);
 }
 
+function resolveEffectiveRemoveKey(
+  ownerNode: CollectionNode,
+  preparedContext: PreparedRealizationContext | undefined,
+  effect: ReversalEffect & { structural: 'remove'; subjectId: number }
+): string | number | undefined {
+  return resolvePreparedOrLiveSubjectKey(ownerNode, preparedContext, effect.subjectId);
+}
+
 function snapshotCollectionEntityValue(
   collectionNode: CollectionNode,
   key: string | number
@@ -1321,9 +1385,18 @@ function updatePreparedRealizationContext(
         return;
       }
 
+      const effectiveRemoveKey = resolveEffectiveRemoveKey(
+        collectionNode,
+        preparedContext,
+        effect
+      );
+      if (effectiveRemoveKey === undefined) {
+        return;
+      }
+
       const liveValue = snapshotCollectionEntityValue(
         collectionNode,
-        effect.before as string | number
+        effectiveRemoveKey
       );
       if (liveValue === undefined) {
         return;
@@ -1332,7 +1405,7 @@ function updatePreparedRealizationContext(
       preparedContext.rememberRemovedSubject(
         effect.subjectId,
         collectionPath,
-        effect.before as string | number,
+        effectiveRemoveKey,
         liveValue
       );
       return;
@@ -1476,7 +1549,6 @@ function resolveCurrentSubjectTarget(
   if (!collectionPath && collectionPath !== '') {
     return undefined;
   }
-
   const collectionNode = resolveNodeAtPath(
     tree.$ as Record<string, unknown>,
     collectionPath

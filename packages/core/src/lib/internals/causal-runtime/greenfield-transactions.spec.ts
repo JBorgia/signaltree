@@ -1462,7 +1462,7 @@ describe('greenfield transactions', () => {
     liveHarness.dispose();
   });
 
-  it('refuses a mixed live structural draft through the realization adapter as structural drift', () => {
+  it('aborts a mixed live structural draft through the realization adapter by contextualizing the fresh subject removal', () => {
     resetPathNotifier();
     const tree = signalTree({
       count: 0,
@@ -1545,19 +1545,22 @@ describe('greenfield transactions', () => {
       ])
     );
 
-    expect(liveDraft.abort()).toEqual({
-      ok: false,
-      refusal: { kind: 'structural-drift' },
-    });
-    expect(tree.$.count()).toBe(1);
-    expect(tree.$.users.ids()).toEqual(['u3']);
-    expect(tree.$.users.byIdOrFail('u3').name()).toBe('Cora');
-    expect(tree.$.users.byIdOrFail('u3').name.__subjectIds?.[0]).toBe(
-      freshSubject
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+    expect(tree.$.count()).toBe(0);
+    expect(tree.$.users.ids()).toEqual(['u1']);
+    expect(tree.$.users.byIdOrFail('u1').name()).toBe('Alice');
+    expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(
+      originalSubject
     );
-    expect(store.getPendingTurnIds()).toEqual([1]);
+    expect(store.getPendingTurnIds()).toEqual([]);
     expect(store.getTurns()).toEqual([]);
     expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    tree.$.users.addOne({ id: 'u9', name: 'Zed' });
+    getPathNotifier().flushSync();
+    expect(tree.$.users.byIdOrFail('u9').name.__subjectIds?.[0]).toBeGreaterThan(
+      freshSubject as number
+    );
 
     liveHarness.dispose();
   });
