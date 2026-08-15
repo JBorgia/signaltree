@@ -1758,6 +1758,17 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
           }
         }
       }
+      for (const symbolKey of Object.getOwnPropertySymbols(enhanced)) {
+        const descriptor = Object.getOwnPropertyDescriptor(enhanced, symbolKey);
+        if (!descriptor) {
+          continue;
+        }
+        try {
+          Object.defineProperty(newBuilder, symbolKey, descriptor);
+        } catch {
+          /* ignore non-configurable symbols */
+        }
+      }
       return newBuilder as SignalTreeBuilder<TSource, TAccum> & TAdded;
     },
     enumerable: false,

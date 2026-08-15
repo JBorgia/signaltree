@@ -7,11 +7,17 @@ import {
 } from '../owned-mutation';
 import { getPhysicalCommitClock } from '../physical-commit-clock';
 import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
+import { isTraversableNode } from '../../utils';
 import { visitTree } from '../visit-tree';
 
 import type { ReversalEffect, ReversalRefusal } from './causal-types';
 
 type StructuralDriftRefusal = Extract<ReversalRefusal, { readonly kind: 'structural-drift' }>;
+
+const TREE_REALIZATION_DESCRIPTORS = Symbol.for(
+  'SignalTree:TreeRealizationDescriptors'
+);
+const TREE_REALIZATION_PORT = Symbol.for('SignalTree:TreeRealizationPort');
 
 type CollectionNode = {
   byIdOrFail(id: string | number): unknown;
@@ -73,6 +79,19 @@ export interface CreateTreeRealizationAdapterOptions {
   readonly descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>;
 }
 
+export interface TreeRealizationPort {
+  validateEffects(
+    effects: readonly ReversalEffect[]
+  ): StructuralDriftRefusal | undefined;
+  applyAtomically(effects: readonly ReversalEffect[]): void;
+}
+
+function isRealizationAttachmentHost(
+  node: unknown
+): node is Record<PropertyKey, unknown> {
+  return isTraversableNode(node) || typeof node === 'function';
+}
+
 export function rememberTreeRealizationDescriptor(
   options: RememberTreeRealizationDescriptorOptions
 ): void {
@@ -82,9 +101,18 @@ export function rememberTreeRealizationDescriptor(
   }
 
   const existing = options.descriptors.get(owner);
-  const structuralHistoryEffects = new Map(existing?.structuralHistoryEffects ?? []);
-  const structuralHistoryBySubject = new Map(existing?.structuralHistoryBySubject ?? []);
-  const subjectDescriptors = new Map(existing?.subjectDescriptors ?? []);
+  const structuralHistoryEffects =
+    existing?.structuralHistoryEffects instanceof Map
+      ? (existing.structuralHistoryEffects as Map<string, StructuralHistoryEffect>)
+      : new Map(existing?.structuralHistoryEffects ?? []);
+  const structuralHistoryBySubject =
+    existing?.structuralHistoryBySubject instanceof Map
+      ? (existing.structuralHistoryBySubject as Map<string, StructuralHistoryEffect>)
+      : new Map(existing?.structuralHistoryBySubject ?? []);
+  const subjectDescriptors =
+    existing?.subjectDescriptors instanceof Map
+      ? (existing.subjectDescriptors as Map<string, SubjectRealizationDescriptor>)
+      : new Map(existing?.subjectDescriptors ?? []);
   if (options.meta?.historyEffect) {
     structuralHistoryEffects.set(
       toStructuralHistoryEffectKey(options.meta.historyEffect),
@@ -103,22 +131,60 @@ export function rememberTreeRealizationDescriptor(
 
   const subjectId = options.subjectIds?.[0];
   const ownerPath = options.ownerPath ?? options.path;
-  const collectionPath = deriveCollectionPath(options.path, ownerPath, subjectId, options.meta?.historyEffect);
-  const fieldPathFromRow = deriveFieldPathFromRow(options.path, ownerPath, subjectId, options.meta?.historyEffect);
+  const collectionPath = deriveCollectionPath(
+    options.path,
+    ownerPath,
+    subjectId,
+    options.meta?.historyEffect
+  );
+  const fieldPathFromRow = deriveFieldPathFromRow(
+    options.path,
+    ownerPath,
+    subjectId,
+    options.meta?.historyEffect
+  );
   if (typeof subjectId === 'number') {
-    subjectDescriptors.set(String(subjectId), {
-      path: options.path,
-      ownerPath,
-      collectionPath,
-      fieldPathFromRow,
-    });
+    const subjectKey = String(subjectId);
+    const existingSubjectDescriptor = subjectDescriptors.get(subjectKey);
+    if (
+      !existingSubjectDescriptor ||
+      existingSubjectDescriptor.path !== options.path ||
+      existingSubjectDescriptor.ownerPath !== ownerPath ||
+      existingSubjectDescriptor.collectionPath !== collectionPath ||
+      existingSubjectDescriptor.fieldPathFromRow !== fieldPathFromRow
+    ) {
+      subjectDescriptors.set(subjectKey, {
+        path: options.path,
+        ownerPath,
+        collectionPath,
+        fieldPathFromRow,
+      });
+    }
+  }
+
+  const nextPath = existing?.path ?? options.path;
+  const nextOwnerPath = existing?.ownerPath ?? ownerPath;
+  const nextCollectionPath = existing?.collectionPath ?? collectionPath;
+  const nextFieldPathFromRow =
+    existing?.fieldPathFromRow ?? fieldPathFromRow;
+
+  if (
+    existing?.path === nextPath &&
+    existing?.ownerPath === nextOwnerPath &&
+    existing?.collectionPath === nextCollectionPath &&
+    existing?.fieldPathFromRow === nextFieldPathFromRow &&
+    existing?.structuralHistoryEffects === structuralHistoryEffects &&
+    existing?.structuralHistoryBySubject === structuralHistoryBySubject &&
+    existing?.subjectDescriptors === subjectDescriptors
+  ) {
+    return;
   }
 
   options.descriptors.set(owner, {
-    path: existing?.path ?? options.path,
-    ownerPath: existing?.ownerPath ?? ownerPath,
-    collectionPath: existing?.collectionPath ?? collectionPath,
-    fieldPathFromRow: existing?.fieldPathFromRow ?? fieldPathFromRow,
+    path: nextPath,
+    ownerPath: nextOwnerPath,
+    collectionPath: nextCollectionPath,
+    fieldPathFromRow: nextFieldPathFromRow,
     structuralHistoryEffects,
     structuralHistoryBySubject,
     subjectDescriptors,
@@ -127,12 +193,7 @@ export function rememberTreeRealizationDescriptor(
 
 export function createTreeRealizationAdapter(
   options: CreateTreeRealizationAdapterOptions
-): {
-  validateEffects(
-    effects: readonly ReversalEffect[]
-  ): StructuralDriftRefusal | undefined;
-  applyAtomically(effects: readonly ReversalEffect[]): void;
-} {
+): TreeRealizationPort {
   const scalarSlotRuntime =
     getTreeScalarSlotRuntime(options.tree) ?? getTreeScalarSlotRuntime(options.tree.$);
   const physicalCommitClock =
@@ -194,6 +255,52 @@ export function createTreeRealizationAdapter(
       }
     },
   };
+}
+
+export function defineTreeRealizationDescriptors(
+  node: object,
+  descriptors: Map<PositionId, TreeRealizationDescriptor>
+): void {
+  Object.defineProperty(node, TREE_REALIZATION_DESCRIPTORS, {
+    value: descriptors,
+    enumerable: false,
+    configurable: true,
+  });
+}
+
+export function getTreeRealizationDescriptors(
+  node: unknown
+): Map<PositionId, TreeRealizationDescriptor> | undefined {
+  if (!isRealizationAttachmentHost(node)) {
+    return undefined;
+  }
+
+  return (node as Record<symbol, Map<PositionId, TreeRealizationDescriptor> | undefined>)[
+    TREE_REALIZATION_DESCRIPTORS
+  ];
+}
+
+export function defineTreeRealizationPort(
+  node: object,
+  port: TreeRealizationPort
+): void {
+  Object.defineProperty(node, TREE_REALIZATION_PORT, {
+    value: port,
+    enumerable: false,
+    configurable: true,
+  });
+}
+
+export function getTreeRealizationPort(
+  node: unknown
+): TreeRealizationPort | undefined {
+  if (!isRealizationAttachmentHost(node)) {
+    return undefined;
+  }
+
+  return (node as Record<symbol, TreeRealizationPort | undefined>)[
+    TREE_REALIZATION_PORT
+  ];
 }
 
 function planHeterogeneousFrame(

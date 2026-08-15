@@ -16,6 +16,14 @@ import {
   getPositionRegistry,
   type PositionRegistry,
 } from '../../lib/internals/position-registry';
+import {
+  createTreeRealizationAdapter,
+  defineTreeRealizationDescriptors,
+  defineTreeRealizationPort,
+  getTreeRealizationDescriptors,
+  getTreeRealizationPort,
+  rememberTreeRealizationDescriptor,
+} from '../../lib/internals/causal-runtime/tree-realization-adapter';
 import { visitTree } from '../../lib/internals/visit-tree';
 import { getCausalWriteMode } from '../../lib/causal-write-mode';
 import { getPathNotifier } from '../../lib/path-notifier';
@@ -23,6 +31,8 @@ import { getActiveWriteContext, withWriteContext } from '../../lib/write-context
 
 import type {
   ISignalTree,
+  PositionId,
+  StructuralHistoryEffect,
   TimeTravelMethods,
   TimeTravelConfig,
   TimeTravelEntry,
@@ -35,6 +45,7 @@ import {
   ENHANCER_META,
   SignalTreeRollbackError,
 } from '../../lib/types';
+import type { ReversalEffect } from '../../lib/internals/causal-runtime/causal-types';
 
 // Re-export for convenience (do not redefine locally)
 export type { TimeTravelConfig, TimeTravelEntry };
@@ -100,6 +111,21 @@ type TurnEffect =
   | CollectionRemoveEffect
   | CollectionRekeyEffect;
 
+type TreeRealizationDescriptorStore = Map<PositionId, {
+  path?: string;
+  ownerPath?: string;
+  collectionPath?: string;
+  fieldPathFromRow?: string;
+  structuralHistoryEffects?: ReadonlyMap<string, StructuralHistoryEffect>;
+  structuralHistoryBySubject?: ReadonlyMap<string, StructuralHistoryEffect>;
+  subjectDescriptors?: ReadonlyMap<string, {
+    path: string;
+    ownerPath: string;
+    collectionPath?: string;
+    fieldPathFromRow?: string;
+  }>;
+}>;
+
 type LaterAppliedEffect = {
   turnId: number;
   effect: TurnEffect;
@@ -139,6 +165,88 @@ const createRollbackError = (
   cause: RollbackFailureCause
 ): SignalTreeRollbackError =>
   new SignalTreeRollbackError(ROLLBACK_ERROR_MESSAGE, { cause });
+
+function toReversalEffect(
+  effect: TurnEffect,
+  direction: 'undo' | 'redo'
+): ReversalEffect {
+  switch (effect.kind) {
+    case 'set':
+      return {
+        owner: effect.position,
+        before: direction === 'undo' ? effect.after : effect.before,
+        after: direction === 'undo' ? effect.before : effect.after,
+        subjectId: effect.subject,
+      };
+    case 'remove': {
+      const structuralContext: StructuralHistoryEffect = {
+        kind: effect.kind,
+        subject: effect.subject,
+        key: effect.key,
+        value: effect.value,
+        beforeSubject: effect.beforeSubject,
+        afterSubject: effect.afterSubject,
+      };
+      return {
+        owner: effect.position,
+        before: direction === 'undo' ? undefined : effect.key,
+        after: direction === 'undo' ? effect.key : undefined,
+        subjectId: effect.subject,
+        structural: direction === 'undo' ? 'add' : 'remove',
+        structuralContext,
+      };
+    }
+    case 'add': {
+      const structuralContext: StructuralHistoryEffect = {
+        kind: effect.kind,
+        subject: effect.subject,
+        key: effect.key,
+        value: effect.value,
+        beforeSubject: effect.beforeSubject,
+        afterSubject: effect.afterSubject,
+      };
+      return {
+        owner: effect.position,
+        before: direction === 'undo' ? effect.key : undefined,
+        after: direction === 'undo' ? undefined : effect.key,
+        subjectId: effect.subject,
+        structural: direction === 'undo' ? 'remove' : 'add',
+        structuralContext,
+      };
+    }
+    case 'rekey': {
+      const structuralContext: StructuralHistoryEffect = {
+        kind: effect.kind,
+        subject: effect.subject,
+        beforeKey: effect.beforeKey,
+        afterKey: effect.afterKey,
+      };
+      return {
+        owner: effect.position,
+        before: direction === 'undo' ? effect.afterKey : effect.beforeKey,
+        after: direction === 'undo' ? effect.beforeKey : effect.afterKey,
+        subjectId: effect.subject,
+        structural: 'rekey',
+        structuralContext,
+      };
+    }
+  }
+}
+
+function canRealizationPortApplyEffect(effect: TurnEffect): boolean {
+  return (
+    effect.kind === 'rekey' ||
+    (
+      effect.kind === 'set' &&
+      effect.subject === undefined &&
+      effect.ownerPath === effect.path
+    )
+  );
+}
+
+function canRealizationPortApplyTurn(effects: readonly TurnEffect[]): boolean {
+  return effects.every((effect) => canRealizationPortApplyEffect(effect));
+}
 
 function buildPendingRollbackPlan(
   pendingTurn: RollbackTurnLike | undefined,
@@ -2360,169 +2468,213 @@ export function timeTravel(
       }
     };
 
+    const realizationDescriptors =
+      getTreeRealizationDescriptors(tree) ??
+      getTreeRealizationDescriptors(tree.$) ??
+      (new Map() as TreeRealizationDescriptorStore);
+    defineTreeRealizationDescriptors(
+      tree as unknown as object,
+      realizationDescriptors
+    );
+    defineTreeRealizationDescriptors(
+      (tree as ISignalTree<T>).$ as unknown as object,
+      realizationDescriptors
+    );
+
+    const realizationPort =
+      getTreeRealizationPort(tree) ??
+      getTreeRealizationPort(tree.$) ??
+      createTreeRealizationAdapter({
+        tree: tree as unknown as ISignalTree<object>,
+        descriptors: realizationDescriptors,
+      });
+    defineTreeRealizationPort(tree as unknown as object, realizationPort);
+    defineTreeRealizationPort(
+      (tree as ISignalTree<T>).$ as unknown as object,
+      realizationPort
+    );
+
     const applyScopedEffects = (
       effects: TurnEffect[],
       direction: 'undo' | 'redo'
     ): void => {
       validateScopedEffects(effects, direction);
-      isRestoring = true;
-      try {
-        for (const effect of effects) {
-          switch (effect.kind) {
-            case 'set': {
-              const leaf =
-                effect.subject === undefined
-                  ? (() => {
-                      const root = (tree as ISignalTree<T>).$ as Record<string, unknown>;
-                      if (effect.ownerPath && effect.ownerPath !== effect.path) {
-                        return resolveOwnedWritableLeaf(
-                          root,
-                          effect.ownerPath,
+      if (!canRealizationPortApplyTurn(effects)) {
+        isRestoring = true;
+        try {
+          for (const effect of effects) {
+            switch (effect.kind) {
+              case 'set': {
+                const leaf =
+                  effect.subject === undefined
+                    ? (() => {
+                        const root = (tree as ISignalTree<T>).$ as Record<string, unknown>;
+                        if (effect.ownerPath && effect.ownerPath !== effect.path) {
+                          return resolveOwnedWritableLeaf(
+                            root,
+                            effect.ownerPath,
+                            effect.path
+                          );
+                        }
+                        return resolveWritableLeaf(root, effect.path);
+                      })()
+                    : (() => {
+                        const { ownerNode, entityId, fieldSegments } = resolveOwnerNode(
+                          (tree as ISignalTree<T>).$ as Record<string, unknown>,
                           effect.path
                         );
-                      }
-                      return resolveWritableLeaf(root, effect.path);
-                    })()
-                  : (() => {
-                      const { ownerNode, entityId, fieldSegments } = resolveOwnerNode(
-                        (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                        effect.path
-                      );
-                      let cursor = ownerNode.byIdOrFail(entityId) as Record<string, unknown>;
-                      for (let i = 0; i < fieldSegments.length - 1; i++) {
-                        cursor = cursor[fieldSegments[i]] as Record<string, unknown>;
-                        if (!cursor) {
-                          throw new Error(`Cannot resolve scoped undo path ${effect.path}`);
+                        let cursor = ownerNode.byIdOrFail(entityId) as Record<string, unknown>;
+                        for (let i = 0; i < fieldSegments.length - 1; i++) {
+                          cursor = cursor[fieldSegments[i]] as Record<string, unknown>;
+                          if (!cursor) {
+                            throw new Error(`Cannot resolve scoped undo path ${effect.path}`);
+                          }
                         }
-                      }
 
-                      const resolvedLeaf = cursor[
-                        fieldSegments[fieldSegments.length - 1]
-                      ] as {
-                        set?: (value: unknown) => void;
-                      };
-                      if (typeof resolvedLeaf?.set !== 'function') {
+                        const resolvedLeaf = cursor[
+                          fieldSegments[fieldSegments.length - 1]
+                        ] as {
+                          set?: (value: unknown) => void;
+                        };
+                        if (typeof resolvedLeaf?.set !== 'function') {
+                          throw new Error(`Unsupported scoped undo path ${effect.path}`);
+                        }
+                        return resolvedLeaf;
+                      })();
+
+                withWriteContext(
+                  {
+                    ...(getActiveWriteContext() ?? {}),
+                    intent: 'system',
+                    source: 'time-travel',
+                    causalMode: 'realization',
+                    subjectIds:
+                      effect.subject === undefined ? undefined : [effect.subject],
+                    positionIds: [effect.position],
+                  },
+                  () => {
+                    leaf.set?.(direction === 'undo' ? effect.before : effect.after);
+                  }
+                );
+                break;
+              }
+              case 'remove': {
+                const { ownerNode, entityId } = resolveCollectionNode(
+                  (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                  effect.ownerPath,
+                  effect.path
+                );
+
+                withWriteContext(
+                  {
+                    ...(getActiveWriteContext() ?? {}),
+                    intent: 'system',
+                    source: 'time-travel',
+                    causalMode: 'realization',
+                    subjectIds: [effect.subject],
+                    positionIds: [effect.position],
+                  },
+                  () => {
+                    if (direction === 'undo') {
+                      if (typeof ownerNode.__restoreOne !== 'function') {
                         throw new Error(`Unsupported scoped undo path ${effect.path}`);
                       }
-                      return resolvedLeaf;
-                    })();
-
-              withWriteContext(
-                {
-                  ...(getActiveWriteContext() ?? {}),
-                  intent: 'system',
-                  source: 'time-travel',
-                  causalMode: 'realization',
-                  subjectIds:
-                    effect.subject === undefined ? undefined : [effect.subject],
-                  positionIds: [effect.position],
-                },
-                () => {
-                  leaf.set?.(direction === 'undo' ? effect.before : effect.after);
-                }
-              );
-              break;
-            }
-            case 'remove': {
-              const { ownerNode, entityId } = resolveCollectionNode(
-                (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                effect.ownerPath,
-                effect.path
-              );
-
-              withWriteContext(
-                {
-                  ...(getActiveWriteContext() ?? {}),
-                  intent: 'system',
-                  source: 'time-travel',
-                  causalMode: 'realization',
-                  subjectIds: [effect.subject],
-                  positionIds: [effect.position],
-                },
-                () => {
-                  if (direction === 'undo') {
-                    if (typeof ownerNode.__restoreOne !== 'function') {
-                      throw new Error(`Unsupported scoped undo path ${effect.path}`);
+                      ownerNode.__restoreOne(
+                        effect.key,
+                        effect.value,
+                        effect.subject,
+                        effect.beforeSubject,
+                        effect.afterSubject
+                      );
+                    } else {
+                      ownerNode.removeOne(entityId);
                     }
-                    ownerNode.__restoreOne(
-                      effect.key,
-                      effect.value,
-                      effect.subject,
-                      effect.beforeSubject,
-                      effect.afterSubject
-                    );
-                  } else {
-                    ownerNode.removeOne(entityId);
                   }
-                }
-              );
-              break;
-            }
-            case 'add': {
-              const { ownerNode } = resolveCollectionNode(
-                (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                effect.ownerPath,
-                effect.path
-              );
+                );
+                break;
+              }
+              case 'add': {
+                const { ownerNode } = resolveCollectionNode(
+                  (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                  effect.ownerPath,
+                  effect.path
+                );
 
-              withWriteContext(
-                {
-                  ...(getActiveWriteContext() ?? {}),
-                  intent: 'system',
-                  source: 'time-travel',
-                  causalMode: 'realization',
-                  subjectIds: [effect.subject],
-                  positionIds: [effect.position],
-                },
-                () => {
-                  if (direction === 'undo') {
-                    const liveKey = resolveLiveKeyForSubject(
-                      ownerNode,
-                      effect.subject
-                    ) as string | number;
-                    ownerNode.removeOne(liveKey);
-                  } else {
-                    ownerNode.__restoreOne?.(
-                      effect.key,
-                      effect.value,
-                      effect.subject,
-                      effect.beforeSubject,
-                      effect.afterSubject
+                withWriteContext(
+                  {
+                    ...(getActiveWriteContext() ?? {}),
+                    intent: 'system',
+                    source: 'time-travel',
+                    causalMode: 'realization',
+                    subjectIds: [effect.subject],
+                    positionIds: [effect.position],
+                  },
+                  () => {
+                    if (direction === 'undo') {
+                      const liveKey = resolveLiveKeyForSubject(
+                        ownerNode,
+                        effect.subject
+                      ) as string | number;
+                      ownerNode.removeOne(liveKey);
+                    } else {
+                      ownerNode.__restoreOne?.(
+                        effect.key,
+                        effect.value,
+                        effect.subject,
+                        effect.beforeSubject,
+                        effect.afterSubject
+                      );
+                    }
+                  }
+                );
+                break;
+              }
+              case 'rekey': {
+                const ownerNode = resolveCollectionOwner(
+                  (tree as ISignalTree<T>).$ as Record<string, unknown>,
+                  effect.ownerPath,
+                  effect.path
+                );
+
+                withWriteContext(
+                  {
+                    ...(getActiveWriteContext() ?? {}),
+                    intent: 'system',
+                    source: 'time-travel',
+                    causalMode: 'realization',
+                    subjectIds: [effect.subject],
+                    positionIds: [effect.position],
+                  },
+                  () => {
+                    ownerNode.changeId(
+                      direction === 'undo' ? effect.afterKey : effect.beforeKey,
+                      direction === 'undo' ? effect.beforeKey : effect.afterKey
                     );
                   }
-                }
-              );
-              break;
+                );
+                break;
+              }
+              default:
+                throw new Error('Unsupported scoped undo effect');
             }
-            case 'rekey': {
-              const ownerNode = resolveCollectionOwner(
-                (tree as ISignalTree<T>).$ as Record<string, unknown>,
-                effect.ownerPath,
-                effect.path
-              );
-
-              withWriteContext(
-                {
-                  ...(getActiveWriteContext() ?? {}),
-                  intent: 'system',
-                  source: 'time-travel',
-                  causalMode: 'realization',
-                  subjectIds: [effect.subject],
-                  positionIds: [effect.position],
-                },
-                () => {
-                  ownerNode.changeId(
-                    direction === 'undo' ? effect.afterKey : effect.beforeKey,
-                    direction === 'undo' ? effect.beforeKey : effect.afterKey
-                  );
-                }
-              );
-              break;
-            }
-            default:
-              throw new Error('Unsupported scoped undo effect');
           }
+        } finally {
+          isRestoring = false;
         }
+        return;
+      }
+
+      const reversalEffects = effects.map((effect) =>
+        toReversalEffect(effect, direction)
+      );
+      const refusal = realizationPort.validateEffects(reversalEffects);
+      if (refusal) {
+        throw new Error(`Unsupported scoped undo effect at ${refusal.kind}`);
+      }
+
+      isRestoring = true;
+      try {
+        realizationPort.applyAtomically(reversalEffects);
       } finally {
         isRestoring = false;
       }
@@ -2811,6 +2963,15 @@ export function timeTravel(
       if (isHistoryExcludedCapture(ownerPath, path)) {
         return;
       }
+
+      rememberTreeRealizationDescriptor({
+        descriptors: realizationDescriptors,
+        path,
+        ownerPath,
+        positionIds,
+        subjectIds,
+        meta,
+      });
 
       bucket.ownerPaths.add(ownerPath ?? path);
       for (const subjectId of subjectIds ?? []) {
@@ -3121,6 +3282,14 @@ export function timeTravel(
     } as unknown as ISignalTree<T>;
 
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    defineTreeRealizationDescriptors(
+      enhancedTree as unknown as object,
+      realizationDescriptors
+    );
+    defineTreeRealizationPort(
+      enhancedTree as unknown as object,
+      realizationPort
+    );
     // copyTreeProperties, NOT Object.assign: `Object.assign` copies only
     // ENUMERABLE own properties, and every tree method (`updateAndReport`,
     // `batchUpdate`, `onPathChange`, `registerCleanup`, …) is defined

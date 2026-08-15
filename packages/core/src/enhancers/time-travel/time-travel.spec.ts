@@ -1,6 +1,7 @@
 import { computed } from '@angular/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { getTreeRealizationPort } from '../../lib/internals/causal-runtime/tree-realization-adapter';
 import { entityMap } from '../../lib/markers/entity-map';
 import { form } from '../../lib/markers/form';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
@@ -4064,6 +4065,135 @@ describe('time-travel enhancer', () => {
     expect(rekeyStore.$.rows.ids()).toEqual([42]);
     expect(rekeyStore.$.rows.byIdOrFail(42).name.__subjectIds?.[0]).toBe(beforeRekeyToken);
     expect(rekeyTimeTravel.getFrontier(rekeyPositionId)).toBe(1);
+  });
+
+  it('attaches one stable realization port per tree instance', () => {
+    const store = signalTree({ count: 0 }).with(timeTravel());
+
+    const rootPort = getTreeRealizationPort(store as unknown as object);
+    const statePort = getTreeRealizationPort(store.$);
+
+    expect(rootPort).toBeDefined();
+    expect(rootPort).toBe(statePort);
+    expect(getTreeRealizationPort(store.$)).toBe(statePort);
+  });
+
+  it('keeps realization ports independent across tree instances', () => {
+    const left = signalTree({ count: 0 }).with(timeTravel());
+    const right = signalTree({ count: 0 }).with(timeTravel());
+
+    const leftPort = getTreeRealizationPort(left.$);
+    const rightPort = getTreeRealizationPort(right.$);
+
+    expect(leftPort).toBeDefined();
+    expect(rightPort).toBeDefined();
+    expect(leftPort).not.toBe(rightPort);
+  });
+
+  it('realizes a supported scalar plus rekey turn entirely through the tree-owned port', async () => {
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'A' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.count.set(1);
+      store.$.rows.changeId(7, 42);
+    }).confirm();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    store.undo();
+
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    expect(store.$.count()).toBe(0);
+    expect(store.$.rows.ids()).toEqual([7]);
+  });
+
+  it('routes a mixed supported scalar plus unsupported subject scalar turn entirely through legacy realization', async () => {
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'A' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.count.set(1);
+      store.$.rows.byIdOrFail(7).name.set('B');
+    }).confirm();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    store.undo();
+
+    expect(applySpy).not.toHaveBeenCalled();
+    expect(store.$.count()).toBe(0);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('A');
+  });
+
+  it('routes a mixed supported scalar plus remove turn entirely through legacy realization', async () => {
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'A' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.count.set(1);
+      store.$.rows.removeOne(7);
+    }).confirm();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    store.undo();
+
+    expect(applySpy).not.toHaveBeenCalled();
+    expect(store.$.count()).toBe(0);
+    expect(store.$.rows.ids()).toEqual([7]);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('A');
   });
 
   it('routes public redo sequentially through turn history using turn/frontier authority', async () => {
