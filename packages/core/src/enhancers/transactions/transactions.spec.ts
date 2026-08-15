@@ -180,7 +180,7 @@ describe('transactions enhancer', () => {
     expect(store()).toEqual({ left: '', right: '', outside: 'stable' });
   });
 
-  it('fails mixed structural thrown rollback on the stale post-rekey path, leaves optimistic state live, and does not promote new confirmed history', async () => {
+  it('fails mixed structural thrown rollback on the stale post-rekey path even though the equivalent realization-backed abort now succeeds, leaves optimistic state live, and does not promote new confirmed history', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
