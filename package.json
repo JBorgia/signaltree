@@ -89,6 +89,7 @@
     "// Validation & Quality Gates": "Pre-release validation and quality checks",
     "validate": "bash scripts/pre-publish-validation.sh",
     "validate:dist": "bash scripts/verify-dist.sh",
+    "validate:production-bundle": "node scripts/verify-production-bundle-no-perf-instrumentation.mjs",
     "validate:exports": "node scripts/verify-exports.js",
     "validate:guardrails-exports": "node scripts/verify-guardrails-default-condition.mjs",
     "validate:docs": "bash scripts/validate-docs.sh",

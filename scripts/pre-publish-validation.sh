@@ -331,7 +331,21 @@ else
     exit 1
 fi
 
-# 9a. Verify Package Exports
+# 9a. Production Bundle Instrumentation Guard (BLOCKING)
+# Scans the ACTUAL emitted core runtime bundle and fails if the live substrate
+# instrumentation API or counter symbols leak into shipped JS again. This stays
+# build-adjacent on purpose: source imports are not the contract, emitted output
+# is. The prod stub module may remain, but live instrumentation markers must not.
+print_step "Verifying built core runtime is free of perf instrumentation markers"
+if node scripts/verify-production-bundle-no-perf-instrumentation.mjs 2>&1 | tee /tmp/verify-production-bundle.log; then
+    print_success "Production core bundle is free of live perf instrumentation"
+else
+    print_error "Production bundle still contains live perf instrumentation markers"
+    cat /tmp/verify-production-bundle.log
+    exit 1
+fi
+
+# 9b. Verify Package Exports
 print_step "Verifying package exports match build output"
 if node scripts/verify-exports.js 2>&1 | tee /tmp/verify-exports.log; then
     print_success "All package exports verified"
@@ -342,7 +356,7 @@ else
     exit 1
 fi
 
-# 9b. Verify No Broken Type Declarations
+# 9c. Verify No Broken Type Declarations
 print_step "Checking for stray dist/**/*.d.ts files"
 if bash scripts/verify-no-broken-dts.sh 2>&1 | tee /tmp/verify-dts.log; then
     print_success "No broken type declaration files found"
@@ -354,7 +368,7 @@ else
     exit 1
 fi
 
-# 9c. Guardrails Conditional-Exports Gate (BLOCKING)
+# 9d. Guardrails Conditional-Exports Gate (BLOCKING)
 # Asserts @signaltree/guardrails' exports map resolves the default condition
 # to the real build (not the no-op stub). Previously only ran in CI
 # (validate.yml); wired here 2026-07-24 so no publish path can dodge it.
@@ -367,7 +381,7 @@ else
     exit 1
 fi
 
-# 9d. Tarball-Consumer Gate (BLOCKING)
+# 9e. Tarball-Consumer Gate (BLOCKING)
 # Packs every publishable package and asserts the SHIPPED tarball actually
 # contains every file its `exports` map references (the guardrails@10.6
 # barrel-bug class), then `npm install`s the @signaltree/core tarball into a
