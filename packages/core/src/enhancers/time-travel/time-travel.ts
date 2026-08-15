@@ -243,7 +243,12 @@ function toReversalEffect(
 }
 
 function canRealizationPortApplyEffect(effect: TurnEffect): boolean {
-  return effect.kind === 'rekey' || effect.kind === 'set';
+  return (
+    effect.kind === 'set' ||
+    effect.kind === 'rekey' ||
+    effect.kind === 'add' ||
+    effect.kind === 'remove'
+  );
 }
 
 function canRealizationPortApplyTurn(effects: readonly TurnEffect[]): boolean {

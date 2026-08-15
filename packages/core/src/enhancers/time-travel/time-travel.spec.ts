@@ -4416,7 +4416,7 @@ describe('time-travel enhancer', () => {
     expect(store.$.rows.byIdOrFail(7).name()).toBe('Bob');
   });
 
-  it('routes a mixed supported scalar plus remove turn entirely through legacy realization', async () => {
+  it('routes a mixed supported scalar plus remove turn entirely through the realization port', async () => {
     const store = signalTree({
       count: 0,
       rows: entityMap<{ id: number; name: string }, number>({
@@ -4516,11 +4516,52 @@ describe('time-travel enhancer', () => {
 
     store.undo();
 
-    expect(validateSpy).not.toHaveBeenCalled();
-    expect(applySpy).not.toHaveBeenCalled();
+    expect(validateSpy).toHaveBeenCalledTimes(1);
+    expect(applySpy).toHaveBeenCalledTimes(1);
     expect(store.$.count()).toBe(0);
     expect(store.$.rows.ids()).toEqual([7]);
     expect(store.$.rows.byIdOrFail(7).name()).toBe('A');
+  });
+
+  it('does not fall back to legacy realization when a port-capable structural turn semantically refuses', async () => {
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+    const t = (store as any).__timeTravel;
+
+    store.$.rows.addOne({ id: 7, name: 'A' });
+    await Promise.resolve();
+    await Promise.resolve();
+    t.resetHistory();
+
+    store.transaction(() => {
+      store.$.count.set(1);
+      store.$.rows.removeOne(7);
+    }).confirm();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+
+    const validateSpy = vi
+      .spyOn(realizationPort, 'validateEffects')
+      .mockReturnValue({ kind: 'structural-drift' });
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
+
+    expect(() => store.undo()).toThrow('Unsupported scoped undo effect at structural-drift');
+
+    expect(validateSpy).toHaveBeenCalledTimes(1);
+    expect(applySpy).not.toHaveBeenCalled();
+    expect(store.$.count()).toBe(1);
+    expect(store.$.rows.ids()).toEqual([]);
+    expect(store.canUndo()).toBe(true);
   });
 
   it('routes public redo sequentially through turn history using turn/frontier authority', async () => {
