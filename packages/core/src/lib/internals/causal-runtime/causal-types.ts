@@ -39,6 +39,15 @@ export interface ReversalEffect {
   readonly before: unknown;
   readonly after: unknown;
   readonly subjectId?: unknown;
+  /**
+   * Captured realization address.
+   *
+   * Used to derive collection context and subject-relative field address. It is
+   * not semantic identity and must not be used to bypass SubjectId when
+   * resolving a current entity target.
+   */
+  readonly path?: string;
+  readonly ownerPath?: string;
   readonly structural?: StructuralEffect;
   /** Durable structural recipe carried from canonical history into realization. */
   readonly structuralContext?: StructuralHistoryEffect;

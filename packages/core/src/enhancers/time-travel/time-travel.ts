@@ -177,6 +177,8 @@ function toReversalEffect(
         before: direction === 'undo' ? effect.after : effect.before,
         after: direction === 'undo' ? effect.before : effect.after,
         subjectId: effect.subject,
+        path: effect.path,
+        ownerPath: effect.ownerPath,
       };
     case 'remove': {
       const structuralContext: StructuralHistoryEffect = {
@@ -192,6 +194,8 @@ function toReversalEffect(
         before: direction === 'undo' ? undefined : effect.key,
         after: direction === 'undo' ? effect.key : undefined,
         subjectId: effect.subject,
+        path: effect.path,
+        ownerPath: effect.ownerPath,
         structural: direction === 'undo' ? 'add' : 'remove',
         structuralContext,
       };
@@ -210,6 +214,8 @@ function toReversalEffect(
         before: direction === 'undo' ? effect.key : undefined,
         after: direction === 'undo' ? undefined : effect.key,
         subjectId: effect.subject,
+        path: effect.path,
+        ownerPath: effect.ownerPath,
         structural: direction === 'undo' ? 'remove' : 'add',
         structuralContext,
       };
@@ -226,6 +232,8 @@ function toReversalEffect(
         before: direction === 'undo' ? effect.afterKey : effect.beforeKey,
         after: direction === 'undo' ? effect.beforeKey : effect.afterKey,
         subjectId: effect.subject,
+        path: effect.path,
+        ownerPath: effect.ownerPath,
         structural: 'rekey',
         structuralContext,
       };
@@ -238,8 +246,10 @@ function canRealizationPortApplyEffect(effect: TurnEffect): boolean {
     effect.kind === 'rekey' ||
     (
       effect.kind === 'set' &&
-      effect.subject === undefined &&
-      effect.ownerPath === effect.path
+      (
+        effect.subject !== undefined ||
+        effect.ownerPath === effect.path
+      )
     )
   );
 }

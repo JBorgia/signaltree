@@ -55,6 +55,12 @@ type SubjectRealizationDescriptor = {
   fieldPathFromRow?: string;
 };
 
+type InlineSubjectAddressEffect = ReversalEffect & {
+  subjectId: number;
+  path: string;
+  ownerPath: string;
+};
+
 export interface TreeRealizationDescriptor {
   readonly path?: string;
   readonly ownerPath?: string;
@@ -406,15 +412,21 @@ function planHeterogeneousFrame(
 
       for (const effect of scalarEffects) {
         const descriptor = descriptors.get(effect.owner);
-        if (!descriptor?.path) {
+        const notifyPath = resolveNotifyPath(
+          tree,
+          descriptor,
+          structuralOwnerPaths,
+          effect
+        );
+        if (!notifyPath) {
           continue;
         }
 
         getPathNotifier().notify(
-          descriptor.path,
+          notifyPath,
           effect.after,
           effect.before,
-          descriptor.ownerPath ?? descriptor.path,
+          descriptor?.ownerPath ?? notifyPath,
           typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
           [effect.owner],
           {
@@ -466,15 +478,21 @@ function planScalarFrame(
 
       for (const effect of effects) {
         const descriptor = descriptors.get(effect.owner);
-        if (!descriptor?.path) {
+        const notifyPath = resolveNotifyPath(
+          tree,
+          descriptor,
+          structuralOwnerPaths,
+          effect
+        );
+        if (!notifyPath) {
           continue;
         }
 
         getPathNotifier().notify(
-          descriptor.path,
+          notifyPath,
           effect.after,
           effect.before,
-          descriptor.ownerPath ?? descriptor.path,
+          descriptor?.ownerPath ?? notifyPath,
           typeof effect.subjectId === 'number' ? [effect.subjectId] : undefined,
           [effect.owner],
           {
@@ -500,7 +518,12 @@ function canApplyEffect(
   effect: ReversalEffect
 ): boolean {
   const descriptor = descriptors.get(effect.owner);
-  if (!descriptor && !effect.structural && !scalarSlotRuntime?.resolveScalarLeaf(effect.owner)) {
+  if (
+    !descriptor &&
+    !effect.structural &&
+    !scalarSlotRuntime?.resolveScalarLeaf(effect.owner) &&
+    !hasInlineSubjectAddress(effect)
+  ) {
     return false;
   }
 
@@ -564,7 +587,12 @@ function applyEffect(
   effect: ReversalEffect
 ): void {
   const descriptor = descriptors.get(effect.owner);
-  if (!descriptor && !effect.structural && !scalarSlotRuntime?.resolveScalarLeaf(effect.owner)) {
+  if (
+    !descriptor &&
+    !effect.structural &&
+    !scalarSlotRuntime?.resolveScalarLeaf(effect.owner) &&
+    !hasInlineSubjectAddress(effect)
+  ) {
     throw new Error(`Missing live descriptor for owner ${String(effect.owner)}`);
   }
 
@@ -751,8 +779,11 @@ function resolveCurrentSubjectTarget(
   subjectId: number,
   effect: ReversalEffect
 ): unknown {
+  const inlineCollectionPath = deriveCollectionPathFromEffect(effect);
+  const inlineFieldPathFromRow = deriveFieldPathFromEffect(effect);
   const subjectDescriptor = descriptor?.subjectDescriptors?.get(String(subjectId));
   const collectionPath =
+    inlineCollectionPath ??
     subjectDescriptor?.collectionPath ??
     descriptor?.collectionPath ??
     (effect.structural ? descriptor?.ownerPath : undefined);
@@ -775,7 +806,9 @@ function resolveCurrentSubjectTarget(
 
   const rowNode = collectionNode.byIdOrFail(currentKey);
   const fieldPathFromRow =
-    subjectDescriptor?.fieldPathFromRow ?? descriptor?.fieldPathFromRow;
+    inlineFieldPathFromRow ??
+    subjectDescriptor?.fieldPathFromRow ??
+    descriptor?.fieldPathFromRow;
 
   if (fieldPathFromRow === '') {
     return rowNode;
@@ -786,6 +819,93 @@ function resolveCurrentSubjectTarget(
   }
 
   return resolveNodeAtPath(rowNode as Record<string, unknown>, fieldPathFromRow);
+}
+
+function resolveNotifyPath(
+  tree: ISignalTree<object>,
+  descriptor: TreeRealizationDescriptor | undefined,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  effect: ReversalEffect
+): string | undefined {
+  if (typeof effect.subjectId !== 'number') {
+    return descriptor?.path;
+  }
+
+  const inlineCollectionPath = deriveCollectionPathFromEffect(effect);
+  const inlineFieldPathFromRow = deriveFieldPathFromEffect(effect);
+  const collectionPath =
+    inlineCollectionPath ??
+    descriptor?.subjectDescriptors?.get(String(effect.subjectId))?.collectionPath ??
+    descriptor?.collectionPath ??
+    structuralOwnerPaths.get(effect.owner);
+  if (collectionPath === undefined) {
+    return descriptor?.path;
+  }
+
+  const collectionNode = resolveNodeAtPath(
+    tree.$ as Record<string, unknown>,
+    collectionPath
+  );
+  if (!isCollectionNode(collectionNode)) {
+    return descriptor?.path;
+  }
+
+  const currentKey = collectionNode.__findKeyBySubjectId?.(effect.subjectId);
+  if (currentKey === undefined) {
+    return descriptor?.path;
+  }
+
+  const fieldPathFromRow =
+    inlineFieldPathFromRow ??
+    descriptor?.subjectDescriptors?.get(String(effect.subjectId))?.fieldPathFromRow ??
+    descriptor?.fieldPathFromRow;
+  const rowPath = `${collectionPath}.${String(currentKey)}`;
+
+  if (fieldPathFromRow === '') {
+    return rowPath;
+  }
+
+  return fieldPathFromRow ? `${rowPath}.${fieldPathFromRow}` : descriptor?.path;
+}
+
+function hasInlineSubjectAddress(
+  effect: ReversalEffect
+): effect is InlineSubjectAddressEffect {
+  return (
+    typeof effect.subjectId === 'number' &&
+    typeof effect.path === 'string' &&
+    typeof effect.ownerPath === 'string'
+  );
+}
+
+function deriveCollectionPathFromEffect(
+  effect: ReversalEffect
+): string | undefined {
+  if (!hasInlineSubjectAddress(effect)) {
+    return undefined;
+  }
+
+  return deriveCollectionPath(
+    effect.path,
+    effect.ownerPath,
+    effect.subjectId as number,
+    undefined
+  );
+}
+
+function deriveFieldPathFromEffect(
+  effect: ReversalEffect
+): string | undefined {
+  if (!hasInlineSubjectAddress(effect)) {
+    return undefined;
+  }
+
+  return deriveFieldPathFromRow(
+    effect.path,
+    effect.ownerPath,
+    effect.subjectId as number,
+    undefined
+  );
 }
 
 function resolveSubjectTargetFromDescriptor(

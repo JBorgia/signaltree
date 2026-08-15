@@ -4125,7 +4125,7 @@ describe('time-travel enhancer', () => {
     expect(store.$.rows.ids()).toEqual([7]);
   });
 
-  it('routes a mixed supported scalar plus unsupported subject scalar turn entirely through legacy realization', async () => {
+  it('realizes a mixed root scalar plus subject scalar turn entirely through the tree-owned port', async () => {
     const store = signalTree({
       count: 0,
       rows: entityMap<{ id: number; name: string }, number>({
@@ -4155,9 +4155,124 @@ describe('time-travel enhancer', () => {
 
     store.undo();
 
-    expect(applySpy).not.toHaveBeenCalled();
+    expect(applySpy).toHaveBeenCalledTimes(1);
     expect(store.$.count()).toBe(0);
     expect(store.$.rows.byIdOrFail(7).name()).toBe('A');
+
+    store.redo();
+
+    expect(applySpy).toHaveBeenCalledTimes(2);
+    expect(store.$.count()).toBe(1);
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('B');
+  });
+
+  it('resolves subject scalar replay against the current key after rekey', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    store.$.rows.addOne({ id: 7, name: 'Alice' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const heldRow = store.$.rows.byIdOrFail(7);
+    const heldName = heldRow.name as typeof heldRow.name & {
+      __positionIds?: number[];
+      __subjectIds?: number[];
+    };
+    const positionId = heldName.__positionIds?.[0] as number | undefined;
+    const subjectId = heldName.__subjectIds?.[0] as number | undefined;
+    if (positionId === undefined || subjectId === undefined) {
+      throw new Error('Expected subject-owned leaf metadata');
+    }
+
+    heldName.set('Alicia');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    store.$.rows.changeId(7, 42);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+
+    realizationPort.applyAtomically([
+      {
+        owner: positionId,
+        before: 'Alicia',
+        after: 'Alice',
+        subjectId,
+        path: 'rows.7.name',
+        ownerPath: 'rows.7',
+      },
+    ]);
+
+    expect(store.$.rows.byId(7)).toBeUndefined();
+    expect(store.$.rows.byIdOrFail(42).name()).toBe('Alice');
+  });
+
+  it('does not resolve a subject scalar descriptor onto a foreign subject that later reuses the key', async () => {
+    const store = signalTree({
+      rows: entityMap<{ id: number; name: string }, number>({
+        selectId: (row) => row.id,
+      }),
+    }).with(timeTravel());
+
+    store.$.rows.addOne({ id: 7, name: 'Alice' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const heldRow = store.$.rows.byIdOrFail(7);
+    const heldName = heldRow.name as typeof heldRow.name & {
+      __positionIds?: number[];
+      __subjectIds?: number[];
+    };
+    const positionId = heldName.__positionIds?.[0] as number | undefined;
+    const subjectId = heldName.__subjectIds?.[0] as number | undefined;
+    if (positionId === undefined || subjectId === undefined) {
+      throw new Error('Expected subject-owned leaf metadata');
+    }
+
+    heldName.set('Alicia');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    store.$.rows.removeOne(7);
+    store.$.rows.addOne({ id: 7, name: 'Bob' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const foreignSubjectId = store.$.rows.byIdOrFail(7).name.__subjectIds?.[0] as number;
+    expect(foreignSubjectId).not.toBe(subjectId);
+
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+
+    const refusal = realizationPort.validateEffects([
+      {
+        owner: positionId,
+        before: 'Alicia',
+        after: 'Alice',
+        subjectId,
+        path: 'rows.7.name',
+        ownerPath: 'rows.7',
+      },
+    ]);
+
+    expect(refusal?.kind).toBe('structural-drift');
+    expect(store.$.rows.byIdOrFail(7).name()).toBe('Bob');
   });
 
   it('routes a mixed supported scalar plus remove turn entirely through legacy realization', async () => {
