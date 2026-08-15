@@ -322,7 +322,7 @@ describe('time-travel enhancer', () => {
     ).toThrow(/nested transaction/i);
   });
 
-  it('rolls back a thrown transaction callback and records no turn', async () => {
+  it('rolls back a thrown transaction callback through the realization port and records no turn', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
@@ -333,6 +333,11 @@ describe('time-travel enhancer', () => {
     const t = (store as any).__timeTravel;
     t.resetHistory();
     const baseline = t.getTurns().length;
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
 
     expect(() =>
       store.transaction(() => {
@@ -343,6 +348,7 @@ describe('time-travel enhancer', () => {
     ).toThrow('boom');
 
     expect(store()).toEqual({ left: '', right: '' });
+    expect(applySpy).toHaveBeenCalledTimes(1);
 
     const turns = t.getTurns();
     expect(turns).toHaveLength(baseline);
@@ -378,7 +384,7 @@ describe('time-travel enhancer', () => {
     expect(store()).toEqual({ x: '', y: '' });
   });
 
-  it('rolls back a pending scalar write while preserving a later unrelated confirmed write', async () => {
+  it('rolls back a pending scalar write through the realization port while preserving a later unrelated confirmed write', async () => {
     const { resetPathNotifier } = await import('../../lib/path-notifier');
     resetPathNotifier();
 
@@ -386,6 +392,11 @@ describe('time-travel enhancer', () => {
       a: { x: 1 },
       b: { y: 2 },
     }).with(timeTravel());
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
 
     const pending = store.transaction(() => {
       store.$.a.x.set(10);
@@ -397,6 +408,7 @@ describe('time-travel enhancer', () => {
 
     pending.rollback();
 
+    expect(applySpy).toHaveBeenCalledTimes(1);
     expect(store()).toEqual({
       a: { x: 1 },
       b: { y: 20 },
@@ -803,7 +815,7 @@ describe('time-travel enhancer', () => {
 
     expectRollbackError(() => pending.rollback(), {
       kind: 'effect-validation-failed',
-      errorMessage: expect.stringMatching(/cannot restore removed entity/i),
+      errorMessage: expect.stringMatching(/structural-drift/i),
     });
     expect(store.$.rows.ids()).toEqual([17]);
     expect(store.$.rows.byIdOrFail(17).name()).toBe('replacement');
@@ -1197,7 +1209,7 @@ describe('time-travel enhancer', () => {
 
     expectRollbackError(() => pending.rollback(), {
       kind: 'effect-validation-failed',
-      errorMessage: expect.stringMatching(/cannot rekey to occupied key/i),
+      errorMessage: expect.stringMatching(/structural-drift/i),
     });
     expect(store.$.rows.ids()).toEqual([42, 7]);
     expect(store.$.rows.byIdOrFail(42).name()).toBe('target');
@@ -2667,7 +2679,7 @@ describe('time-travel enhancer', () => {
     addEffect.key = 1;
 
     expect(() => t.redoPosition(collectionPositionId as number)).toThrow(
-      'Cannot restore added entity'
+      'Unsupported scoped undo effect at structural-drift'
     );
     expect(store.$.rows.ids()).toEqual([1]);
     expect(store.$.drivers.byIdOrFail(7).status()).toBe('idle');
@@ -3116,7 +3128,7 @@ describe('time-travel enhancer', () => {
     rekeyEffect.beforeKey = 42;
 
     expect(() => t.undoPosition(rowsPositionId as number)).toThrow(
-      'Cannot rekey to occupied key'
+      'Unsupported scoped undo effect at structural-drift'
     );
     expect(store.$.rows.ids()).toEqual([42]);
     expect(store.$.drivers.byIdOrFail(1).status()).toBe('assigned');
@@ -3175,7 +3187,7 @@ describe('time-travel enhancer', () => {
     rekeyEffect.afterKey = 7;
 
     expect(() => t.redoPosition(rowsPositionId as number)).toThrow(
-      'Cannot rekey to occupied key'
+      'Unsupported scoped undo effect at structural-drift'
     );
     expect(store.$.rows.ids()).toEqual([7]);
     expect(store.$.drivers.byIdOrFail(1).status()).toBe('idle');
@@ -3660,13 +3672,18 @@ describe('time-travel enhancer', () => {
     expect(store.$.profile().name).toBe('Ada');
   });
 
-  it('routes public undo through turn frontiers for collection add, remove, and rekey', async () => {
+  it('routes collection add, remove, and rekey turns through the realization port', async () => {
     const store = signalTree({
       rows: entityMap<{ id: number; name: string }, number>({
         selectId: (row) => row.id,
       }),
     }).with(timeTravel());
     const t = (store as any).__timeTravel;
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort) {
+      throw new Error('Expected tree-owned realization port');
+    }
+    const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
 
     store.$.rows.addOne({ id: 7, name: 'A' });
     await Promise.resolve();
@@ -3676,6 +3693,7 @@ describe('time-travel enhancer', () => {
     const addPositionId = addTurn.__positionIds?.[0] as number;
     expect(t.getFrontier(addPositionId)).toBe(1);
     store.undo();
+    expect(applySpy).toHaveBeenCalledTimes(1);
     expect(store.$.rows.ids()).toEqual([]);
     expect(t.getFrontier(addPositionId)).toBe(0);
 
@@ -3692,6 +3710,7 @@ describe('time-travel enhancer', () => {
     const removePositionId = removeTurn.__positionIds?.[0] as number;
     expect(t.getFrontier(removePositionId)).toBe(1);
     store.undo();
+    expect(applySpy).toHaveBeenCalledTimes(2);
     expect(store.$.rows.ids()).toEqual([7]);
     expect(store.$.rows.byIdOrFail(7).name()).toBe('A');
     expect(t.getFrontier(removePositionId)).toBe(0);
@@ -3706,6 +3725,7 @@ describe('time-travel enhancer', () => {
     const rekeyPositionId = rekeyTurn.__positionIds?.[0] as number;
     expect(t.getFrontier(rekeyPositionId)).toBe(1);
     store.undo();
+    expect(applySpy).toHaveBeenCalledTimes(3);
     expect(store.$.rows.ids()).toEqual([7]);
     expect(t.getFrontier(rekeyPositionId)).toBe(0);
   });
