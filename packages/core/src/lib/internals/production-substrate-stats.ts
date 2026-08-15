@@ -11,6 +11,8 @@ export interface ProductionSubstrateStats {
 
 type CounterName = keyof ProductionSubstrateStats;
 
+export const PRODUCTION_SUBSTRATE_STATS_ENABLED = true;
+
 let activeStats: ProductionSubstrateStats | undefined;
 
 export function installProductionSubstrateStatsForTesting(): ProductionSubstrateStats {

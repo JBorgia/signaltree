@@ -1,6 +1,9 @@
 import type { PositionId } from '../types';
 
-import { recordProductionSubstrateStat } from './production-substrate-stats';
+import {
+  PRODUCTION_SUBSTRATE_STATS_ENABLED,
+  recordProductionSubstrateStat,
+} from './production-substrate-stats';
 
 type SlotIndex = number;
 type SlotEqualityFn = (current: unknown, next: unknown) => boolean;
@@ -125,7 +128,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
 
     for (const [slotIndex, nextValue] of staged) {
       assertSlotIndex(slotIndex);
-      recordProductionSubstrateStat('equalityChecks');
+      if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+        recordProductionSubstrateStat('equalityChecks');
+      }
       if (equalities[slotIndex](values[slotIndex], nextValue)) {
         continue;
       }
@@ -143,10 +148,14 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     for (const { slotIndex, nextValue } of changed) {
       values[slotIndex] = nextValue;
     }
-    recordProductionSubstrateStat('slotWrites', changed.length);
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('slotWrites', changed.length);
+    }
 
     revision += 1;
-    recordProductionSubstrateStat('revisionIncrements');
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('revisionIncrements');
+    }
 
     return {
       revision,
@@ -159,7 +168,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     nextValue: T
   ): SingleSlotCommitResult => {
     assertSlotIndex(slotIndex);
-    recordProductionSubstrateStat('equalityChecks');
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('equalityChecks');
+    }
 
     if (equalities[slotIndex](values[slotIndex], nextValue)) {
       return {
@@ -169,9 +180,13 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     }
 
     values[slotIndex] = nextValue;
-    recordProductionSubstrateStat('slotWrites');
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('slotWrites');
+    }
     revision += 1;
-    recordProductionSubstrateStat('revisionIncrements');
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('revisionIncrements');
+    }
 
     return {
       revision,
@@ -198,7 +213,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     },
     readSlot<T>(slotIndex: SlotIndex): T {
       assertSlotIndex(slotIndex);
-      recordProductionSubstrateStat('slotReads');
+      if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+        recordProductionSubstrateStat('slotReads');
+      }
       return values[slotIndex] as T;
     },
     commitSlot<T>(slotIndex: SlotIndex, value: T): SingleSlotCommitResult {
@@ -221,7 +238,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       );
     },
     resolveScalarSlot(positionId: PositionId): SlotIndex | undefined {
-      recordProductionSubstrateStat('positionResolutions');
+      if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+        recordProductionSubstrateStat('positionResolutions');
+      }
       return slotByPositionId.get(positionId);
     },
     revision(): number {

@@ -1,6 +1,9 @@
 import { isTraversableNode } from '../utils';
 
-import { recordProductionSubstrateStat } from './production-substrate-stats';
+import {
+  PRODUCTION_SUBSTRATE_STATS_ENABLED,
+  recordProductionSubstrateStat,
+} from './production-substrate-stats';
 
 /**
  * Canonical Family-A tree walk — the traversal skeleton that every hand-rolled
@@ -63,7 +66,9 @@ export function visitTree(
     if (!isTraversableNode(node)) return;
     if (seen.has(node)) return;
     seen.add(node);
-    recordProductionSubstrateStat('treeVisits');
+    if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+      recordProductionSubstrateStat('treeVisits');
+    }
 
     // Per-node action + recurse decision.
     if (visit(node, path, key, parent) === false) return;
