@@ -918,12 +918,132 @@ describe('tree realization adapter', () => {
     expect(tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0]).toBe(subjectId);
   });
 
-  it('refuses a same-turn restore plus separate subject scalar because scalar validation cannot see the prepared future subject', () => {
+  it('realizes a same-turn restore plus separate subject scalar under one shared physical revision', () => {
+    const notifier = getPathNotifier();
+    const previousBatching = notifier.isBatchingEnabled();
+    notifier.setBatchingEnabled(false);
+
+    try {
+      TestBed.runInInjectionContext(() => {
+        const tree = signalTree({
+          users: entityMap<{ id: string; name: string }, string>({
+            selectId: (user) => user.id,
+          }),
+        }).with(timeTravel()) as ISignalTree<{
+          users: {
+            addOne(user: { id: string; name: string }): void;
+            removeOne(id: string): void;
+            ids(): string[];
+            byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+              name: ((() => string | undefined) & { __subjectIds?: number[] });
+            });
+          };
+        }>;
+
+        tree.$.users.addOne({ id: 'u1', name: 'Ada' });
+        getPathNotifier().flushSync();
+
+        const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+        const heldRow = tree.$.users.byIdOrFail('u1');
+        const heldName = heldRow.name;
+        heldRow();
+        heldName();
+        const nameOwner = getOwnedPositionIds(heldName)?.[0];
+        const subjectId = heldName.__subjectIds?.[0];
+        if (
+          structuralOwner === undefined ||
+          nameOwner === undefined ||
+          subjectId === undefined
+        ) {
+          throw new Error('Expected retained subject structural + scalar metadata');
+        }
+
+        const descriptors = new Map<number, TreeRealizationDescriptor>();
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'users.u1',
+          ownerPath: 'users',
+          positionIds: [structuralOwner],
+          subjectIds: [subjectId],
+          meta: {
+            historyEffect: {
+              kind: 'remove',
+              subject: subjectId,
+              key: 'u1',
+              value: { id: 'u1', name: 'Ada' },
+              subjectPositions: [structuralOwner, nameOwner],
+            },
+          },
+        });
+        rememberTreeRealizationDescriptor({
+          descriptors,
+          path: 'users.u1.name',
+          ownerPath: 'users.u1',
+          positionIds: [nameOwner],
+          subjectIds: [subjectId],
+        });
+
+        tree.$.users.removeOne('u1');
+        getPathNotifier().flushSync();
+
+        expect(tree.$.users.ids()).toEqual([]);
+        expect(heldRow()).toBeUndefined();
+        expect(heldName()).toBeUndefined();
+
+        const adapter = createTreeRealizationAdapter({
+          tree: tree as ISignalTree<object>,
+          descriptors,
+        });
+        const physicalCommitClock =
+          getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+        const beforeRevision = physicalCommitClock?.revision();
+
+        const addEffect = {
+          owner: structuralOwner,
+          before: undefined,
+          after: 'u1',
+          subjectId,
+          structural: 'add' as const,
+        };
+        const scalarEffect = {
+          owner: nameOwner,
+          before: 'Ada',
+          after: 'Alicia',
+          subjectId,
+        };
+
+        expect(adapter.validateEffects([addEffect, scalarEffect])).toBeUndefined();
+
+        const seen: string[] = [];
+        effect(() => {
+          seen.push(`${tree.$.users.ids()[0] ?? '<none>'}|${heldName() ?? '<none>'}`);
+        });
+        TestBed.flushEffects();
+
+        adapter.applyAtomically([addEffect, scalarEffect]);
+        TestBed.flushEffects();
+        getPathNotifier().flushSync();
+
+        expect(tree.$.users.ids()).toEqual(['u1']);
+        expect(heldRow()?.id).toBe('u1');
+        expect(heldName()).toBe('Alicia');
+        expect(heldName.__subjectIds?.[0]).toBe(subjectId);
+        expect(physicalCommitClock?.revision()).toBe(
+          beforeRevision === undefined ? undefined : beforeRevision + 1
+        );
+        expect(seen).toEqual(['<none>|<none>', 'u1|Alicia']);
+      });
+    } finally {
+      notifier.setBatchingEnabled(previousBatching);
+    }
+  });
+
+  it('keeps restore planning side-effect free when later scalar frame preparation fails', () => {
     const tree = signalTree({
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
       }),
-    }) as ISignalTree<{
+    }).with(timeTravel()) as ISignalTree<{
       users: {
         addOne(user: { id: string; name: string }): void;
         removeOne(id: string): void;
@@ -980,10 +1100,6 @@ describe('tree realization adapter', () => {
     tree.$.users.removeOne('u1');
     getPathNotifier().flushSync();
 
-    expect(tree.$.users.ids()).toEqual([]);
-    expect(heldRow()).toBeUndefined();
-    expect(heldName()).toBeUndefined();
-
     const adapter = createTreeRealizationAdapter({
       tree: tree as ISignalTree<object>,
       descriptors,
@@ -1010,11 +1126,44 @@ describe('tree realization adapter', () => {
       subjectId,
     };
 
-    expect(adapter.validateEffects([addEffect])).toBeUndefined();
-    expect(adapter.validateEffects([addEffect, scalarEffect])).toEqual({
-      kind: 'structural-drift',
-    });
+    expect(adapter.validateEffects([addEffect, scalarEffect])).toBeUndefined();
 
+    const collectionInternal = tree.$.users as typeof tree.$.users & {
+      __planRestore?: (
+        key: string,
+        entity: { id: string; name: string },
+        subjectId: number,
+        beforeSubject?: number,
+        afterSubject?: number
+      ) => {
+        commit(options?: { advancePhysicalRevision?: boolean }): void;
+        publish(metaOverride?: UpdateMetadata): void;
+      };
+    };
+    if (!collectionInternal.__planRestore) {
+      throw new Error('Expected deferred restore planner for restore planning test');
+    }
+
+    const originalPlanRestore = collectionInternal.__planRestore.bind(collectionInternal);
+    const planRestoreSpy = vi
+      .spyOn(collectionInternal, '__planRestore')
+      .mockImplementation(() => {
+        const plan = originalPlanRestore(
+          'u1',
+          { id: 'u1', name: 'Alicia' },
+          subjectId
+        );
+        return {
+          commit: (_options) => {
+            throw new Error('Prepared scalar frame failure');
+          },
+          publish: plan.publish.bind(plan),
+        };
+      });
+
+    expect(() => adapter.applyAtomically([addEffect, scalarEffect])).toThrow(
+      'Prepared scalar frame failure'
+    );
     getPathNotifier().flushSync();
 
     expect(tree.$.users.ids()).toEqual([]);
@@ -1023,6 +1172,7 @@ describe('tree realization adapter', () => {
     expect(physicalCommitClock?.revision()).toBe(beforeRevision);
     expect(notifications).toEqual([]);
 
+    planRestoreSpy.mockRestore();
     unsubscribe();
   });
 

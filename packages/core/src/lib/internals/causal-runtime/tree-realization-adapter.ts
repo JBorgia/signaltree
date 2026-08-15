@@ -1,6 +1,7 @@
 import type { ISignalTree, PositionId, StructuralHistoryEffect, UpdateMetadata } from '../../types';
 import { getPathNotifier } from '../../path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../write-context';
+import { deepClone } from '@signaltree/shared';
 import {
   getOwnedOwnerPath,
   getOwnedPositionIds,
@@ -24,6 +25,16 @@ type CollectionNode = {
   byIdOrFail(id: string | number): unknown;
   changeId(from: string | number, to: string | number): void;
   removeOne(id: string | number): void;
+  __planRestore?(
+    key: string | number,
+    entity: unknown,
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  };
   __planRekey?(
     from: string | number,
     to: string | number
@@ -48,6 +59,45 @@ type WritableLeaf = {
 type WritableEntityNode = {
   (value: unknown): void;
 };
+
+type PreparedSubjectRealization = {
+  collectionPath: string;
+  key: string | number;
+  value: unknown;
+};
+
+class PreparedRealizationContext {
+  private readonly subjects = new Map<number, PreparedSubjectRealization>();
+
+  rememberRestoredSubject(
+    subjectId: number,
+    collectionPath: string,
+    key: string | number,
+    value: unknown
+  ): void {
+    this.subjects.set(subjectId, { collectionPath, key, value });
+  }
+
+  rememberRekeyedSubject(subjectId: number, key: string | number): void {
+    const existing = this.subjects.get(subjectId);
+    if (!existing) {
+      return;
+    }
+
+    this.subjects.set(subjectId, {
+      ...existing,
+      key,
+    });
+  }
+
+  forgetSubject(subjectId: number): void {
+    this.subjects.delete(subjectId);
+  }
+
+  resolveSubject(subjectId: number): PreparedSubjectRealization | undefined {
+    return this.subjects.get(subjectId);
+  }
+}
 
 type SubjectRealizationDescriptor = {
   path: string;
@@ -209,18 +259,15 @@ export function createTreeRealizationAdapter(
 
   return {
     validateEffects(effects) {
-      for (const effect of effects) {
-        if (
-          !canApplyEffect(
-            options.tree,
-            options.descriptors,
-            structuralOwnerPaths,
-            scalarSlotRuntime,
-            effect
-          )
-        ) {
-          return { kind: 'structural-drift' };
-        }
+      const preparedContext = buildPreparedRealizationContext(
+        options.tree,
+        options.descriptors,
+        structuralOwnerPaths,
+        scalarSlotRuntime,
+        effects
+      );
+      if (!preparedContext) {
+        return { kind: 'structural-drift' };
       }
 
       return undefined;
@@ -320,24 +367,58 @@ function planHeterogeneousFrame(
 ): { commit(): void } | undefined {
   if (
     effects.length === 0 ||
-    !effects.some((effect) => effect.structural === 'rekey') ||
-    effects.some((effect) => effect.structural && effect.structural !== 'rekey')
+    !effects.some(
+      (effect) => effect.structural === 'rekey' || effect.structural === 'add'
+    ) ||
+    effects.some(
+      (effect) => effect.structural && effect.structural !== 'rekey' && effect.structural !== 'add'
+    )
   ) {
     return undefined;
   }
 
-  if (!scalarSlotRuntime) {
+  const scalarEffects = effects.filter((effect) => !effect.structural);
+  const preparedContext = buildPreparedRealizationContext(
+    tree,
+    descriptors,
+    structuralOwnerPaths,
+    scalarSlotRuntime,
+    effects
+  );
+  if (!preparedContext) {
     return undefined;
   }
 
-  const scalarEffects = effects.filter((effect) => !effect.structural);
+  const preparedSubjectScalarEffects = scalarEffects.filter((effect) =>
+    isPreparedSubjectScalarEffect(effect, preparedContext)
+  );
+  const framedScalarEffects = scalarEffects.filter(
+    (effect) => !isPreparedSubjectScalarEffect(effect, preparedContext)
+  );
   const rekeyEffects = effects.filter(
     (effect): effect is ReversalEffect & { structural: 'rekey' } =>
       effect.structural === 'rekey'
   );
-  const baseRevision = scalarSlotRuntime.revision();
+  const restoreEffects = effects.filter(
+    (effect): effect is ReversalEffect & { structural: 'add'; subjectId: number } =>
+      effect.structural === 'add' && typeof effect.subjectId === 'number'
+  );
+  const baseRevision = scalarSlotRuntime?.revision();
+  const scalarFrameRuntime = framedScalarEffects.length > 0 ? scalarSlotRuntime : undefined;
 
-  const scalarFrame = scalarSlotRuntime.beginFrame();
+  const scalarFrame =
+    framedScalarEffects.length > 0 ? scalarFrameRuntime?.beginFrame() : undefined;
+  if (framedScalarEffects.length > 0 && (!scalarFrameRuntime || !scalarFrame)) {
+    return undefined;
+  }
+  const resolvedScalarFrameRuntime = scalarFrameRuntime;
+  const plannedRestores: Array<{
+    effect: ReversalEffect & { structural: 'add'; subjectId: number };
+    plan: {
+      commit(options?: { advancePhysicalRevision?: boolean }): void;
+      publish(metaOverride?: UpdateMetadata): void;
+    };
+  }> = [];
   const plannedRekeys: Array<{
     effect: ReversalEffect & { structural: 'rekey' };
     plan: {
@@ -346,12 +427,60 @@ function planHeterogeneousFrame(
     };
   }> = [];
 
-  for (const effect of scalarEffects) {
-    const slotIndex = scalarSlotRuntime.resolveScalarSlot(effect.owner);
-    if (slotIndex === undefined) {
+  for (const effect of restoreEffects) {
+    const descriptor = descriptors.get(effect.owner);
+    const collectionNode = resolveCollectionNode(
+      tree,
+      descriptor,
+      structuralOwnerPaths,
+      effect
+    );
+    const historyEffect = getStructuralAddEffect(descriptor, effect);
+    const collectionPath = resolveCollectionPath(
+      descriptor,
+      structuralOwnerPaths,
+      effect
+    );
+    if (
+      !collectionNode ||
+      !historyEffect ||
+      !collectionPath ||
+      typeof collectionNode.__planRestore !== 'function'
+    ) {
+      scalarFrame?.discard();
       return undefined;
     }
-    scalarFrame.set(slotIndex, effect.after);
+
+    const preparedSubject = preparedContext.resolveSubject(effect.subjectId);
+    if (!preparedSubject) {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
+    plannedRestores.push({
+      effect,
+      plan: collectionNode.__planRestore(
+        effect.after as string | number,
+        preparedSubject.value,
+        effect.subjectId,
+        historyEffect.beforeSubject,
+        historyEffect.afterSubject
+      ),
+    });
+  }
+
+  for (const effect of framedScalarEffects) {
+    if (!resolvedScalarFrameRuntime) {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
+    const slotIndex = resolvedScalarFrameRuntime.resolveScalarSlot(effect.owner);
+    if (slotIndex === undefined) {
+      scalarFrame?.discard();
+      return undefined;
+    }
+    scalarFrame?.set(slotIndex, effect.after);
   }
 
   for (const effect of rekeyEffects) {
@@ -366,6 +495,7 @@ function planHeterogeneousFrame(
       !collectionNode ||
       typeof collectionNode.__planRekey !== 'function'
     ) {
+      scalarFrame?.discard();
       return undefined;
     }
 
@@ -376,28 +506,53 @@ function planHeterogeneousFrame(
         effect.after as string | number
       ),
     });
+
+    if (typeof effect.subjectId === 'number') {
+      preparedContext.rememberRekeyedSubject(
+        effect.subjectId,
+        effect.after as string | number
+      );
+    }
   }
 
   return {
     commit(): void {
       if (
+        scalarFrame &&
         physicalCommitClock &&
         physicalCommitClock.revision() !== baseRevision
       ) {
         throw new Error('Heterogeneous realization base revision is stale.');
       }
 
-      const scalarCommitResult = scalarFrame.commit({
+      const scalarCommitResult = scalarFrame?.commit({
         advanceRevision: false,
         publish: false,
       });
+
+      for (const { plan } of plannedRestores) {
+        plan.commit({ advancePhysicalRevision: false });
+      }
 
       for (const { plan } of plannedRekeys) {
         plan.commit({ advancePhysicalRevision: false });
       }
 
       physicalCommitClock?.advance();
-      scalarSlotRuntime.publishPrepared(scalarCommitResult);
+      if (scalarCommitResult && scalarSlotRuntime) {
+        scalarSlotRuntime.publishPrepared(scalarCommitResult);
+      }
+
+      for (const { effect, plan } of plannedRestores) {
+        plan.publish({
+          ...(getActiveWriteContext() ?? {}),
+          intent: 'system',
+          source: 'system',
+          causalMode: 'realization',
+          positionIds: [effect.owner],
+          subjectIds: [effect.subjectId],
+        });
+      }
 
       for (const { effect, plan } of plannedRekeys) {
         plan.publish({
@@ -411,7 +566,7 @@ function planHeterogeneousFrame(
         });
       }
 
-      for (const effect of scalarEffects) {
+      for (const effect of [...preparedSubjectScalarEffects, ...framedScalarEffects]) {
         const descriptor = descriptors.get(effect.owner);
         const notifyPath = resolveNotifyPath(
           tree,
@@ -516,7 +671,8 @@ function canApplyEffect(
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
   scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
-  effect: ReversalEffect
+  effect: ReversalEffect,
+  preparedContext?: PreparedRealizationContext
 ): boolean {
   const descriptor = descriptors.get(effect.owner);
   if (
@@ -530,6 +686,10 @@ function canApplyEffect(
   }
 
   if (!effect.structural) {
+    if (canResolvePreparedSubjectTarget(descriptor, effect, preparedContext)) {
+      return true;
+    }
+
     const target = resolveLiveScalarNode(
       tree,
       descriptor,
@@ -551,7 +711,8 @@ function canApplyEffect(
 
   const currentSubjectKey =
     typeof effect.subjectId === 'number'
-      ? ownerNode.__findKeyBySubjectId?.(effect.subjectId)
+      ? preparedContext?.resolveSubject(effect.subjectId)?.key ??
+        ownerNode.__findKeyBySubjectId?.(effect.subjectId)
       : undefined;
 
   switch (effect.structural) {
@@ -733,21 +894,211 @@ function resolveLiveScalarNode(
     : undefined;
 }
 
+function canResolvePreparedSubjectTarget(
+  descriptor: TreeRealizationDescriptor | undefined,
+  effect: ReversalEffect,
+  preparedContext: PreparedRealizationContext | undefined
+): boolean {
+  if (typeof effect.subjectId !== 'number') {
+    return false;
+  }
+
+  const preparedSubject = preparedContext?.resolveSubject(effect.subjectId);
+  if (!preparedSubject) {
+    return false;
+  }
+
+  const fieldPathFromRow = resolveSubjectFieldPath(descriptor, effect);
+  if (!fieldPathFromRow) {
+    return false;
+  }
+
+  return resolveNodeAtPath(
+    preparedSubject.value as Record<string, unknown>,
+    fieldPathFromRow
+  ) !== undefined;
+}
+
 function resolveCollectionNode(
   tree: ISignalTree<object>,
   descriptor: TreeRealizationDescriptor | undefined,
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
   effect: ReversalEffect
 ): CollectionNode | undefined {
-  const collectionPath = descriptor?.collectionPath ??
-    (effect.structural ? descriptor?.ownerPath : undefined) ??
-    structuralOwnerPaths.get(effect.owner);
+  const collectionPath = resolveCollectionPath(
+    descriptor,
+    structuralOwnerPaths,
+    effect
+  );
   if (collectionPath === undefined) {
     return undefined;
   }
 
   const node = resolveNodeAtPath(tree.$ as Record<string, unknown>, collectionPath);
   return isCollectionNode(node) ? node : undefined;
+}
+
+function resolveCollectionPath(
+  descriptor: TreeRealizationDescriptor | undefined,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  effect: ReversalEffect
+): string | undefined {
+  return descriptor?.collectionPath ??
+    (effect.structural ? descriptor?.ownerPath : undefined) ??
+    structuralOwnerPaths.get(effect.owner);
+}
+
+function updatePreparedRealizationContext(
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  preparedContext: PreparedRealizationContext,
+  effect: ReversalEffect
+): void {
+  if (typeof effect.subjectId === 'number' && !effect.structural) {
+    const descriptor = descriptors.get(effect.owner);
+    const preparedSubject = preparedContext.resolveSubject(effect.subjectId);
+    const fieldPathFromRow = resolveSubjectFieldPath(descriptor, effect);
+    if (preparedSubject && fieldPathFromRow) {
+      assignPreparedSubjectValue(preparedSubject.value, fieldPathFromRow, effect.after);
+    }
+    return;
+  }
+
+  if (typeof effect.subjectId !== 'number' || !effect.structural) {
+    return;
+  }
+
+  const descriptor = descriptors.get(effect.owner);
+  switch (effect.structural) {
+    case 'add': {
+      const collectionPath = resolveCollectionPath(
+        descriptor,
+        structuralOwnerPaths,
+        effect
+      );
+      if (!collectionPath) {
+        return;
+      }
+      const historyEffect = getStructuralAddEffect(descriptor, effect);
+      if (!historyEffect) {
+        return;
+      }
+      const preparedValue = deepClone(historyEffect.value);
+      preparedContext.rememberRestoredSubject(
+        effect.subjectId,
+        collectionPath,
+        effect.after as string | number,
+        preparedValue
+      );
+
+      for (const [positionId, value] of Object.entries(effect.subjectState ?? {})) {
+        const positionDescriptor = descriptors.get(Number(positionId) as PositionId);
+        const fieldPathFromRow = positionDescriptor?.fieldPathFromRow;
+        if (!fieldPathFromRow) {
+          continue;
+        }
+        assignPreparedSubjectValue(preparedValue, fieldPathFromRow, value);
+      }
+      return;
+    }
+    case 'rekey':
+      preparedContext.rememberRekeyedSubject(
+        effect.subjectId,
+        effect.after as string | number
+      );
+      return;
+    case 'remove':
+      preparedContext.forgetSubject(effect.subjectId);
+      return;
+  }
+}
+
+function buildPreparedRealizationContext(
+  tree: ISignalTree<object>,
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
+  effects: readonly ReversalEffect[]
+): PreparedRealizationContext | undefined {
+  const preparedContext = new PreparedRealizationContext();
+  for (const effect of effects) {
+    if (
+      !canApplyEffect(
+        tree,
+        descriptors,
+        structuralOwnerPaths,
+        scalarSlotRuntime,
+        effect,
+        preparedContext
+      )
+    ) {
+      return undefined;
+    }
+
+    updatePreparedRealizationContext(
+      descriptors,
+      structuralOwnerPaths,
+      preparedContext,
+      effect
+    );
+  }
+
+  return preparedContext;
+}
+
+function resolveSubjectFieldPath(
+  descriptor: TreeRealizationDescriptor | undefined,
+  effect: ReversalEffect
+): string | undefined {
+  if (typeof effect.subjectId !== 'number') {
+    return undefined;
+  }
+
+  const inlineFieldPathFromRow = deriveFieldPathFromEffect(effect);
+  return inlineFieldPathFromRow ??
+    descriptor?.subjectDescriptors?.get(String(effect.subjectId))?.fieldPathFromRow ??
+    descriptor?.fieldPathFromRow;
+}
+
+function assignPreparedSubjectValue(
+  subjectValue: unknown,
+  fieldPathFromRow: string,
+  nextValue: unknown
+): void {
+  if (fieldPathFromRow === '') {
+    return;
+  }
+
+  if (!isTraversableNode(subjectValue)) {
+    return;
+  }
+
+  const segments = fieldPathFromRow.split('.');
+  let cursor: unknown = subjectValue;
+  for (const segment of segments.slice(0, -1)) {
+    if (!isTraversableNode(cursor)) {
+      return;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+
+  const leafKey = segments.at(-1);
+  if (!leafKey || !isTraversableNode(cursor)) {
+    return;
+  }
+
+  (cursor as Record<string, unknown>)[leafKey] = nextValue;
+}
+
+function isPreparedSubjectScalarEffect(
+  effect: ReversalEffect,
+  preparedContext: PreparedRealizationContext
+): boolean {
+  return (
+    typeof effect.subjectId === 'number' &&
+    !effect.structural &&
+    preparedContext.resolveSubject(effect.subjectId) !== undefined
+  );
 }
 
 function indexStructuralOwnerPaths(root: unknown): Map<PositionId, string> {

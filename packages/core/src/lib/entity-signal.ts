@@ -716,6 +716,27 @@ export function createEntitySignal<
     beforeSubject?: number,
     afterSubject?: number
   ): void {
+    const planned = planRestore(
+      key,
+      entity,
+      subjectId,
+      beforeSubject,
+      afterSubject
+    );
+    planned.commit();
+    planned.publish();
+  }
+
+  function planRestore(
+    key: K,
+    entity: E,
+    subjectId: number,
+    beforeSubject?: number,
+    afterSubject?: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  } {
     if (structuralStore.hasActiveKey(key)) {
       throw new Error(`Entity with id ${String(key)} already exists`);
     }
@@ -736,23 +757,31 @@ export function createEntitySignal<
       afterSubject,
       realizedValue: entity,
     };
-    const frame = createEntityMutationFrame();
-    frame.stageSubjectRestore(restoration);
-    const result = commitAndProjectEntityMutationFrame(frame);
-    for (const changedSubjectId of result.physicallyChangedSubjectIds) {
-      publishSubjectPhysicalChange(changedSubjectId);
-    }
-    lastSubjectIds = [subjectId];
-    syncEntitySignal(key);
-    updateSignals();
-    pathNotifier.notify(
-      `${basePath}.${String(key)}`,
-      entity,
-      undefined,
-      basePath,
-      [subjectId],
-      getPositionIdsForNotify()
-    );
+
+    return {
+      commit(options?: { advancePhysicalRevision?: boolean }): void {
+        const frame = createEntityMutationFrame();
+        frame.stageSubjectRestore(restoration);
+        const result = commitAndProjectEntityMutationFrame(frame, options);
+        for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+          publishSubjectPhysicalChange(changedSubjectId);
+        }
+        lastSubjectIds = [subjectId];
+        syncEntitySignal(key);
+        updateSignals();
+      },
+      publish(metaOverride?: UpdateMetadata): void {
+        pathNotifier.notify(
+          `${basePath}.${String(key)}`,
+          entity,
+          undefined,
+          basePath,
+          [subjectId],
+          getPositionIdsForNotify(),
+          metaOverride
+        );
+      },
+    };
   }
 
   function rewritePendingAddEffect(
@@ -2635,6 +2664,11 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__planRekey', {
     value: planRekey,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planRestore', {
+    value: planRestore,
     enumerable: false,
     configurable: true,
   });
