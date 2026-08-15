@@ -1176,6 +1176,219 @@ describe('tree realization adapter', () => {
     unsubscribe();
   });
 
+  it('refuses same-turn restore then rekey because rekey planning still requires the source key to be live', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Ada' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldRow = tree.$.users.byIdOrFail('u1');
+    const heldName = heldRow.name;
+    heldRow();
+    heldName();
+    const nameOwner = getOwnedPositionIds(heldName)?.[0];
+    const subjectId = heldName.__subjectIds?.[0];
+    if (
+      structuralOwner === undefined ||
+      nameOwner === undefined ||
+      subjectId === undefined
+    ) {
+      throw new Error('Expected retained subject structural + scalar metadata');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [subjectId],
+      meta: {
+        historyEffect: {
+          kind: 'remove',
+          subject: subjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, nameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+      positionIds: [nameOwner],
+      subjectIds: [subjectId],
+    });
+
+    tree.$.users.removeOne('u1');
+    getPathNotifier().flushSync();
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+
+    const restoreEffect = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId,
+      structural: 'add' as const,
+    };
+    const rekeyEffect = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: 'u2',
+      subjectId,
+      structural: 'rekey' as const,
+    };
+    const scalarEffect = {
+      owner: nameOwner,
+      before: 'Ada',
+      after: 'Alicia',
+      subjectId,
+      path: 'users.u1.name',
+      ownerPath: 'users.u1',
+    };
+
+    expect(adapter.validateEffects([restoreEffect, rekeyEffect])).toEqual({
+      kind: 'structural-drift',
+    });
+    expect(
+      adapter.validateEffects([restoreEffect, rekeyEffect, scalarEffect])
+    ).toEqual({ kind: 'structural-drift' });
+  });
+
+  it('keeps restore-rekey refusal side-effect free even when a later stale subject scalar is present', () => {
+    const tree = signalTree({
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }).with(timeTravel()) as ISignalTree<{
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): ((() => { id: string; name: string } | undefined) & {
+          name: ((() => string | undefined) & { __subjectIds?: number[] });
+        });
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Ada' });
+    getPathNotifier().flushSync();
+
+    const structuralOwner = getOwnedPositionIds(tree.$.users)?.[0];
+    const heldRow = tree.$.users.byIdOrFail('u1');
+    const heldName = heldRow.name;
+    heldRow();
+    heldName();
+    const nameOwner = getOwnedPositionIds(heldName)?.[0];
+    const subjectId = heldName.__subjectIds?.[0];
+    if (
+      structuralOwner === undefined ||
+      nameOwner === undefined ||
+      subjectId === undefined
+    ) {
+      throw new Error('Expected retained subject structural + scalar metadata');
+    }
+
+    const descriptors = new Map<number, TreeRealizationDescriptor>();
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1',
+      ownerPath: 'users',
+      positionIds: [structuralOwner],
+      subjectIds: [subjectId],
+      meta: {
+        historyEffect: {
+          kind: 'remove',
+          subject: subjectId,
+          key: 'u1',
+          value: { id: 'u1', name: 'Ada' },
+          subjectPositions: [structuralOwner, nameOwner],
+        },
+      },
+    });
+    rememberTreeRealizationDescriptor({
+      descriptors,
+      path: 'users.u1.missing',
+      ownerPath: 'users.u1',
+      positionIds: [nameOwner],
+      subjectIds: [subjectId],
+    });
+
+    tree.$.users.removeOne('u1');
+    getPathNotifier().flushSync();
+
+    const adapter = createTreeRealizationAdapter({
+      tree: tree as ISignalTree<object>,
+      descriptors,
+    });
+    const physicalCommitClock =
+      getPhysicalCommitClock(tree) ?? getPhysicalCommitClock(tree.$);
+    const beforeRevision = physicalCommitClock?.revision();
+    const notifications: string[] = [];
+    const unsubscribe = getPathNotifier().subscribe('**', (_value, _prev, path) => {
+      notifications.push(path);
+    });
+
+    const restoreEffect = {
+      owner: structuralOwner,
+      before: undefined,
+      after: 'u1',
+      subjectId,
+      structural: 'add' as const,
+    };
+    const rekeyEffect = {
+      owner: structuralOwner,
+      before: 'u1',
+      after: 'u2',
+      subjectId,
+      structural: 'rekey' as const,
+    };
+    const invalidScalarEffect = {
+      owner: nameOwner,
+      before: undefined,
+      after: 'Alicia',
+      subjectId,
+      path: 'users.u1.missing',
+      ownerPath: 'users.u1',
+    };
+
+    expect(adapter.validateEffects([restoreEffect, rekeyEffect])).toEqual({
+      kind: 'structural-drift',
+    });
+    expect(
+      adapter.validateEffects([restoreEffect, rekeyEffect, invalidScalarEffect])
+    ).toEqual({ kind: 'structural-drift' });
+
+    getPathNotifier().flushSync();
+
+    expect(tree.$.users.ids()).toEqual([]);
+    expect(heldRow()).toBeUndefined();
+    expect(heldName()).toBeUndefined();
+    expect(physicalCommitClock?.revision()).toBe(beforeRevision);
+    expect(notifications).toEqual([]);
+
+    unsubscribe();
+  });
+
   it('validates known scalar positions with zero tree visits across 10 to 100k positions', () => {
     const stats = installProductionSubstrateStatsForTesting();
 
