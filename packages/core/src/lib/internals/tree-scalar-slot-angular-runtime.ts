@@ -34,6 +34,7 @@ export interface TreeScalarSlotRuntime {
   ): WritableSignal<T>;
   beginFrame(): ScalarSlotMutationFrame;
   resolveScalarSlot(positionId: PositionId): SlotIndex | undefined;
+  resolveScalarLeaf(positionId: PositionId): WritableSignal<unknown> | undefined;
   revision(): number;
   slotCount(): number;
 }
@@ -128,6 +129,7 @@ function createAngularLeaf<T>(
 export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
   const kernel = createTreeScalarSlotKernel();
   const publication = new AngularScalarSlotPublicationAdapter();
+  const leafByPositionId = new Map<PositionId, WritableSignal<unknown>>();
 
   return {
     createLeaf<T>(
@@ -136,13 +138,23 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       positionId?: PositionId
     ): WritableSignal<T> {
       const slotIndex = kernel.createSlot(initialValue, equal, positionId);
-      return createAngularLeaf(kernel, publication, slotIndex);
+      const leaf = createAngularLeaf<T>(kernel, publication, slotIndex);
+      if (positionId !== undefined) {
+        leafByPositionId.set(positionId, leaf as WritableSignal<unknown>);
+      }
+      return leaf;
     },
     beginFrame(): ScalarSlotMutationFrame {
       return new AngularScalarSlotMutationFrame(kernel.beginFrame(), publication);
     },
     resolveScalarSlot(positionId: PositionId): SlotIndex | undefined {
       return kernel.resolveScalarSlot(positionId);
+    },
+    resolveScalarLeaf(positionId: PositionId): WritableSignal<unknown> | undefined {
+      if (PRODUCTION_SUBSTRATE_STATS_ENABLED) {
+        recordProductionSubstrateStat('positionResolutions');
+      }
+      return leafByPositionId.get(positionId);
     },
     revision(): number {
       return kernel.revision();

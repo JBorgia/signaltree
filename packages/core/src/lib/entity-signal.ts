@@ -16,6 +16,9 @@ import {
   StructuralStore,
   type SubjectLifetimeRecord,
 } from './physical/structural-store';
+import {
+  defineOwnedOwnerPath,
+} from './internals/owned-mutation';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
 import { HISTORY_EXCLUDED, isTraversableNode } from './utils';
@@ -2608,6 +2611,9 @@ export function createEntitySignal<
       enumerable: false,
       configurable: true,
     });
+  }
+  if (ownerMetadataEnabled) {
+    defineOwnedOwnerPath(api, basePath);
   }
   Object.defineProperty(api, '__findKeyBySubjectId', {
     value: findKeyBySubjectId,

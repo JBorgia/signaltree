@@ -1,7 +1,10 @@
 import type { ISignalTree, PositionId, StructuralHistoryEffect, UpdateMetadata } from '../../types';
 import { getPathNotifier } from '../../path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../write-context';
-import { getOwnedPositionIds } from '../owned-mutation';
+import {
+  getOwnedOwnerPath,
+  getOwnedPositionIds,
+} from '../owned-mutation';
 import { getTreeScalarSlotRuntime } from '../tree-scalar-slot-angular-runtime';
 import { visitTree } from '../visit-tree';
 
@@ -41,12 +44,17 @@ type WritableEntityNode = {
 type SubjectRealizationDescriptor = {
   path: string;
   ownerPath: string;
+  collectionPath?: string;
+  fieldPathFromRow?: string;
 };
 
 export interface TreeRealizationDescriptor {
   readonly path?: string;
   readonly ownerPath?: string;
+  readonly collectionPath?: string;
+  readonly fieldPathFromRow?: string;
   readonly structuralHistoryEffects?: ReadonlyMap<string, StructuralHistoryEffect>;
+  readonly structuralHistoryBySubject?: ReadonlyMap<string, StructuralHistoryEffect>;
   readonly subjectDescriptors?: ReadonlyMap<string, SubjectRealizationDescriptor>;
 }
 
@@ -74,27 +82,44 @@ export function rememberTreeRealizationDescriptor(
 
   const existing = options.descriptors.get(owner);
   const structuralHistoryEffects = new Map(existing?.structuralHistoryEffects ?? []);
+  const structuralHistoryBySubject = new Map(existing?.structuralHistoryBySubject ?? []);
   const subjectDescriptors = new Map(existing?.subjectDescriptors ?? []);
   if (options.meta?.historyEffect) {
     structuralHistoryEffects.set(
       toStructuralHistoryEffectKey(options.meta.historyEffect),
       options.meta.historyEffect
     );
+    if (
+      options.meta.historyEffect.kind === 'add' ||
+      options.meta.historyEffect.kind === 'remove'
+    ) {
+      structuralHistoryBySubject.set(
+        String(options.meta.historyEffect.subject),
+        options.meta.historyEffect
+      );
+    }
   }
 
   const subjectId = options.subjectIds?.[0];
   const ownerPath = options.ownerPath ?? options.path;
+  const collectionPath = deriveCollectionPath(options.path, ownerPath, subjectId, options.meta?.historyEffect);
+  const fieldPathFromRow = deriveFieldPathFromRow(options.path, ownerPath, subjectId, options.meta?.historyEffect);
   if (typeof subjectId === 'number') {
     subjectDescriptors.set(String(subjectId), {
       path: options.path,
       ownerPath,
+      collectionPath,
+      fieldPathFromRow,
     });
   }
 
   options.descriptors.set(owner, {
-    path: options.path,
-    ownerPath,
+    path: existing?.path ?? options.path,
+    ownerPath: existing?.ownerPath ?? ownerPath,
+    collectionPath: existing?.collectionPath ?? collectionPath,
+    fieldPathFromRow: existing?.fieldPathFromRow ?? fieldPathFromRow,
     structuralHistoryEffects,
+    structuralHistoryBySubject,
     subjectDescriptors,
   });
 }
@@ -107,10 +132,22 @@ export function createTreeRealizationAdapter(
   ): StructuralDriftRefusal | undefined;
   applyAtomically(effects: readonly ReversalEffect[]): void;
 } {
+  const scalarSlotRuntime =
+    getTreeScalarSlotRuntime(options.tree) ?? getTreeScalarSlotRuntime(options.tree.$);
+  const structuralOwnerPaths = indexStructuralOwnerPaths(options.tree.$);
+
   return {
     validateEffects(effects) {
       for (const effect of effects) {
-        if (!canApplyEffect(options.tree, options.descriptors, effect)) {
+        if (
+          !canApplyEffect(
+            options.tree,
+            options.descriptors,
+            structuralOwnerPaths,
+            scalarSlotRuntime,
+            effect
+          )
+        ) {
           return { kind: 'structural-drift' };
         }
       }
@@ -121,6 +158,8 @@ export function createTreeRealizationAdapter(
       const heterogeneousFrame = planHeterogeneousFrame(
         options.tree,
         options.descriptors,
+        structuralOwnerPaths,
+        scalarSlotRuntime,
         effects
       );
       if (heterogeneousFrame) {
@@ -128,14 +167,26 @@ export function createTreeRealizationAdapter(
         return;
       }
 
-      const scalarFrame = planScalarFrame(options.tree, options.descriptors, effects);
+      const scalarFrame = planScalarFrame(
+        options.tree,
+        options.descriptors,
+        structuralOwnerPaths,
+        scalarSlotRuntime,
+        effects
+      );
       if (scalarFrame) {
         scalarFrame.commit();
         return;
       }
 
       for (const effect of effects) {
-        applyEffect(options.tree, options.descriptors, effect);
+        applyEffect(
+          options.tree,
+          options.descriptors,
+          structuralOwnerPaths,
+          scalarSlotRuntime,
+          effect
+        );
       }
     },
   };
@@ -144,6 +195,8 @@ export function createTreeRealizationAdapter(
 function planHeterogeneousFrame(
   tree: ISignalTree<object>,
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   effects: readonly ReversalEffect[]
 ): { commit(): void } | undefined {
   if (
@@ -154,8 +207,6 @@ function planHeterogeneousFrame(
     return undefined;
   }
 
-  const scalarSlotRuntime =
-    getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
   if (!scalarSlotRuntime) {
     return undefined;
   }
@@ -181,14 +232,23 @@ function planHeterogeneousFrame(
   }
 
   for (const effect of rekeyEffects) {
-    const liveNode = resolveLiveNodeByPositionId(tree, effect.owner);
-    if (!isCollectionNode(liveNode) || typeof liveNode.__planRekey !== 'function') {
+    const descriptor = descriptors.get(effect.owner);
+    const collectionNode = resolveCollectionNode(
+      tree,
+      descriptor,
+      structuralOwnerPaths,
+      effect
+    );
+    if (
+      !collectionNode ||
+      typeof collectionNode.__planRekey !== 'function'
+    ) {
       return undefined;
     }
 
     plannedRekeys.push({
       effect,
-      plan: liveNode.__planRekey(
+      plan: collectionNode.__planRekey(
         effect.before as string | number,
         effect.after as string | number
       ),
@@ -246,14 +306,17 @@ function planHeterogeneousFrame(
 function planScalarFrame(
   tree: ISignalTree<object>,
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   effects: readonly ReversalEffect[]
 ): { commit(): void } | undefined {
+  void tree;
+  void descriptors;
+  void structuralOwnerPaths;
   if (effects.length === 0 || effects.some((effect) => effect.structural)) {
     return undefined;
   }
 
-  const scalarSlotRuntime =
-    getTreeScalarSlotRuntime(tree) ?? getTreeScalarSlotRuntime(tree.$);
   if (!scalarSlotRuntime) {
     return undefined;
   }
@@ -303,25 +366,32 @@ function planScalarFrame(
 function canApplyEffect(
   tree: ISignalTree<object>,
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   effect: ReversalEffect
 ): boolean {
   const descriptor = descriptors.get(effect.owner);
-  if (!descriptor && !effect.structural) {
-    return false;
-  }
-
-  const liveNode = resolveLiveNodeByPositionId(tree, effect.owner);
-  if (!liveNode) {
+  if (!descriptor && !effect.structural && !scalarSlotRuntime?.resolveScalarLeaf(effect.owner)) {
     return false;
   }
 
   if (!effect.structural) {
-    const target = resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode);
+    const target = resolveLiveScalarNode(
+      tree,
+      descriptor,
+      scalarSlotRuntime,
+      effect
+    );
     return isWritableLeaf(target) || isWritableEntityNode(target);
   }
 
-  const ownerNode = liveNode;
-  if (!isCollectionNode(ownerNode)) {
+  const ownerNode = resolveCollectionNode(
+    tree,
+    descriptor,
+    structuralOwnerPaths,
+    effect
+  );
+  if (!ownerNode) {
     return false;
   }
 
@@ -360,16 +430,13 @@ function canApplyEffect(
 function applyEffect(
   tree: ISignalTree<object>,
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   effect: ReversalEffect
 ): void {
   const descriptor = descriptors.get(effect.owner);
-  if (!descriptor && !effect.structural) {
+  if (!descriptor && !effect.structural && !scalarSlotRuntime?.resolveScalarLeaf(effect.owner)) {
     throw new Error(`Missing live descriptor for owner ${String(effect.owner)}`);
-  }
-
-  const liveNode = resolveLiveNodeByPositionId(tree, effect.owner);
-  if (!liveNode) {
-    throw new Error(`Missing live node for owner ${String(effect.owner)}`);
   }
 
   withWriteContext(
@@ -384,7 +451,12 @@ function applyEffect(
     },
     () => {
       if (!effect.structural) {
-        const target = resolveLiveScalarNode(tree, descriptor ?? {}, effect, liveNode);
+        const target = resolveLiveScalarNode(
+          tree,
+          descriptor,
+          scalarSlotRuntime,
+          effect
+        );
         if (isWritableLeaf(target)) {
           target.set(effect.after);
           return;
@@ -401,8 +473,13 @@ function applyEffect(
         return;
       }
 
-      const ownerNode = liveNode;
-      if (!isCollectionNode(ownerNode)) {
+      const ownerNode = resolveCollectionNode(
+        tree,
+        descriptor,
+        structuralOwnerPaths,
+        effect
+      );
+      if (!ownerNode) {
         throw new Error(`Missing structural owner for ${String(effect.owner)}`);
       }
 
@@ -431,8 +508,8 @@ function applyEffect(
             historyEffect.beforeSubject,
             historyEffect.afterSubject
           );
-          applySubjectState(tree, ownerNode, effect);
-      return getStructuralAddEffect(descriptor, effect) !== undefined;
+          applySubjectState(tree, descriptors, scalarSlotRuntime, ownerNode, effect);
+          return;
         }
       }
     }
@@ -441,15 +518,21 @@ function applyEffect(
 
 function applySubjectState(
   tree: ISignalTree<object>,
+  descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
   ownerNode: CollectionNode,
   effect: ReversalEffect
 ): void {
+  const rowNode = ownerNode.byIdOrFail(effect.after as string | number);
+
   for (const [positionId, value] of Object.entries(effect.subjectState ?? {})) {
+    const numericPositionId = Number(positionId) as PositionId;
     const liveNode =
-      resolveSubjectNodeByPositionId(
-        ownerNode.byIdOrFail(effect.after as string | number),
-        Number(positionId)
-      ) ?? resolveLiveNodeByPositionId(tree, Number(positionId));
+      scalarSlotRuntime?.resolveScalarLeaf(numericPositionId) ??
+      resolveSubjectTargetFromDescriptor(
+        rowNode,
+        descriptors.get(numericPositionId)
+      );
     if (!isWritableLeaf(liveNode)) {
       throw new Error(`Missing live subject leaf for owner ${positionId}`);
     }
@@ -460,124 +543,142 @@ function applySubjectState(
 
 function resolveLiveScalarNode(
   tree: ISignalTree<object>,
-  descriptor: TreeRealizationDescriptor,
-  effect: ReversalEffect,
-  liveNode: unknown
+  descriptor: TreeRealizationDescriptor | undefined,
+  scalarSlotRuntime: ReturnType<typeof getTreeScalarSlotRuntime>,
+  effect: ReversalEffect
 ): unknown {
-  if (isWritableLeaf(liveNode)) {
-    return liveNode;
+  const directLeaf = scalarSlotRuntime?.resolveScalarLeaf(effect.owner);
+  if (directLeaf) {
+    return directLeaf;
   }
 
-  if (descriptor.path) {
-    const pathNode = resolveNodeAtPath(tree.$ as Record<string, unknown>, descriptor.path);
-    if (isWritableLeaf(pathNode)) {
-      return pathNode;
-    }
+  if (typeof effect.subjectId === 'number') {
+    return resolveCurrentSubjectTarget(tree, descriptor, effect.subjectId, effect);
   }
 
-  if (
-    !isCollectionNode(liveNode) ||
-    typeof effect.subjectId !== 'number' ||
-    !descriptor.path ||
-    !descriptor.ownerPath
-  ) {
+  if (!descriptor?.path) {
     return undefined;
   }
 
-  const currentKey = liveNode.__findKeyBySubjectId?.(effect.subjectId);
+  const pathNode = resolveNodeAtPath(
+    tree.$ as Record<string, unknown>,
+    descriptor.path
+  );
+  return isWritableLeaf(pathNode) || isWritableEntityNode(pathNode)
+    ? pathNode
+    : undefined;
+}
+
+function resolveCollectionNode(
+  tree: ISignalTree<object>,
+  descriptor: TreeRealizationDescriptor | undefined,
+  structuralOwnerPaths: ReadonlyMap<PositionId, string>,
+  effect: ReversalEffect
+): CollectionNode | undefined {
+  const collectionPath = descriptor?.collectionPath ??
+    (effect.structural ? descriptor?.ownerPath : undefined) ??
+    structuralOwnerPaths.get(effect.owner);
+  if (collectionPath === undefined) {
+    return undefined;
+  }
+
+  const node = resolveNodeAtPath(tree.$ as Record<string, unknown>, collectionPath);
+  return isCollectionNode(node) ? node : undefined;
+}
+
+function indexStructuralOwnerPaths(root: unknown): Map<PositionId, string> {
+  const ownerPaths = new Map<PositionId, string>();
+
+  visitTree(
+    root,
+    (node) => {
+      if (!isCollectionNode(node)) {
+        return undefined;
+      }
+
+      const positionId = getOwnedPositionIds(node)?.[0] as PositionId | undefined;
+      const ownerPath = getOwnedOwnerPath(node);
+      if (positionId === undefined || ownerPath === undefined) {
+        return undefined;
+      }
+
+      // This is only a current realization address for an actual collection
+      // node, not structural identity. PositionId, subject lifetime, and
+      // ownerPath can diverge if topology support expands further.
+      ownerPaths.set(positionId, ownerPath);
+      return undefined;
+    },
+    {
+      skipKey: (key) => key === 'set' || key === 'update' || key.startsWith('_'),
+    }
+  );
+
+  return ownerPaths;
+}
+
+function resolveCurrentSubjectTarget(
+  tree: ISignalTree<object>,
+  descriptor: TreeRealizationDescriptor | undefined,
+  subjectId: number,
+  effect: ReversalEffect
+): unknown {
+  const subjectDescriptor = descriptor?.subjectDescriptors?.get(String(subjectId));
+  const collectionPath =
+    subjectDescriptor?.collectionPath ??
+    descriptor?.collectionPath ??
+    (effect.structural ? descriptor?.ownerPath : undefined);
+  if (!collectionPath && collectionPath !== '') {
+    return undefined;
+  }
+
+  const collectionNode = resolveNodeAtPath(
+    tree.$ as Record<string, unknown>,
+    collectionPath
+  );
+  if (!isCollectionNode(collectionNode)) {
+    return undefined;
+  }
+
+  const currentKey = collectionNode.__findKeyBySubjectId?.(subjectId);
   if (currentKey === undefined) {
     return undefined;
   }
 
-  const subjectDescriptor = descriptor.subjectDescriptors?.get(
-    String(effect.subjectId)
-  );
-  const subjectPath = subjectDescriptor?.path;
-  const subjectOwnerPath = subjectDescriptor?.ownerPath;
-  const rowNode = liveNode.byIdOrFail(currentKey);
+  const rowNode = collectionNode.byIdOrFail(currentKey);
+  const fieldPathFromRow =
+    subjectDescriptor?.fieldPathFromRow ?? descriptor?.fieldPathFromRow;
 
-  if (subjectPath === `${subjectOwnerPath}.${String(currentKey)}`) {
+  if (fieldPathFromRow === '') {
     return rowNode;
   }
 
-  if (
-    subjectPath?.startsWith(`${subjectOwnerPath}.${String(currentKey)}.`)
-  ) {
-    return resolveNodeAtPath(
-      rowNode as Record<string, unknown>,
-      subjectPath.slice(`${subjectOwnerPath}.${String(currentKey)}.`.length)
-    );
+  if (!fieldPathFromRow) {
+    return undefined;
   }
 
-  if (descriptor.path === `${descriptor.ownerPath}.${String(currentKey)}`) {
-    return liveNode.byIdOrFail(currentKey);
+  return resolveNodeAtPath(rowNode as Record<string, unknown>, fieldPathFromRow);
+}
+
+function resolveSubjectTargetFromDescriptor(
+  rowNode: unknown,
+  descriptor: TreeRealizationDescriptor | undefined
+): unknown {
+  if (!descriptor) {
+    return undefined;
   }
 
-  const fieldSuffix = descriptor.path.startsWith(`${descriptor.ownerPath}.`)
-    ? descriptor.path.slice(descriptor.ownerPath.length + 1)
-    : undefined;
-  if (!fieldSuffix) {
+  if (descriptor.fieldPathFromRow === '') {
+    return rowNode;
+  }
+
+  if (!descriptor.fieldPathFromRow) {
     return undefined;
   }
 
   return resolveNodeAtPath(
     rowNode as Record<string, unknown>,
-    fieldSuffix
+    descriptor.fieldPathFromRow
   );
-}
-
-function resolveLiveNodeByPositionId(
-  tree: ISignalTree<object>,
-  owner: PositionId
-): unknown {
-  let exactMatch: unknown;
-  let containingMatch: unknown;
-
-  visitTree(
-    tree.$,
-    (node) => {
-      const positionIds = getOwnedPositionIds(node);
-      if (positionIds?.[0] === owner) {
-        exactMatch = node;
-        return false;
-      }
-
-      if (containingMatch === undefined && positionIds?.includes(owner)) {
-        containingMatch = node;
-      }
-
-      return undefined;
-    },
-    {
-      skipKey: (key) => key === 'set' || key === 'update' || key.startsWith('_'),
-    }
-  );
-
-  return exactMatch ?? containingMatch;
-}
-
-function resolveSubjectNodeByPositionId(
-  subjectRoot: unknown,
-  owner: PositionId
-): unknown {
-  let exactMatch: unknown;
-
-  visitTree(
-    subjectRoot,
-    (node) => {
-      if (getOwnedPositionIds(node)?.[0] === owner) {
-        exactMatch = node;
-        return false;
-      }
-
-      return undefined;
-    },
-    {
-      skipKey: (key) => key === 'set' || key === 'update' || key.startsWith('_'),
-    }
-  );
-
-  return exactMatch;
 }
 
 function resolveNodeAtPath(
@@ -621,10 +722,78 @@ function getStructuralAddEffect(
     return removeEffect;
   }
 
+  const subjectEffect = descriptor?.structuralHistoryBySubject?.get(
+    String(effect.subjectId)
+  );
+  if (subjectEffect?.kind === 'remove' || subjectEffect?.kind === 'add') {
+    return subjectEffect;
+  }
+
   const addEffect = descriptor?.structuralHistoryEffects?.get(
     `add:${String(effect.subjectId)}:${String(effect.after)}`
   );
   return addEffect?.kind === 'add' ? addEffect : undefined;
+}
+
+function deriveCollectionPath(
+  path: string,
+  ownerPath: string,
+  subjectId: number | undefined,
+  historyEffect: StructuralHistoryEffect | undefined
+): string | undefined {
+  if (historyEffect) {
+    return ownerPath;
+  }
+
+  if (path === ownerPath) {
+    return ownerPath.includes('.') ? parentPath(ownerPath) : undefined;
+  }
+
+  if (!path.startsWith(`${ownerPath}.`)) {
+    return undefined;
+  }
+
+  if (!ownerPath.includes('.')) {
+    return ownerPath;
+  }
+
+  if (typeof subjectId !== 'number') {
+    return undefined;
+  }
+
+  return parentPath(ownerPath);
+}
+
+function deriveFieldPathFromRow(
+  path: string,
+  ownerPath: string,
+  subjectId: number | undefined,
+  historyEffect: StructuralHistoryEffect | undefined
+): string | undefined {
+  if (historyEffect) {
+    return undefined;
+  }
+
+  if (path === ownerPath) {
+    return '';
+  }
+
+  if (typeof subjectId !== 'number' || !path.startsWith(`${ownerPath}.`)) {
+    return undefined;
+  }
+
+  const relativePath = path.slice(ownerPath.length + 1);
+  if (!ownerPath.includes('.')) {
+    const firstDot = relativePath.indexOf('.');
+    return firstDot === -1 ? '' : relativePath.slice(firstDot + 1);
+  }
+
+  return relativePath;
+}
+
+function parentPath(path: string): string {
+  const lastDot = path.lastIndexOf('.');
+  return lastDot === -1 ? '' : path.slice(0, lastDot);
 }
 
 function toStructuralHistoryEffectKey(effect: StructuralHistoryEffect): string {
