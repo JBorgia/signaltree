@@ -157,6 +157,91 @@ const createActualTreeAbort = (options: {
     });
 };
 
+const createLiveUsersAbortHarness = () => {
+  resetPathNotifier();
+  const tree = signalTree({
+    users: entityMap<{ id: string; name: string }, string>({
+      selectId: (user) => user.id,
+    }),
+  }) as ISignalTree<{
+    users: {
+      addOne(user: { id: string; name: string }): void;
+      removeOne(id: string): void;
+      changeId(from: string, to: string): void;
+      ids(): string[];
+      byIdOrFail(id: string): {
+        name: (() => string | undefined) & { __subjectIds?: number[] };
+      };
+    };
+  }>;
+
+  const store = new TurnStore();
+  const appliedHistory = new AppliedHistory(store);
+  const liveHarnessRef: {
+    current?: ReturnType<typeof createLiveDraftHarness>;
+  } = {};
+
+  const abortWithPort = (
+    turnId: number,
+    port: Parameters<typeof rollbackPendingTurnAt>[0]['port']
+  ) => {
+    if (!liveHarnessRef.current) {
+      throw new Error('Live draft harness was not initialized');
+    }
+
+    const topology = getPositionRegistry(tree.$);
+    if (!topology) {
+      throw new Error('Expected tree position registry');
+    }
+
+    const realizationContext = createRealizationContextSource({
+      baselineValues: new Map(liveHarnessRef.current.baselineValues),
+      store,
+      appliedHistory,
+    });
+
+    return rollbackPendingTurnAt({
+      authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+      turnId,
+      store,
+      topology,
+      port,
+      realizationContext,
+    });
+  };
+
+  const liveDraft = createGreenfieldTransactionDraft({
+    turnId: 1,
+    store,
+    appliedHistory,
+    abortPendingTurn: (turnId) => {
+      if (!liveHarnessRef.current) {
+        throw new Error('Live draft harness was not initialized');
+      }
+
+      return createActualTreeAbort({
+        tree: tree as ISignalTree<object>,
+        authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+        store,
+        appliedHistory,
+        baselineValues: liveHarnessRef.current.baselineValues,
+        descriptors: liveHarnessRef.current.descriptors,
+      })(turnId);
+    },
+  });
+  const liveHarness = createLiveDraftHarness(liveDraft, 1);
+  liveHarnessRef.current = liveHarness;
+
+  return {
+    tree,
+    store,
+    appliedHistory,
+    liveDraft,
+    liveHarness,
+    abortWithPort,
+  };
+};
+
 describe('greenfield transactions', () => {
   it('seals explicitly captured live effects into one pending turn, then confirms without additional physical writes', () => {
     const store = new TurnStore();
@@ -1467,6 +1552,155 @@ describe('greenfield transactions', () => {
     expect(tree.$.count()).toBe(1);
     expect(tree.$.users.ids()).toEqual(['u3']);
     expect(tree.$.users.byIdOrFail('u3').name()).toBe('Cora');
+    expect(tree.$.users.byIdOrFail('u3').name.__subjectIds?.[0]).toBe(
+      freshSubject
+    );
+    expect(store.getPendingTurnIds()).toEqual([1]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
+  it('aborts a live fresh add by realizing a structural remove without reusing the fresh subject lifetime', () => {
+    const { tree, store, appliedHistory, liveDraft, liveHarness } =
+      createLiveUsersAbortHarness();
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+    });
+    liveHarness.flush();
+
+    expect(freshSubject).toBeTypeOf('number');
+
+    const pendingTurn = liveDraft.seal();
+    expect(pendingTurn.effects).toEqual([
+      expect.objectContaining({
+        before: undefined,
+        after: 'u2',
+        subjectId: freshSubject,
+        structural: 'add',
+      }),
+    ]);
+
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+    expect(tree.$.users.ids()).toEqual([]);
+
+    tree.$.users.addOne({ id: 'u9', name: 'Zed' });
+    getPathNotifier().flushSync();
+    const nextFreshSubject = tree.$.users.byIdOrFail('u9').name.__subjectIds?.[0] as
+      | number
+      | undefined;
+    expect(nextFreshSubject).toBeGreaterThan(freshSubject as number);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
+  it('aborts a live fresh add plus same-subject scalar through the same structural remove frontier', () => {
+    const { tree, store, appliedHistory, liveDraft, liveHarness } =
+      createLiveUsersAbortHarness();
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+      tree.$.users.byIdOrFail('u2').name.set('Cora');
+    });
+    liveHarness.flush();
+
+    expect(freshSubject).toBeTypeOf('number');
+
+    const pendingTurn = liveDraft.seal();
+    expect(pendingTurn.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          before: undefined,
+          after: 'u2',
+          subjectId: freshSubject,
+          structural: 'add',
+        }),
+        expect.objectContaining({
+          before: { id: 'u2', name: 'Bran' },
+          after: { id: 'u2', name: 'Cora' },
+          subjectId: freshSubject,
+        }),
+      ])
+    );
+
+    expect(liveDraft.abort()).toEqual({ ok: true, turnId: 1 });
+    expect(tree.$.users.ids()).toEqual([]);
+
+    tree.$.users.addOne({ id: 'u9', name: 'Zed' });
+    getPathNotifier().flushSync();
+    const nextFreshSubject = tree.$.users.byIdOrFail('u9').name.__subjectIds?.[0] as
+      | number
+      | undefined;
+    expect(nextFreshSubject).toBeGreaterThan(freshSubject as number);
+    expect(store.getPendingTurnIds()).toEqual([]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
+  it('constructs fresh add plus rekey rollback as a stale pre-rekey remove and refuses it as structural drift', () => {
+    const { tree, store, appliedHistory, liveDraft, liveHarness, abortWithPort } =
+      createLiveUsersAbortHarness();
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+      tree.$.users.changeId('u2', 'u3');
+    });
+    liveHarness.flush();
+
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(freshSubject).toBeTypeOf('number');
+
+    const pendingTurn = liveDraft.seal();
+    expect(pendingTurn.effects).toEqual([
+      expect.objectContaining({
+        before: undefined,
+        after: 'u2',
+        subjectId: freshSubject,
+        structural: 'add',
+      }),
+      expect.objectContaining({
+        before: 'u2',
+        after: 'u3',
+        subjectId: freshSubject,
+        structural: 'rekey',
+      }),
+    ]);
+
+    let capturedEffects: ReadonlyArray<Record<string, unknown>> | undefined;
+    const result = abortWithPort(1, {
+      validateEffects(effects) {
+        capturedEffects = effects.map((effect) => ({ ...effect }));
+        return { kind: 'structural-drift' };
+      },
+      applyAtomically() {
+        throw new Error('Expected validation refusal to stop rollback');
+      },
+    });
+
+    expect(result).toEqual({ ok: false, refusal: { kind: 'structural-drift' } });
+    expect(capturedEffects).toEqual([
+      expect.objectContaining({
+        before: 'u2',
+        after: undefined,
+        subjectId: freshSubject,
+        structural: 'remove',
+      }),
+    ]);
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(tree.$.users.byIdOrFail('u3').name()).toBe('Bran');
     expect(tree.$.users.byIdOrFail('u3').name.__subjectIds?.[0]).toBe(
       freshSubject
     );
