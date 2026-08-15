@@ -7,7 +7,7 @@
     "types": ["vitest/globals", "node"],
     "moduleResolution": "node10"
   },
-  "files": ["src/test-setup.ts", "../callable-syntax/src/augmentation.d.ts"],
+  "files": ["src/test-setup.ts"],
   "include": [
     "vitest.config.ts",
     "src/**/*.test.ts",
