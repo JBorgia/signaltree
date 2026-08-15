@@ -180,6 +180,75 @@ describe('transactions enhancer', () => {
     expect(store()).toEqual({ left: '', right: '', outside: 'stable' });
   });
 
+  it('fails mixed structural thrown rollback on the stale post-rekey path and leaves the optimistic turn committed', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../../lib/path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: string; name: string }, string>({
+        selectId: (row) => row.id,
+      }),
+    }).with(transactions()) as {
+      (): { count: number; rows: { all: Array<{ id: string; name: string }> } };
+      $: {
+        count: () => number;
+        rows: {
+          addOne(row: { id: string; name: string }): void;
+          removeOne(id: string): void;
+          changeId(from: string, to: string): void;
+          ids(): string[];
+          byIdOrFail(id: string): {
+            name: (() => string | undefined) & { __subjectIds?: number[] };
+          };
+        };
+      };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+      __transactions: {
+        getConfirmedTurnCount(): number;
+        getPendingTurnCount(): number;
+      };
+    };
+
+    store.$.rows.addOne({ id: 'b', name: 'Base' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const originalSubject = store.$.rows.byIdOrFail('b').name.__subjectIds?.[0] as
+      | number
+      | undefined;
+    let abortedFreshSubject: number | undefined;
+
+    expect(() =>
+      store.transaction(() => {
+        store.$.count.set(1);
+        store.$.rows.removeOne('b');
+        store.$.rows.addOne({ id: 'a', name: 'Alpha' });
+        abortedFreshSubject = store.$.rows.byIdOrFail('a').name.__subjectIds?.[0];
+        store.$.rows.changeId('a', 'c');
+        store.$.rows.byIdOrFail('c').name.set('Charlie');
+        throw new Error('boom');
+      })
+    ).toThrow('Cannot resolve scoped undo path rows.c.name');
+
+    expect(originalSubject).toBe(1);
+    expect(abortedFreshSubject).toBe(2);
+    expect(store.$.count()).toBe(1);
+    expect(store.$.rows.ids()).toEqual(['c']);
+    expect(store()).toEqual({
+      count: 1,
+      rows: { all: [{ id: 'a', name: 'Charlie' }] },
+    });
+    expect(store.$.rows.byIdOrFail('c').name.__subjectIds?.[0]).toBe(
+      abortedFreshSubject
+    );
+    expect(store.__transactions.getConfirmedTurnCount()).toBe(1);
+    expect(store.__transactions.getPendingTurnCount()).toBe(0);
+  });
+
   it('keeps the primary transaction error when capture release cleanup also fails', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'

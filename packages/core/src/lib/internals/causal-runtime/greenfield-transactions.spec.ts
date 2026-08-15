@@ -1377,6 +1377,106 @@ describe('greenfield transactions', () => {
     liveHarness.dispose();
   });
 
+  it('refuses a mixed live structural draft through the realization adapter as structural drift', () => {
+    resetPathNotifier();
+    const tree = signalTree({
+      count: 0,
+      users: entityMap<{ id: string; name: string }, string>({
+        selectId: (user) => user.id,
+      }),
+    }) as ISignalTree<{
+      count: { set(value: number): void; (): number };
+      users: {
+        addOne(user: { id: string; name: string }): void;
+        removeOne(id: string): void;
+        changeId(from: string, to: string): void;
+        ids(): string[];
+        byIdOrFail(id: string): {
+          name: (() => string | undefined) & { __subjectIds?: number[] };
+        };
+      };
+    }>;
+
+    tree.$.users.addOne({ id: 'u1', name: 'Alice' });
+    getPathNotifier().flushSync();
+
+    const originalSubject = tree.$.users.byIdOrFail('u1').name.__subjectIds?.[0] as
+      | number
+      | undefined;
+
+    const store = new TurnStore();
+    const appliedHistory = new AppliedHistory(store);
+    const liveHarnessRef: {
+      current?: ReturnType<typeof createLiveDraftHarness>;
+    } = {};
+    const liveDraft = createGreenfieldTransactionDraft({
+      turnId: 1,
+      store,
+      appliedHistory,
+      abortPendingTurn: (turnId) => {
+        if (!liveHarnessRef.current) {
+          throw new Error('Live draft harness was not initialized');
+        }
+
+        return createActualTreeAbort({
+          tree: tree as ISignalTree<object>,
+          authority: getOwnedPositionIds(tree)?.[0] as PositionId,
+          store,
+          appliedHistory,
+          baselineValues: liveHarnessRef.current.baselineValues,
+          descriptors: liveHarnessRef.current.descriptors,
+        })(turnId);
+      },
+    });
+    const liveHarness = createLiveDraftHarness(liveDraft, 1);
+    liveHarnessRef.current = liveHarness;
+
+    let freshSubject: number | undefined;
+    liveHarness.write(() => {
+      tree.$.count.set(1);
+      tree.$.users.removeOne('u1');
+      tree.$.users.addOne({ id: 'u2', name: 'Bran' });
+      freshSubject = tree.$.users.byIdOrFail('u2').name.__subjectIds?.[0];
+      tree.$.users.changeId('u2', 'u3');
+      tree.$.users.byIdOrFail('u3').name.set('Cora');
+    });
+    liveHarness.flush();
+
+    expect(originalSubject).toBeTypeOf('number');
+    expect(freshSubject).toBeTypeOf('number');
+
+    const pendingTurn = liveDraft.seal();
+    expect(pendingTurn.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ before: 0, after: 1, subjectId: undefined }),
+        expect.objectContaining({ structural: 'remove', subjectId: originalSubject }),
+        expect.objectContaining({ structural: 'add', subjectId: freshSubject }),
+        expect.objectContaining({ structural: 'rekey', subjectId: freshSubject }),
+        expect.objectContaining({
+          before: { id: 'u2', name: 'Bran' },
+          after: { id: 'u2', name: 'Cora' },
+          subjectId: freshSubject,
+        }),
+      ])
+    );
+
+    expect(liveDraft.abort()).toEqual({
+      ok: false,
+      refusal: { kind: 'structural-drift' },
+    });
+    expect(tree.$.count()).toBe(1);
+    expect(tree.$.users.ids()).toEqual(['u3']);
+    expect(tree.$.users.byIdOrFail('u3').name()).toBe('Cora');
+    expect(tree.$.users.byIdOrFail('u3').name.__subjectIds?.[0]).toBe(
+      freshSubject
+    );
+    expect(store.getPendingTurnIds()).toEqual([1]);
+    expect(store.getTurns()).toEqual([]);
+    expect(appliedHistory.getAppliedTurnIds()).toEqual([]);
+
+    liveHarness.dispose();
+  });
+
   it('restores multiple removed subjects in one live transaction abort even when they share one collection owner', () => {
     resetPathNotifier();
     const tree = signalTree({
