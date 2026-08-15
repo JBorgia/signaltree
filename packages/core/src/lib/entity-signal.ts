@@ -603,6 +603,76 @@ export function createEntitySignal<
     };
   }
 
+  function planPreparedRekey(
+    from: K,
+    to: K,
+    subjectId: number,
+    entity: E,
+    subjectPositions?: readonly PositionId[]
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  } {
+    if (from === to) {
+      return {
+        commit(): void {
+          // no-op
+        },
+        publish(): void {
+          // no-op
+        },
+      };
+    }
+
+    const historyEffect: PendingHistoryEffect = {
+      kind: 'rekey',
+      subject: subjectId,
+      beforeKey: from,
+      afterKey: to,
+      subjectPositions,
+    };
+
+    return {
+      commit(options?: { advancePhysicalRevision?: boolean }): void {
+        const transfer: PreparedKeyTransfer<K> = {
+          kind: 'transfer-key',
+          fromKey: from,
+          toKey: to,
+          subjectId,
+        };
+        const frame = createEntityMutationFrame();
+        frame.stageKeyTransfer(transfer);
+        const result = commitAndProjectEntityMutationFrame(frame, options);
+        for (const changedSubjectId of result.physicallyChangedSubjectIds) {
+          publishSubjectPhysicalChange(changedSubjectId);
+        }
+        rekeyedSubjects.add(subjectId);
+
+        if (activeIdSignal() === from) {
+          activeIdSignal.set(to);
+        }
+
+        syncEntitySignal(to);
+        updateSignals();
+      },
+      publish(metaOverride?: UpdateMetadata): void {
+        const meta = metaOverride ?? getActiveWriteContext();
+        pathNotifier.notify(
+          `${basePath}.${String(to)}`,
+          entity,
+          entity,
+          basePath,
+          [subjectId],
+          getPositionIdsForNotify(),
+          {
+            ...(meta ?? {}),
+            historyEffect,
+          }
+        );
+      },
+    };
+  }
+
   /** Active-entity selection. See the `activeId`/`activeEntity` accessors. */
   const activeIdSignal = signal<K | undefined>(undefined);
   let cachedActiveEntity: Signal<E | undefined> | undefined;
@@ -2664,6 +2734,11 @@ export function createEntitySignal<
   });
   Object.defineProperty(api, '__planRekey', {
     value: planRekey,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planPreparedRekey', {
+    value: planPreparedRekey,
     enumerable: false,
     configurable: true,
   });

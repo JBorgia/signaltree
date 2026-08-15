@@ -42,6 +42,16 @@ type CollectionNode = {
     commit(options?: { advancePhysicalRevision?: boolean }): void;
     publish(metaOverride?: UpdateMetadata): void;
   };
+  __planPreparedRekey?(
+    from: string | number,
+    to: string | number,
+    subjectId: number,
+    entity: unknown,
+    subjectPositions?: readonly PositionId[]
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  };
   __findKeyBySubjectId?(subjectId: number): string | number | undefined;
   __restoreOne?(
     key: string | number,
@@ -62,20 +72,37 @@ type WritableEntityNode = {
 
 type PreparedSubjectRealization = {
   collectionPath: string;
+  subjectId: number;
   key: string | number;
   value: unknown;
+  subjectPositions?: readonly PositionId[];
 };
+
+type PreparedOccupancyState = number | 'vacant';
 
 class PreparedRealizationContext {
   private readonly subjects = new Map<number, PreparedSubjectRealization>();
+  private readonly occupancy = new Map<string, PreparedOccupancyState>();
+
+  private occupancyKey(collectionPath: string, key: string | number): string {
+    return `${collectionPath}::${String(key)}`;
+  }
 
   rememberRestoredSubject(
     subjectId: number,
     collectionPath: string,
     key: string | number,
-    value: unknown
+    value: unknown,
+    subjectPositions?: readonly PositionId[]
   ): void {
-    this.subjects.set(subjectId, { collectionPath, key, value });
+    this.subjects.set(subjectId, {
+      collectionPath,
+      subjectId,
+      key,
+      value,
+      subjectPositions,
+    });
+    this.occupancy.set(this.occupancyKey(collectionPath, key), subjectId);
   }
 
   rememberRekeyedSubject(subjectId: number, key: string | number): void {
@@ -84,6 +111,12 @@ class PreparedRealizationContext {
       return;
     }
 
+    this.occupancy.set(
+      this.occupancyKey(existing.collectionPath, existing.key),
+      'vacant'
+    );
+    this.occupancy.set(this.occupancyKey(existing.collectionPath, key), subjectId);
+
     this.subjects.set(subjectId, {
       ...existing,
       key,
@@ -91,11 +124,25 @@ class PreparedRealizationContext {
   }
 
   forgetSubject(subjectId: number): void {
+    const existing = this.subjects.get(subjectId);
+    if (existing) {
+      this.occupancy.set(
+        this.occupancyKey(existing.collectionPath, existing.key),
+        'vacant'
+      );
+    }
     this.subjects.delete(subjectId);
   }
 
   resolveSubject(subjectId: number): PreparedSubjectRealization | undefined {
     return this.subjects.get(subjectId);
+  }
+
+  resolveOccupancy(
+    collectionPath: string,
+    key: string | number
+  ): PreparedOccupancyState | undefined {
+    return this.occupancy.get(this.occupancyKey(collectionPath, key));
   }
 }
 
@@ -493,18 +540,40 @@ function planHeterogeneousFrame(
     );
     if (
       !collectionNode ||
-      typeof collectionNode.__planRekey !== 'function'
+      (typeof collectionNode.__planRekey !== 'function' &&
+        typeof collectionNode.__planPreparedRekey !== 'function')
     ) {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
+    const preparedSubject =
+      typeof effect.subjectId === 'number'
+        ? preparedContext.resolveSubject(effect.subjectId)
+        : undefined;
+    const plan =
+      preparedSubject && typeof collectionNode.__planPreparedRekey === 'function'
+        ? collectionNode.__planPreparedRekey(
+            effect.before as string | number,
+            effect.after as string | number,
+            effect.subjectId as number,
+            preparedSubject.value,
+            preparedSubject.subjectPositions
+          )
+        : typeof collectionNode.__planRekey === 'function'
+          ? collectionNode.__planRekey(
+              effect.before as string | number,
+              effect.after as string | number
+            )
+          : undefined;
+    if (!plan) {
       scalarFrame?.discard();
       return undefined;
     }
 
     plannedRekeys.push({
       effect,
-      plan: collectionNode.__planRekey(
-        effect.before as string | number,
-        effect.after as string | number
-      ),
+      plan,
     });
 
     if (typeof effect.subjectId === 'number') {
@@ -714,24 +783,42 @@ function canApplyEffect(
       ? preparedContext?.resolveSubject(effect.subjectId)?.key ??
         ownerNode.__findKeyBySubjectId?.(effect.subjectId)
       : undefined;
+  const collectionPath = resolveCollectionPath(
+    descriptor,
+    structuralOwnerPaths,
+    effect
+  );
+  const destinationOccupied =
+    effect.structural === 'rekey' || effect.structural === 'add'
+      ? isCollectionKeyOccupied(
+          ownerNode,
+          collectionPath,
+          effect.after as string | number,
+          preparedContext
+        )
+      : false;
 
   switch (effect.structural) {
     case 'remove':
       return (
-        hasCollectionKey(ownerNode, effect.before as string | number) &&
+        (typeof effect.subjectId === 'number'
+          ? currentSubjectKey === effect.before
+          : hasCollectionKey(ownerNode, effect.before as string | number)) &&
         (typeof effect.subjectId !== 'number' || currentSubjectKey === effect.before)
       );
     case 'rekey':
       return (
-        hasCollectionKey(ownerNode, effect.before as string | number) &&
+        (typeof effect.subjectId === 'number'
+          ? currentSubjectKey === effect.before
+          : hasCollectionKey(ownerNode, effect.before as string | number)) &&
         (typeof effect.subjectId !== 'number' || currentSubjectKey === effect.before) &&
-        !hasCollectionKey(ownerNode, effect.after as string | number)
+        !destinationOccupied
       );
     case 'add': {
       if (
         typeof effect.subjectId !== 'number' ||
         typeof ownerNode.__restoreOne !== 'function' ||
-        hasCollectionKey(ownerNode, effect.after as string | number) ||
+        destinationOccupied ||
         currentSubjectKey !== undefined
       ) {
         return false;
@@ -948,6 +1035,25 @@ function resolveCollectionPath(
     structuralOwnerPaths.get(effect.owner);
 }
 
+function isCollectionKeyOccupied(
+  ownerNode: CollectionNode,
+  collectionPath: string | undefined,
+  key: string | number,
+  preparedContext: PreparedRealizationContext | undefined
+): boolean {
+  if (collectionPath) {
+    const preparedOccupancy = preparedContext?.resolveOccupancy(collectionPath, key);
+    if (preparedOccupancy === 'vacant') {
+      return false;
+    }
+    if (preparedOccupancy !== undefined) {
+      return true;
+    }
+  }
+
+  return hasCollectionKey(ownerNode, key);
+}
+
 function updatePreparedRealizationContext(
   descriptors: ReadonlyMap<PositionId, TreeRealizationDescriptor>,
   structuralOwnerPaths: ReadonlyMap<PositionId, string>,
@@ -988,7 +1094,8 @@ function updatePreparedRealizationContext(
         effect.subjectId,
         collectionPath,
         effect.after as string | number,
-        preparedValue
+        preparedValue,
+        historyEffect.subjectPositions
       );
 
       for (const [positionId, value] of Object.entries(effect.subjectState ?? {})) {
