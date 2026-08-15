@@ -37,6 +37,15 @@ export type PreparedFreshSubject<
 > = {
   kind: 'create-fresh-subject';
   key: K;
+  subjectId: number;
+  nextValue: E;
+};
+
+export type ProjectionReplacement<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = {
+  key: K;
   nextValue: E;
 };
 
@@ -64,9 +73,14 @@ export type PreparedEntityPhysicalMutation<
   | PreparedFreshSubject<K, E>
   | PreparedSubjectRestore<K, E>;
 
-export type EntityMutationCommitResult = {
+export type EntityMutationCommitResult<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = {
   physicallyChangedSubjectIds: readonly number[];
   allocatedSubjectIds: readonly number[];
+  projectionRebuildRequired: boolean;
+  projectionReplacements: readonly ProjectionReplacement<K, E>[];
 };
 
 export class EntityMutationFrame<
@@ -105,18 +119,21 @@ export class EntityMutationFrame<
     this.mutations.push(restoration);
   }
 
-  commit(): EntityMutationCommitResult {
+  commit(): EntityMutationCommitResult<K, E> {
     const physicallyChangedSubjectIds = new Set<number>();
     const allocatedSubjectIds: number[] = [];
-    let requiresProjectionRebuild = false;
+    const projectionReplacements: ProjectionReplacement<K, E>[] = [];
+    let projectionRebuildRequired = false;
 
     for (const mutation of this.mutations) {
       if (mutation.kind === 'create-fresh-subject') {
-        const subjectId = this.structuralStore.allocateFreshSubjectId();
-        this.structuralStore.createSubject(subjectId, mutation.key);
-        this.valueStore.retainSubjectValue(subjectId, mutation.nextValue);
-        allocatedSubjectIds.push(subjectId);
-        requiresProjectionRebuild = true;
+        this.structuralStore.createSubject(mutation.subjectId, mutation.key);
+        this.valueStore.retainSubjectValue(
+          mutation.subjectId,
+          mutation.nextValue
+        );
+        allocatedSubjectIds.push(mutation.subjectId);
+        projectionRebuildRequired = true;
         continue;
       }
 
@@ -135,7 +152,7 @@ export class EntityMutationFrame<
           );
         }
         physicallyChangedSubjectIds.add(mutation.subjectId);
-        requiresProjectionRebuild = true;
+        projectionRebuildRequired = true;
         continue;
       }
 
@@ -144,10 +161,10 @@ export class EntityMutationFrame<
           mutation.subjectId,
           mutation.nextValue
         );
-        this.materializedProjection.replaceEntry(
-          mutation.key,
-          mutation.nextValue
-        );
+        projectionReplacements.push({
+          key: mutation.key,
+          nextValue: mutation.nextValue,
+        });
         continue;
       }
 
@@ -169,7 +186,7 @@ export class EntityMutationFrame<
           mutation.toKey
         );
         physicallyChangedSubjectIds.add(mutation.subjectId);
-        requiresProjectionRebuild = true;
+        projectionRebuildRequired = true;
         continue;
       }
 
@@ -179,16 +196,28 @@ export class EntityMutationFrame<
         mutation.restoreAllowed
       );
       physicallyChangedSubjectIds.add(mutation.subjectId);
-      requiresProjectionRebuild = true;
-    }
-
-    if (requiresProjectionRebuild) {
-      this.materializedProjection.rebuild(this.structuralStore, this.valueStore);
+      projectionRebuildRequired = true;
     }
 
     return {
       physicallyChangedSubjectIds: [...physicallyChangedSubjectIds],
       allocatedSubjectIds,
+      projectionRebuildRequired,
+      projectionReplacements,
     };
+  }
+
+  project(commitResult: EntityMutationCommitResult<K, E>): void {
+    if (commitResult.projectionRebuildRequired) {
+      this.materializedProjection.rebuild(this.structuralStore, this.valueStore);
+      return;
+    }
+
+    for (const replacement of commitResult.projectionReplacements) {
+      this.materializedProjection.replaceEntry(
+        replacement.key,
+        replacement.nextValue
+      );
+    }
   }
 }

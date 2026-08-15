@@ -11,6 +11,10 @@ export class StructuralStore<K extends string | number> {
   private nextSubjectId = 1;
   private activeKeys: K[] = [];
 
+  planFreshSubjectIds(count: number): readonly number[] {
+    return Array.from({ length: count }, (_, index) => this.nextSubjectId + index);
+  }
+
   allocateFreshSubjectId(): number {
     const subjectId = this.nextSubjectId;
     this.nextSubjectId += 1;
@@ -126,6 +130,7 @@ export class StructuralStore<K extends string | number> {
   }
 
   createSubject(subjectId: number, key: K): void {
+    this.nextSubjectId = Math.max(this.nextSubjectId, subjectId + 1);
     this.activateSubject(subjectId, key);
     this.subjectRevisions.set(subjectId, 0);
     this.appendActiveKey(key);

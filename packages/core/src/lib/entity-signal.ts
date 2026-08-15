@@ -315,6 +315,14 @@ export function createEntitySignal<
     );
   }
 
+  function commitAndProjectEntityMutationFrame(
+    frame: EntityMutationFrame<K, E>
+  ) {
+    const result = frame.commit();
+    frame.project(result);
+    return result;
+  }
+
   /** Reactive signals for queries — all derived, none eagerly maintained. */
   const allSignal: Signal<E[]> = computed(() => {
     version();
@@ -554,7 +562,7 @@ export function createEntitySignal<
         };
         const frame = createEntityMutationFrame();
         frame.stageKeyTransfer(transfer);
-        const result = frame.commit();
+        const result = commitAndProjectEntityMutationFrame(frame);
         for (const changedSubjectId of result.physicallyChangedSubjectIds) {
           publishSubjectPhysicalChange(changedSubjectId);
         }
@@ -719,7 +727,7 @@ export function createEntitySignal<
     };
     const frame = createEntityMutationFrame();
     frame.stageSubjectRestore(restoration);
-    const result = frame.commit();
+    const result = commitAndProjectEntityMutationFrame(frame);
     for (const changedSubjectId of result.physicallyChangedSubjectIds) {
       publishSubjectPhysicalChange(changedSubjectId);
     }
@@ -799,19 +807,20 @@ export function createEntitySignal<
     }
 
     const transformedEntity = interceptAddedEntity(entity);
+    const subjectId = structuralStore.planFreshSubjectIds(1)[0];
+    if (subjectId === undefined) {
+      throw new Error(`Fresh subject planning for ${String(id)} did not produce an id.`);
+    }
 
     const frame = createEntityMutationFrame();
     const freshSubject: PreparedFreshSubject<K, E> = {
       kind: 'create-fresh-subject',
       key: id,
+      subjectId,
       nextValue: transformedEntity,
     };
     frame.stageFreshSubject(freshSubject);
-    const result = frame.commit();
-    const subjectId = result.allocatedSubjectIds[0];
-    if (subjectId === undefined) {
-      throw new Error(`Fresh subject allocation for ${String(id)} did not commit.`);
-    }
+    commitAndProjectEntityMutationFrame(frame);
     getSubjectStateSignal(subjectId);
     const beforeKey = previousKeys.at(-1);
     const historyEffect: PendingAddHistoryEffect = {
@@ -1226,7 +1235,7 @@ export function createEntitySignal<
       }
     }
 
-    const result = frame.commit();
+    const result = commitAndProjectEntityMutationFrame(frame);
     for (const changedSubjectId of result.physicallyChangedSubjectIds) {
       publishSubjectPhysicalChange(changedSubjectId);
     }
@@ -1539,13 +1548,30 @@ export function createEntitySignal<
         entity: interceptAddedEntity(entity),
         existingSubjectId,
       }));
+      const plannedFreshSubjectIds = structuralStore.planFreshSubjectIds(
+        stagedAdds.filter(({ existingSubjectId }) => existingSubjectId === undefined).length
+      );
+      let plannedFreshIndex = 0;
+      const preparedAdds = stagedAdds.map(({ id, entity, existingSubjectId }) => ({
+        id,
+        entity,
+        existingSubjectId,
+        subjectId:
+          existingSubjectId ?? plannedFreshSubjectIds[plannedFreshIndex++],
+      }));
 
       const frame = createEntityMutationFrame();
-      for (const { id, entity: transformedEntity, existingSubjectId } of stagedAdds) {
+      for (const {
+        id,
+        entity: transformedEntity,
+        existingSubjectId,
+        subjectId,
+      } of preparedAdds) {
         if (existingSubjectId === undefined) {
           frame.stageFreshSubject({
             kind: 'create-fresh-subject',
             key: id,
+            subjectId,
             nextValue: transformedEntity,
           });
           continue;
@@ -1559,13 +1585,9 @@ export function createEntitySignal<
         });
       }
 
-      const result = frame.commit();
-      const freshSubjectIds = result.allocatedSubjectIds;
+      commitAndProjectEntityMutationFrame(frame);
       const subjectIdsByKey = new Map<K, number>();
-      let freshIndex = 0;
-      for (const { id, existingSubjectId } of stagedAdds) {
-        const subjectId =
-          existingSubjectId ?? freshSubjectIds[freshIndex++];
+      for (const { id, subjectId } of preparedAdds) {
         subjectIdsByKey.set(id, subjectId);
       }
 
@@ -1573,7 +1595,11 @@ export function createEntitySignal<
       const processedIds: K[] = [];
       const addedEntities: Array<{ id: K; entity: E; subjectId: number }> = [];
 
-      for (const { entity: transformedEntity, id, existingSubjectId } of stagedAdds) {
+      for (const {
+        entity: transformedEntity,
+        id,
+        existingSubjectId,
+      } of preparedAdds) {
         const subjectId = subjectIdsByKey.get(id);
         if (subjectId === undefined) {
           throw new Error(`Entity with id ${String(id)} has no subject id`);
@@ -1672,7 +1698,7 @@ export function createEntitySignal<
       };
       const frame = createEntityMutationFrame();
       frame.stageValueReplacement(replacement);
-      frame.commit();
+      commitAndProjectEntityMutationFrame(frame);
       syncEntitySignal(id);
       updateSignals();
 
@@ -1742,7 +1768,7 @@ export function createEntitySignal<
       };
       const frame = createEntityMutationFrame();
       frame.stageValueReplacement(replacement);
-      frame.commit();
+      commitAndProjectEntityMutationFrame(frame);
       syncEntitySignal(id);
       updateSignals();
       pathNotifier.notify(
@@ -1820,7 +1846,7 @@ export function createEntitySignal<
           nextValue: finalUpdated,
         });
       }
-      frame.commit();
+      commitAndProjectEntityMutationFrame(frame);
 
       for (const { id } of updatedEntities) {
         syncEntitySignal(id);
@@ -1917,7 +1943,7 @@ export function createEntitySignal<
       };
       const frame = createEntityMutationFrame();
       frame.stageSubjectTombstone(tombstone);
-      const result = frame.commit();
+      const result = commitAndProjectEntityMutationFrame(frame);
       for (const changedSubjectId of result.physicallyChangedSubjectIds) {
         publishSubjectPhysicalChange(changedSubjectId);
       }
@@ -2007,7 +2033,7 @@ export function createEntitySignal<
         });
       }
 
-      const result = frame.commit();
+      const result = commitAndProjectEntityMutationFrame(frame);
       for (const changedSubjectId of result.physicallyChangedSubjectIds) {
         publishSubjectPhysicalChange(changedSubjectId);
       }
