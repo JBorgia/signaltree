@@ -25,6 +25,14 @@ type CollectionNode = {
   byIdOrFail(id: string | number): unknown;
   changeId(from: string | number, to: string | number): void;
   removeOne(id: string | number): void;
+  __planFreshAdd?(
+    key: string | number,
+    entity: unknown,
+    subjectId: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  };
   __planRemove?(
     key: string | number,
     subjectId: number
@@ -60,6 +68,7 @@ type CollectionNode = {
     publish(metaOverride?: UpdateMetadata): void;
   };
   __findKeyBySubjectId?(subjectId: number): string | number | undefined;
+  __inspectSubjectResources?(subjectId: number): { state: 'active' | 'tombstoned' } | undefined;
   __restoreOne?(
     key: string | number,
     entity: unknown,
@@ -520,6 +529,13 @@ function planHeterogeneousFrame(
       publish(metaOverride?: UpdateMetadata): void;
     };
   }> = [];
+  const plannedFreshAdds: Array<{
+    effect: ReversalEffect & { structural: 'add'; subjectId: number };
+    plan: {
+      commit(options?: { advancePhysicalRevision?: boolean }): void;
+      publish(metaOverride?: UpdateMetadata): void;
+    };
+  }> = [];
   const plannedRekeys: Array<{
     effect: ReversalEffect & { structural: 'rekey' };
     plan: {
@@ -549,11 +565,15 @@ function planHeterogeneousFrame(
       structuralOwnerPaths,
       effect
     );
+    const subjectInventory = collectionNode?.__inspectSubjectResources?.(effect.subjectId);
+    const isFreshSubject = subjectInventory === undefined;
     if (
       !collectionNode ||
       !historyEffect ||
       !collectionPath ||
-      typeof collectionNode.__planRestore !== 'function'
+      (isFreshSubject
+        ? typeof collectionNode.__planFreshAdd !== 'function'
+        : typeof collectionNode.__planRestore !== 'function')
     ) {
       scalarFrame?.discard();
       return undefined;
@@ -565,9 +585,33 @@ function planHeterogeneousFrame(
       return undefined;
     }
 
+    if (isFreshSubject) {
+      const planFreshAdd = collectionNode.__planFreshAdd;
+      if (typeof planFreshAdd !== 'function') {
+        scalarFrame?.discard();
+        return undefined;
+      }
+
+      plannedFreshAdds.push({
+        effect,
+        plan: planFreshAdd(
+          effect.after as string | number,
+          preparedSubject.value,
+          effect.subjectId
+        ),
+      });
+      continue;
+    }
+
+    const planRestore = collectionNode.__planRestore;
+    if (typeof planRestore !== 'function') {
+      scalarFrame?.discard();
+      return undefined;
+    }
+
     plannedRestores.push({
       effect,
-      plan: collectionNode.__planRestore(
+      plan: planRestore(
         effect.after as string | number,
         preparedSubject.value,
         effect.subjectId,
@@ -691,6 +735,10 @@ function planHeterogeneousFrame(
         plan.commit({ advancePhysicalRevision: false });
       }
 
+      for (const { plan } of plannedFreshAdds) {
+        plan.commit({ advancePhysicalRevision: false });
+      }
+
       for (const { plan } of plannedRestores) {
         plan.commit({ advancePhysicalRevision: false });
       }
@@ -716,6 +764,17 @@ function planHeterogeneousFrame(
       }
 
       for (const { effect, plan } of plannedRestores) {
+        plan.publish({
+          ...(getActiveWriteContext() ?? {}),
+          intent: 'system',
+          source: 'system',
+          causalMode: 'realization',
+          positionIds: [effect.owner],
+          subjectIds: [effect.subjectId],
+        });
+      }
+
+      for (const { effect, plan } of plannedFreshAdds) {
         plan.publish({
           ...(getActiveWriteContext() ?? {}),
           intent: 'system',

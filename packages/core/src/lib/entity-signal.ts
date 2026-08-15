@@ -854,6 +854,51 @@ export function createEntitySignal<
     };
   }
 
+  function planFreshAdd(
+    key: K,
+    entity: E,
+    subjectId: number
+  ): {
+    commit(options?: { advancePhysicalRevision?: boolean }): void;
+    publish(metaOverride?: UpdateMetadata): void;
+  } {
+    const existingState = resolveSubjectState(subjectId);
+    if (existingState) {
+      throw new Error(
+        `Subject ${String(subjectId)} already exists and cannot be realized as fresh.`
+      );
+    }
+
+    return {
+      commit(options?: { advancePhysicalRevision?: boolean }): void {
+        const frame = createEntityMutationFrame();
+        frame.stageFreshSubject({
+          kind: 'create-fresh-subject',
+          key,
+          subjectId,
+          nextValue: entity,
+        });
+        commitAndProjectEntityMutationFrame(frame, options);
+        getSubjectStateSignal(subjectId);
+        lastSubjectIds = [subjectId];
+        invalidateNodeCache(key);
+        syncEntitySignal(key);
+        updateSignals();
+      },
+      publish(metaOverride?: UpdateMetadata): void {
+        pathNotifier.notify(
+          `${basePath}.${String(key)}`,
+          entity,
+          undefined,
+          basePath,
+          [subjectId],
+          getPositionIdsForNotify(),
+          metaOverride
+        );
+      },
+    };
+  }
+
   function planRemove(
     key: K,
     subjectId: number
@@ -2787,6 +2832,11 @@ export function createEntitySignal<
   }
   Object.defineProperty(api, '__findKeyBySubjectId', {
     value: findKeyBySubjectId,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(api, '__planFreshAdd', {
+    value: planFreshAdd,
     enumerable: false,
     configurable: true,
   });
