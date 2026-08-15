@@ -7,6 +7,7 @@ import { getOwnedPositionIds } from './owned-mutation';
 import {
   createTreeScalarSlotRuntime as createTreeScalarSlotKernel,
   type ScalarSlotCommitResult,
+  type SingleSlotCommitResult,
 } from './tree-scalar-slot-runtime';
 import {
   createTreeScalarSlotRuntime,
@@ -123,14 +124,42 @@ describe('tree scalar slot runtime', () => {
   it('returns framework-neutral commit results from the scalar slot kernel', () => {
     const runtime = createTreeScalarSlotKernel();
     const stableSlot = runtime.createSlot('A', Object.is);
-    const result = runtime.writeSlot(stableSlot, 'A2');
+    const result = runtime.commitSlot(stableSlot, 'A2');
 
-    expect(result).toEqual<ScalarSlotCommitResult>({
+    expect(result).toEqual<SingleSlotCommitResult>({
       revision: 1,
-      changedSlots: [stableSlot],
+      changed: true,
+      slot: stableSlot,
     });
     expect(runtime.readSlot<string>(stableSlot)).toBe('A2');
     expect(runtime.revision()).toBe(1);
+  });
+
+  it('returns no change and preserves revision for an unchanged direct slot commit', () => {
+    const runtime = createTreeScalarSlotKernel();
+    const stableSlot = runtime.createSlot('A', Object.is);
+
+    expect(runtime.commitSlot(stableSlot, 'A')).toEqual<SingleSlotCommitResult>({
+      revision: 0,
+      changed: false,
+    });
+    expect(runtime.readSlot<string>(stableSlot)).toBe('A');
+    expect(runtime.revision()).toBe(0);
+  });
+
+  it('leaves value and revision untouched when direct slot equality throws', () => {
+    const runtime = createTreeScalarSlotKernel();
+    const slot = runtime.createSlot('A', (current, next) => {
+      if (!Object.is(current, next)) {
+        throw new Error('equality exploded');
+      }
+
+      return true;
+    });
+
+    expect(() => runtime.commitSlot(slot, 'A2')).toThrow('equality exploded');
+    expect(runtime.readSlot<string>(slot)).toBe('A');
+    expect(runtime.revision()).toBe(0);
   });
 
   it('publishes leaf writes through the Angular adapter after kernel commit', () => {

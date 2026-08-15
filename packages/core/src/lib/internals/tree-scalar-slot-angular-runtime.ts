@@ -6,6 +6,7 @@ import { isTraversableNode } from '../utils';
 import {
   createTreeScalarSlotRuntime as createTreeScalarSlotKernel,
   type ScalarSlotCommitResult,
+  type SingleSlotCommitResult,
   type ScalarSlotMutationFrame as ScalarSlotKernelMutationFrame,
   type TreeScalarSlotRuntime as TreeScalarSlotKernel,
 } from './tree-scalar-slot-runtime';
@@ -44,6 +45,14 @@ class AngularScalarSlotPublicationAdapter {
     for (const slotIndex of result.changedSlots) {
       this.getToken(slotIndex).update((value) => value + 1);
     }
+  }
+
+  publishSlot(result: SingleSlotCommitResult): void {
+    if (!result.changed) {
+      return;
+    }
+
+    this.getToken(result.slot).update((value) => value + 1);
   }
 
   private getToken(slotIndex: SlotIndex): WritableSignal<number> {
@@ -93,11 +102,11 @@ function createAngularLeaf<T>(
   }) as WritableSignal<T>;
 
   leaf.set = (value: T) => {
-    publication.publish(kernel.writeSlot(slotIndex, value));
+    publication.publishSlot(kernel.commitSlot(slotIndex, value));
   };
 
   leaf.update = (updater: (value: T) => T) => {
-    publication.publish(kernel.updateSlot(slotIndex, updater));
+    publication.publishSlot(kernel.updateSlot(slotIndex, updater));
   };
 
   return leaf;

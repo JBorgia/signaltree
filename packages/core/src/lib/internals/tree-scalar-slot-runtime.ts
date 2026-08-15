@@ -8,6 +8,17 @@ export interface ScalarSlotCommitResult {
   readonly changedSlots: readonly SlotIndex[];
 }
 
+export type SingleSlotCommitResult =
+  | {
+      readonly revision: number;
+      readonly changed: false;
+    }
+  | {
+      readonly revision: number;
+      readonly changed: true;
+      readonly slot: SlotIndex;
+    };
+
 export interface ScalarSlotMutationFrame {
   set(slotIndex: SlotIndex, value: unknown): void;
   update(slotIndex: SlotIndex, updater: (value: unknown) => unknown): void;
@@ -22,11 +33,11 @@ export interface TreeScalarSlotRuntime {
     positionId?: PositionId
   ): SlotIndex;
   readSlot<T>(slotIndex: SlotIndex): T;
-  writeSlot<T>(slotIndex: SlotIndex, value: T): ScalarSlotCommitResult;
+  commitSlot<T>(slotIndex: SlotIndex, value: T): SingleSlotCommitResult;
   updateSlot<T>(
     slotIndex: SlotIndex,
     updater: (value: T) => T
-  ): ScalarSlotCommitResult;
+  ): SingleSlotCommitResult;
   beginFrame(): ScalarSlotMutationFrame;
   resolveScalarSlot(positionId: PositionId): SlotIndex | undefined;
   revision(): number;
@@ -138,6 +149,29 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     };
   };
 
+  const commitSlot = <T>(
+    slotIndex: SlotIndex,
+    nextValue: T
+  ): SingleSlotCommitResult => {
+    assertSlotIndex(slotIndex);
+
+    if (equalities[slotIndex](values[slotIndex], nextValue)) {
+      return {
+        revision,
+        changed: false,
+      };
+    }
+
+    values[slotIndex] = nextValue;
+    revision += 1;
+
+    return {
+      revision,
+      changed: true,
+      slot: slotIndex,
+    };
+  };
+
   return {
     createSlot<T>(
       initialValue: T,
@@ -158,18 +192,15 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       assertSlotIndex(slotIndex);
       return values[slotIndex] as T;
     },
-    writeSlot<T>(slotIndex: SlotIndex, value: T): ScalarSlotCommitResult {
-      assertSlotIndex(slotIndex);
-      return commitSlots(new Map([[slotIndex, value]]));
+    commitSlot<T>(slotIndex: SlotIndex, value: T): SingleSlotCommitResult {
+      return commitSlot(slotIndex, value);
     },
     updateSlot<T>(
       slotIndex: SlotIndex,
       updater: (value: T) => T
-    ): ScalarSlotCommitResult {
+    ): SingleSlotCommitResult {
       assertSlotIndex(slotIndex);
-      return commitSlots(
-        new Map([[slotIndex, updater(values[slotIndex] as T)]])
-      );
+      return commitSlot(slotIndex, updater(values[slotIndex] as T));
     },
     beginFrame(): ScalarSlotMutationFrame {
       return new ScalarSlotMutationFrameImpl(

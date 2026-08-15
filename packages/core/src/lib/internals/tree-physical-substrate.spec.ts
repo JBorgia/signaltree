@@ -68,4 +68,38 @@ describe('tree physical substrate', () => {
       expect(seen).toEqual(['A|B', 'A2|B2']);
     });
   });
+
+  it('does not publish unchanged direct scalar writes and publishes exactly one changed slot write', () => {
+    TestBed.runInInjectionContext(() => {
+      const tree = signalTree({ a: 'A' }) as ISignalTree<{
+        a: { (): string; set(value: string): void };
+      }>;
+      const runtime = getTreeScalarSlotRuntime(tree.$);
+      if (!runtime) {
+        throw new Error('Expected scalar slot runtime on public signalTree path');
+      }
+
+      const seen: string[] = [];
+      effect(() => {
+        seen.push(tree.$.a());
+      });
+      TestBed.flushEffects();
+
+      const beforeRevision = runtime.revision();
+      tree.$.a.set('A');
+      TestBed.flushEffects();
+
+      expect(runtime.revision()).toBe(beforeRevision);
+      expect(seen).toEqual(['A']);
+
+      tree.$.a.set('A2');
+      expect(runtime.revision()).toBe(beforeRevision + 1);
+      expect(seen).toEqual(['A']);
+
+      TestBed.flushEffects();
+
+      expect(tree.$.a()).toBe('A2');
+      expect(seen).toEqual(['A', 'A2']);
+    });
+  });
 });
