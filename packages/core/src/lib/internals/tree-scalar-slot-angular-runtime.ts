@@ -10,6 +10,7 @@ import {
   type ScalarSlotMutationFrame as ScalarSlotKernelMutationFrame,
   type TreeScalarSlotRuntime as TreeScalarSlotKernel,
 } from './tree-scalar-slot-runtime';
+import { recordProductionSubstrateStat } from './production-substrate-stats';
 
 const TREE_SCALAR_SLOT_RUNTIME = Symbol.for('SignalTree:ScalarSlotRuntime');
 
@@ -38,10 +39,12 @@ class AngularScalarSlotPublicationAdapter {
   private readonly tokens: WritableSignal<number>[] = [];
 
   observe(slotIndex: SlotIndex): void {
+    recordProductionSubstrateStat('publicationDependencyReads');
     this.getToken(slotIndex)();
   }
 
   publish(result: ScalarSlotCommitResult): void {
+    recordProductionSubstrateStat('publications', result.changedSlots.length);
     for (const slotIndex of result.changedSlots) {
       this.getToken(slotIndex).update((value) => value + 1);
     }
@@ -52,6 +55,7 @@ class AngularScalarSlotPublicationAdapter {
       return;
     }
 
+    recordProductionSubstrateStat('publications');
     this.getToken(result.slot).update((value) => value + 1);
   }
 

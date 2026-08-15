@@ -1,5 +1,7 @@
 import { isTraversableNode } from '../utils';
 
+import { recordProductionSubstrateStat } from './production-substrate-stats';
+
 /**
  * Canonical Family-A tree walk — the traversal skeleton that every hand-rolled
  * NodeAccessor-tree visitor in this codebase used to re-implement: the
@@ -61,6 +63,7 @@ export function visitTree(
     if (!isTraversableNode(node)) return;
     if (seen.has(node)) return;
     seen.add(node);
+    recordProductionSubstrateStat('treeVisits');
 
     // Per-node action + recurse decision.
     if (visit(node, path, key, parent) === false) return;

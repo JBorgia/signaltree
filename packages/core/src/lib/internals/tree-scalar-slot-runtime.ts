@@ -1,5 +1,7 @@
 import type { PositionId } from '../types';
 
+import { recordProductionSubstrateStat } from './production-substrate-stats';
+
 type SlotIndex = number;
 type SlotEqualityFn = (current: unknown, next: unknown) => boolean;
 
@@ -123,6 +125,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
 
     for (const [slotIndex, nextValue] of staged) {
       assertSlotIndex(slotIndex);
+      recordProductionSubstrateStat('equalityChecks');
       if (equalities[slotIndex](values[slotIndex], nextValue)) {
         continue;
       }
@@ -140,8 +143,10 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     for (const { slotIndex, nextValue } of changed) {
       values[slotIndex] = nextValue;
     }
+    recordProductionSubstrateStat('slotWrites', changed.length);
 
     revision += 1;
+    recordProductionSubstrateStat('revisionIncrements');
 
     return {
       revision,
@@ -154,6 +159,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     nextValue: T
   ): SingleSlotCommitResult => {
     assertSlotIndex(slotIndex);
+    recordProductionSubstrateStat('equalityChecks');
 
     if (equalities[slotIndex](values[slotIndex], nextValue)) {
       return {
@@ -163,7 +169,9 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     }
 
     values[slotIndex] = nextValue;
+    recordProductionSubstrateStat('slotWrites');
     revision += 1;
+    recordProductionSubstrateStat('revisionIncrements');
 
     return {
       revision,
@@ -190,6 +198,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
     },
     readSlot<T>(slotIndex: SlotIndex): T {
       assertSlotIndex(slotIndex);
+      recordProductionSubstrateStat('slotReads');
       return values[slotIndex] as T;
     },
     commitSlot<T>(slotIndex: SlotIndex, value: T): SingleSlotCommitResult {
@@ -212,6 +221,7 @@ export function createTreeScalarSlotRuntime(): TreeScalarSlotRuntime {
       );
     },
     resolveScalarSlot(positionId: PositionId): SlotIndex | undefined {
+      recordProductionSubstrateStat('positionResolutions');
       return slotByPositionId.get(positionId);
     },
     revision(): number {
