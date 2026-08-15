@@ -4438,14 +4438,85 @@ describe('time-travel enhancer', () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    const turn = t.getTurns().at(-1) as {
+      __effects?: Array<
+        | {
+            kind: 'set';
+            position: number;
+            before: number;
+            after: number;
+            path: string;
+            ownerPath: string;
+          }
+        | {
+            kind: 'remove';
+            position: number;
+            subject: number;
+            key: number;
+            value: { id: number; name: string };
+            path: string;
+            ownerPath: string;
+            beforeSubject?: number;
+            afterSubject?: number;
+          }
+      >;
+    };
+    const turnEffects = turn.__effects;
+    if (!turnEffects || turnEffects.length !== 2) {
+      throw new Error('Expected one scalar and one remove effect in the captured turn');
+    }
+
     const realizationPort = getTreeRealizationPort(store.$);
     if (!realizationPort) {
       throw new Error('Expected tree-owned realization port');
     }
+    const setEffect = turnEffects.find(
+      (effect): effect is Extract<(typeof turnEffects)[number], { kind: 'set' }> =>
+        effect.kind === 'set'
+    );
+    const removeEffect = turnEffects.find(
+      (effect): effect is Extract<(typeof turnEffects)[number], { kind: 'remove' }> =>
+        effect.kind === 'remove'
+    );
+    if (!setEffect || !removeEffect) {
+      throw new Error('Expected mixed scalar and remove effects');
+    }
+
+    expect(
+      realizationPort.validateEffects([
+        {
+          owner: setEffect.position,
+          before: setEffect.after,
+          after: setEffect.before,
+          path: setEffect.path,
+          ownerPath: setEffect.ownerPath,
+        },
+        {
+          owner: removeEffect.position,
+          before: undefined,
+          after: removeEffect.key,
+          subjectId: removeEffect.subject,
+          path: removeEffect.path,
+          ownerPath: removeEffect.ownerPath,
+          structural: 'add',
+          structuralContext: {
+            kind: 'remove',
+            subject: removeEffect.subject,
+            key: removeEffect.key,
+            value: removeEffect.value,
+            beforeSubject: removeEffect.beforeSubject,
+            afterSubject: removeEffect.afterSubject,
+          },
+        },
+      ])
+    ).toBeUndefined();
+
+    const validateSpy = vi.spyOn(realizationPort, 'validateEffects');
     const applySpy = vi.spyOn(realizationPort, 'applyAtomically');
 
     store.undo();
 
+    expect(validateSpy).not.toHaveBeenCalled();
     expect(applySpy).not.toHaveBeenCalled();
     expect(store.$.count()).toBe(0);
     expect(store.$.rows.ids()).toEqual([7]);
