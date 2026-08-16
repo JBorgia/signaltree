@@ -505,16 +505,18 @@ function planHeterogeneousFrame(
   >();
   const planningPreparedContext = new PreparedRealizationContext();
   for (const effect of effects) {
-    if (
-      effect.structural === 'remove' &&
-      typeof effect.subjectId === 'number'
-    ) {
+    const removeEffect =
+      effect.structural === 'remove' && typeof effect.subjectId === 'number'
+        ? (effect as ReversalEffect & { structural: 'remove'; subjectId: number })
+        : undefined;
+
+    if (removeEffect) {
       const descriptor = descriptors.get(effect.owner);
       const collectionNode = resolveCollectionNode(
         tree,
         descriptor,
         structuralOwnerPaths,
-        effect
+        removeEffect
       );
       if (!collectionNode) {
         return undefined;
@@ -523,13 +525,13 @@ function planHeterogeneousFrame(
       const effectiveRemoveKey = resolveEffectiveRemoveKey(
         collectionNode,
         planningPreparedContext,
-        effect
+        removeEffect
       );
       if (effectiveRemoveKey === undefined) {
         return undefined;
       }
 
-      removeKeysByEffect.set(effect, effectiveRemoveKey);
+      removeKeysByEffect.set(removeEffect, effectiveRemoveKey);
     }
 
     updatePreparedRealizationContext(
@@ -1005,13 +1007,18 @@ function canApplyEffect(
       : false;
 
   switch (effect.structural) {
-    case 'remove':
+    case 'remove': {
+      const removeEffect =
+        typeof effect.subjectId === 'number'
+          ? (effect as ReversalEffect & { structural: 'remove'; subjectId: number })
+          : undefined;
       return (
-        (typeof effect.subjectId === 'number'
-          ? resolveEffectiveRemoveKey(ownerNode, preparedContext, effect) !== undefined
+        (removeEffect
+          ? resolveEffectiveRemoveKey(ownerNode, preparedContext, removeEffect) !== undefined
           : hasCollectionKey(ownerNode, effect.before as string | number)) &&
         (typeof effect.subjectId !== 'number' || currentSubjectKey !== undefined)
       );
+    }
     case 'rekey':
       return (
         (typeof effect.subjectId === 'number'
@@ -1105,9 +1112,13 @@ function applyEffect(
           );
           return;
         case 'remove': {
-          const effectiveRemoveKey =
+          const removeEffect =
             typeof effect.subjectId === 'number'
-              ? resolveEffectiveRemoveKey(ownerNode, undefined, effect)
+              ? (effect as ReversalEffect & { structural: 'remove'; subjectId: number })
+              : undefined;
+          const effectiveRemoveKey =
+            removeEffect
+              ? resolveEffectiveRemoveKey(ownerNode, undefined, removeEffect)
               : (effect.before as string | number);
           if (effectiveRemoveKey === undefined) {
             throw new Error(
@@ -1385,10 +1396,14 @@ function updatePreparedRealizationContext(
         return;
       }
 
+      const removeEffect = effect as ReversalEffect & {
+        structural: 'remove';
+        subjectId: number;
+      };
       const effectiveRemoveKey = resolveEffectiveRemoveKey(
         collectionNode,
         preparedContext,
-        effect
+        removeEffect
       );
       if (effectiveRemoveKey === undefined) {
         return;

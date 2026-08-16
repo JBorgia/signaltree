@@ -11,8 +11,26 @@ import {
   ENHANCER_META,
   SignalTreeRollbackError,
 } from '../../lib/types';
+import { AppliedHistory } from '../../lib/internals/causal-runtime/applied-history';
+import type {
+  CausalEffect,
+  PositionId as CausalPositionId,
+} from '../../lib/internals/causal-runtime/causal-types';
+import { rollbackPendingTurnAt } from '../../lib/internals/causal-runtime/pending-rollback';
+import { createRealizationContextSource } from '../../lib/internals/causal-runtime/realization-context';
+import {
+  createTreeRealizationAdapter,
+  defineTreeRealizationDescriptors,
+  defineTreeRealizationPort,
+  getTreeRealizationDescriptors,
+  getTreeRealizationPort,
+  rememberTreeRealizationDescriptor,
+} from '../../lib/internals/causal-runtime/tree-realization-adapter';
+import { TurnStore } from '../../lib/internals/causal-runtime/turn-store';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getMutationCaptureRuntime } from '../../lib/internals/mutation-capture-runtime';
+import { getOwnedPositionIds } from '../../lib/internals/owned-mutation';
+import { getPositionRegistry } from '../../lib/internals/position-registry';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { isTraversableNode } from '../../lib/utils';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
@@ -38,6 +56,7 @@ export type CollectionAddEffect = TurnEffectBase & {
   value: unknown;
   beforeSubject?: number;
   afterSubject?: number;
+  subjectPositions?: readonly number[];
 };
 
 export type CollectionRemoveEffect = TurnEffectBase & {
@@ -47,6 +66,7 @@ export type CollectionRemoveEffect = TurnEffectBase & {
   value: unknown;
   beforeSubject?: number;
   afterSubject?: number;
+  subjectPositions?: readonly number[];
 };
 
 export type CollectionRekeyEffect = TurnEffectBase & {
@@ -54,6 +74,7 @@ export type CollectionRekeyEffect = TurnEffectBase & {
   subject: number;
   beforeKey: string | number;
   afterKey: string | number;
+  subjectPositions?: readonly number[];
 };
 
 export type TurnEffect =
@@ -96,6 +117,7 @@ type CaptureBucket = {
   ownerPaths: Set<string>;
   subjectIds: Set<number>;
   positionIds: Set<number>;
+  baselineValues: Map<number, unknown>;
   effects: PendingEffectMap;
 };
 
@@ -461,6 +483,7 @@ function createCaptureBucket(): CaptureBucket {
     ownerPaths: new Set<string>(),
     subjectIds: new Set<number>(),
     positionIds: new Set<number>(),
+    baselineValues: new Map(),
     effects: new Map(),
   };
 }
@@ -490,6 +513,23 @@ export function getOrCreateInternalTransactionRuntime<T>(
   const pendingCreatedListeners = new Set<TransactionLifecycleListener>();
   const pendingConfirmedListeners = new Set<TransactionLifecycleListener>();
   const pendingDiscardedListeners = new Set<TransactionLifecycleListener>();
+  const treeWrapper = tree as unknown as object;
+  const stateRoot = tree.$ as unknown as object;
+  const realizationDescriptors =
+    getTreeRealizationDescriptors(stateRoot) ??
+    getTreeRealizationDescriptors(treeWrapper) ??
+    new Map();
+  defineTreeRealizationDescriptors(treeWrapper, realizationDescriptors);
+  defineTreeRealizationDescriptors(stateRoot, realizationDescriptors);
+  const realizationPort =
+    getTreeRealizationPort(stateRoot) ??
+    getTreeRealizationPort(treeWrapper) ??
+    createTreeRealizationAdapter({
+      tree: tree as unknown as ISignalTree<object>,
+      descriptors: realizationDescriptors,
+    });
+  defineTreeRealizationPort(treeWrapper, realizationPort);
+  defineTreeRealizationPort(stateRoot, realizationPort);
 
   const notifyListeners = (
     listeners: Set<TransactionLifecycleListener>,
@@ -519,6 +559,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
     ownerPaths: string[];
     subjectIds: number[];
     positionIds: number[];
+    baselineValues: Map<number, unknown>;
     effects: TurnEffect[];
   } => {
     const ownerPaths = Array.from(bucket.ownerPaths).sort();
@@ -527,9 +568,33 @@ export function getOrCreateInternalTransactionRuntime<T>(
     bucket.subjectIds.clear();
     const positionIds = Array.from(bucket.positionIds).sort((a, b) => a - b);
     bucket.positionIds.clear();
+    const baselineValues = new Map(bucket.baselineValues);
+    bucket.baselineValues.clear();
     const effects = Array.from(bucket.effects.values()).map(cloneTurnEffect);
     bucket.effects.clear();
-    return { ownerPaths, subjectIds, positionIds, effects };
+    return { ownerPaths, subjectIds, positionIds, baselineValues, effects };
+  };
+
+  const rememberBaselineValue = (
+    bucket: CaptureBucket,
+    effect: TurnEffect
+  ): void => {
+    if (!bucket.baselineValues.has(effect.position)) {
+      switch (effect.kind) {
+        case 'set':
+          bucket.baselineValues.set(effect.position, effect.before);
+          break;
+        case 'add':
+          bucket.baselineValues.set(effect.position, undefined);
+          break;
+        case 'remove':
+          bucket.baselineValues.set(effect.position, effect.key);
+          break;
+        case 'rekey':
+          bucket.baselineValues.set(effect.position, effect.beforeKey);
+          break;
+      }
+    }
   };
 
   const effectKey = (effect: TurnEffect): string => {
@@ -543,7 +608,11 @@ export function getOrCreateInternalTransactionRuntime<T>(
     }
   };
 
-  const enqueueEffect = (effectMap: PendingEffectMap, effect: TurnEffect): void => {
+  const enqueueEffect = (
+    bucket: CaptureBucket,
+    effectMap: PendingEffectMap,
+    effect: TurnEffect
+  ): void => {
     const key = effectKey(effect);
     const existing = effectMap.get(key);
     if (existing) {
@@ -559,6 +628,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
       }
       return;
     }
+    rememberBaselineValue(bucket, effect);
     effectMap.set(key, effect);
   };
 
@@ -597,6 +667,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
     !(value instanceof Set);
 
   const captureEffects = (
+    bucket: CaptureBucket,
     effectMap: PendingEffectMap,
     path: string,
     next: unknown,
@@ -610,7 +681,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
       ? buildTurnEffectFromHistory(meta, ownerPath, path, positionIds, subjectIds)
       : undefined;
     if (historyEffect) {
-      enqueueEffect(effectMap, historyEffect);
+      enqueueEffect(bucket, effectMap, historyEffect);
       return;
     }
 
@@ -631,7 +702,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
         if (before === after) {
           continue;
         }
-        enqueueEffect(effectMap, {
+        enqueueEffect(bucket, effectMap, {
           kind: 'set',
           path: `${path}.${key}`,
           ownerPath: ownerPath ?? path,
@@ -650,7 +721,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
       return;
     }
 
-    enqueueEffect(effectMap, {
+    enqueueEffect(bucket, effectMap, {
       kind: 'set',
       path,
       ownerPath: ownerPath ?? path,
@@ -703,7 +774,16 @@ export function getOrCreateInternalTransactionRuntime<T>(
     for (const positionId of resolvedPositionIds) {
       bucket.positionIds.add(positionId);
     }
+    rememberTreeRealizationDescriptor({
+      descriptors: realizationDescriptors,
+      path,
+      ownerPath,
+      positionIds: resolvedPositionIds,
+      subjectIds,
+      meta,
+    });
     captureEffects(
+      bucket,
       bucket.effects,
       path,
       next,
@@ -761,14 +841,135 @@ export function getOrCreateInternalTransactionRuntime<T>(
     );
   };
 
-  const drainTransactionEffects = (transactionId: number): TurnEffect[] => {
+  const drainTransactionRollbackInput = (
+    transactionId: number
+  ): { effects: TurnEffect[]; baselineValues: Map<number, unknown> } => {
     const bucket = pendingTransactions.get(transactionId);
     pendingTransactions.delete(transactionId);
     if (!bucket) {
-      return [];
+      return { effects: [], baselineValues: new Map() };
     }
-    const { effects } = drainCaptureBucket(bucket);
-    return effects.reverse();
+    const { effects, baselineValues } = drainCaptureBucket(bucket);
+    return { effects, baselineValues };
+  };
+
+  const toCausalEffect = (effect: TurnEffect): CausalEffect => {
+    switch (effect.kind) {
+      case 'set':
+        return {
+          owner: effect.position as CausalPositionId,
+          before: effect.before,
+          after: effect.after,
+          subjectId: effect.subject,
+        };
+      case 'add':
+        return {
+          owner: effect.position as CausalPositionId,
+          before: undefined,
+          after: effect.key,
+          subjectId: effect.subject,
+          structural: 'add',
+          structuralContext: {
+            kind: 'add',
+            subject: effect.subject,
+            key: effect.key,
+            value: effect.value,
+            beforeSubject: effect.beforeSubject,
+            afterSubject: effect.afterSubject,
+            subjectPositions: effect.subjectPositions,
+          },
+          subjectPositions: effect.subjectPositions,
+        };
+      case 'remove':
+        return {
+          owner: effect.position as CausalPositionId,
+          before: effect.key,
+          after: undefined,
+          subjectId: effect.subject,
+          structural: 'remove',
+          structuralContext: {
+            kind: 'remove',
+            subject: effect.subject,
+            key: effect.key,
+            value: effect.value,
+            beforeSubject: effect.beforeSubject,
+            afterSubject: effect.afterSubject,
+            subjectPositions: effect.subjectPositions,
+          },
+          subjectPositions: effect.subjectPositions,
+        };
+      case 'rekey':
+        return {
+          owner: effect.position as CausalPositionId,
+          before: effect.beforeKey,
+          after: effect.afterKey,
+          subjectId: effect.subject,
+          structural: 'rekey',
+          structuralContext: {
+            kind: 'rekey',
+            subject: effect.subject,
+            beforeKey: effect.beforeKey,
+            afterKey: effect.afterKey,
+            subjectPositions: effect.subjectPositions,
+          },
+          subjectPositions: effect.subjectPositions,
+        };
+    }
+  };
+
+  const rollbackThrownTransactionThroughRealizationPort = (
+    transactionId: number,
+    effects: TurnEffect[],
+    baselineValues: ReadonlyMap<number, unknown>,
+    callbackError: unknown
+  ): void => {
+    if (effects.length === 0) {
+      return;
+    }
+
+    const positionRegistry = getPositionRegistry(tree.$);
+    const authorityPosition = getOwnedPositionIds(tree.$)?.[0] as
+      | CausalPositionId
+      | undefined;
+    if (!positionRegistry || authorityPosition === undefined) {
+      throw createRollbackError({
+        kind: 'effect-validation-failed',
+        pendingTurnId: transactionId,
+        compensation: effects,
+        errorMessage: 'Transaction rollback requires tree realization infrastructure',
+        callbackError,
+      });
+    }
+
+    const store = new TurnStore();
+    store.admitPending({
+      id: transactionId,
+      effects: effects.map(toCausalEffect),
+    });
+    const appliedHistory = new AppliedHistory(store);
+    const realizationContext = createRealizationContextSource({
+      baselineValues,
+      store,
+      appliedHistory,
+    });
+    const result = rollbackPendingTurnAt({
+      authority: authorityPosition,
+      turnId: transactionId,
+      store,
+      topology: positionRegistry,
+      port: realizationPort,
+      realizationContext,
+    });
+    if (!result.ok) {
+      throw createRollbackError({
+        kind: 'effect-validation-failed',
+        pendingTurnId: transactionId,
+        compensation: effects,
+        errorMessage: `Transaction rollback refused: ${result.refusal.kind}`,
+        cause: result.refusal,
+        callbackError,
+      });
+    }
   };
 
   try {
@@ -867,6 +1068,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
             );
           } else {
             captureEffects(
+              pendingCapture,
               pendingCapture.effects,
               path,
               next,
@@ -932,23 +1134,16 @@ export function getOrCreateInternalTransactionRuntime<T>(
       } catch (error) {
         primaryError = error;
         notifier?.flushSync();
-        const transactionEffects = drainTransactionEffects(transactionId);
-        if (transactionEffects.length > 0) {
-          try {
-            applyRuntimeScopedEffects(transactionEffects, 'undo');
-          } catch (rollbackError) {
-            primaryError = createRollbackError({
-              kind: 'effect-validation-failed',
-              pendingTurnId: transactionId,
-              compensation: transactionEffects,
-              errorMessage:
-                rollbackError instanceof Error
-                  ? rollbackError.message
-                  : 'Unknown rollback validation failure',
-              cause: rollbackError,
-              callbackError: error,
-            });
-          }
+        const { effects, baselineValues } = drainTransactionRollbackInput(
+          transactionId
+        );
+        if (effects.length > 0) {
+          rollbackThrownTransactionThroughRealizationPort(
+            transactionId,
+            effects,
+            baselineValues,
+            error
+          );
         }
       } finally {
         try {

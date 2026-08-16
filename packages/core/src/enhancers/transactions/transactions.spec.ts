@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { getTreeRealizationPort } from '../../lib/internals/causal-runtime/tree-realization-adapter';
+import { getOwnedPositionIds } from '../../lib/internals/owned-mutation';
 import { entityMap } from '../../lib/markers/entity-map';
 import { LoadingState, status } from '../../lib/markers/status';
 import { stored } from '../../lib/markers/stored';
@@ -167,6 +169,10 @@ describe('transactions enhancer', () => {
     const store = signalTree({ left: '', right: '', outside: 'stable' }).with(
       transactions()
     );
+    expect(getOwnedPositionIds(store.$)?.length).toBeGreaterThan(0);
+    expect(getTreeRealizationPort(store.$)?.validateEffects).toBeTypeOf(
+      'function'
+    );
 
     expect(() =>
       store.transaction(() => {
@@ -180,7 +186,7 @@ describe('transactions enhancer', () => {
     expect(store()).toEqual({ left: '', right: '', outside: 'stable' });
   });
 
-  it('fails mixed structural thrown rollback on the stale post-rekey path even though the equivalent realization-backed abort now succeeds, leaves optimistic state live, and does not promote new confirmed history', async () => {
+  it('aborts a mixed structural thrown rollback through the realization port, restores baseline state, and does not reuse the fresh subject id', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
     );
@@ -235,41 +241,80 @@ describe('transactions enhancer', () => {
         store.$.rows.byIdOrFail('c').name.set('Charlie');
         throw new Error('boom');
       })
-    ).toThrow('SignalTree could not rollback the pending transaction');
+    ).toThrow('boom');
 
     expect(originalSubject).toBe(1);
     expect(abortedFreshSubject).toBe(2);
-    expect(store.$.count()).toBe(1);
-    expect(store.$.rows.ids()).toEqual(['c']);
+    expect(store.$.count()).toBe(0);
+    expect(store.$.rows.ids()).toEqual(['b']);
     expect(store()).toEqual({
-      count: 1,
-      rows: { all: [{ id: 'a', name: 'Charlie' }] },
+      count: 0,
+      rows: { all: [{ id: 'b', name: 'Base' }] },
     });
-    expect(store.$.rows.byIdOrFail('c').name.__subjectIds?.[0]).toBe(
-      abortedFreshSubject
+    expect(store.$.rows.byIdOrFail('b').name.__subjectIds?.[0]).toBe(
+      originalSubject
     );
     expect(store.__transactions.getConfirmedTurnCount()).toBe(baselineConfirmed);
     expect(store.__transactions.getPendingTurnCount()).toBe(baselinePending);
+
+    store.$.rows.addOne({ id: 'z', name: 'Zed' });
+    await Promise.resolve();
+    expect(store.$.rows.byIdOrFail('z').name.__subjectIds?.[0]).toBeGreaterThan(
+      abortedFreshSubject as number
+    );
   });
 
-  it('preserves callback failure details when thrown transaction rollback itself fails', async () => {
+  it('throws rollback error with preserved callback failure when realization-port validation refuses and does not fallback to the scoped resolver', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../../lib/path-notifier'
-    );
-    const { getOrCreateInternalTransactionRuntime } = await import(
-      './transactions'
     );
     resetPathNotifier();
     getPathNotifier().setBatchingEnabled(false);
 
-    const store = signalTree({ count: 0 });
-    const runtime = getOrCreateInternalTransactionRuntime(store, () => {
-      throw new Error('rollback failed');
-    });
+    const store = signalTree({
+      count: 0,
+      rows: entityMap<{ id: string; name: string }, string>({
+        selectId: (row) => row.id,
+      }),
+    }).with(transactions()) as {
+      $: {
+        count: () => number;
+        rows: {
+          addOne(row: { id: string; name: string }): void;
+          removeOne(id: string): void;
+          changeId(from: string, to: string): void;
+          ids(): string[];
+        };
+      };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+      __transactions: {
+        getConfirmedTurnCount(): number;
+        getPendingTurnCount(): number;
+      };
+    };
+
+    store.$.rows.addOne({ id: 'b', name: 'Base' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const baselineConfirmed = store.__transactions.getConfirmedTurnCount();
+    const baselinePending = store.__transactions.getPendingTurnCount();
+    const realizationPort = getTreeRealizationPort(store.$);
+    if (!realizationPort?.validateEffects) {
+      throw new Error('Expected transaction tree realization port');
+    }
+
+    const validateEffects = vi
+      .spyOn(realizationPort, 'validateEffects')
+      .mockImplementation(() => ({ kind: 'structural-drift' }));
+    const applyAtomically = vi.spyOn(realizationPort, 'applyAtomically');
 
     try {
-      runtime.transaction(() => {
+      store.transaction(() => {
         store.$.count.set(1);
+        store.$.rows.removeOne('b');
+        store.$.rows.addOne({ id: 'a', name: 'Alpha' });
+        store.$.rows.changeId('a', 'c');
         throw new Error('boom');
       });
       throw new Error('Expected thrown rollback to fail closed');
@@ -279,14 +324,22 @@ describe('transactions enhancer', () => {
       expect(rollbackError.cause).toMatchObject({
         kind: 'effect-validation-failed',
         pendingTurnId: 1,
-        errorMessage: 'rollback failed',
+        errorMessage: 'Transaction rollback refused: structural-drift',
         callbackError: expect.objectContaining({ message: 'boom' }),
-        cause: expect.objectContaining({ message: 'rollback failed' }),
+        cause: { kind: 'structural-drift' },
       });
+      expect(validateEffects).toHaveBeenCalledOnce();
+      expect(applyAtomically).not.toHaveBeenCalled();
+      expect(store.$.count()).toBe(1);
+      expect(store.$.rows.ids()).toEqual(['c']);
+      expect(store.__transactions.getConfirmedTurnCount()).toBe(
+        baselineConfirmed
+      );
+      expect(store.__transactions.getPendingTurnCount()).toBe(baselinePending);
     }
 
-    expect(runtime.getConfirmedTurnCount()).toBe(0);
-    expect(runtime.getPendingTurnCount()).toBe(0);
+    validateEffects.mockRestore();
+    applyAtomically.mockRestore();
   });
 
   it('keeps the primary transaction error when capture release cleanup also fails', async () => {
