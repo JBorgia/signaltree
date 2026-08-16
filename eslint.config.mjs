@@ -177,4 +177,37 @@ export default [
       'prefer-const': 'off',
     },
   },
+  {
+    // KERNEL NEUTRALITY GATE.
+    //
+    // "SignalTree owns truth. Angular owns observation." That rule is currently
+    // held by convention, and convention is exactly what erodes: measured on
+    // 2026-08-16, the 23 non-spec files under physical/ and causal-runtime/
+    // contain ZERO direct @angular imports. Neutrality is already true — this
+    // makes it stay true, which is the whole value. A framework import that
+    // reaches the physical or causal kernel should fail CI, not code review.
+    //
+    // This is enforcement, not extraction. No package boundary is implied and
+    // none should be created before GATE A: re-slicing packages during kernel
+    // freeze reopens the thing the freeze exists to close.
+    files: [
+      'packages/core/src/lib/physical/**/*.ts',
+      'packages/core/src/lib/internals/causal-runtime/**/*.ts',
+    ],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@angular/*', '@angular'],
+              message:
+                'The physical and causal kernel must stay framework-neutral. Angular belongs in the observation adapter (internals/tree-scalar-slot-angular-runtime.ts), not here. If the kernel needs a capability the adapter owns, inject it rather than importing it.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
