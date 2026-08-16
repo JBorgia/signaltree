@@ -152,6 +152,7 @@ export type TransactionTurnRecord = {
   __subjectIds?: number[];
   __positionIds?: number[];
   __effects?: TurnEffect[];
+  __baselineValues?: Map<number, unknown>;
 };
 
 type TransactionLifecycleListener = (turn: TransactionTurnRecord) => void;
@@ -353,7 +354,8 @@ class TransactionAuthority {
     ownerPaths?: string[],
     subjectIds?: number[],
     positionIds?: number[],
-    effects?: TurnEffect[]
+    effects?: TurnEffect[],
+    baselineValues?: ReadonlyMap<number, unknown>
   ): TransactionTurnRecord | undefined {
     if (
       (ownerPaths?.length ?? 0) === 0 &&
@@ -370,6 +372,7 @@ class TransactionAuthority {
       __subjectIds: subjectIds ? [...subjectIds] : undefined,
       __positionIds: positionIds ? [...positionIds] : undefined,
       __effects: effects ? effects.map(cloneTurnEffect) : undefined,
+      __baselineValues: baselineValues ? new Map(baselineValues) : undefined,
     };
   }
 
@@ -391,9 +394,16 @@ class TransactionAuthority {
     ownerPaths?: string[],
     subjectIds?: number[],
     positionIds?: number[],
-    effects?: TurnEffect[]
+    effects?: TurnEffect[],
+    baselineValues?: ReadonlyMap<number, unknown>
   ): TransactionTurnRecord | undefined {
-    const turn = this.buildTurn(ownerPaths, subjectIds, positionIds, effects);
+    const turn = this.buildTurn(
+      ownerPaths,
+      subjectIds,
+      positionIds,
+      effects,
+      baselineValues
+    );
     if (!turn) {
       return undefined;
     }
@@ -468,6 +478,9 @@ function cloneTurnRecord(turn: TransactionTurnRecord): TransactionTurnRecord {
     __subjectIds: turn.__subjectIds ? [...turn.__subjectIds] : undefined,
     __positionIds: turn.__positionIds ? [...turn.__positionIds] : undefined,
     __effects: turn.__effects ? turn.__effects.map(cloneTurnEffect) : undefined,
+    __baselineValues: turn.__baselineValues
+      ? new Map(turn.__baselineValues)
+      : undefined,
   };
 }
 
@@ -541,7 +554,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
     }
   };
 
-  const applyRuntimeScopedEffects = (
+  const _applyRuntimeScopedEffects = (
     effects: TurnEffect[],
     direction: 'undo' | 'redo'
   ): void => {
@@ -831,13 +844,14 @@ export function getOrCreateInternalTransactionRuntime<T>(
     if (!bucket) {
       return undefined;
     }
-    const { ownerPaths, subjectIds, positionIds, effects } =
+    const { ownerPaths, subjectIds, positionIds, effects, baselineValues } =
       drainCaptureBucket(bucket);
     return authority.createPending(
       ownerPaths.length > 0 ? ownerPaths : undefined,
       subjectIds.length > 0 ? subjectIds : undefined,
       positionIds.length > 0 ? positionIds : undefined,
-      effects.length > 0 ? effects : undefined
+      effects.length > 0 ? effects : undefined,
+      baselineValues.size > 0 ? baselineValues : undefined
     );
   };
 
@@ -861,13 +875,17 @@ export function getOrCreateInternalTransactionRuntime<T>(
           before: effect.before,
           after: effect.after,
           subjectId: effect.subject,
-        };
+          path: effect.path,
+          ownerPath: effect.ownerPath,
+        } as CausalEffect;
       case 'add':
         return {
           owner: effect.position as CausalPositionId,
           before: undefined,
           after: effect.key,
           subjectId: effect.subject,
+          path: effect.path,
+          ownerPath: effect.ownerPath,
           structural: 'add',
           structuralContext: {
             kind: 'add',
@@ -879,13 +897,15 @@ export function getOrCreateInternalTransactionRuntime<T>(
             subjectPositions: effect.subjectPositions,
           },
           subjectPositions: effect.subjectPositions,
-        };
+        } as CausalEffect;
       case 'remove':
         return {
           owner: effect.position as CausalPositionId,
           before: effect.key,
           after: undefined,
           subjectId: effect.subject,
+          path: effect.path,
+          ownerPath: effect.ownerPath,
           structural: 'remove',
           structuralContext: {
             kind: 'remove',
@@ -897,13 +917,15 @@ export function getOrCreateInternalTransactionRuntime<T>(
             subjectPositions: effect.subjectPositions,
           },
           subjectPositions: effect.subjectPositions,
-        };
+        } as CausalEffect;
       case 'rekey':
         return {
           owner: effect.position as CausalPositionId,
           before: effect.beforeKey,
           after: effect.afterKey,
           subjectId: effect.subject,
+          path: effect.path,
+          ownerPath: effect.ownerPath,
           structural: 'rekey',
           structuralContext: {
             kind: 'rekey',
@@ -913,15 +935,15 @@ export function getOrCreateInternalTransactionRuntime<T>(
             subjectPositions: effect.subjectPositions,
           },
           subjectPositions: effect.subjectPositions,
-        };
+        } as CausalEffect;
     }
   };
 
-  const rollbackThrownTransactionThroughRealizationPort = (
+  const rollbackPendingEffectsThroughRealizationPort = (
     transactionId: number,
     effects: TurnEffect[],
     baselineValues: ReadonlyMap<number, unknown>,
-    callbackError: unknown
+    callbackError?: unknown
   ): void => {
     if (effects.length === 0) {
       return;
@@ -1138,7 +1160,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
           transactionId
         );
         if (effects.length > 0) {
-          rollbackThrownTransactionThroughRealizationPort(
+          rollbackPendingEffectsThroughRealizationPort(
             transactionId,
             effects,
             baselineValues,
@@ -1213,7 +1235,11 @@ export function getOrCreateInternalTransactionRuntime<T>(
           const compensation = rollbackPlan.compensation;
           if (compensation.length > 0) {
             try {
-              applyRuntimeScopedEffects(compensation, 'undo');
+              rollbackPendingEffectsThroughRealizationPort(
+                pendingTurnId as number,
+                [...compensation].reverse(),
+                discardedTurn?.__baselineValues ?? new Map()
+              );
             } catch (error) {
               throw createRollbackError({
                 kind: 'effect-validation-failed',

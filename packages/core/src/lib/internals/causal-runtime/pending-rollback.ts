@@ -113,10 +113,13 @@ function createPendingRollbackEffects(
     }
   }
 
-  const firstEffectIndexByOwner = new Map<PositionId, number>();
+  const firstEffectIndexByOwner = new Map<string, number>();
   turn.effects.forEach((effect, index) => {
-    if (!firstEffectIndexByOwner.has(effect.owner)) {
-      firstEffectIndexByOwner.set(effect.owner, index);
+    const effectKey = hasInlineScopedLeafAddress(effect)
+      ? `${String(effect.owner)}\u0000${effect.path}`
+      : String(effect.owner);
+    if (!firstEffectIndexByOwner.has(effectKey)) {
+      firstEffectIndexByOwner.set(effectKey, index);
     }
   });
 
@@ -132,7 +135,10 @@ function createPendingRollbackEffects(
           }
         }
 
-        return firstEffectIndexByOwner.get(effect.owner) === index;
+        const effectKey = hasInlineScopedLeafAddress(effect)
+          ? `${String(effect.owner)}\u0000${effect.path}`
+          : String(effect.owner);
+        return firstEffectIndexByOwner.get(effectKey) === index;
       }
     )
     .map((effect) =>
@@ -161,6 +167,20 @@ function createPendingRollbackEffect(
     };
   }
 
+  if (hasInlineScopedLeafAddress(effect)) {
+    return {
+      owner: effect.owner,
+      before: effect.after,
+      after: effect.before,
+      subjectId: effect.subjectId,
+      path: effect.path,
+      ownerPath: effect.ownerPath,
+      structural,
+      structuralContext: effect.structuralContext,
+      subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
+    };
+  }
+
   return {
     owner: effect.owner,
     before: realizationContext.getCurrentValue(effect.owner),
@@ -170,6 +190,21 @@ function createPendingRollbackEffect(
     structuralContext: effect.structuralContext,
     subjectState: deriveSubjectState(turn, effect, turnId, realizationContext),
   };
+}
+
+function hasInlineScopedLeafAddress(
+  effect: CausalTurn['effects'][number]
+): effect is CausalTurn['effects'][number] & { path: string; ownerPath: string } {
+  const inlinePath = (effect as unknown as { path?: unknown }).path;
+  const inlineOwnerPath = (effect as unknown as { ownerPath?: unknown }).ownerPath;
+
+  return (
+    effect.structural === undefined &&
+    effect.subjectId === undefined &&
+    typeof inlinePath === 'string' &&
+    typeof inlineOwnerPath === 'string' &&
+    inlinePath !== inlineOwnerPath
+  );
 }
 
 function deriveStructuralRollbackBefore(

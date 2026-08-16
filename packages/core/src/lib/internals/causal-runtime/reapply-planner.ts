@@ -1,4 +1,9 @@
-import type { ConfirmedReapplyPlan, ReversalResult, TurnId } from './causal-types';
+import type {
+  CausalEffect,
+  ConfirmedReapplyPlan,
+  ReversalResult,
+  TurnId,
+} from './causal-types';
 import type { RealizationContext } from './realization-context';
 import type { TurnStore } from './turn-store';
 
@@ -37,17 +42,17 @@ function createReapplyEffects(
   realizationContext?: RealizationContext
 ): ConfirmedReapplyPlan['effects'] {
   if (!realizationContext) {
-    return turn.effects.map(
-      ({ owner, before, after, subjectId, structural, structuralContext, subjectPositions }) => ({
-      owner,
-      before,
-      after,
-      subjectId,
-      structural,
-        structuralContext,
-      subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
-    })
-    );
+    return turn.effects.map((effect) => ({
+      owner: effect.owner,
+      before: effect.before,
+      after: effect.after,
+      subjectId: effect.subjectId,
+      path: (effect as CausalEffect & { path?: string }).path,
+      ownerPath: (effect as CausalEffect & { ownerPath?: string }).ownerPath,
+      structural: effect.structural,
+      structuralContext: effect.structuralContext,
+      subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
+    }));
   }
 
   const currentByOwner = new Map<number, unknown>();
@@ -76,6 +81,8 @@ function createReapplyEffects(
       before,
       after: effect.after,
       subjectId: effect.subjectId,
+      path: (effect as CausalEffect & { path?: string }).path,
+      ownerPath: (effect as CausalEffect & { ownerPath?: string }).ownerPath,
       structural: undefined,
       structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,

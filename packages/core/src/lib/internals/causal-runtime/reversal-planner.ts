@@ -1,4 +1,5 @@
 import type { ConfirmedReversalPlan, ReversalResult, TurnId } from './causal-types';
+import type { CausalEffect } from './causal-types';
 import type { RealizationContext } from './realization-context';
 import type { TurnStore } from './turn-store';
 
@@ -39,14 +40,16 @@ function createReversalEffects(
   if (!realizationContext) {
     return [...turn.effects]
       .reverse()
-      .map(({ owner, before, after, subjectId, structural, structuralContext, subjectPositions }) => ({
-        owner,
-        before: after,
-        after: before,
-        subjectId,
-        structural: deriveUndoStructural(structural),
-        structuralContext,
-        subjectPositions: subjectPositions ? [...subjectPositions] : undefined,
+      .map((effect) => ({
+        owner: effect.owner,
+        before: effect.after,
+        after: effect.before,
+        subjectId: effect.subjectId,
+        path: (effect as CausalEffect & { path?: string }).path,
+        ownerPath: (effect as CausalEffect & { ownerPath?: string }).ownerPath,
+        structural: deriveUndoStructural(effect.structural),
+        structuralContext: effect.structuralContext,
+        subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,
         subjectState: undefined,
       }));
   }
@@ -78,6 +81,8 @@ function createReversalEffects(
       before,
       after,
       subjectId: effect.subjectId,
+      path: (effect as CausalEffect & { path?: string }).path,
+      ownerPath: (effect as CausalEffect & { ownerPath?: string }).ownerPath,
       structural,
       structuralContext: effect.structuralContext,
       subjectPositions: effect.subjectPositions ? [...effect.subjectPositions] : undefined,

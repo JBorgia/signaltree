@@ -888,7 +888,15 @@ function planScalarFrame(
   void tree;
   void descriptors;
   void structuralOwnerPaths;
-  if (effects.length === 0 || effects.some((effect) => effect.structural)) {
+  if (
+    effects.length === 0 ||
+    effects.some(
+      (effect) =>
+        effect.structural ||
+        hasInlineScopedAddress(effect) ||
+        hasInlineSubjectAddress(effect)
+    )
+  ) {
     return undefined;
   }
 
