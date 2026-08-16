@@ -49,6 +49,10 @@ export type ProjectionReplacement<
   nextValue: E;
 };
 
+export type ProjectionRemoval<K extends string | number> = {
+  key: K;
+};
+
 export type PreparedSubjectRestore<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -81,6 +85,7 @@ export type EntityMutationCommitResult<
   allocatedSubjectIds: readonly number[];
   projectionRebuildRequired: boolean;
   projectionReplacements: readonly ProjectionReplacement<K, E>[];
+  projectionRemovals: readonly ProjectionRemoval<K>[];
 };
 
 export class EntityMutationFrame<
@@ -123,6 +128,7 @@ export class EntityMutationFrame<
     const physicallyChangedSubjectIds = new Set<number>();
     const allocatedSubjectIds: number[] = [];
     const projectionReplacements: ProjectionReplacement<K, E>[] = [];
+    const projectionRemovals: ProjectionRemoval<K>[] = [];
     let projectionRebuildRequired = false;
 
     for (const mutation of this.mutations) {
@@ -196,7 +202,7 @@ export class EntityMutationFrame<
         mutation.restoreAllowed
       );
       physicallyChangedSubjectIds.add(mutation.subjectId);
-      projectionRebuildRequired = true;
+      projectionRemovals.push({ key: mutation.key });
     }
 
     return {
@@ -204,6 +210,7 @@ export class EntityMutationFrame<
       allocatedSubjectIds,
       projectionRebuildRequired,
       projectionReplacements,
+      projectionRemovals,
     };
   }
 
@@ -218,6 +225,10 @@ export class EntityMutationFrame<
         replacement.key,
         replacement.nextValue
       );
+    }
+
+    for (const removal of commitResult.projectionRemovals) {
+      this.materializedProjection.removeEntry(removal.key);
     }
   }
 }

@@ -725,8 +725,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
       expect(removeRow).toEqual({
         operation: 'entity-removeOne',
         positions: size,
-        projectionRebuilds: 1,
-        projectionEntriesVisited: size - 1,
+        projectionRebuilds: 0,
+        projectionEntriesVisited: 0,
         projectionReplacements: 0,
       });
 

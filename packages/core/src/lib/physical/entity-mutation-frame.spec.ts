@@ -82,25 +82,68 @@ describe('EntityMutationFrame', () => {
     expect(projection.get(1)).toEqual({ id: 1, name: 'Bob' });
   });
 
-  it('projects structural changes mechanically from coherent authoritative owners', () => {
+  it('preserves authoritative order when rekeying through projection rebuild', () => {
     const { frame, structuralStore, valueStore, projection } = createFrameHarness();
 
     structuralStore.createSubject(1, 1);
+    structuralStore.createSubject(2, 2);
+    structuralStore.createSubject(3, 3);
     valueStore.retainSubjectValue(1, { id: 1, name: 'Alice' });
+    valueStore.retainSubjectValue(2, { id: 2, name: 'Bob' });
+    valueStore.retainSubjectValue(3, { id: 3, name: 'Cara' });
     projection.replaceEntry(1, { id: 1, name: 'Alice' });
+    projection.replaceEntry(2, { id: 2, name: 'Bob' });
+    projection.replaceEntry(3, { id: 3, name: 'Cara' });
 
     frame.stageKeyTransfer({
       kind: 'transfer-key',
-      subjectId: 1,
-      fromKey: 1,
-      toKey: 2,
+      subjectId: 2,
+      fromKey: 2,
+      toKey: 4,
     });
 
     const result = frame.commit();
 
     expect(() => frame.project(result)).not.toThrow();
+    expect(Array.from(projection.entries())).toEqual([
+      [1, { id: 1, name: 'Alice' }],
+      [4, { id: 2, name: 'Bob' }],
+      [3, { id: 3, name: 'Cara' }],
+    ]);
+  });
+
+  it('projects remove incrementally and remains equivalent to authoritative rebuild', () => {
+    const { frame, structuralStore, valueStore, projection } = createFrameHarness();
+
+    structuralStore.createSubject(1, 1);
+    structuralStore.createSubject(2, 2);
+    valueStore.retainSubjectValue(1, { id: 1, name: 'Alice' });
+    valueStore.retainSubjectValue(2, { id: 2, name: 'Bob' });
+    projection.replaceEntry(1, { id: 1, name: 'Alice' });
+    projection.replaceEntry(2, { id: 2, name: 'Bob' });
+
+    frame.stageSubjectTombstone({
+      kind: 'tombstone-subject',
+      subjectId: 1,
+      key: 1,
+      restoreAllowed: true,
+    });
+
+    const rebuildSpy = vi.spyOn(projection, 'rebuild');
+    const result = frame.commit();
+
+    expect(() => frame.project(result)).not.toThrow();
+    expect(rebuildSpy).not.toHaveBeenCalled();
     expect(projection.get(1)).toBeUndefined();
-    expect(projection.get(2)).toEqual({ id: 1, name: 'Alice' });
+    expect(projection.get(2)).toEqual({ id: 2, name: 'Bob' });
+
+    const rebuiltProjection = new MaterializedEntityProjection<number, Item>();
+    rebuiltProjection.rebuild(structuralStore, valueStore);
+    expect(Array.from(projection.entries())).toEqual(
+      Array.from(rebuiltProjection.entries())
+    );
+
+    rebuildSpy.mockRestore();
   });
 
   it('documents only a catastrophic injected projection failure boundary after authoritative commit', () => {

@@ -22,6 +22,10 @@ export class MaterializedEntityProjection<
     this.storage.set(key, value);
   }
 
+  removeEntry(key: K): void {
+    this.storage.delete(key);
+  }
+
   rebuild(
     structuralStore: StructuralStore<K>,
     valueStore: EntityValueStore<E>
