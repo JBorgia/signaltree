@@ -1118,11 +1118,6 @@ export function getOrCreateInternalTransactionRuntime<T>(
         );
       } catch (error) {
         primaryError = error;
-        // Drop the speculative writes before compensating. The callback threw,
-        // so nothing it queued is committed truth and none of it may reach
-        // storage. Compensation below then writes the restored baseline as an
-        // ordinary post-commit write, rather than as a repair of a bad one.
-        settleCommitScope(transactionOwnerToken, transactionId, 'discard');
         notifier?.flushSync();
         const { effects, baselineValues } = drainTransactionRollbackInput(
           transactionId
@@ -1135,6 +1130,12 @@ export function getOrCreateInternalTransactionRuntime<T>(
             error
           );
         }
+        // Settle AFTER compensation. The queued speculative writes are dropped
+        // either way, but settling also releases whole-tree consumers waiting
+        // on this scope — and they must observe the RESTORED state, not the
+        // doomed one. Settling first made autoSave snapshot the value the
+        // transaction had just rejected.
+        settleCommitScope(transactionOwnerToken, transactionId, 'discard');
       } finally {
         try {
           releaseCapture?.();
@@ -1199,10 +1200,6 @@ export function getOrCreateInternalTransactionRuntime<T>(
           }
 
           lifecycle = 'rejected';
-          // Drop the speculative writes before compensating, for the same
-          // reason as the thrown-callback path: nothing this transaction
-          // authored is committed truth, so none of it may reach storage.
-          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
           let discardedTurn: TransactionTurnRecord | undefined;
           if (pendingTurnId !== undefined) {
             discardedTurn = authority.discardPending(pendingTurnId);
@@ -1229,6 +1226,10 @@ export function getOrCreateInternalTransactionRuntime<T>(
               });
             }
           }
+
+          // Settle AFTER compensation, for the same reason as the thrown path:
+          // consumers released by this scope must observe the restored state.
+          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
 
           if (discardedTurn) {
             notifyListeners(pendingDiscardedListeners, discardedTurn);

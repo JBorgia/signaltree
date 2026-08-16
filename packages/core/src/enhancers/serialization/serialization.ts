@@ -3,6 +3,10 @@ import type { HydrateMode } from '../../lib/internals/materialize-markers';
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { hydrateMarkerNode } from '../../lib/internals/materialize-markers';
+import {
+  hasOpenCommitScope,
+  onCommitScopesSettled,
+} from '../../lib/internals/commit-consequence';
 import { isTraversableNode } from '../../lib/utils';
 import { ISignalTree } from '../../lib/types';
 import type { EnhancerMeta } from '../../lib/types';
@@ -1170,6 +1174,45 @@ export function persistence(
       let previousState: unknown = tree();
       let pollingActive = true;
 
+      // Persistence is post-commit. autoSave serializes the WHOLE tree, so a
+      // snapshot taken while an explicit transaction is open would persist
+      // speculative state — the same defect stored() had, reached through a
+      // different API.
+      //
+      // stored() can read the transaction off the mutation's write context
+      // because it writes in that mutation's own stack. autoSave cannot: by
+      // the time this timer fires the transaction callback has returned while
+      // the transaction itself may still be pending. So it asks whether the
+      // tree has an unsettled scope instead, and re-arms on settlement.
+      //
+      // Deliberate consequence: a transaction that is never confirmed or
+      // rolled back holds autoSave indefinitely. That is the correct trade —
+      // an unresolved optimistic mutation has no committed truth to persist,
+      // and persisting it anyway is the bug being fixed.
+      let releaseSettleListener: (() => void) | null = null;
+
+      const runAutoSave = () => {
+        if (hasOpenCommitScope(tree as object)) {
+          if (!releaseSettleListener) {
+            releaseSettleListener = onCommitScopesSettled(
+              tree as object,
+              () => {
+                releaseSettleListener?.();
+                releaseSettleListener = null;
+                // Re-check rather than save blindly: another transaction may
+                // have opened while this one was settling.
+                runAutoSave();
+              }
+            );
+          }
+          return;
+        }
+
+        enhanced.save().catch((error) => {
+          console.error('[SignalTree] Auto-save failed:', error);
+        });
+      };
+
       // Hook into state changes to trigger auto-save
       const triggerAutoSave = () => {
         // Debounce saves
@@ -1177,11 +1220,7 @@ export function persistence(
           clearTimeout(saveTimeout);
         }
 
-        saveTimeout = setTimeout(() => {
-          enhanced.save().catch((error) => {
-            console.error('[SignalTree] Auto-save failed:', error);
-          });
-        }, debounceMs);
+        saveTimeout = setTimeout(runAutoSave, debounceMs);
       };
 
       // Try to use tree.subscribe() for reactive state watching
@@ -1240,6 +1279,10 @@ export function persistence(
             clearTimeout(saveTimeout);
             saveTimeout = undefined;
           }
+          // A deferred save must not outlive the tree: settling a scope after
+          // destroy() would otherwise resurrect a save on a dead tree.
+          releaseSettleListener?.();
+          releaseSettleListener = null;
         });
       }
     }
