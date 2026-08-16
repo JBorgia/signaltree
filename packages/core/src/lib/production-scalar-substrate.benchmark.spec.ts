@@ -807,7 +807,6 @@ function measureEntityFrameLogicalWorkRows(
 
   return rows;
 }
-
 function writeRows(report: {
   scalarRows: readonly ScalarTimingRow[];
   entityRows: readonly EntityTimingRow[];
@@ -1001,7 +1000,7 @@ describe('Complexity audit: entity structural projection maintenance', () => {
 
 describe('Complexity audit: structural store order bookkeeping', () => {
   it(
-    'proves which direct-frame structural mutations still inspect existing active keys',
+    'proves direct-frame structural mutations avoid inspecting unrelated active keys',
     () => {
     const stats = installProductionSubstrateStatsForTesting();
     const rows = measureEntityFrameLogicalWorkRows(
@@ -1016,8 +1015,8 @@ describe('Complexity audit: structural store order bookkeeping', () => {
       expect(addRow).toEqual({
         operation: 'entity-frame-addOne',
         positions: size,
-        structuralActiveKeyLookups: 1,
-        structuralActiveKeyEntriesVisited: size,
+        structuralActiveKeyLookups: 0,
+        structuralActiveKeyEntriesVisited: 0,
         structuralSubjectsCreated: 1,
         structuralSubjectTransfers: 0,
         structuralSubjectTombstones: 0,
@@ -1033,8 +1032,8 @@ describe('Complexity audit: structural store order bookkeeping', () => {
       expect(removeRow).toEqual({
         operation: 'entity-frame-removeOne',
         positions: size,
-        structuralActiveKeyLookups: 1,
-        structuralActiveKeyEntriesVisited: size,
+        structuralActiveKeyLookups: 0,
+        structuralActiveKeyEntriesVisited: 0,
         structuralSubjectsCreated: 0,
         structuralSubjectTransfers: 0,
         structuralSubjectTombstones: 1,
@@ -1050,8 +1049,8 @@ describe('Complexity audit: structural store order bookkeeping', () => {
       expect(changeIdRow).toEqual({
         operation: 'entity-frame-changeId',
         positions: size,
-        structuralActiveKeyLookups: 1,
-        structuralActiveKeyEntriesVisited: Math.floor(size / 2) + 1,
+        structuralActiveKeyLookups: 0,
+        structuralActiveKeyEntriesVisited: 0,
         structuralSubjectsCreated: 0,
         structuralSubjectTransfers: 1,
         structuralSubjectTombstones: 0,
