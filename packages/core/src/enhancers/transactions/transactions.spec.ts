@@ -449,9 +449,7 @@ describe('transactions enhancer', () => {
       },
     };
 
-    const runtime = getOrCreateInternalTransactionRuntime(store, () => {
-      /* no-op */
-    });
+    const runtime = getOrCreateInternalTransactionRuntime(store);
 
     expect(() =>
       runtime.transaction(() => {
@@ -487,9 +485,7 @@ describe('transactions enhancer', () => {
       },
     };
 
-    const runtime = getOrCreateInternalTransactionRuntime(store, () => {
-      /* no-op */
-    });
+    const runtime = getOrCreateInternalTransactionRuntime(store);
 
     expect(() =>
       runtime.transaction(() => {

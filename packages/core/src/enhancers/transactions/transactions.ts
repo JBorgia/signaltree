@@ -121,31 +121,6 @@ type CaptureBucket = {
   effects: PendingEffectMap;
 };
 
-type EntityCollectionLookupNode = {
-  byIdOrFail: (id: string | number) => Record<string, unknown>;
-};
-
-type EntityCollectionNode = EntityCollectionLookupNode & {
-  addOne: (value: unknown) => void;
-  removeOne: (id: string | number) => void;
-  changeId: (from: string | number, to: string | number) => void;
-  __findKeyBySubjectId?: (subject: number) => string | number | undefined;
-  __restoreOne?: (
-    key: string | number,
-    value: unknown,
-    subject: number,
-    beforeSubject?: number,
-    afterSubject?: number
-  ) => void;
-};
-
-type HistoryAwareCollectionNode = EntityCollectionNode;
-
-type CollectionResolution = {
-  ownerNode: HistoryAwareCollectionNode;
-  entityId: string | number;
-};
-
 export type TransactionTurnRecord = {
   id: number;
   __ownerPaths?: string[];
@@ -484,13 +459,6 @@ function cloneTurnRecord(turn: TransactionTurnRecord): TransactionTurnRecord {
   };
 }
 
-function parseEntityKey(raw: string): string | number {
-  if (/^-?\d+$/.test(raw)) {
-    return Number(raw);
-  }
-  return raw;
-}
-
 function createCaptureBucket(): CaptureBucket {
   return {
     ownerPaths: new Set<string>(),
@@ -502,8 +470,7 @@ function createCaptureBucket(): CaptureBucket {
 }
 
 export function getOrCreateInternalTransactionRuntime<T>(
-  tree: ISignalTree<T>,
-  applyScopedEffects: (effects: TurnEffect[], direction: 'undo' | 'redo') => void
+  tree: ISignalTree<T>
 ): InternalTransactionRuntime {
   const existing = (
     tree as unknown as Record<PropertyKey, unknown>
@@ -515,7 +482,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
   const authority = new TransactionAuthority();
   const transactionOwnerToken = {};
   let nextTransactionId = 1;
-  let isRestoring = false;
+  const isRestoring = false;
   let selfDirty = false;
   let unsubscribeFlush: (() => void) | null = null;
   let unsubscribeNotifications: (() => void) | null = null;
@@ -551,18 +518,6 @@ export function getOrCreateInternalTransactionRuntime<T>(
     const payload = cloneTurnRecord(turn);
     for (const listener of listeners) {
       listener(payload);
-    }
-  };
-
-  const _applyRuntimeScopedEffects = (
-    effects: TurnEffect[],
-    direction: 'undo' | 'redo'
-  ): void => {
-    isRestoring = true;
-    try {
-      applyScopedEffects(effects, direction);
-    } finally {
-      isRestoring = false;
     }
   };
 
@@ -1325,315 +1280,7 @@ export function transactions(): <T>(
   const enhancerFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & TransactionMethods => {
-    const resolveCollectionNode = (
-      root: Record<string, unknown>,
-      ownerPath: string,
-      path: string
-    ): CollectionResolution => {
-      const ownerSegments = ownerPath.split('.');
-      let cursor: unknown = root;
-      for (const segment of ownerSegments) {
-        if (!isTraversableNode(cursor)) {
-          throw new Error(`Cannot resolve owner path from ${path}`);
-        }
-        cursor = (cursor as Record<string, unknown>)[segment];
-      }
-
-      if (!isTraversableNode(cursor)) {
-        throw new Error(`Cannot resolve owner path from ${path}`);
-      }
-
-      const ownerNode = cursor as HistoryAwareCollectionNode;
-      if (
-        typeof ownerNode.byIdOrFail !== 'function' ||
-        typeof ownerNode.removeOne !== 'function' ||
-        typeof ownerNode.addOne !== 'function'
-      ) {
-        throw new Error(`Unsupported scoped undo path ${path}`);
-      }
-
-      const suffix = path.slice(ownerPath.length + 1);
-      const [entitySegment] = suffix.split('.');
-      if (!entitySegment) {
-        throw new Error(`Unsupported scoped undo path ${path}`);
-      }
-
-      return {
-        ownerNode,
-        entityId: parseEntityKey(entitySegment),
-      };
-    };
-
-    const resolveCollectionOwner = (
-      root: Record<string, unknown>,
-      ownerPath: string,
-      path: string
-    ): HistoryAwareCollectionNode => {
-      const ownerSegments = ownerPath.split('.');
-      let cursor: unknown = root;
-      for (const segment of ownerSegments) {
-        if (!isTraversableNode(cursor)) {
-          throw new Error(`Cannot resolve owner path from ${path}`);
-        }
-        cursor = (cursor as Record<string, unknown>)[segment];
-      }
-
-      if (!isTraversableNode(cursor)) {
-        throw new Error(`Cannot resolve owner path from ${path}`);
-      }
-
-      const ownerNode = cursor as HistoryAwareCollectionNode;
-      if (
-        typeof ownerNode.byIdOrFail !== 'function' ||
-        typeof ownerNode.changeId !== 'function'
-      ) {
-        throw new Error(`Unsupported scoped undo path ${path}`);
-      }
-
-      return ownerNode;
-    };
-
-    const resolveWritableLeaf = (
-      root: Record<string, unknown>,
-      path: string
-    ): { set?: (value: unknown) => void } => {
-      let cursor: unknown = root;
-      for (const segment of path.split('.')) {
-        if (!isTraversableNode(cursor)) {
-          throw new Error(`Cannot resolve scoped undo path ${path}`);
-        }
-        cursor = (cursor as Record<string, unknown>)[segment];
-      }
-
-      const leaf = cursor as { set?: (value: unknown) => void };
-      if (typeof leaf?.set !== 'function') {
-        throw new Error(`Unsupported scoped undo path ${path}`);
-      }
-
-      return leaf;
-    };
-
-    const hasLiveCollectionKey = (
-      ownerNode: EntityCollectionLookupNode,
-      key: string | number
-    ): boolean => {
-      try {
-        ownerNode.byIdOrFail(key);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    const resolveLiveKeyForSubject = (
-      ownerNode: HistoryAwareCollectionNode,
-      subject: number
-    ): string | number | undefined => ownerNode.__findKeyBySubjectId?.(subject);
-
-    const validateScopedEffects = (
-      effects: TurnEffect[],
-      direction: 'undo' | 'redo'
-    ): void => {
-      for (const effect of effects) {
-        switch (effect.kind) {
-          case 'set': {
-            resolveWritableLeaf(tree.$ as Record<string, unknown>, effect.path);
-            break;
-          }
-          case 'remove': {
-            const { ownerNode, entityId } = resolveCollectionNode(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            if (direction === 'undo') {
-              if (typeof ownerNode.__restoreOne !== 'function') {
-                throw new Error(`Unsupported scoped undo path ${effect.path}`);
-              }
-              if (hasLiveCollectionKey(ownerNode, effect.key)) {
-                throw new Error(`Cannot restore removed entity at ${effect.path}`);
-              }
-              if (resolveLiveKeyForSubject(ownerNode, effect.subject) !== undefined) {
-                throw new Error(`Cannot restore removed subject at ${effect.path}`);
-              }
-            } else {
-              const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
-              if (liveKey !== entityId) {
-                throw new Error(`Cannot remove missing subject at ${effect.path}`);
-              }
-            }
-            break;
-          }
-          case 'add': {
-            const { ownerNode } = resolveCollectionNode(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            if (direction === 'undo') {
-              const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
-              if (liveKey !== effect.key) {
-                throw new Error(`Cannot undo added subject at ${effect.path}`);
-              }
-            } else {
-              if (typeof ownerNode.__restoreOne !== 'function') {
-                throw new Error(`Unsupported scoped undo path ${effect.path}`);
-              }
-              if (hasLiveCollectionKey(ownerNode, effect.key)) {
-                throw new Error(`Cannot restore added entity at ${effect.path}`);
-              }
-              if (resolveLiveKeyForSubject(ownerNode, effect.subject) !== undefined) {
-                throw new Error(`Cannot restore added subject at ${effect.path}`);
-              }
-            }
-            break;
-          }
-          case 'rekey': {
-            const ownerNode = resolveCollectionOwner(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            const expectedSourceKey =
-              direction === 'undo' ? effect.afterKey : effect.beforeKey;
-            const expectedTargetKey =
-              direction === 'undo' ? effect.beforeKey : effect.afterKey;
-            const liveKey = resolveLiveKeyForSubject(ownerNode, effect.subject);
-            if (liveKey !== expectedSourceKey) {
-              throw new Error(`Cannot rekey missing subject at ${effect.path}`);
-            }
-            if (hasLiveCollectionKey(ownerNode, expectedTargetKey)) {
-              throw new Error(`Cannot rekey to occupied key at ${effect.path}`);
-            }
-            break;
-          }
-        }
-      }
-    };
-
-    const applyScopedEffects = (
-      effects: TurnEffect[],
-      direction: 'undo' | 'redo'
-    ): void => {
-      validateScopedEffects(effects, direction);
-      for (const effect of effects) {
-        switch (effect.kind) {
-          case 'set': {
-            const leaf = resolveWritableLeaf(
-              tree.$ as Record<string, unknown>,
-              effect.path
-            );
-            withWriteContext(
-              {
-                ...(getActiveWriteContext() ?? {}),
-                intent: 'system',
-                source: 'system',
-                causalMode: 'realization',
-                subjectIds:
-                  effect.subject === undefined ? undefined : [effect.subject],
-                positionIds: [effect.position],
-              },
-              () => {
-                leaf.set?.(direction === 'undo' ? effect.before : effect.after);
-              }
-            );
-            break;
-          }
-          case 'remove': {
-            const { ownerNode, entityId } = resolveCollectionNode(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            withWriteContext(
-              {
-                ...(getActiveWriteContext() ?? {}),
-                intent: 'system',
-                source: 'system',
-                causalMode: 'realization',
-                subjectIds: [effect.subject],
-                positionIds: [effect.position],
-              },
-              () => {
-                if (direction === 'undo') {
-                  ownerNode.__restoreOne?.(
-                    effect.key,
-                    effect.value,
-                    effect.subject,
-                    effect.beforeSubject,
-                    effect.afterSubject
-                  );
-                } else {
-                  ownerNode.removeOne(entityId);
-                }
-              }
-            );
-            break;
-          }
-          case 'add': {
-            const { ownerNode } = resolveCollectionNode(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            withWriteContext(
-              {
-                ...(getActiveWriteContext() ?? {}),
-                intent: 'system',
-                source: 'system',
-                causalMode: 'realization',
-                subjectIds: [effect.subject],
-                positionIds: [effect.position],
-              },
-              () => {
-                if (direction === 'undo') {
-                  const liveKey = resolveLiveKeyForSubject(
-                    ownerNode,
-                    effect.subject
-                  ) as string | number;
-                  ownerNode.removeOne(liveKey);
-                } else {
-                  ownerNode.__restoreOne?.(
-                    effect.key,
-                    effect.value,
-                    effect.subject,
-                    effect.beforeSubject,
-                    effect.afterSubject
-                  );
-                }
-              }
-            );
-            break;
-          }
-          case 'rekey': {
-            const ownerNode = resolveCollectionOwner(
-              tree.$ as Record<string, unknown>,
-              effect.ownerPath,
-              effect.path
-            );
-            withWriteContext(
-              {
-                ...(getActiveWriteContext() ?? {}),
-                intent: 'system',
-                source: 'system',
-                causalMode: 'realization',
-                subjectIds: [effect.subject],
-                positionIds: [effect.position],
-              },
-              () => {
-                ownerNode.changeId(
-                  direction === 'undo' ? effect.afterKey : effect.beforeKey,
-                  direction === 'undo' ? effect.beforeKey : effect.afterKey
-                );
-              }
-            );
-            break;
-          }
-        }
-      }
-    };
-
-    const runtime = getOrCreateInternalTransactionRuntime(tree, applyScopedEffects);
+    const runtime = getOrCreateInternalTransactionRuntime(tree);
 
     (tree as ISignalTree<T> & TransactionMethods).transaction = runtime.transaction;
 
