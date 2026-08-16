@@ -79,6 +79,10 @@ export class StructuralStore<K extends string | number> {
     return this.activeHead?.key;
   }
 
+  lastActiveKey(): K | undefined {
+    return this.activeTail?.key;
+  }
+
   moveKeysToFront(keys: readonly K[]): void {
     const nodes = keys
       .map((key) => this.activeNodesByKey.get(key))

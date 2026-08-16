@@ -19,6 +19,8 @@ export interface ProductionSubstrateStats {
   structuralSubjectTransfers: number;
   structuralSubjectTombstones: number;
   valueStoreWrites: number;
+  publicAddPreviousTailReads: number;
+  publicAddExistingKeysCopied: number;
 }
 
 type CounterName = keyof ProductionSubstrateStats;
@@ -60,6 +62,8 @@ export function resetProductionSubstrateStatsForTesting(
   stats.structuralSubjectTransfers = 0;
   stats.structuralSubjectTombstones = 0;
   stats.valueStoreWrites = 0;
+  stats.publicAddPreviousTailReads = 0;
+  stats.publicAddExistingKeysCopied = 0;
   return stats;
 }
 
@@ -96,5 +100,7 @@ function createProductionSubstrateStats(): ProductionSubstrateStats {
     structuralSubjectTransfers: 0,
     structuralSubjectTombstones: 0,
     valueStoreWrites: 0,
+    publicAddPreviousTailReads: 0,
+    publicAddExistingKeysCopied: 0,
   };
 }

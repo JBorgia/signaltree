@@ -100,6 +100,17 @@ type EntityLogicalWorkRow = {
   projectionRebuilds: number;
   projectionEntriesVisited: number;
   projectionReplacements: number;
+  publicAddPreviousTailReads: number;
+  publicAddExistingKeysCopied: number;
+};
+
+type PublicAddLogicalWorkRow = {
+  positions: number;
+  publicAddPreviousTailReads: number;
+  publicAddExistingKeysCopied: number;
+  structuralSubjectsCreated: number;
+  valueStoreWrites: number;
+  projectionAppends: number;
 };
 
 type ScalarHarness = {
@@ -733,6 +744,8 @@ function measureEntityLogicalWorkRows(
       projectionRebuilds: stats.projectionRebuilds,
       projectionEntriesVisited: stats.projectionEntriesVisited,
       projectionReplacements: stats.projectionReplacements,
+      publicAddPreviousTailReads: stats.publicAddPreviousTailReads,
+      publicAddExistingKeysCopied: stats.publicAddExistingKeysCopied,
     });
   };
 
@@ -807,6 +820,35 @@ function measureEntityFrameLogicalWorkRows(
 
   return rows;
 }
+
+function measurePublicAddLogicalWorkRows(
+  sizes: readonly number[],
+  stats: ProductionSubstrateStats
+): PublicAddLogicalWorkRow[] {
+  const rows: PublicAddLogicalWorkRow[] = [];
+
+  for (const size of sizes) {
+    const harness = createEntityHarness(size);
+
+    try {
+      resetProductionSubstrateStatsForTesting(stats);
+      harness.addOne();
+      rows.push({
+        positions: size,
+        publicAddPreviousTailReads: stats.publicAddPreviousTailReads,
+        publicAddExistingKeysCopied: stats.publicAddExistingKeysCopied,
+        structuralSubjectsCreated: stats.structuralSubjectsCreated,
+        valueStoreWrites: stats.valueStoreWrites,
+        projectionAppends: stats.projectionAppends,
+      });
+    } finally {
+      harness.destroy();
+    }
+  }
+
+  return rows;
+}
+
 function writeRows(report: {
   scalarRows: readonly ScalarTimingRow[];
   entityRows: readonly EntityTimingRow[];
@@ -859,6 +901,8 @@ describe('Complexity guard: production scalar substrate', () => {
           structuralSubjectTransfers: 0,
           structuralSubjectTombstones: 0,
           valueStoreWrites: 0,
+          publicAddPreviousTailReads: 0,
+          publicAddExistingKeysCopied: 0,
         });
 
         resetProductionSubstrateStatsForTesting(stats);
@@ -884,6 +928,8 @@ describe('Complexity guard: production scalar substrate', () => {
           structuralSubjectTransfers: 0,
           structuralSubjectTombstones: 0,
           valueStoreWrites: 0,
+          publicAddPreviousTailReads: 0,
+          publicAddExistingKeysCopied: 0,
         });
       } finally {
         harness.destroy();
@@ -919,6 +965,8 @@ describe('Complexity guard: production scalar substrate', () => {
             structuralSubjectTransfers: 0,
             structuralSubjectTombstones: 0,
             valueStoreWrites: 0,
+            publicAddPreviousTailReads: 0,
+            publicAddExistingKeysCopied: 0,
           });
         } finally {
           frameHarness.destroy();
@@ -945,6 +993,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
         projectionRebuilds: 0,
         projectionEntriesVisited: 0,
         projectionReplacements: 1,
+        publicAddPreviousTailReads: 0,
+        publicAddExistingKeysCopied: 0,
       });
 
       const addRow = rows.find(
@@ -956,6 +1006,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
         projectionRebuilds: 0,
         projectionEntriesVisited: 0,
         projectionReplacements: 0,
+        publicAddPreviousTailReads: 0,
+        publicAddExistingKeysCopied: 0,
       });
 
       const removeRow = rows.find(
@@ -967,6 +1019,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
         projectionRebuilds: 0,
         projectionEntriesVisited: 0,
         projectionReplacements: 0,
+        publicAddPreviousTailReads: 0,
+        publicAddExistingKeysCopied: 0,
       });
 
       const changeIdRow = rows.find(
@@ -978,6 +1032,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
         projectionRebuilds: 0,
         projectionEntriesVisited: 0,
         projectionReplacements: 0,
+        publicAddPreviousTailReads: 0,
+        publicAddExistingKeysCopied: 0,
       });
 
       const mixedRow = rows.find(
@@ -991,11 +1047,35 @@ describe('Complexity audit: entity structural projection maintenance', () => {
         projectionRebuilds: 0,
         projectionEntriesVisited: 0,
         projectionReplacements: 1,
+        publicAddPreviousTailReads: 0,
+        publicAddExistingKeysCopied: 0,
       });
     }
     },
     20_000
   );
+});
+
+describe('Complexity audit: public fresh-add bookkeeping', () => {
+  it('proves public add reads one tail anchor and copies no existing key order', () => {
+    const stats = installProductionSubstrateStatsForTesting();
+    const rows = measurePublicAddLogicalWorkRows(
+      STRUCTURAL_LOGICAL_AUDIT_SIZES,
+      stats
+    );
+
+    for (const size of STRUCTURAL_LOGICAL_AUDIT_SIZES) {
+      const row = rows.find((candidate) => candidate.positions === size);
+      expect(row).toEqual({
+        positions: size,
+        publicAddPreviousTailReads: 1,
+        publicAddExistingKeysCopied: 0,
+        structuralSubjectsCreated: 1,
+        valueStoreWrites: 1,
+        projectionAppends: 1,
+      });
+    }
+  });
 });
 
 describe('Complexity audit: structural store order bookkeeping', () => {

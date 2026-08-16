@@ -22,6 +22,7 @@ import {
 import type { PhysicalCommitClock } from './internals/physical-commit-clock';
 import { PathNotifier } from '../lib/path-notifier';
 import { getActiveWriteContext } from '../lib/write-context';
+import { recordProductionSubstrateStat } from './internals/production-substrate-stats';
 import { HISTORY_EXCLUDED, isTraversableNode } from './utils';
 
 // Angular's global dev-mode flag (defined by the Angular CLI; undefined in
@@ -1018,7 +1019,8 @@ export function createEntitySignal<
     opts?: AddOptions<E, K>
   ): { id: K; historyEffect: PendingAddHistoryEffect } {
     const id = deriveId(entity, opts);
-    const previousKeys = [...structuralStore.activeKeysSnapshot()];
+    const previousLastKey = structuralStore.lastActiveKey();
+    recordProductionSubstrateStat('publicAddPreviousTailReads');
 
     if (structuralStore.hasActiveKey(id)) {
       throw new Error(`Entity with id ${String(id)} already exists`);
@@ -1040,14 +1042,13 @@ export function createEntitySignal<
     frame.stageFreshSubject(freshSubject);
     commitAndProjectEntityMutationFrame(frame);
     getSubjectStateSignal(subjectId);
-    const beforeKey = previousKeys.at(-1);
     const historyEffect: PendingAddHistoryEffect = {
       kind: 'add',
       subject: subjectId,
       key: id,
       value: deepClone(transformedEntity),
       beforeSubject:
-        beforeKey === undefined ? undefined : allocateSubjectId(beforeKey),
+        previousLastKey === undefined ? undefined : allocateSubjectId(previousLastKey),
       subjectPositions: deriveSubjectPositions(id, transformedEntity),
     };
     lastSubjectIds = [subjectId];
