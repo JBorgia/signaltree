@@ -11,6 +11,10 @@ import {
   ENHANCER_META,
   SignalTreeRollbackError,
 } from '../../lib/types';
+import {
+  openCommitScope,
+  settleCommitScope,
+} from '../../lib/internals/commit-consequence';
 import { AppliedHistory } from '../../lib/internals/causal-runtime/applied-history';
 import type {
   CausalEffect,
@@ -1095,6 +1099,10 @@ export function getOrCreateInternalTransactionRuntime<T>(
       const transactionId = nextTransactionId++;
       pendingTransactions.set(transactionId, createCaptureBucket());
 
+      // Persistence is post-commit: open the deferral scope BEFORE the callback
+      // runs, so speculative writes inside it queue instead of reaching storage.
+      openCommitScope(transactionOwnerToken, transactionId, tree as object);
+
       const releaseCapture = captureRuntime?.activateCapture();
       let primaryError: unknown;
       let cleanupError: unknown;
@@ -1110,6 +1118,11 @@ export function getOrCreateInternalTransactionRuntime<T>(
         );
       } catch (error) {
         primaryError = error;
+        // Drop the speculative writes before compensating. The callback threw,
+        // so nothing it queued is committed truth and none of it may reach
+        // storage. Compensation below then writes the restored baseline as an
+        // ordinary post-commit write, rather than as a repair of a bad one.
+        settleCommitScope(transactionOwnerToken, transactionId, 'discard');
         notifier?.flushSync();
         const { effects, baselineValues } = drainTransactionRollbackInput(
           transactionId
@@ -1164,6 +1177,10 @@ export function getOrCreateInternalTransactionRuntime<T>(
               notifyListeners(pendingConfirmedListeners, confirmedTurn);
             }
           }
+          // The physical state this transaction authored is now committed
+          // truth, so its durable consequences may run. Last, so that a
+          // throwing storage backend cannot leave the turn unconfirmed.
+          settleCommitScope(transactionOwnerToken, transactionId, 'commit');
         },
         rollback(): void {
           if (lifecycle === 'rejected') {
@@ -1182,6 +1199,10 @@ export function getOrCreateInternalTransactionRuntime<T>(
           }
 
           lifecycle = 'rejected';
+          // Drop the speculative writes before compensating, for the same
+          // reason as the thrown-callback path: nothing this transaction
+          // authored is committed truth, so none of it may reach storage.
+          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
           let discardedTurn: TransactionTurnRecord | undefined;
           if (pendingTurnId !== undefined) {
             discardedTurn = authority.discardPending(pendingTurnId);

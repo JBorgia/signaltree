@@ -265,11 +265,14 @@ describe('plannedSignalTree prototype', () => {
       tree.$.theme.set('dark');
     });
 
+    // Persistence is post-commit: the live tree shows the speculative value,
+    // but nothing durable has moved while the transaction is unconfirmed.
     expect(tree.$.theme()).toBe('dark');
-    expect(JSON.parse(storage.getItem('planned-stored-transaction') as string).data).toBe('dark');
+    expect(JSON.parse(storage.getItem('planned-stored-transaction') as string).data).toBe('light');
 
     pending.rollback();
 
+    // Storage never held 'dark', so the rollback has nothing to repair.
     expect(tree.$.theme()).toBe('light');
     expect(JSON.parse(storage.getItem('planned-stored-transaction') as string).data).toBe('light');
   });

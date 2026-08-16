@@ -9,6 +9,7 @@ import {
 } from '../internals/owned-mutation';
 
 import { getActiveWriteContext } from '../write-context';
+import { deferCommitConsequence } from '../internals/commit-consequence';
 
 declare const ngDevMode: boolean | undefined;
 
@@ -102,6 +103,13 @@ export interface StoredOptions<T> {
    * Debounce delay in ms for writes (default: 100).
    * Set to 0 for immediate, synchronous writes in the caller's stack —
    * equivalent durability to calling `storage.setItem` yourself.
+   *
+   * Inside an explicit `transaction()` this guarantee is deliberately
+   * suspended: persistence is post-commit, so the write is held until the
+   * transaction is confirmed and dropped entirely if it is rolled back. A
+   * transaction that is never settled never persists. Outside a transaction
+   * the write still commits in its own stack, so `0` is durable the moment
+   * `set()` returns exactly as before.
    */
   debounceMs?: number;
   /**
@@ -827,9 +835,8 @@ export function createStoredSignal<T>(
     writeNow(value);
   };
 
-  const saveToStorage = (value: T): void => {
-    if (!storage) return;
-
+  // Durable write, once the value is known to be committed truth.
+  const saveCommitted = (value: T): void => {
     // Immediate mode: write synchronously in the caller's stack, so the
     // value is durable the moment set() returns.
     if (debounceMs === 0) {
@@ -837,6 +844,38 @@ export function createStoredSignal<T>(
       return;
     }
 
+    scheduleDebounced(value);
+  };
+
+  const saveToStorage = (value: T): void => {
+    if (!storage) return;
+
+    // Persistence is post-commit. A write made inside an explicit transaction
+    // is speculative until that transaction is confirmed, so it is queued as a
+    // commit consequence rather than written here. Writes to this same signal
+    // later in the transaction replace the queued one, so storage sees a
+    // single coherent value per key instead of every intermediate.
+    //
+    // Outside a transaction there is nothing to wait for: the write commits in
+    // its own stack, so it falls straight through and `debounceMs: 0` keeps
+    // its same-stack durability guarantee.
+    const meta = getActiveWriteContext();
+    const owner = meta?.transactionOwner;
+    const transactionId = meta?.transactionId;
+    if (
+      owner !== undefined &&
+      typeof transactionId === 'number' &&
+      deferCommitConsequence(owner, transactionId, sig, () =>
+        saveCommitted(value)
+      )
+    ) {
+      return;
+    }
+
+    saveCommitted(value);
+  };
+
+  const scheduleDebounced = (value: T): void => {
     // Debounced write - coalesce rapid updates to a single write
     pendingValue = value;
     hasPending = true;

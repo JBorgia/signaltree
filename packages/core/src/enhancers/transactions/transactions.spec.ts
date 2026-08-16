@@ -148,11 +148,16 @@ describe('transactions enhancer', () => {
       store.$.theme.set('dark');
     });
 
+    // Persistence is post-commit. The live tree carries the speculative value
+    // immediately, but storage must not: this assertion read 'dark' until the
+    // 1.0 ordering decision, which is precisely the defect it was pinning.
     expect(store.$.theme()).toBe('dark');
-    expect(JSON.parse(map.get('tx-stored') as string).data).toBe('dark');
+    expect(JSON.parse(map.get('tx-stored') as string).data).toBe('light');
 
     pending.rollback();
 
+    // The rollback restores the tree; storage needs no compensating write
+    // because the speculative value was never durable.
     expect(store.$.theme()).toBe('light');
     expect(JSON.parse(map.get('tx-stored') as string).data).toBe('light');
     expect(store.__transactions.getConfirmedTurnCount()).toBe(0);

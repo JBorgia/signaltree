@@ -5,36 +5,31 @@ import { signalTree } from '../signal-tree';
 import { stored } from './stored';
 
 /**
- * CHARACTERIZATION — `stored()` consequence ordering vs. the commit boundary.
+ * `stored()` consequence ordering — the marker-level pin for
+ * "Persistence is post-commit" (RELEASE-1.0.md Release Invariants).
  *
- * These tests assert what HEAD ACTUALLY DOES, not what it should do. They exist
- * to make the gap concrete and reviewable, because two documents disagree:
+ * This file was committed at 83e241ef as a CHARACTERIZATION of the opposite
+ * behavior: at that commit `stored()` wrote through from `afterSet`, so a
+ * pending transaction was already durable, two keys tore, and an aborted
+ * transaction persisted a doomed value and then repaired it. Those assertions
+ * are inverted here, which is exactly the signal the original docblock
+ * promised. The mechanism now enforcing the ordering lives in
+ * `internals/commit-consequence.ts`; its own falsifiers — explicit
+ * attribution, cross-identity isolation, idempotent settle — are in
+ * `internals/commit-consequence.spec.ts`. What remains here is the guarantee
+ * as a CONSUMER of `stored()` observes it.
  *
- *   RELEASE-1.0.md  "Persistence is post-commit."
- *                   "All expected fallible semantic work precedes private commit."
- *   TODO.md §1      "failed PREPARE -> zero persistence writes"
- *                   "atomic multi-field/frame commit -> persistence sees only
- *                    final coherent state"
- *
- *   stored.ts:833   "Immediate mode: write synchronously in the caller's stack,
- *                    so the value is durable the moment set() returns."
- *
- * The marker writes through `saveToStorage` from `afterSet`/`afterUpdate`
- * (stored.ts:892-897), which runs inside the mutation's own stack — before the
- * transaction that contains it has been confirmed or even sealed. The tests
- * below measure the three consequences of that.
- *
- * If the ordering is changed so persistence is genuinely post-commit, every
- * assertion in this file inverts. That is the intended signal, not a
- * regression: this file is the falsifier for the "stored() consequence
- * ordering" item in RELEASE-1.0.md Phase 1.
+ * One limit is recorded rather than fixed, in the last test: `Storage` has no
+ * multi-key atomic write, so N stored keys in one transaction remain N
+ * `setItem` calls. They are now all post-commit — every value an observer can
+ * see is a committed value — but the SEQUENCE is still observable. A tree that
+ * needs cross-key atomicity in storage wants `persistence()`, which serializes
+ * the whole tree under a single key.
  */
 
 interface Recorder {
   readonly adapter: Storage;
-  /** One entry per setItem/removeItem, in order. */
   readonly log: Array<{ op: 'set' | 'remove'; key: string }>;
-  /** Full snapshot of the store taken after each write. */
   readonly snapshots: Array<Record<string, string>>;
 }
 
@@ -73,14 +68,13 @@ function recordingStorage(seed: Record<string, unknown> = {}): Recorder {
   return { adapter, log, snapshots };
 }
 
-/** Read the payload a `stored()` marker wrote, from a raw snapshot. */
 function dataIn(snapshot: Record<string, string>, key: string): unknown {
   const raw = snapshot[key];
   return raw === undefined ? undefined : JSON.parse(raw).data;
 }
 
-describe('stored() consequence ordering (characterization of HEAD)', () => {
-  it('persists a pending transaction BEFORE it is confirmed', async () => {
+describe('stored() consequence ordering', () => {
+  it('does not persist a pending transaction until it is confirmed', async () => {
     const { resetPathNotifier } = await import('../path-notifier');
     resetPathNotifier();
 
@@ -100,60 +94,18 @@ describe('stored() consequence ordering (characterization of HEAD)', () => {
       store.$.theme.set('dark');
     });
 
-    // The transaction has NOT been confirmed, yet storage is already mutated.
-    // Under "persistence is post-commit" this write must not have happened yet.
-    expect(rec.log).toEqual([{ op: 'set', key: 'sco-pending' }]);
-    expect(dataIn(rec.snapshots[0], 'sco-pending')).toBe('dark');
+    // Live tree advanced; durable state has not.
+    expect(store.$.theme()).toBe('dark');
+    expect(rec.log).toEqual([]);
+    expect(dataIn({ 'sco-pending': rec.adapter.getItem('sco-pending') as string }, 'sco-pending')).toBe('light');
 
-    pending.rollback();
-
-    // Rollback repairs the value by writing again, rather than by never having
-    // written. Durable state was wrong in between; a crash here loses the repair.
-    expect(rec.log).toHaveLength(2);
-    expect(dataIn(rec.snapshots[1], 'sco-pending')).toBe('light');
-  });
-
-  it('exposes a torn intermediate state across two stored keys in one transaction', async () => {
-    const { getPathNotifier, resetPathNotifier } = await import(
-      '../path-notifier'
-    );
-    resetPathNotifier();
-    getPathNotifier().setBatchingEnabled(false);
-
-    const rec = recordingStorage({ 'sco-a': 'a0', 'sco-b': 'b0' });
-
-    const store = signalTree({
-      a: stored('sco-a', 'a0', { storage: rec.adapter, debounceMs: 0 }),
-      b: stored('sco-b', 'b0', { storage: rec.adapter, debounceMs: 0 }),
-    }).with(transactions()) as {
-      $: {
-        a: { (): string; set(value: string): void };
-        b: { (): string; set(value: string): void };
-      };
-      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
-    };
-
-    const pending = store.transaction(() => {
-      store.$.a.set('a1');
-      store.$.b.set('b1');
-    });
     pending.confirm();
 
-    // Two separate writes, not one atomic frame.
-    expect(rec.log.map((e) => e.key)).toEqual(['sco-a', 'sco-b']);
-
-    // Snapshot 0 is the torn state: `a` advanced, `b` still at its old value.
-    // A reload, a `storage` event in another tab, or a crash at this instant
-    // observes a combination that never existed as a committed tree state.
-    expect(dataIn(rec.snapshots[0], 'sco-a')).toBe('a1');
-    expect(dataIn(rec.snapshots[0], 'sco-b')).toBe('b0');
-
-    // Only the final snapshot is coherent.
-    expect(dataIn(rec.snapshots[1], 'sco-a')).toBe('a1');
-    expect(dataIn(rec.snapshots[1], 'sco-b')).toBe('b1');
+    expect(rec.log).toEqual([{ op: 'set', key: 'sco-pending' }]);
+    expect(dataIn(rec.snapshots[0], 'sco-pending')).toBe('dark');
   });
 
-  it('writes to storage during a transaction that then throws', async () => {
+  it('never makes a doomed value durable when the transaction throws', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../path-notifier'
     );
@@ -181,16 +133,89 @@ describe('stored() consequence ordering (characterization of HEAD)', () => {
 
     await Promise.resolve();
 
-    // "failed PREPARE -> zero persistence writes" would require log.length === 0.
-    // HEAD writes the doomed value, then writes the baseline back.
-    expect(rec.log.length).toBeGreaterThan(0);
-    expect(dataIn(rec.snapshots[0], 'sco-throw')).toBe('doomed');
-
-    // The in-memory tree is repaired...
+    // Correctness is "never wrote", not "wrote and compensated": no snapshot
+    // storage ever held may contain the rejected value.
+    for (const snapshot of rec.snapshots) {
+      expect(dataIn(snapshot, 'sco-throw')).not.toBe('doomed');
+    }
     expect(store.$.v()).toBe('keep');
-    // ...and storage converges too, but only via a compensating write.
-    expect(dataIn(rec.snapshots[rec.snapshots.length - 1], 'sco-throw')).toBe(
-      'keep'
+    expect(rec.adapter.getItem('sco-throw')).toContain('keep');
+  });
+
+  it('collapses repeated writes to one key into a single committed write', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
     );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-collapse': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-collapse', 'v0', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(value: string): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => {
+      store.$.v.set('v1');
+      store.$.v.set('v2');
+      store.$.v.set('v3');
+    });
+    pending.confirm();
+
+    // Three sets, one durable write, final value only. No intermediate value
+    // was ever observable in storage.
+    expect(rec.log).toHaveLength(1);
+    expect(dataIn(rec.snapshots[0], 'sco-collapse')).toBe('v3');
+  });
+
+  it('RECORDED LIMIT: multi-key writes are all post-commit but not one atomic store write', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-a': 'a0', 'sco-b': 'b0' });
+
+    const store = signalTree({
+      a: stored('sco-a', 'a0', { storage: rec.adapter, debounceMs: 0 }),
+      b: stored('sco-b', 'b0', { storage: rec.adapter, debounceMs: 0 }),
+    }).with(transactions()) as {
+      $: {
+        a: { (): string; set(value: string): void };
+        b: { (): string; set(value: string): void };
+      };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => {
+      store.$.a.set('a1');
+      store.$.b.set('b1');
+    });
+
+    // Nothing durable before commit — this is the part that IS guaranteed.
+    expect(rec.log).toEqual([]);
+
+    pending.confirm();
+
+    // Both writes happen after the commit, in order. The intermediate snapshot
+    // still shows a1/b0, because `Storage` exposes no way to write two keys
+    // atomically. Every value visible there is a COMMITTED value — the
+    // speculative one never appears — but a crash between the two setItem
+    // calls can still leave a mixed pair. Use `persistence()` (single key,
+    // whole tree) when cross-key atomicity is required.
+    expect(rec.log.map((e) => e.key)).toEqual(['sco-a', 'sco-b']);
+    expect(dataIn(rec.snapshots[0], 'sco-a')).toBe('a1');
+    expect(dataIn(rec.snapshots[0], 'sco-b')).toBe('b0');
+    for (const snapshot of rec.snapshots) {
+      expect(['a0', 'a1']).toContain(dataIn(snapshot, 'sco-a'));
+      expect(['b0', 'b1']).toContain(dataIn(snapshot, 'sco-b'));
+    }
   });
 });
