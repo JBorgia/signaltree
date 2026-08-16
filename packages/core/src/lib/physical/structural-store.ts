@@ -6,6 +6,13 @@ export type SubjectLifetimeRecord<K extends string | number> = {
   restoreAllowed: boolean;
 };
 
+export type ResolvedSubjectRestorePlacement<K extends string | number> = {
+  beforeSubject?: number;
+  afterSubject?: number;
+  beforeKey?: K;
+  afterKey?: K;
+};
+
 type ActiveNode<K extends string | number> = {
   key: K;
   subjectId: number;
@@ -222,6 +229,79 @@ export class StructuralStore<K extends string | number> {
     afterSubject?: number,
     restoreAllowed = true
   ): void {
+    const placement = this.resolveSubjectRestorePlacement(
+      beforeSubject,
+      afterSubject
+    );
+    this.restoreSubjectAtResolvedPlacement(
+      subjectId,
+      key,
+      placement,
+      restoreAllowed
+    );
+  }
+
+  resolveSubjectRestorePlacement(
+    beforeSubject?: number,
+    afterSubject?: number
+  ): ResolvedSubjectRestorePlacement<K> {
+    const beforeNode =
+      beforeSubject === undefined
+        ? undefined
+        : this.activeNodesBySubject.get(beforeSubject);
+    const afterNode =
+      afterSubject === undefined
+        ? undefined
+        : this.activeNodesBySubject.get(afterSubject);
+
+    if (beforeNode !== undefined && afterNode !== undefined) {
+      if (this.nodePrecedes(beforeNode, afterNode)) {
+        return {
+          beforeSubject: beforeNode.subjectId,
+          afterSubject: afterNode.subjectId,
+          beforeKey: beforeNode.key,
+          afterKey: afterNode.key,
+        };
+      }
+
+      return {
+        beforeSubject: afterNode.prev?.subjectId,
+        afterSubject: afterNode.subjectId,
+        beforeKey: afterNode.prev?.key,
+        afterKey: afterNode.key,
+      };
+    }
+
+    if (afterNode !== undefined) {
+      return {
+        beforeSubject: afterNode.prev?.subjectId,
+        afterSubject: afterNode.subjectId,
+        beforeKey: afterNode.prev?.key,
+        afterKey: afterNode.key,
+      };
+    }
+
+    if (beforeNode !== undefined) {
+      return {
+        beforeSubject: beforeNode.subjectId,
+        afterSubject: beforeNode.next?.subjectId,
+        beforeKey: beforeNode.key,
+        afterKey: beforeNode.next?.key,
+      };
+    }
+
+    return {
+      beforeSubject: this.activeTail?.subjectId,
+      beforeKey: this.activeTail?.key,
+    };
+  }
+
+  restoreSubjectAtResolvedPlacement(
+    subjectId: number,
+    key: K,
+    placement: ResolvedSubjectRestorePlacement<K>,
+    restoreAllowed = true
+  ): void {
     this.activateSubject(subjectId, key, restoreAllowed);
 
     const node: ActiveNode<K> = {
@@ -236,22 +316,13 @@ export class StructuralStore<K extends string | number> {
     this.activeCount += 1;
 
     const beforeNode =
-      beforeSubject === undefined
+      placement.beforeSubject === undefined
         ? undefined
-        : this.activeNodesBySubject.get(beforeSubject);
+        : this.activeNodesBySubject.get(placement.beforeSubject);
     const afterNode =
-      afterSubject === undefined
+      placement.afterSubject === undefined
         ? undefined
-        : this.activeNodesBySubject.get(afterSubject);
-
-    if (beforeNode !== undefined && afterNode !== undefined) {
-      if (this.nodePrecedes(beforeNode, afterNode)) {
-        this.insertDetachedNodeAfter(node, beforeNode);
-      } else {
-        this.insertDetachedNodeBefore(node, afterNode);
-      }
-      return;
-    }
+        : this.activeNodesBySubject.get(placement.afterSubject);
 
     if (afterNode !== undefined) {
       this.insertDetachedNodeBefore(node, afterNode);

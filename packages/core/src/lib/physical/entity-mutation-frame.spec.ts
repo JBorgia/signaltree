@@ -245,6 +245,61 @@ describe('EntityMutationFrame', () => {
     rebuildSpy.mockRestore();
   });
 
+  it('keeps earlier frame work side-effect free when later restore preparation fails', () => {
+    const { frame, structuralStore, valueStore, projection } = createFrameHarness();
+
+    structuralStore.createSubject(1, 1);
+    structuralStore.createSubject(2, 2);
+    structuralStore.createSubject(3, 3);
+    valueStore.retainSubjectValue(1, { id: 1, name: 'Alice' });
+    valueStore.retainSubjectValue(2, { id: 2, name: 'Bob' });
+    valueStore.retainSubjectValue(3, { id: 3, name: 'Cara' });
+    projection.replaceEntry(1, { id: 1, name: 'Alice' });
+    projection.replaceEntry(2, { id: 2, name: 'Bob' });
+    projection.replaceEntry(3, { id: 3, name: 'Cara' });
+
+    structuralStore.tombstoneSubject(2, 2, true);
+    projection.removeEntry(2);
+
+    frame.stageFreshSubject({
+      kind: 'create-fresh-subject',
+      key: 4,
+      subjectId: 4,
+      nextValue: { id: 4, name: 'Delta' },
+    });
+    frame.stageSubjectRestore({
+      kind: 'restore-subject',
+      key: 2,
+      subjectId: 2,
+      restoreAllowed: true,
+      beforeSubject: 1,
+      afterSubject: 3,
+      realizedValue: { id: 2, name: 'Bob' },
+    });
+
+    const resolvePlacementSpy = vi
+      .spyOn(structuralStore, 'resolveSubjectRestorePlacement')
+      .mockImplementation(() => {
+        throw new Error('restore planning failed');
+      });
+
+    expect(() => frame.commit()).toThrow('restore planning failed');
+    expect(structuralStore.subjectIdForKey(4)).toBeUndefined();
+    expect(structuralStore.stateForSubject(4)).toBeUndefined();
+    expect(structuralStore.activeKeysSnapshot()).toEqual([1, 3]);
+    expect(structuralStore.stateForSubject(2)).toEqual({
+      active: false,
+      restoreAllowed: true,
+    });
+    expect(valueStore.backingForSubject(4)).toBeUndefined();
+    expect(Array.from(projection.entries())).toEqual([
+      [1, { id: 1, name: 'Alice' }],
+      [3, { id: 3, name: 'Cara' }],
+    ]);
+
+    resolvePlacementSpy.mockRestore();
+  });
+
   it('projects fresh key reuse from committed subject truth without reviving tombstoned state', () => {
     const { frame, structuralStore, valueStore, projection } = createFrameHarness();
 

@@ -1,6 +1,9 @@
 import { EntityValueStore } from './entity-value-store';
 import { MaterializedEntityProjection } from './materialized-entity-projection';
-import { StructuralStore } from './structural-store';
+import {
+  type ResolvedSubjectRestorePlacement,
+  StructuralStore,
+} from './structural-store';
 
 export type PreparedValueReplacement<
   K extends string | number,
@@ -114,6 +117,21 @@ export type EntityMutationCommitResult<
   projectionRestores: readonly ProjectionRestore<K, E>[];
 };
 
+type PreparedRestoreCommitInstruction<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = PreparedSubjectRestore<K, E> & {
+  resolvedValue?: E;
+  resolvedPlacement: ResolvedSubjectRestorePlacement<K>;
+};
+
+type PreparedCommitInstruction<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> =
+  | Exclude<PreparedEntityPhysicalMutation<K, E>, PreparedSubjectRestore<K, E>>
+  | PreparedRestoreCommitInstruction<K, E>;
+
 export class EntityMutationFrame<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -151,6 +169,7 @@ export class EntityMutationFrame<
   }
 
   commit(): EntityMutationCommitResult<K, E> {
+    const preparedMutations = this.prepareCommitInstructions();
     const physicallyChangedSubjectIds = new Set<number>();
     const allocatedSubjectIds: number[] = [];
     const projectionReplacements: ProjectionReplacement<K, E>[] = [];
@@ -160,7 +179,7 @@ export class EntityMutationFrame<
     const projectionRestores: ProjectionRestore<K, E>[] = [];
     let projectionRebuildRequired = false;
 
-    for (const mutation of this.mutations) {
+    for (const mutation of preparedMutations) {
       if (mutation.kind === 'create-fresh-subject') {
         this.structuralStore.createSubject(mutation.subjectId, mutation.key);
         this.valueStore.retainSubjectValue(
@@ -176,37 +195,25 @@ export class EntityMutationFrame<
       }
 
       if (mutation.kind === 'restore-subject') {
-        this.structuralStore.restoreSubject(
+        this.structuralStore.restoreSubjectAtResolvedPlacement(
           mutation.subjectId,
           mutation.key,
-          mutation.beforeSubject,
-          mutation.afterSubject,
+          mutation.resolvedPlacement,
           mutation.restoreAllowed
         );
-        if (mutation.realizedValue !== undefined) {
+        if (mutation.resolvedValue !== undefined) {
           this.valueStore.retainSubjectValue(
             mutation.subjectId,
-            mutation.realizedValue
+            mutation.resolvedValue
           );
         }
 
-        const restoredValue =
-          mutation.realizedValue ??
-          this.valueStore.backingForSubject(mutation.subjectId);
-        if (restoredValue !== undefined) {
-          const { beforeSubject, afterSubject } =
-            this.structuralStore.neighborSubjectsForKey(mutation.key);
+        if (mutation.resolvedValue !== undefined) {
           projectionRestores.push({
             key: mutation.key,
-            nextValue: restoredValue,
-            beforeKey:
-              beforeSubject === undefined
-                ? undefined
-                : this.structuralStore.activeKeyForSubject(beforeSubject),
-            afterKey:
-              afterSubject === undefined
-                ? undefined
-                : this.structuralStore.activeKeyForSubject(afterSubject),
+            nextValue: mutation.resolvedValue,
+            beforeKey: mutation.resolvedPlacement.beforeKey,
+            afterKey: mutation.resolvedPlacement.afterKey,
           });
         } else {
           projectionRebuildRequired = true;
@@ -280,6 +287,25 @@ export class EntityMutationFrame<
       projectionRekeys,
       projectionRestores,
     };
+  }
+
+  private prepareCommitInstructions(): PreparedCommitInstruction<K, E>[] {
+    return this.mutations.map((mutation) => {
+      if (mutation.kind !== 'restore-subject') {
+        return mutation;
+      }
+
+      return {
+        ...mutation,
+        resolvedValue:
+          mutation.realizedValue ??
+          this.valueStore.backingForSubject(mutation.subjectId),
+        resolvedPlacement: this.structuralStore.resolveSubjectRestorePlacement(
+          mutation.beforeSubject,
+          mutation.afterSubject
+        ),
+      };
+    });
   }
 
   project(commitResult: EntityMutationCommitResult<K, E>): void {
