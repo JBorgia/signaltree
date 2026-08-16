@@ -13,6 +13,7 @@ export interface ProductionSubstrateStats {
   projectionAppends: number;
   projectionRemovals: number;
   projectionRekeys: number;
+  projectionRestores: number;
   structuralActiveKeyLookups: number;
   structuralActiveKeyEntriesVisited: number;
   structuralSubjectsCreated: number;
@@ -56,6 +57,7 @@ export function resetProductionSubstrateStatsForTesting(
   stats.projectionAppends = 0;
   stats.projectionRemovals = 0;
   stats.projectionRekeys = 0;
+  stats.projectionRestores = 0;
   stats.structuralActiveKeyLookups = 0;
   stats.structuralActiveKeyEntriesVisited = 0;
   stats.structuralSubjectsCreated = 0;
@@ -94,6 +96,7 @@ function createProductionSubstrateStats(): ProductionSubstrateStats {
     projectionAppends: 0,
     projectionRemovals: 0,
     projectionRekeys: 0,
+    projectionRestores: 0,
     structuralActiveKeyLookups: 0,
     structuralActiveKeyEntriesVisited: 0,
     structuralSubjectsCreated: 0,

@@ -66,6 +66,16 @@ export type ProjectionRekey<K extends string | number> = {
   toKey: K;
 };
 
+export type ProjectionRestore<
+  K extends string | number,
+  E extends Record<string, unknown>,
+> = {
+  key: K;
+  nextValue: E;
+  beforeKey?: K;
+  afterKey?: K;
+};
+
 export type PreparedSubjectRestore<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -101,6 +111,7 @@ export type EntityMutationCommitResult<
   projectionRemovals: readonly ProjectionRemoval<K>[];
   projectionAppends: readonly ProjectionAppend<K, E>[];
   projectionRekeys: readonly ProjectionRekey<K>[];
+  projectionRestores: readonly ProjectionRestore<K, E>[];
 };
 
 export class EntityMutationFrame<
@@ -146,6 +157,7 @@ export class EntityMutationFrame<
     const projectionRemovals: ProjectionRemoval<K>[] = [];
     const projectionAppends: ProjectionAppend<K, E>[] = [];
     const projectionRekeys: ProjectionRekey<K>[] = [];
+    const projectionRestores: ProjectionRestore<K, E>[] = [];
     let projectionRebuildRequired = false;
 
     for (const mutation of this.mutations) {
@@ -177,8 +189,30 @@ export class EntityMutationFrame<
             mutation.realizedValue
           );
         }
+
+        const restoredValue =
+          mutation.realizedValue ??
+          this.valueStore.backingForSubject(mutation.subjectId);
+        if (restoredValue !== undefined) {
+          const { beforeSubject, afterSubject } =
+            this.structuralStore.neighborSubjectsForKey(mutation.key);
+          projectionRestores.push({
+            key: mutation.key,
+            nextValue: restoredValue,
+            beforeKey:
+              beforeSubject === undefined
+                ? undefined
+                : this.structuralStore.activeKeyForSubject(beforeSubject),
+            afterKey:
+              afterSubject === undefined
+                ? undefined
+                : this.structuralStore.activeKeyForSubject(afterSubject),
+          });
+        } else {
+          projectionRebuildRequired = true;
+        }
+
         physicallyChangedSubjectIds.add(mutation.subjectId);
-        projectionRebuildRequired = true;
         continue;
       }
 
@@ -244,6 +278,7 @@ export class EntityMutationFrame<
       projectionRemovals,
       projectionAppends,
       projectionRekeys,
+      projectionRestores,
     };
   }
 
@@ -259,6 +294,13 @@ export class EntityMutationFrame<
 
     for (const rekey of commitResult.projectionRekeys) {
       this.materializedProjection.rekeyEntry(rekey.fromKey, rekey.toKey);
+    }
+
+    for (const restore of commitResult.projectionRestores) {
+      this.materializedProjection.restoreEntry(restore.key, restore.nextValue, {
+        beforeKey: restore.beforeKey,
+        afterKey: restore.afterKey,
+      });
     }
 
     for (const append of commitResult.projectionAppends) {

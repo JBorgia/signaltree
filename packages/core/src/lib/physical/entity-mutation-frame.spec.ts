@@ -199,6 +199,52 @@ describe('EntityMutationFrame', () => {
     rebuildSpy.mockRestore();
   });
 
+  it('projects restore incrementally and remains equivalent to authoritative rebuild', () => {
+    const { frame, structuralStore, valueStore, projection } = createFrameHarness();
+
+    structuralStore.createSubject(1, 1);
+    structuralStore.createSubject(2, 2);
+    structuralStore.createSubject(3, 3);
+    valueStore.retainSubjectValue(1, { id: 1, name: 'Alice' });
+    valueStore.retainSubjectValue(2, { id: 2, name: 'Bob' });
+    valueStore.retainSubjectValue(3, { id: 3, name: 'Cara' });
+    projection.replaceEntry(1, { id: 1, name: 'Alice' });
+    projection.replaceEntry(2, { id: 2, name: 'Bob' });
+    projection.replaceEntry(3, { id: 3, name: 'Cara' });
+
+    structuralStore.tombstoneSubject(2, 2, true);
+    projection.removeEntry(2);
+
+    frame.stageSubjectRestore({
+      kind: 'restore-subject',
+      key: 2,
+      subjectId: 2,
+      restoreAllowed: true,
+      beforeSubject: 1,
+      afterSubject: 3,
+      realizedValue: { id: 2, name: 'Bob' },
+    });
+
+    const rebuildSpy = vi.spyOn(projection, 'rebuild');
+    const result = frame.commit();
+
+    expect(() => frame.project(result)).not.toThrow();
+    expect(rebuildSpy).not.toHaveBeenCalled();
+    expect(Array.from(projection.entries())).toEqual([
+      [1, { id: 1, name: 'Alice' }],
+      [2, { id: 2, name: 'Bob' }],
+      [3, { id: 3, name: 'Cara' }],
+    ]);
+
+    const rebuiltProjection = new MaterializedEntityProjection<number, Item>();
+    rebuiltProjection.rebuild(structuralStore, valueStore);
+    expect(Array.from(projection.entries())).toEqual(
+      Array.from(rebuiltProjection.entries())
+    );
+
+    rebuildSpy.mockRestore();
+  });
+
   it('projects fresh key reuse from committed subject truth without reviving tombstoned state', () => {
     const { frame, structuralStore, valueStore, projection } = createFrameHarness();
 

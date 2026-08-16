@@ -64,6 +64,43 @@ export class MaterializedEntityProjection<
     this.storage.set(toKey, existing);
   }
 
+  restoreEntry(
+    key: K,
+    value: E,
+    options?: { beforeKey?: K; afterKey?: K }
+  ): void {
+    recordProductionSubstrateStat('projectionRestores');
+    const existing = this.storage.get(key);
+    if (existing !== undefined) {
+      existing.value = value;
+      return;
+    }
+
+    const node: ProjectionNode<K, E> = {
+      key,
+      value,
+    };
+
+    const beforeNode =
+      options?.beforeKey === undefined
+        ? undefined
+        : this.storage.get(options.beforeKey);
+    const afterNode =
+      options?.afterKey === undefined
+        ? undefined
+        : this.storage.get(options.afterKey);
+
+    if (beforeNode !== undefined) {
+      this.insertNodeAfter(node, beforeNode);
+    } else if (afterNode !== undefined) {
+      this.insertNodeBefore(node, afterNode);
+    } else {
+      this.appendDetachedNode(node);
+    }
+
+    this.storage.set(key, node);
+  }
+
   removeEntry(key: K): void {
     recordProductionSubstrateStat('projectionRemovals');
     const existing = this.storage.get(key);
@@ -120,8 +157,15 @@ export class MaterializedEntityProjection<
     const node: ProjectionNode<K, E> = {
       key,
       value,
-      previous: this.tail,
     };
+
+    this.appendDetachedNode(node);
+    this.storage.set(key, node);
+  }
+
+  private appendDetachedNode(node: ProjectionNode<K, E>): void {
+    node.next = undefined;
+    node.previous = this.tail;
 
     if (this.tail !== undefined) {
       this.tail.next = node;
@@ -130,7 +174,34 @@ export class MaterializedEntityProjection<
     }
 
     this.tail = node;
-    this.storage.set(key, node);
+  }
+
+  private insertNodeAfter(
+    node: ProjectionNode<K, E>,
+    anchor: ProjectionNode<K, E>
+  ): void {
+    node.previous = anchor;
+    node.next = anchor.next;
+    if (anchor.next !== undefined) {
+      anchor.next.previous = node;
+    } else {
+      this.tail = node;
+    }
+    anchor.next = node;
+  }
+
+  private insertNodeBefore(
+    node: ProjectionNode<K, E>,
+    anchor: ProjectionNode<K, E>
+  ): void {
+    node.next = anchor;
+    node.previous = anchor.previous;
+    if (anchor.previous !== undefined) {
+      anchor.previous.next = node;
+    } else {
+      this.head = node;
+    }
+    anchor.previous = node;
   }
 
   private clear(): void {
