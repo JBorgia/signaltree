@@ -212,6 +212,14 @@ export class EntityMutationFrame<
           mutation.toKey
         );
         physicallyChangedSubjectIds.add(mutation.subjectId);
+        const appendedEntry = projectionAppends.find(
+          (append) => append.key === mutation.fromKey
+        );
+        if (appendedEntry !== undefined) {
+          appendedEntry.key = mutation.toKey;
+          continue;
+        }
+
         projectionRekeys.push({
           fromKey: mutation.fromKey,
           toKey: mutation.toKey,

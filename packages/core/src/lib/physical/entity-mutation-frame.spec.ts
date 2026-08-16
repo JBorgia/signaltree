@@ -243,6 +243,37 @@ describe('EntityMutationFrame', () => {
     rebuildSpy.mockRestore();
   });
 
+  it('projects fresh add followed by rekey in the same frame as the final committed address', () => {
+    const { frame, structuralStore, valueStore, projection } = createFrameHarness();
+
+    frame.stageFreshSubject({
+      kind: 'create-fresh-subject',
+      key: 1,
+      subjectId: 1,
+      nextValue: { id: 1, name: 'Alice' },
+    });
+    frame.stageKeyTransfer({
+      kind: 'transfer-key',
+      subjectId: 1,
+      fromKey: 1,
+      toKey: 2,
+    });
+
+    const result = frame.commit();
+
+    expect(structuralStore.subjectIdForKey(1)).toBeUndefined();
+    expect(structuralStore.subjectIdForKey(2)).toBe(1);
+    expect(() => frame.project(result)).not.toThrow();
+    expect(projection.get(1)).toBeUndefined();
+    expect(projection.get(2)).toEqual({ id: 1, name: 'Alice' });
+
+    const rebuiltProjection = new MaterializedEntityProjection<number, Item>();
+    rebuiltProjection.rebuild(structuralStore, valueStore);
+    expect(Array.from(projection.entries())).toEqual(
+      Array.from(rebuiltProjection.entries())
+    );
+  });
+
   it('documents only a catastrophic injected projection failure boundary after authoritative commit', () => {
     const { frame, structuralStore, valueStore, projection } = createFrameHarness();
 
