@@ -1,3 +1,5 @@
+import { recordProductionSubstrateStat } from '../internals/production-substrate-stats';
+
 import { EntityValueStore } from './entity-value-store';
 import { StructuralStore } from './structural-store';
 
@@ -16,6 +18,7 @@ export class MaterializedEntityProjection<
   }
 
   replaceEntry(key: K, value: E): void {
+    recordProductionSubstrateStat('projectionReplacements');
     this.storage.set(key, value);
   }
 
@@ -23,8 +26,10 @@ export class MaterializedEntityProjection<
     structuralStore: StructuralStore<K>,
     valueStore: EntityValueStore<E>
   ): void {
+    recordProductionSubstrateStat('projectionRebuilds');
     this.storage.clear();
     for (const key of structuralStore.activeKeysSnapshot()) {
+      recordProductionSubstrateStat('projectionEntriesVisited');
       const subjectId = structuralStore.subjectIdForKey(key);
       const value =
         subjectId === undefined

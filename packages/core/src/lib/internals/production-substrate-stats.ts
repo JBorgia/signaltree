@@ -7,6 +7,9 @@ export interface ProductionSubstrateStats {
   publicationDependencyReads: number;
   publications: number;
   treeVisits: number;
+  projectionRebuilds: number;
+  projectionEntriesVisited: number;
+  projectionReplacements: number;
 }
 
 type CounterName = keyof ProductionSubstrateStats;
@@ -36,6 +39,9 @@ export function resetProductionSubstrateStatsForTesting(
   stats.publicationDependencyReads = 0;
   stats.publications = 0;
   stats.treeVisits = 0;
+  stats.projectionRebuilds = 0;
+  stats.projectionEntriesVisited = 0;
+  stats.projectionReplacements = 0;
   return stats;
 }
 
@@ -60,5 +66,8 @@ function createProductionSubstrateStats(): ProductionSubstrateStats {
     publicationDependencyReads: 0,
     publications: 0,
     treeVisits: 0,
+    projectionRebuilds: 0,
+    projectionEntriesVisited: 0,
+    projectionReplacements: 0,
   };
 }

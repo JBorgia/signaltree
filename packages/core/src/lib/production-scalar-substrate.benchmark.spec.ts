@@ -4,6 +4,10 @@ import type { WritableSignal } from '@angular/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { entityMap } from './markers/entity-map';
+import { EntityMutationFrame } from './physical/entity-mutation-frame';
+import { EntityValueStore } from './physical/entity-value-store';
+import { MaterializedEntityProjection } from './physical/materialized-entity-projection';
+import { StructuralStore } from './physical/structural-store';
 import {
   clearProductionSubstrateStatsForTesting,
   installProductionSubstrateStatsForTesting,
@@ -19,6 +23,7 @@ const RUN_TIMING = process.env['ST_PERF'] === '1';
 const timingDescribe = describe.runIf(RUN_TIMING);
 const OUTPUT_FILE = process.env['ST_PERF_OUTPUT_FILE'];
 const COMPLEXITY_SIZES = [10, 100, 1_000, 10_000, 100_000] as const;
+const LOGICAL_AUDIT_SIZES = [100, 100_000] as const;
 const FRAME_WIDTHS = [2, 10, 100] as const;
 const TIMING_READ_ITERATIONS = 20_000;
 const TIMING_WRITE_ITERATIONS = 5_000;
@@ -45,6 +50,10 @@ type EntityTimingOperation =
   | 'entity-removeOne'
   | 'entity-changeId';
 
+type EntityLogicalWorkOperation =
+  | EntityTimingOperation
+  | 'entity-mixed-structural-frame';
+
 type ScalarTimingRow = {
   operation: ScalarTimingOperation;
   positions: number;
@@ -55,6 +64,14 @@ type EntityTimingRow = {
   operation: EntityTimingOperation;
   positions: number;
   perOperationUs: number;
+};
+
+type EntityLogicalWorkRow = {
+  operation: EntityLogicalWorkOperation;
+  positions: number;
+  projectionRebuilds: number;
+  projectionEntriesVisited: number;
+  projectionReplacements: number;
 };
 
 type ScalarHarness = {
@@ -88,6 +105,14 @@ type EntityHarness = {
   removeOne(): void;
   changeId(): void;
   destroy(): void;
+};
+
+type ProjectionFrameHarness = {
+  updateOne(value: number): void;
+  addOne(): void;
+  removeOne(): void;
+  changeId(): void;
+  runMixedFrame(): void;
 };
 
 function median(values: number[]): number {
@@ -195,6 +220,128 @@ function createEntityHarness(size: number): EntityHarness {
     },
     destroy(): void {
       tree.destroy();
+    },
+  };
+}
+
+function createProjectionFrameHarness(size: number): ProjectionFrameHarness {
+  const valueStore = new EntityValueStore<EntityRow>();
+  const projection = new MaterializedEntityProjection<number, EntityRow>();
+  const structuralStore = new StructuralStore<number>();
+
+  for (let index = 0; index < size; index++) {
+    const subjectId = index + 1;
+    const entity = { id: index, value: index };
+    structuralStore.createSubject(subjectId, index);
+    valueStore.retainSubjectValue(subjectId, entity);
+    projection.replaceEntry(index, entity);
+  }
+
+  const stableKey = Math.floor(size / 2);
+  const stableSubjectId = structuralStore.subjectIdForKey(stableKey);
+  const removableKey = size - 1;
+  const removableSubjectId = structuralStore.subjectIdForKey(removableKey);
+  const transferredKey = size + 10_000;
+  const freshKey = size + 20_000;
+  const freshSubjectId = size + 1;
+
+  if (stableSubjectId === undefined || removableSubjectId === undefined) {
+    throw new Error('Expected seeded structural subjects for projection frame harness.');
+  }
+
+  return {
+    updateOne(value: number): void {
+      const frame = new EntityMutationFrame(
+        valueStore,
+        projection,
+        structuralStore
+      );
+      frame.stageValueReplacement({
+        kind: 'replace-value',
+        key: stableKey,
+        subjectId: stableSubjectId,
+        nextValue: { id: stableKey, value },
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    addOne(): void {
+      const frame = new EntityMutationFrame(
+        valueStore,
+        projection,
+        structuralStore
+      );
+      frame.stageFreshSubject({
+        kind: 'create-fresh-subject',
+        key: freshKey,
+        subjectId: freshSubjectId,
+        nextValue: { id: freshKey, value: freshKey },
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    removeOne(): void {
+      const frame = new EntityMutationFrame(
+        valueStore,
+        projection,
+        structuralStore
+      );
+      frame.stageSubjectTombstone({
+        kind: 'tombstone-subject',
+        key: removableKey,
+        subjectId: removableSubjectId,
+        restoreAllowed: true,
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    changeId(): void {
+      const frame = new EntityMutationFrame(
+        valueStore,
+        projection,
+        structuralStore
+      );
+      frame.stageKeyTransfer({
+        kind: 'transfer-key',
+        fromKey: stableKey,
+        toKey: transferredKey,
+        subjectId: stableSubjectId,
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    runMixedFrame(): void {
+      const frame = new EntityMutationFrame(
+        valueStore,
+        projection,
+        structuralStore
+      );
+      frame.stageKeyTransfer({
+        kind: 'transfer-key',
+        fromKey: stableKey,
+        toKey: transferredKey,
+        subjectId: stableSubjectId,
+      });
+      frame.stageValueReplacement({
+        kind: 'replace-value',
+        key: transferredKey,
+        subjectId: stableSubjectId,
+        nextValue: { id: transferredKey, value: transferredKey },
+      });
+      frame.stageSubjectTombstone({
+        kind: 'tombstone-subject',
+        key: removableKey,
+        subjectId: removableSubjectId,
+        restoreAllowed: true,
+      });
+      frame.stageFreshSubject({
+        kind: 'create-fresh-subject',
+        key: freshKey,
+        subjectId: freshSubjectId,
+        nextValue: { id: freshKey, value: freshKey },
+      });
+      const result = frame.commit();
+      frame.project(result);
     },
   };
 }
@@ -401,9 +548,59 @@ function measureEntityTimingRows(
   return rows;
 }
 
+function measureEntityLogicalWorkRows(
+  sizes: readonly number[],
+  stats: ProductionSubstrateStats
+): EntityLogicalWorkRow[] {
+  const rows: EntityLogicalWorkRow[] = [];
+
+  const captureRow = (
+    operation: EntityLogicalWorkOperation,
+    positions: number
+  ): void => {
+    rows.push({
+      operation,
+      positions,
+      projectionRebuilds: stats.projectionRebuilds,
+      projectionEntriesVisited: stats.projectionEntriesVisited,
+      projectionReplacements: stats.projectionReplacements,
+    });
+  };
+
+  for (const size of sizes) {
+    const updateHarness = createProjectionFrameHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    updateHarness.updateOne(size + 1);
+    captureRow('entity-updateOne', size);
+
+    const addHarness = createProjectionFrameHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    addHarness.addOne();
+    captureRow('entity-addOne', size);
+
+    const removeHarness = createProjectionFrameHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    removeHarness.removeOne();
+    captureRow('entity-removeOne', size);
+
+    const changeIdHarness = createProjectionFrameHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    changeIdHarness.changeId();
+    captureRow('entity-changeId', size);
+
+    const mixedFrameHarness = createProjectionFrameHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    mixedFrameHarness.runMixedFrame();
+    captureRow('entity-mixed-structural-frame', size);
+  }
+
+  return rows;
+}
+
 function writeRows(report: {
   scalarRows: readonly ScalarTimingRow[];
   entityRows: readonly EntityTimingRow[];
+  entityLogicalRows: readonly EntityLogicalWorkRow[];
 }): void {
   if (!OUTPUT_FILE) {
     return;
@@ -438,6 +635,9 @@ describe('Complexity guard: production scalar substrate', () => {
           publicationDependencyReads: 1,
           publications: 0,
           treeVisits: 0,
+          projectionRebuilds: 0,
+          projectionEntriesVisited: 0,
+          projectionReplacements: 0,
         });
 
         resetProductionSubstrateStatsForTesting(stats);
@@ -451,6 +651,9 @@ describe('Complexity guard: production scalar substrate', () => {
           publicationDependencyReads: 1,
           publications: 1,
           treeVisits: 0,
+          projectionRebuilds: 0,
+          projectionEntriesVisited: 0,
+          projectionReplacements: 0,
         });
       } finally {
         harness.destroy();
@@ -474,6 +677,9 @@ describe('Complexity guard: production scalar substrate', () => {
             publicationDependencyReads: 0,
             publications: width,
             treeVisits: 0,
+            projectionRebuilds: 0,
+            projectionEntriesVisited: 0,
+            projectionReplacements: 0,
           });
         } finally {
           frameHarness.destroy();
@@ -481,6 +687,76 @@ describe('Complexity guard: production scalar substrate', () => {
       }
     }
   });
+});
+
+describe('Complexity audit: entity structural projection maintenance', () => {
+  it(
+    'proves value-only writes stay O(1) while structural projection work still scales with collection size',
+    () => {
+    const stats = installProductionSubstrateStatsForTesting();
+    const rows = measureEntityLogicalWorkRows(LOGICAL_AUDIT_SIZES, stats);
+
+    for (const size of LOGICAL_AUDIT_SIZES) {
+      const updateRow = rows.find(
+        (row) => row.operation === 'entity-updateOne' && row.positions === size
+      );
+      expect(updateRow).toEqual({
+        operation: 'entity-updateOne',
+        positions: size,
+        projectionRebuilds: 0,
+        projectionEntriesVisited: 0,
+        projectionReplacements: 1,
+      });
+
+      const addRow = rows.find(
+        (row) => row.operation === 'entity-addOne' && row.positions === size
+      );
+      expect(addRow).toEqual({
+        operation: 'entity-addOne',
+        positions: size,
+        projectionRebuilds: 1,
+        projectionEntriesVisited: size + 1,
+        projectionReplacements: 0,
+      });
+
+      const removeRow = rows.find(
+        (row) => row.operation === 'entity-removeOne' && row.positions === size
+      );
+      expect(removeRow).toEqual({
+        operation: 'entity-removeOne',
+        positions: size,
+        projectionRebuilds: 1,
+        projectionEntriesVisited: size - 1,
+        projectionReplacements: 0,
+      });
+
+      const changeIdRow = rows.find(
+        (row) => row.operation === 'entity-changeId' && row.positions === size
+      );
+      expect(changeIdRow).toEqual({
+        operation: 'entity-changeId',
+        positions: size,
+        projectionRebuilds: 1,
+        projectionEntriesVisited: size,
+        projectionReplacements: 0,
+      });
+
+      const mixedRow = rows.find(
+        (row) =>
+          row.operation === 'entity-mixed-structural-frame' &&
+          row.positions === size
+      );
+      expect(mixedRow).toEqual({
+        operation: 'entity-mixed-structural-frame',
+        positions: size,
+        projectionRebuilds: 1,
+        projectionEntriesVisited: size,
+        projectionReplacements: 0,
+      });
+    }
+    },
+    20_000
+  );
 });
 
 describe('Timing guard: production scalar substrate', () => {
@@ -506,9 +782,12 @@ timingDescribe('Performance report: production substrate', () => {
   it('reports scalar and entity scaling across the shipped path', () => {
     const scalarRows = measureScalarTimingRows(COMPLEXITY_SIZES);
     const entityRows = measureEntityTimingRows(COMPLEXITY_SIZES);
+    const stats = installProductionSubstrateStatsForTesting();
+    const entityLogicalRows = measureEntityLogicalWorkRows(LOGICAL_AUDIT_SIZES, stats);
 
-    writeRows({ scalarRows, entityRows });
+    writeRows({ scalarRows, entityRows, entityLogicalRows });
     console.table(scalarRows);
     console.table(entityRows);
+    console.table(entityLogicalRows);
   }, 120_000);
 });
