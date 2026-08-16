@@ -736,8 +736,8 @@ describe('Complexity audit: entity structural projection maintenance', () => {
       expect(changeIdRow).toEqual({
         operation: 'entity-changeId',
         positions: size,
-        projectionRebuilds: 1,
-        projectionEntriesVisited: size,
+        projectionRebuilds: 0,
+        projectionEntriesVisited: 0,
         projectionReplacements: 0,
       });
 
@@ -749,9 +749,9 @@ describe('Complexity audit: entity structural projection maintenance', () => {
       expect(mixedRow).toEqual({
         operation: 'entity-mixed-structural-frame',
         positions: size,
-        projectionRebuilds: 1,
-        projectionEntriesVisited: size,
-        projectionReplacements: 0,
+        projectionRebuilds: 0,
+        projectionEntriesVisited: 0,
+        projectionReplacements: 1,
       });
     }
     },

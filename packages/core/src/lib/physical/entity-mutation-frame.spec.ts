@@ -122,7 +122,7 @@ describe('EntityMutationFrame', () => {
     rebuildSpy.mockRestore();
   });
 
-  it('preserves authoritative order when rekeying through projection rebuild', () => {
+  it('projects rekey incrementally while preserving authoritative order', () => {
     const { frame, structuralStore, valueStore, projection } = createFrameHarness();
 
     structuralStore.createSubject(1, 1);
@@ -134,6 +134,7 @@ describe('EntityMutationFrame', () => {
     projection.replaceEntry(1, { id: 1, name: 'Alice' });
     projection.replaceEntry(2, { id: 2, name: 'Bob' });
     projection.replaceEntry(3, { id: 3, name: 'Cara' });
+    const originalProjectedValue = projection.get(2);
 
     frame.stageKeyTransfer({
       kind: 'transfer-key',
@@ -142,14 +143,26 @@ describe('EntityMutationFrame', () => {
       toKey: 4,
     });
 
+    const rebuildSpy = vi.spyOn(projection, 'rebuild');
     const result = frame.commit();
 
     expect(() => frame.project(result)).not.toThrow();
+    expect(rebuildSpy).not.toHaveBeenCalled();
+    expect(projection.get(2)).toBeUndefined();
+    expect(projection.get(4)).toBe(originalProjectedValue);
     expect(Array.from(projection.entries())).toEqual([
       [1, { id: 1, name: 'Alice' }],
       [4, { id: 2, name: 'Bob' }],
       [3, { id: 3, name: 'Cara' }],
     ]);
+
+    const rebuiltProjection = new MaterializedEntityProjection<number, Item>();
+    rebuiltProjection.rebuild(structuralStore, valueStore);
+    expect(Array.from(projection.entries())).toEqual(
+      Array.from(rebuiltProjection.entries())
+    );
+
+    rebuildSpy.mockRestore();
   });
 
   it('projects remove incrementally and remains equivalent to authoritative rebuild', () => {
@@ -244,7 +257,7 @@ describe('EntityMutationFrame', () => {
       toKey: 2,
     });
 
-    const rebuildSpy = vi.spyOn(projection, 'rebuild').mockImplementation(() => {
+    const rekeySpy = vi.spyOn(projection, 'rekeyEntry').mockImplementation(() => {
       throw new Error('projection exploded');
     });
 
@@ -255,6 +268,6 @@ describe('EntityMutationFrame', () => {
     expect(projection.get(1)).toEqual({ id: 1, name: 'Alice' });
     expect(() => frame.project(result)).toThrow('projection exploded');
 
-    rebuildSpy.mockRestore();
+    rekeySpy.mockRestore();
   });
 });

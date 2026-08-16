@@ -61,6 +61,11 @@ export type ProjectionAppend<
   nextValue: E;
 };
 
+export type ProjectionRekey<K extends string | number> = {
+  fromKey: K;
+  toKey: K;
+};
+
 export type PreparedSubjectRestore<
   K extends string | number,
   E extends Record<string, unknown>,
@@ -95,6 +100,7 @@ export type EntityMutationCommitResult<
   projectionReplacements: readonly ProjectionReplacement<K, E>[];
   projectionRemovals: readonly ProjectionRemoval<K>[];
   projectionAppends: readonly ProjectionAppend<K, E>[];
+  projectionRekeys: readonly ProjectionRekey<K>[];
 };
 
 export class EntityMutationFrame<
@@ -139,6 +145,7 @@ export class EntityMutationFrame<
     const projectionReplacements: ProjectionReplacement<K, E>[] = [];
     const projectionRemovals: ProjectionRemoval<K>[] = [];
     const projectionAppends: ProjectionAppend<K, E>[] = [];
+    const projectionRekeys: ProjectionRekey<K>[] = [];
     let projectionRebuildRequired = false;
 
     for (const mutation of this.mutations) {
@@ -205,7 +212,10 @@ export class EntityMutationFrame<
           mutation.toKey
         );
         physicallyChangedSubjectIds.add(mutation.subjectId);
-        projectionRebuildRequired = true;
+        projectionRekeys.push({
+          fromKey: mutation.fromKey,
+          toKey: mutation.toKey,
+        });
         continue;
       }
 
@@ -225,6 +235,7 @@ export class EntityMutationFrame<
       projectionReplacements,
       projectionRemovals,
       projectionAppends,
+      projectionRekeys,
     };
   }
 
@@ -234,19 +245,23 @@ export class EntityMutationFrame<
       return;
     }
 
+    for (const removal of commitResult.projectionRemovals) {
+      this.materializedProjection.removeEntry(removal.key);
+    }
+
+    for (const rekey of commitResult.projectionRekeys) {
+      this.materializedProjection.rekeyEntry(rekey.fromKey, rekey.toKey);
+    }
+
+    for (const append of commitResult.projectionAppends) {
+      this.materializedProjection.appendEntry(append.key, append.nextValue);
+    }
+
     for (const replacement of commitResult.projectionReplacements) {
       this.materializedProjection.replaceEntry(
         replacement.key,
         replacement.nextValue
       );
-    }
-
-    for (const removal of commitResult.projectionRemovals) {
-      this.materializedProjection.removeEntry(removal.key);
-    }
-
-    for (const append of commitResult.projectionAppends) {
-      this.materializedProjection.appendEntry(append.key, append.nextValue);
     }
   }
 }
