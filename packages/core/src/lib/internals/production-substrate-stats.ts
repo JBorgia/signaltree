@@ -10,6 +10,15 @@ export interface ProductionSubstrateStats {
   projectionRebuilds: number;
   projectionEntriesVisited: number;
   projectionReplacements: number;
+  projectionAppends: number;
+  projectionRemovals: number;
+  projectionRekeys: number;
+  structuralActiveKeyLookups: number;
+  structuralActiveKeyEntriesVisited: number;
+  structuralSubjectsCreated: number;
+  structuralSubjectTransfers: number;
+  structuralSubjectTombstones: number;
+  valueStoreWrites: number;
 }
 
 type CounterName = keyof ProductionSubstrateStats;
@@ -42,6 +51,15 @@ export function resetProductionSubstrateStatsForTesting(
   stats.projectionRebuilds = 0;
   stats.projectionEntriesVisited = 0;
   stats.projectionReplacements = 0;
+  stats.projectionAppends = 0;
+  stats.projectionRemovals = 0;
+  stats.projectionRekeys = 0;
+  stats.structuralActiveKeyLookups = 0;
+  stats.structuralActiveKeyEntriesVisited = 0;
+  stats.structuralSubjectsCreated = 0;
+  stats.structuralSubjectTransfers = 0;
+  stats.structuralSubjectTombstones = 0;
+  stats.valueStoreWrites = 0;
   return stats;
 }
 
@@ -69,5 +87,14 @@ function createProductionSubstrateStats(): ProductionSubstrateStats {
     projectionRebuilds: 0,
     projectionEntriesVisited: 0,
     projectionReplacements: 0,
+    projectionAppends: 0,
+    projectionRemovals: 0,
+    projectionRekeys: 0,
+    structuralActiveKeyLookups: 0,
+    structuralActiveKeyEntriesVisited: 0,
+    structuralSubjectsCreated: 0,
+    structuralSubjectTransfers: 0,
+    structuralSubjectTombstones: 0,
+    valueStoreWrites: 0,
   };
 }

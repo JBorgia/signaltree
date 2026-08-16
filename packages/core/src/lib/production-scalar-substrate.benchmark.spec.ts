@@ -23,7 +23,8 @@ const RUN_TIMING = process.env['ST_PERF'] === '1';
 const timingDescribe = describe.runIf(RUN_TIMING);
 const OUTPUT_FILE = process.env['ST_PERF_OUTPUT_FILE'];
 const COMPLEXITY_SIZES = [10, 100, 1_000, 10_000, 100_000] as const;
-const LOGICAL_AUDIT_SIZES = [100, 100_000] as const;
+const LOGICAL_AUDIT_SIZES = [100, 1_000] as const;
+const STRUCTURAL_LOGICAL_AUDIT_SIZES = [100, 100_000] as const;
 const FRAME_WIDTHS = [2, 10, 100] as const;
 const TIMING_READ_ITERATIONS = 20_000;
 const TIMING_WRITE_ITERATIONS = 5_000;
@@ -52,6 +53,11 @@ type EntityTimingOperation =
 
 type EntityFrameTimingOperation = 'entity-frame-addOne';
 
+type EntityFrameLogicalWorkOperation =
+  | 'entity-frame-addOne'
+  | 'entity-frame-removeOne'
+  | 'entity-frame-changeId';
+
 type EntityLogicalWorkOperation =
   | EntityTimingOperation
   | 'entity-mixed-structural-frame';
@@ -72,6 +78,20 @@ type EntityFrameTimingRow = {
   operation: EntityFrameTimingOperation;
   positions: number;
   perOperationUs: number;
+};
+
+type EntityFrameLogicalWorkRow = {
+  operation: EntityFrameLogicalWorkOperation;
+  positions: number;
+  structuralActiveKeyLookups: number;
+  structuralActiveKeyEntriesVisited: number;
+  structuralSubjectsCreated: number;
+  structuralSubjectTransfers: number;
+  structuralSubjectTombstones: number;
+  valueStoreWrites: number;
+  projectionAppends: number;
+  projectionRemovals: number;
+  projectionRekeys: number;
 };
 
 type EntityLogicalWorkRow = {
@@ -121,6 +141,12 @@ type ProjectionFrameHarness = {
   removeOne(): void;
   changeId(): void;
   runMixedFrame(): void;
+};
+
+type StructuralAuditHarness = {
+  addOne(): void;
+  removeOne(): void;
+  changeId(): void;
 };
 
 function median(values: number[]): number {
@@ -347,6 +373,116 @@ function createProjectionFrameHarness(size: number): ProjectionFrameHarness {
         key: freshKey,
         subjectId: freshSubjectId,
         nextValue: { id: freshKey, value: freshKey },
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+  };
+}
+
+function createStructuralAuditHarness(size: number): StructuralAuditHarness {
+  const activeKeys = Array.from({ length: size }, (_, index) => index);
+  const stableKey = Math.floor(size / 2);
+  const stableSubjectId = stableKey + 1;
+  const removableKey = size - 1;
+  const removableSubjectId = removableKey + 1;
+  const transferredKey = size + 10_000;
+  const freshKey = size + 20_000;
+  const freshSubjectId = size + 1;
+
+  const seedAddStore = (): StructuralStore<number> => {
+    const structuralStore = new StructuralStore<number>();
+    const seededStore = structuralStore as unknown as {
+      activeKeys: number[];
+      nextSubjectId: number;
+    };
+    seededStore.activeKeys = [...activeKeys];
+    seededStore.nextSubjectId = freshSubjectId;
+    return structuralStore;
+  };
+
+  const seedRemoveStore = (): StructuralStore<number> => {
+    const structuralStore = new StructuralStore<number>();
+    const seededStore = structuralStore as unknown as {
+      activeKeys: number[];
+      subjectIds: Map<number, number>;
+      subjectStates: Map<
+        number,
+        { active: boolean; key?: number; restoreAllowed: boolean }
+      >;
+      nextSubjectId: number;
+    };
+    seededStore.activeKeys = [...activeKeys];
+    seededStore.subjectIds = new Map([[removableKey, removableSubjectId]]);
+    seededStore.subjectStates = new Map([
+      [
+        removableSubjectId,
+        { active: true, key: removableKey, restoreAllowed: true },
+      ],
+    ]);
+    seededStore.nextSubjectId = freshSubjectId;
+    return structuralStore;
+  };
+
+  const seedChangeIdStore = (): StructuralStore<number> => {
+    const structuralStore = new StructuralStore<number>();
+    const seededStore = structuralStore as unknown as {
+      activeKeys: number[];
+      subjectIds: Map<number, number>;
+      subjectStates: Map<
+        number,
+        { active: boolean; key?: number; restoreAllowed: boolean }
+      >;
+      nextSubjectId: number;
+    };
+    seededStore.activeKeys = [...activeKeys];
+    seededStore.subjectIds = new Map([[stableKey, stableSubjectId]]);
+    seededStore.subjectStates = new Map([
+      [stableSubjectId, { active: true, key: stableKey, restoreAllowed: true }],
+    ]);
+    seededStore.nextSubjectId = freshSubjectId;
+    return structuralStore;
+  };
+
+  return {
+    addOne(): void {
+      const valueStore = new EntityValueStore<EntityRow>();
+      const projection = new MaterializedEntityProjection<number, EntityRow>();
+      const structuralStore = seedAddStore();
+      const frame = new EntityMutationFrame(valueStore, projection, structuralStore);
+      frame.stageFreshSubject({
+        kind: 'create-fresh-subject',
+        key: freshKey,
+        subjectId: freshSubjectId,
+        nextValue: { id: freshKey, value: freshKey },
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    removeOne(): void {
+      const valueStore = new EntityValueStore<EntityRow>();
+      const projection = new MaterializedEntityProjection<number, EntityRow>();
+      const structuralStore = seedRemoveStore();
+      const frame = new EntityMutationFrame(valueStore, projection, structuralStore);
+      frame.stageSubjectTombstone({
+        kind: 'tombstone-subject',
+        key: removableKey,
+        subjectId: removableSubjectId,
+        restoreAllowed: true,
+      });
+      const result = frame.commit();
+      frame.project(result);
+    },
+    changeId(): void {
+      const valueStore = new EntityValueStore<EntityRow>();
+      const projection = new MaterializedEntityProjection<number, EntityRow>();
+      const structuralStore = seedChangeIdStore();
+      const frame = new EntityMutationFrame(valueStore, projection, structuralStore);
+      frame.stageKeyTransfer({
+        kind: 'transfer-key',
+        fromKey: stableKey,
+        toKey: transferredKey,
+        subjectId: stableSubjectId,
       });
       const result = frame.commit();
       frame.project(result);
@@ -601,30 +737,72 @@ function measureEntityLogicalWorkRows(
   };
 
   for (const size of sizes) {
-    const updateHarness = createProjectionFrameHarness(size);
+    const harness = createProjectionFrameHarness(size);
+
     resetProductionSubstrateStatsForTesting(stats);
-    updateHarness.updateOne(size + 1);
+    harness.updateOne(size + 1);
     captureRow('entity-updateOne', size);
 
-    const addHarness = createProjectionFrameHarness(size);
     resetProductionSubstrateStatsForTesting(stats);
-    addHarness.addOne();
+    harness.addOne();
     captureRow('entity-addOne', size);
 
-    const removeHarness = createProjectionFrameHarness(size);
     resetProductionSubstrateStatsForTesting(stats);
-    removeHarness.removeOne();
+    harness.removeOne();
     captureRow('entity-removeOne', size);
 
-    const changeIdHarness = createProjectionFrameHarness(size);
     resetProductionSubstrateStatsForTesting(stats);
-    changeIdHarness.changeId();
+    harness.changeId();
     captureRow('entity-changeId', size);
 
-    const mixedFrameHarness = createProjectionFrameHarness(size);
     resetProductionSubstrateStatsForTesting(stats);
-    mixedFrameHarness.runMixedFrame();
+    harness.runMixedFrame();
     captureRow('entity-mixed-structural-frame', size);
+  }
+
+  return rows;
+}
+
+function measureEntityFrameLogicalWorkRows(
+  sizes: readonly number[],
+  stats: ProductionSubstrateStats
+): EntityFrameLogicalWorkRow[] {
+  const rows: EntityFrameLogicalWorkRow[] = [];
+
+  const captureRow = (
+    operation: EntityFrameLogicalWorkOperation,
+    positions: number
+  ): void => {
+    rows.push({
+      operation,
+      positions,
+      structuralActiveKeyLookups: stats.structuralActiveKeyLookups,
+      structuralActiveKeyEntriesVisited: stats.structuralActiveKeyEntriesVisited,
+      structuralSubjectsCreated: stats.structuralSubjectsCreated,
+      structuralSubjectTransfers: stats.structuralSubjectTransfers,
+      structuralSubjectTombstones: stats.structuralSubjectTombstones,
+      valueStoreWrites: stats.valueStoreWrites,
+      projectionAppends: stats.projectionAppends,
+      projectionRemovals: stats.projectionRemovals,
+      projectionRekeys: stats.projectionRekeys,
+    });
+  };
+
+  for (const size of sizes) {
+    const addHarness = createStructuralAuditHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    addHarness.addOne();
+    captureRow('entity-frame-addOne', size);
+
+    const removeHarness = createStructuralAuditHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    removeHarness.removeOne();
+    captureRow('entity-frame-removeOne', size);
+
+    const changeIdHarness = createStructuralAuditHarness(size);
+    resetProductionSubstrateStatsForTesting(stats);
+    changeIdHarness.changeId();
+    captureRow('entity-frame-changeId', size);
   }
 
   return rows;
@@ -635,6 +813,7 @@ function writeRows(report: {
   entityRows: readonly EntityTimingRow[];
   entityFrameRows: readonly EntityFrameTimingRow[];
   entityLogicalRows: readonly EntityLogicalWorkRow[];
+  entityFrameLogicalRows: readonly EntityFrameLogicalWorkRow[];
 }): void {
   if (!OUTPUT_FILE) {
     return;
@@ -672,6 +851,15 @@ describe('Complexity guard: production scalar substrate', () => {
           projectionRebuilds: 0,
           projectionEntriesVisited: 0,
           projectionReplacements: 0,
+          projectionAppends: 0,
+          projectionRemovals: 0,
+          projectionRekeys: 0,
+          structuralActiveKeyLookups: 0,
+          structuralActiveKeyEntriesVisited: 0,
+          structuralSubjectsCreated: 0,
+          structuralSubjectTransfers: 0,
+          structuralSubjectTombstones: 0,
+          valueStoreWrites: 0,
         });
 
         resetProductionSubstrateStatsForTesting(stats);
@@ -688,6 +876,15 @@ describe('Complexity guard: production scalar substrate', () => {
           projectionRebuilds: 0,
           projectionEntriesVisited: 0,
           projectionReplacements: 0,
+          projectionAppends: 0,
+          projectionRemovals: 0,
+          projectionRekeys: 0,
+          structuralActiveKeyLookups: 0,
+          structuralActiveKeyEntriesVisited: 0,
+          structuralSubjectsCreated: 0,
+          structuralSubjectTransfers: 0,
+          structuralSubjectTombstones: 0,
+          valueStoreWrites: 0,
         });
       } finally {
         harness.destroy();
@@ -714,6 +911,15 @@ describe('Complexity guard: production scalar substrate', () => {
             projectionRebuilds: 0,
             projectionEntriesVisited: 0,
             projectionReplacements: 0,
+            projectionAppends: 0,
+            projectionRemovals: 0,
+            projectionRekeys: 0,
+            structuralActiveKeyLookups: 0,
+            structuralActiveKeyEntriesVisited: 0,
+            structuralSubjectsCreated: 0,
+            structuralSubjectTransfers: 0,
+            structuralSubjectTombstones: 0,
+            valueStoreWrites: 0,
           });
         } finally {
           frameHarness.destroy();
@@ -725,7 +931,7 @@ describe('Complexity guard: production scalar substrate', () => {
 
 describe('Complexity audit: entity structural projection maintenance', () => {
   it(
-    'proves value-only writes stay O(1) while structural projection work still scales with collection size',
+    'proves value-only writes stay O(1) while structural projection work stays local',
     () => {
     const stats = installProductionSubstrateStatsForTesting();
     const rows = measureEntityLogicalWorkRows(LOGICAL_AUDIT_SIZES, stats);
@@ -793,6 +999,73 @@ describe('Complexity audit: entity structural projection maintenance', () => {
   );
 });
 
+describe('Complexity audit: structural store order bookkeeping', () => {
+  it(
+    'proves which direct-frame structural mutations still inspect existing active keys',
+    () => {
+    const stats = installProductionSubstrateStatsForTesting();
+    const rows = measureEntityFrameLogicalWorkRows(
+      STRUCTURAL_LOGICAL_AUDIT_SIZES,
+      stats
+    );
+
+    for (const size of STRUCTURAL_LOGICAL_AUDIT_SIZES) {
+      const addRow = rows.find(
+        (row) => row.operation === 'entity-frame-addOne' && row.positions === size
+      );
+      expect(addRow).toEqual({
+        operation: 'entity-frame-addOne',
+        positions: size,
+        structuralActiveKeyLookups: 1,
+        structuralActiveKeyEntriesVisited: size,
+        structuralSubjectsCreated: 1,
+        structuralSubjectTransfers: 0,
+        structuralSubjectTombstones: 0,
+        valueStoreWrites: 1,
+        projectionAppends: 1,
+        projectionRemovals: 0,
+        projectionRekeys: 0,
+      });
+
+      const removeRow = rows.find(
+        (row) => row.operation === 'entity-frame-removeOne' && row.positions === size
+      );
+      expect(removeRow).toEqual({
+        operation: 'entity-frame-removeOne',
+        positions: size,
+        structuralActiveKeyLookups: 1,
+        structuralActiveKeyEntriesVisited: size,
+        structuralSubjectsCreated: 0,
+        structuralSubjectTransfers: 0,
+        structuralSubjectTombstones: 1,
+        valueStoreWrites: 0,
+        projectionAppends: 0,
+        projectionRemovals: 1,
+        projectionRekeys: 0,
+      });
+
+      const changeIdRow = rows.find(
+        (row) => row.operation === 'entity-frame-changeId' && row.positions === size
+      );
+      expect(changeIdRow).toEqual({
+        operation: 'entity-frame-changeId',
+        positions: size,
+        structuralActiveKeyLookups: 1,
+        structuralActiveKeyEntriesVisited: Math.floor(size / 2) + 1,
+        structuralSubjectsCreated: 0,
+        structuralSubjectTransfers: 1,
+        structuralSubjectTombstones: 0,
+        valueStoreWrites: 0,
+        projectionAppends: 0,
+        projectionRemovals: 0,
+        projectionRekeys: 1,
+      });
+    }
+    },
+    20_000
+  );
+});
+
 describe('Timing guard: production scalar substrate', () => {
   it('rejects catastrophic total-size scaling for compiled scalar operations', () => {
     const rows = measureScalarTimingRows(COMPLEXITY_SIZES);
@@ -819,11 +1092,22 @@ timingDescribe('Performance report: production substrate', () => {
     const entityFrameRows = measureEntityFrameTimingRows(COMPLEXITY_SIZES);
     const stats = installProductionSubstrateStatsForTesting();
     const entityLogicalRows = measureEntityLogicalWorkRows(LOGICAL_AUDIT_SIZES, stats);
+    const entityFrameLogicalRows = measureEntityFrameLogicalWorkRows(
+      STRUCTURAL_LOGICAL_AUDIT_SIZES,
+      stats
+    );
 
-    writeRows({ scalarRows, entityRows, entityFrameRows, entityLogicalRows });
+    writeRows({
+      scalarRows,
+      entityRows,
+      entityFrameRows,
+      entityLogicalRows,
+      entityFrameLogicalRows,
+    });
     console.table(scalarRows);
     console.table(entityRows);
     console.table(entityFrameRows);
     console.table(entityLogicalRows);
+    console.table(entityFrameLogicalRows);
   }, 120_000);
 });

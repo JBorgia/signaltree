@@ -1,3 +1,5 @@
+import { recordProductionSubstrateStat } from '../internals/production-substrate-stats';
+
 export type SubjectLifetimeRecord<K extends string | number> = {
   active: boolean;
   key?: K;
@@ -130,6 +132,7 @@ export class StructuralStore<K extends string | number> {
   }
 
   createSubject(subjectId: number, key: K): void {
+    recordProductionSubstrateStat('structuralSubjectsCreated');
     this.nextSubjectId = Math.max(this.nextSubjectId, subjectId + 1);
     this.activateSubject(subjectId, key);
     this.subjectRevisions.set(subjectId, 0);
@@ -137,6 +140,7 @@ export class StructuralStore<K extends string | number> {
   }
 
   transferSubject(subjectId: number, from: K, to: K, restoreAllowed = true): void {
+    recordProductionSubstrateStat('structuralSubjectTransfers');
     const activeIndex = this.activeIndexForKey(from);
     this.subjectIds.delete(from);
     this.activateSubject(subjectId, to, restoreAllowed);
@@ -148,6 +152,7 @@ export class StructuralStore<K extends string | number> {
   }
 
   tombstoneSubject(subjectId: number, key: K, restoreAllowed: boolean): void {
+    recordProductionSubstrateStat('structuralSubjectTombstones');
     this.subjectIds.delete(key);
     this.removeActiveKey(key);
     this.subjectStates.set(subjectId, {
@@ -184,7 +189,15 @@ export class StructuralStore<K extends string | number> {
   }
 
   private activeIndexForKey(key: K): number {
-    return this.activeKeys.indexOf(key);
+    recordProductionSubstrateStat('structuralActiveKeyLookups');
+    for (let index = 0; index < this.activeKeys.length; index++) {
+      recordProductionSubstrateStat('structuralActiveKeyEntriesVisited');
+      if (this.activeKeys[index] === key) {
+        return index;
+      }
+    }
+
+    return -1;
   }
 
   private insertActiveKeyAt(key: K, index: number): void {

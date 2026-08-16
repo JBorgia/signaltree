@@ -1,3 +1,5 @@
+import { recordProductionSubstrateStat } from '../internals/production-substrate-stats';
+
 export class EntityValueStore<E extends Record<string, unknown>> {
   private readonly retainedEntities = new Map<number, E>();
 
@@ -6,6 +8,7 @@ export class EntityValueStore<E extends Record<string, unknown>> {
   }
 
   retainSubjectValue(subjectId: number, entity: E): void {
+    recordProductionSubstrateStat('valueStoreWrites');
     this.retainedEntities.set(subjectId, entity);
   }
 

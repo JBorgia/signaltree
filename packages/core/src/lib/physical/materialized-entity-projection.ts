@@ -42,6 +42,7 @@ export class MaterializedEntityProjection<
   }
 
   appendEntry(key: K, value: E): void {
+    recordProductionSubstrateStat('projectionAppends');
     const existing = this.storage.get(key);
     if (existing !== undefined) {
       existing.value = value;
@@ -52,6 +53,7 @@ export class MaterializedEntityProjection<
   }
 
   rekeyEntry(fromKey: K, toKey: K): void {
+    recordProductionSubstrateStat('projectionRekeys');
     const existing = this.storage.get(fromKey);
     if (existing === undefined) {
       return;
@@ -63,6 +65,7 @@ export class MaterializedEntityProjection<
   }
 
   removeEntry(key: K): void {
+    recordProductionSubstrateStat('projectionRemovals');
     const existing = this.storage.get(key);
     if (existing === undefined) {
       return;
