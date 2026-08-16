@@ -50,6 +50,8 @@ type EntityTimingOperation =
   | 'entity-removeOne'
   | 'entity-changeId';
 
+type EntityFrameTimingOperation = 'entity-frame-addOne';
+
 type EntityLogicalWorkOperation =
   | EntityTimingOperation
   | 'entity-mixed-structural-frame';
@@ -62,6 +64,12 @@ type ScalarTimingRow = {
 
 type EntityTimingRow = {
   operation: EntityTimingOperation;
+  positions: number;
+  perOperationUs: number;
+};
+
+type EntityFrameTimingRow = {
+  operation: EntityFrameTimingOperation;
   positions: number;
   perOperationUs: number;
 };
@@ -548,6 +556,31 @@ function measureEntityTimingRows(
   return rows;
 }
 
+function measureEntityFrameTimingRows(
+  sizes: readonly number[]
+): EntityFrameTimingRow[] {
+  const rows: EntityFrameTimingRow[] = [];
+
+  for (const size of sizes) {
+    const frameHarness = createProjectionFrameHarness(size);
+
+    rows.push({
+      operation: 'entity-frame-addOne',
+      positions: size,
+      perOperationUs: perOperationUs(
+        measureOnceMs(() => {
+          for (let iteration = 0; iteration < ENTITY_STRUCTURAL_ITERATIONS; iteration++) {
+            frameHarness.addOne();
+          }
+        }),
+        ENTITY_STRUCTURAL_ITERATIONS
+      ),
+    });
+  }
+
+  return rows;
+}
+
 function measureEntityLogicalWorkRows(
   sizes: readonly number[],
   stats: ProductionSubstrateStats
@@ -600,6 +633,7 @@ function measureEntityLogicalWorkRows(
 function writeRows(report: {
   scalarRows: readonly ScalarTimingRow[];
   entityRows: readonly EntityTimingRow[];
+  entityFrameRows: readonly EntityFrameTimingRow[];
   entityLogicalRows: readonly EntityLogicalWorkRow[];
 }): void {
   if (!OUTPUT_FILE) {
@@ -782,12 +816,14 @@ timingDescribe('Performance report: production substrate', () => {
   it('reports scalar and entity scaling across the shipped path', () => {
     const scalarRows = measureScalarTimingRows(COMPLEXITY_SIZES);
     const entityRows = measureEntityTimingRows(COMPLEXITY_SIZES);
+    const entityFrameRows = measureEntityFrameTimingRows(COMPLEXITY_SIZES);
     const stats = installProductionSubstrateStatsForTesting();
     const entityLogicalRows = measureEntityLogicalWorkRows(LOGICAL_AUDIT_SIZES, stats);
 
-    writeRows({ scalarRows, entityRows, entityLogicalRows });
+    writeRows({ scalarRows, entityRows, entityFrameRows, entityLogicalRows });
     console.table(scalarRows);
     console.table(entityRows);
+    console.table(entityFrameRows);
     console.table(entityLogicalRows);
   }, 120_000);
 });
