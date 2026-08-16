@@ -22,6 +22,8 @@ export interface ProductionSubstrateStats {
   valueStoreWrites: number;
   publicAddPreviousTailReads: number;
   publicAddExistingKeysCopied: number;
+  publicUndoPositionEntriesExamined: number;
+  publicUndoTurnEffectsExamined: number;
 }
 
 type CounterName = keyof ProductionSubstrateStats;
@@ -66,6 +68,8 @@ export function resetProductionSubstrateStatsForTesting(
   stats.valueStoreWrites = 0;
   stats.publicAddPreviousTailReads = 0;
   stats.publicAddExistingKeysCopied = 0;
+  stats.publicUndoPositionEntriesExamined = 0;
+  stats.publicUndoTurnEffectsExamined = 0;
   return stats;
 }
 
@@ -105,5 +109,7 @@ function createProductionSubstrateStats(): ProductionSubstrateStats {
     valueStoreWrites: 0,
     publicAddPreviousTailReads: 0,
     publicAddExistingKeysCopied: 0,
+    publicUndoPositionEntriesExamined: 0,
+    publicUndoTurnEffectsExamined: 0,
   };
 }

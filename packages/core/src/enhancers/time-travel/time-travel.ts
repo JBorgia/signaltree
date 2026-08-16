@@ -25,6 +25,7 @@ import {
   rememberTreeRealizationDescriptor,
 } from '../../lib/internals/causal-runtime/tree-realization-adapter';
 import { visitTree } from '../../lib/internals/visit-tree';
+import { recordProductionSubstrateStat } from '../../lib/internals/production-substrate-stats';
 import { getCausalWriteMode } from '../../lib/causal-write-mode';
 import { getPathNotifier } from '../../lib/path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
@@ -1330,6 +1331,7 @@ class TimeTravelManager<T> {
     let latestTurn: CanonicalTurn<T> | undefined;
 
     for (const [positionId, turnIds] of this.positionTurnIds.entries()) {
+      recordProductionSubstrateStat('publicUndoPositionEntriesExamined');
       const frontier = this.getFrontier(positionId);
       if (frontier <= 0) {
         continue;
@@ -1560,6 +1562,7 @@ class TimeTravelManager<T> {
 
   private hasAppliedConfirmedTurns(): boolean {
     for (const [positionId] of this.positionTurnIds.entries()) {
+      recordProductionSubstrateStat('publicUndoPositionEntriesExamined');
       if (this.getFrontier(positionId) > 0) {
         return true;
       }
@@ -1651,6 +1654,10 @@ class TimeTravelManager<T> {
         continue;
       }
       const turnEffects = turn.__effects ?? [];
+      recordProductionSubstrateStat(
+        'publicUndoTurnEffectsExamined',
+        turnEffects.length
+      );
       if (direction === 'undo') {
         for (let i = turnEffects.length - 1; i >= 0; i--) {
           effects.push(turnEffects[i]);

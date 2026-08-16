@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import type { WritableSignal } from '@angular/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { timeTravel } from '../enhancers/time-travel/time-travel';
 import { entityMap } from './markers/entity-map';
 import { EntityMutationFrame } from './physical/entity-mutation-frame';
 import { EntityValueStore } from './physical/entity-value-store';
@@ -16,6 +17,7 @@ import {
 } from './internals/production-substrate-stats';
 import { getTreeScalarSlotRuntime } from './internals/tree-scalar-slot-angular-runtime';
 import { getOwnedPositionIds } from './internals/owned-mutation';
+import { getPathNotifier } from './path-notifier';
 import { signalTree } from './signal-tree';
 import type { ISignalTree, PositionId } from './types';
 
@@ -49,7 +51,8 @@ type EntityTimingOperation =
   | 'entity-updateOne'
   | 'entity-addOne'
   | 'entity-removeOne'
-  | 'entity-changeId';
+  | 'entity-changeId'
+  | 'entity-undoRemove';
 
 type EntityFrameTimingOperation =
   | 'entity-frame-addOne'
@@ -82,9 +85,24 @@ type EntityFrameTimingRow = {
   perOperationUs: number;
 };
 
+type PublicUndoLogicalWorkRow = {
+  positions: number;
+  projectionRebuilds: number;
+  projectionEntriesVisited: number;
+  projectionRestores: number;
+  publicUndoPositionEntriesExamined: number;
+  publicUndoTurnEffectsExamined: number;
+};
+
 type ProjectionRestoreHarness = {
   prepareRestore(): void;
   restoreOne(): void;
+};
+
+type UndoEntityHarness = {
+  prepareUndo(): void;
+  undoRemove(): void;
+  destroy(): void;
 };
 
 type EntityFrameLogicalWorkRow = {
@@ -295,6 +313,35 @@ function createEntityHarness(size: number): EntityHarness {
       const previousId = currentChangeId;
       currentChangeId = nextChangeId;
       nextChangeId = previousId;
+    },
+    destroy(): void {
+      tree.destroy();
+    },
+  };
+}
+
+function createUndoEntityHarness(size: number): UndoEntityHarness {
+  const tree = signalTree({ rows: entityMap<EntityRow, number>() }).with(
+    timeTravel({ maxHistorySize: size + 10 })
+  ) as ISignalTree<{
+    rows: EntityCollection;
+  }> & {
+    undo(): void;
+  };
+  const rows = tree.$.rows;
+  const notifier = getPathNotifier();
+  const removableId = size - 1;
+
+  rows.addMany(buildEntityRows(size));
+  notifier?.flushSync();
+
+  return {
+    prepareUndo(): void {
+      rows.removeOne(removableId);
+      notifier?.flushSync();
+    },
+    undoRemove(): void {
+      tree.undo();
     },
     destroy(): void {
       tree.destroy();
@@ -824,6 +871,21 @@ function measureEntityTimingRows(
           ENTITY_STRUCTURAL_ITERATIONS
         ),
       });
+
+        const undoHarness = createUndoEntityHarness(size);
+        try {
+          rows.push({
+            operation: 'entity-undoRemove',
+            positions: size,
+            perOperationUs: measurePreparedOperationUs(
+              structuralIterations,
+              () => undoHarness.prepareUndo(),
+              () => undoHarness.undoRemove()
+            ),
+          });
+        } finally {
+          undoHarness.destroy();
+        }
     } finally {
       changeIdHarness.destroy();
     }
@@ -1013,6 +1075,36 @@ function measurePublicAddLogicalWorkRows(
   return rows;
 }
 
+function measurePublicUndoLogicalWorkRows(
+  sizes: readonly number[],
+  stats: ProductionSubstrateStats
+): PublicUndoLogicalWorkRow[] {
+  const rows: PublicUndoLogicalWorkRow[] = [];
+
+  for (const size of sizes) {
+    const harness = createUndoEntityHarness(size);
+
+    try {
+      harness.prepareUndo();
+      resetProductionSubstrateStatsForTesting(stats);
+      harness.undoRemove();
+      rows.push({
+        positions: size,
+        projectionRebuilds: stats.projectionRebuilds,
+        projectionEntriesVisited: stats.projectionEntriesVisited,
+        projectionRestores: stats.projectionRestores,
+        publicUndoPositionEntriesExamined:
+          stats.publicUndoPositionEntriesExamined,
+        publicUndoTurnEffectsExamined: stats.publicUndoTurnEffectsExamined,
+      });
+    } finally {
+      harness.destroy();
+    }
+  }
+
+  return rows;
+}
+
 function writeRows(report: {
   scalarRows: readonly ScalarTimingRow[];
   entityRows: readonly EntityTimingRow[];
@@ -1020,6 +1112,7 @@ function writeRows(report: {
   entityLogicalRows: readonly EntityLogicalWorkRow[];
   entityFrameLogicalRows: readonly EntityFrameLogicalWorkRow[];
   restoreLogicalRows: readonly RestoreLogicalWorkRow[];
+  publicUndoLogicalRows: readonly PublicUndoLogicalWorkRow[];
 }): void {
   if (!OUTPUT_FILE) {
     return;
@@ -1069,6 +1162,8 @@ describe('Complexity guard: production scalar substrate', () => {
           valueStoreWrites: 0,
           publicAddPreviousTailReads: 0,
           publicAddExistingKeysCopied: 0,
+          publicUndoPositionEntriesExamined: 0,
+          publicUndoTurnEffectsExamined: 0,
         });
 
         resetProductionSubstrateStatsForTesting(stats);
@@ -1097,6 +1192,8 @@ describe('Complexity guard: production scalar substrate', () => {
           valueStoreWrites: 0,
           publicAddPreviousTailReads: 0,
           publicAddExistingKeysCopied: 0,
+          publicUndoPositionEntriesExamined: 0,
+          publicUndoTurnEffectsExamined: 0,
         });
       } finally {
         harness.destroy();
@@ -1135,6 +1232,8 @@ describe('Complexity guard: production scalar substrate', () => {
             valueStoreWrites: 0,
             publicAddPreviousTailReads: 0,
             publicAddExistingKeysCopied: 0,
+            publicUndoPositionEntriesExamined: 0,
+            publicUndoTurnEffectsExamined: 0,
           });
         } finally {
           frameHarness.destroy();
@@ -1335,6 +1434,28 @@ describe('Complexity audit: restore-one projection maintenance', () => {
   });
 });
 
+describe('Complexity audit: public undo-of-remove realization', () => {
+  it('proves public undo-of-remove realizes through one incremental restore', () => {
+    const stats = installProductionSubstrateStatsForTesting();
+    const rows = measurePublicUndoLogicalWorkRows(
+      STRUCTURAL_LOGICAL_AUDIT_SIZES,
+      stats
+    );
+
+    for (const size of STRUCTURAL_LOGICAL_AUDIT_SIZES) {
+      const row = rows.find((candidate) => candidate.positions === size);
+      expect(row).toEqual({
+        positions: size,
+        projectionRebuilds: 0,
+        projectionEntriesVisited: 0,
+        projectionRestores: 1,
+        publicUndoPositionEntriesExamined: 2,
+        publicUndoTurnEffectsExamined: 1,
+      });
+    }
+  });
+});
+
 describe('Timing guard: production scalar substrate', () => {
   it('rejects catastrophic total-size scaling for compiled scalar operations', () => {
     const rows = measureScalarTimingRows(COMPLEXITY_SIZES);
@@ -1369,6 +1490,10 @@ timingDescribe('Performance report: production substrate', () => {
       STRUCTURAL_LOGICAL_AUDIT_SIZES,
       stats
     );
+    const publicUndoLogicalRows = measurePublicUndoLogicalWorkRows(
+      STRUCTURAL_LOGICAL_AUDIT_SIZES,
+      stats
+    );
 
     writeRows({
       scalarRows,
@@ -1377,6 +1502,7 @@ timingDescribe('Performance report: production substrate', () => {
       entityLogicalRows,
       entityFrameLogicalRows,
       restoreLogicalRows,
+      publicUndoLogicalRows,
     });
     console.table(scalarRows);
     console.table(entityRows);
@@ -1384,5 +1510,6 @@ timingDescribe('Performance report: production substrate', () => {
     console.table(entityLogicalRows);
     console.table(entityFrameLogicalRows);
     console.table(restoreLogicalRows);
+    console.table(publicUndoLogicalRows);
   }, 120_000);
 });
