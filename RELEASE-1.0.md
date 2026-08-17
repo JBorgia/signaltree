@@ -123,6 +123,23 @@ Never include unrelated dirt in release commits.
 
 ## Rules
 
+0. **When a measurement will drive an API or architecture decision, use the
+   strongest available measurement, never a convenient proxy.** Earned the hard
+   way — every proxy used in this release was materially wrong at least once:
+
+   | Proxy | Said | Truth | Would have caused |
+   | --- | --- | --- | --- |
+   | `grep -c '^export'` | core 141 exports | 209 across 6 entrypoints | freezing a surface 1/3 unseen |
+   | `SymbolFlags.Value` on an alias | 2 runtime exports | 84 | wrong runtime/type split |
+   | `signal(` | `stored` uses 0 | 1 (`signal<T>(`) | "already neutral", wrongly |
+   | `angularInType` | `schema` needs no Angular | emits `@angular/core` | dropping a required peer |
+   | `toContain('a')` | test passing | matched the `a` in `"data"` | shipping a defect with a green test |
+   | file-level `@angular` grep | core deeply coupled | 3 of 209 public types | deferring a viable extraction |
+
+   Two of those produced a confidently wrong conclusion that survived until a
+   second measurement contradicted it. When two measurements disagree, stop and
+   reconcile before acting on either.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
@@ -732,6 +749,31 @@ Not "the Angular import disappeared from the neutral file", but:
 
 > Can the descriptor module be imported in a process with **no Angular
 > installed** and still construct, inspect, and type the marker?
+
+**Prove it with an isolated consumer, not a grep.** Build a throwaway fixture
+where `@angular/core` is genuinely unresolvable — a temp project outside the
+workspace, or an esbuild/tsc run with Angular aliased to a failing stub — then
+import the descriptor module, construct a marker, run its guard, and type-check
+against its config. Grepping imports proves the file does not name Angular; it
+does not prove the module's transitive closure can load without it. Every proxy
+measurement in this release that drove a decision was materially wrong at least
+once (see the standing rule below), and this is the decision the whole package
+boundary rests on.
+
+Success criterion for the first slice:
+
+```text
+Neutral descriptor closure     Angular runtime imports  = 0
+                               core-internals reachback = 0
+Angular realization            behavior unchanged
+                               same marker identity/config semantics
+                               same public symbol set
+```
+
+**If any symbol appears or disappears during `async-source`, STOP and understand
+why before continuing.** The first split must be pure declaration-location
+movement; a symbol-set change there means the seam is not where the analysis
+said it was.
 
 #### Order — deliberately not by marker name
 
