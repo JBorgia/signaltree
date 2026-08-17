@@ -1101,6 +1101,20 @@ may legitimately remain if it appears in neutral async contracts.
                 -> stays:   Angular-derived source types
    ```
 
+   **Extract the MINIMUM neutral contract.** The goal is the smallest substrate
+   the SDK actually consumes — NOT "`types.ts` without the Angular import". If
+   the neutral module grows into a shadow copy of core's full type model, the
+   split has failed even when the declaration closure reports zero Angular.
+
+   **STOP CONDITION during the split:** if a supposedly neutral declaration
+   needs `ISignalTree`, `Signal`, `WritableSignal` or another realization-facing
+   type for its ACTUAL PUBLIC SEMANTICS — not merely because it shares a file
+   with one — stop and reclassify that symbol into bucket 3. Do not widen the
+   neutral substrate to accommodate it. That is the same judgement already made
+   for `isSignalTree`, and the same rule applies: runtime neutrality does not
+   make an API authoring-neutral if its supported type contract describes the
+   framework realization.
+
 2. **Preserve nominal identity.** `ENHANCER_META` is a `Symbol` and must remain
    exactly ONE authoritative runtime instance — extract it, do not duplicate it
    into neutral and core copies with matching names. Same for any brand symbol
