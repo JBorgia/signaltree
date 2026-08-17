@@ -349,6 +349,18 @@ explains WHY/HOW state changed over time            -> CAUSAL AUTHORITY
 A feature may use several internally; its PUBLIC ABSTRACTION follows its
 PRIMARY OWNER.
 
+**AMENDMENT — THESE ROLES ARE NOT AN EXHAUSTIVE ONTOLOGY.** They are mutually
+distinguishable WHERE APPLICABLE, not a complete list of SignalTree concepts.
+Plenty of things are none of them: compiler functionality, construction syntax,
+queries/read models, utilities, policies, services, derived computations,
+framework-local helpers.
+
+> **If a function does not naturally fit one of the five, DO NOT MANUFACTURE A
+> ROLE FOR IT.**
+
+Otherwise we replace "everything is an enhancer" with "everything must fit our
+new five boxes" — the same form-first error with better vocabulary.
+
 **THE ENHANCER TEST, stated sharply:**
 
 > If I apply this, has the SEMANTIC BEHAVIOUR of the SignalTree itself changed?
@@ -384,19 +396,36 @@ disposition:**
 
 ```
 transactions   tree acquires transaction semantics        ENHANCER plausible
-timeTravel     temporal/causal capability                 ENHANCER plausible,
-                                                          subject to causal-owner audit
+timeTravel     temporal/causal capability                 installation form UNPROVEN;
+                                                          causal owner already matters
 batching       notification timing of realization         UNPROVEN — may be
                                                           publication-side
-serialization  tree can serialize itself                  ENHANCER plausible
-persistence    acts on committed truth                    CONSEQUENCE suspected
-schema         derived subsystem over truth               ENHANCER now LESS obvious
-devTools       external diagnostic projection             ADAPTER suspected
+serialization  DOWNGRADED to UNPROVEN. "tree can serialize itself" assumed the
+               conclusion. Apply the test literally: does installing it change
+               the tree's SEMANTIC BEHAVIOUR, or merely provide a REPRESENTATION
+               of existing truth? `serialize(tree)` as a utility/service may be
+               the honest shape rather than `tree.with(serialization())`.
+persistence    OWNER FROZEN — governed CONSEQUENCE over surviving committed
+               truth, settled in Gate A and NOT reopened here.
+               PUBLIC INSTALLATION FORM — should it be installed via an
+               Enhancer? UNPROVEN. Rule 0i may reject the installation form
+               without touching the semantics.
+schema         derived subsystem over truth               UNPROVEN
+devTools       external diagnostic projection             ADAPTER hypothesis
 guardrails     authoring-time diagnostics                 UNPROVEN
-realtime       external synchronization                   ADAPTER or CONSEQUENCE
-formBridge     Angular Reactive Forms interop             ADAPTER — derived at
-                                                          `b4e1ebd5`
+realtime       external synchronization                   UNPROVEN — adapter,
+                                                          consequence or other,
+                                                          per product function
+formBridge     Angular Reactive Forms interop             ADAPTER ownership DERIVED
+                                                          (`b4e1ebd5`); enhancer
+                                                          form REJECTED; marker
+                                                          dependency SEVERED
+                                                          (`2937ecbb`)
 ```
+
+**The persistence row is the pattern to copy:** a FROZEN semantic owner and an
+UNPROVEN installation form are different questions. Rule 0i attacks installation
+mechanisms without reopening settled semantics.
 
 #### MARKERS GET THE SAME HOSTILITY
 
@@ -406,6 +435,22 @@ markers. For each of `entityMap`, `stored`, `status`, `form`, `asyncSource`,
 
 > If the kernel existed first, would this concept genuinely be encoded in the
 > DECLARATIVE SEMANTIC STATE DESCRIPTION?
+
+**"Describes what a position is" is NECESSARY BUT NOT SUFFICIENT.** Otherwise
+almost any adjective earns a marker — validated, remote, audited, visible,
+editable, cached — and we simply move generic extension machinery from enhancers
+into markers. A marker must additionally earn CONSTRUCTION-TIME COMPILATION:
+
+```
+Does this declare an INTRINSIC SEMANTIC PROPERTY of a position
+AND must that property participate in CONSTRUCTION / COMPILATION?
+   YES -> marker plausible
+   NO  -> marker probably wrong
+```
+
+`entityMap` looks strong because structural/entity identity affects how the
+graph is COMPILED. Angular forms clearly fails. `form()` is precisely why the
+stronger test is needed.
 
 ```
 entityMap   carries structural/identity meaning            MARKER plausible
@@ -3218,6 +3263,110 @@ survive.
 
 **Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
 inventory.
+
+### MUT-0 ROW — VALIDATION OWNERSHIP — **OPEN. Higher priority than realtime R0.**
+
+Promoted ahead of realtime because RF-M1 produced evidence that 15.0 may carry
+**TWO AUTHORITIES FOR ONE SEMANTIC FUNCTION**, which can contaminate `form()`,
+schema, both Angular forms adapters and marker design simultaneously. Realtime is
+a self-contained product question; this is not.
+
+**NULL HYPOTHESIS:**
+
+> SignalTree has EXACTLY ONE semantic validation authority unless a second,
+> independently required function falsifies it. Angular forms systems CONSUME
+> validation; they do not OWN SignalTree validation semantics.
+
+#### A. THE FUNCTION INVENTORY — derived with names hidden
+
+```
+DECLARATION      how are rules attached to semantic state?
+EVALUATION       who runs them, against what truth?
+DERIVED STATE    who owns errors / valid / invalid?
+DEPENDENCY       how does a rule know it must recompute?
+ASYNC            who owns pending / cancellation / staleness?
+COMPOSITION      how do field, subtree and whole-graph rules combine?
+EXTERNAL INTEROP how do Angular forms systems consume the result?
+```
+
+#### B. MEASURED — the two current surfaces are NEAR-ISOMORPHIC
+
+```
+form() / FormSignal                    @signaltree/schema
+--------------------------------       ----------------------------------
+valid:      Signal<boolean>            isValid:   Signal<boolean>
+errors:     Signal<Partial<Record<     errors:    Signal<Readonly<Record<
+              keyof T, string|null>>>              string, string|null>>>
+errorList:  Signal<string[]>           errorList: Signal<readonly string[]>
+validate(): Promise<boolean>           validate():     Promise<boolean>
+validateField(k): Promise<boolean>     validatePath(p): Promise<boolean>
+—                                      pending / pendingPaths / isPendingAt
+—                                      errorsAt / isValidAt / schemaFor /
+                                       boundPaths / compact
+```
+
+**Same concept, two vocabularies.** Differences that might be SEMANTIC rather
+than historical packaging, and must be adjudicated rather than assumed:
+
+```
+SCOPE       form: keyed by field WITHIN one form (`keyof T`)
+            schema: keyed by dot-path ACROSS the tree (`string`)
+DECLARATION form: inline per-field validator functions
+            schema: StandardSchema objects per path (Zod/Valibot/ArkType/…)
+ASYNC       schema models pending explicitly; form exposes only a Promise
+```
+
+**FALSIFIER:** *can every required validation workflow be expressed through ONE
+canonical authority without losing a genuinely distinct semantic capability?*
+If yes, two owners are wrong. If no, state precisely why both exist and give
+them NON-OVERLAPPING ownership.
+
+#### C. A SEPARATE FUNCTION FOUND INSIDE `form()`
+
+`FormSignal` bundles validation with something else entirely:
+
+```
+VALIDATION        valid, errors, errorList, validate, validateField
+FORM-SESSION      dirty, touched, submitting, touch, touchAll, reset, clear,
+                  patch, wizard
+```
+
+Form-session state is **not validation**, and under the Rule 0i amendment it may
+be none of the five roles. It must be derived independently — and it is
+plausibly the real remaining justification for a form concept once validation is
+assigned correctly.
+
+#### D. ANGULAR STAYS STRICTLY DOWNSTREAM — with one nuance
+
+The RF-M1 contamination finding (`formGroup`, `formControl`, `angularErrors`,
+`asyncPending` written onto the marker) must be removed regardless of which
+authority survives. But do NOT delete a concept merely for sitting next to
+Angular baggage:
+
+```
+Angular FormControl/FormGroup refs   clearly ADAPTER-owned
+Angular error representation         ADAPTER-owned
+validation PENDING                   POTENTIALLY SEMANTIC — derive its owner.
+                                     Schema already models it as domain state.
+```
+
+#### E. SEQUENCING — `form()` is NOT audited yet
+
+Its survival is entangled with this row. If validators are the only semantic
+content left in `form()`, assigning validation ownership may collapse most of
+the marker's reason to exist — so auditing it now would test it against
+semantics that may move.
+
+```
+NOW    validation ownership      -> canonical validation semantics
+THEN   form() marker survival    -> what remains after validation is assigned?
+                                    (form-session state is the live candidate)
+THEN   realtime R0
+```
+
+**RF-M1's lesson generalized:** the adapter did not need "form-ness", it needed
+VALIDATION METADATA. Accidental coupling of that kind is exactly what this audit
+exists to expose.
 
 ### RULE 0g DERIVATION — Reactive Forms interoperability — **RESULT: REDESIGN / MOVE**
 
