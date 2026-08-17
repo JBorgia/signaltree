@@ -31,6 +31,7 @@ import { getPathNotifier } from '../../lib/path-notifier';
 import { getActiveWriteContext, withWriteContext } from '../../lib/write-context';
 
 import type {
+  Enhancer,
   ISignalTree,
   PositionId,
   StructuralHistoryEffect,
@@ -2078,7 +2079,7 @@ function checkHistoryRetention(root: unknown, entries: number): void {
 
 export function timeTravel(
   config: TimeTravelConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods {
+): Enhancer<TimeTravelMethods> {
   const { enabled = true } = config;
   const enhancerFn = <T>(
     tree: ISignalTree<T>
@@ -3028,15 +3029,30 @@ export function timeTravel(
   };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+
+  // THE ONE BOUNDARY CAST — same shape as `batching`, same reason, and it must
+  // be re-justified per enhancer rather than assumed. `enhancerFn` reads the
+  // realized tree so its parameter is `ISignalTree<T>`; `Enhancer<TAdded>`
+  // takes the neutral `EnhancerHost`, and parameters are contravariant under
+  // `strictFunctionTypes`. The body is untouched.
+  //
+  // `TimeTravelMethods.getHistory()` recovers its state from polymorphic
+  // `this`, NOT from anything this cast carries — which is why the public
+  // contract stays state-precise across it. `b266457d` removed the old
+  // `TimeTravelMethods<T>` generic for exactly this reason; the rows in
+  // `time-travel-contract.typing.spec.ts` are what verify it.
+  return enhancerFn as unknown as Enhancer<TimeTravelMethods>;
 }
 
 /**
- * Convenience function to enable basic time travel
+ * Convenience function to enable basic time travel.
+ *
+ * NOT PUBLIC — absent from `tools/api-baseline.json` and from every barrel, so
+ * it reaches no entry point. Migrated with `timeTravel()` rather than left
+ * declaring the pre-15.0 shape; deletion candidate for the deletion-first
+ * utility audit, alongside `batchingWithConfig`.
  */
-export function enableTimeTravel(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & TimeTravelMethods {
+export function enableTimeTravel(): Enhancer<TimeTravelMethods> {
   return timeTravel({ enabled: true });
 }
 
@@ -3048,7 +3064,7 @@ export function enableTimeTravel(): <T>(
  */
 function timeTravelHistory(
   maxHistorySize: number
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods {
+): Enhancer<TimeTravelMethods> {
   return timeTravel({ maxHistorySize });
 }
 
