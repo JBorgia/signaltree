@@ -1606,7 +1606,8 @@ identical in the output:
 
 **GREEN at `629b3b7d`.** Measured, not asserted: fresh `npm pack` of
 `dist/packages/core`, installed into a project OUTSIDE the workspace together with
-only its declared peers (`@angular/core`, `tslib`), no tsconfig path aliases, no
+all REQUIRED declared peers (`@angular/core`, `tslib`) — optional `rxjs`
+deliberately omitted — no tsconfig path aliases, no
 monorepo source resolution, `skipLibCheck: false` — `tsc --noEmit` exits 0 with zero
 errors.
 
@@ -1626,6 +1627,42 @@ One failure during construction was correctly classified as a FIXTURE defect, no
 package defect: the fixture invented an `initial` member on `EntityConfig`. No
 package was installed to make `tsc` pass — only declared peers — so an undeclared
 dependency could not hide behind the harness.
+
+#### Negative controls — `tools/check-declaration-closure-fixtures.mjs`
+
+The production gate reporting zero is only meaningful if the checker can FAIL when
+it should. Three synthetic inputs, one per discovered presentation, each asserting
+the full semantic property rather than "the declaration disappeared":
+
+```
+production emit succeeds
+stripping removes declaration X
+a SURVIVING emitted declaration still depends on X
+the checker reports X as broken closure
+```
+
+| case            | stripped               | still depends on it          | detected |
+| --------------- | ---------------------- | ---------------------------- | -------- |
+| A type-space    | `FixtureInternalType`  | `FixturePublicType`          | yes      |
+| B value-space   | `fixtureInternalFn`    | `fixturePublicFn` (`typeof`) | yes      |
+| C orphan trivia | `FixtureOrphanSupport` | `FixtureOrphanConsumer`      | yes      |
+
+Stripping an implementation-only declaration is CORRECT. The defect is a removed
+declaration plus a surviving shipped dependency, which is why each case asserts all
+three conditions.
+
+Fixture names are deliberately distinctive so the checker's bare-identifier keying
+cannot collide with a real declaration and mask a result — testing the checker that
+exists rather than presupposing the module-qualified rewrite. The marker token
+appears in each fixture ONCE, in the position under test, and nowhere else: prose
+mentioning it re-arms the behaviour.
+
+### GATE B DECLARATION CLOSURE — GREEN. Investigation CLOSED.
+
+Reopen only on a packed-consumer counterexample. No module-qualified rewrite, no
+export-specifier enhancement, no further `stripInternal` archaeology. The two
+documented checker approximations stay until an actual falsifier demands otherwise;
+the packed external consumer is the stronger oracle.
 
 HISTORICAL: `56572c5d` proved the entity-map instance is gone. It did not prove
 the packed consumer gate passes: the temp consumer had no `node_modules`, so
