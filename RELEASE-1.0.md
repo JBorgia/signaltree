@@ -953,6 +953,26 @@ dependency on core is just as disqualifying as a runtime one. Do not engrave
 "22 core modules + 1 shared module" as the physical move count until declaration
 emit agrees.
 
+And measure the EMITTED declaration specifiers, not TypeScript's source graph —
+a fourth member of the same Rule 0 family:
+
+```text
+compiler source resolution   !=   shipped declaration resolution
+```
+
+A type can resolve perfectly inside the monorepo while the generated `.d.ts`
+still carries an import path that is invalid once packed, or that reaches back
+into core. The property that actually governs `GATE B` is:
+
+```text
+packed @signaltree/authoring .d.ts
+        resolves using only itself + legitimate neutral dependencies
+        never @signaltree/core
+        never workspace-relative source paths
+```
+
+Read the emitted `.d.ts` files. Do not infer them from `tsc` succeeding.
+
 #### First cold-session task: graph, not `git mv`
 
 ```text
