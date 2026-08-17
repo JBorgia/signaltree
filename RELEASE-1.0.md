@@ -3000,10 +3000,28 @@ This is the same class of error the whole slice exists to prevent: I found a
 structure that already had the right FIELDS and promoted it before checking its
 COVERAGE.
 
-**What survives:** the *shape* of the null design — invalidate by semantic
-identity at a settled boundary, then reread truth — remains attractive and is
-still the best candidate. What is now unproven is WHERE that identity comes
-from. It is not `CausalTurn` today.
+**What survives, and ONLY as a scoped hypothesis:** invalidate by semantic
+identity at a settled boundary, then reread truth. That is a
+**SCHEMA / CURRENT-TRUTH-CONSUMER hypothesis**, NOT a universal SignalTree
+architecture.
+
+**Do NOT now hunt for "the real universal invalidation source".** That is the
+same proximity trap one level up: having found `CausalTurn` insufficient, the
+reflex is to look for whatever else emits affected positions for everything.
+**There may correctly be no such thing.** A plausible optimal design has no
+universal channel at all:
+
+```
+authored semantic operation  -> causal authority gets meaning
+physical semantic commit     -> current-truth consumers invalidate
+structural operation         -> topology/compiler invalidation
+persistence                  -> governed consequence
+realtime                     -> purpose-specific committed consequence
+Angular                      -> publication
+```
+
+The completeness failure is itself evidence for this: one structure did not
+cover everything because covering everything may not be one structure's job.
 
 **COMPLETENESS REQUIREMENT, now explicit.** Before any invalidation source is
 adopted, prove it covers every semantically meaningful way truth can change:
@@ -3046,9 +3064,21 @@ THIRD-PARTY SDK      UNPROVEN. No measured consumer. COUNTEREXAMPLE NEEDED:
 
 #### E. THE ONE CANDIDATE MISSING PRIMITIVE
 
-The null design covers everything except **A5**. `CausalTurn` carries `id`,
-`effects`, `participants`, `state` — **no attribution**. Schema's only
-irreducible extra requirement is suppression by `intent` / `source`.
+**RETRACTED — "schema's irreducible requirement".** Previously this said
+suppression by `intent`/`source` was schema's irreducible extra requirement.
+That is a fact about the CURRENT IMPLEMENTATION, promoted to a derived
+requirement. We have established only that today's schema reads those fields.
+We have NOT established that optimal 15.0 schema should have a
+suppression-by-source/intent concept at all.
+
+**THE RULE THIS VIOLATED, now explicit:**
+
+> Delete REQUIREMENTS as aggressively as we delete MECHANISMS. A legacy
+> requirement preserved uncritically is as damaging as a legacy mechanism, and
+> harder to see — it arrives wearing the words "we need".
+
+`CausalTurn` carries `id`, `effects`, `participants`, `state` — no attribution.
+Whether anything SHOULD is downstream of a function question nobody has asked.
 
 ```
 MINIMUM MISSING PRIMITIVE (stated without reference to current APIs)
@@ -3074,9 +3104,18 @@ operation, individual instruction, causal effect, transaction — are all open.
 
 ```
 interceptLeafSignals    finds Angular signals and wraps their setters.
-                        Observes FRAMEWORK REALIZATION, contradicting F1/F2.
-                        Zero application usage. Superseded by turn
-                        participants.                    -> DELETE (provisional)
+                        CORRECTION: this does NOT categorically contradict
+                        F1/F2. Angular IS permitted to observe Angular
+                        realization — that is its ownership. The narrower and
+                        correct argument:
+                          as a NEUTRAL SEMANTIC AUTHORING primitive
+                            -> very likely DELETE: it derives semantic change
+                               from framework realization rather than from
+                               SignalTree-owned truth
+                          as an ANGULAR-LOCAL implementation technique
+                            -> judge independently, by function
+                        Otherwise Rule 0e degenerates into "no code may ever
+                        look at a signal".              -> DELETE CANDIDATE
 
 PathNotifier /          global process-wide mutation bus; flattens
 getPathNotifier         MutationEnvelope into 8 positional args; requires
@@ -3129,7 +3168,54 @@ X4  attribution that cannot live on the turn without breaking causal semantics
 X5  a capability needing to REFUSE — none measured; schema is observe-only
 ```
 
-**X1 IS THE ONE TO ATTACK FIRST — but NOT with `timeTravel`.**
+#### FUNCTION RESET — runs BEFORE X1
+
+X1 as previously written still assumed several EXISTING feature requirements are
+requirements of the optimal design. Reset each candidate's function first,
+ignoring its current API and protocol:
+
+```
+REALTIME    what must optimal 15.0 realtime ACCOMPLISH?
+            "make remote state converge to surviving committed truth"
+              -> current truth may suffice
+            "replicate semantic operations preserving concurrency meaning"
+              -> operation/delta information is probably fundamental
+            These are DIFFERENT PRODUCTS with different information needs.
+            Derive from the intended function, never from what the current
+            implementation happens to send.
+
+DEVTOOLS    SEPARATE THESE FIRST — they may not be one capability.
+vs AUDIT    inspector: show current state + diagnostics -> current truth
+            audit:     immutable "A -> B happened" provenance -> transitions
+            Even if audit needs transitions, it may consume CAUSAL RECORDS or a
+            dedicated audit consequence — not a generic mutation stream.
+
+SCHEMA      what must validation ACCOMPLISH?
+            Does optimal schema have source/intent suppression AT ALL?
+            If it survives, derive its SEMANTICS from the product function
+            before worrying about timing.
+```
+
+#### X1 SPLIT INTO THREE CLAIMS OF INCREASING STRENGTH
+
+Binary X1 permits the bad inference *"realtime needs A->B, therefore SignalTree
+needs a public mutation observer"*. Split:
+
+```
+X1a  does ANY legitimate non-causal capability require historical TRANSITION
+     information rather than current truth?
+X1b  if yes, must it come from a SHARED semantic mechanism, or can its owning
+     subsystem receive it through a PURPOSE-SPECIFIC integration?
+X1c  if a shared mechanism is needed INTERNALLY, must THIRD-PARTY implementers
+     have PUBLIC access to it?
+```
+
+A capability needing transitions can still land as
+`semantic commit authority -> purpose-specific consequence` with **zero public
+observer API**, preserving the null design at the SDK level. Only X1c reaching
+"yes" creates public surface.
+
+**AND NOT WITH `timeTravel`.**
 
 `timeTravel` is a CONTAMINATED candidate: it IS the authority that owns causal
 history, so of course undo needs before/after. That proves only "causal history
