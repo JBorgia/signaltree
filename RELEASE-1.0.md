@@ -3271,11 +3271,72 @@ Promoted ahead of realtime because RF-M1 produced evidence that 15.0 may carry
 schema, both Angular forms adapters and marker design simultaneously. Realtime is
 a self-contained product question; this is not.
 
-**NULL HYPOTHESIS:**
+**RETRACTED NULL HYPOTHESIS.** This row opened with *"SignalTree has exactly ONE
+semantic validation authority unless falsified"*. That **already assumes
+SignalTree should own validation semantics at all**, which has not been earned.
+Rule 0g requires deleting REQUIREMENTS too — and "we currently have two
+validation systems" is not evidence that we need one.
 
-> SignalTree has EXACTLY ONE semantic validation authority unless a second,
-> independently required function falsifies it. Angular forms systems CONSUME
-> validation; they do not OWN SignalTree validation semantics.
+#### V0 — DOES SIGNALTREE OWN VALIDATION AT ALL? (runs FIRST)
+
+```
+ASSUME NONE OF IT EXISTS
+  no form()          no validators()      no schemas()
+  no @signaltree/schema                   no Angular forms
+  no path-based validation API
+
+Given ONLY the 15.0 kernel: what validation capability, if any, should
+SignalTree DELIBERATELY provide?
+```
+
+Three greenfield possibilities, all live:
+
+```
+A  SIGNALTREE SEMANTIC CAPABILITY
+   validation is intrinsic to semantic state; SignalTree owns declaration,
+   evaluation and result semantics
+B  DERIVED POLICY SYSTEM
+   SignalTree owns truth; a validation subsystem derives verdicts FROM it and
+   never becomes part of kernel/state semantics
+C  EXTERNAL ADAPTER
+   Zod/Valibot/Angular own validation; SignalTree exposes enough truth and
+   access for them to operate, and owns essentially NO validation ontology
+```
+
+Each sub-function may independently answer NO:
+
+```
+rule declaration?        automatic re-evaluation?   manual validation?
+cross-position deps?     subtree validation?        async evaluation?
+cancellation/staleness?  errors?                    validity?
+pending?                 third-party rule formats?
+```
+
+Only AFTER V0 does the one-authority falsifier run, and then in its corrected
+form: *can every SURVIVING validation function be satisfied by one
+non-overlapping semantic authority?*
+
+**A counterexample must identify TWO GENUINELY DIFFERENT FUNCTIONS.** These are
+representation and format differences until proven otherwise:
+
+```
+one API uses fields          one API uses paths
+one API uses functions       one API takes StandardSchema
+```
+
+**VALIDATION MAY ITSELF SPLIT.** "One canonical authority" means ONE OWNER PER
+SEMANTIC RESPONSIBILITY, not one giant subsystem:
+
+```
+VALIDATION POLICY     which rules apply to which semantic targets/dependencies
+VALIDATION EXECUTION  run sync/async rules against current truth
+VALIDATION RESULT     errors / validity / pending derived projection
+FORMAT ADAPTERS       Standard Schema, Angular validator fns, custom validators
+```
+
+That shape would let Standard Schema survive WITHOUT `@signaltree/schema` being
+a second authority. The evaluator itself may also belong outside SignalTree.
+Both open.
 
 #### A. THE FUNCTION INVENTORY — derived with names hidden
 
@@ -3316,6 +3377,25 @@ DECLARATION form: inline per-field validator functions
 ASYNC       schema models pending explicitly; form exposes only a Promise
 ```
 
+**DO NOT ATTACK THE SCOPE DIFFERENCE FIRST.** Both sides are
+REPRESENTATION-SHAPED, and NEITHER is the kernel's semantic identity model:
+
+```
+keyof T    TypeScript object structure
+dot-path   MUTABLE ADDRESS structure
+PositionId semantic/topological identity   <- the kernel's actual model
+```
+
+So the greenfield question is not *"field scope or path scope?"* but:
+
+> **What semantic THING is being validated, and what DEPENDENCIES may its rule
+> have?**
+
+e.g. *validate position P using truth at P, Q and R*, or *validate subtree S
+against current committed truth*. Both `keyof T` and dot-paths may vanish from
+the internal model entirely — which is precisely the kind of thing this audit
+exists to catch.
+
 **FALSIFIER:** *can every required validation workflow be expressed through ONE
 canonical authority without losing a genuinely distinct semantic capability?*
 If yes, two owners are wrong. If no, state precisely why both exist and give
@@ -3332,9 +3412,25 @@ FORM-SESSION      dirty, touched, submitting, touch, touchAll, reset, clear,
 ```
 
 Form-session state is **not validation**, and under the Rule 0i amendment it may
-be none of the five roles. It must be derived independently — and it is
-plausibly the real remaining justification for a form concept once validation is
-assigned correctly.
+be none of the five roles.
+
+**AND IT IS NOT ONE COHERENT FUNCTION EITHER.** Do not treat the leftover bundle
+as a single surviving thing:
+
+```
+dirty / touched      interaction / session concepts
+submitting           process state
+wizard               workflow / navigation
+reset / clear / patch operations
+```
+
+Those may each have different owners. So the question after validation is
+resolved is NOT *"does the remaining form-session bundle justify `form()`?"* but:
+
+> **What INDEPENDENTLY REQUIRED functions remain inside the historical form
+> bundle?**
+
+`form()` may disappear even if several of its functions survive elsewhere.
 
 #### D. ANGULAR STAYS STRICTLY DOWNSTREAM — with one nuance
 
@@ -3346,9 +3442,29 @@ Angular baggage:
 ```
 Angular FormControl/FormGroup refs   clearly ADAPTER-owned
 Angular error representation         ADAPTER-owned
-validation PENDING                   POTENTIALLY SEMANTIC — derive its owner.
-                                     Schema already models it as domain state.
+validation PENDING                   see below — three separate UNPROVEN questions
 ```
+
+**"Schema already models pending as domain state" was TOO STRONG and is
+retracted.** What is established is only that `@signaltree/schema` publicly
+models pending as reactive derived state. That does not establish it belongs to
+SignalTree's semantic truth. It may simply be OPERATIONAL STATE OF AN EVALUATOR:
+
+```
+truth -> async validation process -> pending / result
+```
+
+And there is a reason for active suspicion: undo/redo/rollback should almost
+certainly NOT treat *"a validator promise is currently unresolved"* as authored
+domain history. Keep all three questions separate:
+
+```
+pending concept required?   POTENTIALLY
+owner?                      UNPROVEN
+part of semantic state?     UNPROVEN
+```
+
+Current public visibility must not promote its ontology.
 
 #### E. SEQUENCING — `form()` is NOT audited yet
 
