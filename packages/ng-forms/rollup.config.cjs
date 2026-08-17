@@ -12,7 +12,6 @@ const options = {
     './src/core/async-validators.ts',
     './src/history/history.ts',
     './src/enhancer/form-bridge.ts',
-    './src/audit/audit.ts',
     './src/wizard/wizard.ts',
     './src/signals/index.ts',
   ],

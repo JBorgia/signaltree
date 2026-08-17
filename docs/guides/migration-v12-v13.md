@@ -23,9 +23,9 @@ import { createAuditTracker, createAuditCallback, AuditEntry } from '@signaltree
 import { createAuditTracker, createAuditCallback, AuditEntry } from '@signaltree/core';
 ```
 
-The old `@signaltree/ng-forms/audit` path still re-exports the same
-functions/types as a `@deprecated` back-compat shim — this is a find-and-replace,
-not a rewrite. Behavior is unchanged; only the canonical import moved.
+The old `@signaltree/ng-forms/audit` path re-exported the same
+functions/types as a `@deprecated` back-compat shim, and was REMOVED in 15.0 —
+this is a find-and-replace, not a rewrite. Behavior is unchanged; only the canonical import moved.
 
 ## 2. New: `history()` for `form()` markers — supersedes `withFormHistory` (additive)
 

@@ -14,11 +14,6 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./audit": {
-      "types": "./src/audit/audit.d.ts",
-      "import": "./dist/audit/audit.js",
-      "default": "./dist/audit/audit.js"
-    },
     "./signals": {
       "types": "./src/signals/index.d.ts",
       "import": "./dist/signals/index.js",

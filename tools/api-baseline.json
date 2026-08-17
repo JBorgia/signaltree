@@ -3237,7 +3237,6 @@
   "ng-forms": {
     "entrypoints": [
       ".",
-      "./audit",
       "./signals"
     ],
     "symbols": [
@@ -3473,51 +3472,6 @@
         "declFile": "packages/ng-forms/src/history/history.ts",
         "angularInDecl": true,
         "angularInType": true,
-        "internalDecl": false
-      },
-      {
-        "name": "AuditEntry",
-        "subpath": "./audit",
-        "kind": "type-only",
-        "declFile": "packages/core/src/lib/audit/audit.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
-        "name": "AuditMetadata",
-        "subpath": "./audit",
-        "kind": "type-only",
-        "declFile": "packages/core/src/lib/audit/audit.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
-        "name": "AuditTrackerConfig",
-        "subpath": "./audit",
-        "kind": "type-only",
-        "declFile": "packages/core/src/lib/audit/audit.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
-        "name": "createAuditCallback",
-        "subpath": "./audit",
-        "kind": "runtime",
-        "declFile": "packages/core/src/lib/audit/audit.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
-        "name": "createAuditTracker",
-        "subpath": "./audit",
-        "kind": "runtime",
-        "declFile": "packages/core/src/lib/audit/audit.ts",
-        "angularInDecl": false,
-        "angularInType": false,
         "internalDecl": false
       },
       {
