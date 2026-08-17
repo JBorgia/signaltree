@@ -2965,7 +2965,7 @@ A2-A4 need nothing new. They were never observation problems.
 Assume there is no generic observer, no mutation bus, no public write context,
 and no leaf interception. Can A1 still be implemented?
 
-**MEASURED FACT — the kernel already computes the hard part.**
+**MEASURED — the shape exists:**
 
 ```ts
 interface CausalTurn {
@@ -2976,11 +2976,50 @@ interface CausalTurn {
 }
 ```
 
-`TurnStore` provides `admitConfirmed` / `admitPending` / `confirmPending` /
-`discardPending`. So affected semantic identity, transaction granularity, and
-settlement lifecycle ALL exist already — keyed by `PositionId`, not by path.
+**COMPLETENESS FALSIFIER — RUN, AND IT FAILS. My own draft is refuted.**
 
-A dependent capability therefore needs no mutation stream:
+The draft claimed "affected semantic identity, transaction granularity and
+settlement lifecycle ALL exist already". That is TRUE OF `CausalTurn` and FALSE
+as a statement about ordinary truth changes. Measured:
+
+```
+new TurnStore()   constructed in exactly ONE place:
+                  packages/core/src/enhancers/transactions/transactions.ts:926
+
+TurnStore in lib/ zero construction sites — turns are NOT part of ordinary
+                  tree construction
+```
+
+**`CausalTurn` is TRANSACTION-SCOPED, not tree-wide.** An ordinary
+`signalTree()` leaf write produces no turn at all. So the model
+`turn settles -> participants -> invalidate` does not see ordinary writes, and
+`CausalTurn` is a TEMPTING NEARBY STRUCTURE rather than a proven invalidation
+source.
+
+This is the same class of error the whole slice exists to prevent: I found a
+structure that already had the right FIELDS and promoted it before checking its
+COVERAGE.
+
+**What survives:** the *shape* of the null design — invalidate by semantic
+identity at a settled boundary, then reread truth — remains attractive and is
+still the best candidate. What is now unproven is WHERE that identity comes
+from. It is not `CausalTurn` today.
+
+**COMPLETENESS REQUIREMENT, now explicit.** Before any invalidation source is
+adopted, prove it covers every semantically meaningful way truth can change:
+
+```
+ordinary authored write          multi-position semantic transaction
+speculative write                confirmation with no new value change
+rollback                         confirmed undo / redo
+derived / internal realization   hydrate / restore
+structural entity operations
+```
+
+Some rows may correctly produce NO invalidation — but that must be a semantic
+decision, not an accident of which enhancer happens to construct a store.
+
+A dependent capability would then need no mutation stream:
 
 ```
 turn settles
@@ -3018,8 +3057,18 @@ MINIMUM MISSING PRIMITIVE (stated without reference to current APIs)
   decides whether a dependent capability should react to it.
 ```
 
-That is a property OF THE TURN, not a subscription API. Plausibly: attribution
-becomes part of the causal record. **UNPROVEN, and MUT-2's question.**
+**DO NOT conclude "therefore it belongs on the turn".** That would repeat the
+error above — attaching metadata to whichever structure is nearby. The
+attribution's SEMANTIC OWNER AND GRANULARITY are unresolved:
+
+```
+could ONE semantic transaction contain changes with DIFFERENT
+source / intent / suppression policy?
+```
+
+If yes, turn-level attribution is too coarse. Candidate owners — semantic
+operation, individual instruction, causal effect, transaction — are all open.
+**MUT-2 must DERIVE the owner, not inherit it from proximity.**
 
 #### F. ONLY NOW — the existing forms, and provisional dispositions
 
@@ -3044,15 +3093,30 @@ MutationEnvelope        the RICHEST existing shape, and the one closest to
                         and truth is readable.        -> likely INTERNAL only
 ```
 
-**PROVISIONAL ROW-1 RESULT:**
+**PROVISIONAL ROW-1 RESULT — all weakened to CANDIDATE pending the falsifiers:**
 
 ```
-generic public mutation observation    NOT NEEDED — no replacement designed
-leaf interception                      DELETE
-public mutation bus                    DELETE / INTERNALIZE
-public write context                   INTERNALIZE
-one candidate missing primitive        attribution on the settled turn
+generic PUBLIC mutation observation    NOT-NEEDED CANDIDATE (strong)
+leaf interception                      DELETE CANDIDATE (strong: observes
+                                       framework realization, contradicts
+                                       F1/F2; zero application usage)
+public mutation bus                    DELETE / INTERNALIZE CANDIDATE
+public write context                   INTERNALIZE / REPLACE CANDIDATE
+MutationEnvelope                       INTERNAL IMPLEMENTATION CANDIDATE —
+                                       explicitly NOT delete-on-the-strength-of
+                                       turn participants. A structure can be
+                                       wrong as PUBLIC authoring abstraction
+                                       and exactly right internally for
+                                       physical/causal machinery.
+invalidation source                    UNPROVEN — NOT CausalTurn
+attribution owner                      UNPROVEN — do not assume the turn
 ```
+
+**"No event needs values" is NOT frozen.** It holds for capabilities deriving
+from CURRENT TRUTH. It would not hold for recording "A -> B happened", sending
+a delta to a replica, or an incremental transformation that cannot be
+reconstructed. Keep only the weaker rule: *current-truth consumers should not
+receive copied state unless proven necessary.*
 
 **COUNTEREXAMPLES THAT WOULD OVERTURN THIS:**
 
@@ -3065,7 +3129,37 @@ X4  attribution that cannot live on the turn without breaking causal semantics
 X5  a capability needing to REFUSE — none measured; schema is observe-only
 ```
 
-**X1 is the one to attack first**, and `timeTravel` is its best candidate.
+**X1 IS THE ONE TO ATTACK FIRST — but NOT with `timeTravel`.**
+
+`timeTravel` is a CONTAMINATED candidate: it IS the authority that owns causal
+history, so of course undo needs before/after. That proves only "causal history
+needs transition information", which is already frozen — and using it would
+falsely resurrect `MutationEnvelope` as a public concept because the causal
+kernel needs data that belongs INSIDE the causal kernel.
+
+Attack X1 from OUTSIDE the owning authority:
+
+```
+realtime        does outbound sync need the transition/delta, or can it
+                serialize current committed truth?
+devtools/audit  is there a promised function that must say "A -> B happened",
+                rather than display current truth?
+schema          does any validation behaviour depend on the TRANSITION rather
+                than final truth + operation policy?
+```
+
+**SCHEMA'S REAL FALSIFIER IS SUPPRESSION TIMING, not `prev`/`next`.** Given
+
+```
+T1 changes P7 with "suppress schema"
+T2 changes P7 normally
+```
+
+and coalesced invalidation, "P7 changed -> eventually reread truth" is ambiguous
+between: do not validate the value produced by T1; do not SCHEDULE validation
+because of T1; or keep the previous verdict until an eligible operation occurs.
+Those differ when T2 arrives quickly. That schema ignores `prev` does NOT prove
+identity + current truth + policy reproduces its function.
 
 #### Not yet: running the demo
 
