@@ -2651,6 +2651,57 @@ owners immediately after establishing one. The shape that preserves both
 properties is `.with()` owning application and DevTools OBSERVING it through a
 hook — not DevTools replacing `.with()` to learn that application happened.
 
+## BLOCKER FOUND DURING #4a-2 — `@signaltree/schema` is 25 tests RED
+
+Found while capturing the pre-migration runtime baseline for `schemas()`.
+
+```
+guardrails   62 passed / 1 skipped
+realtime     34 passed
+schema       25 FAILED / 15 passed      <-- only red package
+ng-forms     Jest, not vitest — `nx test ng-forms` exits 0
+events      221 passed
+shared       80 passed
+```
+
+Nine of ten schema spec files fail: `aggregates`, `ancestor`, `compact`,
+`smoke`, `suppress`, `sync-fast-path`, `walker-conformance`, `wildcard`,
+`write-sequence`. Real assertion failures ("expected true to be false",
+"expected undefined to be 'a-err'"), not infrastructure.
+
+**PRE-EXISTING, and proven so rather than assumed.** Two independent checks:
+
+1. Substituting `signal-tree.ts` from before `681ffb8e` (the capability-authority
+   repair) reproduces the identical 25/15 split — so neither `681ffb8e` nor
+   `7a6bd4c9` caused it.
+2. A worktree at the SESSION-START commit `0693f683` reproduces the identical
+   25/15 split.
+
+**WHY NOBODY NOTICED — a real gap in the validation ladder.** The ladder runs
+`nx run-many -t build --all`, which BUILDS every package, and `vitest run` for
+CORE ONLY. No step runs the other packages' tests. A package can be entirely red
+and every gate stays green. `nx run-many -t test --all` belongs in the ladder;
+its absence is why 25 failures survived to Gate B.
+
+### 14.x disposition (Rule 0f) — UNCLASSIFIED pending measurement
+
+Do NOT assume it is a 14.x defect. The failures are present at this branch's
+start, but this branch is ~150 commits of 15.0 work; whether they reproduce at
+`v14.1.1` has NOT been measured. That measurement decides between
+"14.x DEFECT -> PATCH" and "15.0-dev regression introduced earlier on this
+branch". It must be run before classification.
+
+### Effect on #4a-2
+
+`schemas()` can still be migrated — "identical failure set before and after" is
+a valid comparison, and it is the same discipline already used for the
+documented `demo:build:production` noise. But it is strictly weaker than a green
+baseline, and migrating a package while a quarter of its behaviour is unverified
+is a judgement call rather than a routine slice.
+
+The `schemas()` CONSUMER CONTRACT characterization is unaffected and green — it
+is type-only.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
