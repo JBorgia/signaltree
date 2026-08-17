@@ -44,7 +44,6 @@ interface ModularPerformanceMetrics {
   totalUpdates: number;
   moduleUpdates: Record<string, number>;
   modulePerformance: Record<string, number>;
-  compositionChain: string[];
   signalGrowth: Record<string, number>;
   memoryDelta: Record<string, number>;
   moduleCacheStats: Record<string, { hits: number; misses: number }>;
@@ -58,7 +57,6 @@ interface ModuleActivityTracker {
 }
 
 interface CompositionLogger {
-  logComposition: (modules: string[], action: 'with' | 'enhance') => void;
   logMethodExecution: (
     module: string,
     method: string,
@@ -89,7 +87,6 @@ interface ModularDevToolsInterface {
   activityTracker: ModuleActivityTracker;
   logger: CompositionLogger;
   metrics: Signal<ModularPerformanceMetrics>;
-  trackComposition: (modules: string[]) => void;
   startModuleProfiling: (module: string) => string;
   endModuleProfiling: (profileId: string) => void;
   connectDevTools: () => void;
@@ -97,7 +94,6 @@ interface ModularDevToolsInterface {
     metrics: ModularPerformanceMetrics;
     modules: ModuleMetadata[];
     logs: Array<unknown>;
-    compositionHistory: Array<{ timestamp: Date; chain: string[] }>;
   };
 }
 
@@ -216,12 +212,6 @@ function createCompositionLogger(options?: {
   };
 
   return {
-    logComposition: (modules: string[], action: 'with' | 'enhance') => {
-      addLog('core', 'composition', { modules, action });
-      if ((typeof ngDevMode === 'undefined' || ngDevMode) && enableConsole) {
-        console.log(`🔗 Composition ${action}:`, modules.join(' → '));
-      }
-    },
 
     logMethodExecution: (
       module: string,
@@ -272,9 +262,6 @@ function createCompositionLogger(options?: {
 
 function createNoopLogger(): CompositionLogger {
   return {
-    logComposition: () => {
-      /* noop */
-    },
     logMethodExecution: () => {
       /* noop */
     },
@@ -293,7 +280,6 @@ function createModularMetrics() {
     totalUpdates: 0,
     moduleUpdates: {},
     modulePerformance: {},
-    compositionChain: [],
     signalGrowth: {},
     memoryDelta: {},
     moduleCacheStats: {},
@@ -1173,13 +1159,6 @@ export function createDevToolsEnhancer(
       : createNoopLogger();
     const metrics = createModularMetrics();
 
-    const compositionHistory: Array<{ timestamp: Date; chain: string[] }> = [];
-    const compositionChain: string[] = [];
-    const trackComposition = (modules: string[]): void => {
-      compositionHistory.push({ timestamp: new Date(), chain: [...modules] });
-      metrics.updateMetrics({ compositionChain: modules });
-      logger.logComposition(modules, 'with');
-    };
     const activeProfiles = new Map<
       string,
       { module: string; operation: string; startTime: number }
@@ -1731,29 +1710,6 @@ export function createDevToolsEnhancer(
 
     // Define new .with() method that passes enhancedTree (not the original tree)
     // to subsequent enhancers. This is critical for preserving the enhancer chain.
-    Object.defineProperty(enhancedTree, 'with', {
-      value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
-        if (typeof enhancer !== 'function') {
-          throw new Error('Enhancer must be a function');
-        }
-
-        const enhancerName = enhancer.name || 'anonymousEnhancer';
-        compositionChain.push(enhancerName);
-        trackComposition([...compositionChain]);
-        scheduleSend(
-          buildAction('SignalTree/with', {
-            enhancer: enhancerName,
-            chain: [...compositionChain],
-          }),
-          { source: 'composition' }
-        );
-
-        return enhancer(enhancedTree as ISignalTree<T>) as R;
-      },
-      writable: false,
-      enumerable: false,
-      configurable: true,
-    });
 
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
@@ -1769,7 +1725,6 @@ export function createDevToolsEnhancer(
       logger,
       metrics: metrics.signal,
 
-      trackComposition,
 
       startModuleProfiling: (module: string) => {
         const profileId = `${module}_${Date.now()}`;
@@ -1797,7 +1752,6 @@ export function createDevToolsEnhancer(
           metrics: metrics.signal(),
           modules: activityTracker.getAllModules(),
           logs: logger.exportLogs(),
-          compositionHistory,
         };
       },
     };
