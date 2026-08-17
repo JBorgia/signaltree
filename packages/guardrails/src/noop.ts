@@ -3,7 +3,9 @@
  * This module exports empty implementations to ensure zero production cost
  */
 
-import type { GuardrailsConfig, GuardrailRule } from './lib/types';
+import type { Enhancer } from '@signaltree/core';
+
+import type { GuardrailsAPI, GuardrailsConfig, GuardrailRule } from './lib/types';
 
 const noopRule = (name: string): GuardrailRule => ({
   name,
@@ -13,13 +15,24 @@ const noopRule = (name: string): GuardrailRule => ({
   severity: 'info',
 });
 
-export function guardrails(config: GuardrailsConfig<any> = {}) {
-  return <S>(tree: import('@signaltree/core').SignalTree<S>) => {
+/**
+ * Production no-op. Declares the SAME public contract as the real
+ * implementation — both halves of a conditionally-exported symbol must, or a
+ * consumer's types change with their build configuration.
+ *
+ * `__guardrails` is OPTIONAL in that contract, so returning the tree without
+ * attaching an API satisfies it, which is exactly what a no-op should do.
+ */
+export function guardrails(
+  config: GuardrailsConfig<any> = {}
+): Enhancer<{ __guardrails?: GuardrailsAPI }> {
+  const enhancerFn = <S>(tree: import('@signaltree/core').SignalTree<S>) => {
     if (config) {
       // Production build ignores guardrail configuration
     }
     return tree as import('@signaltree/core').SignalTree<S>;
   };
+  return enhancerFn as unknown as Enhancer<{ __guardrails?: GuardrailsAPI }>;
 }
 
 export const rules = {

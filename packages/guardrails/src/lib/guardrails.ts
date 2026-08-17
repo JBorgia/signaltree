@@ -6,7 +6,7 @@ import { deepEqual } from '@signaltree/shared';
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import type { ISignalTree } from '@signaltree/core';
+import type { Enhancer, ISignalTree } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,
@@ -335,10 +335,8 @@ function isGuardrailsThrow(error: unknown): error is Error {
  */
 export function guardrails(
   config: GuardrailsConfig<any> = {}
-): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & { __guardrails?: GuardrailsAPI } {
-  return function <Tree extends ISignalTree<any>>(
+): Enhancer<{ __guardrails?: GuardrailsAPI }> {
+  const enhancerFn = function <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & {
     __guardrails?: GuardrailsAPI;
@@ -398,6 +396,23 @@ export function guardrails(
 
     return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
   };
+
+  // THE ONE BOUNDARY ASSERTION, at the boundary and nowhere else.
+  //
+  // The body legitimately consumes a realized `ISignalTree`, so its parameter
+  // stays concrete; `Enhancer<TAdded>` takes the neutral `EnhancerHost`, and
+  // parameters are contravariant under `strictFunctionTypes`. Same shape and
+  // same justification as each core built-in's cast.
+  //
+  // `TAdded` is `{ __guardrails?: GuardrailsAPI }` — OPTIONAL, matching the
+  // pre-migration consumer contract exactly. Whether it should be required is a
+  // separate decision and is deliberately not touched here.
+  //
+  // The generic `<Tree extends ISignalTree<any>>` is retained on the
+  // IMPLEMENTATION because the body uses it; it is no longer part of the
+  // public contract, since `.with()` already preserves the caller's tree type
+  // through `this & TAdded`.
+  return enhancerFn as unknown as Enhancer<{ __guardrails?: GuardrailsAPI }>;
 }
 
 /** Once-per-process flag for the plain-object change-blindness warning. */
