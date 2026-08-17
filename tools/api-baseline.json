@@ -1454,7 +1454,7 @@
         "subpath": "./authoring",
         "kind": "type-only",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },
@@ -1463,7 +1463,7 @@
         "subpath": "./authoring",
         "kind": "type-only",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },
@@ -1472,7 +1472,7 @@
         "subpath": "./authoring",
         "kind": "type-only",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },
@@ -1481,7 +1481,7 @@
         "subpath": "./authoring",
         "kind": "type-only",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },
@@ -1589,7 +1589,7 @@
         "subpath": "./authoring",
         "kind": "runtime",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },
@@ -1625,7 +1625,7 @@
         "subpath": "./authoring",
         "kind": "runtime",
         "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
-        "angularInDecl": true,
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
       },

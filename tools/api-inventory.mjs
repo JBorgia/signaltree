@@ -185,9 +185,27 @@ if (check) {
     for (const s of v.symbols) before.add(`${pkg}${s.subpath} :: ${s.name}`);
   for (const [pkg, v] of Object.entries(surface))
     for (const s of v.symbols) after.add(`${pkg}${s.subpath} :: ${s.name}`);
-  for (const k of after) if (!before.has(k)) console.error(`  ADDED    ${k}`);
-  for (const k of before) if (!after.has(k)) console.error(`  REMOVED  ${k}`);
-  console.error('\nPublic API surface changed. Update the baseline deliberately.');
+  let symbolSetChanged = false;
+  for (const k of after)
+    if (!before.has(k)) {
+      symbolSetChanged = true;
+      console.error(`  ADDED    ${k}`);
+    }
+  for (const k of before)
+    if (!after.has(k)) {
+      symbolSetChanged = true;
+      console.error(`  REMOVED  ${k}`);
+    }
+
+  // Distinguish the two, or a metadata-only drift reads as a broken API freeze.
+  // Refactoring that changes a symbol's declaring file or framework coupling
+  // moves this file WITHOUT changing the contract, and reporting that as
+  // "public API surface changed" trains people to ignore the gate.
+  console.error(
+    symbolSetChanged
+      ? '\nPUBLIC API SURFACE CHANGED (symbols added/removed). Update the baseline deliberately.'
+      : '\nSurface metadata changed (declaring file / framework coupling); the exported symbol set is IDENTICAL. Regenerate the baseline.'
+  );
   process.exit(1);
 }
 
