@@ -6,7 +6,7 @@
 import type { Signal } from '@angular/core';
 
 import type { ProcessDerived } from './derived-types';
-import type { ISignalTree, TreeNode } from '../types';
+import type { Enhancer, ISignalTree, TreeNode } from '../types';
 
 // =============================================================================
 // SIGNAL TREE BUILDER
@@ -62,6 +62,8 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
    * intent; the signature did not implement it. Fixed in 14.0.0 — polymorphic
    * `this` is what makes the intersection survive the next link.
    */
+  with<TAdded>(enhancer: Enhancer<TAdded>): this & TAdded;
+  /** Realization-facing overload — see ISignalTree.with. */
   with<TAdded>(
     enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TAdded
   ): this & TAdded;
@@ -117,6 +119,10 @@ export interface SignalTreePlanBuilder<
   TSource extends object,
   TAdded extends object = object,
 > {
+  with<TNextAdded>(
+    enhancer: Enhancer<TNextAdded>
+  ): SignalTreePlanBuilder<TSource, TAdded & TNextAdded>;
+  /** Realization-facing overload — see ISignalTree.with. */
   with<TNextAdded>(
     enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TNextAdded
   ): SignalTreePlanBuilder<TSource, TAdded & TNextAdded>;

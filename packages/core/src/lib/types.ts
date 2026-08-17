@@ -375,6 +375,34 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
    * tree.batch(() => {...})  // ✅ Batching method available
    * ```
    */
+  /**
+   * Takes `Enhancer<TAdded>` so `TAdded` is read straight off the enhancer's own
+   * type. The previous signature inlined its own lambda shape, which made
+   * `with()` RE-DERIVE `TAdded` by matching the enhancer's return against
+   * `ISignalTree<T> & TAdded` — so a neutrally-typed enhancer had its host
+   * absorbed into the inference result (`ISignalTree<T> & EnhancerHost & {...}`).
+   * Two separate types were solving the same problem and disagreeing about it.
+   *
+   * `this & TAdded` is unchanged, and it is what actually preserves both the
+   * concrete state type and every previously accumulated enhancer method.
+   */
+  with<TAdded>(enhancer: Enhancer<TAdded>): this & TAdded;
+  /**
+   * Realization-facing overload, for enhancers written against a CONCRETE tree.
+   *
+   * Two authoring styles genuinely exist and this is not a compatibility hack:
+   * core's built-ins are declared `<T>(tree: ISignalTree<T>) => ISignalTree<T> &
+   * Methods` and legitimately read the realized surface, while third-party
+   * enhancers built with `createEnhancer` are neutral. A single signature cannot
+   * accept both, because `Enhancer` is a function-type alias and therefore has a
+   * CONTRAVARIANT parameter under `strictFunctionTypes` — accepting a concrete
+   * enhancer through it would require `EnhancerHost` to be assignable to
+   * `ISignalTree<unknown>`, i.e. the neutral host to be a SUBTYPE of the tree,
+   * which is the exact inversion of what neutrality means.
+   *
+   * Ordering matters: the neutral overload is first so a `createEnhancer` result
+   * resolves against it and keeps `TAdded` exact.
+   */
   with<TAdded>(
     enhancer: (tree: ISignalTree<T>) => ISignalTree<T> & TAdded
   ): this & TAdded;
@@ -1408,15 +1436,52 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 // =============================================================================
 
 /**
+ * The capabilities an enhancer body receives — the UNION of what the built-in
+ * neutral enhancers actually use, measured rather than guessed.
+ *
+ * DELIBERATELY NOT EXPORTED. It is an authoring context, not a tree model, and
+ * publishing it would invite `NeutralSignalTree`-shaped speculation. It appears
+ * in the emitted `.d.ts` as a non-exported interface because `Enhancer` names
+ * it; that is structural reachability, not public API.
+ *
+ * WHY A FIXED TYPE AND NOT `<TTree extends EnhancerHost>`. The generic-constraint
+ * form was tried and failed twice, for two independent reasons:
+ *
+ *   1. VARIANCE. `NodeAccessor<T>` has input positions (`(value: Partial<T>)`),
+ *      so it is contravariant in `T` and `ISignalTree<Model>` is NOT assignable
+ *      to a host declaring `bind(): NodeAccessor<unknown>`. The constraint could
+ *      not be satisfied by a real tree.
+ *   2. INFERENCE. A return of `TTree & TAdded` asks TypeScript to split ONE
+ *      intersection against TWO inference targets. It cannot, so `TAdded`
+ *      collapsed to `unknown` and every added method vanished from `.with()`.
+ *
+ * A fixed host has neither problem, because NOTHING in a public signature ever
+ * needs a concrete tree to be assignable to it — only `with()`'s implementation
+ * does, and that is one library-owned, audited assertion.
+ */
+interface EnhancerHost {
+  readonly $: unknown;
+  bind(thisArg?: unknown): NodeAccessor<unknown>;
+  destroy(): void;
+  registerCleanup(fn: EnhancerCleanup): void;
+}
+
+/**
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  *
- * Uses ISignalTree<any> to allow enhancers to be applied to trees
- * that have already accumulated methods from previous enhancers.
+ * `TAdded` is the ONLY inference target here, which is why
+ * `createEnhancer(meta, tree => Object.assign(tree, { foo() {} }))` infers with
+ * no annotation, no explicit generic and no cast.
+ *
+ * The previous signature took `ISignalTree<unknown>`, documented as being
+ * "to allow enhancers to be applied to trees that have already accumulated
+ * methods from previous enhancers." That reason was wrong: `ISignalTree<unknown>`
+ * contains no accumulated methods, and accumulation is produced entirely by
+ * `with()` returning `this & TAdded`. The Angular coupling was historical
+ * breadth, not semantics — no built-in enhancer body needed it.
  */
-export type Enhancer<TAdded> = (
-  tree: ISignalTree<unknown>
-) => ISignalTree<unknown> & TAdded;
+export type Enhancer<TAdded> = (tree: EnhancerHost) => EnhancerHost & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {

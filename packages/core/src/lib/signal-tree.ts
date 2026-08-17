@@ -77,6 +77,7 @@ import type {
   NodeAccessor,
   EntityMapMarker,
   ISignalTree,
+  Enhancer,
   EnhancerWithMeta,
   EnhancerMeta,
   TreeCapability,
@@ -1589,7 +1590,11 @@ function createPlannedBuilder<TSource extends object, TAdded extends object = ob
 
   const planner: SignalTreePlanBuilder<TSource, TAdded> = {
     with<TNextAdded>(
-      enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TNextAdded
+      // Implementation signature: must satisfy BOTH declared overloads
+      // (neutral and realization-facing), so it accepts either shape.
+      enhancer:
+        | Enhancer<TNextAdded>
+        | ((tree: ISignalTree<TSource>) => ISignalTree<TSource> & TNextAdded)
     ): SignalTreePlanBuilder<TSource, TAdded & TNextAdded> {
       if (builtTree) {
         throw new Error(
@@ -1636,9 +1641,7 @@ function createPlannedBuilder<TSource extends object, TAdded extends object = ob
       materializeTreeMarkers(tree, materializationContext);
 
       for (const enhancer of orderedEnhancers) {
-        tree = tree.with(
-          enhancer as (tree: ISignalTree<TSource>) => ISignalTree<TSource>
-        );
+        tree = tree.with(enhancer as Enhancer<unknown>);
       }
 
       Object.defineProperty(tree, 'with', {
@@ -1744,7 +1747,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   // Override 'with' method to maintain builder chain
   Object.defineProperty(builder, 'with', {
     value: function <TAdded>(
-      enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TAdded
+      enhancer: Enhancer<TAdded>
     ): SignalTreeBuilder<TSource, TAccum> & TAdded {
       // Finalize markers BEFORE passing to enhancer so form(), entityMap(), etc. are materialized
       finalize();
