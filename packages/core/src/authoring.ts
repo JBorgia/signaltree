@@ -108,7 +108,7 @@ export { ASYNC_QUERY_MARKER } from './lib/markers/async-query';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
 export { isFormMarker } from './lib/markers/form';
-export { isStoredMarker } from './lib/markers/stored';
+export { isStoredMarker } from './lib/markers/stored.contract';
 export { isStatusMarker } from './lib/markers/status';
 export { isDerivedMarker } from './lib/markers/derived';
 export { isAsyncSourceMarker } from './lib/markers/async-source.contract';
