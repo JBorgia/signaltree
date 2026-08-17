@@ -1,6 +1,26 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import {
+  FORM_MARKER,
+  isFormMarker,
+  type FormConfig,
+  type FormMarker,
+  type Validator,
+} from './form.contract';
+
+// Identity, validator signatures, config/descriptor shapes and the guard live
+// in the neutral contract module; this file owns the Angular realization.
+// Re-exported so the public surface is unchanged by the split.
+export { FORM_MARKER, isFormMarker } from './form.contract';
+export type {
+  Validator,
+  AsyncValidator,
+  WizardStepConfig,
+  WizardConfig,
+  FormConfig,
+  FormMarker,
+} from './form.contract';
 import { PathNotifier } from '../path-notifier';
 // Type-only: keeps the history engine (snapshot buffer, undo/redo) out of every
 // bundle that doesn't call `history()`. The branded feature's closure is the
@@ -41,108 +61,16 @@ import type { FormHistoryApi, HistoryFeature } from '../types';
 // SYMBOL
 // =============================================================================
 
-export const FORM_MARKER = Symbol('FORM_MARKER');
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-/**
- * Validator function returns error message or null if valid.
- *
- * Receives the current form values as an optional second argument so
- * cross-field validators (e.g. `validators.when`) can inspect sibling fields.
- *
- * The optional `validatorKind` property is a semantic identifier ('required',
- * 'email', …) that bridges — like `signalForm()` — can use as the
- * Signal Forms error `kind` instead of a generic bridge-source literal. Every
- * built-in `validators.*` factory tags its returned closure with this, and
- * `validators.when` forwards the wrapped validator's kind; custom validators
- * may set it too (see {@link withKind}), or leave it unset to fall back to
- * the bridge's generic kind.
- *
- * `validatorParams` is internal: built-in factories with a constraint value
- * (`min`, `max`, `minLength`, `maxLength`, `pattern`) record it here so
- * bridges can construct Angular's branded validation errors (e.g.
- * `minError(min, { message })`), which carry the constraint as a typed
- * property.
- */
-export type Validator<T> = ((
-  value: T,
-  formValues?: Record<string, unknown>
-) => string | null) & {
-  validatorKind?: string;
-  /** @internal — constraint values for branded-error bridges. */
-  validatorParams?: Record<string, unknown>;
-};
 
-/**
- * Async validator function
- */
-export type AsyncValidator<T> = (value: T) => Promise<string | null>;
 
-/**
- * Wizard step configuration
- */
-export interface WizardStepConfig {
-  /** Fields visible/editable in this step */
-  fields?: string[];
-  /** Validation function for step (must pass to proceed) */
-  validate?: () => Promise<boolean> | boolean;
-  /** Whether step can be skipped */
-  canSkip?: boolean;
-}
 
-/**
- * Wizard configuration
- */
-export interface WizardConfig {
-  /** Step names in order */
-  steps: string[];
-  /** Per-step configuration */
-  stepConfig?: Record<string, WizardStepConfig>;
-  /** Fields required per step (alternative to stepConfig) */
-  stepFields?: Record<string, string[]>;
-}
 
-/**
- * Form marker configuration
- */
-export interface FormConfig<T extends Record<string, unknown>> {
-  /** Initial form values */
-  initial: T;
-  /** LocalStorage key for persistence (optional) */
-  persist?: string;
-  /** Custom storage backend (default: localStorage) */
-  storage?: Storage | null;
-  /** Debounce delay for persistence writes (default: 500ms) */
-  persistDebounceMs?: number;
-  /** Per-field validators */
-  validators?: Partial<
-    Record<keyof T, Validator<unknown> | Validator<unknown>[]>
-  >;
-  /** Per-field async validators */
-  asyncValidators?: Partial<Record<keyof T, AsyncValidator<unknown>>>;
-  /** Wizard configuration (optional) */
-  wizard?: WizardConfig;
-  /** Custom equality check for dirty detection */
-  equalityFn?: (a: unknown, b: unknown) => boolean;
-  /**
-   * Undo/redo history, built by the `history()` helper:
-   * `form({ history: history({ capacity, exclude }) })`. Attaches to the
-   * marker's values signal, so undo/redo also drive a bound `signalForm()`
-   * field tree. Tree-shaken out when `history()` is never imported.
-   */
-  history?: HistoryFeature<T>;
-}
 
-/**
- * Form marker - placeholder in source state
- */
-export interface FormMarker<T extends Record<string, unknown>> {
-  [FORM_MARKER]: true;
-  config: FormConfig<T>;
-}
 
 /**
  * Wizard navigation interface
@@ -402,19 +330,6 @@ export function form<T extends Record<string, unknown>>(
 // TYPE GUARD
 // =============================================================================
 
-/**
- * Type guard to check if a value is a form marker.
- */
-export function isFormMarker(
-  value: unknown
-): value is FormMarker<Record<string, unknown>> {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    FORM_MARKER in value &&
-    (value as Record<symbol, unknown>)[FORM_MARKER] === true
-  );
-}
 
 // =============================================================================
 // SIGNAL FACTORY

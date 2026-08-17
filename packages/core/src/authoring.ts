@@ -102,12 +102,12 @@ export {
 } from './lib/readonly';
 
 // Marker brand symbols — for recognising a marker you did not create.
-export { FORM_MARKER } from './lib/markers/form';
+export { FORM_MARKER } from './lib/markers/form.contract';
 export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source.contract';
 export { ASYNC_QUERY_MARKER } from './lib/markers/async-query';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
-export { isFormMarker } from './lib/markers/form';
+export { isFormMarker } from './lib/markers/form.contract';
 export { isStoredMarker } from './lib/markers/stored.contract';
 export { isStatusMarker } from './lib/markers/status.contract';
 export { isDerivedMarker } from './lib/markers/derived';
