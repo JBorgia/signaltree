@@ -160,6 +160,45 @@ Never include unrelated dirt in release commits.
    not EXPOSE Angular — it never measured whether the package REQUIRES Angular
    at runtime, which the emitted root import settles, and it does.
 
+0b. **Name the property first, then design the falsifier that measures THAT
+property directly. A proxy may support an investigation; it may never close
+one.**
+
+Rule 0 says which measurement is right. This says how to arrive at one, and it
+is operational rather than an exhortation to care more:
+
+1.  State the property.
+2.  State what result would falsify the current hypothesis.
+3.  Measure that property directly.
+4.  Require a POSITIVE success condition — never merely the absence of a known
+    failure string.
+5.  Only then change production code.
+
+Step 4 is the one that keeps being skipped. Every row below is a real error
+from the 15.0 work, and they look nothing alike until you line them up:
+
+| Question                                    | Weak proxy                                             | Decisive property                           |
+| ------------------------------------------- | ------------------------------------------------------ | ------------------------------------------- |
+| Is the SDK neutral?                         | module-graph traversal                                 | retained runtime / declaration closure      |
+| Does variadic `.with()` work?               | neutral tuple, realization enhancer chained separately | a realization enhancer INSIDE the tuple     |
+| Does `T` flow through `timeTravel`?         | annotated call sites                                   | unannotated inferred consumer type          |
+| Is the declaration valid?                   | source typecheck                                       | packed `.d.ts`, consumer compile            |
+| Did the build succeed?                      | absence of `error TS`                                  | exit 0 AND artifact exists                  |
+| Is the API unchanged?                       | exported symbol names                                  | public type contract                        |
+| Is the package consumable?                  | `skipLibCheck: true`                                   | `skipLibCheck: false`                       |
+| Does barrel reachability cause the pruning? | plausible export topology                              | already-exported `DefaultKey` still missing |
+
+Corollary, and it is not a consolation prize: **optimize for cheaper, earlier,
+more decisive failures — not for fewer failed experiments.** Every falsifier
+that fired in this work improved the architecture rather than merely blocking
+a change. The heterogeneous `.with()` failure exposed the neutral/realization
+distinction; the `TimeTravelMethods<T>` falsifier produced the polymorphic
+`this` design; the emitted-declaration failure exposed a shipped-package
+defect that predated the work entirely; the failed barrel probe eliminated a
+whole class of API "fixes" that would have widened the public surface to
+satisfy a build bug. A green experiment that measured the wrong property costs
+far more than a red one that measured the right property.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
