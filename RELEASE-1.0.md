@@ -1760,7 +1760,7 @@ while another failed:
 | dimension             | question                                  | failure it missed                                                                                                                    |
 | --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Export inventory      | what names exist?                         | `TimeTravelMethods<T>` -> `TimeTravelMethods` (arity change, symbol set identical); `StateOf` (inventory clean, declaration invalid) |
-| Public type contracts | what do those names mean to TypeScript?   | not yet systematic — targeted contract tests are sufficient for 1.0                                                                  |
+| Public type contracts | what do those names mean to TypeScript?   | not yet systematic — targeted contract tests are sufficient for 1.0. `SignalTree<T>` is now covered by `signal-tree-type-matrix.typing.spec.ts` (`9f0d1464`) |
 | Declaration closure   | can the shipped types be consumed at all? | the entity-map blocker above                                                                                                         |
 
 `tools/api-inventory.mjs` compares symbol sets and metadata; it structurally
@@ -1805,8 +1805,10 @@ batching-shaped.
 
 ### API cleanup queue, after the declaration fix
 
-1. Delete `SignalTreeBase`.
-2. Delete `composeEnhancers`.
+1. ~~Delete `SignalTreeBase`.~~ **DONE** — characterized `9f0d1464`, deleted
+   `6a515699`. See "Slice 1 — `SignalTreeBase`" below.
+2. Delete `composeEnhancers`. <- NEXT
+
 3. Migrate remaining built-ins to `Enhancer<Methods>`, one at a time.
 4. Remove the realization-facing `.with()` overload; add heterogeneous variadic
    `.with(...enhancers)` with runtime order-equivalence tests and an
@@ -1825,6 +1827,82 @@ batching-shaped.
    genuinely process-wide or leaked implementation ownership.
 9. Deletion-first audit — `deepEqual`, `isDev`, `toWritableSignal`, `asReadonly`.
 10. Metadata polish — `readonly`/literal-friendly `EnhancerMeta` arrays.
+
+### Slice 1 — `SignalTreeBase` DELETED (`9f0d1464`, `6a515699`)
+
+Rationale is ontological, not aesthetic: the name asserted a base/derived
+relationship with `SignalTree<T>` that never existed. Both aliases expanded to
+`ISignalTree<T> & TreeNode<T>`, so "base" was a synonym wearing a taxonomy.
+
+```
+PROPERTY   SignalTreeBase has no independent supported semantic contract.
+FALSIFIER  a consumer or API contract where replacing SignalTreeBase with
+           SignalTree changes expressible type semantics, inference,
+           assignability, or public capability.
+RESULT     no counterexample -> deleted
+```
+
+The falsifier was UNIVERSAL, not sampled: `Equal<SignalTree<T>,
+SignalTreeBase<T>>` at a free unresolved `T` is a statement about every
+instantiation. It was proven able to fire before it was trusted — mutating the
+alias to `ISignalTree<T>` turned the universal row and all five sampled rows
+red, and mutating it to `ISignalTree<unknown> & TreeNode<T>` additionally turned
+the member-level `bind` row red. `registerCleanup` cannot distinguish either
+mutation because its member type does not mention `T`; recorded rather than
+papered over.
+
+**`packages/core/src/lib/signal-tree-type-matrix.typing.spec.ts` is permanent
+and is the third GATE B dimension for the one type consumers annotate with.**
+It closes the recorded `api-inventory` blind spot for `SignalTree<T>`
+specifically: the inventory compares symbol sets and metadata, so it cannot see
+a type-shape change to a symbol that keeps its name. Dimensions pinned: root
+object tree, primitive root, nested access, markers, `entityMap`, enhancer
+accumulation, `bind`/`destroy`/`registerCleanup`, negative controls. Rows are
+invariant identity, not assignability — assignability passes on a widened type.
+Section 0 pins that the `Equal` helper is not vacuous.
+
+Rule 0d is pinned there deliberately: the three branch call forms, structural
+navigability at depth, and `branch is not a signal` are exactly what a type
+cleanup erodes while every runtime test stays green.
+
+Two things learned that outlive the slice:
+
+- **`state` is NOT on `SignalTree<T>`.** It is a `SignalTreeBuilder` member, so
+  it exists on what `signalTree()` returns but not on the type consumers
+  annotate with. The first draft of the matrix asserted it; `tsc` refuted it.
+  Now a negative control.
+- **`api-inventory --check` output does not prove the absence of metadata
+  drift.** It prints symbol-set changes and then reports "SURFACE CHANGED",
+  staying silent about metadata drift on RETAINED symbols even though such
+  drift also fails the comparison. Confirming an intended delta therefore means
+  regenerating the baseline and diffing the JSON, not reading `--check`. Done
+  here: exactly the nine-line `SignalTreeBase` block, core 207 -> 206, every
+  other package byte-identical.
+
+Ladder at `6a515699`: tsc typecheck green; `nx build core` exit 0 with fresh
+artifacts (`SignalTree` declared in the emitted `types.d.ts`, `SignalTreeBase`
+absent from the whole `dist` tree); vitest 1715 passed / 20 skipped / 1 todo;
+`nx lint core` green; `check-declaration-closure` stripped-but-referenced=0;
+closure fixtures 3/3; `nx run-many -t build --all` with only the documented
+`demo:build:production` noise.
+
+#### Newly discovered — not this slice
+
+- **The `6e7bf16a` "Measured public surface" table above is stale.** It records
+  core 209 / `ng-forms` 34 / internal-decl 17; the tracked baseline before this
+  slice was core 207 / `ng-forms` 29 / internal-decl 19. The table is labelled
+  with its commit and is left as the historical measurement it is — but do not
+  cite those numbers as current. `tools/api-baseline.json` is the live figure.
+- **`nx test core` swallows the vitest reporter output.** A failing run prints
+  only "Running target test for project core failed" with no test name, at any
+  `--output-style` and with `--verbose`. During this slice the nx-mediated suite
+  alternated fail / pass / fail and Nx itself flagged the task as flaky, while
+  three consecutive direct runs were green at the ledger's exact counts. So the
+  known timing flakiness is confirmed, but it is currently UNDIAGNOSABLE through
+  the documented command. `npx vitest run` from `packages/core` reports
+  normally — the `ngModule null` failure applies to running from the repo ROOT,
+  not from the package directory. This belongs with the Phase 5 flaky-spec item:
+  a release gate that cannot say which test failed is not a usable gate.
 
 ### NEEDS RECONCILIATION — "guardrails dead in prod"
 
@@ -1879,6 +1957,12 @@ Exit condition: `GATE D`
       what a CI release gate cannot tolerate. Either give them a generous
       margin, move them out of the gating suite, or assert complexity rather
       than milliseconds.
+
+      **Also make the failure legible.** `nx test core` reports a failure
+      without naming the failing test at any `--output-style`, `--verbose`
+      included, so the flakiness above currently cannot be diagnosed through the
+      documented command — see "Newly discovered" under slice 1. `npx vitest
+      run` from `packages/core` reports normally.
 - [ ] CI release gate
 - [ ] trusted publishing/provenance
 - [ ] clean-checkout release flow
