@@ -2720,6 +2720,169 @@ SUBSTRATE FACTS (candidate ingredients, not endorsements)
                         themselves (time-travel does exactly this)
 ```
 
+### MUT-1 — PARTICIPATION MODEL — **DERIVED PROPOSAL, NOT FROZEN**
+
+Answers ONE question: *at which lifecycle phases may external authoring
+participants act, and what authority does each phase permit?* No event types, no
+mapping of existing classes — those are MUT-2 and later.
+
+Every line below is labelled. Nothing here is ledger truth until reviewed.
+
+#### FROZEN INPUTS used (quoted from Release Invariants)
+
+```
+F1  "SignalTree owns truth."
+F2  "Angular owns observation."          <- ANGULAR, not "framework"
+F3  "Causal history owns meaning."
+F4  "All expected fallible semantic work precedes private commit."
+F5  "PRIVATE COMMIT consumes prepared instructions only."
+F6  "PROJECT reflects committed truth; it never determines authority."
+F7  "Persistence is post-commit."
+F8  "no observer, publication adapter, persistence consequence, or other
+     external consumer may observe an intermediate heterogeneous state."
+F9  "a semantic transaction may span more than one private substrate commit"
+F10 durable gate is TREE-LOCAL; "Callers describe a consequence; they do not
+     decide when it runs."
+F11 `PositionId != SubjectId != SlotIndex != key/path`
+```
+
+#### Phase-by-phase
+
+**PREPARE — DERIVED PROPOSAL: yes, a public participation tier.**
+
+```
+already true at entry   a semantic change has been PROPOSED; nothing is live
+may still fail          everything that can legitimately fail
+extension may           observe the proposal; REFUSE it
+extension MUST NOT      observe other trees; assume it runs once per physical
+                        commit; mutate live state
+```
+
+Derivation: F4 puts all fallible semantic work here by definition. If refusal is
+a supported capability anywhere, it can only be here — refusing after PRIVATE
+COMMIT would contradict F5, which admits only prepared instructions.
+
+**OPEN QUESTION — is refusal a capability we actually want to offer third
+parties at all?** No current consumer needs it: schema is observe-only by
+design, and guardrails is a diagnostic. A refusal tier with zero legitimate
+consumers is speculative surface. COUNTEREXAMPLE NEEDED: a real authoring case
+that must prevent a write rather than report on it.
+
+**OPEN QUESTION — transformation/normalization.** Distinct from refusal and much
+riskier: a transforming participant becomes a co-author of truth, which strains
+F1. Recommend excluding it unless a counterexample forces it.
+
+**PRIVATE COMMIT — DERIVED PROPOSAL: NO external participation.**
+
+Direct from F5. It consumes prepared instructions ONLY. Any extension code here
+would be either fallible work that F4 says belongs in PREPARE, or an observer
+that F8 forbids from seeing intermediate state.
+
+**POST-COMMIT SEMANTIC OBSERVATION — DERIVED PROPOSAL: yes, a public tier, and
+the one most consumers want.**
+
+```
+already true at entry   accepted semantic truth exists
+may still fail          nothing semantic; an observer's own failure is its own
+extension may           observe committed truth WITH causal attribution
+extension MUST NOT      alter or reject; assume framework publication happened;
+                        assume one notification per physical commit
+```
+
+Derivation, and this is the non-obvious part: F8 + F9 together mean this tier
+CANNOT be per-physical-commit. A semantic transaction may span several private
+commits, and no external consumer may observe an intermediate heterogeneous
+state — so the observation unit is the SEMANTIC TRANSACTION, not the physical
+write. **DERIVED PROPOSAL: a "committed observer" fires once per settled
+semantic unit, never once per substrate commit.**
+
+Also derived from F2: this tier must NOT sit behind publication. Angular owns
+observation, so an authoring extension that waited for Angular publication would
+inherit a framework dependency it has no business having — and would break in
+any non-Angular realization.
+
+**PROJECT — DERIVED PROPOSAL: NOT an extension boundary.**
+
+F6 is decisive: projection "never determines authority". Exposing it publicly
+would invite extensions to influence realization, and would leak realization
+concerns into a semantic authoring contract. Nothing an extension legitimately
+needs is first available at PROJECT.
+
+**PUBLISH — DERIVED PROPOSAL: framework-adapter boundary, NOT general authoring
+API.**
+
+Direct from F2. The Angular adapter owns this. Ordinary authoring extensions sit
+deliberately BELOW publication, which is also what makes them portable across
+realizations. **DERIVED PROPOSAL: publication observation is not part of the
+neutral authoring SDK.**
+
+**PERSISTENCE CONSEQUENCE — DERIVED PROPOSAL: a governed mechanism, NOT a
+general post-commit effect tier.**
+
+F7, F10 and the durable-gate invariant already give this strong, specific
+semantics: consequences are gated on tree-local settled state, and "callers
+describe a consequence; they do not decide when it runs." Generalizing this into
+"any extension may run arbitrary effects after commit" would discard that
+governance. An extension wanting arbitrary post-commit work belongs in the
+observation tier and owns its own scheduling.
+
+#### Causal meaning stays ORTHOGONAL
+
+Per F3, physical phase and causal meaning are different axes. The same committed
+physical mutation may be authored, derived, speculative, confirmed, or the
+realization of a rollback/undo/redo.
+
+**DERIVED PROPOSAL, phase-level only:** causal attribution must be ESTABLISHED at
+or before PREPARE (the proposal knows who authored it and why) and PRESERVED
+through to the observation tier. What history actually receives is MUT-2, not
+this slice.
+
+#### The proposed public model, in full
+
+```
+1  PREPARE PARTICIPANT             may refuse         OPEN: wanted at all?
+2  COMMITTED SEMANTIC OBSERVER     observe only, transaction-granular,
+                                   below publication, causally attributed
+—  PRIVATE COMMIT / PROJECT        NOT extension boundaries
+—  PUBLISH                         Angular adapter only
+—  CONSEQUENCE                     governed mechanism, not an observer tier
+```
+
+So the neutral authoring SDK plausibly needs **ONE tier** (2), with (1) offered
+only if a real refusal consumer exists.
+
+#### Challenge cases — "can this actor's legitimate responsibility be placed
+cleanly?", NOT "where does it run today"
+
+```
+schema           tier 2. Observe-only by design, needs attribution for
+                 suppression. Placing it in PREPARE would grant authority its
+                 requirements do not ask for.                        CLEAN
+guardrails       tier 2. Authoring-time diagnostics, reports.        CLEAN
+devTools         tier 2 for state; publication timing is Angular's.  CLEAN
+persistence      CONSEQUENCE, already governed.                      CLEAN
+timeTravel       tier 2 + causal axis. OPEN: does recording need more
+                 than an observer can see? MUT-2.              NEEDS MUT-2
+transactions     NOT an extension of this model — it DEFINES the semantic
+                 unit that tier 2 observes.                          CLEAN
+realtime         tier 2 inbound; outbound is an ordinary write.      CLEAN
+third party      tier 2.                                             CLEAN
+Angular adapter  PUBLISH. The only actor there.                      CLEAN
+```
+
+**COUNTEREXAMPLE NEEDED before this proposal can be frozen:**
+
+```
+C1  an authoring case that must REFUSE a write, not merely report on it
+    (absent this, tier 1 is speculative surface and should not ship)
+C2  an authoring case that legitimately needs per-PHYSICAL-commit granularity
+    (would contradict the transaction-granular derivation from F8+F9)
+C3  an authoring case that must observe PROJECT or PUBLISH
+    (would contradict F6/F2 and force reopening those boundaries)
+C4  a consumer needing transformation rather than refusal
+    (would strain F1 — SignalTree owns truth)
+```
+
 ### The four questions this slice must answer, in order
 
 ```
