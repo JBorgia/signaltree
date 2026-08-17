@@ -2664,38 +2664,64 @@ PREDICATE    schema's own Nx test target (`vitest run` in packages/schema),
              noise. It is a repair confirmation instead.
 ```
 
-### The semantic change
+### The observable change — CONFIRMED
 
 `d8824b91` does not touch `@signaltree/schema` at all. It changes
-`interceptLeafSignals` — the PUBLIC authoring API schema observes writes
-through — to SKIP any node that now carries an intrinsic mutation emitter:
+`interceptLeafSignals`, the PUBLIC authoring API schema observes writes through.
+
+```
+                       leaf `.set` replaced?   callback paths
+d8824b91~1             (not measured)          ["count","user.name"]
+current HEAD           NO                      []
+```
+
+At HEAD the interceptor does not wrap a plain leaf's `.set` AT ALL — the
+identity of `leaf.set` is unchanged after `interceptLeafSignals()` runs. So the
+callback is not merely filtered; the wrapping never happens.
+
+### MECHANISM — RETRACTED, still unresolved
+
+This section previously asserted the cause was the new early-return:
 
 ```ts
 const hasOwnedMutationEmitter = hasIntrinsicMutationEmitter(node);
-if (hasOwnedMutationEmitter) {
-  return false;          // <- no longer wrapped, callback never fires
-}
+if (hasOwnedMutationEmitter) return false;
 ```
 
-The causal-runtime kernel gave leaves their own mutation emitters and routed
-those writes through the new capture path. Core's own consumers — `timeTravel`,
-`devTools`, `transactions` — were updated in the same commit. The EXTERNAL
-consumer was not, and nothing tested it.
-
-### Direct consequence, measured not inferred
-
-Same probe, both commits: install `interceptLeafSignals` on `tree.$`, write two
-plain leaves, record the paths the callback receives.
+**That is REFUTED.** Measured on a plain leaf of a default `signalTree()` at
+HEAD:
 
 ```
-d8824b91~1   ["count", "user.name"]
-current HEAD []
+own symbols on the leaf   ["Symbol(SIGNAL)"]     <- Angular's only
+intrinsic emitter         false
+owned positionIds         null
 ```
 
-Schema's callback never fires, so no verdict is ever applied — which is exactly
-the failure family: `isValid` stays `true` ("expected true to be false") and the
-errors map stays empty ("expected undefined to be 'a-err'"). Failure identity at
-the first bad commit matches HEAD.
+With no intrinsic emitter the skip cannot fire, so it is not what stops the
+wrapping. The claim was inferred from reading the diff rather than measured, and
+it is corrected here rather than left standing.
+
+Two further measurements, both negative, that narrow the search:
+
+- `getPathNotifier().subscribe('**', …)` receives NOTHING for plain leaf writes,
+  with or without `timeTravel()` applied. So the new capture path is not
+  silently taking over delivery either — nobody observes those writes.
+- `emitOwnedMutation` early-returns when `positionIds?.[0]` is `undefined`, and
+  plain leaves have no positionIds. That is consistent with the silence but does
+  not explain the missing WRAPPING, which happens earlier and independently.
+
+**The effect is confirmed and reproducible; the mechanism is not yet
+established.** It needs a focused root-cause pass — most likely on how leaves
+are realized in `createSignalStore`/`materialize-markers` at HEAD versus the
+parent, not on `interceptLeafSignals`' own diff.
+
+### Direct consequence — this part stands
+
+Schema's callback never fires, so no verdict is ever applied, which is exactly
+the observed failure family: `isValid` stays `true` ("expected true to be
+false") and the errors map stays empty ("expected undefined to be 'a-err'").
+The bisect result and the consequence are solid; only the mechanism above was
+overclaimed.
 
 ### Why this is the most consequential finding of the slice
 
