@@ -312,6 +312,127 @@ mechanism can be legacy-shaped too. Users never seeing it does not make it
 harmless if it forces the kernel through the wrong lifecycle or duplicates an
 authority.
 
+0i. **SEMANTIC ROLES ARE DISTINCT AND NARROW. Marker, enhancer, adapter,
+consequence and causal integration are different semantic roles. A feature must
+EARN its role from its greenfield function. "It needs to plug into SignalTree
+somehow" is NOT justification for an enhancer or a marker.**
+
+```
+                         SignalTree kernel
+                               |
+        +----------------------+----------------------+
+        |                      |                      |
+   compilation            capabilities           publication
+        |                      |                      |
+     MARKERS               ENHANCERS               ADAPTERS
+  what state IS         what the tree CAN DO    how outsiders interact
+```
+
+Plus two roles the kernel made explicit:
+
+```
+CONSEQUENCE   acts BECAUSE surviving committed truth exists, without becoming
+              mutation authority
+CAUSAL        owns why/how semantic state changed across time
+```
+
+**THE CLASSIFIER:**
+
+```
+describes WHAT A POSITION IS                        -> MARKER
+adds WHAT THE TREE CAN SEMANTICALLY DO              -> ENHANCER
+connects SignalTree to an EXTERNAL REPRESENTATION   -> ADAPTER
+acts AFTER surviving committed truth                -> CONSEQUENCE
+explains WHY/HOW state changed over time            -> CAUSAL AUTHORITY
+```
+
+A feature may use several internally; its PUBLIC ABSTRACTION follows its
+PRIMARY OWNER.
+
+**THE ENHANCER TEST, stated sharply:**
+
+> If I apply this, has the SEMANTIC BEHAVIOUR of the SignalTree itself changed?
+
+```
+tree.with(transactions()); tree.transaction(...)
+   -> the tree ACQUIRED transaction semantics                  ENHANCER holds
+
+tree.with(formBridge()); tree.getAngularForm(...)
+   -> the tree owns the same truth, writes, identity, causality as before.
+      An Angular object now presents that truth.               ENHANCER FAILS
+```
+
+The second is `Enhancer` used as *"a convenient way to attach methods to the
+tree"* rather than *"a semantic extension of the tree"*. Rule 0g exists to
+eliminate exactly that.
+
+**Before the kernel, making everything an enhancer was defensible — the tree
+object was the only integration point. It no longer is.** In 15.0 these are
+SEMANTIC CATEGORIES WITH NARROW OWNERSHIP, not generic hooks.
+
+#### CONSEQUENCE FOR COMPLETED WORK — item #3 must be re-audited
+
+Migrating six built-ins to `Enhancer<Methods>` proved the PROTOCOL is neutral
+and coherent. Under Rule 0h that says nothing about whether each of those
+features should BE an enhancer. Do not conclude *"we built an excellent neutral
+enhancer model, therefore schema/realtime/ng-forms must fit it"*. Conclude
+*"we built an excellent neutral enhancer model — now determine which functions
+are actually enhancers"*.
+
+**PRELIMINARY CLASSIFICATION — every row needs its own 0g derivation; none is a
+disposition:**
+
+```
+transactions   tree acquires transaction semantics        ENHANCER plausible
+timeTravel     temporal/causal capability                 ENHANCER plausible,
+                                                          subject to causal-owner audit
+batching       notification timing of realization         UNPROVEN — may be
+                                                          publication-side
+serialization  tree can serialize itself                  ENHANCER plausible
+persistence    acts on committed truth                    CONSEQUENCE suspected
+schema         derived subsystem over truth               ENHANCER now LESS obvious
+devTools       external diagnostic projection             ADAPTER suspected
+guardrails     authoring-time diagnostics                 UNPROVEN
+realtime       external synchronization                   ADAPTER or CONSEQUENCE
+formBridge     Angular Reactive Forms interop             ADAPTER — derived at
+                                                          `b4e1ebd5`
+```
+
+#### MARKERS GET THE SAME HOSTILITY
+
+`registerMarkerProcessor` existing does not mean feature packages should invent
+markers. For each of `entityMap`, `stored`, `status`, `form`, `asyncSource`,
+`asyncQuery`, `compared`:
+
+> If the kernel existed first, would this concept genuinely be encoded in the
+> DECLARATIVE SEMANTIC STATE DESCRIPTION?
+
+```
+entityMap   carries structural/identity meaning            MARKER plausible
+stored      encodes durable-storage semantics on a position — check against the
+            persistence-CONSEQUENCE architecture before assuming
+form        THE INTERESTING ONE — see below
+```
+
+**`form` — separate two things that are currently one word.** "This subtree
+participates in form/validation SEMANTICS" is not the same as "Angular Reactive
+Forms / Signal Forms INTEGRATION". If they separate cleanly, the architecture is:
+
+```
+SignalTree semantic form marker
+   |-- schema / validation semantics
+   |-- Angular Reactive Forms ADAPTER
+   +-- Angular Signal Forms ADAPTER
+```
+
+rather than Angular forms concerns embedded in SignalTree enhancers. A
+HYPOTHESIS to derive — not something to preserve from today's `form()`.
+
+**The contamination test for a marker:** would you accept
+`signalTree({ profile: reactiveFormBridge(...) })`? No — that puts Angular
+presentation concerns into the semantic state definition. So Reactive Forms
+interop is not a marker concern either.
+
 0h. **MIGRATION COST IS NON-SEMANTIC. Migration difficulty, consumer count,
 already-completed conversion work, documentation volume and compatibility effort
 have ZERO weight in determining the 15.0 architectural endpoint.**
