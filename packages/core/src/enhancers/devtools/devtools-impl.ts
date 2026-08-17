@@ -13,6 +13,7 @@ import { withWriteContext } from '../../lib/write-context';
  * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods
  */
 import type {
+  Enhancer,
   ISignalTree,
   DevToolsConfig,
   DevToolsMethods,
@@ -1112,7 +1113,7 @@ function getOrCreateDevToolsGroup(
 
 export function createDevToolsEnhancer(
   config: DevToolsConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+): Enhancer<DevToolsMethods> {
   const {
     enabled = true,
     name = 'SignalTree',
@@ -2005,5 +2006,11 @@ export function createDevToolsEnhancer(
   const meta: EnhancerMeta = { name: 'devTools', provides: ['devTools'] };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+
+  // THE ONE BOUNDARY CAST for the identity-REPLACING half of the dispatch.
+  // Re-justified rather than copied: `enhancerFn` reads the realized tree, so
+  // its parameter is `ISignalTree<T>`, while `Enhancer<TAdded>` takes the
+  // neutral `EnhancerHost` and parameters are contravariant under
+  // `strictFunctionTypes`. Body untouched.
+  return enhancerFn as unknown as Enhancer<DevToolsMethods>;
 }

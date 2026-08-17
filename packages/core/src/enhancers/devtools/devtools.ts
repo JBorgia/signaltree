@@ -12,6 +12,7 @@
  */
 import { createDevToolsEnhancer } from './devtools-impl';
 import type {
+  Enhancer,
   ISignalTree,
   DevToolsConfig,
   DevToolsMethods,
@@ -32,7 +33,7 @@ declare const ngDevMode: boolean | undefined;
  */
 function prodNoopDevTools(
   _config: DevToolsConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+): Enhancer<DevToolsMethods> {
   const enhancerFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & DevToolsMethods =>
@@ -47,7 +48,9 @@ function prodNoopDevTools(
   const meta: EnhancerMeta = { name: 'devTools', provides: ['devTools'] };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+  // Boundary cast — see the note on `devTools` below. This is the MUTATING half
+  // of the dispatch; it still reads `ISignalTree<T>`.
+  return enhancerFn as unknown as Enhancer<DevToolsMethods>;
 }
 
 // Module-level selection. In a production build `ngDevMode` is defined as false,
@@ -70,9 +73,7 @@ const devToolsImpl =
  * implementation tree-shakes out — `.with(devTools())` costs ~nothing in prod.
  * Apps that genuinely need devtools in production should use a non-prod build.
  */
-export function devTools(
-  config: DevToolsConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+export function devTools(config: DevToolsConfig = {}): Enhancer<DevToolsMethods> {
   return devToolsImpl(config);
 }
 
@@ -83,18 +84,14 @@ export function devTools(
 /**
  * Enable devtools with default settings
  */
-export function enableDevTools(
-  name = 'SignalTree'
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+export function enableDevTools(name = 'SignalTree'): Enhancer<DevToolsMethods> {
   return devTools({ name, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function fullDevTools(
-  name = 'SignalTree'
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+export function fullDevTools(name = 'SignalTree'): Enhancer<DevToolsMethods> {
   return devTools({
     name,
     enabled: true,
@@ -107,9 +104,7 @@ export function fullDevTools(
 /**
  * Lightweight devtools for production
  */
-export function productionDevTools(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & DevToolsMethods {
+export function productionDevTools(): Enhancer<DevToolsMethods> {
   return devTools({
     enabled: true,
     enableBrowserDevTools: false,
