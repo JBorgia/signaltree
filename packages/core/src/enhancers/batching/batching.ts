@@ -5,6 +5,7 @@ import type {
   ISignalTree,
   BatchingConfig,
   BatchingMethods,
+  Enhancer,
   EnhancerMeta,
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
@@ -45,9 +46,7 @@ type BatchWrappedNode = Record<string, unknown> & {
  * });
  * ```
  */
-export function batching(
-  config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods {
+export function batching(config: BatchingConfig = {}): Enhancer<BatchingMethods> {
   const enabled = config.enabled ?? true;
   const notificationDelayMs = config.notificationDelayMs ?? 0;
 
@@ -393,7 +392,17 @@ export function batching(
   const meta: EnhancerMeta = { name: 'batching', provides: ['batching'] };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+
+  // THE ONE BOUNDARY CAST. `enhancerFn` reads the realized tree, so its
+  // parameter is `ISignalTree<T>`; `Enhancer<TAdded>` takes the neutral
+  // `EnhancerHost`. Function parameters are contravariant under
+  // `strictFunctionTypes`, so a concrete-tree enhancer is not assignable to the
+  // neutral type — that is the inversion `EnhancerHost` exists to prevent, not
+  // an accident. Casting here is the single audited assertion that lets the
+  // PUBLIC contract be neutral while the body keeps reading what it needs.
+  //
+  // The body is untouched by this migration.
+  return enhancerFn as unknown as Enhancer<BatchingMethods>;
 }
 
 // `highPerformanceBatching()` used to live here — a two-line preset returning
@@ -419,10 +428,19 @@ export function batching(
 // DEPRECATED EXPORTS (for backwards compat)
 // ========================================
 
-/** @deprecated Use batching() instead */
+/**
+ * @deprecated Use batching() instead.
+ *
+ * NOT PUBLIC — absent from `tools/api-baseline.json` and from every barrel, so
+ * it reaches no entry point. Migrated with `batching()` rather than left
+ * declaring the pre-15.0 shape; it is a deletion candidate for the
+ * deletion-first utility audit, which is where the same "exported symbol that
+ * reaches no entry point" problem is already recorded for
+ * `highPerformanceBatching` (see the note above).
+ */
 export function batchingWithConfig(
   config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods {
+): Enhancer<BatchingMethods> {
   return batching(config);
 }
 
