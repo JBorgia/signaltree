@@ -1,4 +1,5 @@
 import type {
+  Enhancer,
   EnhancerMeta,
   ISignalTree,
   PendingTransaction,
@@ -1366,9 +1367,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
   return runtime;
 }
 
-export function transactions(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & TransactionMethods {
+export function transactions(): Enhancer<TransactionMethods> {
   const enhancerFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & TransactionMethods => {
@@ -1393,5 +1392,14 @@ export function transactions(): <T>(
   };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+
+  // THE ONE BOUNDARY CAST, re-justified: `enhancerFn` reads the realized tree
+  // so its parameter is `ISignalTree<T>`, while `Enhancer<TAdded>` takes the
+  // neutral `EnhancerHost` and parameters are contravariant under
+  // `strictFunctionTypes`. Body untouched.
+  //
+  // The per-tree runtime this enhancer keeps on a module-level Symbol side
+  // channel is unaffected — it is keyed off the tree object, not off the
+  // declared parameter type, so a signature change cannot reach it.
+  return enhancerFn as unknown as Enhancer<TransactionMethods>;
 }
