@@ -1814,12 +1814,13 @@ batching-shaped.
    `.with(...enhancers)` with runtime order-equivalence tests and an
    identity-replacing enhancer case.
 5. Realistic `SignalTree` vs `ISignalTree` matrix (state containing nested
-   object + `entityMap` + marker + primitive leaf, with negative controls), then
-   remove public `ISignalTree`. **Now also owns the annotation/constructor
-   alignment defect** — `signalTree()` returns a value the canonical
-   `SignalTree<T>` annotation rejects, on `bind()` alone. See "Matrix corrected
-   at `cd49e9a0`". EXTEND `signal-tree-type-matrix.typing.spec.ts`; do not start
-   a new file.
+   object + `entityMap` + marker + primitive leaf, with negative controls).
+   **The annotation/constructor alignment half is DONE** (`243dd5fb`,
+   `215568cb`) — the constructor's return now satisfies `SignalTree<T>`
+   positively. What remains is internalizing `ISignalTree` **BEHIND**
+   `SignalTree<T>` — `SignalTree<T>` is the public name and it stays; only its
+   current representation becomes private. EXTEND
+   `signal-tree-type-matrix.typing.spec.ts`; do not start a new file.
 6. `FORM_MARKER` / `isFormMarker` — one owner. Declared in
    `@signaltree/core/authoring`, re-exported by `ng-forms`
    (`form-bridge.ts:582`); pick the marker-contract owner.
@@ -1957,11 +1958,75 @@ signature. A "canonical public tree type" that no code uses, that rejects the
 constructor's return, and that describes a runtime shape which does not exist is
 a candidate for being the wrong abstraction rather than a broken one.
 
-**DECISION REQUIRED — this is a public-type design fork, not a local repair.**
-Queued to item 5, which owns the tree-type vocabulary. Both mismatches are
-characterized in matrix section C: mismatch 1 behind a `@ts-expect-error`, and
-mismatch 2 as a row that is green ONLY because the type is wrong and will start
-failing when the type is corrected.
+#### DECIDED and CLOSED — `243dd5fb`, `215568cb`
+
+**Decision: keep `SignalTree<T>` as the sole canonical consumer type, remove the
+false root surface, align builder `bind` separately, prove constructor
+assignability positively.**
+
+Landed as two commits, one variable each, in that order:
+
+| commit | one variable | proven result |
+| --- | --- | --- |
+| `243dd5fb` | `SignalTree<T>` -> `ISignalTree<T>` | assignment still RED; sole remaining blocker is now exactly `bind(...)(...)` returning `void \| RootState`, verified by reading the elaborated error |
+| `215568cb` | `SignalTreeBuilder.bind` -> `NodeAccessor<TSource>` | assignment GREEN, no `@ts-expect-error` |
+
+Endpoint now asserted positively in matrix section C:
+
+```
+runtime grammar      tree.$
+public annotation    tree.$
+constructor return   satisfies the public annotation
+bind runtime/type    aligned
+```
+
+**Rejected — root property copying.** Adding state keys to the runtime root
+would create `tree.count()` alongside `tree.$.count()`: two ways to address one
+node, the duplicate grammar this API deliberately does not have. It also
+contradicts the `$`-centric design every call site already uses.
+
+**Rejected — deleting `SignalTree<T>`.** That it is barely annotated in-repo is
+weak evidence: local code relies on inference, while a public library still
+needs a nameable type for `function inspect(tree: SignalTree<AppState>)` and
+`interface Store { tree: SignalTree<AppState> }`. Deleting it would leave
+consumers choosing among `SignalTreeBuilder`, `ISignalTree`, or
+`ReturnType<typeof signalTree>` — the opposite of one obvious path per concept.
+
+Settled ontology:
+
+```
+SignalTree<T>          public semantic tree contract   <- the name that survives
+SignalTreeBuilder<…>   construction / inference machinery
+ISignalTree<T>         implementation vocabulary, queued for internalization
+TreeNode<T>            the shape behind tree.$
+NodeAccessor<T>        semantic branch/root callable
+```
+
+`SignalTree<T> = ISignalTree<T>` is the correct CURRENT REPRESENTATION, not the
+final algebra. The docblock says so explicitly, because item 7 internalizes
+`ISignalTree` BEHIND `SignalTree` — `SignalTree` is not the thing that
+disappears.
+
+**Wording that must not be collapsed.** The two mismatches pointed in OPPOSITE
+directions and the loose phrase "the builder is honest" was wrong as a general
+statement:
+
+```
+root-state mismatch   SignalTree<T>          OVER-promised
+bind mismatch         SignalTreeBuilder      UNDER-promised
+```
+
+**FROZEN — state is addressed through `$`, and only through `$`.** Matrix
+section A1 now holds `@ts-expect-error` rows for `tree.count` / `tree.user`
+beside green `tree.$.count()` / `tree.$.user()`, so the root surface cannot
+return by a re-added `& TreeNode<T>`, by runtime property copying, or by any
+other route.
+
+**What no other gate could have caught.** `api-inventory --check` was CLEAN
+across both commits — the symbol set never changed, and it structurally cannot
+see a type-shape change. A public type was describing a different API grammar
+from the runtime and typechecking access to properties that do not exist. This
+is the case for the type-contract dimension existing at all.
 
 #### Newly discovered — not this slice
 
