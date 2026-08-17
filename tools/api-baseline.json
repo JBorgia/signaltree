@@ -1543,10 +1543,10 @@
         "name": "isNodeAccessor",
         "subpath": "./authoring",
         "kind": "runtime",
-        "declFile": "packages/core/src/lib/utils.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/internals/node-shape.ts",
+        "angularInDecl": false,
         "angularInType": false,
-        "internalDecl": false
+        "internalDecl": true
       },
       {
         "name": "isSignalTree",
@@ -1579,10 +1579,10 @@
         "name": "isTraversableNode",
         "subpath": "./authoring",
         "kind": "runtime",
-        "declFile": "packages/core/src/lib/utils.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/internals/node-shape.ts",
+        "angularInDecl": false,
         "angularInType": false,
-        "internalDecl": false
+        "internalDecl": true
       },
       {
         "name": "onHydrateDecision",

@@ -8,7 +8,20 @@ import type {
   PositionId,
   UpdateMetadata,
 } from '../types';
-import { isTraversableNode } from '../utils';
+import {
+  OWNED_NODE_METADATA,
+  type OwnedNodeMetadata,
+} from './owned-metadata';
+
+// The READ side of owned-node metadata is framework-neutral and lives in
+// owned-metadata.ts; this file keeps the write side, which needs untracked().
+// Re-exported so the public surface is unchanged.
+export {
+  getOwnedPositionIds,
+  getOwnedSubjectIds,
+  getOwnedOwnerPath,
+  hasIntrinsicMutationEmitter,
+} from './owned-metadata';
 import { getActiveWriteContext } from '../write-context';
 
 type OwnedMutationIntent = NonNullable<UpdateMetadata['mutationIntent']>;
@@ -41,14 +54,6 @@ type OwnedWriteHooks<TValue> = {
 const toSegments = (path: string): readonly PropertyKey[] =>
   path === '' ? [] : path.split('.');
 
-type OwnedNodeMetadata = {
-  positionIds?: readonly number[];
-  subjectIds?: readonly number[];
-  ownerPath?: string;
-  emitsMutations?: boolean;
-};
-
-const OWNED_NODE_METADATA = new WeakMap<object, OwnedNodeMetadata>();
 
 function mergeOwnedNodeMetadata(
   node: object,
@@ -58,59 +63,9 @@ function mergeOwnedNodeMetadata(
   OWNED_NODE_METADATA.set(node, { ...existing, ...patch });
 }
 
-export function getOwnedPositionIds(node: unknown): number[] | undefined {
-  if (isTraversableNode(node)) {
-    const direct = (node as { __positionIds?: number[] }).__positionIds;
-    if (direct) {
-      return [...direct];
-    }
 
-    const sidecar = OWNED_NODE_METADATA.get(node as object)?.positionIds;
-    return sidecar ? [...sidecar] : undefined;
-  }
 
-  return undefined;
-}
 
-export function getOwnedSubjectIds(node: unknown): number[] | undefined {
-  if (isTraversableNode(node)) {
-    const direct = (node as { __subjectIds?: number[] }).__subjectIds;
-    if (direct) {
-      return [...direct];
-    }
-
-    const sidecar = OWNED_NODE_METADATA.get(node as object)?.subjectIds;
-    return sidecar ? [...sidecar] : undefined;
-  }
-
-  return undefined;
-}
-
-export function getOwnedOwnerPath(node: unknown): string | undefined {
-  if (isTraversableNode(node)) {
-    const direct = (node as { __ownerPath?: string }).__ownerPath;
-    if (direct !== undefined) {
-      return direct;
-    }
-
-    return OWNED_NODE_METADATA.get(node as object)?.ownerPath;
-  }
-
-  return undefined;
-}
-
-export function hasIntrinsicMutationEmitter(node: unknown): boolean {
-  if (isTraversableNode(node)) {
-    const direct = (node as { __emitsMutations?: boolean }).__emitsMutations;
-    if (direct !== undefined) {
-      return direct;
-    }
-
-    return OWNED_NODE_METADATA.get(node as object)?.emitsMutations === true;
-  }
-
-  return false;
-}
 
 export function defineOwnedPositionIds(
   node: object,

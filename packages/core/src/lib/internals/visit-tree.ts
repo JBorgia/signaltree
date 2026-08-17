@@ -1,4 +1,4 @@
-import { isTraversableNode } from '../utils';
+import { isTraversableNode } from './node-shape';
 
 import {
   PRODUCTION_SUBSTRATE_STATS_ENABLED,

@@ -18,7 +18,7 @@ import {
 } from './position-registry';
 import type { PhysicalCommitClock } from './physical-commit-clock';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
-import { isNodeAccessor, isTraversableNode } from '../utils';
+import { isNodeAccessor, isTraversableNode } from './node-shape';
 
 /** @internal Must match the symbol set by `makeNodeAccessor`. */
 const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');

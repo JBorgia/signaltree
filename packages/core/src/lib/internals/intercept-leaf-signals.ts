@@ -1,12 +1,12 @@
 import type { UpdateMetadata } from '../types';
-import { isTraversableNode } from '../utils';
+import { isTraversableNode } from './node-shape';
 import { getNodeProcessor, snapshotMarkerNode } from './materialize-markers';
 import {
   getOwnedOwnerPath,
   getOwnedPositionIds,
   getOwnedSubjectIds,
   hasIntrinsicMutationEmitter,
-} from './owned-mutation';
+} from './owned-metadata';
 import { getActiveWriteContext } from '../write-context';
 
 import { visitTree } from './visit-tree';

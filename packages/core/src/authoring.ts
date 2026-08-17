@@ -125,11 +125,8 @@ export { isAsyncQueryMarker } from './lib/markers/async-query.contract';
 // not be changed without a breaking change to core. Both remain in use inside
 // core; only the public re-export is gone. No compatibility shim: a major is
 // exactly when an accidental export should stop existing.
-export {
-  isNodeAccessor,
-  isAnySignal,
-  isTraversableNode,
-} from './lib/utils';
+export { isTraversableNode, isNodeAccessor } from './lib/internals/node-shape';
+export { isAnySignal } from './lib/utils';
 export { isSignalTree } from './lib/types';
 
 // Constants and diagnostic message text.

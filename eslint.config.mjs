@@ -62,7 +62,14 @@ export default [
     // (different variables) also flags — zero in-tree instances today; if one
     // ever appears legitimately, eslint-disable-next-line it with a comment.
     files: ['packages/*/src/**/*.ts'],
-    ignores: ['**/*.spec.ts', 'packages/core/src/lib/utils.ts'],
+    // node-shape.ts DECLARES isTraversableNode, so it is the one place the
+    // hand-rolled shape actually belongs. utils.ts stays ignored because it
+    // re-exports it and still holds signal-shaped guards of its own.
+    ignores: [
+      '**/*.spec.ts',
+      'packages/core/src/lib/utils.ts',
+      'packages/core/src/lib/internals/node-shape.ts',
+    ],
     rules: {
       'no-restricted-syntax': [
         'error',

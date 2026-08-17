@@ -194,7 +194,6 @@ function pruneUncached<T>(snapshot: T, liveNode: unknown): T {
 }
 
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
-const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
 /**
  * SignalTree Utility Functions v1.1.6
@@ -260,11 +259,6 @@ import type { NodeAccessor, TreeNode } from './types';
 /**
  * Checks if a value is a node accessor created by makeNodeAccessor
  */
-export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
-  return (
-    typeof value === 'function' && value && CALLABLE_SIGNAL_SYMBOL in value
-  );
-}
 
 /**
  * Checks if a value is either an Angular signal or a callable signal
@@ -291,11 +285,14 @@ export function isAnySignal(value: unknown): boolean {
  * callables), so callers can pass the value to `Object.keys()` /
  * `WeakSet#has()` without re-asserting what the guard already proved.
  */
-export function isTraversableNode(value: unknown): value is object {
-  return (
-    value != null && (typeof value === 'object' || typeof value === 'function')
-  );
-}
+
+// Structural predicate extracted to a framework-neutral module so a neutral
+// consumer can reach it; re-exported here so the public surface is unchanged.
+import { isTraversableNode, isNodeAccessor } from './internals/node-shape';
+
+// Structural guards live in a framework-neutral module so neutral consumers can
+// reach them; re-exported here so the public surface is unchanged.
+export { isTraversableNode, isNodeAccessor } from './internals/node-shape';
 
 /**
  * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
