@@ -1,6 +1,19 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import {
+  STATUS_MARKER,
+  LoadingState,
+  isStatusMarker,
+  type StatusMarker,
+} from './status.contract';
+
+// Identity, loading states, descriptor shape and guard live in the neutral
+// contract module; this file owns the Angular realization. Re-exported so the
+// public surface is unchanged by the split.
+export { STATUS_MARKER, LoadingState, isStatusMarker } from './status.contract';
+export type { StatusConfig, StatusMarker } from './status.contract';
+
+import {
   registerBuiltinMarkerProcessor,
   reportHydrateDecision,
 } from '../internals/materialize-markers';
@@ -15,40 +28,13 @@ import {
 // SYMBOL & ENUM
 // =============================================================================
 
-export const STATUS_MARKER = Symbol('STATUS_MARKER');
 
-/**
- * Loading state enum for async operations.
- */
-export enum LoadingState {
-  NotLoaded = 'NOT_LOADED',
-  Loading = 'LOADING',
-  Loaded = 'LOADED',
-  Error = 'ERROR',
-}
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-/**
- * Configuration options for status marker.
- */
-export interface StatusConfig {
-  /** Initial loading state (default: NotLoaded) */
-  initialState?: LoadingState;
-}
 
-/**
- * Status marker - placeholder in source state.
- * @typeParam E - Error type (default: Error)
- */
-export interface StatusMarker<E = Error> {
-  [STATUS_MARKER]: true;
-  initialState: LoadingState;
-  /** Phantom type for error - not used at runtime */
-  readonly __errorType?: E;
-}
 
 /**
  * Materialized status signal with state, error, derived signals, and helpers.
@@ -283,17 +269,6 @@ export function status<E = Error>(
 // TYPE GUARD
 // =============================================================================
 
-/**
- * Type guard to check if a value is a status marker.
- */
-export function isStatusMarker(value: unknown): value is StatusMarker {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    STATUS_MARKER in value &&
-    (value as Record<symbol, unknown>)[STATUS_MARKER] === true
-  );
-}
 
 // =============================================================================
 // SIGNAL FACTORY

@@ -733,8 +733,8 @@
         "name": "LoadingState",
         "subpath": ".",
         "kind": "value+type",
-        "declFile": "packages/core/src/lib/markers/status.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/markers/status.contract.ts",
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": false
       },
@@ -1066,8 +1066,8 @@
         "name": "StatusConfig",
         "subpath": ".",
         "kind": "type-only",
-        "declFile": "packages/core/src/lib/markers/status.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/markers/status.contract.ts",
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": false
       },
@@ -1075,8 +1075,8 @@
         "name": "StatusMarker",
         "subpath": ".",
         "kind": "type-only",
-        "declFile": "packages/core/src/lib/markers/status.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/markers/status.contract.ts",
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": false
       },
@@ -1561,8 +1561,8 @@
         "name": "isStatusMarker",
         "subpath": "./authoring",
         "kind": "runtime",
-        "declFile": "packages/core/src/lib/markers/status.ts",
-        "angularInDecl": true,
+        "declFile": "packages/core/src/lib/markers/status.contract.ts",
+        "angularInDecl": false,
         "angularInType": false,
         "internalDecl": false
       },
