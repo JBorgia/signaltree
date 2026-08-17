@@ -1,3 +1,104 @@
+## 14.1.2 (2026-08-17)
+
+Patch release. One class of defect, found by auditing what the public types
+DECLARE against what any code actually implements: surface that compiles, reads
+as working, and does nothing at runtime. Every runtime diagnostic this library
+carries for silent no-ops — ST2008, ST2022, ST2023, the hydrate-decision
+channel — is blind to it, because it fails at the type layer where nothing
+executes.
+
+### Fixed — hooks that were declared and never wired
+
+`entityMap`'s `hooks.beforeAdd` / `hooks.beforeUpdate` / `hooks.beforeRemove`
+and `tap({ onChange })` now run. They were declared in December 2025 and never
+implemented in any of the five generations of the entity implementation that
+followed, so `entityMap({ hooks: { beforeRemove: () => false } })` type-checked,
+read as a guard, and removed the entity anyway.
+
+Blocking **throws** rather than skipping silently, matching `intercept()`'s
+`ctx.block()`. Bulk mutations run every hook before touching storage, so a
+block leaves the collection untouched instead of half-applied.
+
+**`clear()` and `setAll()` now fire `onRemove`.** They previously fired nothing
+while `removeOne` / `removeMany` / `removeWhere` all did — `setAll` gave the
+omission away by announcing incoming entities through `onAdd` and staying
+silent about the ones it evicted. Where an entity owns an external resource
+(a socket, an interval, a subscription) and `onRemove` is its teardown seam,
+`clear()` dropped every one of them without closing anything. That is a leak
+fix, not a feature. `setAll` fires only for genuine evictions; an entity
+present on both sides is not torn down.
+
+### Fixed — `UpdateMetadata` was lost at the batch boundary
+
+PathNotifier batches by default and flushes on a microtask, by which point the
+`withWriteContext` call that wrapped the write has restored the previous value.
+Every subscriber consulting the ambient write context therefore saw nothing,
+for effectively every write. Core now captures the metadata at notify time and
+re-establishes it around the flush; coalesced writes to one path keep the last
+write's metadata, matching the value delivered.
+
+This is what makes `@signaltree/guardrails`' `suppression` config real. Both
+`respectMetadata` (documented "Honor suppressGuardrails metadata flag") and
+`autoSuppress` were inert — `@signaltree/schema` honoured `suppressGuardrails`
+while guardrails, the package it is named for, ignored it. Because `timeTravel()`
+already writes under `source: 'time-travel'` and devtools replay under
+`source: 'devtools'`, `autoSuppress: ['time-travel']` now genuinely silences an
+undo instead of merely reading as though it would.
+
+`GuardrailsConfig.reporting.maxIssuesPerReport` is also implemented, most severe
+first, so a cap truncates the tail rather than an arbitrary insertion order.
+
+### Changed — `EntityNode<E>` is typed one level deep, because it always was
+
+The recursive branch declared `EntityNode<E[P]>` for an object-valued field —
+recursion no version has ever implemented. It carried `(value: E[P]): void`, so
+`node.address({ city: 'x' })` compiled, hit a computed getter that ignores its
+arguments, and **discarded the write with no diagnostic**. An object-valued
+field is now typed as a writable signal over the whole object, which is what it
+has always been at runtime:
+
+```ts
+node.address.set({ ...node.address(), city: 'Denver' });
+```
+
+Narrowed rather than made recursive on purpose: a node per nested object
+multiplies the per-entity cost already reduced 4,149B -> 844B with `WeakRef`,
+and buys nothing the whole-object write does not express. For per-field
+granularity inside a composite, keep the entity shape flat.
+
+### Removed — type surface nothing implements
+
+Type-only removals. None of these had runtime behaviour to lose.
+
+- `OptimizedUpdateMethods<T>` — typed `@signaltree/enterprise`'s diff engine,
+  dropped in 14.0.0. The removal swept the demo page, route, benchmark arm,
+  docs and every pipeline entry, and missed the interface, still exported from
+  the root barrel. Use `tree.updateAndReport()`.
+- `TreeConfig.maxCacheSize`, `.trackPerformance`, `.useStructuralSharing` and
+  `DevToolsConfig.logActions`, `.maxAge` — zero consumers. 14.1.1 removed
+  `enableTimeTravel` from `TreeConfig` for precisely this reason; these were
+  undocumented, which is how they survived that sweep. Structural sharing is
+  not a toggle — it is unconditional.
+- Eleven `GuardrailsConfig` / `RuleContext` members: `budgets.maxTreeDepth`,
+  `budgets.alertThreshold`, `hotPaths.trackDownstream`, `memory.trackUnread`,
+  `analysis.forbidRootRead`, `.forbidSliceRootRead`, `.maxDepsPerComputed`,
+  `.detectThrashing`, `.maxRerunsPerSecond`, `RuleContext.recomputeCount` and
+  `.isUnread`. Two were being taught in runnable SKILL.md examples, which is
+  how they looked alive. Deleted rather than implemented: speculatively
+  building nine monitoring features is the mechanism that produced the set.
+
+### Added — a gate so this class cannot come back
+
+`dead-type-surface` (gate 36) fails the build on any exported interface member
+with no implementation reference anywhere in the workspace, ratcheted to zero
+and carrying its own mutation so `gates:self-test` proves it can fail. It is
+the sibling of `dead-exports` for the failure that one cannot see: a dead export
+is unreachable, a dead member is reachable and does nothing.
+
+`signaltree-entities` grows 9.75 -> 10.10KB prod (12.40 -> 12.78 dev) for the
+hook plumbing; the budget moved to 10.2/12.9 with the reasoning recorded at the
+definition.
+
 ## 14.1.1 (2026-08-11)
 
 > **14.1.0 was published and immediately superseded — do not install it.** It shipped
