@@ -1911,6 +1911,11 @@ batching-shaped.
 4. Remove the realization-facing `.with()` overload; add heterogeneous variadic
    `.with(...enhancers)` with runtime order-equivalence tests and an
    identity-replacing enhancer case.
+   **Also delete the three built-in `.with()` overrides** (`batching.ts:355`,
+   `time-travel.ts:2820`, `devtools-impl.ts:1733`). `7a6bd4c9` made the
+   canonical `with` overwrite them on adoption, so they are now dead machinery —
+   but under Rule 0e the canonical path should be the SOLE owner, not merely the
+   winner. Do not keep them because the fix tolerates them.
 5. Realistic `SignalTree` vs `ISignalTree` matrix (state containing nested
    object + `entityMap` + marker + primitive leaf, with negative controls).
    **The annotation/constructor alignment half is DONE** (`243dd5fb`,
