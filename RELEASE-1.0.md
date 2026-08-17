@@ -2628,13 +2628,16 @@ Retaining a second `.with()` authoring grammar whose only justification is
 external migrations are therefore on the Gate B critical path, not deferrable.
 
 ```
-#4c-1  DevTools composition-tracking falsifier   DONE — regression confirmed
-       DECISION REQUIRED on observation ownership before the repair lands
+#4c-1  DONE — regression confirmed, then RESOLVED BY DELETION. Burden of proof
+       was on keeping and was not met: 0 docs, 0 tests, absent from
+       DevToolsMethods and the api-baseline, reachable only via the `__devTools`
+       escape hatch. Deleted rather than rescued with an observation hook.
 #4a    migrate the external concrete-tree enhancers, ONE AT A TIME
        guardrails / schema / realtime / ng-forms  (item #3 is CLOSED for core;
        this is not reopening it)
 #4b    delete the realization overload — only once every public consumer is neutral
-#4c    delete batching + timeTravel overrides; resolve devTools per #4c-1
+#4c    DONE — devTools composition reporting deleted (`a8fbee3a`), then all
+       three overrides deleted; canonical `.with()` is the sole owner
 #5     variadic .with(...)
 ```
 

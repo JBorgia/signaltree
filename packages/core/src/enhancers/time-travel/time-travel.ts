@@ -2818,17 +2818,6 @@ export function timeTravel(
     );
     // Define new .with() method that passes enhancedTree (not the original tree)
     // to subsequent enhancers. This is critical for preserving the enhancer chain.
-    Object.defineProperty(enhancedTree, 'with', {
-      value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
-        if (typeof enhancer !== 'function') {
-          throw new Error('Enhancer must be a function');
-        }
-        return enhancer(enhancedTree as ISignalTree<T>) as R;
-      },
-      writable: false,
-      enumerable: false,
-      configurable: true,
-    });
 
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {

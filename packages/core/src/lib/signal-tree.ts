@@ -1416,21 +1416,16 @@ function create<T extends object>(
       // ADOPT a replacement. An identity-replacing enhancer hands back a new
       // callable; from here on it IS the tree, so the next enhancer must be
       // applied to it and must still reach this guard. Re-installing this exact
-      // function overwrites the minimal, guard-less `with` that
-      // batching/timeTravel/devTools each define on their replacement — which
-      // is the whole bypass.
+      // function is what keeps the chain inside the protocol.
       //
-      // CORRECTION to what `7a6bd4c9` claimed. That commit said "theirs only
-      // forwarded, so nothing is lost". MEASURED since: true for `batching` and
-      // `timeTravel`, FALSE for `devTools`, whose override also pushes the
-      // enhancer name onto a composition chain and reports a `SignalTree/with`
-      // action to Redux DevTools. Whether that reporting was observably
-      // FUNCTIONING before this adoption is NOT YET MEASURED — a first probe
-      // returned zero both before and after, which means the probe did not
-      // exercise the path, not that the feature is dead. Release queue item
-      // #4c-1 owns that falsifier and the resulting ownership decision.
-      //
-      // Do not read this adoption as "devTools lost nothing".
+      // HISTORICAL. `batching`, `timeTravel` and `devTools` each used to define
+      // their own guard-less `with` on the replacement, which this adoption
+      // overwrote — that was the bypass. All three are DELETED as of the item
+      // #4 ownership cleanup, so this now re-installs onto replacements that
+      // carry no competing implementation. `7a6bd4c9` claimed those overrides
+      // "only forwarded"; that was true for two of three, and `devTools`' also
+      // reported a composition chain, a diagnostic since deleted for want of
+      // any consumer.
       if (result !== currentRealization && isTraversableNode(result)) {
         currentRealization = result;
         try {
