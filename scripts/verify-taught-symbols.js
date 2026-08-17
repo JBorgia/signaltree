@@ -187,7 +187,10 @@ function auditImportClaims(docText, entryExports) {
 // Curated capabilities. Every entry must be (a) exported from its documented
 // entry point and (b) taught in llms-full.txt. Verified against the built
 // d.ts on 2026-07-23. Candidates deliberately NOT listed because they are
-// exported but untaught today: toWritableSignal, composeEnhancers. asyncStream
+// exported but untaught today: toWritableSignal. (composeEnhancers was listed
+// here too; it was DELETED in 15.0 — its type erased every enhancer addition.
+// This comment also contradicted reference/core.md, which did teach it.)
+// asyncStream
 // is deliberately neither exported nor taught (RFC 0001 §5 — experimental;
 // the step-8 doc pass removed its teaching sections). Note: loadOrThrow/load
 // are loader-surface METHODS, not importable symbols — not golden-eligible.

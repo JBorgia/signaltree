@@ -90,7 +90,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
   `withKind` stayed on the root.
 
 <!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
-`@signaltree/core` has **36 symbols**. `@signaltree/core/authoring` has **37**, grouped as: reader allowlists (8), marker brands (3), marker type guards (6), other type guards (4), marker authoring (4), enhancer authoring (4), write-path plumbing (4), observation hooks (2), constants (2).
+`@signaltree/core` has **36 symbols**. `@signaltree/core/authoring` has **36**, grouped as: reader allowlists (8), marker brands (3), marker type guards (6), other type guards (4), marker authoring (4), enhancer authoring (3), write-path plumbing (4), observation hooks (2), constants (2).
 <!-- END GENERATED: api-entry-points -->
 
 - Large app, bulk updates, diff-based patching, "what changed" reporting → `tree.updateAndReport(partial)`, built into `@signaltree/core`. There is NO `onPathChange`/subscription API in core — do not emit one. Do NOT add `@signaltree/enterprise` — deprecated in 13.5.0 and **removed in 14.0.0** (no longer published). It was measurably slower than the core method that replaced it. To migrate an existing dependency off it, see [`docs/guides/migration-v13-v14.md`](../../guides/migration-v13-v14.md) §6.

@@ -48,10 +48,10 @@ export type {
   HydrateReason,
 } from './lib/internals/materialize-markers';
 
-// Enhancer authoring — create enhancers with metadata, resolve dependency
-// order, and compose several enhancers into one.
+// Enhancer authoring — create enhancers with metadata and resolve dependency
+// order. Composition is `tree.with(a).with(b)`; `composeEnhancers` was removed
+// in 15.0 because its type erased every enhancer's additions.
 export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
-export { composeEnhancers } from './lib/utils';
 
 // Enhancer metadata symbol (third-party compatibility) + its shape.
 export { ENHANCER_META } from './lib/types';

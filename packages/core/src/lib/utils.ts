@@ -371,12 +371,6 @@ export function toWritableSignal<T>(
   return sig;
 }
 
-export function composeEnhancers<T>(
-  ...enhancers: Array<(tree: T) => T>
-): (tree: T) => T {
-  return (tree: T) => enhancers.reduce((t, e) => e(t), tree);
-}
-
 /**
  * @internal A materialised marker snapshots ITSELF.
  *

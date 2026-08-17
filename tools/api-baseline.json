@@ -1315,15 +1315,6 @@
         "internalDecl": false
       },
       {
-        "name": "composeEnhancers",
-        "subpath": "./authoring",
-        "kind": "runtime",
-        "declFile": "packages/core/src/lib/utils.ts",
-        "angularInDecl": true,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
         "name": "createAsyncQuerySignal",
         "subpath": "./authoring",
         "kind": "runtime",

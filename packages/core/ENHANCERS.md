@@ -34,23 +34,22 @@ Behavior
 
 All enhancers are imported from `@signaltree/core`:
 
-### Simple composition using `composeEnhancers`:
-
-```typescript
-import { signalTree, composeEnhancers, batching, devTools } from '@signaltree/core';
-
-const composed = composeEnhancers(batching, devTools);
-
-const tree = signalTree({ count: 0 }).with(composed);
-```
-
-### Or apply enhancers directly in explicit order (recommended for predictability):
+### Apply enhancers in explicit order:
 
 ```typescript
 import { signalTree, batching, devTools } from '@signaltree/core';
 
-const enhanced = signalTree({ count: 0 }).with(batching, devTools);
+const enhanced = signalTree({ count: 0 }).with(batching()).with(devTools());
 ```
+
+Each `.with()` returns `this & TAdded`, so every enhancer's methods accumulate
+and stay statically available to the end of the chain. Note that the enhancers
+are CALLED — `batching` is a factory that takes config and returns the enhancer.
+
+> `composeEnhancers(...)` was removed in 15.0. Its type used one `T` for both
+> its parameter and its return, leaving nowhere to carry what an enhancer ADDS,
+> so a composed chain silently lost every method it applied. Chain `.with()`
+> instead; it is not a workaround, it is the path that preserves the types.
 
 ### Use presets for convenient developer setup:
 

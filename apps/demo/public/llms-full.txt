@@ -1023,13 +1023,13 @@ symbol from `@signaltree/core` is a compile error.
 
 <!-- BEGIN GENERATED: api-entry-points — do not edit by hand; run `node tools/gen-api-surface.mjs` -->
 - `@signaltree/core` — **36 symbols** (the app surface)
-- `@signaltree/core/authoring` — **37 symbols**:
+- `@signaltree/core/authoring` — **36 symbols**:
   - reader allowlists (8): `ASYNC_QUERY_READERS`, `ASYNC_SOURCE_READERS`, `ENTITY_LOADER_READERS`, `ENTITY_READERS`, `FORM_READERS`, `FORM_WIZARD_READERS`, `STATUS_READERS`, `STORED_READERS`
   - marker brands (3): `ASYNC_QUERY_MARKER`, `ASYNC_SOURCE_MARKER`, `FORM_MARKER`
   - marker type guards (6): `isAsyncQueryMarker`, `isAsyncSourceMarker`, `isDerivedMarker`, `isFormMarker`, `isStatusMarker`, `isStoredMarker`
   - other type guards (4): `isAnySignal`, `isNodeAccessor`, `isSignalTree`, `isTraversableNode`
   - marker authoring (4): `createAsyncQuerySignal`, `createAsyncSourceSignal`, `createFormSignal`, `registerMarkerProcessor`
-  - enhancer authoring (4): `ENHANCER_META`, `composeEnhancers`, `createEnhancer`, `resolveEnhancerOrder`
+  - enhancer authoring (3): `ENHANCER_META`, `createEnhancer`, `resolveEnhancerOrder`
   - write-path plumbing (4): `getActiveWriteContext`, `getPathNotifier`, `interceptLeafSignals`, `withWriteContext`
   - observation hooks (2): `onHydrateDecision`, `onTreeError`
   - constants (2): `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES`

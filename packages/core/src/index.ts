@@ -305,8 +305,9 @@ export {
   // structural guard when you are walking a tree, which is authoring work.
 } from './lib/utils';
 
-// `composeEnhancers`, `getPathNotifier` — removed from the root barrel in v12;
-// import from '@signaltree/core/authoring'.
+// `getPathNotifier` — removed from the root barrel in v12; import from
+// '@signaltree/core/authoring'. `composeEnhancers` left the root barrel in v12
+// too and was deleted outright in 15.0 — use `tree.with(a).with(b)`.
 
 // ============================================
 // EDIT SESSION (subpath: @signaltree/core/edit-session)

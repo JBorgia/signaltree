@@ -380,7 +380,6 @@ Built-in enhancers exported from `@signaltree/core`:
 
 Utilities you may need when composing enhancers yourself:
 
-- `composeEnhancers(...enhancers)` — combine multiple enhancers into one.
 - `createEnhancer(metadata, fn)` — author a third-party enhancer with metadata.
 - `resolveEnhancerOrder(list)` — dependency-aware ordering.
 - `ENHANCER_META` — symbol used by third parties to attach metadata.
