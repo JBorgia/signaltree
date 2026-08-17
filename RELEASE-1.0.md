@@ -2651,6 +2651,111 @@ owners immediately after establishing one. The shape that preserves both
 properties is `.with()` owning application and DevTools OBSERVING it through a
 hook — not DevTools replacing `.with()` to learn that application happened.
 
+## MUT — the 15.0 mutation participation model (DERIVATION SLICE, no production changes)
+
+**Method rule for this slice, and it is the one that keeps being violated:**
+
+> Derive the contract from the frozen semantic model FIRST. Then determine what
+> kernel changes are required to satisfy it. Do NOT let what the kernel happens
+> to emit today define what the contract can promise — that turns implementation
+> limitations into architecture by accident.
+
+### TWO RETRACTIONS before anything is built on them
+
+**R1 — `PathNotifier` is NOT "the greenfield observation boundary".** It is a
+CANDIDATE SUBSTRATE. It has attractive ingredients — `MutationEnvelope` carries
+semantic identity, the class imports zero Angular, and `emitOwnedMutation`
+already forwards envelopes into it — but the join test is decisive against
+promoting it: **ordinary leaf writes produce ZERO events through it**, with or
+without `timeTravel()`. Calling it "already exists" would repeat the exact error
+this queue keeps making: promoting a discovered implementation into the
+architecture before its semantics are shown to match the endpoint.
+
+**R2 — `PathNotifierInterceptor` is NOT a PREPARE contract.** Establishing this
+from call ORDER rather than from the shape of its return type:
+
+```
+runOwnedMutation:  read before -> apply()  -> read after -> emitOwnedMutation
+emitOwnedMutation: ... -> notifier.emitMutation(envelope)
+emitMutation:      notify(path, envelope.after, envelope.before, …)
+```
+
+`envelope.after` is produced by reading AFTER `apply()`. So interceptors are
+consulted once the physical mutation has already happened. `{ block, transform }`
+is a SYNTACTIC property; running before any live mutation is the SEMANTIC
+property of PREPARE, and this does not have it. It may be old-architecture
+vocabulary whose semantics never fit the frozen lifecycle.
+
+### What IS established
+
+```
+SCHEMA'S REQUIREMENT (measured from its callback)
+  needs      path, next value, metadata (intent/source/suppressGuardrails)
+  ignores    previous value (`_prev`)
+  semantics  OBSERVE-ONLY, never rejects writes
+
+  -> schema needs NO PREPARE participation. That narrows the problem.
+  -> but "post-commit" is not yet precise enough: after PRIVATE COMMIT, after
+     PROJECT, or after PUBLISH are no longer interchangeable. To be DERIVED.
+```
+
+```
+CURRENT REALITY (measured)
+  plain leaf at HEAD    no intrinsic emitter, no owned positionIds
+  interceptLeafSignals  does not wrap the leaf's `.set` at all
+  PathNotifier          zero events for plain leaf writes
+  emitOwnedMutation     early-returns when positionIds[0] is undefined
+
+  -> ordinary leaf writes participate in NO observation contract today.
+```
+
+```
+SUBSTRATE FACTS (candidate ingredients, not endorsements)
+  MutationEnvelope      positionId, path, ownerPath, before, after, kind,
+                        subjectId, structural, attribution
+  PathNotifier          zero Angular imports
+  subscribe handler     EIGHT POSITIONAL ARGS — flattens the envelope; kind,
+                        structural and attribution structure are lost
+  getPathNotifier()     PROCESS-GLOBAL SINGLETON; consumers filter other trees
+                        themselves (time-travel does exactly this)
+```
+
+### The four questions this slice must answer, in order
+
+```
+MUT-1  PHASES     which semantic phases may extension authors participate in?
+                  PREPARE / PRIVATE COMMIT / PROJECT / PUBLISH / CONSEQUENCE
+MUT-2  ONTOLOGY   what identity, value and attribution exist AT EACH PHASE?
+MUT-3  SCOPE      how is observation bound to ONE tree lineage rather than
+                  process-global state? A global singleton requiring consumers
+                  to filter foreign trees is evidence about current plumbing,
+                  not a candidate public contract.
+MUT-4  CONSUMERS  map schema, causal history, transactions, time travel,
+                  persistence, devtools, realtime and third parties onto those
+                  contracts — including which need NONE of them.
+```
+
+Only AFTER those: *can `MutationEnvelope` + `PathNotifier` be refactored into
+this model?* Plausible outcome — envelope survives largely intact, the notifier
+becomes a tree-scoped dispatcher, and the flattened callback, the global
+singleton, the post-hoc "interceptors" and `interceptLeafSignals` are all
+deleted. Or the derivation produces something else; that is why it comes first.
+
+### Where the leaf-realization root cause belongs
+
+AFTER the contract is stated, not before. The question then becomes the useful
+one:
+
+> Why do ordinary leaf writes fail to enter the canonical semantic mutation
+> pipeline?
+
+rather than the old-mechanism-centred:
+
+> Why does `interceptLeafSignals` not wrap them?
+
+**Do not repair `interceptLeafSignals`. Do not promote `PathNotifier` to public
+architecture. `schemas()` migration remains blocked.**
+
 ## SCHEMA REGRESSION — BISECTED AND CHARACTERIZED, repair NOT yet chosen
 
 ```
