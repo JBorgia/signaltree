@@ -1,4 +1,22 @@
-import { isSignal, signal, untracked, WritableSignal } from '@angular/core';
+import {
+  computed,
+  isSignal,
+  signal,
+  untracked,
+  WritableSignal,
+} from '@angular/core';
+
+import { installMaterializationRealization } from './internals/materialization-realization';
+
+// Angular supplies the two reactive operations marker materialization needs.
+// Installed once at module load: for this release `@signaltree/core` IS the
+// Angular adapter, so the binding lives here rather than in the neutral
+// materializer. See `internals/materialization-realization.ts` for why this is
+// two named semantic operations and not a signals shim.
+installMaterializationRealization({
+  isReactiveNode: (node) => isSignal(node),
+  memoizeSnapshot: (_node, compute) => computed(compute),
+});
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from '../enhancers';

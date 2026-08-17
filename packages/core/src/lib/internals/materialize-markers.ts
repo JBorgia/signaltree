@@ -1,4 +1,16 @@
-import { computed, isSignal, type Signal } from '@angular/core';
+import {
+  getMaterializationRealization,
+} from './materialization-realization';
+
+/**
+ * "Has the adapter already realized this node?" — see
+ * `materialization-realization.ts`. Without an adapter this answers `false`,
+ * which is the conservative direction: the walk treats the node as ordinary
+ * data rather than skipping it.
+ */
+function isReactiveNode(node: unknown): boolean {
+  return getMaterializationRealization()?.isReactiveNode(node) ?? false;
+}
 
 import {
   createPositionRegistry,
@@ -160,7 +172,7 @@ export function getNodeProcessor(node: unknown): MarkerProcessor | undefined {
  * figures in docs/architecture/memory-profile.md, which are the entityMap's id
  * index and storage.
  */
-const SNAPSHOT_MEMO = new WeakMap<object, Signal<{ value: unknown }>>();
+const SNAPSHOT_MEMO = new WeakMap<object, () => { value: unknown }>();
 
 export function snapshotMarkerNode(
   node: unknown
@@ -169,10 +181,19 @@ export function snapshotMarkerNode(
   if (!proc?.snapshot) return undefined;
   if (!isTraversableNode(node)) return { value: proc.snapshot(node) };
 
+  const realization = getMaterializationRealization();
+  if (!realization) {
+    // No adapter: still correct, just recomputed. Reference stability is an
+    // optimisation the adapter's dependency graph provides, not a semantic.
+    return { value: proc.snapshot(node) };
+  }
+
   let memo = SNAPSHOT_MEMO.get(node as object);
   if (!memo) {
     const snapshot = proc.snapshot;
-    memo = computed(() => ({ value: snapshot(node) }));
+    memo = realization.memoizeSnapshot(node as object, () => ({
+      value: snapshot(node),
+    }));
     SNAPSHOT_MEMO.set(node as object, memo);
   }
   return memo();
@@ -488,7 +509,7 @@ function warnWriteOnlyMarker(processor: MarkerProcessor, node: unknown): void {
   if (!processor.snapshot || processor.hydrate) return;
   // Exactly what `recursiveUpdate` falls through to. If that can write the
   // node, no hook is needed and there is nothing to report.
-  if (isSignal(node) && 'set' in (node as object)) return;
+  if (isReactiveNode(node) && 'set' in (node as object)) return;
   if (warnedWriteOnly.has(processor as object)) return;
   warnedWriteOnly.add(processor as object);
   console.warn(
@@ -607,7 +628,7 @@ export function materializeMarkers(
   context: MaterializationContext = createMaterializationContext()
 ): void {
   if (!isTraversableNode(node)) return;
-  if (isSignal(node)) return;
+  if (isReactiveNode(node)) return;
 
   // Handle NodeAccessors (functions with properties)
   const isAccessor = typeof node === 'function' && isNodeAccessor(node);
@@ -696,7 +717,7 @@ export function materializeMarkers(
       } else if (
         typeof value === 'object' &&
         !Array.isArray(value) &&
-        !isSignal(value)
+        !isReactiveNode(value)
       ) {
         // Plain object - recurse
         materializeMarkers(value, notifier, currentPath, context);
