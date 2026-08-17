@@ -3325,6 +3325,20 @@ AUTHORITATIVE  "this semantic operation is ILLEGAL and must not commit"
                -> kernel / PREPARE integration potentially REQUIRED
 ```
 
+**STATUS — measured behaviour, NOT a frozen greenfield decision.** My previous
+wording, "V0.0 is now measured, not open", overstated it. Correctly:
+
+```
+MEASURED          no existing workflow demonstrates write refusal
+DERIVED DEFAULT   do NOT introduce authoritative validation without an
+                  independently required function that needs PREPARE refusal
+PRODUCT SEMANTICS still falsifiable if such a function is discovered
+```
+
+Rule 0g forbids current behaviour from settling a greenfield product question.
+This keeps the burden of proof where it belongs without making 14/15-dev
+behaviour the specification.
+
 **MEASURED — both current systems are DESCRIPTIVE. Neither refuses a write.**
 
 ```
@@ -3378,24 +3392,121 @@ validation, async validation, errors, isValid, pending, manual validate,
 automatic recomputation, Standard Schema support. If all are satisfiable without
 changing the semantic state engine, that is strong evidence against A.
 
-The null has real support already: `NodeAccessor`s provide readable state and
-publication machinery provides reactive realization, so no mutation
+The null has real support: `NodeAccessor`s provide readable state, so no mutation
 interception, paths, marker ownership or causal records are automatically
-needed. And an async evaluator can own its own operational concerns —
+needed. An async evaluator can also own its own operational concerns —
 *read truth -> validate against input X -> newer input arrives -> old result is
 stale -> publish only the surviving result* — WITHOUT `pending` becoming
-SignalTree truth.
+SignalTree truth. **And solve staleness with an EVALUATOR-LOCAL GENERATION
+COUNTER, not physical revisions**, unless the required semantics demand kernel
+identity: *run 41 starts, run 42 starts, 41 resolves -> ignore, 42 resolves ->
+publish.*
 
-**The burden of proof for KERNEL ownership is therefore very high.**
-
-Each sub-function may independently answer NO:
+**RETRACTED FROM MY OWN ARGUMENT — "publication machinery provides reactive
+realization".** That is ANGULAR-specific. The frozen invariant is *"Angular owns
+observation"*, so a FRAMEWORK-NEUTRAL validation package cannot casually lean on
+Angular publication to solve automatic currency. Two questions must be split:
 
 ```
-rule declaration?        automatic re-evaluation?   manual validation?
-cross-position deps?     subtree validation?        async evaluation?
-cancellation/staleness?  errors?                    validity?
-pending?                 third-party rule formats?
+CAN validation be COMPUTED from truth?          -> reads suffice
+HOW does a NEUTRAL system know WHEN to recompute? -> the real falsifier
 ```
+
+**BUT FIRST — IS NEUTRALITY EVEN REQUIRED? MEASURED: NO, not today.**
+
+```
+@signaltree/schema imports `signal`, `computed`, `Signal` from '@angular/core'
+                   and declares an @angular/core PEER DEPENDENCY
+```
+
+The current validation package is **not framework-neutral**. So "a
+framework-neutral validation package" is a requirement I was about to INVENT,
+not one that exists. It must earn its place like any other:
+
+```
+V0.6  is FRAMEWORK NEUTRALITY a required property of the validation facility?
+      NO  -> Angular reactivity is available; automatic currency is solvable
+             with computed/effect and NO kernel integration is implied
+      YES -> the automatic-currency falsifier bites, and only then
+```
+
+**The burden of proof for KERNEL ownership is therefore very high — and the
+automatic-currency falsifier only applies CONDITIONALLY on V0.6.**
+
+#### THE MATRIX — three columns, not one binary
+
+`NEEDS SIGNALTREE-SPECIFIC SUPPORT` is separated from `NEEDS VALIDATION
+SEMANTICS IN KERNEL`, because the answers differ and collapsing them is what
+produced the old observer machinery.
+
+```
+CAPABILITY            KERNEL VALIDATION   KERNEL          SIGNALTREE-SPECIFIC
+                      SEMANTICS?          INTEGRATION?    SUPPORT?
+--------------------  -----------------   -------------   -------------------
+sync evaluation       NO                  NO              reads only
+manual validate()     NO                  NO              reads only
+errors / isValid      NO                  NO              derived result
+Standard Schema       NO                  NO              format adapter
+async evaluation      NO                  NO              reads only
+pending               NO                  NO              evaluator state
+staleness/cancel      NO                  NO              evaluator-local
+                                                          generation counter
+cross-field deps      NO                  MAYBE           reads + a dependency
+                                                          model
+subtree validation    NO                  NO              reads only
+AUTOMATIC CURRENCY    NO                  REAL FALSIFIER  conditional on V0.6
+authoritative refusal YES (PREPARE)       YES             ONLY if the product
+                                                          requires refusal —
+                                                          nothing measured does
+```
+
+**The shape this produces is internally consistent and worth stating:**
+
+```
+VALIDATION SEMANTICS IN KERNEL     NO
+SIGNALTREE-SPECIFIC INTEGRATION    MAYBE (one row)
+FIRST-PARTY VALIDATION PACKAGE     plausibly YES
+```
+
+Those three are perfectly compatible — which is exactly why A/B/C had to stop
+being rival architectures.
+
+#### AUTOMATIC CURRENCY MUST EARN ITS OWN EXISTENCE FIRST
+
+Do not inherit it as a requirement merely because today's schemas are reactive.
+
+```
+FUNCTION     what user outcome requires always-current validity?
+WITHOUT IT   what becomes IMPOSSIBLE rather than merely less convenient?
+```
+
+Two materially different product promises:
+
+```
+EXPLICIT   await validation.run(); validation.errors();
+           Angular Forms handles its own triggering
+CONTINUOUS validation.isValid() must ALWAYS correspond to current truth
+```
+
+Only if CONTINUOUS is required, AND V0.6 says neutrality is required, does the
+falsifier bite. And even then the result is **NOT** "validation belongs in the
+kernel". It is:
+
+```
+zero kernel VALIDATION ontology still survives
++ some narrow neutral dependency-invalidation integration may be required
+```
+
+**CRITICAL DISTINCTION — dependency invalidation is NOT mutation observation.**
+The minimum sufficient information may be only:
+
+```
+"something relevant to dependency set D may have changed"   -> then REREAD truth
+```
+
+with NO before, no after, no path, no mutation kind, no event envelope, and no
+`PositionId` exposure. That preserves everything MUT-0 row 1 established, and it
+is a far better question than *"what replaces `interceptLeafSignals`?"*
 
 Only AFTER V0 does the one-authority falsifier run, and then in its corrected
 form: *can every SURVIVING validation function be satisfied by one
