@@ -2877,10 +2877,25 @@ DISPOSITION         KEEP / INTERNALIZE / MOVE / SPLIT / DELETE / UNPROVEN
 zero application usage removes "ordinary application need", never "third-party
 implementer need".
 
+#### Three levels of need — never collapse them
+
+```
+CORE-INTERNAL          core needs it; no contract crosses a package boundary
+FIRST-PARTY PACKAGE    schema/realtime/ng-forms need it; may justify an
+                       INTERNAL SHARED contract, NOT a public protocol
+THIRD-PARTY SDK        arbitrary extension authors need it; only this level
+                       justifies public authoring surface
+```
+
+`@signaltree/schema` being separately published does NOT prove third-party need.
+Demo evidence cannot answer any of these; first-party consumption cannot answer
+the third.
+
 #### Order — highest architectural gravity first, not alphabetical
 
 ```
-1  interceptLeafSignals / PathNotifier / getPathNotifier / write-context APIs
+1  SYNCHRONIZATION / INTEGRATION FUNCTIONS  (deliberately NOT named
+   "observation" — that phrase pre-selects an abstraction)
 2  Enhancer / createEnhancer / ENHANCER_META / resolveEnhancerOrder
 3  schema integration
 4  realtime integration
@@ -2914,6 +2929,143 @@ Conversely, if a genuine third-party function emerges — e.g. "a custom semanti
 extension must be notified when its registered positions participate in a
 settled semantic transaction" — then a public capability IS proven, and can be
 designed at minimum size without inheriting 14.x form.
+
+### MUT-0 ROW 1 — SYNCHRONIZATION / INTEGRATION — **DRAFT PROPOSAL, NOT A DISPOSITION**
+
+Deliberately NOT called "observation". Derived with current API names hidden
+until step F.
+
+#### A. REQUIRED FUNCTIONS — outcomes 15.0 must provide
+
+```
+A1  a non-kernel capability stays CORRECT as SignalTree truth changes
+A2  durable storage reflects surviving committed truth
+A3  Angular re-renders from published truth
+A4  authored operations retain causal meaning (undo/redo/rollback)
+A5  a capability may decline to act on changes it should ignore
+```
+
+Note what is NOT listed: "a subsystem is notified of mutations". That is a
+MECHANISM, not an outcome.
+
+#### B. WHICH FROZEN AUTHORITY ALREADY OWNS EACH
+
+```
+A2  governed persistence consequence      OWNED, frozen
+A3  Angular publication                   OWNED, frozen (F2)
+A4  causal kernel                         OWNED, frozen (F3)
+A5  attribution on the semantic operation OWNED in principle — see E
+A1  <- the only genuinely open row
+```
+
+A2-A4 need nothing new. They were never observation problems.
+
+#### C. THE NULL DESIGN — assume NONE of it exists
+
+Assume there is no generic observer, no mutation bus, no public write context,
+and no leaf interception. Can A1 still be implemented?
+
+**MEASURED FACT — the kernel already computes the hard part.**
+
+```ts
+interface CausalTurn {
+  readonly id: TurnId;
+  readonly effects: readonly CausalEffect[];
+  readonly participants: readonly PositionId[];   // <- AFFECTED SEMANTIC POSITIONS
+  readonly state: TurnState;
+}
+```
+
+`TurnStore` provides `admitConfirmed` / `admitPending` / `confirmPending` /
+`discardPending`. So affected semantic identity, transaction granularity, and
+settlement lifecycle ALL exist already — keyed by `PositionId`, not by path.
+
+A dependent capability therefore needs no mutation stream:
+
+```
+turn settles
+   -> participants: PositionId[]
+   -> capability's dependencies on those positions invalidate
+   -> capability READS CURRENT TRUTH from the tree
+   -> derived state recomputed
+```
+
+**The event need not carry the value at all.** SignalTree owns truth (F1); a
+mutation payload would be a second copy of it. Schema's measured requirements
+confirm this — it already ignores `prev`, and `next` is obtainable by reading.
+
+#### D. PUBLIC NECESSITY — if a primitive IS needed, at which level?
+
+```
+CORE-INTERNAL        certainly sufficient for A2/A3/A4
+FIRST-PARTY PACKAGE  schema and realtime would consume A1. An internal shared
+                     contract satisfies that WITHOUT a public protocol.
+THIRD-PARTY SDK      UNPROVEN. No measured consumer. COUNTEREXAMPLE NEEDED:
+                     an extension only a third party could write, requiring
+                     position-level invalidation.
+```
+
+#### E. THE ONE CANDIDATE MISSING PRIMITIVE
+
+The null design covers everything except **A5**. `CausalTurn` carries `id`,
+`effects`, `participants`, `state` — **no attribution**. Schema's only
+irreducible extra requirement is suppression by `intent` / `source`.
+
+```
+MINIMUM MISSING PRIMITIVE (stated without reference to current APIs)
+
+  attribution of a settled semantic operation must be readable by whatever
+  decides whether a dependent capability should react to it.
+```
+
+That is a property OF THE TURN, not a subscription API. Plausibly: attribution
+becomes part of the causal record. **UNPROVEN, and MUT-2's question.**
+
+#### F. ONLY NOW — the existing forms, and provisional dispositions
+
+```
+interceptLeafSignals    finds Angular signals and wraps their setters.
+                        Observes FRAMEWORK REALIZATION, contradicting F1/F2.
+                        Zero application usage. Superseded by turn
+                        participants.                    -> DELETE (provisional)
+
+PathNotifier /          global process-wide mutation bus; flattens
+getPathNotifier         MutationEnvelope into 8 positional args; requires
+                        consumers to filter foreign trees. Global authority in
+                        a tree-owned architecture.  -> INTERNALIZE or DELETE
+
+write-context APIs      raw ambient write context. If attribution belongs on
+                        the turn (E), owning subsystems receive it directly and
+                        no consumer needs the raw context. -> INTERNALIZE
+                                                              (provisional)
+
+MutationEnvelope        the RICHEST existing shape, and the one closest to
+                        being unnecessary — a turn already names participants,
+                        and truth is readable.        -> likely INTERNAL only
+```
+
+**PROVISIONAL ROW-1 RESULT:**
+
+```
+generic public mutation observation    NOT NEEDED — no replacement designed
+leaf interception                      DELETE
+public mutation bus                    DELETE / INTERNALIZE
+public write context                   INTERNALIZE
+one candidate missing primitive        attribution on the settled turn
+```
+
+**COUNTEREXAMPLES THAT WOULD OVERTURN THIS:**
+
+```
+X1  a capability that CANNOT recompute from current truth and must see the
+    transition itself (before/after)
+X2  a capability needing per-physical-commit granularity (contradicts F8+F9)
+X3  a third-party extension that cannot be written without a public hook
+X4  attribution that cannot live on the turn without breaking causal semantics
+X5  a capability needing to REFUSE — none measured; schema is observe-only
+```
+
+**X1 is the one to attack first**, and `timeTravel` is its best candidate.
 
 #### Not yet: running the demo
 
@@ -3313,7 +3465,7 @@ CORE ONLY. No step runs the other packages' tests. A package can be entirely red
 and every gate stays green. `nx run-many -t test --all` belongs in the ladder;
 its absence is why 25 failures survived to Gate B.
 
-### 14.x disposition (Rule 0f) — MEASURED: 15.0-dev REGRESSION, no 14.x patch
+### 14.x disposition (Rule 0f) — MEASURED: 15.0 BEHAVIOURAL DIVERGENCE from 14.x, no 14.x patch
 
 ```
 v14.1.1                 10 files / 40 tests   ALL PASSING
