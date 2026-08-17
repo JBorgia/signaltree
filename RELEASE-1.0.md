@@ -652,7 +652,139 @@ some belong elsewhere and having to redo `GATE B`. Four questions:
    `EntityMutationFrame` into public view is exactly what a private boundary
    lets us find out without a compatibility promise.
 
-### `@signaltree/authoring` — DEPENDENCY CHECK FAILED, split deferred
+### `@signaltree/authoring` — IN PROGRESS. Resume here.
+
+**Decision reversed: the split happens in this major.** 15.0 is already the
+breaking release; keeping `@signaltree/core/authoring` now and moving it later
+would manufacture a second migration. The failed dependency check below changed
+the SEQUENCE, not the destination — the prerequisites land before `GATE B`.
+
+**GATE A stays frozen throughout.** Implementation and package refactoring are
+allowed; frozen semantics are not. Stop if the split can only be achieved by
+changing a GATE A invariant or redesigning marker semantics.
+
+#### What the marker analysis proved
+
+The problem is **file/package co-location, not semantic entanglement.** The
+neutral model already exists:
+
+```text
+authorship factory  ->  plain descriptor { [X_MARKER]: true, config }
+                            ->  materializer
+                                    ->  framework create*Signal realization
+```
+
+Every Angular primitive in all five marker modules is inside the `create*Signal`
+REALIZATION function. Zero are in the authorship factories, which return inert
+objects.
+
+| Module | Angular primitives | Location | Authorship |
+| --- | --- | --- | --- |
+| `form` | `signal`×6, `computed`×9 | all in `createFormSignal` | inert |
+| `status` | `signal`×2, `computed`×6 | all in `createStatusSignal` | inert |
+| `stored` | `signal`×1, `untracked`×2 | all in `createStoredSignal` | inert |
+| `async-query` | `signal`×4, `untracked`×1, `effect`×1 | all in `createAsyncQuerySignal` | inert |
+| `async-source` | `signal`×3 | all in `createAsyncSourceSignal` | inert |
+
+So `@signaltree/authoring` needs no new abstraction — it needs the existing
+separation made physical. The `create*Signal` functions are Angular REALIZATIONS,
+not SDK contracts, and belong with the adapter in core.
+
+Measurement note: count generic calls with `signal\s*[<(]`, not `signal(`.
+`signal<T>(` does not contain `signal(`, which under-reported `stored` as having
+zero uses.
+
+#### FROZEN refactor constraint for these splits
+
+> Marker descriptors own configuration and semantic intent. Framework
+> realization owns reactive observation state. Neither becomes a second source
+> of authoritative SignalTree truth.
+
+That protects the frozen identity/authority model while files move. Do not solve
+Angular removal by relocating mutable state into an ambient registry.
+
+#### Canonical split shape — establish with `async-source`, then conform
+
+```text
+markers/async-source.ts           neutral: descriptor, guard, marker symbol, config types
+markers/async-source.angular.ts   Angular: createAsyncSourceSignal + signal(...)
+```
+
+The suffix matters less than making the direction obvious. **Do not invent five
+slightly different patterns** — `async-source` sets the structure and the other
+four conform.
+
+#### Pin these four on every split
+
+1. **Public semantics unchanged** — same marker object shape, same identity
+   symbol, same config semantics.
+2. **Realization behavior unchanged** — existing core tests exercise the same
+   Angular implementation after relocation.
+3. **Dependency direction improves** — the neutral descriptor must NOT import
+   the realization module; realization may import the descriptor.
+4. **API symbol set unchanged** — until the final package move this must appear
+   as declaration-location movement, which `tools/api-inventory.mjs --check`
+   now reports separately from a contract change.
+
+#### The package-boundary falsifier
+
+Not "the Angular import disappeared from the neutral file", but:
+
+> Can the descriptor module be imported in a process with **no Angular
+> installed** and still construct, inspect, and type the marker?
+
+#### Order — deliberately not by marker name
+
+```text
+1. async-source   349 lines, 3 calls — simplest realization seam, sets the pattern
+2. stored         richer: persistence consequences + untracked
+3. status
+4. form
+5. async-query    LAST — effect() adds lifecycle deserving more scrutiny
+```
+
+After `async-source`, do `stored` NEXT rather than sweeping the rest: if both a
+simple case and a consequence-bearing case split with no semantic drift, the
+remaining three become safely mechanical.
+
+#### Create the package only when this is true
+
+```text
+proposed @signaltree/authoring closure
+    Angular runtime imports:      0
+    core internals reach-through: 0
+```
+
+**Do not create the package halfway through the five splits.**
+
+#### Recorded, NOT to be solved during the splits
+
+Adapter registration (`installMaterializationRealization`, `064f19ab`) is
+module-load and currently "last adapter imported wins". Fine for a single
+Angular-facing core; it matters when a second adapter becomes viable. Desired
+rule when that day comes:
+
+```text
+same adapter installed twice     -> idempotent
+different incompatible adapter   -> deterministic failure
+```
+
+Release debt. Do not derail a split to fix it unless a split directly requires it.
+
+#### Progress
+
+- [x] Neutralize marker materialization behind a realization port — `064f19ab`.
+      `internals/materialize-markers.ts` now imports zero framework code.
+- [ ] `async-source` split (sets the canonical pattern)
+- [ ] `stored` split (consequence-bearing proof)
+- [ ] `status`, `form` splits
+- [ ] `async-query` split (effect/lifecycle, last)
+- [ ] Re-run the module graph; confirm the closure criterion
+- [ ] Create `@signaltree/authoring`, move the SDK, repoint `guardrails`
+- [ ] Remove `@signaltree/core/authoring` as a 15.0 breaking change
+- [ ] Regenerate the API baseline deliberately, then `GATE B`
+
+### Historical — the dependency check that produced the sequence above
 
 The gate was: *can `@signaltree/authoring` be consumed by a third-party
 extension package without importing `@signaltree/core` implementation modules or
