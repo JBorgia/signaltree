@@ -1439,6 +1439,19 @@ sub-result into the conclusion much harder, which is exactly how the previous
 | consumer type      | ?      | ?           |
 | negative control   | ?      | ?           |
 
+**SCOPE LIMIT.** The expected result is that `isDev` tagged is stripped, and that
+removing only its own `@internal` restores the declaration, root importability, and
+a boolean-compatible consumer type. If the table shows that, **the mechanism is
+closed — do not investigate declaration tooling further.** Go straight to the
+product question, and require POSITIVE evidence for keeping `isDev`, since it is
+already deletion-favoured by the utility audit. Only if the table FALSIFIES the
+same-mechanism explanation is a fresh-artifact investigation warranted.
+
+**The packed gate is where declaration work ENDS.** Once packed + declared peers +
+external consumer + no workspace resolution + `skipLibCheck: false` + `tsc` exit 0
+is green, add the two-route regression fixture and return to API reduction. Do not
+continue improving the declaration machinery past that point.
+
 Then run an AST **characterization scan** (not a fix list) for the value-space
 route. **Do not limit it to functions** — the recorded invariant is broader. The
 property is whether the emitted public type contains a VALUE QUERY (`typeof
