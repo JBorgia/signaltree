@@ -2392,8 +2392,51 @@ decisive lines.
 | false `SignalTree<T>` root-state surface | `export type SignalTree<T> = ISignalTree<T> & TreeNode<T>` (`types.ts:1297`) | **PATCH DOCS / KNOWN ISSUE** — do not silently make a breaking type correction on 14.x | **BREAKING CORRECTION** (`243dd5fb`) |
 | `composeEnhancers` broken types + bypass semantics | implementation byte-identical (`utils.ts:377`) | **PATCH DOCS / DEPRECATION** — see the warning below | **ARCHITECTURAL CUTOFF** (`6c3d73a8`) |
 | `SignalTreeBase` | present (`types.ts:1298`); no defect | **NO ACTION** | **ARCHITECTURAL CUTOFF** (`6a515699`) |
+| **identity-replacing enhancers silently disable the enhancer protocol** | `Object.defineProperty(enhancedTree, 'with', …)` in `batching.ts`, `time-travel.ts`, `devtools-impl.ts` — all three byte-identical at the tag; the replacement `with` only type-checks its argument and calls `enhancer(enhancedTree)` | **PATCH CODE** | **BLOCKS #3b** — see below |
 | stale generated API-surface docs | **NOT MEASURED at 14.1.1** — the staleness found was relative to HEAD source | **UNCLASSIFIED** | 15.0 cleanup (`7772effa`) |
 | `nx test core` unreliable + swallows the reporter; `api-inventory` member/shape blind spot | tooling, not a consumer contract | **NO ACTION** | **TOOLING DEBT** — Phase 5 |
+
+### BLOCKER for #3b — the enhancer protocol does not survive its own built-ins
+
+Found while characterizing `batching` for #3b, before touching its signature.
+**All three identity-replacing built-ins redefine `.with()` on their replacement
+tree, and the redefinition carries no metadata guard at all.** Measured:
+
+```
+                              unsatisfied requirement    duplicate name
+plain tree                    THROWS                     THROWS
+after .with(batching())       no throw                   no throw
+```
+
+`batching.ts:355`, `time-travel.ts:2820`, `devtools-impl.ts:1733` — each
+installs a `with` that validates only `typeof enhancer === 'function'` and then
+calls `enhancer(enhancedTree)` directly. No duplicate detection, no dependency
+validation, no capability publication.
+
+This is the SAME defect class as `composeEnhancers` — a fail-closed check
+bypassed by an alternate application path — and it **defeats the `681ffb8e`
+repair in exactly the configurations most real apps use**, since batching,
+devTools and timeTravel are the common enhancers. The protocol is disabled for
+the remainder of the chain from the moment any of them is applied.
+
+**Why this is not a one-line fix, and therefore not a #3b sub-task.** The
+bookkeeping (`appliedEnhancerNames`, `providedEnhancerCapabilities`) is per-tree
+closure state inside `create()`. A replacement tree is a new object and cannot
+reach it. Delegating naively to the original `tree.with` is wrong too: the
+original invokes `enhancer(tree)` against the ORIGINAL receiver, so a delegating
+call would hand the enhancer the pre-replacement tree. Making this correct means
+factoring the guard into a reusable "apply against THIS receiver" operation that
+shares one tree's bookkeeping — a small architectural change touching three
+built-ins.
+
+**Recommended sequencing — do NOT fold this into #3b.** It is a shared-protocol
+defect, not a per-enhancer one, and #3b must not absorb fixes to other built-ins.
+Treat it as `#3a-2`, the same shape as `#3a`: repair the protocol first, then
+migrate built-ins onto a protocol that is actually coherent. Migrating
+`batching`'s signature while its runtime silently drops the protocol would type a
+contract the implementation does not honour.
+
+DECISION REQUIRED before proceeding — see the session report.
 
 ### Do NOT "repair" `composeEnhancers` runtime semantics in a 14.x patch
 
