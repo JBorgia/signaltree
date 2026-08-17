@@ -1030,9 +1030,7 @@ export interface PersistenceConfig extends SerializationConfig {
  */
 export function persistence(
   config: PersistenceConfig
-): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & SerializationMethods & PersistenceMethods {
+): Enhancer<SerializationMethods & PersistenceMethods> {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -1309,7 +1307,21 @@ export function persistence(
   (persistenceFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (persistenceFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] =
     meta;
-  return persistenceFn;
+
+  // THE ONE BOUNDARY CAST, re-justified: `persistenceFn` reads the realized
+  // tree so its parameter is `ISignalTree<T>`, while `Enhancer<TAdded>` takes
+  // the neutral `EnhancerHost` and parameters are contravariant under
+  // `strictFunctionTypes`. Body untouched.
+  //
+  // `TAdded` here is a COMPOSITE — `SerializationMethods & PersistenceMethods`
+  // — because this enhancer applies `serialization()` internally and then adds
+  // its own surface on top. Both halves must survive the cast; the rows in
+  // `persistence-contract.typing.spec.ts` check them independently, since a
+  // migration dropping the serialization half would still satisfy any test
+  // that merely calls `save()`.
+  return persistenceFn as unknown as Enhancer<
+    SerializationMethods & PersistenceMethods
+  >;
 }
 
 // v12: removed the deprecated `withPersistence` alias — use `persistence()`.
