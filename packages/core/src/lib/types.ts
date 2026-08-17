@@ -556,12 +556,35 @@ export interface TransactionMethods {
   transaction(fn: () => void): PendingTransaction;
 }
 
-export interface TimeTravelMethods<T = unknown> extends TransactionMethods {
+/**
+ * Time-travel capability.
+ *
+ * NOT generic in the state, and that is the point. `getHistory()` returns the
+ * history of the tree the methods are attached to, so the state is recovered
+ * from polymorphic `this` — which is what the semantics always were. The
+ * previous `TimeTravelMethods<T>` carried a second copy of the state type
+ * purely so the enhancer could transport it, and that generic is what forced
+ * enhancer signatures to name `ISignalTree<T>`.
+ *
+ * THE CONDITIONAL IS INLINE ON PURPOSE. A named `StateOf<T>` helper reads
+ * better here but has no independent public concept to own, and it cannot stay
+ * private: the declaration pipeline keeps a non-exported INTERFACE (see
+ * `EnhancerHost`) but PRUNES a non-exported type alias while leaving the
+ * reference to it behind — emitting a `.d.ts` that names an undeclared type.
+ * That is invisible under `skipLibCheck` and a hard error without it. Inlining
+ * makes the emitted signature self-contained without adding a public symbol.
+ *
+ * State inference is UNCHANGED for consumers: `getHistory()[0].state` is the
+ * exact concrete state, through arbitrarily long `.with()` chains.
+ */
+export interface TimeTravelMethods extends TransactionMethods {
   undo(): void;
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
-  getHistory(): TimeTravelEntry<T>[];
+  getHistory(): TimeTravelEntry<
+    this extends NodeAccessor<infer S> ? S : never
+  >[];
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
@@ -582,7 +605,10 @@ export interface TimeTravelMethods<T = unknown> extends TransactionMethods {
     redo(): void;
     canUndo(): boolean;
     canRedo(): boolean;
-    getHistory(): TimeTravelEntry<T>[];
+    // `unknown`: this is an inline property type, so `this` is the enclosing
+    // interface rather than the tree. Internal tooling surface — state
+    // precision belongs on the public getHistory().
+    getHistory(): TimeTravelEntry<unknown>[];
     resetHistory(): void;
     jumpTo(index: number): void;
     getCurrentIndex(): number;

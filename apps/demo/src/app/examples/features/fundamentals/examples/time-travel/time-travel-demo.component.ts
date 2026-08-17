@@ -83,8 +83,8 @@ export class TimeTravelDemoComponent {
     profile: form<ProfileModel>({ initial: { name: '', email: '' } }),
   }).with(timeTravel({ maxHistorySize: 50 }));
 
-  private get markerTT(): TimeTravelMethods<unknown> {
-    return this.markerTree as unknown as TimeTravelMethods<unknown>;
+  private get markerTT(): TimeTravelMethods {
+    return this.markerTree as unknown as TimeTravelMethods;
   }
 
   private nextPersonId = 1;
@@ -182,7 +182,7 @@ export class TimeTravelDemoComponent {
     ],
   }).with(
     timeTravel({ maxHistorySize: 50 })
-  ) as unknown as ISignalTree<AppState> & TimeTravelMethods<AppState>;
+  ) as unknown as ISignalTree<AppState> & TimeTravelMethods;
 
   // Type-safe tree updater
   private updateTree = (updater: (state: AppState) => AppState) => {

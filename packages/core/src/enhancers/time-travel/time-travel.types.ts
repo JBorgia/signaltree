@@ -4,7 +4,7 @@ import { timeTravel, TimeTravelConfig } from './time-travel';
 
 type ExpectedSignature = (
   config?: TimeTravelConfig
-) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T>;
+) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods;
 
 type ActualSignature = typeof timeTravel;
 

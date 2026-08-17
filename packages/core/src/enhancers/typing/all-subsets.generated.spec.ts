@@ -25,7 +25,7 @@ type Subset_A_has_connectDevTools = Assert<Equals<HasMethod<Subset_A, 'connectDe
 type Subset_A_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_A, 'disconnectDevTools'>, false>>;
 type Subset_A_has_updateOptimized = Assert<Equals<HasMethod<Subset_A, 'updateOptimized'>, false>>;
 
-type Subset_C = TimeTravelMethods<Tree>;
+type Subset_C = TimeTravelMethods;
 type Subset_C_has_batch = Assert<Equals<HasMethod<Subset_C, 'batch'>, false>>;
 type Subset_C_has_coalesce = Assert<Equals<HasMethod<Subset_C, 'coalesce'>, false>>;
 type Subset_C_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_C, 'hasPendingNotifications'>, false>>;
@@ -42,7 +42,7 @@ type Subset_C_has_connectDevTools = Assert<Equals<HasMethod<Subset_C, 'connectDe
 type Subset_C_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_C, 'disconnectDevTools'>, false>>;
 type Subset_C_has_updateOptimized = Assert<Equals<HasMethod<Subset_C, 'updateOptimized'>, false>>;
 
-type Subset_AC = BatchingMethods & TimeTravelMethods<Tree>;
+type Subset_AC = BatchingMethods & TimeTravelMethods;
 type Subset_AC_has_batch = Assert<Equals<HasMethod<Subset_AC, 'batch'>, true>>;
 type Subset_AC_has_coalesce = Assert<Equals<HasMethod<Subset_AC, 'coalesce'>, true>>;
 type Subset_AC_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_AC, 'hasPendingNotifications'>, true>>;
@@ -93,7 +93,7 @@ type Subset_AD_has_connectDevTools = Assert<Equals<HasMethod<Subset_AD, 'connect
 type Subset_AD_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_AD, 'disconnectDevTools'>, true>>;
 type Subset_AD_has_updateOptimized = Assert<Equals<HasMethod<Subset_AD, 'updateOptimized'>, false>>;
 
-type Subset_CD = TimeTravelMethods<Tree> & DevToolsMethods;
+type Subset_CD = TimeTravelMethods & DevToolsMethods;
 type Subset_CD_has_batch = Assert<Equals<HasMethod<Subset_CD, 'batch'>, false>>;
 type Subset_CD_has_coalesce = Assert<Equals<HasMethod<Subset_CD, 'coalesce'>, false>>;
 type Subset_CD_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_CD, 'hasPendingNotifications'>, false>>;
@@ -110,7 +110,7 @@ type Subset_CD_has_connectDevTools = Assert<Equals<HasMethod<Subset_CD, 'connect
 type Subset_CD_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CD, 'disconnectDevTools'>, true>>;
 type Subset_CD_has_updateOptimized = Assert<Equals<HasMethod<Subset_CD, 'updateOptimized'>, false>>;
 
-type Subset_ACD = BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods;
+type Subset_ACD = BatchingMethods & TimeTravelMethods & DevToolsMethods;
 type Subset_ACD_has_batch = Assert<Equals<HasMethod<Subset_ACD, 'batch'>, true>>;
 type Subset_ACD_has_coalesce = Assert<Equals<HasMethod<Subset_ACD, 'coalesce'>, true>>;
 type Subset_ACD_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ACD, 'hasPendingNotifications'>, true>>;
@@ -161,7 +161,7 @@ type Subset_AF_has_connectDevTools = Assert<Equals<HasMethod<Subset_AF, 'connect
 type Subset_AF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_AF, 'disconnectDevTools'>, false>>;
 type Subset_AF_has_updateOptimized = Assert<Equals<HasMethod<Subset_AF, 'updateOptimized'>, true>>;
 
-type Subset_CF = TimeTravelMethods<Tree> & OptimizedUpdateMethods<Tree>;
+type Subset_CF = TimeTravelMethods & OptimizedUpdateMethods<Tree>;
 type Subset_CF_has_batch = Assert<Equals<HasMethod<Subset_CF, 'batch'>, false>>;
 type Subset_CF_has_coalesce = Assert<Equals<HasMethod<Subset_CF, 'coalesce'>, false>>;
 type Subset_CF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_CF, 'hasPendingNotifications'>, false>>;
@@ -178,7 +178,7 @@ type Subset_CF_has_connectDevTools = Assert<Equals<HasMethod<Subset_CF, 'connect
 type Subset_CF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CF, 'disconnectDevTools'>, false>>;
 type Subset_CF_has_updateOptimized = Assert<Equals<HasMethod<Subset_CF, 'updateOptimized'>, true>>;
 
-type Subset_ACF = BatchingMethods & TimeTravelMethods<Tree> & OptimizedUpdateMethods<Tree>;
+type Subset_ACF = BatchingMethods & TimeTravelMethods & OptimizedUpdateMethods<Tree>;
 type Subset_ACF_has_batch = Assert<Equals<HasMethod<Subset_ACF, 'batch'>, true>>;
 type Subset_ACF_has_coalesce = Assert<Equals<HasMethod<Subset_ACF, 'coalesce'>, true>>;
 type Subset_ACF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ACF, 'hasPendingNotifications'>, true>>;
@@ -229,7 +229,7 @@ type Subset_ADF_has_connectDevTools = Assert<Equals<HasMethod<Subset_ADF, 'conne
 type Subset_ADF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_ADF, 'disconnectDevTools'>, true>>;
 type Subset_ADF_has_updateOptimized = Assert<Equals<HasMethod<Subset_ADF, 'updateOptimized'>, true>>;
 
-type Subset_CDF = TimeTravelMethods<Tree> & DevToolsMethods & OptimizedUpdateMethods<Tree>;
+type Subset_CDF = TimeTravelMethods & DevToolsMethods & OptimizedUpdateMethods<Tree>;
 type Subset_CDF_has_batch = Assert<Equals<HasMethod<Subset_CDF, 'batch'>, false>>;
 type Subset_CDF_has_coalesce = Assert<Equals<HasMethod<Subset_CDF, 'coalesce'>, false>>;
 type Subset_CDF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_CDF, 'hasPendingNotifications'>, false>>;
@@ -246,7 +246,7 @@ type Subset_CDF_has_connectDevTools = Assert<Equals<HasMethod<Subset_CDF, 'conne
 type Subset_CDF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CDF, 'disconnectDevTools'>, true>>;
 type Subset_CDF_has_updateOptimized = Assert<Equals<HasMethod<Subset_CDF, 'updateOptimized'>, true>>;
 
-type Subset_ACDF = BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods & OptimizedUpdateMethods<Tree>;
+type Subset_ACDF = BatchingMethods & TimeTravelMethods & DevToolsMethods & OptimizedUpdateMethods<Tree>;
 type Subset_ACDF_has_batch = Assert<Equals<HasMethod<Subset_ACDF, 'batch'>, true>>;
 type Subset_ACDF_has_coalesce = Assert<Equals<HasMethod<Subset_ACDF, 'coalesce'>, true>>;
 type Subset_ACDF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ACDF, 'hasPendingNotifications'>, true>>;

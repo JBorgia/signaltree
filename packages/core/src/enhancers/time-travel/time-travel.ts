@@ -2078,14 +2078,14 @@ function checkHistoryRetention(root: unknown, entries: number): void {
 
 export function timeTravel(
   config: TimeTravelConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods {
   const { enabled = true } = config;
   const enhancerFn = <T>(
     tree: ISignalTree<T>
-  ): ISignalTree<T> & TimeTravelMethods<T> => {
+  ): ISignalTree<T> & TimeTravelMethods => {
     // Disabled (noop) path
     if (!enabled) {
-      const noopMethods: TimeTravelMethods<T> = {
+      const noopMethods = {
         undo(): void {
           /* disabled */
         },
@@ -2124,7 +2124,7 @@ export function timeTravel(
       };
 
       return Object.assign(tree, noopMethods) as unknown as ISignalTree<T> &
-        TimeTravelMethods<T>;
+        TimeTravelMethods;
     }
     // Store the original callable tree function
     const originalTreeCall = (
@@ -2837,13 +2837,13 @@ export function timeTravel(
       });
     }
 
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['undo'] = () => {
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['undo'] = () => {
       timeTravelManager.undoConfirmed();
     };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['redo'] = () => {
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['redo'] = () => {
       timeTravelManager.redoConfirmed();
     };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['transaction'] = (
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['transaction'] = (
       fn: () => void
     ) => {
       const activeMeta = getActiveWriteContext();
@@ -2933,22 +2933,22 @@ export function timeTravel(
         },
       };
     };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getHistory'] =
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['getHistory'] =
       () => timeTravelManager.getHistory();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['resetHistory'] =
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['resetHistory'] =
       () => {
         timeTravelManager.resetHistory();
       };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['jumpTo'] = (
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['jumpTo'] = (
       index: number
     ) => {
       timeTravelManager.jumpTo(index);
     };
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['canUndo'] = () =>
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['canUndo'] = () =>
       timeTravelManager.canUndoConfirmed();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['canRedo'] = () =>
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['canRedo'] = () =>
       timeTravelManager.canRedoConfirmed();
-    (enhancedTree as ISignalTree<T> & TimeTravelMethods<T>)['getCurrentIndex'] =
+    (enhancedTree as ISignalTree<T> & TimeTravelMethods)['getCurrentIndex'] =
       () => timeTravelManager.getCurrentIndex();
 
     // Expose internal manager for advanced tooling / demo usage
@@ -3018,7 +3018,7 @@ export function timeTravel(
       });
     }
 
-    return enhancedTree as unknown as ISignalTree<T> & TimeTravelMethods<T>;
+    return enhancedTree as unknown as ISignalTree<T> & TimeTravelMethods;
   };
 
   const meta: EnhancerMeta = {
@@ -3036,7 +3036,7 @@ export function timeTravel(
  */
 export function enableTimeTravel(): <T>(
   tree: ISignalTree<T>
-) => ISignalTree<T> & TimeTravelMethods<T> {
+) => ISignalTree<T> & TimeTravelMethods {
   return timeTravel({ enabled: true });
 }
 
@@ -3048,7 +3048,7 @@ export function enableTimeTravel(): <T>(
  */
 function timeTravelHistory(
   maxHistorySize: number
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods {
   return timeTravel({ maxHistorySize });
 }
 

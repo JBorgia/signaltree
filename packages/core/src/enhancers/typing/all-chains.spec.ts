@@ -26,7 +26,7 @@ type _batch_single = Assert<
   Equals<BatchingMethods & Base, Base & BatchingMethods>
 >;
 type _tt_single = Assert<
-  Equals<TimeTravelMethods<Tree> & Base, Base & TimeTravelMethods<Tree>>
+  Equals<TimeTravelMethods & Base, Base & TimeTravelMethods>
 >;
 type _dev_single = Assert<
   Equals<DevToolsMethods & Base, Base & DevToolsMethods>
@@ -36,19 +36,19 @@ type _entities_single = Assert<
 >;
 
 // Pair combinations
-type BT = BatchingMethods & TimeTravelMethods<Tree> & Base;
+type BT = BatchingMethods & TimeTravelMethods & Base;
 type _pair_batch_tt = Assert<
-  Equals<BT, Base & BatchingMethods & TimeTravelMethods<Tree>>
+  Equals<BT, Base & BatchingMethods & TimeTravelMethods>
 >;
 
 type BTD = BatchingMethods &
-  TimeTravelMethods<Tree> &
+  TimeTravelMethods &
   DevToolsMethods &
   Base;
 type _triple_btd = Assert<
   Equals<
     BTD,
-    Base & BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods
+    Base & BatchingMethods & TimeTravelMethods & DevToolsMethods
   >
 >;
 
@@ -62,7 +62,7 @@ type _pair_entities_opt = Assert<
 type Composite = Base &
   BatchingMethods &
   DevToolsMethods &
-  TimeTravelMethods<Tree> &
+  TimeTravelMethods &
   EntitiesEnabled &
   OptimizedUpdateMethods<Tree>;
 type _composite_ok = Assert<Equals<Composite, Composite>>;
