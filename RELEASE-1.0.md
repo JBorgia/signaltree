@@ -577,6 +577,49 @@ Framework coupling is an implementation fact, not an API fact. A kernel
 extraction therefore does not require a large public API change, which is a
 materially stronger position than the file counts suggested.
 
+### Emitted-entrypoint dependency analysis (runtime truth)
+
+Transitive external imports of each BUILT entrypoint. This is the question that
+settles a peer dependency; `angularInType` does not, and the tool docblock has
+been corrected to say so.
+
+| Entrypoint | Emitted external imports |
+| --- | --- |
+| `core` `.` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators`, `tslib` |
+| `core/authoring` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators` |
+| `core/lazy`, `core/edit-session` | `@angular/core` |
+| **`core/security`, `core/storage`** | **(none)** |
+| **`events` `.`** | **`zod` only — no Angular, no Nest, no rxjs** |
+| `events/angular` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/webSocket`, `tslib` |
+| `events/nestjs` | `@nestjs/common`, `bullmq`, `tslib` |
+| `events/testing` | (none) |
+| `guardrails` (all) | `@signaltree/core/authoring` only — **no Angular anywhere** |
+| `ng-forms` `.` | `@angular/core`, `@angular/forms`, `@signaltree/core{,/authoring}`, `rxjs` |
+| `ng-forms/audit` | `@signaltree/core` only — confirms it is a pure re-export |
+| `ng-forms/signals` | `@angular/core`, `@angular/forms/signals`, `@signaltree/core{,/authoring}` |
+| **`realtime` `.` and `./supabase`** | **`@angular/core`** |
+| **`schema` `.`** | **`@angular/core`, `@signaltree/core/authoring`** |
+
+**This corrects an earlier claim of mine.** I called `schema` "the strongest
+candidate for eliminating Angular" on the basis that 0 of its 4 public types
+mention Angular. Its emitted root imports `@angular/core` at runtime, so it is
+NOT neutral today. Making it neutral means removing the Angular usage, not
+merely narrowing the peer declaration. Same for `realtime`.
+
+`events` is the genuine success: its root emits only `zod`, with Angular
+confined to `./angular` and Nest/bullmq to `./nestjs`. That is the shape the
+others should reach — and it argues for `peerDependenciesMeta.optional` rather
+than deleting peers, since npm peers are package-scoped, not subpath-scoped.
+
+Two anomalies to verify at `GATE C`, not now:
+
+- `realtime` declares `@supabase/supabase-js` as a peer, but no emitted `.js`
+  references it — only the `.d.ts`, README and package.json. Either a
+  type-only dependency mis-declared as a runtime peer, or dead weight.
+- A `${path}` template-literal specifier appeared while scanning `realtime`.
+  Probably my scanner matching a dynamic import inside a template literal;
+  needs confirming before anyone treats it as a defect.
+
 ### PACKAGE TOPOLOGY DECISION — required before the export freeze
 
 Freezing 209 core symbols before deciding the topology risks discovering that
@@ -608,6 +651,56 @@ some belong elsewhere and having to redo `GATE B`. Four questions:
    `history`, `persistence`) or forces `SlotIndex` / `StructuralStore` /
    `EntityMutationFrame` into public view is exactly what a private boundary
    lets us find out without a compatibility promise.
+
+### Keep / remove / move symbol map
+
+Governing rule, applied per symbol rather than per package history:
+
+```text
+ordinary app needs it                          -> core
+extension/plugin author needs it               -> authoring
+framework-specific integration needs it        -> adapter/integration package
+nobody outside SignalTree implementation needs it -> stop exporting it
+```
+
+**`core/authoring` — 48 symbols. The seam is clean enough to justify a split.**
+
+| Class | n | Disposition |
+| --- | --: | --- |
+| Extension SDK — marker processing, hydrate/error hooks, enhancer composition, write context, path notifier, 4 `create*Signal` factories | 24 | MOVE to `@signaltree/authoring` if the split lands; otherwise keep, but relocate the 10 declared under `internals/` |
+| Marker introspection — 8 `*_READERS`, 6 `is*Marker`, `*_MARKER` tokens | 13 | MOVE with the SDK; coherent as a set |
+| General utilities — `composeEnhancers`, `isAnySignal`, `isNodeAccessor`, `isTraversableNode`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` | 7 | KEEP in core — ordinary-user API mis-filed under authoring |
+| **Private-package leakage** — `isBuiltInObject`, `parsePath` | 2 | **REMOVE.** Declared in `@signaltree/shared`, which is `"private": true`. Publishing them makes a private package's internals part of core's public contract |
+
+37 of 48 are genuine extension-author surface with no ordinary-app use. That is
+an SDK, not a convenience subpath — `@signaltree/authoring` is justified on
+evidence, not merely plausible.
+
+**Root's 7 `internals/` exports.** Verify each against docs, examples and typing
+specs before cutting; expected dispositions: `derivedFrom` KEEP (user-facing);
+`DerivedFactory`, `WithDerived` KEEP or MOVE to authoring; `SignalTreeBuilder`,
+`SignalTreePlanBuilder` MOVE to authoring; `ProcessDerived`, `DeepMergeTree`
+REMOVE — type machinery public only because inference needed it.
+
+**`ng-forms` audit duplication.** `createAuditTracker`, `createAuditCallback`,
+`AuditEntry`, `AuditMetadata`, `AuditTrackerConfig` all declare in
+`packages/core/src/lib/audit/audit.ts`. `ng-forms/audit` emits only
+`@signaltree/core`, confirming it is a pure re-export with no forms-specific
+content. **Core owns audit; remove the republication.** Also eliminate
+`ng-forms`' four `export *` barrels so its contract is explicit.
+
+**`realtime` — 13 symbols, the abstraction is real.**
+
+| Class | n | Detail |
+| --- | --: | --- |
+| Provider-neutral | 9 | The whole root; `RealtimeAdapter` is a genuine seam |
+| Supabase-specific | 4 | The whole `./supabase` subpath |
+| Angular-specific | 0 | — |
+
+**KEEP the name.** A rename to `@signaltree/supabase` would destroy a working
+provider boundary. The defect is that Angular sits in the NEUTRAL half —
+`connection-state.ts` and `types.ts` import `@angular/core` — so the cleanup is
+2 files, not a repackaging.
 
 Recommended topology, pending that decision:
 

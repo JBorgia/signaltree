@@ -22,10 +22,26 @@
  *   - `angularInDecl` — the file DECLARING this symbol imports Angular. Says
  *     something about the implementation, nothing about the contract.
  *   - `angularInType` — the symbol's PUBLIC TYPE mentions an Angular type, so a
- *     consumer cannot use it without Angular. THIS is what justifies a peer
- *     dependency.
+ *     consumer cannot even TYPE-CHECK against it without Angular.
  * Conflating them overstates coupling badly: core has 169 of the first and 3 of
  * the second.
+ *
+ * NEITHER SETTLES A PEER DEPENDENCY, and this tool must not be read as if it
+ * did. A package whose emitted entrypoint contains `import { inject } from
+ * '@angular/core'` needs Angular AT RUNTIME even when no exported signature
+ * mentions it. There are four distinct questions and this file answers only
+ * the middle two:
+ *
+ *   Angular in the public .d.ts        -> consumer TYPE coupling      (here)
+ *   Angular imported by source         -> implementation coupling     (here)
+ *   Angular in the emitted entrypoint  -> consumer RUNTIME dependency (NOT here)
+ *   Angular in peerDependencies        -> installation contract       (NOT here)
+ *
+ * Audit the BUILT entrypoints before changing any peer declaration.
+ *
+ * `angularInType` is also a heuristic: it matches a fixed list of framework type
+ * names against `typeToString()`. Good enough to rank surfaces for review, not
+ * proof that a declaration graph is framework-free.
  *
  * Usage:
  *   node tools/api-inventory.mjs            # write tools/api-baseline.json
