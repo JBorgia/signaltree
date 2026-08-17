@@ -207,6 +207,21 @@ operationally enforceable rather than merely stylistic: an `@internal` tag on
 anything a public declaration references produces a shipped `.d.ts` that names
 what it does not declare. See the entity-map resolution under Phase 2.
 
+**Corollary — closure is transitive across BOTH type-space and value-space.** A
+public declaration is invalid if it reaches a stripped symbol through a named type,
+a conditional or default type argument, a `typeof` query, an alias, or any other
+declaration dependency. Two routes are proven in-tree, and treating them as
+unrelated bugs is the mistake:
+
+| route       | shape                                                | emitted                                      |
+| ----------- | ---------------------------------------------------- | -------------------------------------------- |
+| type-space  | `@internal` type named by a public signature         | reference survives, declaration stripped     |
+| value-space | public alias of an `@internal` function/class/object | `declare const c: typeof _c` — `_c` stripped |
+
+The value-space route is invisible to "is the name declared?" checks: the alias IS
+declared. Only its inferred TYPE is dangling. Any closure gate must therefore check
+semantic validity, not symbol presence.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
@@ -1373,7 +1388,46 @@ with a public alias; and a plain public value as control. Property measured is
 appears somewhere". Assert exit 0, fresh artifact, alias declaration count == 1,
 and that packed matches rolled.
 
-**Decide intent BEFORE de-internalizing any of the three.** `isDev` is already in
+RESULT — the four-form fixture was run on the production tsconfig/plugin path:
+
+| form | target                         | alias declared? | emitted type                  |
+| ---- | ------------------------------ | --------------- | ----------------------------- |
+| A    | exported `@internal` const     | YES             | `a = true` (inlined — safe)   |
+| B    | module-local `@internal` const | YES             | `b = true` (inlined — safe)   |
+| C    | exported `@internal` FUNCTION  | YES             | `c: typeof _c` — **DANGLING** |
+| D    | plain public const (control)   | YES             | `d = true`                    |
+
+**The alias-target hypothesis is REFUTED** — `@internal` on an alias target does not
+strip the public alias. But the fixture found a second real route anyway: primitive
+aliases inline their literal type and are safe, while FUNCTION (and likely
+class/object) aliases emit `typeof target`, so the alias survives referencing a
+stripped declaration. Visible only because the fixture asserted the emitted TYPE
+rather than the name's presence — on a presence-only check all four rows read YES.
+
+`isDev` therefore does NOT match the alias hypothesis. `_isDev` is module-local and
+NOT `@internal`; `isDev` itself carries the tag, making it most likely the SAME
+mechanism as entity-map. The earlier observation that removing its tag did not
+restore the declaration is NOT trustworthy: it grepped one presumed file
+(`constants.d.ts`) without confirming where the symbol should be emitted — the third
+instance this session of answering a slightly different question than the one that
+governs the decision. Re-test before recording any mechanism.
+
+The rigorous falsifier asks the PUBLIC property, avoiding the location assumption:
+after removing only `isDev`'s own `@internal` tag, can a consumer
+`import { isDev } from '@signaltree/core'`, and what exact type arrives? Assert
+build exit 0; dist recreated after the edit; package-root declaration exists;
+`isDev` reachable from the root; consumer import typechecks; inferred type is the
+expected boolean/literal shape; negative control proves it is not `any`/`unknown`.
+Search the WHOLE fresh declaration tree for declaration sites and references to both
+`isDev` and `_isDev`. If tag removal does not restore the contract, stop and
+characterize what the fresh declarations actually contain — no mechanism guess.
+
+Then run an AST **characterization scan** (not a fix list) for the value-space
+route: an exported variable whose emitted public type depends on `typeof X` where X
+is strip-removable — catching `export const publicFn = internalFn`,
+`= InternalClass`, `= internalObject`.
+
+**Decide intent BEFORE de-internalizing any of the three, or any scan hit.** `isDev` is already in
 the deletion-first utility audit below, so the product fix may be to remove it
 from the public surface rather than to make its declaration survive. For each of
 `isDev`, `createFormSignal`, `HydrateMode`: intended public API -> its declaration
@@ -1410,6 +1464,29 @@ NOT YET GREEN. `56572c5d` proved the entity-map instance is gone. It did not pro
 the packed consumer gate passes: the temp consumer had no `node_modules`, so
 `@angular/core` was unresolved (fixture defect), and the `isDev` instance above is
 a real remaining package defect.
+
+#### Permanent closure fixture — must cover BOTH routes
+
+A fixture covering only a non-root support type would miss the value-space case
+entirely, so it must exercise both proven routes:
+
+```ts
+// type-space closure
+/** @internal */ export interface InternalType {}
+export interface PublicType {
+  value: InternalType;
+}
+
+// value-space closure
+/** @internal */ export function internalFn(): number {
+  return 1;
+}
+export const publicFn = internalFn;
+```
+
+The production declaration gate must reject both if stripping leaves a dangling
+reference. Add it only AFTER the cause is fully repaired — a fixture added while
+the pipeline is still broken proves little.
 
 #### Build-experiment evidence rule
 
@@ -1636,8 +1713,14 @@ recommend speculative optimizations.
 
 ## Current Sequence From Here
 
-**NEXT SESSION, one question only:** does `stripInternal` remove a PUBLIC alias's
-declaration because its aliased target is `@internal`? See "OPEN — second
+**NEXT SESSION:** (1) re-test `isDev` rigorously per the falsifier in "OPEN —
+second instance" — public-import property, whole declaration tree, no location
+assumption; (2) AST characterization scan for the value-space route; (3) decide
+public intent for `isDev` / `createFormSignal` / `HydrateMode` and each scan hit
+BEFORE repairing anything; (4) repair only intended public contracts; (5) packed
+gate with legitimate peers installed. The alias-target hypothesis is REFUTED — do
+not re-run it. Formerly this asked whether `stripInternal` strips a public alias
+whose target is `@internal`; See "OPEN — second
 instance" under Phase 2. Answered by an isolated fixture on the production
 tsconfig/plugin path, with no API changes during the measurement; then decide
 whether `isDev` / `createFormSignal` / `HydrateMode` are intended public API at
