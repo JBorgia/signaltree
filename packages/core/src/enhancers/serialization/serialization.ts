@@ -4,8 +4,8 @@ import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { hydrateMarkerNode } from '../../lib/internals/materialize-markers';
 import {
-  hasOpenCommitScope,
-  onCommitScopesSettled,
+  cancelDurableConsequence,
+  scheduleDurableConsequence,
 } from '../../lib/internals/commit-consequence';
 import { isTraversableNode } from '../../lib/utils';
 import { ISignalTree } from '../../lib/types';
@@ -1189,27 +1189,20 @@ export function persistence(
       // rolled back holds autoSave indefinitely. That is the correct trade —
       // an unresolved optimistic mutation has no committed truth to persist,
       // and persisting it anyway is the bug being fixed.
-      let releaseSettleListener: (() => void) | null = null;
+      // One durable-consequence token for this enhancer instance: repeated
+      // autoSaves collapse to the latest, exactly as repeated writes to one
+      // stored() node do.
+      const autoSaveKey = Symbol('persistence:autoSave');
 
       const runAutoSave = () => {
-        if (hasOpenCommitScope(tree as object)) {
-          if (!releaseSettleListener) {
-            releaseSettleListener = onCommitScopesSettled(
-              tree as object,
-              () => {
-                releaseSettleListener?.();
-                releaseSettleListener = null;
-                // Re-check rather than save blindly: another transaction may
-                // have opened while this one was settling.
-                runAutoSave();
-              }
-            );
-          }
-          return;
-        }
-
-        enhanced.save().catch((error) => {
-          console.error('[SignalTree] Auto-save failed:', error);
+        scheduleDurableConsequence({
+          claimant: tree as object,
+          key: autoSaveKey,
+          run: () => {
+            enhanced.save().catch((error) => {
+              console.error('[SignalTree] Auto-save failed:', error);
+            });
+          },
         });
       };
 
@@ -1279,10 +1272,9 @@ export function persistence(
             clearTimeout(saveTimeout);
             saveTimeout = undefined;
           }
-          // A deferred save must not outlive the tree: settling a scope after
+          // A held save must not outlive the tree: settling a scope after
           // destroy() would otherwise resurrect a save on a dead tree.
-          releaseSettleListener?.();
-          releaseSettleListener = null;
+          cancelDurableConsequence(tree as object, autoSaveKey);
         });
       }
     }

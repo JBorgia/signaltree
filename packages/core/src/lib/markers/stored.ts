@@ -9,7 +9,7 @@ import {
 } from '../internals/owned-mutation';
 
 import { getActiveWriteContext } from '../write-context';
-import { deferCommitConsequence } from '../internals/commit-consequence';
+import { scheduleDurableConsequence } from '../internals/commit-consequence';
 
 declare const ngDevMode: boolean | undefined;
 
@@ -881,46 +881,26 @@ export function createStoredSignal<T>(
     // later in the transaction replace the queued one, so storage sees a
     // single coherent value per key instead of every intermediate.
     //
-    // Outside a transaction there is nothing to wait for: the write commits in
-    // its own stack, so it falls straight through and `debounceMs: 0` keeps
-    // its same-stack durability guarantee.
-    // A DEFERRED consequence must resolve committed truth when it RUNS, not
-    // capture what was authored. Overlapping transactions on one tree are a
-    // designed-for case — only NESTED ones are refused — and they may confirm
-    // out of authoring order, which made the last SETTLED scope win rather than
-    // the last authored operation.
+    // This marker does NOT decide what post-commit means. It DESCRIBES the
+    // consequence; the commit-scope authority decides whether it runs now,
+    // waits for an owning transaction, or waits for the whole tree to settle.
+    // Inferring commit-ness here from the call stack is what produced six
+    // defects on this boundary — "outside a transaction callback" is not the
+    // same as "this tree has no speculative state".
+    //
+    // The consequence resolves committed truth when it RUNS rather than
+    // capturing what was authored, and the sequence makes a superseded
+    // operation a no-op, so settle order cannot resurrect an old value.
+    void value;
     const seq = ++authoredSeq;
-    if (
-      deferDurableConsequence(() => {
+    scheduleDurableConsequence({
+      claimant: ownerRegistry,
+      key: sig,
+      run: () => {
         if (seq !== authoredSeq) return; // superseded by a later operation
         saveCommitted(untracked(() => sig()));
-      })
-    ) {
-      return;
-    }
-
-    saveCommitted(value);
-  };
-
-  /**
-   * Queue `effect` as a consequence of the transaction this write belongs to,
-   * or report that it belongs to none.
-   *
-   * The write context is ambient, so an open transaction is not by itself
-   * evidence that this signal's write is speculative under it — a write to
-   * THIS tree made inside ANOTHER tree's callback would otherwise be absorbed
-   * by a scope that cannot compensate it. `ownerRegistry` is this node's own
-   * per-tree position registry and lets the scope prove ownership.
-   */
-  const deferDurableConsequence = (effect: () => void): boolean => {
-    const meta = getActiveWriteContext();
-    const owner = meta?.transactionOwner;
-    const transactionId = meta?.transactionId;
-    return (
-      owner !== undefined &&
-      typeof transactionId === 'number' &&
-      deferCommitConsequence(owner, transactionId, sig, effect, ownerRegistry)
-    );
+      },
+    });
   };
 
   const scheduleDebounced = (value: T): void => {
@@ -1031,11 +1011,14 @@ export function createStoredSignal<T>(
       // clear deferred in an older pending would delete a key that a newer,
       // already-confirmed transaction had legitimately written.
       const seq = ++authoredSeq;
-      const deferred = deferDurableConsequence(() => {
-        if (seq !== authoredSeq) return; // superseded by a later operation
-        removeNow();
+      scheduleDurableConsequence({
+        claimant: ownerRegistry,
+        key: sig,
+        run: () => {
+          if (seq !== authoredSeq) return; // superseded by a later operation
+          removeNow();
+        },
       });
-      if (!deferred) removeNow();
     }
   };
 

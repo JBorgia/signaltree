@@ -365,13 +365,18 @@ describe('stored() deferred consequences resolve at settle time', () => {
       store.$.v.set('optimistic');
     });
 
-    // A bare, non-transactional write: committed truth the moment it returns.
+    // A bare, non-transactional write. It used to be durable the moment it
+    // returned; under the tree-level durability authority it is HELD, because
+    // this tree still carries unsettled speculative state. Being outside the
+    // transaction callback does not make the tree settled.
     store.$.v.set('user-typed-later');
-    expect(rec.adapter.getItem('sco-stale')).toContain('user-typed-later');
+    expect(rec.log).toEqual([]);
+    expect(rec.adapter.getItem('sco-stale')).toContain('v0');
 
     pending.confirm();
 
-    // Storage must agree with the tree. The transaction's own value is stale.
+    // Storage must agree with the tree. The transaction's own value is stale,
+    // and what lands is the surviving truth — released once the tree settled.
     expect(store.$.v()).toBe('user-typed-later');
     expect(rec.adapter.getItem('sco-stale')).toContain('user-typed-later');
   });
@@ -451,10 +456,87 @@ describe('stored() commit attribution — RECORDED DEFECT', () => {
 
     p2.rollback();
 
-    // THE DEFECT: compensation restored 'a' — p1's speculative value, still
-    // unconfirmed — and wrote it straight through the boundary.
-    expect(rec.log).toEqual([{ op: 'set', key: 'sco-attr' }]);
-    expect(dataIn(rec.snapshots[0], 'sco-attr')).toBe('a');
+    // FIXED. Compensation restores 'a' in the tree — p1's value — but p1 is
+    // still unconfirmed, so the tree still holds speculative state and nothing
+    // may become durable. The write has no transaction on the stack, which is
+    // exactly the state the old call-stack test could not see.
+    expect(rec.log).toEqual([]);
     expect(store.$.v()).toBe('a');
+
+    // Settling the last scope releases the held consequence, and what lands is
+    // the SURVIVING truth, never a captured speculative value.
+    p1.rollback();
+
+    expect(store.$.v()).toBe('v0');
+    expect(rec.adapter.getItem('sco-attr')).toContain('v0');
+    for (const snapshot of rec.snapshots) {
+      expect(dataIn(snapshot, 'sco-attr')).not.toBe('a');
+      expect(dataIn(snapshot, 'sco-attr')).not.toBe('b');
+    }
+  });
+
+  it('holds a bare write while its OWN tree has unsettled speculative state', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-bare-hold': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-bare-hold', 'v0', { storage: rec.adapter, debounceMs: 0 }),
+      n: 0,
+    }).with(transactions()) as {
+      $: {
+        v: { (): string; set(value: string): void };
+        n: { (): number; set(value: number): void };
+      };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => store.$.n.set(1));
+
+    // Outside the transaction callback — but the TREE holds speculative state,
+    // so durability waits. "Outside a transaction callback" is not the same as
+    // "this tree has nothing speculative in flight".
+    store.$.v.set('bare');
+    expect(rec.log).toEqual([]);
+
+    pending.confirm();
+
+    expect(rec.adapter.getItem('sco-bare-hold')).toContain('bare');
+  });
+
+  it('a FOREIGN tree transaction never delays this tree', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-foreign-nodelay': 'v0' });
+
+    const treeA = signalTree({
+      v: stored('sco-foreign-nodelay', 'v0', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }) as unknown as { $: { v: { (): string; set(value: string): void } } };
+
+    const treeB = signalTree({ n: 0 }).with(transactions()) as {
+      $: { n: { (): number; set(value: number): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = treeB.transaction(() => treeB.$.n.set(1));
+
+    // The gate is tree-local: treeA has no open scope of its own.
+    treeA.$.v.set('immediate');
+    expect(rec.adapter.getItem('sco-foreign-nodelay')).toContain('immediate');
+
+    pending.rollback();
+    expect(treeA.$.v()).toBe('immediate');
+    expect(rec.adapter.getItem('sco-foreign-nodelay')).toContain('immediate');
   });
 });
