@@ -608,6 +608,12 @@ export function createStoredSignal<T>(
     positionTopologyEnabled?: boolean;
     hasCapability?: (capability: 'mutation-capture' | 'position-topology') => boolean;
     allocatePositionId: (parentPositionId?: number) => number;
+    /**
+     * Per-tree identity. Kept `unknown` because this marker only ever compares
+     * it by reference — it proves which tree a write belongs to, and must not
+     * grow a dependency on the registry's shape.
+     */
+    positionRegistry?: unknown;
   },
   parentPositionId?: number
 ): StoredSignal<T> {
@@ -647,6 +653,9 @@ export function createStoredSignal<T>(
       ? [context.allocatePositionId(parentPositionId)]
       : undefined;
   const ownerPath = path;
+  // This node's own tree identity, used to prove that an ambient transaction
+  // scope actually owns this signal's durable consequences.
+  const ownerRegistry = context?.positionRegistry;
 
   // Monotonic count of committed writes - used to drop a deferred migration
   // persist that would otherwise clobber data written after it was scheduled.
@@ -682,7 +691,9 @@ export function createStoredSignal<T>(
     }
   };
 
-  // Synchronous versioned write - the single point where storage is touched
+  // Synchronous versioned write - the single point where storage is WRITTEN.
+  // (Not the only point where storage is touched: `removeNow` deletes the key
+  // for clear(). Both go through the same commit-consequence boundary.)
   const writeNow = (value: T): void => {
     if (!storage) return;
 
@@ -859,20 +870,30 @@ export function createStoredSignal<T>(
     // Outside a transaction there is nothing to wait for: the write commits in
     // its own stack, so it falls straight through and `debounceMs: 0` keeps
     // its same-stack durability guarantee.
+    if (deferDurableConsequence(() => saveCommitted(value))) return;
+
+    saveCommitted(value);
+  };
+
+  /**
+   * Queue `effect` as a consequence of the transaction this write belongs to,
+   * or report that it belongs to none.
+   *
+   * The write context is ambient, so an open transaction is not by itself
+   * evidence that this signal's write is speculative under it — a write to
+   * THIS tree made inside ANOTHER tree's callback would otherwise be absorbed
+   * by a scope that cannot compensate it. `ownerRegistry` is this node's own
+   * per-tree position registry and lets the scope prove ownership.
+   */
+  const deferDurableConsequence = (effect: () => void): boolean => {
     const meta = getActiveWriteContext();
     const owner = meta?.transactionOwner;
     const transactionId = meta?.transactionId;
-    if (
+    return (
       owner !== undefined &&
       typeof transactionId === 'number' &&
-      deferCommitConsequence(owner, transactionId, sig, () =>
-        saveCommitted(value)
-      )
-    ) {
-      return;
-    }
-
-    saveCommitted(value);
+      deferCommitConsequence(owner, transactionId, sig, effect, ownerRegistry)
+    );
   };
 
   const scheduleDebounced = (value: T): void => {
@@ -972,17 +993,28 @@ export function createStoredSignal<T>(
       rawSet(defaultValue);
     }
     if (storage) {
-      try {
-        storage.removeItem(key);
-      } catch (e) {
-        reportError(
-          'remove',
-          e,
-          `SignalTree: Failed to remove "${key}" from storage`
-        );
-      }
+      // Removing the key is a durable consequence exactly as writing it is, so
+      // it obeys the same boundary: inside an owning transaction it waits for
+      // the commit and is dropped on discard. It shares the `sig` consequence
+      // key with the write path, so a clear() supersedes any queued write to
+      // this signal in the same transaction, and vice versa — last one wins,
+      // which is what the tree ends up showing.
+      if (!deferDurableConsequence(removeNow)) removeNow();
     }
   };
+
+  function removeNow(): void {
+    if (!storage) return;
+    try {
+      storage.removeItem(key);
+    } catch (e) {
+      reportError(
+        'remove',
+        e,
+        `SignalTree: Failed to remove "${key}" from storage`
+      );
+    }
+  }
 
   storedSignal.reload = (): StoredReloadResult => {
     if (!storage) return 'default';

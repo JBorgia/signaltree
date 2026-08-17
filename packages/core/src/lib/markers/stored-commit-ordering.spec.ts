@@ -219,3 +219,82 @@ describe('stored() consequence ordering', () => {
     }
   });
 });
+
+/**
+ * Blockers found by the fresh-HEAD antagonistic audit against 59bed701.
+ * Both are gaps in the post-commit boundary introduced with 51a98699.
+ */
+describe('stored() post-commit boundary — audit blockers', () => {
+  it('clear() inside a transaction is not durable until commit', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-clear': 'light' });
+
+    const store = signalTree({
+      theme: stored('sco-clear', 'light', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }).with(transactions()) as {
+      $: { theme: { (): string; set(v: string): void; clear(): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => {
+      store.$.theme.clear();
+    });
+
+    // clear() removes the key. That is a durable consequence and must wait for
+    // the commit exactly as a set() does.
+    expect(rec.log).toEqual([]);
+
+    pending.rollback();
+
+    // Rollback restores the signal; storage must never have lost the key.
+    expect(store.$.theme()).toBe('light');
+    expect(rec.adapter.getItem('sco-clear')).toContain('light');
+  });
+
+  it('does not absorb a write into a FOREIGN tree transaction scope', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-foreign': 'light' });
+
+    // treeA has no transactions enhancer at all — nothing about its writes is
+    // speculative under treeB's transaction.
+    const treeA = signalTree({
+      theme: stored('sco-foreign', 'light', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }) as unknown as {
+      $: { theme: { (): string; set(v: string): void } };
+    };
+
+    const treeB = signalTree({ n: 0 }).with(transactions()) as {
+      $: { n: { (): number; set(v: number): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = treeB.transaction(() => {
+      treeB.$.n.set(1);
+      treeA.$.theme.set('dark'); // committed truth for treeA, not speculative
+    });
+
+    pending.rollback();
+
+    // treeB's rollback does not and cannot compensate treeA, so treeA's write
+    // must have been durable. Absorbing it into treeB's scope drops it, and the
+    // tree then disagrees with storage forever.
+    expect(treeA.$.theme()).toBe('dark');
+    expect(rec.adapter.getItem('sco-foreign')).toContain('dark');
+  });
+});

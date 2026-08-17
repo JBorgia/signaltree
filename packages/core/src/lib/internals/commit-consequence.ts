@@ -31,6 +31,8 @@
  * in the tree can find its scope from the active write context alone.
  */
 
+import { getPositionRegistry } from './position-registry';
+
 export type CommitConsequence = () => void;
 
 export type CommitScopeOutcome = 'commit' | 'discard';
@@ -84,21 +86,51 @@ export function openCommitScope(
 }
 
 /**
+ * Prove that `claimant` belongs to the tree that owns this scope.
+ *
+ * The write context is AMBIENT: any code running inside a transaction callback
+ * sees that transaction's owner and id, including a write to a completely
+ * different tree. Presence of a transaction is therefore not evidence that the
+ * write is speculative under it. Without this check a write to tree A made
+ * inside tree B's callback was absorbed into B's scope and DROPPED when B
+ * rolled back — B's compensation cannot restore A, so A's value stayed advanced
+ * while storage kept the old one, permanently and silently.
+ *
+ * `claimant` is the writing node's own position registry, which is per-tree.
+ * Ownership must be positively proven: an unprovable claim falls through to an
+ * immediate write, which is merely the pre-deferral behavior. Guessing the
+ * other way loses committed data.
+ */
+function scopeOwns(scope: CommitScope, claimant: unknown): boolean {
+  // No tree on the scope: nothing to contradict (unit-level scopes).
+  if (!scope.tree) return true;
+  if (claimant === undefined) return false;
+
+  const node = scope.tree as { $?: object };
+  const treeRegistry =
+    getPositionRegistry(node.$ ?? scope.tree) ??
+    getPositionRegistry(scope.tree);
+  return treeRegistry !== undefined && treeRegistry === claimant;
+}
+
+/**
  * Defer `fn` until the scope commits.
  *
- * Returns `false` when there is no open scope for this owner/transaction, in
- * which case the caller must perform its effect immediately — that is the
- * ordinary non-transactional write, which commits in its own stack and is
- * therefore already post-commit.
+ * Returns `false` when there is no open scope for this owner/transaction, or
+ * when the scope cannot be shown to own `claimant`. In either case the caller
+ * must perform its effect immediately — that is the ordinary non-transactional
+ * write, which commits in its own stack and is therefore already post-commit.
  */
 export function deferCommitConsequence(
   owner: object,
   transactionId: number,
   key: unknown,
-  fn: CommitConsequence
+  fn: CommitConsequence,
+  claimant?: unknown
 ): boolean {
   const scope = scopesByOwner.get(owner)?.get(transactionId);
   if (!scope) return false;
+  if (!scopeOwns(scope, claimant)) return false;
   scope.consequences.set(key, fn);
   return true;
 }

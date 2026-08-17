@@ -1122,20 +1122,26 @@ export function getOrCreateInternalTransactionRuntime<T>(
         const { effects, baselineValues } = drainTransactionRollbackInput(
           transactionId
         );
-        if (effects.length > 0) {
-          rollbackPendingEffectsThroughRealizationPort(
-            transactionId,
-            effects,
-            baselineValues,
-            error
-          );
+        try {
+          if (effects.length > 0) {
+            rollbackPendingEffectsThroughRealizationPort(
+              transactionId,
+              effects,
+              baselineValues,
+              error
+            );
+          }
+        } finally {
+          // Settle AFTER compensation, but UNCONDITIONALLY. Late, so consumers
+          // released by this scope observe the RESTORED state rather than the
+          // doomed one. In a `finally`, because compensation is fallible — it
+          // throws SignalTreeRollbackError on a conservative refusal, which is
+          // a supported fail-closed contract, not an edge case. Skipping the
+          // settle there left the scope open forever, and since nothing can
+          // ever settle it afterwards, autoSave was wedged for the life of the
+          // tree: post-commit silently degraded to never-commit.
+          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
         }
-        // Settle AFTER compensation. The queued speculative writes are dropped
-        // either way, but settling also releases whole-tree consumers waiting
-        // on this scope — and they must observe the RESTORED state, not the
-        // doomed one. Settling first made autoSave snapshot the value the
-        // transaction had just rejected.
-        settleCommitScope(transactionOwnerToken, transactionId, 'discard');
       } finally {
         try {
           releaseCapture?.();
@@ -1172,16 +1178,26 @@ export function getOrCreateInternalTransactionRuntime<T>(
             throw new Error('Cannot confirm a rolled back transaction');
           }
           lifecycle = 'confirmed';
-          if (pendingTurnId !== undefined) {
-            const confirmedTurn = authority.confirmPending(pendingTurnId);
-            if (confirmedTurn) {
-              notifyListeners(pendingConfirmedListeners, confirmedTurn);
+          try {
+            if (pendingTurnId !== undefined) {
+              const confirmedTurn = authority.confirmPending(pendingTurnId);
+              if (confirmedTurn) {
+                notifyListeners(pendingConfirmedListeners, confirmedTurn);
+              }
             }
+          } finally {
+            // The physical state this transaction authored is committed truth,
+            // so its durable consequences run — last, so a throwing storage
+            // backend cannot leave the turn unconfirmed, and in a `finally` so
+            // a throwing confirmPending or listener cannot strand the scope.
+            //
+            // 'commit' even on that error path, deliberately: the writes were
+            // physically realized during the callback and nothing compensates
+            // them here (`lifecycle` is already 'confirmed', so a following
+            // rollback() throws). Discarding would drop durable consequences
+            // for state the tree is still showing.
+            settleCommitScope(transactionOwnerToken, transactionId, 'commit');
           }
-          // The physical state this transaction authored is now committed
-          // truth, so its durable consequences may run. Last, so that a
-          // throwing storage backend cannot leave the turn unconfirmed.
-          settleCommitScope(transactionOwnerToken, transactionId, 'commit');
         },
         rollback(): void {
           if (lifecycle === 'rejected') {
@@ -1206,30 +1222,35 @@ export function getOrCreateInternalTransactionRuntime<T>(
           }
 
           const compensation = rollbackPlan.compensation;
-          if (compensation.length > 0) {
-            try {
-              rollbackPendingEffectsThroughRealizationPort(
-                pendingTurnId as number,
-                [...compensation].reverse(),
-                discardedTurn?.__baselineValues ?? new Map()
-              );
-            } catch (error) {
-              throw createRollbackError({
-                kind: 'effect-validation-failed',
-                pendingTurnId: pendingTurnId as number,
-                compensation,
-                errorMessage:
-                  error instanceof Error
-                    ? error.message
-                    : 'Unknown rollback validation failure',
-                cause: error,
-              });
+          try {
+            if (compensation.length > 0) {
+              try {
+                rollbackPendingEffectsThroughRealizationPort(
+                  pendingTurnId as number,
+                  [...compensation].reverse(),
+                  discardedTurn?.__baselineValues ?? new Map()
+                );
+              } catch (error) {
+                throw createRollbackError({
+                  kind: 'effect-validation-failed',
+                  pendingTurnId: pendingTurnId as number,
+                  compensation,
+                  errorMessage:
+                    error instanceof Error
+                      ? error.message
+                      : 'Unknown rollback validation failure',
+                  cause: error,
+                });
+              }
             }
+          } finally {
+            // Late so consumers observe restored state, unconditional so a
+            // refused compensation cannot strand the scope. `lifecycle` is
+            // already 'rejected' at this point, so no later confirm() or
+            // rollback() could ever settle it — skipping here wedged autoSave
+            // permanently. See the thrown-callback path for the full note.
+            settleCommitScope(transactionOwnerToken, transactionId, 'discard');
           }
-
-          // Settle AFTER compensation, for the same reason as the thrown path:
-          // consumers released by this scope must observe the restored state.
-          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
 
           if (discardedTurn) {
             notifyListeners(pendingDiscardedListeners, discardedTurn);

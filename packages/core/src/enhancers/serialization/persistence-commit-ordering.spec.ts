@@ -184,3 +184,54 @@ describe('persistence() autoSave respects the commit boundary', () => {
     pending.confirm();
   });
 });
+
+/**
+ * Blocker found by the fresh-HEAD antagonistic audit against 59bed701.
+ *
+ * `settleCommitScope` sat AFTER the compensation call rather than in a
+ * `finally`. Compensation is fallible — it throws a SignalTreeRollbackError
+ * when it cannot reconcile conservatively, which is a SUPPORTED fail-closed
+ * contract, not an edge case. When it threw, the scope was never settled, so
+ * `hasOpenCommitScope(tree)` stayed true forever and autoSave was wedged for
+ * the life of the tree. Post-commit had degraded to never-commit, silently.
+ */
+describe('persistence() autoSave survives a refused rollback', () => {
+  it('is not wedged forever when compensation refuses', async () => {
+    const { getTreeRealizationPort } = await import(
+      '../../lib/internals/causal-runtime/tree-realization-adapter'
+    );
+
+    const rec = recordingStorage();
+    const tree = makeTree(rec, 'pco-refused');
+
+    // Force the fail-closed refusal path.
+    const port = getTreeRealizationPort(
+      (tree as unknown as { $: object }).$
+    ) as { validateEffects?: (...args: unknown[]) => unknown } | undefined;
+    const original = port?.validateEffects;
+    if (port && typeof original === 'function') {
+      port.validateEffects = () => ({ kind: 'structural-drift' });
+    }
+
+    const pending = tree.transaction(() => {
+      tree.$.a.set('a1');
+    });
+
+    try {
+      pending.rollback();
+    } catch {
+      // Refusal is expected; the point is what happens to the scope.
+    } finally {
+      if (port && typeof original === 'function') {
+        port.validateEffects = original as typeof port.validateEffects;
+      }
+    }
+
+    // An ordinary, entirely unrelated write on a settled tree must still
+    // reach storage. If the scope leaked, autoSave never fires again.
+    tree.$.b.set('after-refusal');
+    await settleTimers();
+
+    expect(rec.writes.length).toBeGreaterThan(0);
+  });
+});
