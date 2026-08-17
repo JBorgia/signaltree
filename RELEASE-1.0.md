@@ -2997,64 +2997,106 @@ extension must be notified when its registered positions participate in a
 settled semantic transaction" — then a public capability IS proven, and can be
 designed at minimum size without inheriting 14.x form.
 
-### BLOCKER — ANGULAR SUPPORT RANGE (product decision, gates all Angular-facing audit)
+### ANGULAR SUPPORT RANGE — **DECIDED: 21 and 22. Angular 20 excluded.**
 
-MUT-0 is supposed to establish product requirements before deriving mechanisms.
-Carrying an unresolved Angular support policy while auditing Angular-facing APIs
-would leave a large conditional over the whole inventory, so this is settled
-first.
-
-**MEASURED FACTS ONLY — the decision itself is not mine to make.**
+**MY FRAMING OF THIS WAS WRONG AND IS RETRACTED.** `a52f0124` said:
 
 ```
-workspace builds on          @angular/* 22.0.7
-peer range, core             ^20.0.0 || ^21.0.0 || ^22.0.0
-peer range, ng-forms         ^20.0.0 || ^21.0.0 || ^22.0.0
+IF 22+ ONLY -> the Reactive Forms function falls outside the product boundary
+            -> formBridge becomes a DELETE candidate
 ```
 
-**The two-track forms design is INTENTIONAL and currently COHERENT, not
-accidental legacy:**
+**That does not follow.** It conflates THREE independent things:
 
 ```
-@signaltree/ng-forms            root subpath
-   -> formBridge()              Reactive Forms (FormGroup) interop
-   -> resolves on 20 / 21 / 22
-
-@signaltree/ng-forms/signals    ISOLATED subpath in package.json#exports
-   -> signalForm()
-   -> imports '@angular/forms/signals' DIRECTLY (bridge.ts:23)
-   -> hard Angular 22 requirement
+framework version   which Angular majors we support
+forms paradigm      Reactive Forms vs Signal Forms vs Template-driven
+SignalTree form     enhancer vs adapter
 ```
 
-Because `/signals` is a separate export subpath, an Angular 20/21 consumer that
-never imports it is unaffected. **The declared peer range is therefore honest**
-— the 22-only dependency is opt-in, the same conditional-subpath pattern
-`guardrails` uses. This is a deliberate two-track design.
+Reactive Forms is a **current, supported, distinct forms system in Angular 22** —
+not a legacy path being replaced by Signal Forms. Angular's own guidance
+presents them as different approaches for different cases, recommending Signal
+Forms for new signal-based apps while existing Reactive Forms apps continue on
+Reactive Forms. So SignalTree-to-`FormGroup` interoperability is a legitimate
+greenfield requirement **on every supported major**, including 22-only.
 
-**NOT MEASURED, and I will not assert it from memory:** Angular's own support
-status and EOL dates for 20 and 21 relative to SignalTree 15.0's ship date. That
-is a real input to the decision and should be checked against Angular's published
-support policy rather than recalled.
+That makes the subtraction result STRONGER, not weaker: **the Reactive Forms
+function is independent of Angular-major compatibility.** The range determines
+whether a SECOND forms integration is available, never whether the first has
+value.
 
-**THE DECISION, framed per Rule 0h — cost is not an input:**
+**SECOND CORRECTION — "/signals has a hard Angular 22 requirement".** Signal
+Forms exist in Angular 21+; they became STABLE in 22. The repo's own comment
+says so precisely — *"`@angular/forms` ships **stable** Signal Forms via the
+`./signals` subpath starting in v22.0.0"*. So the boundary is **SignalTree
+PRODUCT POLICY** — do not build a stable integration contract on an Angular API
+that did not yet carry Angular's stability guarantee — not a technical absence
+in 21. Defensible, but it must be stated as policy.
+
+#### The decision
 
 ```
-WRONG   formBridge is awkward to migrate -> require Angular 22+
-RIGHT   SignalTree 15 should support Angular <X> -> therefore these integration
-        functions are required -> derive their optimal kernel-native forms
+@signaltree/*                    peer Angular ^21 || ^22
+Angular 20                       OUT of the 15.0 product boundary
+Angular 21                       supported
+Angular 22                       supported, primary development target
+@signaltree/ng-forms/signals     Angular 22+ (stability policy)
 ```
 
+**Rationale is PRODUCT HORIZON, and note it is the compatibility-UNfriendly
+choice** — supporting another major would be the easier path, so Rule 0h is not
+being violated in reverse. Angular support status, as supplied by the reviewer
+from Angular's published release page (external evidence, not measured by me):
+
 ```
-IF 20/21 SUPPORTED   Reactive Forms interop is a REQUIRED function.
-                     formBridge's FUNCTION survives -> then run Rule 0g step 2
-                     on its FORM (enhancer vs adapter). REDESIGN still possible.
-IF 22+ ONLY          the function falls outside the product boundary.
-                     formBridge becomes a genuine DELETE candidate, and
-                     `/signals` becomes the single forms track.
+Angular 22   Active   active to June 2027, LTS to June 2028
+Angular 21   LTS      to June 2027
+Angular 20   LTS      to 28 November 2026
 ```
 
-Everything Angular-facing in the audit — ng-forms, `defineStore`, publication
-ownership, and the authoring package's Angular coupling — inherits this answer.
+Shipping a greenfield major in August 2026 built around a version that goes
+unsupported in ~3 months creates immediate legacy obligation. Angular 21 remains
+supported to June 2027, so excluding it would discard a real supported user base.
+
+#### Resulting product
+
+```
+Angular 21    SignalTree + Reactive Forms integration
+Angular 22    SignalTree + Reactive Forms integration + Signal Forms integration
+```
+
+#### Consequence for `formBridge` — the FORM is still UNPROVEN
+
+```
+FUNCTION      SignalTree <-> Angular Reactive Forms interoperability
+              SURVIVES, on BOTH supported majors, independent of the range
+CURRENT FORM  an ENHANCER mutating a tree to add `AngularFormsMethods` and a
+              Map<string, AngularFormBridge>
+              UNPROVEN under Rule 0g — the subtraction test proved the function
+              and did NOT rescue the form
+DISPOSITION   REDESIGN CANDIDATE
+```
+
+**The next test, with the name erased:** given the 15.0 kernel, the Angular
+publication architecture, and a requirement to interoperate with
+`FormGroup`/Reactive Forms, what would we build today?
+
+```
+SUSPECTED (unproven)        vs        CURRENT
+SignalTree truth                      tree.with(formBridge())
+   -> Angular publication                -> mutate SignalTree realization
+   <-> Reactive Forms adapter            -> add getAngularForm(), bridge Map
+   <-> FormGroup / FormControl
+```
+
+An adapter over published realization may be the kernel-native answer. That must
+be DERIVED, not assumed — and it bears directly on #4a, where migrating
+`formBridge` to `Enhancer<TAdded>` would be converting a form that may not
+survive.
+
+**Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
+inventory.
 
 ### SUBTRACTION TEST — `formBridge` — **FUNCTION SURVIVES; FORM UNPROVEN**
 
