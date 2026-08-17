@@ -3255,16 +3255,22 @@ hatches — with this comment:
 > at creation time.**"*
 
 A tree-mutating enhancer applied via `tree.with(...)` may run anywhere, so the
-integration **silently degrades to one-way** when the context is absent. An
-Angular-owned adapter always has the context by construction. The escape hatch
-is a symptom of the wrong owner, not a convenience.
+integration **silently degrades to one-way** when the context is absent.
+**CORRECTED WORDING:** an Angular-owned adapter can make Angular
+lifecycle/injection context an EXPLICIT CONSTRUCTION REQUIREMENT, whereas a
+generic tree enhancer cannot assume one. (Not "always has it by construction" —
+that overstates it and does not need to be true for the argument to hold.) The
+escape hatch is a symptom of the wrong owner, not a convenience.
 
 **2. Lifecycle owner is mismatched.** Cleanup keys on `DestroyRef` — Angular
 injector/component lifetime. The enhancer attaches to TREE lifetime. Those are
 different lifetimes, and the tree's is usually longer.
 
-**3. Cardinality is wrong.** `formBridge: Map<string, AngularFormBridge>` keyed
-by path is SINGLETON STATE ON THE TREE. Two components each wanting their own
+**3. Cardinality is wrong — REINFORCING evidence, not foundational.** Findings 1
+and 2 already convict the enhancer form; this row would need an independent
+requirement for multiple simultaneous `FormGroup`s over one subtree to carry
+weight on its own. `formBridge: Map<string, AngularFormBridge>` keyed by path is
+SINGLETON STATE ON THE TREE. Two components each wanting their own
 `FormGroup` over the same `form()` marker — a routine Angular scenario — collide.
 The natural cardinality of a forms binding is PER COMPONENT, not per tree.
 
@@ -3301,11 +3307,16 @@ DISPOSITION    REDESIGN / MOVE TO OWNER
 
 ```
                   DERIVED                          CURRENT
-SignalTree truth                      tree.with(formBridge())
-   -> Angular publication                -> mutates realization
-   <-> Reactive Forms adapter            -> adds getAngularForm() + Map
+SignalTree NodeAccessor /             tree.with(formBridge())
+  published Angular view                 -> mutates realization
+   <-> Angular-owned RF adapter          -> adds getAngularForm() + Map
    <-> FormGroup / FormControl           -> hopes for an injection context
 ```
+
+**WHICH SIDE OF THE PUBLICATION BOUNDARY the adapter consumes is NOT PROVEN.**
+Question 3 concluded public node accessors suffice — so forcing the adapter
+through an Angular publication abstraction could itself be an unnecessary layer.
+Left open deliberately.
 
 **CONSEQUENCE FOR #4a — `formBridge` must NOT be migrated to
 `Enhancer<TAdded>`.** That would convert a form this derivation concludes should
@@ -3315,6 +3326,55 @@ deletion procedure does not get to drive the ontology.
 **STILL OPEN, and honestly so:** question 4 (topology change under a bound form)
 is unanswered by either design, and the derived adapter's exact surface is not
 specified — this slice establishes OWNERSHIP, not API.
+
+#### RF-M1 — does Reactive Forms interop justify the `form()` MARKER?
+
+Removing the enhancer while preserving the same architecture one level down in
+the marker would be a hollow win. Null assumption: **no `form()` marker exists.**
+Can an Angular-owned adapter implement the complete function from an arbitrary
+suitable `NodeAccessor<T>`?
+
+**MEASURED — everything the bridge takes from the marker:**
+
+```
+formSignal()                              read values      -> NodeAccessor gives this
+formSignal.set(formValues)                write values     -> NodeAccessor gives this
+formSignal.valid                          validity signal  -> DERIVED from validators
+mergeMarkerValidators(formSignal, …)      VALIDATORS       -> the ONLY real dependency
+```
+
+**ANSWER: values need no marker. The marker contributes exactly ONE thing —
+DECLARED VALIDATION RULES attached to the position.**
+
+So Reactive Forms interop does not depend on "form-ness" at all. It depends on
+*"where are this subtree's validation rules?"* — **a VALIDATION-OWNERSHIP
+question, not a forms-interop one.** And validation already has a second owner in
+`@signaltree/schema`, so 15.0 currently has TWO validation systems and the forms
+adapter is coupled to one of them by accident of history.
+
+**WORSE — the bridge CONTAMINATES the semantic marker with Angular objects:**
+
+```ts
+(formSignal as …)['formGroup']     = …
+(formSignal as …)['formControl']   = …
+(formSignal as …)['angularErrors'] = …
+(formSignal as …)['asyncPending']  = …
+```
+
+Angular presentation state written onto a SignalTree semantic marker. That is
+the contamination Rule 0i's marker test forbids, happening in the opposite
+direction from the one anticipated.
+
+```
+RF-M1 RESULT   Reactive Forms interop does NOT justify `form()` as a marker
+               -> sever the architectural dependence
+               -> `form()` faces its own MUT-0 survival audit on whatever
+                  semantics genuinely remain (validation declaration? dirty?
+                  submission?), inheriting NOTHING from forms integration
+```
+
+**This does NOT delete `form()`.** It may independently own real semantics. It
+simply may not inherit survival from Reactive Forms integration.
 
 ### SUBTRACTION TEST — `formBridge` — **FUNCTION SURVIVES; FORM UNPROVEN**
 
