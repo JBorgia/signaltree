@@ -4,8 +4,8 @@
  * Written while proving the `composeEnhancers` deletion, and kept because it
  * pins behaviour that has nothing to do with that symbol.
  *
- * Two things are recorded here. The first is a guarantee worth protecting; the
- * second is a defect worth not forgetting.
+ * Two things are recorded here: a guarantee worth protecting, and the enhancer
+ * metadata contract as it applies to the PLANNED construction path.
  *
  * 1. THE GUARANTEE — dependency validation is FAIL-CLOSED. The guard runs
  *    inside `.with()` before the enhancer is invoked, so an unsatisfiable
@@ -16,34 +16,23 @@
  *    bypass was fail-OPEN — no error, dependent enhancer runs anyway, tree
  *    looks fine.
  *
- * 2. THE DEFECT — see the banner below. `requires` has two authorities that
- *    disagree, and the tests recording that are NOT a compatibility contract.
+ * 2. THE CONTRACT (repaired) — `requires` names CAPABILITY TOKENS, resolved
+ *    against what applied enhancers `provides`. Never against enhancer names.
+ *    `resolveEnhancerOrder` and the `.with()` guard now answer the same
+ *    question, so ordering and enforcement cannot disagree.
  *
- * ============================================================================
- * KNOWN DEFECT / TRANSITIONAL CHARACTERIZATION — DO NOT FREEZE
- * ============================================================================
- * `requires` currently has INCONSISTENT AUTHORITY:
- *
- *     resolveEnhancerOrder   interprets `requires` against `provides`  (CAPABILITY)
- *     .with() validation     interprets `requires` against `name`      (NAME)
- *
- * so a requirement is satisfiable only when some enhancer is BOTH named `x` AND
- * declares `provides: ['x']`. Both natural spellings fail at build time, with a
- * message that names the requirement but not the reason.
- *
- * The three tests below marked DEFECT record CURRENT BEHAVIOUR so that release
- * queue item #3 (migrating the built-in enhancers to `Enhancer<Methods>`, where
- * these contracts are normalized) can change it DELIBERATELY. They are NOT a
- * compatibility requirement and they are NOT desired semantics.
- *
- * If you are here because you made the namespace coherent and these went red:
- * that is the fix landing. UPDATE THE TESTS — do not restore the bug.
- * ============================================================================
+ *    This file previously carried DO-NOT-FREEZE rows recording the opposite:
+ *    the sorter matched capabilities while the guard matched names, so a
+ *    requirement was satisfiable only when the provider was BOTH named `x` AND
+ *    declared `provides: ['x']`. Those rows have been converted to positive
+ *    assertions of the repaired contract, which is exactly what the banner
+ *    asked the next author to do. The full contract lives in
+ *    `enhancer-metadata-authority.spec.ts`; this file covers it through the
+ *    PLANNED construction path specifically.
  *
  * NOT MEASURED: whether composing also hid child enhancer CAPABILITIES from
  * `buildTreePlan`. The probe could not reach the build plan as an observable
- * property, so there is no result either way — not an open prerequisite. Reopen
- * only if a concrete item-#3 decision depends on it.
+ * property, so there is no result either way — not an open prerequisite.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -75,30 +64,30 @@ function build(providerMeta: Record<string, unknown>, req: string) {
 
 describe('plannedSignalTree enhancer dependency metadata', () => {
   it('reorders the dependent enhancer after its provider (source order ignored)', () => {
-    // DEFECT-ADJACENT: the only spelling that works today is the redundant one
-    // — named `provider` AND provides `provider`. The REORDERING itself is the
-    // real guarantee here and should survive item #3; the doubled spelling
-    // should not need to.
+    // The planner sorts on capability edges, then the guard enforces on the
+    // resolved order. Both read `requires` the same way, so a correctly
+    // declared dependency is reordered AND accepted.
+    expect(build({ name: 'provider', provides: ['base'] }, 'base')).toEqual([
+      'provider',
+      'consumer',
+    ]);
+  });
+
+  it('the redundant name===provides spelling still works', () => {
+    // Every built-in ships this shape, so it must keep working.
     expect(build({ name: 'provider', provides: ['provider'] }, 'provider')).toEqual([
       'provider',
       'consumer',
     ]);
   });
 
-  it('DEFECT (transitional, item #3 owns this): capability-only `provides` does not satisfy `requires`', () => {
-    // Reads as the obvious spelling — consumer requires the "base" capability,
-    // provider supplies it — and it throws, because the guard wants a NAME.
-    expect(() => build({ name: 'provider', provides: ['base'] }, 'base')).toThrow(
-      /Enhancer "consumer" requires "base" to be applied first/
-    );
-  });
-
-  it('DEFECT (transitional, item #3 owns this): requiring the provider BY NAME fails too', () => {
-    // The mirror-image spelling. Now the guard would be happy, but
-    // `resolveEnhancerOrder` builds no edge (nobody PROVIDES "provider"), so no
-    // reordering happens and the guard fires on the original order.
+  it('a provider NAME does not satisfy a requirement — capabilities only', () => {
+    // No name fallback, through the planned path too. `provider` is named
+    // `provider` but provides only `base`, so `requires: ['provider']` is
+    // unsatisfied — and `resolveEnhancerOrder` builds no edge for it either,
+    // which is consistent rather than contradictory now.
     expect(() => build({ name: 'provider', provides: ['base'] }, 'provider')).toThrow(
-      /Enhancer "consumer" requires "provider" to be applied first/
+      /requires capability "provider"/
     );
   });
 
@@ -116,7 +105,7 @@ describe('plannedSignalTree enhancer dependency metadata', () => {
       plannedSignalTree({ count: 0 })
         .with(orphan as never)
         .build()
-    ).toThrow(/requires "nothing-provides-this"/);
+    ).toThrow(/requires capability "nothing-provides-this"/);
     expect(log).toEqual([]);
   });
 

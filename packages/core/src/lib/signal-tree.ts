@@ -1274,7 +1274,22 @@ function create<T extends object>(
   // Lifecycle: cleanup registry and destroyed flag
   const cleanupFns: Array<() => void> = [];
   const destroyedSig = signal(false);
-  const appliedEnhancers = new Set<string>();
+  /**
+   * Enhancer protocol bookkeeping — TWO namespaces, deliberately separate.
+   *
+   * `name` is IDENTITY (duplicate detection, diagnostics). `provides` are
+   * CAPABILITY TOKENS, and `requires` names capability tokens — never an
+   * enhancer name. Collapsing them is what made a requirement satisfiable only
+   * when the provider was BOTH named `x` AND declared `provides: ['x']`, a
+   * contract with no coherent owner that silently broke every documented
+   * authoring example where `name !== provides`.
+   *
+   * Do NOT reintroduce a name fallback (`provided.has(req) || applied.has(req)`)
+   * — that restores the ambiguity rather than resolving it, and
+   * `enhancer-metadata-authority.spec.ts` fails if you do.
+   */
+  const appliedEnhancerNames = new Set<string>();
+  const providedEnhancerCapabilities = new Set<string>();
 
   // Add core properties
   Object.defineProperty(tree, '$', {
@@ -1333,27 +1348,51 @@ function create<T extends object>(
         (enhancer as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] ??
         (enhancer as unknown as { metadata?: EnhancerMeta }).metadata;
 
-      if (meta?.name) {
-        if (appliedEnhancers.has(meta.name)) {
-          throw new Error(
-            `Enhancer "${meta.name}" has already been applied to this tree. ` +
-              `Each enhancer can only be applied once.`
-          );
-        }
-        // Dependency validation
-        if (meta.requires) {
-          for (const dep of meta.requires) {
-            if (!appliedEnhancers.has(dep)) {
-              throw new Error(
-                `Enhancer "${meta.name}" requires "${dep}" to be applied first.`
-              );
-            }
-          }
-        }
-        appliedEnhancers.add(meta.name);
+      // IDENTITY — duplicate detection keys on `name` and nothing else.
+      if (meta?.name && appliedEnhancerNames.has(meta.name)) {
+        throw new Error(
+          `Enhancer "${meta.name}" has already been applied to this tree. ` +
+            `Each enhancer can only be applied once.`
+        );
       }
 
-      return enhancer(tree) as R;
+      // CAPABILITY — requirements resolve against what applied enhancers have
+      // PROVIDED. Never against their names: an enhancer's identity is not a
+      // capability, and `provides` is the only thing that grants one.
+      //
+      // Validated independently of `name`, so an anonymous enhancer that
+      // declares `requires` is still checked. Previously the whole block was
+      // gated on `meta.name`, so an unnamed enhancer's requirements were
+      // silently ignored.
+      if (meta?.requires) {
+        for (const dep of meta.requires) {
+          if (!providedEnhancerCapabilities.has(dep)) {
+            const who = meta.name ? `Enhancer "${meta.name}"` : 'This enhancer';
+            throw new Error(
+              `${who} requires capability "${dep}", which no applied enhancer ` +
+                `provides. Declare "${dep}" in another enhancer's \`provides\` ` +
+                `and apply it first.`
+            );
+          }
+        }
+      }
+
+      // Apply BEFORE publishing. A throwing enhancer must not leave its name
+      // marked applied or its capabilities marked satisfied — otherwise a
+      // failed application would let a dependent enhancer run against a
+      // prerequisite that never took effect, and would make a retry look like a
+      // duplicate. Dependency state obeys the same fail-closed principle as the
+      // validation above.
+      const result = enhancer(tree) as R;
+
+      if (meta?.name) {
+        appliedEnhancerNames.add(meta.name);
+      }
+      for (const capability of meta?.provides ?? []) {
+        providedEnhancerCapabilities.add(capability);
+      }
+
+      return result;
     },
     enumerable: false,
     writable: false,
