@@ -652,6 +652,43 @@ some belong elsewhere and having to redo `GATE B`. Four questions:
    `EntityMutationFrame` into public view is exactly what a private boundary
    lets us find out without a compatibility promise.
 
+### `@signaltree/authoring` — DEPENDENCY CHECK FAILED, split deferred
+
+The gate was: *can `@signaltree/authoring` be consumed by a third-party
+extension package without importing `@signaltree/core` implementation modules or
+Angular?* **No, on both counts.** Files were NOT moved.
+
+Module-level import graph for the 37 SDK symbols — 14 declaring modules:
+
+| Class | Modules | Verdict |
+| --- | --- | --- |
+| **Runtime-neutral** | `internals/error-reporter.ts` (zero imports of any kind), `write-context.ts`, `path-notifier.ts`, `enhancers/index.ts` | could move today |
+| **Type-only Angular** — erasable, not a barrier | `types.ts` (`Signal`, `WritableSignal` as types), `readonly.ts` (`import type`) | not blocking |
+| **Runtime Angular** | `internals/materialize-markers.ts` (`computed`, `isSignal`), `markers/{form,status,stored,async-query,async-source}.ts` (`signal`, `computed`, `untracked`) | **blocks the split** |
+
+`markers/derived.ts` looked Angular-coupled but its `computed` mention is inside
+a JSDoc comment; it has no imports at all.
+
+**The blocker is `registerMarkerProcessor`, the flagship extension API.** It is
+declared in `internals/materialize-markers.ts`, which needs Angular's `computed`
+and `isSignal` at RUNTIME and additionally reaches into `./physical-commit-clock`
+(kernel), `./position-registry`, `../path-notifier` and `../utils`. Moving it
+produces exactly the package-shaped dependency leak the check exists to prevent:
+a package that is a façade over core internals.
+
+Confirmed against the built artifact rather than inferred — `core/authoring`
+emits `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators`.
+
+**Missing neutral port:** a reactive-primitive port (create a computed, detect a
+signal) beneath both packages. That is the SAME class of work as the realization
+port needing the neutral `SlotIndex` interface, and it is already recorded under
+Kernel Extraction Prerequisites. Sequence the authoring split AFTER that
+migration, not before it.
+
+The audience argument for the split still holds — 37 of 48 symbols have no
+ordinary-app use. The seam is real; it just cuts THROUGH the SDK today rather
+than around it, so splitting now would ship the wrong boundary permanently.
+
 ### Keep / remove / move symbol map
 
 Governing rule, applied per symbol rather than per package history:
