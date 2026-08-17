@@ -103,7 +103,7 @@ export {
 
 // Marker brand symbols — for recognising a marker you did not create.
 export { FORM_MARKER } from './lib/markers/form';
-export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source';
+export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source.contract';
 export { ASYNC_QUERY_MARKER } from './lib/markers/async-query';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
@@ -111,7 +111,7 @@ export { isFormMarker } from './lib/markers/form';
 export { isStoredMarker } from './lib/markers/stored';
 export { isStatusMarker } from './lib/markers/status';
 export { isDerivedMarker } from './lib/markers/derived';
-export { isAsyncSourceMarker } from './lib/markers/async-source';
+export { isAsyncSourceMarker } from './lib/markers/async-source.contract';
 export { isAsyncQueryMarker } from './lib/markers/async-query';
 
 // Structural guards and path plumbing — tree-walking tools.

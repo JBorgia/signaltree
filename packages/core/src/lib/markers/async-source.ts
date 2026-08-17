@@ -9,6 +9,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
+import {
+  ASYNC_SOURCE_MARKER,
+  isAsyncSourceMarker,
+  type AsyncSourceConfig,
+  type AsyncSourceMarker,
+} from './async-source.contract';
 import { reportTreeError } from '../internals/error-reporter';
 import {
   registerBuiltinMarkerProcessor,
@@ -19,42 +25,18 @@ import {
 // SYMBOL
 // =============================================================================
 
-export const ASYNC_SOURCE_MARKER = Symbol('ASYNC_SOURCE_MARKER');
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-/**
- * Loader function for an async source. Returns either an Observable or a Promise.
- */
-export type AsyncSourceLoader<T> = () => Observable<T> | Promise<T>;
-
-/**
- * Configuration for an {@link asyncSource} marker.
- */
-export interface AsyncSourceConfig<T> {
-  /** Initial value before the loader completes (default: `undefined`). */
-  initial?: T;
-  /** Function that produces the data — returns Observable or Promise. */
-  load: AsyncSourceLoader<T>;
-  /**
-   * If true, skip the initial auto-load. Call `.refresh()` to trigger.
-   * (default: `false` — loads automatically when the tree is materialized.)
-   */
-  lazy?: boolean;
-}
-
-/**
- * Marker placeholder that gets materialized into an {@link AsyncSourceSignal}
- * during tree construction.
- */
-export interface AsyncSourceMarker<T> {
-  [ASYNC_SOURCE_MARKER]: true;
-  config: AsyncSourceConfig<T>;
-  /** Phantom type for inference. */
-  readonly __valueType?: T;
-}
+// Identity, descriptor shape and the type guard live in the framework-neutral
+// contract module; this file owns the Angular realization. Re-exported so the
+// public surface is unchanged by the split.
+export {
+  ASYNC_SOURCE_MARKER,
+  isAsyncSourceMarker,
+} from './async-source.contract';
+export type {
+  AsyncSourceLoader,
+  AsyncSourceConfig,
+  AsyncSourceMarker,
+} from './async-source.contract';
 
 /**
  * The materialized async-source accessor.
@@ -204,16 +186,6 @@ export function asyncSource<T>(
 // TYPE GUARD
 // =============================================================================
 
-export function isAsyncSourceMarker(
-  value: unknown
-): value is AsyncSourceMarker<unknown> {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    ASYNC_SOURCE_MARKER in value &&
-    (value as Record<symbol, unknown>)[ASYNC_SOURCE_MARKER] === true
-  );
-}
 
 // =============================================================================
 // SIGNAL FACTORY (materializer)
