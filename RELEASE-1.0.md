@@ -1604,10 +1604,33 @@ identical in the output:
 | missing required PEER dependency          | fixture defect |
 | missing transitive DECLARATION dependency | package defect |
 
-NOT YET GREEN. `56572c5d` proved the entity-map instance is gone. It did not prove
+**GREEN at `629b3b7d`.** Measured, not asserted: fresh `npm pack` of
+`dist/packages/core`, installed into a project OUTSIDE the workspace together with
+only its declared peers (`@angular/core`, `tslib`), no tsconfig path aliases, no
+monorepo source resolution, `skipLibCheck: false` — `tsc --noEmit` exits 0 with zero
+errors.
+
+The fixture has reach rather than merely importing the package. It exercises every
+declaration family that broke during this chapter, and carries three negative
+controls that pass only if the shipped types are precise:
+
+| family             | assertion                                                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `isDev`            | `boolean`; rejects `string`                                                                                                      |
+| `HydrateMode`      | all four members accepted; `'nope'` rejected                                                                                     |
+| `createFormSignal` | callable at its emitted signature (the value re-export the differential cannot see)                                              |
+| `entityMap`        | `DefaultKey` / computed-slice declarations resolve                                                                               |
+| `timeTravel`       | `entry.state.count: number`, `.profile.name: string`, rejects `string` — receiver-derived inference surviving the packed `.d.ts` |
+
+One failure during construction was correctly classified as a FIXTURE defect, not a
+package defect: the fixture invented an `initial` member on `EntityConfig`. No
+package was installed to make `tsc` pass — only declared peers — so an undeclared
+dependency could not hide behind the harness.
+
+HISTORICAL: `56572c5d` proved the entity-map instance is gone. It did not prove
 the packed consumer gate passes: the temp consumer had no `node_modules`, so
-`@angular/core` was unresolved (fixture defect), and the `isDev` instance above is
-a real remaining package defect.
+`@angular/core` was unresolved (fixture defect), and the `isDev` instance was a real
+package defect — both since resolved.
 
 #### Permanent closure fixture — must cover BOTH routes
 
