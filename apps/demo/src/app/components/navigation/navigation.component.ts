@@ -198,6 +198,14 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'dynamic-instances',
+      title: 'N runtime instances, one tree',
+      description:
+        'Attach/detach N composite instances of one domain at runtime — one history buffer, one timeline, one snapshot',
+      route: '/dynamic-instances',
+      category: 'examples',
+    },
+    {
       id: 'built-for-ai',
       title: 'Built for AI coding agents',
       description:

@@ -1,0 +1,184 @@
+<st-example
+  heading="N runtime instances, one tree"
+  [headingLevel]="1"
+  [state]="snapshot()"
+>
+  <div intro>
+    <p>
+      Attach and detach scale connections at runtime. Each is an independent
+      composite instance — its own connection status, ticket draft and save
+      state — and every one of them lives in a <strong>single tree</strong>,
+      sharing one history buffer, one DevTools timeline and one snapshot.
+    </p>
+    <p class="muted">
+      The instances are entities in an <code>entityMap</code>. Attach is
+      <code>addOne</code>, detach is <code>removeOne</code>, <code>get</code> is
+      <code>byId</code>, <code>keys</code> is <code>ids</code>. No detached
+      trees, no per-instance enhancer chain.
+    </p>
+  </div>
+
+  <section class="panel">
+    <div class="toolbar">
+      <button type="button" (click)="attach()" [disabled]="atCapacity()">
+        + Attach a scale
+      </button>
+      <button type="button" (click)="detachAll()" [disabled]="!instanceCount()">
+        Detach all
+      </button>
+      <button type="button" (click)="toggleFeeds()">
+        {{ feedsRunning() ? 'Pause' : 'Start' }} live feeds
+      </button>
+      <span class="spacer"></span>
+      <button type="button" (click)="undo()" [disabled]="!canUndo()">
+        ↶ Undo
+      </button>
+      <button type="button" (click)="redo()" [disabled]="!canRedo()">
+        ↷ Redo
+      </button>
+    </div>
+
+    <div class="stats">
+      <span
+        >instances: <strong>{{ instanceCount() }}</strong></span
+      >
+      <span
+        >open feeds: <strong>{{ openFeeds() }}</strong></span
+      >
+      <span
+        >history entries: <strong>{{ historyLength() }}</strong></span
+      >
+      <span
+        >tickets written: <strong>{{ ticketsWritten() }}</strong></span
+      >
+    </div>
+
+    @if (!instanceCount()) {
+    <p class="empty">
+      No instances attached. Hit <em>Attach a scale</em> — the tree's shape is
+      fixed, but its membership is not.
+    </p>
+    }
+
+    <div class="cards">
+      @for (view of views(); track view.id) {
+      <article class="card">
+        <header>
+          <h3>{{ view.label() }}</h3>
+          <span class="pill" [class.live]="view.connStatus() === 'live'">{{
+            view.connStatus()
+          }}</span>
+          <button
+            type="button"
+            class="detach"
+            (click)="detach(view.id)"
+            aria-label="Detach this scale"
+          >
+            ×
+          </button>
+        </header>
+
+        <p class="reading">
+          {{ view.net() | number : '1.0-0' }} <span class="unit">lb</span>
+        </p>
+
+        <label>
+          Customer
+          <input
+            type="text"
+            [value]="view.customer()"
+            (input)="setCustomer(view.id, $any($event.target).value)"
+          />
+        </label>
+
+        <label>
+          Project
+          <input
+            type="text"
+            [value]="view.project()"
+            (input)="setProject(view.id, $any($event.target).value)"
+          />
+        </label>
+
+        <footer>
+          <button
+            type="button"
+            (click)="writeTicket(view.id)"
+            [disabled]="!view.customer()"
+          >
+            Write ticket
+          </button>
+          <span class="save">{{ view.saveState() }}</span>
+        </footer>
+      </article>
+      }
+    </div>
+  </section>
+
+  <section class="proofs">
+    <div class="proof">
+      <h4>Per-instance granularity</h4>
+      <p class="metric">
+        derivations re-run on the last edit:
+        <strong [class.good]="lastFanOut() <= 1">{{ lastFanOut() }}</strong>
+        / {{ instanceCount() }}
+      </p>
+      <p class="muted">
+        One derivation per instance, each reading only its own
+        <code>customer</code>. Editing one re-runs one body — writes do not fan
+        out across instances, even though they share a collection.
+      </p>
+    </div>
+
+    <div class="proof">
+      <h4>One ordered history, not N</h4>
+      @if (recentHistory().length) {
+      <ol class="timeline">
+        @for (line of recentHistory(); track $index) {
+        <li>{{ line }}</li>
+        }
+      </ol>
+      } @else {
+      <p class="muted">Edit a draft to record an entry.</p>
+      }
+      <p class="muted">
+        Actions across every instance land in one buffer in the order they
+        happened, so <em>Undo</em> unwinds the last thing the operator did — not
+        the last thing they did <em>to this card</em>. That ordering is exactly
+        what a detached tree per instance destroys.
+      </p>
+    </div>
+
+    <div class="proof">
+      <h4>Detach disposes what the instance owns</h4>
+      <p class="metric">
+        open feeds: <strong>{{ openFeeds() }}</strong> / instances:
+        <strong>{{ instanceCount() }}</strong>
+      </p>
+      <p class="muted">
+        Each instance owns a simulated stream. A
+        <code>tap(&#123; onAdd, onRemove &#125;)</code> on the collection opens
+        it on attach and closes it on detach, so the two counters above cannot
+        drift. Note the gap: <code>clear()</code> and <code>setAll()</code> do
+        <em>not</em> fire <code>onRemove</code> — only
+        <code>removeOne</code>/<code>removeMany</code>/<code>removeWhere</code>
+        do, which is why "Detach all" uses <code>removeMany</code>.
+      </p>
+    </div>
+
+    <div class="proof">
+      <h4>The feed stays out of the undo stack</h4>
+      <p class="metric">
+        samples written: <strong>{{ samplesWritten() }}</strong> · history
+        entries: <strong>{{ historyLength() }}</strong>
+      </p>
+      <p class="muted">
+        Readings live in a second collection declared
+        <code>entityMap(&#123; recordHistory: false &#125;)</code>. They persist
+        and serialise like everything else, but never enter time travel — so a
+        stream at 2 Hz does not bury the operator's actions, and undo does not
+        rewind a weight.
+      </p>
+    </div>
+  </section>
+</st-example>

@@ -213,6 +213,18 @@ export const appRoutes: Route[] = [
       ).then((c) => c.GranularReactivityDemoComponent),
   },
   {
+    path: 'dynamic-instances',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/dynamic-instances/dynamic-instances-demo.component'
+      ).then((c) => c.DynamicInstancesDemoComponent),
+    data: {
+      title: 'N runtime instances, one tree',
+      description:
+        'Attach and detach N independent composite instances of one domain at runtime — inside a single tree, sharing one history buffer, one DevTools timeline and one snapshot. The alternative to a detached signalTree() per instance.',
+    },
+  },
+  {
     path: 'linked-derived',
     loadComponent: () =>
       import(
