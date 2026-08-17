@@ -1,8 +1,11 @@
 
 import { Component, computed, Signal, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ISignalTree, signalTree } from '@signaltree/core';
-import { registerMarkerProcessor } from '@signaltree/core/authoring';
+import { signalTree } from '@signaltree/core';
+import {
+  createEnhancer,
+  registerMarkerProcessor,
+} from '@signaltree/core/authoring';
 
 import {
   type CodeFile,
@@ -194,10 +197,10 @@ interface WithUndo {
   historyLength: Signal<number>;
 }
 
-function withUndo<T>(config?: { maxHistory?: number }) {
+function withUndo(config?: { maxHistory?: number }) {
   const maxHistory = config?.maxHistory ?? 50;
 
-  return (tree: ISignalTree<T>): ISignalTree<T> & WithUndo => {
+  return createEnhancer({ name: 'withUndo' }, (tree) => {
     const history = signal<Record<string, unknown>[]>([]);
     const future = signal<Record<string, unknown>[]>([]);
 
@@ -280,7 +283,7 @@ function withUndo<T>(config?: { maxHistory?: number }) {
       checkpoint,
       historyLength,
     } as WithUndo);
-  };
+  });
 }
 
 // =============================================================================
@@ -293,8 +296,8 @@ interface WithFreeze {
   isFrozen: Signal<boolean>;
 }
 
-function withFreeze<T>() {
-  return (tree: ISignalTree<T>): ISignalTree<T> & WithFreeze => {
+function withFreeze() {
+  return createEnhancer({ name: 'withFreeze' }, (tree) => {
     const frozenSignal = signal(false);
 
     return Object.assign(tree, {
@@ -302,7 +305,7 @@ function withFreeze<T>() {
       unfreeze: () => frozenSignal.set(false),
       isFrozen: frozenSignal.asReadonly(),
     } as WithFreeze);
-  };
+  });
 }
 
 // =============================================================================
@@ -378,39 +381,39 @@ export class CustomExtensionsDemoComponent {
 
   // Enhancer method accessors
   get canUndo(): Signal<boolean> {
-    return (this.store as unknown as WithUndo).canUndo;
+    return this.store.canUndo;
   }
 
   get canRedo(): Signal<boolean> {
-    return (this.store as unknown as WithUndo).canRedo;
+    return this.store.canRedo;
   }
 
   get historyLength(): Signal<number> {
-    return (this.store as unknown as WithUndo).historyLength;
+    return this.store.historyLength;
   }
 
   get isFrozen(): Signal<boolean> {
-    return (this.store as unknown as WithFreeze).isFrozen;
+    return this.store.isFrozen;
   }
 
   checkpoint() {
-    (this.store as unknown as WithUndo).checkpoint();
+    this.store.checkpoint();
   }
 
   undo() {
-    (this.store as unknown as WithUndo).undo();
+    this.store.undo();
   }
 
   redo() {
-    (this.store as unknown as WithUndo).redo();
+    this.store.redo();
   }
 
   freeze() {
-    (this.store as unknown as WithFreeze).freeze();
+    this.store.freeze();
   }
 
   unfreeze() {
-    (this.store as unknown as WithFreeze).unfreeze();
+    this.store.unfreeze();
   }
 
   // Computed
@@ -556,8 +559,9 @@ interface WithUndo {
   historyLength: Signal<number>;
 }
 
-function withUndo<T>(config?: { maxHistory?: number }) {
-  return (tree: ISignalTree<T>): ISignalTree<T> & WithUndo => {
+// createEnhancer() infers what you add — no generic argument, no casts.
+function withUndo(config?: { maxHistory?: number }) {
+  return createEnhancer({ name: 'withUndo' }, tree => {
     const history = signal<Snapshot[]>([]);
     const future = signal<Snapshot[]>([]);
     
@@ -580,9 +584,15 @@ function withUndo<T>(config?: { maxHistory?: number }) {
       canUndo: computed(() => history().length > 0),
       canRedo: computed(() => future().length > 0),
       historyLength: computed(() => history().length),
-    });
-  };
-}`;
+    } as WithUndo);
+  });
+}
+
+// Usage — no generic argument, no casts:
+const store = signalTree({ ... }).with(withUndo({ maxHistory: 20 }));
+store.checkpoint();
+store.undo();
+store.canUndo();`;
 
   readonly freezeEnhancerCode = `// withFreeze() - Block mutations during operations
 interface WithFreeze {
@@ -591,19 +601,20 @@ interface WithFreeze {
   isFrozen: Signal<boolean>;
 }
 
-function withFreeze<T>() {
-  return (tree: ISignalTree<T>): ISignalTree<T> & WithFreeze => {
+function withFreeze() {
+  return createEnhancer({ name: 'withFreeze' }, tree => {
     const frozen = signal(false);
     
     return Object.assign(tree, {
       freeze: () => frozen.set(true),
       unfreeze: () => frozen.set(false),
       isFrozen: frozen.asReadonly(),
-    });
-  };
+    } as WithFreeze);
+  });
 }
 
-// Usage:
+// Usage — .with() returns \`this & WithFreeze\`, so the methods are
+// directly available and correctly typed. No cast needed.
 const store = signalTree({ ... }).with(withFreeze());
 
 // Before async operation:
