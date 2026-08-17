@@ -2651,6 +2651,36 @@ owners immediately after establishing one. The shape that preserves both
 properties is `.with()` owning application and DevTools OBSERVING it through a
 hook — not DevTools replacing `.with()` to learn that application happened.
 
+## VALIDATION LADDER — workspace test rung (added at the schema blocker)
+
+**Building a package is not evidence that its runtime contract passes.** The
+ladder ran `nx run-many -t build --all` and tested CORE ONLY, so
+`@signaltree/schema` sat 25 tests red through ~150 commits while every gate
+reported green — and Gate B reasoning repeatedly leaned on "runtime unchanged".
+
+The rung is added NOW, before schema is repaired. It is expected to be RED until
+then. That is the information, not noise.
+
+```
+1. targeted slice tests          diagnosis — keep these, they read clearly
+2. package-specific tests        the package being changed
+3. nx run-many -t test --all     nothing else silently red
+4. typecheck / lint / build / API / declaration gates
+```
+
+Rungs 1-2 stay: `nx test <project>` swallows the reporter, so targeted runs are
+still how a failure gets identified. Rung 3 is what stops another package
+sitting red unnoticed.
+
+> **GATE B may not claim repository behavioural health until every package test
+> target passes.** Record the baseline BY IDENTITY, as with the demo build —
+> if `test --all` exposes further failures, characterize them before attributing
+> them to a known cause.
+
+**Ask the project's Nx target which runner it uses.** `vitest run --root` gives
+false readings for Jest projects — "no tests" for `ng-forms`, "27 failed" for
+`demo`. Both were artifacts.
+
 ## BLOCKER FOUND DURING #4a-2 — `@signaltree/schema` is 25 tests RED
 
 Found while capturing the pre-migration runtime baseline for `schemas()`.
@@ -2683,21 +2713,62 @@ CORE ONLY. No step runs the other packages' tests. A package can be entirely red
 and every gate stays green. `nx run-many -t test --all` belongs in the ladder;
 its absence is why 25 failures survived to Gate B.
 
-### 14.x disposition (Rule 0f) — UNCLASSIFIED pending measurement
+### 14.x disposition (Rule 0f) — MEASURED: 15.0-dev REGRESSION, no 14.x patch
 
-Do NOT assume it is a 14.x defect. The failures are present at this branch's
-start, but this branch is ~150 commits of 15.0 work; whether they reproduce at
-`v14.1.1` has NOT been measured. That measurement decides between
-"14.x DEFECT -> PATCH" and "15.0-dev regression introduced earlier on this
-branch". It must be run before classification.
+```
+v14.1.1                 10 files / 40 tests   ALL PASSING
+branch start 0693f683    9 failed / 1 passed   25 failed / 15 passed
+current HEAD             9 failed / 1 passed   25 failed / 15 passed
+```
 
-### Effect on #4a-2
+Identical test COUNT at the tag and at HEAD — no specs added or removed, the
+same tests now fail. So:
 
-`schemas()` can still be migrated — "identical failure set before and after" is
-a valid comparison, and it is the same discipline already used for the
-documented `demo:build:production` noise. But it is strictly weaker than a green
-baseline, and migrating a package while a quarter of its behaviour is unverified
-is a judgement call rather than a routine slice.
+```
+14.x ACTION        NO ACTION — v14.1.1 is green, nothing to patch
+15.0 DISPOSITION   REGRESSION introduced somewhere in this branch's ~150
+                   commits. Must be repaired before Gate B.
+```
+
+Ownership is not in question: the 15.0 workstream owns getting HEAD green
+regardless of where the defect entered. Rule 0f only decided whether there is an
+ADDITIONAL 14.x maintenance obligation, and there is not.
+
+### `demo:test` — 4 failures, SAME defect
+
+`nx run-many -t test --all` also fails `demo:test`. Measured rather than
+attributed: 26 suites, 25 passed, 4 tests failed, and ALL FOUR are
+`SchemaDemoComponent` — downstream of the schema regression, not an independent
+defect.
+
+RUNNER-MISMATCH TRAP, hit twice and worth stating as a rule. `vitest run --root
+apps/demo` reports "27 failed" and `--root packages/ng-forms` reports "no
+tests"; both are ARTIFACTS — those projects run on Jest. Ask the project's Nx
+test target what runner it uses; do not assume one runner across the workspace.
+
+### Workspace test baseline, by identity
+
+```
+schema:test   25 failed / 15 passed   the regression
+demo:test      4 failed / 177 passed  all SchemaDemoComponent, same defect
+core:test     documented flaky timing specs (Phase 5); reads clean via
+              `npx vitest run --root packages/core`
+```
+
+Everything else green: guardrails 62/1 skipped, realtime 34, events 221,
+shared 80, ng-forms `nx test` exit 0.
+
+### Effect on #4a-2 — `schemas()` migration is BLOCKED
+
+Rejected the "identical failure set before and after" shortcut. That discipline
+is sound for the demo build because those failures are OUTSIDE the package being
+changed. Here it would mean changing `@signaltree/schema` while a quarter of its
+own behavioural tests are red — which can show the change made nothing worse,
+but cannot show the migrated enhancer preserves the behaviour those tests exist
+to cover.
+
+Repair schema and establish a green baseline first. The characterization at
+`c1213225` stays frozen and is unaffected.
 
 The `schemas()` CONSUMER CONTRACT characterization is unaffected and green — it
 is type-only.
