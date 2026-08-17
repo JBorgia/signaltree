@@ -2930,6 +2930,116 @@ extension must be notified when its registered positions participate in a
 settled semantic transaction" — then a public capability IS proven, and can be
 designed at minimum size without inheriting 14.x form.
 
+### SUBTRACTION TEST — `formBridge` — **RESULT: KEEP. Obsolescence hypothesis REFUTED.**
+
+Pulled forward as a cheap functional falsifier: delete it and ask what capability
+disappears that `signalForm` cannot provide. It was expected to be an obsolete
+pre-Signal-Forms bridge. **It is not**, and the evidence is the project's own
+documentation.
+
+```
+CONSUMERS   exactly ONE real call site —
+            apps/demo/.../form-marker-demo.component.ts:357
+            everything else is README prose and code-sample STRINGS
+```
+
+That count alone would have looked like a deletion. It is not, because:
+
+```
+signalForm()   Angular SIGNAL FORMS   requires @angular/forms/signals, Angular 22+
+formBridge()   Angular REACTIVE FORMS interop (FormGroup), Angular 20/21
+```
+
+The demo states it outright: *"Requires Angular 22+ (`@angular/forms/signals`).
+The classic `formBridge()` (Reactive Forms) remains available for Angular 20/21
+apps."* And the peer range is `^20 || ^21 || ^22` on both `core` and `ng-forms`.
+
+**These are two DIFFERENT Angular form systems, not old and new versions of one.**
+`formBridge` provides `getAngularForm(path)` and a `Map` of `AngularFormBridge`
+— FormGroup interop — which `signalForm` does not and cannot provide on Angular
+20/21.
+
+```
+FUNCTIONAL FALSIFIER
+  workflow lost if deleted?      YES — Reactive Forms interop on Angular 20/21
+  signalForm covers it?          NO  — different API, requires Angular 22+
+  only demos/tests/docs?         NO  — the function is real; the low usage count
+                                       reflects the demo having one page per
+                                       feature, not disuse
+```
+
+**LESSON — the subtraction test earned its place by REFUTING a deletion.** One
+consumer plus "it looks superseded" was a deletion-shaped story. The audit's
+value is symmetric: it must be as willing to find a real function as to delete a
+mechanism, or it becomes a demolition process with extra steps.
+
+**THE REAL QUESTION IT EXPOSED, which is a genuine 15.0 product decision:**
+
+```
+Does SignalTree 15.0 support Angular 20/21, or require 22+?
+
+supports 20/21  -> formBridge is REQUIRED; deleting it removes forms interop
+                   for the majority of the supported range
+requires 22+    -> formBridge's reason to exist evaporates and it becomes a
+                   real DELETE candidate
+```
+
+The peer range currently says `^20 || ^21 || ^22`. **DECISION REQUIRED — the
+supported Angular range is a release-scope question, not a cleanup, and it
+determines `formBridge`'s disposition entirely.** Until it is answered,
+`formBridge` is KEEP.
+
+### REALTIME FUNCTION RESET — start at R0, OWNERSHIP
+
+Do not begin by asking what realtime needs. Ask whether it is SignalTree's
+concern at all — a package name is itself inherited architecture.
+
+```
+R0  does optimal SignalTree promise ANY remote-state semantics?
+    NO  -> realtime is an integration/product OUTSIDE SignalTree semantics,
+           and its needs MUST NOT shape the kernel
+    YES -> state exactly which remote guarantee SignalTree owns
+```
+
+Only then choose among four DIFFERENT PRODUCTS:
+
+```
+A  STATE CONVERGENCE     eventually make remote equal surviving committed truth
+B  CHANGE PROPAGATION    transmit eligible committed changes efficiently
+C  OPERATION REPLICATION transmit semantic operations, not resulting state
+D  CAUSAL REPLICATION    preserve ordering, conflicts, identity, supersession
+```
+
+**SEMANTIC NECESSITY vs PERFORMANCE OPTIMIZATION — keep these apart.** If
+convergence is the function, a delta may be a bandwidth optimization, not a
+semantic requirement. This must never become "therefore SignalTree needs a
+transition API".
+
+**DO NOT ASSUME these are requirements:** deltas, `source`-based echo
+suppression, remote-write metadata, or change notification. Echo suppression
+especially — an optimal design might have the integration know which inbound
+operation it submitted, or use causal/origin identity. The existing `source`
+flag is not automatically the right concept.
+
+Answer BEFORE reading the current protocol:
+
+```
+1 is remote sync a SignalTree responsibility at all?
+2 what correctness guarantee is promised — eventual convergence, ordered
+  replication, causal convergence, offline reconciliation?
+3 is the transmitted unit semantically significant, or an optimization?
+4 does realtime need causal MEANING, or only committed truth?
+5 who owns conflict resolution — SignalTree, adapter, backend, application?
+6 are remote writes ORDINARY semantic operations on arrival, or is there a
+  special remote-write ontology?           <- avoids a parallel architecture
+7 what does a third-party implementer need — transport adapter, serializer,
+  conflict policy, commit notification?
+```
+
+Neither outcome implies a generic observer: "only committed truth" points to a
+purpose-specific consequence; "genuinely needs causal operations" points to the
+CAUSAL AUTHORITY.
+
 ### MUT-0 ROW 1 — SYNCHRONIZATION / INTEGRATION — **DRAFT PROPOSAL, NOT A DISPOSITION**
 
 Deliberately NOT called "observation". Derived with current API names hidden
