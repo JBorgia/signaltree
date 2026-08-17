@@ -410,3 +410,51 @@ describe('stored() deferred consequences resolve at settle time', () => {
     );
   });
 });
+
+/**
+ * RECORDED DEFECT — not fixed. Found by the third audit of this boundary
+ * (HEAD 49a8ab34). Characterized here so it is measured rather than argued
+ * about, and deliberately NOT patched: it is the sixth defect of the same
+ * class on this surface, and the release ledger records a design
+ * reassessment instead of a fourth local repair.
+ *
+ * A rollback compensation write is applied through the realization port with
+ * NO transaction on the stack. `deferDurableConsequence` can only defer when
+ * the ambient write context carries transactionOwner + transactionId, so the
+ * compensating write falls through to an immediate durable write. When two
+ * pendings overlap, the value it restores is the OTHER pending transaction's
+ * speculative value — which is then durable while that transaction is still
+ * unconfirmed.
+ */
+describe('stored() commit attribution — RECORDED DEFECT', () => {
+  it('writes a still-pending speculative value during an overlapping rollback', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-attr': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-attr', 'v0', { storage: rec.adapter, debounceMs: 0 }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(value: string): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const p1 = store.transaction(() => store.$.v.set('a'));
+    const p2 = store.transaction(() => store.$.v.set('b'));
+
+    // Correct so far: both speculative, nothing durable.
+    expect(rec.log).toEqual([]);
+
+    p2.rollback();
+
+    // THE DEFECT: compensation restored 'a' — p1's speculative value, still
+    // unconfirmed — and wrote it straight through the boundary.
+    expect(rec.log).toEqual([{ op: 'set', key: 'sco-attr' }]);
+    expect(dataIn(rec.snapshots[0], 'sco-attr')).toBe('a');
+    expect(store.$.v()).toBe('a');
+  });
+});
