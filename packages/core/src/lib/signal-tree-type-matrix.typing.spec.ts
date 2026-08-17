@@ -32,7 +32,6 @@ import type {
   ISignalTree,
   NodeAccessor,
   SignalTree,
-  SignalTreeBase,
   StatusSignal,
   StoredSignal,
   TreeNode,
@@ -60,53 +59,12 @@ export type _HelperControls = [
   ExpectFalse<Equal<NodeAccessor<{ a: number }>, TreeNode<{ a: number }>>>
 ];
 
-// ============================================================================
-// SECTION 1 — TRANSIENT FALSIFIER: `SignalTreeBase<T>` vs `SignalTree<T>`
-// ============================================================================
-// PROPERTY
-//   `SignalTreeBase` has no independent supported semantic contract.
-//
-// FALSIFIER
-//   A consumer or API contract where replacing `SignalTreeBase` with
-//   `SignalTree` changes expressible type semantics, inference, assignability,
-//   or public capability.
-//
-// The first row is the decisive one and it is UNIVERSAL, not sampled: `T` is a
-// free, unresolved type parameter, so a `true` here is a statement about every
-// instantiation, not about the concrete cases that follow it. The concrete rows
-// exist because the matrix below has to be pinned anyway, and running them
-// through both aliases costs nothing.
-//
-// DELETE THIS SECTION WITH THE SYMBOL. Everything below it is permanent.
-type _UniversalIdentity<T> = Expect<Equal<SignalTree<T>, SignalTreeBase<T>>>;
-export type _BaseAliasIsRedundant = [
-  _UniversalIdentity<unknown>,
-  // Sampled instantiations, one per matrix dimension below.
-  Expect<Equal<SignalTree<RootState>, SignalTreeBase<RootState>>>,
-  Expect<Equal<SignalTree<number>, SignalTreeBase<number>>>,
-  Expect<Equal<SignalTree<MarkerState>, SignalTreeBase<MarkerState>>>,
-  Expect<Equal<SignalTree<EntityState>, SignalTreeBase<EntityState>>>,
-  // Both aliases accumulate an enhancer's methods identically.
-  Expect<
-    Equal<
-      SignalTree<RootState> & CounterMethods,
-      SignalTreeBase<RootState> & CounterMethods
-    >
-  >,
-  // The lifecycle surface is reached through both with the same member types.
-  Expect<
-    Equal<SignalTree<RootState>['bind'], SignalTreeBase<RootState>['bind']>
-  >,
-  Expect<
-    Equal<
-      SignalTree<RootState>['registerCleanup'],
-      SignalTreeBase<RootState>['registerCleanup']
-    >
-  >,
-  // Negative control: the identity above is not an artifact of the alias being
-  // matched by NAME. Different `T` still differs through the base alias.
-  ExpectFalse<Equal<SignalTreeBase<RootState>, SignalTreeBase<MarkerState>>>
-];
+// SECTION 1 was the transient `SignalTreeBase<T>` falsifier. It compared the
+// alias against `SignalTree<T>` at an unresolved `T` (a universal statement,
+// not a sampled one) plus one instantiation per dimension below, and was proven
+// able to fire by two mutations of the alias before the symbol was removed. It
+// was deleted with the symbol in the same commit; everything below is permanent
+// and is unchanged by that deletion.
 
 // ============================================================================
 // The state shapes the matrix is characterized over

@@ -1545,7 +1545,6 @@ export interface EnhancerMeta {
 // Backwards-compatible alias: include TreeNode<T> so properties copied to
 // the root callable are visible in TypeScript (legacy consumers rely on this)
 export type SignalTree<T> = ISignalTree<T> & TreeNode<T>;
-export type SignalTreeBase<T> = ISignalTree<T> & TreeNode<T>;
 
 // ============================================
 // TYPE GUARDS

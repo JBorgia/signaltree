@@ -1018,15 +1018,6 @@
         "internalDecl": false
       },
       {
-        "name": "SignalTreeBase",
-        "subpath": ".",
-        "kind": "type-only",
-        "declFile": "packages/core/src/lib/types.ts",
-        "angularInDecl": true,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
         "name": "SignalTreeBuilder",
         "subpath": ".",
         "kind": "type-only",

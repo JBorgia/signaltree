@@ -60,7 +60,6 @@ export type {
   // Core types - Main SignalTree interfaces
   ISignalTree,
   SignalTree,
-  SignalTreeBase,
   TreeNode,
   CallableWritableSignal,
   AccessibleNode,
