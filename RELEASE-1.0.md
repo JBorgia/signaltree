@@ -1815,7 +1815,11 @@ batching-shaped.
    identity-replacing enhancer case.
 5. Realistic `SignalTree` vs `ISignalTree` matrix (state containing nested
    object + `entityMap` + marker + primitive leaf, with negative controls), then
-   remove public `ISignalTree`.
+   remove public `ISignalTree`. **Now also owns the annotation/constructor
+   alignment defect** — `signalTree()` returns a value the canonical
+   `SignalTree<T>` annotation rejects, on `bind()` alone. See "Matrix corrected
+   at `cd49e9a0`". EXTEND `signal-tree-type-matrix.typing.spec.ts`; do not start
+   a new file.
 6. `FORM_MARKER` / `isFormMarker` — one owner. Declared in
    `@signaltree/core/authoring`, re-exported by `ng-forms`
    (`form-bridge.ts:582`); pick the marker-contract owner.
@@ -1885,6 +1889,79 @@ absent from the whole `dist` tree); vitest 1715 passed / 20 skipped / 1 todo;
 `nx lint core` green; `check-declaration-closure` stripped-but-referenced=0;
 closure fixtures 3/3; `nx run-many -t build --all` with only the documented
 `demo:build:production` noise.
+
+#### Matrix corrected at `cd49e9a0` — and it found a live defect
+
+Review of `9f0d1464` caught the matrix doing three things a PERMANENT gate must
+not do. All three are fixed; the deletion at `6a515699` is unaffected and
+stands.
+
+| defect | why it was wrong |
+| --- | --- |
+| froze `SignalTree<T> === ISignalTree<T> & TreeNode<T>` | freezes a decomposition queue item 7 schedules for DELETION; the file would contradict the plan and have to be edited by the slice doing the work |
+| `declare const primitiveTree: SignalTree<number>` | measured that an ANNOTATION is expressible and called it a product contract. The constructor is `T extends object`. Rule 0 category error, and it committed the release to a capability nobody chose |
+| every row used `declare const … : SignalTree<T>` | proved only "given a value already typed `SignalTree<T>`, these semantics follow" — never that a consumer calling `signalTree()` gets them |
+
+The rule this establishes for every future contract matrix:
+
+> Assert what a consumer can DO. Never assert the implementation decomposition,
+> and never assert a capability merely because the type system can express it.
+
+**LIVE DEFECT found the moment the constructor path was measured.** The
+canonical annotation does not accept the documented constructor:
+
+```ts
+const tree: SignalTree<MyState> = signalTree({ ... }); // does NOT compile
+```
+
+There are **TWO independent mismatches**, and the second is invisible until the
+first is neutralized. This was nearly recorded as "`bind()` is the ONLY
+incompatibility" on the strength of one elaborated error — a proxy for a
+property it does not measure, since **TypeScript stops at the first decisive
+member incompatibility**. The one-variable experiment refuted it.
+
+| # | mismatch | which side is wrong |
+| --- | --- | --- |
+| 1 | builder `bind()` -> `(value?: S) => S \| void`; `ISignalTree.bind()` -> `NodeAccessor<S>` | the **declaration**. Runtime copies the base tree's `bind` verbatim (`signal-tree.ts:1802`) and it returns `NodeAccessor<T>` (`signal-tree.ts:1365`) |
+| 2 | `SignalTree<T>` = `ISignalTree<T> & TreeNode<T>` requires the STATE KEYS on the tree object; the builder does not declare them | the **annotation**. The runtime root has no state keys at all |
+
+Mismatch 2 is the serious one and it inverts the first diagnosis. Executed
+runtime probe on `signalTree({ count, tags, user })`:
+
+```
+Object.keys(tree)   []
+tree.count          undefined
+Object.keys(tree.$) [ 'count', 'tags', 'user' ]
+```
+
+Meanwhile `declare const t: SignalTree<S>; t.count` typechecks green as
+`CallableWritableSignal<number>`. **The canonical public tree type promises a
+root-level state surface that does not exist at runtime.** `types.ts` still
+explains the `& TreeNode<T>` as "properties copied to the root callable ...
+legacy consumers rely on this"; that copying does not happen for state keys —
+the only copy loop in `signal-tree.ts:1762` copies ENHANCER result keys.
+
+So `SignalTreeBuilder` is HONEST and `SignalTree<T>` OVER-PROMISES. Making the
+builder satisfy the annotation as written would mean inventing a root surface
+the design deliberately puts behind `$`. Mismatch 1 alone is the drift class
+`internals/builder-types.ts` documents for `destroyed`, `registerCleanup` and
+`updateAndReport` — each runtime-present but type-missing, each repaired
+separately, each caught by an accident rather than a gate. Matrix section B6 is
+now that gate. `name` is absent from the missing-property list only because a
+function already has `Function.prototype.name`.
+
+Corroborating, and it may matter more than either defect: **nothing in this repo
+or its docs annotates with `SignalTree<T>`.** Every call site infers from
+`signalTree()`; the only `: SignalTree<` outside the matrix is one RFC
+signature. A "canonical public tree type" that no code uses, that rejects the
+constructor's return, and that describes a runtime shape which does not exist is
+a candidate for being the wrong abstraction rather than a broken one.
+
+**DECISION REQUIRED — this is a public-type design fork, not a local repair.**
+Queued to item 5, which owns the tree-type vocabulary. Both mismatches are
+characterized in matrix section C: mismatch 1 behind a `@ts-expect-error`, and
+mismatch 2 as a row that is green ONLY because the type is wrong and will start
+failing when the type is corrected.
 
 #### Newly discovered — not this slice
 
