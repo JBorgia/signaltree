@@ -3289,19 +3289,104 @@ Given ONLY the 15.0 kernel: what validation capability, if any, should
 SignalTree DELIBERATELY provide?
 ```
 
-Three greenfield possibilities, all live:
+**A/B/C ARE NOT MUTUALLY EXCLUSIVE — CORRECTED.** They were framed as rival
+architectures; they are INDEPENDENT OWNERSHIP AXES, and **B + C is a perfectly
+legitimate result**:
 
 ```
-A  SIGNALTREE SEMANTIC CAPABILITY
-   validation is intrinsic to semantic state; SignalTree owns declaration,
-   evaluation and result semantics
-B  DERIVED POLICY SYSTEM
-   SignalTree owns truth; a validation subsystem derives verdicts FROM it and
-   never becomes part of kernel/state semantics
-C  EXTERNAL ADAPTER
-   Zod/Valibot/Angular own validation; SignalTree exposes enough truth and
-   access for them to operate, and owns essentially NO validation ontology
+SignalTree kernel                     owns truth only
+first-party validation package        derives verdicts from truth
+Zod / Valibot / Standard Schema       supply rule formats via adapters
 ```
+
+Critically: **"not kernel semantics" does NOT imply "SignalTree should have no
+validation package."** A package can be extremely valuable while remaining
+strictly downstream of truth. Ask five independent questions instead of picking
+a winner:
+
+```
+V0.1  does the KERNEL own any validation semantics?
+V0.2  should the PRODUCT ship a first-party validation facility, even if
+      validation is NOT kernel semantics?
+V0.3  if yes, what does that facility own — policy? evaluation? result
+      projection?
+V0.4  which parts are merely ADAPTERS to external rule formats?
+V0.5  does any of it require public kernel integration BEYOND READING TRUTH?
+```
+
+#### V0.0 — THE FIRST QUESTION: DESCRIPTIVE or AUTHORITATIVE?
+
+Do not let the word "validation" collapse two radically different products:
+
+```
+DESCRIPTIVE    "this current truth violates these rules"
+               -> a downstream derived system is very plausible
+AUTHORITATIVE  "this semantic operation is ILLEGAL and must not commit"
+               -> kernel / PREPARE integration potentially REQUIRED
+```
+
+**MEASURED — both current systems are DESCRIPTIVE. Neither refuses a write.**
+
+```
+@signaltree/schema   documented "observe-only … never blocks writes"
+form() / FormSignal  `set(values)` NEVER consults validity. The only two
+                     `if (!valid) return false` sites in the whole marker are
+                     wizard `next()` and `goTo()` — WORKFLOW NAVIGATION, not
+                     state refusal.
+```
+
+So **no measured function requires write refusal**, and nothing yet justifies
+promoting validation into PREPARE or kernel semantics. Historical behaviour is
+not normative — but it also means we must not casually INVENT write-refusal
+semantics we have never had.
+
+The wizard finding also reinforces the form-session decomposition: wizard gating
+is WORKFLOW CONSUMING validation as an input, not validation itself.
+
+#### V0.0b — APPLICATION VALIDATION vs KERNEL INVARIANTS
+
+A third thing hides under the same word, and conflating them would drag
+structural correctness into this cleanup:
+
+```
+KERNEL INVARIANT        required for SignalTree's OWN correctness
+                        e.g. entity identity cannot be duplicated
+APPLICATION VALIDATION  user/domain policy over state
+                        e.g. "email must look valid"
+DOMAIN INVARIANT        e.g. "order.total must equal sum(lines)" — could be
+                        any of the three depending on product semantics
+```
+
+> **"The kernel owns no application validation" does NOT mean "the kernel never
+> refuses invalid state."** The kernel may enforce its own structural/semantic
+> invariants without owning a general user validation system. `entityMap`
+> constraints must not be swept into this row.
+
+**THE DECISIVE FALSIFIER, and it is simpler than the inventory below.** Before
+enumerating async, errors and cross-position dependencies, assume:
+
+```
+SignalTree           owns current truth
+validation consumer  reads truth -> derives verdict
+```
+
+> **What user-visible capability becomes IMPOSSIBLE if SignalTree itself owns
+> ZERO validation semantics?**
+
+Attack that null with: sync validation, cross-field validation, subtree
+validation, async validation, errors, isValid, pending, manual validate,
+automatic recomputation, Standard Schema support. If all are satisfiable without
+changing the semantic state engine, that is strong evidence against A.
+
+The null has real support already: `NodeAccessor`s provide readable state and
+publication machinery provides reactive realization, so no mutation
+interception, paths, marker ownership or causal records are automatically
+needed. And an async evaluator can own its own operational concerns —
+*read truth -> validate against input X -> newer input arrives -> old result is
+stale -> publish only the surviving result* — WITHOUT `pending` becoming
+SignalTree truth.
+
+**The burden of proof for KERNEL ownership is therefore very high.**
 
 Each sub-function may independently answer NO:
 
@@ -3390,6 +3475,20 @@ So the greenfield question is not *"field scope or path scope?"* but:
 
 > **What semantic THING is being validated, and what DEPENDENCIES may its rule
 > have?**
+
+**AND DO NOT PROMOTE `PositionId` INTO VALIDATION'S PUBLIC ONTOLOGY.** That
+would be another nearby-kernel-structure promotion. The kernel may internally
+compile a dependency such as *"`profile.name` depends on `profile.country`"*
+into semantic identities while a rule author still writes something like
+`validate(tree.$.profile.name, …)` or a schema object over a subtree. The
+question is:
+
+```
+does validation need stable semantic dependency identity INTERNALLY?
+NOT: should validation's PUBLIC ontology expose PositionId?
+```
+
+The answer may well be **internal YES / public NO.**
 
 e.g. *validate position P using truth at P, Q and R*, or *validate subtree S
 against current committed truth*. Both `keyof T` and dot-paths may vanish from
