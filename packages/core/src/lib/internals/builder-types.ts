@@ -6,7 +6,7 @@
 import type { Signal } from '@angular/core';
 
 import type { ProcessDerived } from './derived-types';
-import type { Enhancer, ISignalTree, TreeNode } from '../types';
+import type { Enhancer, ISignalTree, NodeAccessor, TreeNode } from '../types';
 
 // =============================================================================
 // SIGNAL TREE BUILDER
@@ -69,7 +69,24 @@ export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
   ): this & TAdded;
 
   // From ISignalTree
-  bind(thisArg?: unknown): (value?: TSource) => TSource | void;
+  /**
+   * Returns the tree callable bound to `thisArg` — a `NodeAccessor<TSource>`,
+   * i.e. all three call forms, with the read form returning `TSource`.
+   *
+   * This was declared `(value?: TSource) => TSource | void`, which collapsed
+   * the three overloads into one lossy signature and made the read form return
+   * `TSource | void`. The runtime never behaved that way: `signal-tree.ts`
+   * defines `bind` as returning a `NodeAccessor<T>`, and the builder copies
+   * that function verbatim. So the declaration under-promised what the runtime
+   * already delivered — the same runtime-present / type-missing drift recorded
+   * above for `destroyed`, `registerCleanup` and `updateAndReport`.
+   *
+   * It also had a consumer-visible consequence beyond `bind` itself: because
+   * `SignalTree<T>` requires `ISignalTree<T>`'s `bind(): NodeAccessor<T>`, the
+   * lossy signature made `const tree: SignalTree<S> = signalTree(...)` fail to
+   * compile. Gated by `signal-tree-type-matrix.typing.spec.ts` section C.
+   */
+  bind(thisArg?: unknown): NodeAccessor<TSource>;
   destroy(): void;
   /**
    * Whether this tree has been destroyed. Present at runtime on every
