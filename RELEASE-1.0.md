@@ -1807,9 +1807,14 @@ batching-shaped.
 
 1. ~~Delete `SignalTreeBase`.~~ **DONE** — characterized `9f0d1464`, deleted
    `6a515699`. See "Slice 1 — `SignalTreeBase`" below.
-2. Delete `composeEnhancers`. <- NEXT
-
-3. Migrate remaining built-ins to `Enhancer<Methods>`, one at a time.
+2. ~~Delete `composeEnhancers`.~~ **DONE** — characterized `2f46115b`, deleted
+   `6c3d73a8`, equivalence claim refuted and corrected `d09525d6`, migration
+   `2ae531c1`. See "Slice 2" below.
+3. Migrate remaining built-ins to `Enhancer<Methods>`, one at a time. <- NEXT
+   **Also owns the `requires` namespace defect** found in slice 2 (below), and
+   the transitional tests in `planned-enhancer-dependencies.spec.ts` that record
+   it. Those tests are NOT a compatibility contract — changing the behaviour
+   means updating them, not restoring the bug.
 4. Remove the realization-facing `.with()` overload; add heterogeneous variadic
    `.with(...enhancers)` with runtime order-equivalence tests and an
    identity-replacing enhancer case.
@@ -2045,6 +2050,111 @@ is the case for the type-contract dimension existing at all.
   normally — the `ngModule null` failure applies to running from the repo ROOT,
   not from the package directory. This belongs with the Phase 5 flaky-spec item:
   a release gate that cannot say which test failed is not a usable gate.
+
+### Slice 2 — `composeEnhancers` DELETED (`2f46115b`, `6c3d73a8`, `d09525d6`)
+
+**DECISION, final.** `composeEnhancers` DELETE confirmed. It is an opaque
+alternate composition grammar, not a runtime-equivalent helper. Consumer
+characterization showed single-enhancer application is type-invalid;
+multi-enhancer application loses accumulated additions; composed child enhancers
+bypass canonical metadata/dependency validation and differ from chained
+`.with()` for identity-replacing enhancers. Canonical replacement is ordered
+`.with(a).with(b)`. Variadic `.with(...)` remains a separate later decision and
+was NOT coupled to this.
+
+Migration: `docs/guides/migration-v14-v15.md` (`2ae531c1`).
+
+```
+P1 REACHABILITY   declared lib/utils.ts; exported ONLY from ./authoring
+                  (left the root barrel in v12). Zero internal consumers, zero
+                  tests, zero package-to-package consumers, zero demo use.
+                  Taught in ENHANCERS.md, skills reference, generated llms/SKILL.
+
+P2 CAPABILITY     NOT equivalent. See the correction below.
+
+P3 TYPE           broken in BOTH arities, DIFFERENTLY:
+                    composeEnhancers(A)     cannot be applied at all — `T`
+                                            infers from the RETURN and is then
+                                            demanded as input, so the enhancer
+                                            requires the additions it exists to
+                                            add
+                    composeEnhancers(A, B)  applies, silently erases every
+                                            addition
+                  Not "erasure in both". The distinction was a real finding.
+```
+
+**The taught example never compiled.** `ENHANCERS.md` imported `composeEnhancers`
+from `@signaltree/core`, where it had not existed since v12, and passed enhancer
+FACTORIES where enhancers are required (TS2345 + TS2769 when reproduced
+verbatim). The adjacent "recommended" example was also wrong — it used a
+variadic `.with()` that does not exist. Both replaced with a form that was
+compiled before being written down.
+
+#### CORRECTION — I claimed runtime equivalence and it was refuted (`d09525d6`)
+
+`2f46115b`/`6c3d73a8` stated P2 as "no unique runtime capability" on evidence
+covering only ordinary `signalTree()` with mutating enhancers. Two falsifiers on
+the uncovered protocol boundaries both fired. History was NOT rewritten; the
+wrong claim stays and `d09525d6` is the correction.
+
+```
+P2a  plannedSignalTree dependency validation
+     separate  .with(late).with(early).build()
+               THREW "late requires base to be applied first", log ["early"]
+               -> fail-CLOSED, `late` never ran
+     composed  .with(composeEnhancers(late, early)).build()
+               ok, log ["late","early"]
+               -> fail-OPEN, ran with its requirement unmet
+
+P2b  identity-replacing enhancer
+     chained   2nd enhancer observed {symbol: null, prop: null}; final: neither
+     composed  2nd enhancer observed {symbol: set, prop: true}; final: both
+```
+
+The guard lives INSIDE `.with()` and runs before the enhancer is invoked. A
+composed fold calls its children directly, so they never reach it — no duplicate
+detection, no dependency validation, no ordering, no capability collection. The
+metadata-hiding was also an accidental escape hatch for forcing raw source order;
+removed deliberately, since an undocumented way to defeat a fail-closed check is
+not a feature and nothing used it.
+
+**THE LESSON, and it was paid for twice in this chapter:**
+
+> A green representative example does not prove equivalence of two API paths.
+> Test the protocol boundaries where their implementations differ.
+
+The first instance was `SignalTree<T>` (Section A and Section B both green while
+they disagreed — fixed by a positive JOIN assertion). The second is this one.
+
+NOT MEASURED, and not an open prerequisite: whether composing also hid child
+CAPABILITIES from `buildTreePlan`. The probe could not observe the build plan.
+Reopen only if a concrete item-#3 decision depends on it.
+
+#### ROUTED FORWARD — enhancer metadata defect, item #3 owns it
+
+`requires` currently resolves against two different namespaces:
+
+```
+resolveEnhancerOrder   edge only when `a.provides.has(req)`   -> CAPABILITY
+.with() guard          `appliedEnhancers.has(req)`            -> NAME
+```
+
+so a requirement is satisfiable only when an enhancer is BOTH named `x` AND
+declares `provides: ['x']`. Measured across all four spellings:
+
+| `requires` | provider `name` | provider `provides` | result |
+| --- | --- | --- | --- |
+| `base` | `provider` | `['base']` | THROWS |
+| `provider` | `provider` | `['base']` | THROWS |
+| `provider` | `provider` | `['provider']` | OK, reordered |
+| `base` | `base` | `['base']` | OK, reordered |
+
+Both natural spellings fail. Characterized in
+`packages/core/src/lib/planned-enhancer-dependencies.spec.ts` as **CURRENT
+BEHAVIOUR, NOT FROZEN SEMANTICS** — the file carries a DO-NOT-FREEZE banner
+saying that if those rows go red because the namespace was made coherent, the
+TESTS get updated, not the implementation. That file also pins the durable
+guarantee worth keeping: dependency validation is fail-closed.
 
 ### NEEDS RECONCILIATION — "guardrails dead in prod"
 
