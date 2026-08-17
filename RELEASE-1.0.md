@@ -2751,9 +2751,20 @@ getActiveWriteContext    0
 
 No application reaches for leaf interception, the notifier, or write context.
 They are used only by core internals and by `@signaltree/schema`'s
-implementation. **That is direct evidence for the subtraction hypothesis:** if
-the only consumers of a "public observation protocol" are the library's own
-internals, it is not serving an authoring function.
+implementation.
+
+**OVERCLAIM CORRECTED.** This previously read: "if the only consumers of a
+public observation protocol are the library's own internals, it is not serving
+an authoring function." **That does not follow.** An authoring SDK is precisely
+the kind of API that may have near-zero ordinary application usage —
+`registerMarkerProcessor` and `createEnhancer` are obvious cases, and the demo's
+own usage is dominated by higher-level APIs exactly as it should be. The
+supportable inference is narrower:
+
+> Zero demo usage removes **"ordinary application need"** as a justification.
+> It does NOT remove **"third-party implementer need"**.
+
+Which is what MUT-0 exists to determine.
 
 **Other zero-usage results relevant to the survival audit:**
 
@@ -2767,15 +2778,37 @@ isSignalTree             0
 **Counter-evidence worth recording — things a real app DOES use:**
 
 ```
-ISignalTree              5 files   <- relevant to item #7 (internalize).
-                                      Internalizing it breaks real consumer code
-                                      unless SignalTree<T> is the stated
-                                      replacement.
+ISignalTree              5 files   <- MIGRATION IMPACT, not a keep-argument.
 clearStoragePrefix       1
 flushAllStoredSignals    1         <- the three "global authority" symbols
 invalidateTag            1            already flagged as suspicious: each has
                                       exactly one real consumer.
 ```
+
+**EVIDENCE HIERARCHY — demo usage is a witness, never the judge.**
+
+```
+GREENFIELD FUNCTION
+      -> required semantic owner
+      -> does third-party implementation require access?
+      -> minimum public capability
+      -> existing consumers / demo usage as SUPPORTING evidence
+```
+
+NOT `demo uses it -> keep` / `demo doesn't -> delete`. That methodology would
+delete the extension SDK of almost every library.
+
+**`ISignalTree` is the worked example of doing this correctly.** Five demo files
+import it — and the answer is still not "keep":
+
+```
+used by real consumers?                 YES  (5 files)
+semantic concept independently needed?  YES
+correct 15.0 owner?                     SignalTree<T>
+=> migrate consumers, DELETE the ISignalTree public vocabulary
+```
+
+The usage count sized the migration. It did not decide the architecture.
 
 **ng-forms shape — evidence for the adapter hypothesis:**
 
@@ -2786,12 +2819,108 @@ ngFormValidators 2
 formBridge      2         <- the ENHANCER is the least-used entry point
 ```
 
-The most-used ng-forms surface is `signalForm`, an Angular Signal Forms
-integration — not the enhancer. **OPEN QUESTION for the audit:** is ng-forms
-primarily an Angular realization adapter that happens to ship an enhancer,
-rather than an enhancer package? If so, forcing `formBridge` through
-`Enhancer<TAdded>` merely to enable deleting the realization overload would be
-letting a desired deletion procedure drive the ontology.
+**OVERCLAIM CORRECTED.** Usage frequency cannot establish ontology. It tells us
+consumers reach for the Angular-facing APIs more often; it does NOT tell us
+`formBridge` has the wrong ontology. The audit question is functional:
+
+> What function does `formBridge` provide that `signalForm` / the Angular
+> adapter does not?
+
+```
+merely bridges realization into Angular Forms  -> Angular adapter owns it
+independently adds semantic tree capability    -> enhancer may be correct
+redundant with signalForm                      -> DELETE
+```
+
+What the frequency DOES support is refusing the reverse error: do not force
+`formBridge` through `Enhancer<TAdded>` merely to enable deleting the
+realization overload. That would let a deletion procedure drive the ontology.
+
+### MUT-0 — GREENFIELD SURVIVAL INVENTORY (runs BEFORE MUT-2)
+
+**THE RULE THIS SLICE ENFORCES:**
+
+> Existing code may prove a FUNCTION is useful. It may NEVER prove its current
+> ABSTRACTION is necessary. Derive function and ownership with the current API
+> names HIDDEN; reveal the existing mechanism only after the greenfield
+> requirement is stated.
+
+**TWO SEPARATE VERDICTS, never conflated.** A concept can be perfectly
+implemented and still be DELETE:
+
+```
+CORRECTLY IMPLEMENTED?     <- what the last ~150 commits proved
+NECESSARY?                 <- what MUT-0 asks
+```
+
+This applies with FULL FORCE to work already converted. `Enhancer<TAdded>` being
+neutral and coherent does not establish that it belongs in 15.0. Declaration
+closure being correct does not justify every shipped declaration. Authoring
+being framework-neutral does not prove every authoring symbol belongs in the
+extracted package. Those proofs remain valuable and are not reopened — they
+simply answer a different question.
+
+#### Template — CURRENT FORM is filled in LAST, deliberately
+
+```
+FUNCTION            what capability must exist?
+OWNER               which frozen 15.0 authority naturally owns it?
+PUBLIC NEED         must a THIRD-PARTY IMPLEMENTER have access?
+                    why can SignalTree not own the integration itself?
+MINIMUM PRIMITIVE   smallest capability that provides the function
+CURRENT FORM        <- LAST. Prevents designing around PathNotifier,
+                       Enhancer, formBridge, etc. by reflex.
+DISPOSITION         KEEP / INTERNALIZE / MOVE / SPLIT / DELETE / UNPROVEN
+```
+
+`PUBLIC NEED` is the question the demo evidence cannot answer and MUT-0 must:
+zero application usage removes "ordinary application need", never "third-party
+implementer need".
+
+#### Order — highest architectural gravity first, not alphabetical
+
+```
+1  interceptLeafSignals / PathNotifier / getPathNotifier / write-context APIs
+2  Enhancer / createEnhancer / ENHANCER_META / resolveEnhancerOrder
+3  schema integration
+4  realtime integration
+5  ng-forms / formBridge / signalForm
+6  guardrails
+7  persistence integration
+8  devTools integration
+9  plannedSignalTree
+10 global storage / tag authorities
+```
+
+Then outward. The hypothesis worth testing first, because confirming it would
+delete a large amount of machinery:
+
+```
+history / undo / redo / rollback  -> causal authority
+transactions                      -> semantic/causal authority
+persistence                       -> governed consequence
+realtime                          -> governed consequence?
+schema                            -> derived invalidation from committed truth
+devtools                          -> diagnostic projection
+Angular                           -> publication / reactivity
+ng-forms                          -> Angular adapter?
+```
+
+None of those rows obviously requires `observeEveryMutation(callback)`. If they
+all place cleanly with their owning authority, the generic observation concept
+disappears rather than being redesigned.
+
+Conversely, if a genuine third-party function emerges — e.g. "a custom semantic
+extension must be notified when its registered positions participate in a
+settled semantic transaction" — then a public capability IS proven, and can be
+designed at minimum size without inheriting 14.x form.
+
+#### Not yet: running the demo
+
+Runtime exercise would characterize CURRENT BEHAVIOUR more richly, which is
+precisely what must not define the architecture. Defer it until a function
+SURVIVES MUT-0 and we need to characterize what that surviving function must
+preserve.
 
 ### MUT-1 — PARTICIPATION MODEL — **DERIVED PROPOSAL, NOT FROZEN**
 
@@ -2835,11 +2964,21 @@ Derivation: F4 puts all fallible semantic work here by definition. If refusal is
 a supported capability anywhere, it can only be here — refusing after PRIVATE
 COMMIT would contradict F5, which admits only prepared instructions.
 
-**OPEN QUESTION — is refusal a capability we actually want to offer third
-parties at all?** No current consumer needs it: schema is observe-only by
-design, and guardrails is a diagnostic. A refusal tier with zero legitimate
-consumers is speculative surface. COUNTEREXAMPLE NEEDED: a real authoring case
-that must prevent a write rather than report on it.
+**REVISED — the phase conclusion and the public-surface conclusion are separate
+claims, and only the first is derived.**
+
+```
+FROZEN-DERIVED     refusal, if it exists at all, must occur during PREPARE
+UNPROVEN           that any PUBLIC PREPARE participation API should exist
+```
+
+F4/F5 constrain WHERE refusal can happen. They say nothing about whether an
+external plugin protocol is required there. If SignalTree itself, schema
+compilation, or another built-in semantic subsystem performs all necessary
+refusal during PREPARE, no public tier is needed. No current consumer requires
+it: schema is observe-only by design, guardrails is a diagnostic.
+COUNTEREXAMPLE NEEDED: a real authoring case that must PREVENT a write rather
+than report on it.
 
 **OPEN QUESTION — transformation/normalization.** Distinct from refusal and much
 riskier: a transforming participant becomes a co-author of truth, which strains
@@ -2862,12 +3001,23 @@ extension MUST NOT      alter or reject; assume framework publication happened;
                         assume one notification per physical commit
 ```
 
-Derivation, and this is the non-obvious part: F8 + F9 together mean this tier
-CANNOT be per-physical-commit. A semantic transaction may span several private
-commits, and no external consumer may observe an intermediate heterogeneous
-state — so the observation unit is the SEMANTIC TRANSACTION, not the physical
-write. **DERIVED PROPOSAL: a "committed observer" fires once per settled
-semantic unit, never once per substrate commit.**
+**REVISED — separating what F8+F9 prove from what they do not.**
+
+```
+FROZEN-DERIVED  the semantic transaction boundary is the EARLIEST COHERENT
+                point at which committed truth could be consumed without
+                exposing heterogeneous physical commits
+UNPROVEN        that any general PUBLIC consumption API should exist there
+```
+
+F8 + F9 establish a property of the LIFECYCLE: a semantic transaction may span
+several private commits, and no external consumer may observe an intermediate
+heterogeneous state — so anything consuming committed transitions must respect
+transaction granularity, never per-substrate-commit. That is a real constraint.
+
+It does NOT establish that the authoring SDK needs a public `CommittedObserver`.
+The previous draft made exactly that leap. Whether ANY public API exposes this
+boundary is MUT-0's question.
 
 Also derived from F2: this tier must NOT sit behind publication. Angular owns
 observation, so an authoring extension that waited for Angular publication would
@@ -2921,8 +3071,18 @@ this slice.
 —  CONSEQUENCE                     governed mechanism, not an observer tier
 ```
 
-So the neutral authoring SDK plausibly needs **ONE tier** (2), with (1) offered
-only if a real refusal consumer exists.
+**REVISED CENTRAL RESULT.** The previous draft concluded "the SDK plausibly
+needs one public tier". That was the premature step. Corrected:
+
+```
+internal lifecycle boundaries exist          YES, frozen
+some subsystems must act at them             YES
+ANY public participation API is required     UNPROVEN — possibly NONE
+```
+
+"None" must stay a live answer. The subsystems that react to committed truth may
+each integrate with the authority that owns the information they need, with no
+shared observation contract at all.
 
 #### Challenge cases — "can this actor's legitimate responsibility be placed
 cleanly?", NOT "where does it run today"
