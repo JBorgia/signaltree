@@ -50,7 +50,6 @@ export interface ComputedSliceConfig<E, R> {
 
 /**
  * Stored computed slice definitions for an entityMap marker
- * @internal
  */
 export interface EntityMapComputedSlices<E> {
   [name: string]: ComputedSliceConfig<E, unknown>;
@@ -58,7 +57,6 @@ export interface EntityMapComputedSlices<E> {
 
 /**
  * EntityMap marker with computed slices attached
- * @internal
  */
 export interface EntityMapMarkerWithSlices<
   E,
@@ -159,7 +157,6 @@ type InternalMarker = EntityMapMarker<
 
 /**
  * Default key type: inferred from the entity's `id` field if present.
- * @internal
  */
 /**
  * Exported because it appears in a PUBLIC signature default —
