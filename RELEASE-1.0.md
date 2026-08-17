@@ -2364,6 +2364,104 @@ invariant or be retired with evidence. Do not silently convert it to "false".
 The real finding is API hygiene, queued above: `./noop` is separately public
 though users should never select it themselves.
 
+## 14.x DISPOSITION LEDGER (Rule 0f)
+
+**Two axes, not one label.** A finding can be both a defect 14.x users are
+living with AND a surface 15.0 removes; collapsing those understates the first.
+
+```
+14.x ACTION   PATCH CODE | PATCH DOCS / KNOWN ISSUE | NEEDS CONSUMER PROOF | NO ACTION
+15.0 DISP.    INHERIT PATCH | BREAKING CORRECTION | ARCHITECTURAL CUTOFF | TOOLING DEBT
+```
+
+**Every first-column claim below was measured AT THE `v14.1.1` TAG**, not
+inferred from 15.0-dev HEAD. That distinction is load-bearing: this queue has
+twice produced a wrong conclusion by characterizing HEAD and reasoning backward
+about an older release. Method: `git show v14.1.1:<path>` and compare the
+decisive lines.
+
+| Finding | Verified at `v14.1.1` | 14.x action | 15.0 disposition |
+| --- | --- | --- | --- |
+| `requires` resolved against NAMES while the sorter matches `provides` | guard `appliedEnhancers.has(dep)`; sorter `a.provides.has(req)` (`enhancers/index.ts:91`) — the disagreement is real at 14.1.1 | **PATCH CODE** | inherit (`681ffb8e`) |
+| enhancer marked applied BEFORE it succeeds | `appliedEnhancers.add(meta.name)` precedes `return enhancer(tree)` | **PATCH CODE** | inherit |
+| anonymous enhancer's `requires` silently ignored | whole block gated on `if (meta?.name)` | **PATCH CODE** | inherit |
+| `ENHANCERS.md` composition example cannot compile | imports `composeEnhancers` from `@signaltree/core`, where `index.ts:303` carries only a REMOVAL COMMENT ("removed from the root barrel in v12"); also passes enhancer FACTORIES | **PATCH DOCS** | corrected docs continue |
+| `withAudit` guide example cannot work | `{ name: 'withAudit', provides: ['audit'], requires: ['logger'] }` — `name !== provides`, unsatisfiable under the name-based guard | **PATCH DOCS** | ditto |
+| `createEnhancer` JSDoc example cannot work | `provides: ['feature1'], requires: ['feature2']` — same shape | **PATCH DOCS** | ditto |
+| builder `bind()` under-promise | `bind(thisArg?: unknown): (value?: TSource) => TSource \| void` (`builder-types.ts:70`) | **NEEDS CONSUMER PROOF** — see below | corrected (`215568cb`); SURVIVAL is a separate question, item 9 |
+| false `SignalTree<T>` root-state surface | `export type SignalTree<T> = ISignalTree<T> & TreeNode<T>` (`types.ts:1297`) | **PATCH DOCS / KNOWN ISSUE** — do not silently make a breaking type correction on 14.x | **BREAKING CORRECTION** (`243dd5fb`) |
+| `composeEnhancers` broken types + bypass semantics | implementation byte-identical (`utils.ts:377`) | **PATCH DOCS / DEPRECATION** — see the warning below | **ARCHITECTURAL CUTOFF** (`6c3d73a8`) |
+| `SignalTreeBase` | present (`types.ts:1298`); no defect | **NO ACTION** | **ARCHITECTURAL CUTOFF** (`6a515699`) |
+| stale generated API-surface docs | **NOT MEASURED at 14.1.1** — the staleness found was relative to HEAD source | **UNCLASSIFIED** | 15.0 cleanup (`7772effa`) |
+| `nx test core` unreliable + swallows the reporter; `api-inventory` member/shape blind spot | tooling, not a consumer contract | **NO ACTION** | **TOOLING DEBT** — Phase 5 |
+
+### Do NOT "repair" `composeEnhancers` runtime semantics in a 14.x patch
+
+Making it traverse the canonical `.with()` boundary instead of invoking children
+directly would change ordering, dependency-validation outcomes, duplicate
+detection and identity-replacement behaviour. That is a semver-BREAKING change
+wearing a bug-fix costume. A documentation/deprecation patch discharges the 14.x
+maintenance obligation; deletion stays the 15.0 answer.
+
+### Required postcondition for the enhancer-bookkeeping patch
+
+```
+validate prerequisites -> invoke enhancer -> enhancer SUCCEEDS -> publish
+                                                                  identity +
+                                                                  capabilities
+```
+
+A throwing enhancer must contribute NEITHER identity NOR capabilities.
+
+### `bind()` — NEEDS CONSUMER PROOF, and the question is bigger than the type
+
+Do not classify this as a 14.x type defect yet. Repairing the declaration of a
+surface 15.0 may delete would MANUFACTURE a 14.x contract rather than honour
+one. Sequence:
+
+```
+Is bind() an independently supported 14.x CONSUMER contract?
+  NO  -> internalize/delete question; do not "fix" its declaration on 14.x
+  YES -> characterize the real public semantics, THEN ask whether the
+         declaration is defective and patchable
+```
+
+An apparently more accurate declaration can still be breaking under TypeScript
+assignability, so a real 14.x consumer matrix is required either way.
+
+**Measured, and it is why this is not routine cleanup.** Every meaningful use is
+one pattern — capture the original callable, then replace tree identity —
+at `batching.ts:305`, `devtools-impl.ts:1670`, `time-travel.ts:2134`, and taught
+at `custom-markers-enhancers.md:800`. Two of those three CAST AROUND the declared
+type (`as unknown as { bind: (t: unknown) => … }`), so the declaration was not
+functioning as a contract for the code that needed it. And `bind` is the NAMED
+cause of the variance failure that forced the fixed `EnhancerHost`
+(`types.ts:1476`): `NodeAccessor<T>` has input positions, so `ISignalTree<Model>`
+is not assignable to a host declaring `bind(): NodeAccessor<unknown>`.
+
+So it intersects the callable-tree ontology AND the neutral enhancer boundary —
+do not bury it beside `deepEqual`. The audit property for item 9:
+
+> Does SignalTree semantically own a public "bound callable accessor" concept,
+> or is `bind()` merely the mechanism enhancer realizations use to preserve the
+> pre-wrapper invocation path?
+
+Falsifier for deletion: a supported consumer behaviour that requires
+`tree.bind(...)`, cannot be expressed through the canonical tree/authoring
+contracts without loss, and is not merely machinery for wrapping the callable.
+
+**NOT PROVEN, do not repeat as fact:** that a closure `(...args) => tree(...args)`
+is semantically equivalent to `bind()`. That was asserted in session and
+retracted — it needs a real falsifier over read/update call forms, mutation
+context and metadata, identity-replacement behaviour, `this` semantics, and the
+wrapper's property/prototype copying.
+
+### Branch mechanics are execution, not classification
+
+A live 14.x maintenance branch is NOT required to classify. Prove the defect
+against supported 14.x source first; create the branch from the latest supported
+14.x state when patch work is actually scheduled.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
