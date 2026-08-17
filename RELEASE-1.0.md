@@ -2651,6 +2651,79 @@ owners immediately after establishing one. The shape that preserves both
 properties is `.with()` owning application and DevTools OBSERVING it through a
 hook — not DevTools replacing `.with()` to learn that application happened.
 
+## SCHEMA REGRESSION — BISECTED AND CHARACTERIZED, repair NOT yet chosen
+
+```
+FIRST BAD    d8824b91  feat(history): scaffold causal runtime kernel
+PARENT       d8824b91~1
+RANGE        v14.1.1 .. 0693f683  (193 commits, 7 bisect steps)
+PREDICATE    schema's own Nx test target (`vitest run` in packages/schema),
+             not a hand-picked invocation — the runner lesson applies to the
+             bisect classifier too. `demo:test` deliberately EXCLUDED from the
+             predicate: its 4 failures are the same defect and would only add
+             noise. It is a repair confirmation instead.
+```
+
+### The semantic change
+
+`d8824b91` does not touch `@signaltree/schema` at all. It changes
+`interceptLeafSignals` — the PUBLIC authoring API schema observes writes
+through — to SKIP any node that now carries an intrinsic mutation emitter:
+
+```ts
+const hasOwnedMutationEmitter = hasIntrinsicMutationEmitter(node);
+if (hasOwnedMutationEmitter) {
+  return false;          // <- no longer wrapped, callback never fires
+}
+```
+
+The causal-runtime kernel gave leaves their own mutation emitters and routed
+those writes through the new capture path. Core's own consumers — `timeTravel`,
+`devTools`, `transactions` — were updated in the same commit. The EXTERNAL
+consumer was not, and nothing tested it.
+
+### Direct consequence, measured not inferred
+
+Same probe, both commits: install `interceptLeafSignals` on `tree.$`, write two
+plain leaves, record the paths the callback receives.
+
+```
+d8824b91~1   ["count", "user.name"]
+current HEAD []
+```
+
+Schema's callback never fires, so no verdict is ever applied — which is exactly
+the failure family: `isValid` stays `true` ("expected true to be false") and the
+errors map stays empty ("expected undefined to be 'a-err'"). Failure identity at
+the first bad commit matches HEAD.
+
+### Why this is the most consequential finding of the slice
+
+`interceptLeafSignals` is exported from `@signaltree/core/authoring`. It is the
+supported way a third-party enhancer observes leaf writes, and the ledger
+already flags it as the last genuine SDK symbol dragging Angular. Its contract
+was narrowed by an internal kernel change, and the only external consumer in the
+repo broke silently for ~150 commits.
+
+### Repair hypotheses — CANDIDATES ONLY, not chosen
+
+```
+A  restore the public contract: interceptLeafSignals delivers callbacks for
+   owned-emitter nodes too, so an external observer sees every leaf write
+B  migrate schema onto the new mutation-capture path, accepting that the
+   authoring contract narrowed deliberately
+```
+
+A treats the narrowing as an unintended break of a supported API; B treats it as
+an intentional redesign that schema simply never followed. **Do NOT revert
+`d8824b91`** — this branch carries ~150 commits of intentional 15.0 work built
+on that kernel; the commit locates where the invariant was lost, it does not
+prescribe the endpoint.
+
+The deciding question is whether `interceptLeafSignals` is still meant to be the
+supported leaf-observation contract for third-party authors. That is a Gate B
+API decision, not a repair detail.
+
 ## VALIDATION LADDER — workspace test rung (added at the schema blocker)
 
 **Building a package is not evidence that its runtime contract passes.** The
