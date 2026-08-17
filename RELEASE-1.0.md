@@ -547,13 +547,85 @@ the kernel before `GATE A`.
 
 ## Phase 2 — Public Release Surface
 
-- [ ] inventory public packages
+- [x] inventory public packages — `6e7bf16a`, baseline `tools/api-baseline.json`
+- [ ] **PACKAGE TOPOLOGY DECISION** (below) — blocks the export freeze
 - [ ] freeze exports
 - [ ] public TypeScript tests
 - [ ] compatibility matrix
 - [ ] freeze public API
 
 Exit condition: `GATE B`
+
+### Measured public surface (`6e7bf16a`, checker-resolved, not regex)
+
+| Package | Total | Runtime | Type-only | **Angular in public TYPE** | Angular in decl | Internal-decl leaks |
+| --- | --: | --: | --: | --: | --: | --: |
+| `core` | 209 | 84 | 125 | **3** | 169 | **17** |
+| `events` | 116 | 63 | 53 | **0** | 11 | 0 |
+| `ng-forms` | 34 | 15 | 19 | **3** | 26 | 0 |
+| `guardrails` | 33 | 11 | 22 | **0** | 2 | 0 |
+| `realtime` | 13 | 5 | 8 | **0** | 7 | 0 |
+| `schema` | 4 | 1 | 3 | **0** | 4 | 0 |
+
+`core` by entrypoint: `.` 142 (36 runtime) · `./authoring` 48 (39) · `./security` 7 ·
+`./edit-session` 6 · `./lazy` 3 · `./storage` 3.
+
+**The headline finding: core's CONTRACT is already framework-neutral.** Only 3 of
+209 symbols expose an Angular type publicly — `linked`, `trackHistory`,
+`toWritableSignal` — even though 169 declaring files import Angular internally.
+Framework coupling is an implementation fact, not an API fact. A kernel
+extraction therefore does not require a large public API change, which is a
+materially stronger position than the file counts suggested.
+
+### PACKAGE TOPOLOGY DECISION — required before the export freeze
+
+Freezing 209 core symbols before deciding the topology risks discovering that
+some belong elsewhere and having to redo `GATE B`. Four questions:
+
+1. **17 internal declarations are publicly exported.** 7 on root
+   (`ProcessDerived`, `DeepMergeTree`, `DerivedFactory`, `WithDerived`,
+   `derivedFrom`, `SignalTreeBuilder`, `SignalTreePlanBuilder` from
+   `lib/internals/*-types.ts`) and 10 on `./authoring` (marker-processor,
+   hydrate-decision and error-reporter symbols). Are these intentional
+   extension points to be relocated out of `internals/`, or accidental leaks to
+   be removed? Removal is a breaking change; keeping them means `internals/` is
+   a misnomer for those files.
+2. **`ng-forms` re-exports core's audit API as its own** — `createAuditTracker`,
+   `createAuditCallback`, `AuditEntry`, `AuditMetadata`, `AuditTrackerConfig`,
+   all declared in `packages/core/src/lib/audit/audit.ts`. Two packages publish
+   one API. Which owns it?
+3. **Three packages declare an `@angular/core` peer that their public types do
+   not require** — `events` (0 of 116), `realtime` (0 of 13), `schema` (0 of 4).
+   `events` already splits `./angular` and `./nestjs` subpaths, so its root
+   could be framework-neutral with Angular peer-scoped to the subpath. `schema`
+   is the strongest case: a Standard Schema bridge should not need Angular at
+   all. Narrow the peers, or keep them for safety?
+4. **`@signaltree/kernel`: private boundary or published package?** Recommend
+   PRIVATE first. The extraction prerequisite is unchanged — the realization
+   port still consumes the Angular-shaped `TreeScalarSlotRuntime` and must move
+   to the neutral `SlotIndex` interface. Publishing also means committing to a
+   surface; whether that surface is small (`createTree`, `transactions`,
+   `history`, `persistence`) or forces `SlotIndex` / `StructuralStore` /
+   `EntityMutationFrame` into public view is exactly what a private boundary
+   lets us find out without a compatibility promise.
+
+Recommended topology, pending that decision:
+
+```text
+              @signaltree/kernel  (private first)
+                      |
+              @signaltree/core    (Angular integration + product API)
+                      |
+   +----------+-------+--------+-----------+
+   |          |                |           |
+ng-forms   schema?          realtime?   guardrails
+(Angular)  (neutral?)       (neutral?)  (already neutral)
+
+events: root neutral, Angular peer scoped to ./angular, Nest to ./nestjs
+```
+
+Two facts support this being achievable rather than aspirational: `guardrails`
+already imports zero Angular across 6 files, and `shared` zero across 12.
 
 ## Phase 3 — Packaging Proof
 
