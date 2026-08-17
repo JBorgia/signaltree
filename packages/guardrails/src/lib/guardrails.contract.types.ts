@@ -30,6 +30,7 @@ import { signalTree } from '@signaltree/core';
 
 import { guardrails } from './guardrails';
 
+import type { Enhancer } from '@signaltree/core';
 import type { GuardrailsAPI } from './types';
 
 // --- compile-time assertion helpers -----------------------------------------
@@ -71,16 +72,42 @@ export type _AddedSurface = Expect<
 export const _count: number = guarded.$.count();
 export const _name: string = guarded.$.user.name();
 export const _user: { name: string; age: number } = guarded.$.user();
+
+// Rule 0d — a branch keeps all three call forms through the enhancer.
+guarded.$.user({ age: 37 });
+guarded.$.user((current) => ({ ...current, age: current.age + 1 }));
+
+// Root call forms — READ and both WRITE forms, not just the read.
 export const _snapshot: AppState = guarded();
+guarded({ count: 1 });
+guarded((current) => ({ ...current, count: current.count + 1 }));
+// @ts-expect-error a root write must not accept a foreign key
+guarded({ nope: 1 });
 
 // ============================================================================
-// 3 — accumulation in BOTH orders
+// 3 — accumulation in BOTH orders, against a SECOND enhancer
 // ============================================================================
-const guardedThenTravelled = tree.with(guardrails());
-export const _acc1: number = guardedThenTravelled.$.count();
-export type _AccKeepsAddition = Expect<
-  Equal<(typeof guardedThenTravelled)['__guardrails'], GuardrailsAPI | undefined>
->;
+// The first draft of this section applied `guardrails()` alone and called that
+// "both orders", which proved nothing about accumulation. Corrected before this
+// file was used as migration evidence.
+declare const labeller: Enhancer<{ label(): string }>;
+
+const guardedThenLabelled = tree.with(guardrails()).with(labeller);
+const labelledThenGuarded = tree.with(labeller).with(guardrails());
+
+export const _acc1: number = guardedThenLabelled.$.count();
+export const _acc2: string = guardedThenLabelled.label();
+export const _acc3: number = labelledThenGuarded.$.count();
+export const _acc4: string = labelledThenGuarded.label();
+
+export type _AccKeepsAddition = [
+  Expect<
+    Equal<(typeof guardedThenLabelled)['__guardrails'], GuardrailsAPI | undefined>
+  >,
+  Expect<
+    Equal<(typeof labelledThenGuarded)['__guardrails'], GuardrailsAPI | undefined>
+  >
+];
 
 // ============================================================================
 // 4 — config is optional and does not change the added surface
