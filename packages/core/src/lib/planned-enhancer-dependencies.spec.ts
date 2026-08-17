@@ -16,17 +16,34 @@
  *    bypass was fail-OPEN — no error, dependent enhancer runs anyway, tree
  *    looks fine.
  *
- * 2. THE DEFECT — `requires` is resolved against TWO DIFFERENT NAMESPACES by
- *    the two things that read it:
+ * 2. THE DEFECT — see the banner below. `requires` has two authorities that
+ *    disagree, and the tests recording that are NOT a compatibility contract.
  *
- *      resolveEnhancerOrder   edges only when `a.provides.has(req)`  -> CAPABILITY
- *      .with() guard          `appliedEnhancers.has(req)`            -> NAME
+ * ============================================================================
+ * KNOWN DEFECT / TRANSITIONAL CHARACTERIZATION — DO NOT FREEZE
+ * ============================================================================
+ * `requires` currently has INCONSISTENT AUTHORITY:
  *
- *    So a requirement is satisfiable only when some enhancer is BOTH named `x`
- *    AND declares `provides: ['x']`. The two natural spellings both fail, and
- *    they fail at build time with a message that names the requirement but not
- *    the reason. Pinned as CURRENT BEHAVIOUR, not endorsed — repairing it is
- *    enhancer-metadata work, not part of the deletion slice that found it.
+ *     resolveEnhancerOrder   interprets `requires` against `provides`  (CAPABILITY)
+ *     .with() validation     interprets `requires` against `name`      (NAME)
+ *
+ * so a requirement is satisfiable only when some enhancer is BOTH named `x` AND
+ * declares `provides: ['x']`. Both natural spellings fail at build time, with a
+ * message that names the requirement but not the reason.
+ *
+ * The three tests below marked DEFECT record CURRENT BEHAVIOUR so that release
+ * queue item #3 (migrating the built-in enhancers to `Enhancer<Methods>`, where
+ * these contracts are normalized) can change it DELIBERATELY. They are NOT a
+ * compatibility requirement and they are NOT desired semantics.
+ *
+ * If you are here because you made the namespace coherent and these went red:
+ * that is the fix landing. UPDATE THE TESTS — do not restore the bug.
+ * ============================================================================
+ *
+ * NOT MEASURED: whether composing also hid child enhancer CAPABILITIES from
+ * `buildTreePlan`. The probe could not reach the build plan as an observable
+ * property, so there is no result either way — not an open prerequisite. Reopen
+ * only if a concrete item-#3 decision depends on it.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -58,14 +75,17 @@ function build(providerMeta: Record<string, unknown>, req: string) {
 
 describe('plannedSignalTree enhancer dependency metadata', () => {
   it('reorders the dependent enhancer after its provider (source order ignored)', () => {
-    // The only spelling that works: named `provider` AND provides `provider`.
+    // DEFECT-ADJACENT: the only spelling that works today is the redundant one
+    // — named `provider` AND provides `provider`. The REORDERING itself is the
+    // real guarantee here and should survive item #3; the doubled spelling
+    // should not need to.
     expect(build({ name: 'provider', provides: ['provider'] }, 'provider')).toEqual([
       'provider',
       'consumer',
     ]);
   });
 
-  it('DEFECT: a capability-only `provides` does not satisfy `requires`', () => {
+  it('DEFECT (transitional, item #3 owns this): capability-only `provides` does not satisfy `requires`', () => {
     // Reads as the obvious spelling — consumer requires the "base" capability,
     // provider supplies it — and it throws, because the guard wants a NAME.
     expect(() => build({ name: 'provider', provides: ['base'] }, 'base')).toThrow(
@@ -73,7 +93,7 @@ describe('plannedSignalTree enhancer dependency metadata', () => {
     );
   });
 
-  it('DEFECT: requiring the provider BY NAME does not satisfy it either', () => {
+  it('DEFECT (transitional, item #3 owns this): requiring the provider BY NAME fails too', () => {
     // The mirror-image spelling. Now the guard would be happy, but
     // `resolveEnhancerOrder` builds no edge (nobody PROVIDES "provider"), so no
     // reordering happens and the guard fires on the original order.
