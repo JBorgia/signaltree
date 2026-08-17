@@ -123,22 +123,38 @@ Never include unrelated dirt in release commits.
 
 ## Rules
 
-0. **When a measurement will drive an API or architecture decision, use the
-   strongest available measurement, never a convenient proxy.** Earned the hard
-   way — every proxy used in this release was materially wrong at least once:
+0. **Measure the property that actually governs the decision. A convenient proxy
+   is not evidence for a DIFFERENT property. When two measurements disagree,
+   determine whether they measure the same property; if they do, reconcile them
+   before acting.**
 
-   | Proxy | Said | Truth | Would have caused |
+   Two distinct failure classes, and conflating them is itself a mistake:
+
+   **(a) A weak measurement of the RIGHT property.** These are simply wrong, and
+   each produced a confident conclusion that survived until something
+   contradicted it:
+
+   | Weak | Said | Strong | Truth |
    | --- | --- | --- | --- |
-   | `grep -c '^export'` | core 141 exports | 209 across 6 entrypoints | freezing a surface 1/3 unseen |
-   | `SymbolFlags.Value` on an alias | 2 runtime exports | 84 | wrong runtime/type split |
-   | `signal(` | `stored` uses 0 | 1 (`signal<T>(`) | "already neutral", wrongly |
-   | `angularInType` | `schema` needs no Angular | emits `@angular/core` | dropping a required peer |
-   | `toContain('a')` | test passing | matched the `a` in `"data"` | shipping a defect with a green test |
-   | file-level `@angular` grep | core deeply coupled | 3 of 209 public types | deferring a viable extraction |
+   | `grep -c '^export'` on `index.ts` | core 141 | checker export graph | 209 across 6 entrypoints |
+   | `SymbolFlags.Value` on an alias | 2 runtime exports | `getAliasedSymbol` first | 84 |
+   | `signal(` | `stored` uses none | `signal\s*[<(]` | 1 — it is `signal<T>(` |
+   | `toContain('a')` on a JSON payload | test green | parse, compare the value | red — matched the `a` in `"data"` |
 
-   Two of those produced a confidently wrong conclusion that survived until a
-   second measurement contradicted it. When two measurements disagree, stop and
-   reconcile before acting on either.
+   **(b) Correct measurements of DIFFERENT properties.** These do not contradict
+   each other; all can be true at once, and each answers its own question:
+
+   | Measurement | Property it governs |
+   | --- | --- |
+   | Angular imported by source files | implementation coupling |
+   | Angular in the public `.d.ts` | type-contract coupling |
+   | Angular in the emitted entrypoint | runtime / package dependency |
+
+   Core is 169-of-209 by the first, 3-of-209 by the second, and requires Angular
+   by the third. Reading the second as "core is nearly framework-neutral" would
+   be a category error: `angularInType` measured that `schema`'s public API does
+   not EXPOSE Angular — it never measured whether the package REQUIRES Angular
+   at runtime, which the emitted root import settles, and it does.
 
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
