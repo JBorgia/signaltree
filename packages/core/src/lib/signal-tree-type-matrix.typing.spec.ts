@@ -39,9 +39,20 @@
  * these semantics follow" — which says nothing about the real consumer path,
  * because the factory returns `SignalTreeBuilder`. Section C is the join: it
  * asserts POSITIVELY that the constructor's return satisfies the canonical
- * annotation. Adding it exposed two real defects, one on each side, both now
- * fixed; the history is kept in section C because the method that found the
- * second one generalizes.
+ * annotation. Adding that join exposed a real mismatch; a one-variable
+ * falsifier separated it into two independent defects, one on each side, both
+ * now fixed. The history is kept in section C because the method that separated
+ * them generalizes.
+ *
+ * THE PATTERN, WHICH IS NOT ABOUT SignalTree
+ *
+ * When two representations are supposed to describe the same public concept —
+ * an annotation and a factory return, a hand-written type and an inferred one,
+ * a documented shape and an emitted one — add an EXPLICIT POSITIVE JOIN
+ * ASSERTION between them. Characterizing each side separately can leave both
+ * green while they disagree, and that disagreement is invisible to a symbol
+ * inventory, to runtime tests, and to review. The join is the only row that
+ * fails.
  *
  * A NOTE ON READING TYPESCRIPT ERRORS AS CAUSES
  *
