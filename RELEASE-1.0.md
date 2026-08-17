@@ -1373,7 +1373,111 @@ A prior in-file fix attempt at `entity-map.ts` exported `DefaultKey` with a
 correct diagnosis of the SYMPTOM but left the tag in place, so it did not resolve
 the defect.
 
-#### OPEN — second instance, possibly a second mechanism
+#### RESOLVED — one cause, two source presentations
+
+`stripInternal` is the single production cause for every instance found. Proven by
+toggling ONE variable on the production plugin path and searching the whole output
+tree (121 `.d.ts` files):
+
+|                    | `stripInternal: true`        | `stripInternal: false`                      |
+| ------------------ | ---------------------------- | ------------------------------------------- |
+| `createFormSignal` | declarations 0, references 5 | declarations 1 (`form.d.ts`)                |
+| `HydrateMode`      | declarations 0, references 3 | declarations 1 (`materialize-markers.d.ts`) |
+
+It is reached through two SOURCE presentations, not two mechanisms:
+
+| presentation | shape                                                                             | detectable by `getJSDocTags()`? |
+| ------------ | --------------------------------------------------------------------------------- | ------------------------------- |
+| direct       | the declaration's own leading `@internal`                                         | yes                             |
+| orphan       | an EARLIER `@internal` docblock still sitting in the declaration's leading trivia | **NO**                          |
+
+`createFormSignal` is direct (own tag at `form.ts:342`). `HydrateMode` is orphan:
+`materialize-markers.ts` closes an `@internal` docblock at line 43, has a banner
+comment, opens a fresh docblock at 49, and declares `HydrateMode` at 71 with NO
+declaration in between — so the orphaned tag is in its leading trivia.
+`ts.getJSDocTags()` on that declaration reports `[none]`.
+
+> **For SignalTree's production TypeScript emit, `getJSDocTags()` is not sufficient
+> to predict `stripInternal`.** An orphaned `@internal` block in a declaration's
+> leading comment trivia can cause stripping even when the parsed declaration
+> reports no `internal` JSDoc tag.
+
+This retroactively explains `DefaultKey`: the earlier in-file fix exported it and
+left an orphaned `@internal` above the new docblock, which is why exporting looked
+correct and changed nothing.
+
+**THE EARLIER AST SCAN IS INVALIDATED.** It used `getJSDocTags()`, so it measured
+attached-JSDoc semantics as a proxy for the emitter's LEXICAL behaviour. Its "3
+defects" result understates the true count. Do not patch it with a special case for
+`HydrateMode` — replace the measurement.
+
+Two more of my own conclusions were wrong for the recorded reason and are corrected
+here: "removing `createFormSignal`'s tag didn't help" (the tag is demonstrably the
+cause) and the earlier `isDev` refutation. Both trusted a check never verified
+against a fresh artifact. Fourth occurrence of that failure mode this session.
+
+#### The measurement that can CLOSE the declaration chapter
+
+Stop hunting symbols one at a time and stop trying to reimplement TypeScript's rules
+for what counts as internal. Run the production declaration emit twice and diff:
+
+```
+stripInternal: true   vs   stripInternal: false
+        |
+        v
+anything present ONLY in the `false` output
+that is still REFERENCED by the `true` output
+        =
+broken declaration closure
+```
+
+That directly measures the dangerous property and is presentation-agnostic — it
+catches ordinary type references, default generic helpers, orphaned comment blocks,
+`typeof` value queries, and any fourth syntactic form. A leading-trivia scan is
+still useful as a candidate FINDER, never as the oracle.
+
+#### Repairs — deterministic, product intent already frozen
+
+```
+createFormSignal   KEEP  -> remove its declaration's own @internal
+HydrateMode        KEEP  -> remove the orphaned @internal docblock above it
+```
+
+No API redesign, no barrel changes, no `stripInternal` config change. Verify each
+INDEPENDENTLY before combining: build exit 0, fresh artifacts, whole-tree
+declaration AND reference search, packed declaration, external consumer against the
+packed artifact, exact intended public type. For `HydrateMode` prove the emitted
+union is exactly `'merge' | 'restore' | 'rehydrate' | 'transfer'` and that the public
+hook/event declarations resolve to it. For `createFormSignal` prove the function
+SIGNATURE is present, not merely that a re-export mentions the name.
+
+#### FROZEN — do not reopen
+
+```
+isDev             KEEP        createFormSignal   KEEP
+HydrateMode       KEEP        stripInternal      KEEP ENABLED
+re-export chains  NOT causal  barrel widening    NOT a fix
+```
+
+The re-export-chain hypothesis was never tested and does not need to be: one
+compiler variable explained both cases.
+
+#### Third fixture presentation
+
+Add the orphan presentation to the permanent closure fixture — a regression case for
+the bug that defeated source inspection, not a new rule:
+
+```ts
+/** @internal */
+
+// banner comment, no declaration in between
+
+/** Public support type. */
+export type PublicSupport = 'a' | 'b';
+```
+
+Assert the gate detects `PublicSupport` disappearing while a public declaration still
+references it. This exercises Rule 0c; it is not a new rule.
 
 `isDev`, `createFormSignal`, and `HydrateMode` are also publicly exported yet
 `@internal`. Removing `isDev`'s tag did NOT restore its declaration, so at least
