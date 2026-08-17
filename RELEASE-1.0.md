@@ -222,6 +222,11 @@ The value-space route is invisible to "is the name declared?" checks: the alias 
 declared. Only its inferred TYPE is dangling. Any closure gate must therefore check
 semantic validity, not symbol presence.
 
+**This rule is COMPLETE — stop adding rules for each new manifestation.** entity-map
+and the value-space alias are EXAMPLES of the invariant above, not separate
+architectural principles. The general statement is: public declaration closure is
+transitive across every dependency needed to interpret the shipped contract.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
@@ -1422,10 +1427,32 @@ Search the WHOLE fresh declaration tree for declaration sites and references to 
 `isDev` and `_isDev`. If tag removal does not restore the contract, stop and
 characterize what the fresh declarations actually contain — no mechanism guess.
 
+Report the `isDev` result as this table, not as prose — it makes promoting one
+sub-result into the conclusion much harder, which is exactly how the previous
+`isDev` claim went wrong:
+
+|                    | tagged | tag removed |
+| ------------------ | ------ | ----------- |
+| root importable    | ?      | ?           |
+| rolled declaration | ?      | ?           |
+| packed declaration | ?      | ?           |
+| consumer type      | ?      | ?           |
+| negative control   | ?      | ?           |
+
 Then run an AST **characterization scan** (not a fix list) for the value-space
-route: an exported variable whose emitted public type depends on `typeof X` where X
-is strip-removable — catching `export const publicFn = internalFn`,
-`= InternalClass`, `= internalObject`.
+route. **Do not limit it to functions** — the recorded invariant is broader. The
+property is whether the emitted public type contains a VALUE QUERY (`typeof
+InternalThing`) whose target will not survive production declaration emission:
+
+```ts
+export const x = internalFunction;
+export const x = InternalClass;
+export const x = internalObject;
+export const x = internalCallableObject;
+```
+
+Primitive initializers inline their literal type and are safe; anything the checker
+describes by reference to another symbol is a candidate.
 
 **Decide intent BEFORE de-internalizing any of the three, or any scan hit.** `isDev` is already in
 the deletion-first utility audit below, so the product fix may be to remove it
