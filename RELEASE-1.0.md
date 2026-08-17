@@ -2997,6 +2997,65 @@ extension must be notified when its registered positions participate in a
 settled semantic transaction" — then a public capability IS proven, and can be
 designed at minimum size without inheriting 14.x form.
 
+### BLOCKER — ANGULAR SUPPORT RANGE (product decision, gates all Angular-facing audit)
+
+MUT-0 is supposed to establish product requirements before deriving mechanisms.
+Carrying an unresolved Angular support policy while auditing Angular-facing APIs
+would leave a large conditional over the whole inventory, so this is settled
+first.
+
+**MEASURED FACTS ONLY — the decision itself is not mine to make.**
+
+```
+workspace builds on          @angular/* 22.0.7
+peer range, core             ^20.0.0 || ^21.0.0 || ^22.0.0
+peer range, ng-forms         ^20.0.0 || ^21.0.0 || ^22.0.0
+```
+
+**The two-track forms design is INTENTIONAL and currently COHERENT, not
+accidental legacy:**
+
+```
+@signaltree/ng-forms            root subpath
+   -> formBridge()              Reactive Forms (FormGroup) interop
+   -> resolves on 20 / 21 / 22
+
+@signaltree/ng-forms/signals    ISOLATED subpath in package.json#exports
+   -> signalForm()
+   -> imports '@angular/forms/signals' DIRECTLY (bridge.ts:23)
+   -> hard Angular 22 requirement
+```
+
+Because `/signals` is a separate export subpath, an Angular 20/21 consumer that
+never imports it is unaffected. **The declared peer range is therefore honest**
+— the 22-only dependency is opt-in, the same conditional-subpath pattern
+`guardrails` uses. This is a deliberate two-track design.
+
+**NOT MEASURED, and I will not assert it from memory:** Angular's own support
+status and EOL dates for 20 and 21 relative to SignalTree 15.0's ship date. That
+is a real input to the decision and should be checked against Angular's published
+support policy rather than recalled.
+
+**THE DECISION, framed per Rule 0h — cost is not an input:**
+
+```
+WRONG   formBridge is awkward to migrate -> require Angular 22+
+RIGHT   SignalTree 15 should support Angular <X> -> therefore these integration
+        functions are required -> derive their optimal kernel-native forms
+```
+
+```
+IF 20/21 SUPPORTED   Reactive Forms interop is a REQUIRED function.
+                     formBridge's FUNCTION survives -> then run Rule 0g step 2
+                     on its FORM (enhancer vs adapter). REDESIGN still possible.
+IF 22+ ONLY          the function falls outside the product boundary.
+                     formBridge becomes a genuine DELETE candidate, and
+                     `/signals` becomes the single forms track.
+```
+
+Everything Angular-facing in the audit — ng-forms, `defineStore`, publication
+ownership, and the authoring package's Angular coupling — inherits this answer.
+
 ### SUBTRACTION TEST — `formBridge` — **FUNCTION SURVIVES; FORM UNPROVEN**
 
 Pulled forward as a cheap functional falsifier: delete it and ask what capability
