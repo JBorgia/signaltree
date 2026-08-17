@@ -235,3 +235,75 @@ describe('persistence() autoSave survives a refused rollback', () => {
     expect(rec.writes.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * Second-pass audit blocker: 1f94f74a made settlement unconditional on three
+ * lifecycle exits, but rollback() has a FOURTH refusal door that returns before
+ * any of them — the plan-conflict check, which throws before `lifecycle` is
+ * even set to 'rejected'. That refusal is terminal (rollback() refuses again on
+ * every retry) and the documented recovery is a manual refetch that never calls
+ * confirm(), so nothing would ever settle the scope.
+ */
+describe('persistence() autoSave survives a REFUSED ROLLBACK PLAN', () => {
+  it('is not wedged when the rollback plan is conservatively rejected', async () => {
+    const { entityMap } = await import('../../lib/markers/entity-map');
+
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const rec = recordingStorage();
+    const tree = signalTree({
+      note: 'n0',
+      rows: entityMap<{ id: string; name: string }, string>({
+        selectId: (r) => r.id,
+      }),
+    })
+      .with(transactions())
+      .with(
+        persistence({
+          key: 'pco-conflict',
+          storage: rec.adapter,
+          autoSave: true,
+          autoLoad: false,
+          debounceMs: 10,
+        })
+      ) as unknown as {
+      $: {
+        note: { (): string; set(v: string): void };
+        rows: {
+          addOne(r: { id: string; name: string }): void;
+          byIdOrFail(id: string): { name: { set(v: string): void } };
+        };
+      };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = tree.transaction(() => {
+      tree.$.rows.addOne({ id: 'r1', name: 'Ada' });
+    });
+
+    // A later write to the same subject makes conservative rollback refuse.
+    // The two microtask turns are required for the dependent write to be
+    // captured before the plan is built — same idiom as the shipped
+    // "application refetch fallback" case in transactions.spec.ts.
+    tree.$.rows.byIdOrFail('r1').name.set('Alicia');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    let refused = false;
+    try {
+      pending.rollback();
+    } catch {
+      refused = true;
+    }
+
+    // The refusal itself is a supported contract; what must NOT happen is the
+    // scope staying open forever afterwards.
+    expect(refused).toBe(true);
+
+    tree.$.note.set('after-refusal');
+    await settleTimers();
+
+    expect(rec.writes.length).toBeGreaterThan(0);
+  });
+});

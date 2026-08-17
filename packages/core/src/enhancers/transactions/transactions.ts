@@ -1212,6 +1212,22 @@ export function getOrCreateInternalTransactionRuntime<T>(
               ? authority.getPendingRollbackPlan(pendingTurnId)
               : { compensation: [] };
           if ('conflict' in rollbackPlan) {
+            // The SECOND refusal door. 1f94f74a wrapped only the
+            // effect-validation refusal thrown from compensation; this
+            // PLAN-level refusal escaped before any settle, leaking the scope
+            // and killing persistence() for the life of the tree. It is not an
+            // edge case — it is the shipped, tested "application refetch
+            // fallback" pattern, which catches this error, compensates by hand
+            // and never confirms.
+            //
+            // Settled as 'commit', not 'discard': nothing was compensated, so
+            // every write this transaction authored is still live in the tree
+            // and IS the committed truth a reader sees. Discarding would drop
+            // durable consequences for state the tree is still showing, which
+            // is the tree/storage divergence this whole boundary exists to
+            // prevent. Same argument confirm() already uses for the equivalent
+            // situation.
+            settleCommitScope(transactionOwnerToken, transactionId, 'commit');
             throw createRollbackError(rollbackPlan.conflict);
           }
 

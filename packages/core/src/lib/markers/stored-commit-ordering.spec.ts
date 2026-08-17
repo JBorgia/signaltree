@@ -259,6 +259,41 @@ describe('stored() post-commit boundary — audit blockers', () => {
     expect(rec.adapter.getItem('sco-clear')).toContain('light');
   });
 
+  it('out-of-order confirm of overlapping transactions cannot resurrect a superseded value', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-overlap': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-overlap', 'v0', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(value: string): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    // Two pendings open at once on one tree. Only NESTED transactions are
+    // refused; overlapping ones are a designed-for case.
+    const p1 = store.transaction(() => store.$.v.set('a'));
+    const p2 = store.transaction(() => store.$.v.set('b'));
+
+    // Confirmed out of authoring order, which the API permits.
+    p2.confirm();
+    p1.confirm();
+
+    // 'a' was never committed truth by the time p1 settled: the tree already
+    // read 'b'. A consequence must persist committed truth at SETTLE time, not
+    // the value captured when the write was authored.
+    expect(store.$.v()).toBe('b');
+    expect(rec.adapter.getItem('sco-overlap')).toContain('b');
+  });
+
   it('does not absorb a write into a FOREIGN tree transaction scope', async () => {
     const { getPathNotifier, resetPathNotifier } = await import(
       '../path-notifier'
@@ -296,5 +331,82 @@ describe('stored() post-commit boundary — audit blockers', () => {
     // tree then disagrees with storage forever.
     expect(treeA.$.theme()).toBe('dark');
     expect(rec.adapter.getItem('sco-foreign')).toContain('dark');
+  });
+});
+
+/**
+ * Second-pass audit blocker: a deferred consequence must reflect COMMITTED
+ * truth at settle time, not the value captured when it was queued.
+ *
+ * The queued closure captured `value`, so a bare committed write made after
+ * the callback returned — the ordinary optimistic-UI shape, a request in
+ * flight while the user edits the same field again — was overwritten by the
+ * stale speculative value when the transaction confirmed. Storage ended up
+ * holding a value the tree never had, permanently.
+ */
+describe('stored() deferred consequences resolve at settle time', () => {
+  it('does not replay a stale speculative value over a later committed write', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-stale': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-stale', 'v0', { storage: rec.adapter, debounceMs: 0 }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(value: string): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => {
+      store.$.v.set('optimistic');
+    });
+
+    // A bare, non-transactional write: committed truth the moment it returns.
+    store.$.v.set('user-typed-later');
+    expect(rec.adapter.getItem('sco-stale')).toContain('user-typed-later');
+
+    pending.confirm();
+
+    // Storage must agree with the tree. The transaction's own value is stale.
+    expect(store.$.v()).toBe('user-typed-later');
+    expect(rec.adapter.getItem('sco-stale')).toContain('user-typed-later');
+  });
+
+  it('does not let a deferred clear() delete a later committed write', async () => {
+    const { getPathNotifier, resetPathNotifier } = await import(
+      '../path-notifier'
+    );
+    resetPathNotifier();
+    getPathNotifier().setBatchingEnabled(false);
+
+    const rec = recordingStorage({ 'sco-stale-clear': 'v0' });
+
+    const store = signalTree({
+      v: stored('sco-stale-clear', 'v0', {
+        storage: rec.adapter,
+        debounceMs: 0,
+      }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(value: string): void; clear(): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const pending = store.transaction(() => {
+      store.$.v.clear();
+    });
+
+    store.$.v.set('written-after-clear');
+    pending.confirm();
+
+    // The clear is stale: the node holds a committed value, so storage must
+    // hold it too rather than having the key removed.
+    expect(store.$.v()).toBe('written-after-clear');
+    expect(rec.adapter.getItem('sco-stale-clear')).toContain(
+      'written-after-clear'
+    );
   });
 });

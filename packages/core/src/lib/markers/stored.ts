@@ -657,6 +657,20 @@ export function createStoredSignal<T>(
   // scope actually owns this signal's durable consequences.
   const ownerRegistry = context?.positionRegistry;
 
+  /**
+   * Monotonic count of AUTHORED durable operations on this signal — writes and
+   * clears alike, deferred or immediate.
+   *
+   * A deferred consequence runs when its scope settles, and settle order is
+   * confirm order, not authoring order. Without a sequence, an older pending
+   * confirmed after a newer one replays a stale operation over a newer one:
+   * a superseded value overwrites the current one, or a deferred `clear()`
+   * deletes a key a later committed write had just populated. Comparing the
+   * captured sequence against the latest makes a superseded consequence a
+   * no-op, so settle order stops mattering.
+   */
+  let authoredSeq = 0;
+
   // Monotonic count of committed writes - used to drop a deferred migration
   // persist that would otherwise clobber data written after it was scheduled.
   let writeGeneration = 0;
@@ -870,7 +884,20 @@ export function createStoredSignal<T>(
     // Outside a transaction there is nothing to wait for: the write commits in
     // its own stack, so it falls straight through and `debounceMs: 0` keeps
     // its same-stack durability guarantee.
-    if (deferDurableConsequence(() => saveCommitted(value))) return;
+    // A DEFERRED consequence must resolve committed truth when it RUNS, not
+    // capture what was authored. Overlapping transactions on one tree are a
+    // designed-for case — only NESTED ones are refused — and they may confirm
+    // out of authoring order, which made the last SETTLED scope win rather than
+    // the last authored operation.
+    const seq = ++authoredSeq;
+    if (
+      deferDurableConsequence(() => {
+        if (seq !== authoredSeq) return; // superseded by a later operation
+        saveCommitted(untracked(() => sig()));
+      })
+    ) {
+      return;
+    }
 
     saveCommitted(value);
   };
@@ -999,7 +1026,16 @@ export function createStoredSignal<T>(
       // key with the write path, so a clear() supersedes any queued write to
       // this signal in the same transaction, and vice versa — last one wins,
       // which is what the tree ends up showing.
-      if (!deferDurableConsequence(removeNow)) removeNow();
+      //
+      // Across SCOPES the same sequence guard as the write path applies, or a
+      // clear deferred in an older pending would delete a key that a newer,
+      // already-confirmed transaction had legitimately written.
+      const seq = ++authoredSeq;
+      const deferred = deferDurableConsequence(() => {
+        if (seq !== authoredSeq) return; // superseded by a later operation
+        removeNow();
+      });
+      if (!deferred) removeNow();
     }
   };
 

@@ -6,6 +6,7 @@ import { signalTree } from '../signal-tree';
 import {
   deferCommitConsequence,
   hasOpenCommitScope,
+  onCommitScopesSettled,
   openCommitScope,
   settleCommitScope,
 } from './commit-consequence';
@@ -154,6 +155,45 @@ describe('commit-consequence registry — explicit attribution', () => {
 
     expect(() => settleCommitScope(owner, 1, 'commit')).toThrow('backend down');
     expect(ran).toEqual(['a', 'b']);
+  });
+
+  it('survives re-entrancy: a settle listener that writes and opens a new scope', () => {
+    // The audit that found the wedge never reached this case. A settle listener
+    // runs while settleCommitScope is still on the stack, so anything it does —
+    // deferring, opening another scope, settling one — must not recurse
+    // unboundedly, strand a scope, or lose the work.
+    // NOTE on the fixture: a scope carrying a tree only absorbs consequences it
+    // can prove it owns, and a bare `{}` has no position registry to match
+    // against — so the listener's nested work uses a tree-less scope. That
+    // refusal is the ownership gate behaving correctly; every real tree has a
+    // registry, which the stored()-level tests below exercise.
+    const owner = {};
+    const tree = {};
+    const order: string[] = [];
+    let reentered = 0;
+
+    const release = onCommitScopesSettled(tree, () => {
+      reentered++;
+      order.push(`listener-${reentered}`);
+      // Bound the re-entry in case a listener's own settle re-triggers it.
+      if (reentered > 3) return;
+      const nestedId = 100 + reentered;
+      openCommitScope(owner, nestedId);
+      deferCommitConsequence(owner, nestedId, 'k', () =>
+        order.push(`nested-${reentered}`)
+      );
+      settleCommitScope(owner, nestedId, 'commit');
+    });
+
+    openCommitScope(owner, 1, tree);
+    settleCommitScope(owner, 1, 'commit');
+    release();
+
+    // The listener ran exactly once, its nested scope's work ran and settled,
+    // nothing recursed unboundedly, and no scope was stranded.
+    expect(order).toEqual(['listener-1', 'nested-1']);
+    expect(reentered).toBe(1);
+    expect(hasOpenCommitScope(tree)).toBe(false);
   });
 
   it('reports open scopes per tree and clears them on settle', () => {
