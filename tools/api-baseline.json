@@ -1,0 +1,3738 @@
+{
+  "core": {
+    "entrypoints": [
+      ".",
+      "./security",
+      "./lazy",
+      "./edit-session",
+      "./storage",
+      "./authoring"
+    ],
+    "symbols": [
+      {
+        "name": "AccessibleNode",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AddManyOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AddOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "asReadonly",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "asyncQuery",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncQueryConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncQueryFn",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncQueryMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncQuerySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "asyncSource",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncSourceConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncSourceLoader",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncSourceMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncSourceSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AsyncValidator",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditEntry",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditMetadata",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditTrackerConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "batching",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/batching/batching.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BatchingConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BatchingMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "byKeys",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/compared.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "CallableWritableSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "clearStoragePrefix",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "compared",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/compared.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ComparedMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/compared.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ComputedSliceConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAuditCallback",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAuditTracker",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createStorageKeys",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "deepEqual",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/shared/src/lib/deep-equal.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DeepMergeTree",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/derived-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "DefaultKey",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "defineStore",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/define-store.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DefineStoreConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/define-store.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DerivedFactory",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/derived-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "derivedFrom",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/internals/derived-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "DerivedMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/derived.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DerivedType",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/derived.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "devTools",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/devtools/devtools.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DevToolsMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EffectsMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "Enhancer",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EnhancerCleanup",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EnhancerWithMeta",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityLoader",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityLoaderSurface",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityLoadOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "entityMap",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityMapBuilder",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityMapComputedSlices",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityMapMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityMapMarkerWithSlices",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityPersist",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntitySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntitySignalWithSlices",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityStorageAdapter",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "flushAllStoredSignals",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "form",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormFields",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormHistoryApi",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormHistoryOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormWizard",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "history",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/form-history/form-history.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "HistoryFeature",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "invalidateTag",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/entity-loader.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isDev",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/constants.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ISignalTree",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "linked",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/linked.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "LinkedOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/linked.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "loader",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/loader.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoaderFeature",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoaderOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/loader.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoadingEntityMapBuilder",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/entity-map.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoadingEntityMapMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoadingEntitySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LoadingState",
+        "subpath": ".",
+        "kind": "value+type",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "MigrationFn",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "MutationOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "NodeAccessor",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "NotFn",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "OptimizedUpdateMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PendingTransaction",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "persistence",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PersistenceConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PersistenceMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "plannedSignalTree",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/signal-tree.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "Primitive",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ProcessDerived",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/derived-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "ReadonlyAsyncQuerySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyAsyncSourceSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyEntityLoaderSurface",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyEntityNode",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyEntitySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyFormSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyFormWizard",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyLoadingEntitySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyNodeAccessor",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyStatusSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyStore",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyStoredSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ReadonlyView",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "serialization",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SerializationConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SerializationMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SerializedState",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/serialization.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "signalTree",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/signal-tree.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalTree",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalTreeBase",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalTreeBuilder",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/builder-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "SignalTreePlanBuilder",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/builder-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "SignalTreeRollbackError",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "status",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StatusConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StatusMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StatusSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "stored",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StoredErrorContext",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StoredMarker",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StoredOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StoredReloadResult",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StoredSignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "timeTravel",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/time-travel/time-travel.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TimeTravelEntry",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TimeTravelMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "toWritableSignal",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/utils.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "trackHistory",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/form-history/form-history.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "TransactionMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "transactions",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/transactions/transactions.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TreeConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TreeNode",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "UpdateMetadata",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "Validator",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "validators",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WithDerived",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/derived-types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "withKind",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WizardConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WizardStepConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ASYNC_QUERY_MARKER",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ASYNC_QUERY_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ASYNC_SOURCE_MARKER",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ASYNC_SOURCE_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "composeEnhancers",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/utils.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAsyncQuerySignal",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAsyncSourceSignal",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEnhancer",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createFormSignal",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ENHANCER_META",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EnhancerMeta",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ENTITY_LOADER_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ENTITY_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FORM_MARKER",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FORM_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FORM_WIZARD_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "getActiveWriteContext",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/write-context.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "getPathNotifier",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/path-notifier.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "HydrateDecision",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "HydrateDecisionEvent",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "HydrateMode",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "HydrateReason",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "interceptLeafSignals",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/internals/intercept-leaf-signals.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "isAnySignal",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/utils.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isAsyncQueryMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-query.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isAsyncSourceMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/async-source.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isBuiltInObject",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/shared/src/lib/is-built-in-object.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isDerivedMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/derived.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isFormMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isNodeAccessor",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/utils.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isSignalTree",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isStatusMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/status.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isStoredMarker",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/markers/stored.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isTraversableNode",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/utils.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "onHydrateDecision",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "onTreeError",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/internals/error-reporter.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "parsePath",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/shared/src/lib/parse-path.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PathNotifierHandler",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/path-notifier.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PathNotifierInterceptor",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/path-notifier.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "registerMarkerProcessor",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/internals/materialize-markers.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "resolveEnhancerOrder",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SIGNAL_TREE_CONSTANTS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/constants.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SIGNAL_TREE_MESSAGES",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/constants.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "STATUS_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "STORED_READERS",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/readonly.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TreeErrorEvent",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/error-reporter.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "TreeErrorSource",
+        "subpath": "./authoring",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/internals/error-reporter.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": true
+      },
+      {
+        "name": "withWriteContext",
+        "subpath": "./authoring",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/write-context.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEditSession",
+        "subpath": "./edit-session",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createTreeEditSession",
+        "subpath": "./edit-session",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EditSession",
+        "subpath": "./edit-session",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TreeEditSession",
+        "subpath": "./edit-session",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TreeEditSource",
+        "subpath": "./edit-session",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "UndoRedoHistory",
+        "subpath": "./edit-session",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/edit-session.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "lazy",
+        "subpath": "./lazy",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lazy.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "LazyFeature",
+        "subpath": "./lazy",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalMemoryManager",
+        "subpath": "./lazy",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/memory/memory-manager.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "security",
+        "subpath": "./security",
+        "kind": "runtime",
+        "declFile": "packages/core/src/security.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityEvent",
+        "subpath": "./security",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/security/security-validator.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityEventType",
+        "subpath": "./security",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/security/security-validator.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityFeature",
+        "subpath": "./security",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityPresets",
+        "subpath": "./security",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/security/security-validator.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityValidator",
+        "subpath": "./security",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/security/security-validator.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SecurityValidatorConfig",
+        "subpath": "./security",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/security/security-validator.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createIndexedDBAdapter",
+        "subpath": "./storage",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/serialization/storage-adapters.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createStorageAdapter",
+        "subpath": "./storage",
+        "kind": "runtime",
+        "declFile": "packages/core/src/enhancers/serialization/storage-adapters.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "StorageAdapter",
+        "subpath": "./storage",
+        "kind": "type-only",
+        "declFile": "packages/core/src/enhancers/serialization/storage-adapters.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  },
+  "events": {
+    "entrypoints": [
+      ".",
+      "./nestjs",
+      "./angular",
+      "./testing"
+    ],
+    "symbols": [
+      {
+        "name": "BaseEvent",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BaseEventSchema",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ClassificationResult",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "classifyError",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createErrorClassifier",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEvent",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventFactory",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "CreateEventOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventRegistry",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventSchema",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventSchemaFromZod",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createInMemoryIdempotencyStore",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DEFAULT_EVENT_VERSION",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DEFAULT_RETRY_CONFIGS",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "defaultErrorClassifier",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ErrorClassification",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ErrorClassifier",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ErrorClassifierConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EVENT_PRIORITIES",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventActor",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventActorSchema",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventCatalog",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventCatalogEntry",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventFactory",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventFactoryConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventMetadata",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventMetadataSchema",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventPriority",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventRegistry",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventRegistryConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventValidationError",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventVersion",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventVersionSchema",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "generateCorrelationId",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "generateCorrelationKey",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "generateEventId",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/factory.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "generateIdempotencyKey",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "IdempotencyCheckOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "IdempotencyCheckResult",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "IdempotencyStore",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "InMemoryIdempotencyStore",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "InMemoryIdempotencyStoreConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isRetryableError",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isValidEvent",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "parseEvent",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ProcessedEventRecord",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/idempotency.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RegisteredEvent",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/registry.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RetryConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/events/src/core/error-classification.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "safeParseEvent",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/events/src/core/validation.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "z",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.d.cts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "applyOptimisticEntityChange",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "batchedHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "composeHandlers",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "conditionalHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createHandlerRegistry",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createOptimisticUpdateManager",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createTypedHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "debouncedHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "entityEventHandler",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/entity-events.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityEventMapping",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/entity-events.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityEventOp",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/entity-events.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntityOptimisticPatch",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EntitySnapshotAccessor",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventHandler",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "OptimisticUpdate",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "OptimisticUpdateManager",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TypedEventHandler",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/handlers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "UpdateResult",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/optimistic-updates.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WebSocketConfig",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/websocket.service.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WebSocketConnectionState",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/websocket.service.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WebSocketMessage",
+        "subpath": "./angular",
+        "kind": "type-only",
+        "declFile": "packages/events/src/angular/websocket.service.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "WebSocketService",
+        "subpath": "./angular",
+        "kind": "runtime",
+        "declFile": "packages/events/src/angular/websocket.service.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BaseSubscriber",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/base.subscriber.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "CreateEventServiceOptions",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DLQ_SERVICE",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/tokens.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DlqEntry",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/dlq.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DlqQueryOptions",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/dlq.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DlqService",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/dlq.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "DlqStats",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/dlq.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ERROR_CLASSIFIER",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/tokens.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EVENT_BUS_CONFIG",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/tokens.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EVENT_HANDLER_METADATA",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/decorators.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EVENT_REGISTRY",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/tokens.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventBusModule",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventBusModuleAsyncConfig",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventBusModuleConfig",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventBusService",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/event-bus.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "IDEMPOTENCY_STORE",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/tokens.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "OnEvent",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/decorators.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ProcessingResult",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/base.subscriber.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PublishOptions",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PublishResult",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.service.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "QUEUE_PRESETS",
+        "subpath": "./nestjs",
+        "kind": "runtime",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "QueueConfig",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "QueuePreset",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RedisConfig",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/event-bus.module.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SubscriberConfig",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/base.subscriber.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SubscriberMetrics",
+        "subpath": "./nestjs",
+        "kind": "type-only",
+        "declFile": "packages/events/src/nestjs/base.subscriber.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AssertionResult",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/assertions.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "collectEvents",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/helpers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createEventAssertions",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/assertions.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createMockEventBus",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/mock-event-bus.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createTestEvent",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/factories.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createTestEventFactory",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/factories.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "EventAssertions",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/assertions.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "MockCreateEventOptions",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/mock-event-bus.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "mockErrorClassifier",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/helpers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "MockEventBus",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/mock-event-bus.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "MockEventBusOptions",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/mock-event-bus.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "mockIdempotencyStore",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/helpers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "PublishedEvent",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/mock-event-bus.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TestEventFactory",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/factories.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TestEventOptions",
+        "subpath": "./testing",
+        "kind": "type-only",
+        "declFile": "packages/events/src/testing/factories.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "waitForEvent",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/helpers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "waitForEvents",
+        "subpath": "./testing",
+        "kind": "runtime",
+        "declFile": "packages/events/src/testing/helpers.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  },
+  "guardrails": {
+    "entrypoints": [
+      ".",
+      "./factories",
+      "./noop"
+    ],
+    "symbols": [
+      {
+        "name": "BudgetItem",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BudgetStatus",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailIssue",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailRule",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "guardrails",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/lib/guardrails.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsAPI",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsReport",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "HotPath",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RuleContext",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "rules",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/lib/rules.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RuntimeStats",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "UpdateMetadata",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAngularFeatureTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAppShellTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createCacheTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createFeatureTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createGuardedFormTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createPerformanceTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createTestTree",
+        "subpath": "./factories",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/factories/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BudgetItem",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "BudgetStatus",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailIssue",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailRule",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "guardrails",
+        "subpath": "./noop",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/noop.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsAPI",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsConfig",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "GuardrailsReport",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "HotPath",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RuleContext",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "rules",
+        "subpath": "./noop",
+        "kind": "runtime",
+        "declFile": "packages/guardrails/src/noop.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RuntimeStats",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/guardrails/src/lib/types.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "UpdateMetadata",
+        "subpath": "./noop",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  },
+  "ng-forms": {
+    "entrypoints": [
+      ".",
+      "./audit",
+      "./signals"
+    ],
+    "symbols": [
+      {
+        "name": "AngularConditionalField",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AngularFieldConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AngularFormBridge",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AngularFormsConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AngularFormsMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ConditionalField",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createFormTree",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createVirtualFormArray",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "createWizardForm",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/wizard/wizard.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "EnhancedArraySignal",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FieldConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FieldValidator",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FORM_MARKER",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "(unresolved)",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "formBridge",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/enhancer/form-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormHistory",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/history/history.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormStep",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/wizard/wizard.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormTree",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormTreeAsyncValidatorFn",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormTreeOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "FormValidationError",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "isFormMarker",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "(unresolved)",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ngFormValidators",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/index.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SIGNAL_FORM_DIRECTIVES",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalValueDirective",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "TypedFormGroup",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/core/ng-forms.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "withFormHistory",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/history/history.ts",
+        "angularInDecl": true,
+        "angularInType": true,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditEntry",
+        "subpath": "./audit",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditMetadata",
+        "subpath": "./audit",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "AuditTrackerConfig",
+        "subpath": "./audit",
+        "kind": "type-only",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAuditCallback",
+        "subpath": "./audit",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createAuditTracker",
+        "subpath": "./audit",
+        "kind": "runtime",
+        "declFile": "packages/core/src/lib/audit/audit.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "applySignalTreeSchemas",
+        "subpath": "./signals",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/signals/bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "signalForm",
+        "subpath": "./signals",
+        "kind": "runtime",
+        "declFile": "packages/ng-forms/src/signals/signal-form.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SignalFormOptions",
+        "subpath": "./signals",
+        "kind": "type-only",
+        "declFile": "packages/ng-forms/src/signals/marker-bridge.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  },
+  "realtime": {
+    "entrypoints": [
+      ".",
+      "./supabase"
+    ],
+    "symbols": [
+      {
+        "name": "ConnectionState",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "ConnectionStatus",
+        "subpath": ".",
+        "kind": "value+type",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createConnectionState",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/realtime/src/connection-state.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "realtime",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/realtime/src/create-realtime-enhancer.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RealtimeAdapter",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/create-realtime-enhancer.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RealtimeConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RealtimeEnhancerOptions",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RealtimeEvent",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "RealtimeSubscription",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "createSupabaseAdapter",
+        "subpath": "./supabase",
+        "kind": "runtime",
+        "declFile": "packages/realtime/src/supabase/supabase-realtime.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "supabaseRealtime",
+        "subpath": "./supabase",
+        "kind": "runtime",
+        "declFile": "packages/realtime/src/supabase/supabase-realtime.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SupabaseRealtimeConfig",
+        "subpath": "./supabase",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/supabase/supabase-realtime.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SupabaseSubscriptionConfig",
+        "subpath": "./supabase",
+        "kind": "type-only",
+        "declFile": "packages/realtime/src/supabase/supabase-realtime.ts",
+        "angularInDecl": false,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  },
+  "schema": {
+    "entrypoints": [
+      "."
+    ],
+    "symbols": [
+      {
+        "name": "SchemaConfig",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/schema/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SchemaMethods",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/schema/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "SchemaPath",
+        "subpath": ".",
+        "kind": "type-only",
+        "declFile": "packages/schema/src/lib/types.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      },
+      {
+        "name": "schemas",
+        "subpath": ".",
+        "kind": "runtime",
+        "declFile": "packages/schema/src/lib/schema.ts",
+        "angularInDecl": true,
+        "angularInType": false,
+        "internalDecl": false
+      }
+    ]
+  }
+}
