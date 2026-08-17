@@ -1,4 +1,7 @@
-import { getPathNotifier } from '@signaltree/core/authoring';
+import {
+  getActiveWriteContext,
+  getPathNotifier,
+} from '@signaltree/core/authoring';
 import { deepEqual } from '@signaltree/shared';
 
 /**
@@ -494,6 +497,44 @@ function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
  * This is called directly by PathNotifier with precise path information,
  * avoiding the need for JSON diffing.
  */
+/**
+ * `suppression` — honour the write's intent instead of reporting on it.
+ *
+ * Declared in `GuardrailsConfig` and implemented in 14.1.2; before that BOTH
+ * halves were dead. `respectMetadata` was documented "Honor suppressGuardrails
+ * metadata flag" and nothing in this package ever read the flag —
+ * `@signaltree/schema` honoured it (leaf-handler.ts) while guardrails, the
+ * package it is named for, did not. `autoSuppress` was equally inert.
+ *
+ * `respectMetadata` defaults to ON: a write that has explicitly asked not to be
+ * guardrailed is stating intent, and ignoring it is what produced the false
+ * positives on hydrate/replay that the flag exists to prevent. Pass
+ * `respectMetadata: false` to report on those writes anyway.
+ */
+export function isSuppressedWrite<T>(
+  context: Pick<GuardrailsContext<T>, 'config'>,
+  metadata: UpdateMetadata | undefined
+): boolean {
+  if (!metadata) return false;
+  const suppression = context.config.suppression;
+
+  if (suppression?.respectMetadata !== false && metadata.suppressGuardrails) {
+    return true;
+  }
+
+  const auto = suppression?.autoSuppress;
+  if (auto?.length) {
+    // An intent and a source can each name a suppressed category.
+    if (metadata.intent && (auto as string[]).includes(metadata.intent)) {
+      return true;
+    }
+    if (metadata.source && (auto as string[]).includes(metadata.source)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function handlePathNotifierChange<T>(
   context: GuardrailsContext<T>,
   path: string,
@@ -501,6 +542,12 @@ function handlePathNotifierChange<T>(
   oldValue: unknown
 ): void {
   if (context.disposed || context.suppressed) return;
+
+  // The ambient write context carries this write's UpdateMetadata. Reading it
+  // here is what makes `suppression` work: the notifier callback has no other
+  // way to see the intent the caller declared.
+  const metadata = getActiveWriteContext();
+  if (isSuppressedWrite(context, metadata)) return;
 
   const startTime = performance.now();
   const timestamp = Date.now();
@@ -513,7 +560,7 @@ function handlePathNotifierChange<T>(
   };
 
   // Analyze the change
-  analyzePreUpdate(context, detail, {});
+  analyzePreUpdate(context, detail, metadata ?? {});
 
   const duration = performance.now() - startTime;
   const diffRatio = calculateDiffRatio(oldValue, newValue);

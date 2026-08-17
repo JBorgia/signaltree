@@ -98,7 +98,8 @@ export type {
   // own return type (losing `.batch()`/`.undo()`/… for its callers). Found via a
   // real consumer doing exactly that — see docs/audits/2026-07/.
   DevToolsMethods,
-  OptimizedUpdateMethods,
+  // `OptimizedUpdateMethods` removed in 14.1.2 — it typed the diff engine in
+  // `@signaltree/enterprise`, dropped in 14.0.0. See types.ts.
 
   // Lifecycle
   EnhancerCleanup,

@@ -5,7 +5,6 @@
 import type {
   BatchingMethods,
   DevToolsMethods,
-  OptimizedUpdateMethods,
   TimeTravelMethods,
   EntitiesEnabled,
 } from '../../lib/types';
@@ -53,19 +52,18 @@ type _triple_btd = Assert<
   >
 >;
 
-// Include optimized update methods and entities
-type EO = EntitiesEnabled & OptimizedUpdateMethods<Tree> & Base;
-type _pair_entities_opt = Assert<
-  Equals<EO, Base & EntitiesEnabled & OptimizedUpdateMethods<Tree>>
->;
+// Entities marker composes with the base tree.
+// The `OptimizedUpdateMethods` arm was dropped in 14.1.2 with the interface
+// itself — it typed `@signaltree/enterprise`, removed in 14.0.0.
+type EO = EntitiesEnabled & Base;
+type _pair_entities_opt = Assert<Equals<EO, Base & EntitiesEnabled>>;
 
 // Affirm composition assignability (structural)
 type Composite = Base &
   BatchingMethods &
   DevToolsMethods &
   TimeTravelMethods<Tree> &
-  EntitiesEnabled &
-  OptimizedUpdateMethods<Tree>;
+  EntitiesEnabled;
 type _composite_ok = Assert<Equals<Composite, Composite>>;
 
 export {};

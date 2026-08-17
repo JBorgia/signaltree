@@ -94,6 +94,7 @@
     "validate:docs": "bash scripts/validate-docs.sh",
     "validate:taught-symbols": "node scripts/verify-taught-symbols.js",
     "validate:version-claims": "node scripts/verify-version-claims.js",
+    "check:dead-type-surface": "node tools/check-dead-type-surface.mjs",
     "validate:release-state": "node scripts/verify-release-state.js",
     "validate:tarball-consumer": "node tools/verify-tarball-consumer.mjs",
     "validate:changelog-entry": "bash scripts/verify-changelog-entry.sh",

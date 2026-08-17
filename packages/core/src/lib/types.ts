@@ -475,27 +475,18 @@ export interface EntitiesEnabled {
   readonly __entitiesEnabled?: true;
 }
 
-export interface OptimizedUpdateMethods<T> {
-  updateOptimized(
-    updates: Partial<T>,
-    options?: {
-      batch?: boolean;
-      batchSize?: number;
-      maxDepth?: number;
-      ignoreArrayOrder?: boolean;
-      equalityFn?: (a: unknown, b: unknown) => boolean;
-    }
-  ): {
-    changed: boolean;
-    duration: number;
-    changedPaths: string[];
-    stats?: {
-      totalPaths: number;
-      optimizedPaths: number;
-      batchedUpdates: number;
-    };
-  };
-}
+// `OptimizedUpdateMethods<T>` was REMOVED here in 14.1.2.
+//
+// It described `@signaltree/enterprise`'s diff engine — `updateOptimized()`
+// and its stats block — and that package was dropped in 14.0.0 (be8460b5),
+// measured slower in every workload than core's reference-equality
+// short-circuit. That removal swept the demo page, the route, the benchmark
+// arm, the docs entry, the home-page card, the tsconfig path mapping and every
+// pipeline entry, and missed this interface, which kept being exported from
+// the root barrel. Nothing in any package implemented it, so no tree ever
+// satisfied it: a public type describing a deleted package's API.
+//
+// The replacement is `tree.updateAndReport()`, which needs no enhancer.
 
 export interface TimeTravelEntry<T> {
   action: string;
@@ -526,13 +517,19 @@ export interface TreeConfig {
    */
   useLazySignals?: boolean;
   useShallowComparison?: boolean;
-  maxCacheSize?: number;
-  trackPerformance?: boolean;
   /** Name shown in devtools. Was also spelled `treeName` on DevToolsConfig; that alias is gone in 14.1.1. */
   name?: string;
   enableDevTools?: boolean;
   debugMode?: boolean;
-  useStructuralSharing?: boolean;
+
+  // `maxCacheSize`, `trackPerformance` and `useStructuralSharing` were REMOVED
+  // in 14.1.2, for exactly the reason recorded above for `enableTimeTravel`:
+  // ZERO consumers anywhere in the workspace, silently doing nothing, while
+  // every other flag on this interface has them. They were undocumented, which
+  // is how they survived the 14.1.1 sweep that removed their sibling.
+  //
+  // Structural sharing is not a toggle to begin with — it is unconditional (see
+  // `materialized()` in utils.ts, where clean subtrees come back by reference).
 
   /**
    * Construction-time security validation, built with the `security()` helper
@@ -893,18 +890,40 @@ export interface InterceptHandlers<E, K extends string | number> {
 }
 
 /**
- * Entity node with deep signal access
+ * A cursor onto one entity: callable for the whole entity, plus one writable
+ * signal per own field.
+ *
+ * **One level deep, and the type says so since 14.1.2.** It previously declared
+ * `EntityNode<E[P]>` for an object-valued field — recursion the runtime has
+ * never implemented in any generation of `createEntityNode`, which builds one
+ * `computed` per own key of the entity and does not descend. The mismatch was
+ * not cosmetic: the recursive branch carried `(value: E[P]): void`, so
+ * `node.address({ city: 'x' })` type-checked, hit a `computed` getter that
+ * ignores its arguments, and **discarded the write with no diagnostic** — the
+ * same silent-loss class as [ST2008]/[ST2022]/[ST2023], and the same class the
+ * 2026-04 audit raised as F-013 and fixed for flat fields only.
+ *
+ * Narrowed rather than made recursive, deliberately. Materialising a node per
+ * nested object multiplies the per-entity cost that
+ * `entity-node-cache.spec.ts` already had to solve with `WeakRef` (4,149 B →
+ * 844 B per entity), and it would buy nothing the whole-object write does not
+ * already express.
+ *
+ * So an object-valued field is a writable signal over the WHOLE object:
+ *
+ * ```ts
+ * node.address.set({ ...node.address(), city: 'Denver' }); // replace
+ * node.address().city;                                     // read
+ * ```
+ *
+ * For per-field granularity inside a composite, keep the entity shape flat.
  */
 export type EntityNode<E> = {
   (): E;
   (value: E): void;
   (updater: (current: E) => E): void;
 } & {
-  [P in keyof E]: E[P] extends object
-    ? E[P] extends readonly unknown[]
-      ? CallableWritableSignal<E[P]>
-      : EntityNode<E[P]>
-    : CallableWritableSignal<E[P]>;
+  [P in keyof E]: CallableWritableSignal<E[P]>;
 };
 
 /**
@@ -1049,10 +1068,9 @@ export interface DevToolsConfig {
   name?: string;
   /** Enable/disable devtools connection */
   enabled?: boolean;
-  /** Log actions to console */
-  logActions?: boolean;
-  /** Max history entries to keep */
-  maxAge?: number;
+  // `logActions` and `maxAge` were REMOVED in 14.1.2 — no consumer anywhere in
+  // the workspace, so both silently did nothing. `enableLogging` above is the
+  // working logging flag; the Redux extension owns its own history depth.
   /** Limit sends to at most once every N milliseconds (0 = no limit) */
   rateLimitMs?: number;
   /** Limit sends by rate (overrides rateLimitMs if provided) */

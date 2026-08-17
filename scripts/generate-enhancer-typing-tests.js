@@ -59,14 +59,10 @@ const enhancers = [
     generic: false,
     methods: ['connectDevTools', 'disconnectDevTools'],
   },
-  {
-    id: 'F',
-    name: 'OptimizedUpdate',
-    importPath: '../../lib/types',
-    typeName: 'OptimizedUpdateMethods',
-    generic: true,
-    methods: ['updateOptimized'],
-  },
+  // The 'F' / OptimizedUpdate entry was removed in 14.1.2 along with
+  // `OptimizedUpdateMethods` itself: it typed `@signaltree/enterprise`'s diff
+  // engine, and that package was dropped in 14.0.0. Nothing implemented the
+  // interface, so these subsets were exercising a type no tree could satisfy.
 ];
 
 function powerset(arr) {

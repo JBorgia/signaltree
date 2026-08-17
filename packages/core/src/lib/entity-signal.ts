@@ -400,6 +400,79 @@ export function createEntitySignal<
   // INTERNAL HELPERS
   // ==================
 
+  /**
+   * `EntityConfig.hooks` — declarative per-entity guards.
+   *
+   * Declared in 14.1.1's public types and implemented in 14.1.2; between the
+   * two they were pure type surface. Passing
+   * `entityMap({ hooks: { beforeRemove: () => false } })` compiled, read as a
+   * guard, and removed the entity anyway.
+   *
+   * **Blocking throws**, matching `intercept()`'s `ctx.block()` rather than
+   * skipping silently. A guard that declines a mutation and says nothing is the
+   * defect class this codebase already carries ST2008/ST2022/ST2023 for, and a
+   * skip cannot be reported through `addOne`'s `K` return anyway.
+   *
+   * Bulk mutations run every hook BEFORE touching storage, so a block leaves
+   * the collection untouched rather than half-applied — the atomicity
+   * `d300c90e` established for interceptors.
+   *
+   * These run before interceptors: config is declared at the collection, taps
+   * and interceptors are registered against it.
+   */
+  const entityHooks = config.hooks;
+
+  /** Transform-or-block before an add. Returns the entity to store. */
+  function runBeforeAdd(entity: E): E {
+    const hook = entityHooks?.beforeAdd;
+    if (!hook) return entity;
+    const result = hook(entity);
+    if (result === false) {
+      throw new Error(
+        `Cannot add entity: blocked by beforeAdd hook${
+          basePath ? ` at "${basePath}"` : ''
+        }`
+      );
+    }
+    return result;
+  }
+
+  /** Transform-or-block before an update. Returns the changes to apply. */
+  function runBeforeUpdate(id: K, changes: Partial<E>): Partial<E> {
+    const hook = entityHooks?.beforeUpdate;
+    if (!hook) return changes;
+    const result = hook(id, changes);
+    if (result === false) {
+      throw new Error(
+        `Cannot update entity ${String(id)}: blocked by beforeUpdate hook`
+      );
+    }
+    return result;
+  }
+
+  /** Block before a remove. Throws when the hook returns false. */
+  function runBeforeRemove(id: K, entity: E): void {
+    const hook = entityHooks?.beforeRemove;
+    if (!hook) return;
+    if (hook(id, entity) === false) {
+      throw new Error(
+        `Cannot remove entity ${String(id)}: blocked by beforeRemove hook`
+      );
+    }
+  }
+
+  /**
+   * Fire `tap({ onChange })` once per mutation that actually changed the
+   * collection.
+   *
+   * Also declared-but-dead until 14.1.2. Called once per operation, not once
+   * per entity, so a bulk mutation is one change — the collection-level
+   * counterpart to the per-entity `onAdd`/`onUpdate`/`onRemove`.
+   */
+  function notifyChange(): void {
+    for (const handler of tapHandlers) handler.onChange?.();
+  }
+
   /** Mark the collection dirty. O(1) — see the `version` docs above. */
   function updateSignals(): void {
     version.update((v) => v + 1);
@@ -728,8 +801,8 @@ export function createEntitySignal<
         throw new Error(`Entity with id ${String(id)} already exists`);
       }
 
-      // Run interceptors
-      let transformedEntity = entity;
+      // Run config hooks, then interceptors
+      let transformedEntity = runBeforeAdd(entity);
       for (const handler of interceptHandlers) {
         const ctx: InterceptContext<E> = {
           block: (reason?: string) => {
@@ -743,7 +816,7 @@ export function createEntitySignal<
           blocked: false,
           blockReason: undefined,
         };
-        handler.onAdd?.(entity, ctx);
+        handler.onAdd?.(transformedEntity, ctx);
       }
 
       // Store and update signals
@@ -763,6 +836,7 @@ export function createEntitySignal<
       for (const handler of tapHandlers) {
         handler.onAdd?.(transformedEntity, id);
       }
+      notifyChange();
 
       return id;
     },
@@ -865,11 +939,18 @@ export function createEntitySignal<
 
       if (toProcess.length === 0) return [];
 
+      // Config hooks for the whole batch BEFORE any storage write, so a block
+      // leaves the collection untouched rather than half-added.
+      const hooked = toProcess.map(({ entity, id }) => ({
+        id,
+        entity: runBeforeAdd(entity),
+      }));
+
       // Process all entities without triggering per-entity signal updates
       const processedIds: K[] = [];
       const addedEntities: Array<{ id: K; entity: E }> = [];
 
-      for (const { entity, id } of toProcess) {
+      for (const { entity, id } of hooked) {
         // Run interceptors
         let transformedEntity = entity;
         for (const handler of interceptHandlers) {
@@ -885,7 +966,7 @@ export function createEntitySignal<
             blocked: false,
             blockReason: undefined,
           };
-          handler.onAdd?.(entity, ctx);
+          handler.onAdd?.(transformedEntity, ctx);
         }
 
         storage.set(id, transformedEntity);
@@ -909,6 +990,7 @@ export function createEntitySignal<
           handler.onAdd?.(entity, id);
         }
       }
+      notifyChange();
 
       return processedIds;
     },
@@ -925,8 +1007,8 @@ export function createEntitySignal<
 
       const prev = entity;
 
-      // Run interceptors
-      let transformedChanges = changes;
+      // Run config hooks, then interceptors
+      let transformedChanges = runBeforeUpdate(id, changes);
       for (const handler of interceptHandlers) {
         const ctx: InterceptContext<Partial<E>> = {
           block: (reason?: string) => {
@@ -940,7 +1022,7 @@ export function createEntitySignal<
           blocked: false,
           blockReason: undefined,
         };
-        handler.onUpdate?.(id, changes, ctx);
+        handler.onUpdate?.(id, transformedChanges, ctx);
       }
 
       const finalUpdated = { ...entity, ...transformedChanges };
@@ -956,6 +1038,7 @@ export function createEntitySignal<
       for (const handler of tapHandlers) {
         handler.onUpdate?.(id, transformedChanges, finalUpdated);
       }
+      notifyChange();
     },
 
     /**
@@ -977,7 +1060,7 @@ export function createEntitySignal<
         throw new Error(`Entity with id ${String(id)} not found`);
       }
 
-      let next = entity;
+      let next = runBeforeUpdate(id, entity as Partial<E>) as E;
       for (const handler of interceptHandlers) {
         const ctx: InterceptContext<Partial<E>> = {
           block: (reason?: string) => {
@@ -1002,6 +1085,7 @@ export function createEntitySignal<
       for (const handler of tapHandlers) {
         handler.onUpdate?.(id, next as Partial<E>, next);
       }
+      notifyChange();
     },
 
     updateMany(ids: K[], changes: Partial<E>): void {
@@ -1015,6 +1099,16 @@ export function createEntitySignal<
         transformedChanges: Partial<E>;
       }> = [];
 
+      // Config hooks for every id BEFORE the first storage write, so a
+      // `beforeUpdate` block cannot leave the batch half-applied.
+      const hookedChanges = new Map<K, Partial<E>>();
+      for (const id of ids) {
+        if (!storage.has(id)) {
+          throw new Error(`Entity with id ${String(id)} not found`);
+        }
+        hookedChanges.set(id, runBeforeUpdate(id, changes));
+      }
+
       for (const id of ids) {
         const entity = storage.get(id);
         if (!entity) {
@@ -1023,7 +1117,7 @@ export function createEntitySignal<
         const prev = entity;
 
         // Run interceptors
-        let transformedChanges = changes;
+        let transformedChanges = hookedChanges.get(id) as Partial<E>;
         for (const handler of interceptHandlers) {
           const ctx: InterceptContext<Partial<E>> = {
             block: (reason?: string) => {
@@ -1037,7 +1131,7 @@ export function createEntitySignal<
             blocked: false,
             blockReason: undefined,
           };
-          handler.onUpdate?.(id, changes, ctx);
+          handler.onUpdate?.(id, transformedChanges, ctx);
         }
 
         const finalUpdated = { ...entity, ...transformedChanges };
@@ -1061,6 +1155,7 @@ export function createEntitySignal<
           handler.onUpdate?.(id, transformedChanges, finalUpdated);
         }
       }
+      notifyChange();
     },
 
     updateWhere(
@@ -1089,7 +1184,8 @@ export function createEntitySignal<
         throw new Error(`Entity with id ${String(id)} not found`);
       }
 
-      // Run interceptors
+      // Run config hooks, then interceptors
+      runBeforeRemove(id, entity);
       for (const handler of interceptHandlers) {
         const ctx: InterceptContext<void> = {
           block: (reason?: string) => {
@@ -1119,6 +1215,7 @@ export function createEntitySignal<
       for (const handler of tapHandlers) {
         handler.onRemove?.(id, entity);
       }
+      notifyChange();
     },
 
     removeMany(ids: K[]): void {
@@ -1132,7 +1229,9 @@ export function createEntitySignal<
           throw new Error(`Entity with id ${String(id)} not found`);
         }
 
-        // Run interceptors
+        // Run config hooks, then interceptors — all of them BEFORE any
+        // deletion, so a block leaves the collection untouched.
+        runBeforeRemove(id, entity);
         for (const handler of interceptHandlers) {
           const ctx: InterceptContext<void> = {
             block: (reason?: string) => {
@@ -1173,6 +1272,7 @@ export function createEntitySignal<
           handler.onRemove?.(id, entity);
         }
       }
+      notifyChange();
     },
 
     removeWhere(predicate: (entity: E) => boolean): number {
@@ -1219,9 +1319,22 @@ export function createEntitySignal<
         }
       }
 
+      // Config hooks for BOTH halves before any storage write, so a block
+      // leaves the collection untouched.
+      const hookedAdds = toAdd.map(({ entity, id }) => ({
+        id,
+        entity: runBeforeAdd(entity),
+      }));
+      const hookedUpdates = new Map<K, Partial<E>>(
+        toUpdate.map(({ entity, id }) => [
+          id,
+          runBeforeUpdate(id, entity as Partial<E>),
+        ])
+      );
+
       // Process adds
       const addedEntities: Array<{ id: K; entity: E }> = [];
-      for (const { entity, id } of toAdd) {
+      for (const { entity, id } of hookedAdds) {
         // Run interceptors
         let transformedEntity = entity;
         for (const handler of interceptHandlers) {
@@ -1237,7 +1350,7 @@ export function createEntitySignal<
             blocked: false,
             blockReason: undefined,
           };
-          handler.onAdd?.(entity, ctx);
+          handler.onAdd?.(transformedEntity, ctx);
         }
         storage.set(id, transformedEntity);
         nodeCache.delete(id);
@@ -1252,9 +1365,9 @@ export function createEntitySignal<
         finalUpdated: E;
         transformedChanges: Partial<E>;
       }> = [];
-      for (const { entity, id, prev } of toUpdate) {
+      for (const { id, prev } of toUpdate) {
         // Run interceptors
-        let transformedChanges: Partial<E> = entity;
+        let transformedChanges = hookedUpdates.get(id) as Partial<E>;
         for (const handler of interceptHandlers) {
           const ctx: InterceptContext<Partial<E>> = {
             block: (reason?: string) => {
@@ -1268,7 +1381,7 @@ export function createEntitySignal<
             blocked: false,
             blockReason: undefined,
           };
-          handler.onUpdate?.(id, entity, ctx);
+          handler.onUpdate?.(id, transformedChanges, ctx);
         }
         const finalUpdated = { ...prev, ...transformedChanges };
         storage.set(id, finalUpdated);
@@ -1304,6 +1417,8 @@ export function createEntitySignal<
         }
       }
 
+      notifyChange();
+
       return [...toAdd.map((a) => a.id), ...toUpdate.map((u) => u.id)];
     },
 
@@ -1311,23 +1426,72 @@ export function createEntitySignal<
     // MUTATIONS: CLEAR/RESET
     // ==================
 
+    /**
+     * Empty the collection, firing `beforeRemove` and `onRemove` for every
+     * entity.
+     *
+     * Until 14.1.2 this fired NOTHING — no hook, no tap, no notifier — while
+     * `removeOne`/`removeMany`/`removeWhere` all did. Where an entity owns an
+     * external resource (a socket, an interval, a subscription) and `onRemove`
+     * is its teardown seam, `clear()` dropped every one of them without
+     * closing anything. That is a leak, not a policy: `setAll` gave the
+     * asymmetry away by firing `onAdd` for incoming entities while staying
+     * silent about the ones it evicted.
+     *
+     * Hooks run before any deletion, so a `beforeRemove` block leaves the
+     * collection whole rather than half-cleared.
+     */
     clear(): void {
+      const removed = [...storage.entries()] as Array<[K, E]>;
+      if (removed.length === 0) return;
+
+      for (const [id, entity] of removed) runBeforeRemove(id, entity);
+
       storage.clear();
       nodeCache.clear();
       resetEntitySignals();
       updateSignals();
+
+      for (const [id, entity] of removed) {
+        pathNotifier.notify(`${basePath}.${String(id)}`, undefined, entity);
+        for (const handler of tapHandlers) handler.onRemove?.(id, entity);
+      }
+      notifyChange();
     },
 
+    /**
+     * Full replace.
+     *
+     * Fires `onRemove` for entities this call EVICTS — present before, absent
+     * after. Until 14.1.2 it fired `onAdd` for every incoming entity and
+     * nothing at all for the ones it dropped, and that asymmetry is what marked
+     * the omission as a bug rather than a "bulk ops bypass hooks" policy.
+     *
+     * An entity present on BOTH sides is re-announced through `onAdd`, which is
+     * long-standing behaviour and unchanged here: a tap that allocates on
+     * `onAdd` should be idempotent per id. It is deliberately NOT treated as an
+     * eviction, so a resource owner that survives the replace is not torn down.
+     */
     setAll(entities: E[], opts?: AddOptions<E, K>): void {
+      const previous = [...storage.entries()] as Array<[K, E]>;
+
+      // Pre-flight every hook before touching storage, so a block leaves the
+      // collection exactly as it was.
+      const incoming: Array<{ id: K; entity: E }> = entities.map((entity) => ({
+        id: deriveId(entity, opts),
+        entity: runBeforeAdd(entity),
+      }));
+      const incomingIds = new Set(incoming.map((i) => i.id));
+      const evicted = previous.filter(([id]) => !incomingIds.has(id));
+      for (const [id, entity] of evicted) runBeforeRemove(id, entity);
+
       // Clear storage without triggering intermediate signal updates
       storage.clear();
       nodeCache.clear();
 
       // Add all entities without triggering per-entity signal updates
       const addedIds: K[] = [];
-      for (const entity of entities) {
-        const id = deriveId(entity, opts);
-
+      for (const { id, entity } of incoming) {
         // Run interceptors
         let transformedEntity = entity;
         for (const handler of interceptHandlers) {
@@ -1343,7 +1507,7 @@ export function createEntitySignal<
             blocked: false,
             blockReason: undefined,
           };
-          handler.onAdd?.(entity, ctx);
+          handler.onAdd?.(transformedEntity, ctx);
         }
 
         storage.set(id, transformedEntity);
@@ -1364,6 +1528,12 @@ export function createEntitySignal<
         pathNotifier.notify(`${basePath}.${String(id)}`, entity, undefined);
       }
 
+      // Evictions: notifier + onRemove, the half that was missing.
+      for (const [id, entity] of evicted) {
+        pathNotifier.notify(`${basePath}.${String(id)}`, undefined, entity);
+        for (const handler of tapHandlers) handler.onRemove?.(id, entity);
+      }
+
       // Run tap handlers for each added entity
       for (let i = 0; i < addedIds.length; i++) {
         const id = addedIds[i];
@@ -1374,6 +1544,7 @@ export function createEntitySignal<
           }
         }
       }
+      notifyChange();
     },
 
     // ==================

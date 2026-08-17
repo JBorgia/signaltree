@@ -3,7 +3,7 @@
 import type { Equals, Assert } from './helpers-types';
 import type { SignalTree } from '../../lib/types';
 type Tree = { count: number };
-import type { BatchingMethods, TimeTravelMethods, DevToolsMethods, OptimizedUpdateMethods } from '../../lib/types';
+import type { BatchingMethods, TimeTravelMethods, DevToolsMethods } from '../../lib/types';
 
 // Helper to detect method presence
 type HasMethod<T, K extends string> = K extends keyof T ? true : false;
@@ -23,7 +23,6 @@ type Subset_A_has_jumpTo = Assert<Equals<HasMethod<Subset_A, 'jumpTo'>, false>>;
 type Subset_A_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_A, 'getCurrentIndex'>, false>>;
 type Subset_A_has_connectDevTools = Assert<Equals<HasMethod<Subset_A, 'connectDevTools'>, false>>;
 type Subset_A_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_A, 'disconnectDevTools'>, false>>;
-type Subset_A_has_updateOptimized = Assert<Equals<HasMethod<Subset_A, 'updateOptimized'>, false>>;
 
 type Subset_C = TimeTravelMethods<Tree>;
 type Subset_C_has_batch = Assert<Equals<HasMethod<Subset_C, 'batch'>, false>>;
@@ -40,7 +39,6 @@ type Subset_C_has_jumpTo = Assert<Equals<HasMethod<Subset_C, 'jumpTo'>, true>>;
 type Subset_C_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_C, 'getCurrentIndex'>, true>>;
 type Subset_C_has_connectDevTools = Assert<Equals<HasMethod<Subset_C, 'connectDevTools'>, false>>;
 type Subset_C_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_C, 'disconnectDevTools'>, false>>;
-type Subset_C_has_updateOptimized = Assert<Equals<HasMethod<Subset_C, 'updateOptimized'>, false>>;
 
 type Subset_AC = BatchingMethods & TimeTravelMethods<Tree>;
 type Subset_AC_has_batch = Assert<Equals<HasMethod<Subset_AC, 'batch'>, true>>;
@@ -57,7 +55,6 @@ type Subset_AC_has_jumpTo = Assert<Equals<HasMethod<Subset_AC, 'jumpTo'>, true>>
 type Subset_AC_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_AC, 'getCurrentIndex'>, true>>;
 type Subset_AC_has_connectDevTools = Assert<Equals<HasMethod<Subset_AC, 'connectDevTools'>, false>>;
 type Subset_AC_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_AC, 'disconnectDevTools'>, false>>;
-type Subset_AC_has_updateOptimized = Assert<Equals<HasMethod<Subset_AC, 'updateOptimized'>, false>>;
 
 type Subset_D = DevToolsMethods;
 type Subset_D_has_batch = Assert<Equals<HasMethod<Subset_D, 'batch'>, false>>;
@@ -74,7 +71,6 @@ type Subset_D_has_jumpTo = Assert<Equals<HasMethod<Subset_D, 'jumpTo'>, false>>;
 type Subset_D_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_D, 'getCurrentIndex'>, false>>;
 type Subset_D_has_connectDevTools = Assert<Equals<HasMethod<Subset_D, 'connectDevTools'>, true>>;
 type Subset_D_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_D, 'disconnectDevTools'>, true>>;
-type Subset_D_has_updateOptimized = Assert<Equals<HasMethod<Subset_D, 'updateOptimized'>, false>>;
 
 type Subset_AD = BatchingMethods & DevToolsMethods;
 type Subset_AD_has_batch = Assert<Equals<HasMethod<Subset_AD, 'batch'>, true>>;
@@ -91,7 +87,6 @@ type Subset_AD_has_jumpTo = Assert<Equals<HasMethod<Subset_AD, 'jumpTo'>, false>
 type Subset_AD_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_AD, 'getCurrentIndex'>, false>>;
 type Subset_AD_has_connectDevTools = Assert<Equals<HasMethod<Subset_AD, 'connectDevTools'>, true>>;
 type Subset_AD_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_AD, 'disconnectDevTools'>, true>>;
-type Subset_AD_has_updateOptimized = Assert<Equals<HasMethod<Subset_AD, 'updateOptimized'>, false>>;
 
 type Subset_CD = TimeTravelMethods<Tree> & DevToolsMethods;
 type Subset_CD_has_batch = Assert<Equals<HasMethod<Subset_CD, 'batch'>, false>>;
@@ -108,7 +103,6 @@ type Subset_CD_has_jumpTo = Assert<Equals<HasMethod<Subset_CD, 'jumpTo'>, true>>
 type Subset_CD_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_CD, 'getCurrentIndex'>, true>>;
 type Subset_CD_has_connectDevTools = Assert<Equals<HasMethod<Subset_CD, 'connectDevTools'>, true>>;
 type Subset_CD_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CD, 'disconnectDevTools'>, true>>;
-type Subset_CD_has_updateOptimized = Assert<Equals<HasMethod<Subset_CD, 'updateOptimized'>, false>>;
 
 type Subset_ACD = BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods;
 type Subset_ACD_has_batch = Assert<Equals<HasMethod<Subset_ACD, 'batch'>, true>>;
@@ -125,143 +119,6 @@ type Subset_ACD_has_jumpTo = Assert<Equals<HasMethod<Subset_ACD, 'jumpTo'>, true
 type Subset_ACD_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_ACD, 'getCurrentIndex'>, true>>;
 type Subset_ACD_has_connectDevTools = Assert<Equals<HasMethod<Subset_ACD, 'connectDevTools'>, true>>;
 type Subset_ACD_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_ACD, 'disconnectDevTools'>, true>>;
-type Subset_ACD_has_updateOptimized = Assert<Equals<HasMethod<Subset_ACD, 'updateOptimized'>, false>>;
-
-type Subset_F = OptimizedUpdateMethods<Tree>;
-type Subset_F_has_batch = Assert<Equals<HasMethod<Subset_F, 'batch'>, false>>;
-type Subset_F_has_coalesce = Assert<Equals<HasMethod<Subset_F, 'coalesce'>, false>>;
-type Subset_F_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_F, 'hasPendingNotifications'>, false>>;
-type Subset_F_has_flushNotifications = Assert<Equals<HasMethod<Subset_F, 'flushNotifications'>, false>>;
-type Subset_F_has_undo = Assert<Equals<HasMethod<Subset_F, 'undo'>, false>>;
-type Subset_F_has_redo = Assert<Equals<HasMethod<Subset_F, 'redo'>, false>>;
-type Subset_F_has_canUndo = Assert<Equals<HasMethod<Subset_F, 'canUndo'>, false>>;
-type Subset_F_has_canRedo = Assert<Equals<HasMethod<Subset_F, 'canRedo'>, false>>;
-type Subset_F_has_getHistory = Assert<Equals<HasMethod<Subset_F, 'getHistory'>, false>>;
-type Subset_F_has_resetHistory = Assert<Equals<HasMethod<Subset_F, 'resetHistory'>, false>>;
-type Subset_F_has_jumpTo = Assert<Equals<HasMethod<Subset_F, 'jumpTo'>, false>>;
-type Subset_F_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_F, 'getCurrentIndex'>, false>>;
-type Subset_F_has_connectDevTools = Assert<Equals<HasMethod<Subset_F, 'connectDevTools'>, false>>;
-type Subset_F_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_F, 'disconnectDevTools'>, false>>;
-type Subset_F_has_updateOptimized = Assert<Equals<HasMethod<Subset_F, 'updateOptimized'>, true>>;
-
-type Subset_AF = BatchingMethods & OptimizedUpdateMethods<Tree>;
-type Subset_AF_has_batch = Assert<Equals<HasMethod<Subset_AF, 'batch'>, true>>;
-type Subset_AF_has_coalesce = Assert<Equals<HasMethod<Subset_AF, 'coalesce'>, true>>;
-type Subset_AF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_AF, 'hasPendingNotifications'>, true>>;
-type Subset_AF_has_flushNotifications = Assert<Equals<HasMethod<Subset_AF, 'flushNotifications'>, true>>;
-type Subset_AF_has_undo = Assert<Equals<HasMethod<Subset_AF, 'undo'>, false>>;
-type Subset_AF_has_redo = Assert<Equals<HasMethod<Subset_AF, 'redo'>, false>>;
-type Subset_AF_has_canUndo = Assert<Equals<HasMethod<Subset_AF, 'canUndo'>, false>>;
-type Subset_AF_has_canRedo = Assert<Equals<HasMethod<Subset_AF, 'canRedo'>, false>>;
-type Subset_AF_has_getHistory = Assert<Equals<HasMethod<Subset_AF, 'getHistory'>, false>>;
-type Subset_AF_has_resetHistory = Assert<Equals<HasMethod<Subset_AF, 'resetHistory'>, false>>;
-type Subset_AF_has_jumpTo = Assert<Equals<HasMethod<Subset_AF, 'jumpTo'>, false>>;
-type Subset_AF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_AF, 'getCurrentIndex'>, false>>;
-type Subset_AF_has_connectDevTools = Assert<Equals<HasMethod<Subset_AF, 'connectDevTools'>, false>>;
-type Subset_AF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_AF, 'disconnectDevTools'>, false>>;
-type Subset_AF_has_updateOptimized = Assert<Equals<HasMethod<Subset_AF, 'updateOptimized'>, true>>;
-
-type Subset_CF = TimeTravelMethods<Tree> & OptimizedUpdateMethods<Tree>;
-type Subset_CF_has_batch = Assert<Equals<HasMethod<Subset_CF, 'batch'>, false>>;
-type Subset_CF_has_coalesce = Assert<Equals<HasMethod<Subset_CF, 'coalesce'>, false>>;
-type Subset_CF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_CF, 'hasPendingNotifications'>, false>>;
-type Subset_CF_has_flushNotifications = Assert<Equals<HasMethod<Subset_CF, 'flushNotifications'>, false>>;
-type Subset_CF_has_undo = Assert<Equals<HasMethod<Subset_CF, 'undo'>, true>>;
-type Subset_CF_has_redo = Assert<Equals<HasMethod<Subset_CF, 'redo'>, true>>;
-type Subset_CF_has_canUndo = Assert<Equals<HasMethod<Subset_CF, 'canUndo'>, true>>;
-type Subset_CF_has_canRedo = Assert<Equals<HasMethod<Subset_CF, 'canRedo'>, true>>;
-type Subset_CF_has_getHistory = Assert<Equals<HasMethod<Subset_CF, 'getHistory'>, true>>;
-type Subset_CF_has_resetHistory = Assert<Equals<HasMethod<Subset_CF, 'resetHistory'>, true>>;
-type Subset_CF_has_jumpTo = Assert<Equals<HasMethod<Subset_CF, 'jumpTo'>, true>>;
-type Subset_CF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_CF, 'getCurrentIndex'>, true>>;
-type Subset_CF_has_connectDevTools = Assert<Equals<HasMethod<Subset_CF, 'connectDevTools'>, false>>;
-type Subset_CF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CF, 'disconnectDevTools'>, false>>;
-type Subset_CF_has_updateOptimized = Assert<Equals<HasMethod<Subset_CF, 'updateOptimized'>, true>>;
-
-type Subset_ACF = BatchingMethods & TimeTravelMethods<Tree> & OptimizedUpdateMethods<Tree>;
-type Subset_ACF_has_batch = Assert<Equals<HasMethod<Subset_ACF, 'batch'>, true>>;
-type Subset_ACF_has_coalesce = Assert<Equals<HasMethod<Subset_ACF, 'coalesce'>, true>>;
-type Subset_ACF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ACF, 'hasPendingNotifications'>, true>>;
-type Subset_ACF_has_flushNotifications = Assert<Equals<HasMethod<Subset_ACF, 'flushNotifications'>, true>>;
-type Subset_ACF_has_undo = Assert<Equals<HasMethod<Subset_ACF, 'undo'>, true>>;
-type Subset_ACF_has_redo = Assert<Equals<HasMethod<Subset_ACF, 'redo'>, true>>;
-type Subset_ACF_has_canUndo = Assert<Equals<HasMethod<Subset_ACF, 'canUndo'>, true>>;
-type Subset_ACF_has_canRedo = Assert<Equals<HasMethod<Subset_ACF, 'canRedo'>, true>>;
-type Subset_ACF_has_getHistory = Assert<Equals<HasMethod<Subset_ACF, 'getHistory'>, true>>;
-type Subset_ACF_has_resetHistory = Assert<Equals<HasMethod<Subset_ACF, 'resetHistory'>, true>>;
-type Subset_ACF_has_jumpTo = Assert<Equals<HasMethod<Subset_ACF, 'jumpTo'>, true>>;
-type Subset_ACF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_ACF, 'getCurrentIndex'>, true>>;
-type Subset_ACF_has_connectDevTools = Assert<Equals<HasMethod<Subset_ACF, 'connectDevTools'>, false>>;
-type Subset_ACF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_ACF, 'disconnectDevTools'>, false>>;
-type Subset_ACF_has_updateOptimized = Assert<Equals<HasMethod<Subset_ACF, 'updateOptimized'>, true>>;
-
-type Subset_DF = DevToolsMethods & OptimizedUpdateMethods<Tree>;
-type Subset_DF_has_batch = Assert<Equals<HasMethod<Subset_DF, 'batch'>, false>>;
-type Subset_DF_has_coalesce = Assert<Equals<HasMethod<Subset_DF, 'coalesce'>, false>>;
-type Subset_DF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_DF, 'hasPendingNotifications'>, false>>;
-type Subset_DF_has_flushNotifications = Assert<Equals<HasMethod<Subset_DF, 'flushNotifications'>, false>>;
-type Subset_DF_has_undo = Assert<Equals<HasMethod<Subset_DF, 'undo'>, false>>;
-type Subset_DF_has_redo = Assert<Equals<HasMethod<Subset_DF, 'redo'>, false>>;
-type Subset_DF_has_canUndo = Assert<Equals<HasMethod<Subset_DF, 'canUndo'>, false>>;
-type Subset_DF_has_canRedo = Assert<Equals<HasMethod<Subset_DF, 'canRedo'>, false>>;
-type Subset_DF_has_getHistory = Assert<Equals<HasMethod<Subset_DF, 'getHistory'>, false>>;
-type Subset_DF_has_resetHistory = Assert<Equals<HasMethod<Subset_DF, 'resetHistory'>, false>>;
-type Subset_DF_has_jumpTo = Assert<Equals<HasMethod<Subset_DF, 'jumpTo'>, false>>;
-type Subset_DF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_DF, 'getCurrentIndex'>, false>>;
-type Subset_DF_has_connectDevTools = Assert<Equals<HasMethod<Subset_DF, 'connectDevTools'>, true>>;
-type Subset_DF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_DF, 'disconnectDevTools'>, true>>;
-type Subset_DF_has_updateOptimized = Assert<Equals<HasMethod<Subset_DF, 'updateOptimized'>, true>>;
-
-type Subset_ADF = BatchingMethods & DevToolsMethods & OptimizedUpdateMethods<Tree>;
-type Subset_ADF_has_batch = Assert<Equals<HasMethod<Subset_ADF, 'batch'>, true>>;
-type Subset_ADF_has_coalesce = Assert<Equals<HasMethod<Subset_ADF, 'coalesce'>, true>>;
-type Subset_ADF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ADF, 'hasPendingNotifications'>, true>>;
-type Subset_ADF_has_flushNotifications = Assert<Equals<HasMethod<Subset_ADF, 'flushNotifications'>, true>>;
-type Subset_ADF_has_undo = Assert<Equals<HasMethod<Subset_ADF, 'undo'>, false>>;
-type Subset_ADF_has_redo = Assert<Equals<HasMethod<Subset_ADF, 'redo'>, false>>;
-type Subset_ADF_has_canUndo = Assert<Equals<HasMethod<Subset_ADF, 'canUndo'>, false>>;
-type Subset_ADF_has_canRedo = Assert<Equals<HasMethod<Subset_ADF, 'canRedo'>, false>>;
-type Subset_ADF_has_getHistory = Assert<Equals<HasMethod<Subset_ADF, 'getHistory'>, false>>;
-type Subset_ADF_has_resetHistory = Assert<Equals<HasMethod<Subset_ADF, 'resetHistory'>, false>>;
-type Subset_ADF_has_jumpTo = Assert<Equals<HasMethod<Subset_ADF, 'jumpTo'>, false>>;
-type Subset_ADF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_ADF, 'getCurrentIndex'>, false>>;
-type Subset_ADF_has_connectDevTools = Assert<Equals<HasMethod<Subset_ADF, 'connectDevTools'>, true>>;
-type Subset_ADF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_ADF, 'disconnectDevTools'>, true>>;
-type Subset_ADF_has_updateOptimized = Assert<Equals<HasMethod<Subset_ADF, 'updateOptimized'>, true>>;
-
-type Subset_CDF = TimeTravelMethods<Tree> & DevToolsMethods & OptimizedUpdateMethods<Tree>;
-type Subset_CDF_has_batch = Assert<Equals<HasMethod<Subset_CDF, 'batch'>, false>>;
-type Subset_CDF_has_coalesce = Assert<Equals<HasMethod<Subset_CDF, 'coalesce'>, false>>;
-type Subset_CDF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_CDF, 'hasPendingNotifications'>, false>>;
-type Subset_CDF_has_flushNotifications = Assert<Equals<HasMethod<Subset_CDF, 'flushNotifications'>, false>>;
-type Subset_CDF_has_undo = Assert<Equals<HasMethod<Subset_CDF, 'undo'>, true>>;
-type Subset_CDF_has_redo = Assert<Equals<HasMethod<Subset_CDF, 'redo'>, true>>;
-type Subset_CDF_has_canUndo = Assert<Equals<HasMethod<Subset_CDF, 'canUndo'>, true>>;
-type Subset_CDF_has_canRedo = Assert<Equals<HasMethod<Subset_CDF, 'canRedo'>, true>>;
-type Subset_CDF_has_getHistory = Assert<Equals<HasMethod<Subset_CDF, 'getHistory'>, true>>;
-type Subset_CDF_has_resetHistory = Assert<Equals<HasMethod<Subset_CDF, 'resetHistory'>, true>>;
-type Subset_CDF_has_jumpTo = Assert<Equals<HasMethod<Subset_CDF, 'jumpTo'>, true>>;
-type Subset_CDF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_CDF, 'getCurrentIndex'>, true>>;
-type Subset_CDF_has_connectDevTools = Assert<Equals<HasMethod<Subset_CDF, 'connectDevTools'>, true>>;
-type Subset_CDF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_CDF, 'disconnectDevTools'>, true>>;
-type Subset_CDF_has_updateOptimized = Assert<Equals<HasMethod<Subset_CDF, 'updateOptimized'>, true>>;
-
-type Subset_ACDF = BatchingMethods & TimeTravelMethods<Tree> & DevToolsMethods & OptimizedUpdateMethods<Tree>;
-type Subset_ACDF_has_batch = Assert<Equals<HasMethod<Subset_ACDF, 'batch'>, true>>;
-type Subset_ACDF_has_coalesce = Assert<Equals<HasMethod<Subset_ACDF, 'coalesce'>, true>>;
-type Subset_ACDF_has_hasPendingNotifications = Assert<Equals<HasMethod<Subset_ACDF, 'hasPendingNotifications'>, true>>;
-type Subset_ACDF_has_flushNotifications = Assert<Equals<HasMethod<Subset_ACDF, 'flushNotifications'>, true>>;
-type Subset_ACDF_has_undo = Assert<Equals<HasMethod<Subset_ACDF, 'undo'>, true>>;
-type Subset_ACDF_has_redo = Assert<Equals<HasMethod<Subset_ACDF, 'redo'>, true>>;
-type Subset_ACDF_has_canUndo = Assert<Equals<HasMethod<Subset_ACDF, 'canUndo'>, true>>;
-type Subset_ACDF_has_canRedo = Assert<Equals<HasMethod<Subset_ACDF, 'canRedo'>, true>>;
-type Subset_ACDF_has_getHistory = Assert<Equals<HasMethod<Subset_ACDF, 'getHistory'>, true>>;
-type Subset_ACDF_has_resetHistory = Assert<Equals<HasMethod<Subset_ACDF, 'resetHistory'>, true>>;
-type Subset_ACDF_has_jumpTo = Assert<Equals<HasMethod<Subset_ACDF, 'jumpTo'>, true>>;
-type Subset_ACDF_has_getCurrentIndex = Assert<Equals<HasMethod<Subset_ACDF, 'getCurrentIndex'>, true>>;
-type Subset_ACDF_has_connectDevTools = Assert<Equals<HasMethod<Subset_ACDF, 'connectDevTools'>, true>>;
-type Subset_ACDF_has_disconnectDevTools = Assert<Equals<HasMethod<Subset_ACDF, 'disconnectDevTools'>, true>>;
-type Subset_ACDF_has_updateOptimized = Assert<Equals<HasMethod<Subset_ACDF, 'updateOptimized'>, true>>;
 
 
 export {};
