@@ -2595,11 +2595,31 @@ FALSE for `devTools`. The claim came from reading `batching`'s body and
 generalizing. History is not rewritten; this entry and the corrected comment in
 `signal-tree.ts` are the current authority.
 
-**NOT YET MEASURED — whether the composition reporting was ever observably
-functioning.** A first probe captured zero `SignalTree/with` actions BOTH before
-and after `7a6bd4c9`, which means the probe did not exercise the path, not that
-the feature is dead. Recorded as inconclusive rather than promoted to a
-regression claim.
+**MEASURED (#4c-1) — `7a6bd4c9` IS A REGRESSION.** The first probe was vacuous:
+it captured zero both before and after because it never flushed
+`scheduleSend`'s `queueMicrotask` + rate-limit timer. A corrected probe installs
+the fake extension on `window` (not `globalThis`), awaits both flush stages, and
+carries a CONTROL — an ordinary state write that must produce a send, so another
+zero cannot be mistaken for a result:
+
+```
+                    connected  total  types                        SignalTree/with
+7a6bd4c9~1          true       2      ["", "SignalTree/with"]      1
+current HEAD        true       2      ["", "SignalTree/n"]         0
+```
+
+The control fires at HEAD (`SignalTree/n` from the state write), so the
+connection is live and the zero is real. Composition tracking WORKED before the
+canonical-`with` adoption and does not now.
+
+Scope: `7a6bd4c9` is unreleased 15.0-dev, so this is NOT a 14.x defect and needs
+no 14.x patch — 14.1.1 never had the adoption. It is a 15.0 regression to fix
+before release.
+
+Note the pre-fix run reported 1, not 2, for two `.with()` calls: `scheduleSend`
+clobbers a second pending explicit action rather than queueing it. That is
+pre-existing rate-limit behaviour, unrelated to the adoption, and is not
+something this slice changes.
 
 ### Sequencing — Gate B may NOT freeze with the overload still present
 
@@ -2608,11 +2628,8 @@ Retaining a second `.with()` authoring grammar whose only justification is
 external migrations are therefore on the Gate B critical path, not deferrable.
 
 ```
-#4c-1  DevTools composition-tracking falsifier   <- NEXT
-       deterministic probe around the real transport, WITH a control action
-       proving the fake connection captures an ordinary send; run at
-       7a6bd4c9^, 7a6bd4c9, current, and v14.1.1 to separate
-       "working 14.x feature -> regression" from "already dead in 14.x"
+#4c-1  DevTools composition-tracking falsifier   DONE — regression confirmed
+       DECISION REQUIRED on observation ownership before the repair lands
 #4a    migrate the external concrete-tree enhancers, ONE AT A TIME
        guardrails / schema / realtime / ng-forms  (item #3 is CLOSED for core;
        this is not reopening it)
@@ -2625,8 +2642,8 @@ If one of the four cannot be represented honestly as `Enhancer<TAdded>` without
 degrading inference or semantics, STOP — that is a Gate B architecture decision.
 Do not keep the overload merely to avoid answering it.
 
-**Likely endpoint for devTools, stated as a HYPOTHESIS pending #4c-1:** if the
-tracking is real, keeping a DevTools-owned `.with()` override would restore two
+**Endpoint for devTools — the factual half is now settled; the ownership half is
+a DECISION.** The tracking is real and currently broken. Keeping a DevTools-owned `.with()` override would restore two
 owners immediately after establishing one. The shape that preserves both
 properties is `.with()` owning application and DevTools OBSERVING it through a
 hook — not DevTools replacing `.with()` to learn that application happened.
