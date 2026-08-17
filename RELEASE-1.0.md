@@ -2156,6 +2156,102 @@ saying that if those rows go red because the namespace was made coherent, the
 TESTS get updated, not the implementation. That file also pins the durable
 guarantee worth keeping: dependency validation is fail-closed.
 
+### Item #3 opening measurement — `requires` has no coherent semantic owner
+
+Item #3 starts here, NOT with `batching`. The metadata inconsistency sits
+underneath the protocol the built-ins participate in, so the contract has to be
+settled before nine signatures are migrated to target it.
+
+**PROPERTY: what does `requires: ['x']` semantically name?**
+
+```
+A  enhancer identity / name
+B  provided capability
+C  something else explicitly modelled
+```
+
+Measured against docs, metadata types, built-ins, the ordering implementation,
+the validation guard, and the third-party authoring contract — NOT inferred from
+the field names.
+
+#### The concepts, separated
+
+| field | type | consumed by | means |
+| --- | --- | --- | --- |
+| `name` | `string` | `.with()` duplicate detection, `.with()` dependency guard | identity |
+| `provides` | `string[]` | `resolveEnhancerOrder` edges | capability token |
+| `requires` | `string[]` | `resolveEnhancerOrder` (as CAPABILITY), `.with()` guard (as NAME) | **two authorities, disagreeing** |
+| `capabilities` | `TreeCapability[]` | `buildTreePlan` -> `collectRequestedTreeCapabilities` | tree SUBSTRATE capability — a separate, typed axis; not part of this question |
+| `description` | `string` | docs only | — |
+
+#### Evidence — every source says CAPABILITY except the guard
+
+```
+docs/guides/custom-enhancers.md:22-24
+    provides: ['myEnhancer'],   // "Capabilities this enhancer adds"
+    requires: ['serialization'] // "Capabilities that must be applied first"
+
+docs/guides/custom-markers-enhancers.md:770-773   <- the decisive one
+    { name: 'withAudit', provides: ['audit'], requires: ['logger'] }
+    name != provides, and the comment reads
+    "Requires withLogger to be applied first"
+
+packages/core/src/enhancers/index.ts:20-22  (createEnhancer JSDoc)
+    { name: 'myEnhancer', provides: ['feature1'], requires: ['feature2'] }
+    name != provides
+```
+
+**Two of those three documented examples CANNOT WORK TODAY** — same class as the
+`composeEnhancers` example slice 2 found. `withAudit` requires `'logger'`, which
+under the guard needs an applied enhancer NAMED `logger`; the enhancer that
+provides it is named `withLogger`. It throws.
+
+**Proven on a REAL built-in, not a fixture.** `persistence` declares
+`{ name: 'persistence', provides: ['persistence', 'serialization'] }` — a
+capability it does not own as a name. Applying it and then an enhancer declaring
+`requires: ['serialization']`:
+
+```
+plannedSignalTree({count:0}).with(persistence({key})).with(consumer).build()
+  -> THREW: Enhancer "consumer" requires "serialization" to be applied first
+```
+
+The capability a shipping enhancer advertises is not honoured. `provides` is
+consulted for ORDERING and ignored for VALIDATION.
+
+**Why every built-in hides the defect:** all of them declare `name ===
+provides[0]` (`batching`/`['batching']`, `devTools`/`['devTools']`,
+`transactions`/`['transactions']`, `serialization`/`['serialization']`,
+`timeTravel`/`['timeTravel']`). The accidental intersection is satisfied, so
+nothing in-repo fails. `persistence` is the one built-in that declares a second
+capability, and that second capability is exactly what does not work.
+
+Historical note, not a proposal: `docs/archive/UPGRADE_TO_V6.md` used `provides`
+for METHOD names (`['undo','redo','canUndo',…]`). The vocabulary drifted from
+"methods added" to "capability token" without the guard following.
+
+#### Backward-compatibility fact that constrains the decision
+
+Today a requirement is satisfiable only when `provider.name === req` AND
+`provider.provides` includes `req`. So today's working set is a SUBSET of both
+candidate semantics — **A and B are each strictly backward compatible for
+everything that currently works.** Nothing in-repo breaks under either. The
+choice is therefore about which contract is correct, not about migration risk.
+
+#### DECISION REQUIRED — see the session report
+
+Recommendation is **B (capability)**, with `name` retained as identity for
+duplicate detection only. Under A, `provides` loses its only consumer and
+becomes vestigial, and all three documented authoring examples stay wrong.
+
+Do NOT keep the current intersection. "Satisfiable only when the provider is
+both NAMED x and PROVIDES x" has no coherent semantic owner and forces authors
+into a redundant spelling to make dependencies work at all.
+
+`planned-enhancer-dependencies.spec.ts` records the current behaviour and is
+banner-marked DO NOT FREEZE; its two DEFECT rows are EXPECTED to go red when this
+is resolved.
+
 ### NEEDS RECONCILIATION — "guardrails dead in prod"
 
 Investigated: `@signaltree/guardrails` root resolves to `dist/noop.js` under the
