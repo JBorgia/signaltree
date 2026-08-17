@@ -925,6 +925,94 @@ Constraints already decided, do not relitigate:
   tarball for `packages/core/src`, `../core`, `@angular/core`,
   `@signaltree/core/authoring`, `workspace:*`.
 
+#### THREE closures, not one — measure all three before `git mv`
+
+The 23-module result is the RETAINED RUNTIME closure. It is **not** yet the
+package-migration closure. Three separate properties govern this move, and
+esbuild answers only the first:
+
+```text
+1. RETAINED RUNTIME CLOSURE      esbuild metafile bytesInOutput
+                                 -> MEASURED: 23 modules, 0 Angular
+
+2. DECLARATION / TYPE CLOSURE    tsc declaration emit + resolution
+                                 -> NOT YET MEASURED. What must exist for
+                                    authoring's .d.ts to stand alone without
+                                    reaching into @signaltree/core?
+
+3. NATIVE MODULE-LOAD CLOSURE    built ESM imported with NO bundler
+                                 -> NOT YET MEASURED. Does importing the
+                                    package root make Node evaluate Angular or
+                                    a core-only module?
+```
+
+**(2) is the one to worry about.** esbuild correctly erases type-only
+dependencies, so they contribute zero bytes and vanish from the runtime
+measurement — but `GATE B` freezes a TYPESCRIPT API, so a declaration
+dependency on core is just as disqualifying as a runtime one. Do not engrave
+"22 core modules + 1 shared module" as the physical move count until declaration
+emit agrees.
+
+#### First cold-session task: graph, not `git mv`
+
+```text
+candidate modules -> runtime edges + type/declaration edges
+                  -> strongly connected components
+                  -> topological migration order
+```
+
+Two stop conditions fall out of it:
+
+- a candidate authoring `.d.ts` that references `@signaltree/core` -> STOP;
+- a runtime SCC spanning a neutral-authoring module and an Angular/core-only
+  module -> STOP and split that SCC first.
+
+This is a MEASUREMENT exercise. It is not permission to reopen the authoring
+architecture; do that only if one of these produces a real cross-boundary
+dependency.
+
+#### Migrate SCC-by-SCC, never 23 files at once
+
+Establish the package, then move leaf groups upward in dependency order, keeping
+BOTH packages building after each coherent slice. Let the SCC graph decide the
+order, not the file names. The invariant after every slice:
+
+```text
+authoring -> NEVER core
+core      -> MAY authoring
+```
+
+No temporary reverse edge "just until the move is finished". Those are exactly
+the edges that survive migrations.
+
+#### Two ownership maps — do not collapse them
+
+`core -> authoring` being the right dependency direction does NOT mean every
+module in the closure becomes public SDK API:
+
+```text
+PHYSICAL ownership   authoring may own 20+ implementation modules
+PUBLIC   ownership   authoring EXPORTS only the ~38 supported capabilities
+```
+
+`owned-metadata`, the materialization machinery and any storage objects live
+inside the package while staying package-private. The extraction at `9e193a7f`
+deliberately preserved that line; the migration must not quietly erase it.
+
+#### Packed proof covers three different things
+
+```text
+pack -> temp project OUTSIDE the workspace, no Angular installed,
+        no workspace path aliases, install the tarball
+
+node import('@signaltree/authoring')   proves MODULE LOADING
+tsc consumer.ts --noEmit               proves DECLARATIONS
+bundle representative imports          proves TREE-SHAKING
+```
+
+Native import matters on its own: a bundler can tree-shake something Node's ESM
+loader would still evaluate.
+
 **MEASUREMENT WARNING — this error was made TWICE in one session.** Module-graph
 TRAVERSAL is not RETAINED closure. `onLoad`/`onResolve` fire during graph
 construction, before tree-shaking; only the metafile's `bytesInOutput` (or
