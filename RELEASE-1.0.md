@@ -280,6 +280,73 @@ Any proposed change to these semantics is a **breaking architectural decision
 requiring an explicit counterexample** — not routine type/API cleanup. This
 distinction also belongs in the Gate-B realistic type/runtime matrix.
 
+0g. **KERNEL-FIRST GREENFIELD DERIVATION. For every capability, derive the
+optimal implementation assuming the current 15.0 kernel exists and NO prior
+SignalTree API, package, implementation, or compatibility constraint ever
+existed. Existing mechanisms are revealed only AFTER the kernel-native design is
+stated. A useful legacy capability does NOT justify its legacy abstraction.**
+
+The decision order, and it is not negotiable:
+
+```
+1  GREENFIELD FUNCTION   what capability should exist in an ideal SignalTree 15?
+2  KERNEL-NATIVE DESIGN  given the kernel we have, how would we build it if no
+                         previous API or package had ever existed?
+3  OWNERSHIP             kernel / causal / consequence / publication / adapter /
+                         application
+4  PUBLIC NECESSITY      does an EXTERNAL implementer genuinely need access?
+5  MINIMUM SURFACE       if so, the smallest kernel-native primitive
+6  COMPARE               only now, look at the existing mechanism
+7  MIGRATION COST        ignore for architecture; record afterwards as execution
+```
+
+Step 2 is the one that was missing:
+
+> **Given the kernel, would we invent this abstraction today?**
+
+If no, then having users, tests, docs, third-party value, or completed
+conversion work is NOT sufficient to keep its current FORM.
+
+**This applies to INTERNAL machinery as much as public API.** A private
+mechanism can be legacy-shaped too. Users never seeing it does not make it
+harmless if it forces the kernel through the wrong lifecycle or duplicates an
+authority.
+
+0h. **MIGRATION COST IS NON-SEMANTIC. Migration difficulty, consumer count,
+already-completed conversion work, documentation volume and compatibility effort
+have ZERO weight in determining the 15.0 architectural endpoint.**
+
+```
+CORRECT    determine ideal endpoint -> freeze it -> measure blast radius -> migrate
+FORBIDDEN  measure blast radius -> adjust the endpoint to make migration easier
+```
+
+None of these are architectural arguments:
+
+```
+"this would change 40 call sites, maybe keep an alias"
+"we already migrated this enhancer, probably keep it"
+"deleting this breaks the demo, maybe it is required"
+```
+
+They describe how much EXECUTION follows a decision, never which decision is
+right. Under Rule 0e, the forbidden ordering is precisely how old ontology
+survives a major release.
+
+### DISPOSITION VOCABULARY — `DELETE` alone conflates function with form
+
+```
+KEEP         function AND current abstraction are kernel-optimal
+REDESIGN     function survives; current abstraction does NOT
+MOVE         function survives under a DIFFERENT semantic owner
+INTERNALIZE  function survives but is not a PUBLIC capability
+DELETE       the FUNCTION itself is unnecessary
+UNPROVEN     function or ownership has not earned survival
+```
+
+`REDESIGN` is the one that was missing, and it is where most legacy lands:
+a capability can be valuable while its abstraction is wrong.
+
 0e. **15.0 HARD-CUTOFF RULE. No compatibility surface may preserve an API path,
 type decomposition, package dependency, or runtime protocol that the 15.0
 architecture has assigned to a different semantic owner. Migration
@@ -2930,7 +2997,7 @@ extension must be notified when its registered positions participate in a
 settled semantic transaction" — then a public capability IS proven, and can be
 designed at minimum size without inheriting 14.x form.
 
-### SUBTRACTION TEST — `formBridge` — **RESULT: KEEP. Obsolescence hypothesis REFUTED.**
+### SUBTRACTION TEST — `formBridge` — **FUNCTION SURVIVES; FORM UNPROVEN**
 
 Pulled forward as a cheap functional falsifier: delete it and ask what capability
 disappears that `signalForm` cannot provide. It was expected to be an obsolete
@@ -2985,9 +3052,32 @@ requires 22+    -> formBridge's reason to exist evaporates and it becomes a
 ```
 
 The peer range currently says `^20 || ^21 || ^22`. **DECISION REQUIRED — the
-supported Angular range is a release-scope question, not a cleanup, and it
-determines `formBridge`'s disposition entirely.** Until it is answered,
-`formBridge` is KEEP.
+supported Angular range is a release-scope question, not a cleanup.**
+
+**CORRECTION UNDER RULE 0g — my "KEEP" verdict conflated FUNCTION with FORM.**
+The subtraction test proved the function is real. It proved nothing about the
+abstraction. Rule 0g step 2 has not been run:
+
+```
+FUNCTION      Angular Reactive Forms integration for the supported range
+              -> SURVIVES (subject to the Angular-range decision)
+CURRENT FORM  an ENHANCER that mutates a tree to add `AngularFormsMethods`
+              and a `Map<string, AngularFormBridge>`
+              -> UNPROVEN
+
+KERNEL-NATIVE QUESTION, NOT YET ASKED:
+  given the 15.0 kernel and no prior API, would Angular forms integration be
+  built as a tree-mutating enhancer at all — or as an ADAPTER over published
+  realization?
+      Angular forms adapter  <->  published SignalTree realization
+
+DISPOSITION   REDESIGN CANDIDATE, not KEEP
+```
+
+If the kernel-native answer is an adapter, then the enhancer form is wrong even
+though the functionality is valuable — and that is exactly the case `REDESIGN`
+exists for. It also bears directly on #4a: forcing `formBridge` through
+`Enhancer<TAdded>` would then be migrating a form that should not survive.
 
 ### REALTIME FUNCTION RESET — start at R0, OWNERSHIP
 
