@@ -422,19 +422,21 @@ export function createEntitySignal<
    */
   const entityHooks = config.hooks;
 
+  /** One message shape for all three, so only one string constant ships. */
+  function blocked(kind: string, id: K | undefined): never {
+    throw new Error(
+      `SignalTree: blocked by ${kind} hook${
+        id === undefined ? '' : ` (id ${String(id)})`
+      }`
+    );
+  }
+
   /** Transform-or-block before an add. Returns the entity to store. */
   function runBeforeAdd(entity: E): E {
     const hook = entityHooks?.beforeAdd;
     if (!hook) return entity;
     const result = hook(entity);
-    if (result === false) {
-      throw new Error(
-        `Cannot add entity: blocked by beforeAdd hook${
-          basePath ? ` at "${basePath}"` : ''
-        }`
-      );
-    }
-    return result;
+    return result === false ? blocked('beforeAdd', undefined) : result;
   }
 
   /** Transform-or-block before an update. Returns the changes to apply. */
@@ -442,23 +444,13 @@ export function createEntitySignal<
     const hook = entityHooks?.beforeUpdate;
     if (!hook) return changes;
     const result = hook(id, changes);
-    if (result === false) {
-      throw new Error(
-        `Cannot update entity ${String(id)}: blocked by beforeUpdate hook`
-      );
-    }
-    return result;
+    return result === false ? blocked('beforeUpdate', id) : result;
   }
 
   /** Block before a remove. Throws when the hook returns false. */
   function runBeforeRemove(id: K, entity: E): void {
     const hook = entityHooks?.beforeRemove;
-    if (!hook) return;
-    if (hook(id, entity) === false) {
-      throw new Error(
-        `Cannot remove entity ${String(id)}: blocked by beforeRemove hook`
-      );
-    }
+    if (hook && hook(id, entity) === false) blocked('beforeRemove', id);
   }
 
   /**
@@ -1442,8 +1434,16 @@ export function createEntitySignal<
      * collection whole rather than half-cleared.
      */
     clear(): void {
-      const removed = [...storage.entries()] as Array<[K, E]>;
-      if (removed.length === 0) return;
+      if (storage.size === 0) return;
+
+      // Only materialise the removed set when something will consume it —
+      // clearing a 50k collection with no taps and no hook should not allocate
+      // an array of 50k pairs to hand to nobody.
+      const observed =
+        tapHandlers.length > 0 || entityHooks?.beforeRemove !== undefined;
+      const removed = observed
+        ? ([...storage.entries()] as Array<[K, E]>)
+        : [];
 
       for (const [id, entity] of removed) runBeforeRemove(id, entity);
 

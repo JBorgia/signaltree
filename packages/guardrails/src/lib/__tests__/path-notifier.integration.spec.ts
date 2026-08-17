@@ -5,11 +5,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { guardrails } from '../guardrails';
 
 describe('PathNotifier integration', () => {
-  // TODO: PathNotifier doesn't emit events for regular signalTree mutations
-  // This test was written assuming PathNotifier works with signalTree, but it only
-  // fires events for entity signal mutations. Either:
-  // 1. Use entity signals in this test, or
-  // 2. Accept that PathNotifier integration only works with entity-based trees
+  // Skipped for a REAL, documented limitation rather than a broken test: the
+  // notifier is change-blind to LEAF writes on a plain-object tree unless
+  // devtools has installed its leaf interceptor. See the comment on
+  // `startChangeDetection` in guardrails.ts and the polling backstop that
+  // exists to cover exactly this. Entity-collection writes DO fire —
+  // `suppression-integration.spec.ts` exercises that path end to end.
+  //
+  // A second reason notifier assertions used to fail was fixed in 14.1.2 and
+  // was not leaf-specific: batched notifications flush on a microtask, so a
+  // synchronous assertion always ran before anything had happened. Any
+  // notifier assertion must await a tick first, as this one does.
   it.skip('uses PathNotifier when available', async () => {
     const tree = signalTree({ users: { u1: { name: 'Alice' } } });
     const enhanced = guardrails()(tree);

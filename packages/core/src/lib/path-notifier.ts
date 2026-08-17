@@ -8,6 +8,12 @@
  *
  * @internal
  */
+import {
+  getActiveWriteContext,
+  withWriteContext,
+} from './write-context';
+
+import type { UpdateMetadata } from './types';
 
 export type PathNotifierHandler = (
   value: unknown,
@@ -36,7 +42,24 @@ export class PathNotifier {
   // Batching state
   private batchingEnabled = true;
   private pendingFlush = false;
-  private pending = new Map<string, { newValue: unknown; oldValue: unknown }>();
+  /**
+   * `metadata` is the ambient `UpdateMetadata` captured at `notify()` time.
+   *
+   * Batched notifications flush on a microtask, by which point the
+   * `withWriteContext` call that wrapped the write has long since exited and
+   * `getActiveWriteContext()` reads `undefined`. Any subscriber that consults
+   * the write context — guardrails' `suppression`, and anything else built on
+   * that seam — therefore saw NOTHING for every batched write, which is to say
+   * for nearly every write, since batching is on by default.
+   *
+   * Capturing here and re-establishing it around the flush (see `flush()`) is
+   * what makes intent survive the microtask boundary. Coalesced writes to one
+   * path keep the LAST write's metadata, matching `newValue`.
+   */
+  private pending = new Map<
+    string,
+    { newValue: unknown; oldValue: unknown; metadata?: UpdateMetadata }
+  >();
   private firstValues = new Map<string, unknown>();
   private flushCallbacks = new Set<() => void>();
 
@@ -127,6 +150,7 @@ export class PathNotifier {
     this.pending.set(path, {
       newValue: value,
       oldValue: this.firstValues.get(path),
+      metadata: getActiveWriteContext(),
     });
 
     if (!this.pendingFlush) {
@@ -193,12 +217,15 @@ export class PathNotifier {
     this.firstValues.clear();
     this.pendingFlush = false;
 
-    for (const [path, { newValue, oldValue }] of toNotify) {
+    for (const [path, { newValue, oldValue, metadata }] of toNotify) {
       // If value didn't change compared to original oldValue, skip
       if (newValue === oldValue) continue;
 
-      // Run interceptors + subscribers synchronously for each path
-      const res = this._runNotify(path, newValue, oldValue);
+      // Re-establish the write context captured at notify() time. Without this
+      // every subscriber sees `undefined` here, because the microtask runs
+      // after `withWriteContext` has restored the previous value.
+      const run = () => this._runNotify(path, newValue, oldValue);
+      const res = metadata ? withWriteContext(metadata, run) : run();
       if (res.blocked) {
         // blocked by interceptor - nothing to do
       }

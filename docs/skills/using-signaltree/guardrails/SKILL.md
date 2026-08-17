@@ -31,10 +31,9 @@ const tree = signalTree<AppState>({ items: [], ui: { search: '' } }).with(
     mode: 'warn', // 'warn' | 'throw' | 'silent'
     budgets: {
       maxUpdateTime: 16, // ms per update
-      maxTreeDepth: 8, // nesting depth, not path-segment count
     },
     hotPaths: { enabled: true, threshold: 10, topN: 5 },
-    reporting: { console: true, interval: 5000 },
+    reporting: { console: true, interval: 5000, maxIssuesPerReport: 20 },
   })
 );
 ```
@@ -49,7 +48,6 @@ const tree = signalTree(initial).with(
       checkInterval: 5000,
       retentionThreshold: 200,
       growthRate: 0.25,
-      trackUnread: true,
     },
     suppression: {
       autoSuppress: ['hydrate', 'reset', 'bulk', 'migration', 'time-travel', 'serialization'], // values from intent/source that silence budget warnings

@@ -16,6 +16,24 @@ import type { ISignalTree, UpdateMetadata } from '@signaltree/core';
  */
 export type { UpdateMetadata };
 
+/**
+ * Eleven members were REMOVED from this file in 14.1.2:
+ * `budgets.maxTreeDepth`, `budgets.alertThreshold`, `hotPaths.trackDownstream`,
+ * `memory.trackUnread`, `analysis.forbidRootRead`, `analysis.forbidSliceRootRead`,
+ * `analysis.maxDepsPerComputed`, `analysis.detectThrashing`,
+ * `analysis.maxRerunsPerSecond`, and `RuleContext.recomputeCount` / `.isUnread`.
+ *
+ * None was ever read by any code in this workspace. They type-checked, read as
+ * working monitoring config, and did nothing — the same silent-no-op class as
+ * `suppression` (now implemented) and core's dead `TreeConfig` flags (now
+ * removed). Nothing can regress: there was no behaviour to lose.
+ *
+ * They are deleted rather than implemented on purpose. Speculatively building
+ * nine monitoring features is the mechanism that produced this set in the first
+ * place; re-add any one of them together with its implementation and a test
+ * when there is a caller who wants it. `tools/check-dead-type-surface.mjs`
+ * fails the build if a replacement arrives without one.
+ */
 export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
   mode?: 'warn' | 'throw' | 'silent';
@@ -73,10 +91,6 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
     maxUpdateTime?: number;
     /** Max memory in MB (default: 50) */
     maxMemory?: number;
-    /** Max tree nesting depth (default: 10) */
-    maxTreeDepth?: number;
-    /** Alert when % of budget used (default: 0.8) */
-    alertThreshold?: number;
   };
 
   /** Hot path analysis configuration */
@@ -87,8 +101,6 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
     threshold?: number;
     /** Track top N hot paths (default: 5) */
     topN?: number;
-    /** Track downstream effects */
-    trackDownstream?: boolean;
     /** Time window for rate calculation in ms (default: 1000) */
     windowMs?: number;
   };
@@ -103,8 +115,6 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
     retentionThreshold?: number;
     /** Growth rate % to trigger warning (default: 0.2) */
     growthRate?: number;
-    /** Track signals never read */
-    trackUnread?: boolean;
   };
 
   /** Custom rules */
@@ -127,20 +137,10 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
 
   /** Read/write analysis */
   analysis?: {
-    /** Forbid reading entire tree root */
-    forbidRootRead?: boolean;
-    /** Forbid reading slice roots */
-    forbidSliceRootRead?: boolean | string[];
-    /** Max dependencies per computed */
-    maxDepsPerComputed?: number;
     /** Warn on parent replacement */
     warnParentReplace?: boolean;
     /** Min diff ratio to justify parent replace (default: 0.8) */
     minDiffForParentReplace?: number;
-    /** Detect thrashing */
-    detectThrashing?: boolean;
-    /** Max reruns per second before thrashing */
-    maxRerunsPerSecond?: number;
   };
 
   /** Reporting configuration */
@@ -193,12 +193,8 @@ export interface RuleContext<T = Record<string, unknown>> {
   duration?: number;
   /** Diff ratio (0-1) */
   diffRatio?: number;
-  /** Recomputation count */
-  recomputeCount?: number;
   /** Downstream effects count */
   downstreamEffects?: number;
-  /** Is signal unread */
-  isUnread?: boolean;
   /** Runtime statistics */
   stats: RuntimeStats;
 }

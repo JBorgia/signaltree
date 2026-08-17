@@ -1176,10 +1176,25 @@ function generateReport<T>(context: GuardrailsContext<T>): GuardrailsReport {
     memory: createBudgetItem(memoryCurrent, memoryLimit),
   };
 
+  // `maxIssuesPerReport` — implemented in 14.1.2; declared and dead before it.
+  // Most severe first, so a cap truncates the tail rather than whatever the
+  // Map happened to insert last.
+  const severityRank: Record<string, number> = { error: 0, warning: 1, info: 2 };
+  let issues = Array.from(context.issueMap.values());
+  const cap = context.config.reporting?.maxIssuesPerReport;
+  if (cap !== undefined && cap >= 0 && issues.length > cap) {
+    issues = [...issues]
+      .sort(
+        (a, b) =>
+          (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3)
+      )
+      .slice(0, cap);
+  }
+
   return {
     timestamp: Date.now(),
     treeId: context.config.treeId,
-    issues: Array.from(context.issueMap.values()),
+    issues,
     hotPaths: context.hotPaths,
     budgets,
     stats: context.stats,

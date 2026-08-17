@@ -295,8 +295,27 @@ const TARGETS = {
     // 0.29KB to convert a permanent silent failure into a named one is the trade
     // this library's diagnostics exist to make. If it needs reclaiming, the Map
     // is the thing to make dev-only, not the message.
-    devKB: 12.4,
-    prodKB: 9.75,
+    //
+    // Bumped for 14.1.2 — the entity hooks that were declared and never wired.
+    // Measured: 9.75 -> 10.10 prod, 12.40 -> 12.78 dev. Dev and prod move by the
+    // same ~0.36KB, the same shape as ST2031 above and for the same reason: this
+    // is CODE, not diagnostic text, so `ngDevMode: false` reclaims none of it.
+    //
+    // What it buys, none of which existed before: `beforeAdd`/`beforeUpdate`/
+    // `beforeRemove` and `tap({ onChange })` actually run; every bulk mutation
+    // pre-flights its hooks so a block cannot half-apply a batch; and `clear()`
+    // / `setAll()` fire `onRemove`, which they never did. That last one is a
+    // LEAK fix, not a feature — an entity owning a socket or an interval was
+    // dropped by `clear()` with its teardown seam never called.
+    //
+    // Paid deliberately, and this is the collection users pay it in: the people
+    // importing `entityMap` are exactly the people whose teardown was broken.
+    // Trimming was attempted first and returned 0.01KB (one shared error-message
+    // constant, and skipping the removed-set allocation in `clear()` when
+    // nothing observes it) — the rest is hook plumbing on ~14 mutation paths and
+    // is not compressible without removing the behaviour.
+    devKB: 12.9,
+    prodKB: 10.2,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });

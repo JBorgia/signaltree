@@ -34,8 +34,15 @@ import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
 
-/** Files that only DECLARE. A hit here does not count as an implementation. */
-const DECLARATION_FILES = [/\/lib\/types\.ts$/, /\.d\.ts$/];
+/**
+ * Files that only DECLARE. A reference inside one of these does not count as
+ * an implementation — otherwise a member would "prove" itself by existing.
+ *
+ * Every `types.ts` / `*.types.ts` in the workspace, not just core's: the first
+ * run of this tool only covered `lib/types.ts` and therefore missed the
+ * enhancer, realtime and events type files entirely.
+ */
+const DECLARATION_FILES = [/\/types\.ts$/, /\.types\.ts$/, /\.d\.ts$/];
 
 /** Roots scanned for implementations. */
 const SCAN_ROOTS = ['packages', 'apps/demo/src', 'tools'];

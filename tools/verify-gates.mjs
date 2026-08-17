@@ -378,6 +378,28 @@ const GATES = [
     },
   },
   {
+    name: 'dead-type-surface',
+    covers:
+      'no exported interface member is declared without an implementation anywhere in the workspace',
+    // The sibling of `dead-exports`, for the failure it cannot see. A dead
+    // EXPORT is unreachable; a dead MEMBER is reachable, type-checks, reads as
+    // working config, and does nothing. 14.1.2 found four separate instances:
+    // `EntityConfig.hooks.*` and `TapHandlers.onChange` (declared Dec 2025,
+    // never wired), `OptimizedUpdateMethods` (outlived the package it typed),
+    // three dead `TreeConfig` flags (survived the 14.1.1 sweep that removed
+    // their sibling), and `GuardrailsConfig.suppression` (guardrails declared
+    // a flag to honour `suppressGuardrails` that only schema honoured).
+    //
+    // Ratcheted to zero: the backlog was implemented or deleted, so any new
+    // one is a regression rather than one more on a pile.
+    cmd: ['node', 'tools/check-dead-type-surface.mjs'],
+    mutation: {
+      file: 'packages/core/src/lib/types.ts',
+      append:
+        '\nexport interface __GateDeadSurface {\n  zzzGateDeadMember?: boolean;\n}\n',
+    },
+  },
+  {
     name: 'numeric-claims',
     covers:
       'every measured figure on a live surface names a tool that produces it — ratcheted, so new ungenerated numbers cannot land',
