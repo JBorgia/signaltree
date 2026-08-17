@@ -1922,7 +1922,8 @@ batching-shaped.
 
    **Also delete the three built-in `.with()` overrides** (`batching.ts:355`,
    `time-travel.ts:2820`, `devtools-impl.ts:1733`). `7a6bd4c9` made the
-   canonical `with` overwrite them on adoption, so they are now dead machinery —
+   canonical `with` overwrite them on adoption. `batching`'s and `timeTravel`'s
+   are then dead machinery; `devTools`' is NOT — see the correction below —
    but under Rule 0e the canonical path should be the SOLE owner, not merely the
    winner. Do not keep them because the fix tolerates them.
 5. Realistic `SignalTree` vs `ISignalTree` matrix (state containing nested
@@ -2544,6 +2545,91 @@ wrapper's property/prototype copying.
 A live 14.x maintenance branch is NOT required to classify. Prove the defect
 against supported 14.x source first; create the branch from the latest supported
 14.x state when patch work is actually scheduled.
+
+## Item #4 — DISCOVERY COMPLETE, neither deletion earned yet
+
+Two independent claims, measured separately. Neither is clean, and one of them
+corrects a claim I made in `7a6bd4c9`.
+
+### A — delete the realization-facing `.with()` overload: NOT EARNED
+
+Measured by REMOVING the overload from both `ISignalTree` and
+`SignalTreeBuilder` and building the workspace. Four public enhancers in three
+packages still require it, compiler-proven:
+
+```
+ng-forms    formBridge   <T>(tree: ISignalTree<T>) => ISignalTree<T> & AngularFormsMethods
+schema      schemas      <T>(tree: ISignalTree<T>) => ISignalTree<T> & SchemaMethods
+guardrails  guardrails   <Tree extends ISignalTree<any>>(tree: Tree) => Tree & {…}
+```
+
+**`realtime` / `supabaseRealtime` are concrete-tree too but did NOT surface** —
+every `.with(...)` call site for them is inside JSDoc, so no compiled consumer
+exercised them. That is INFERRED, not proven, and needs its own type-contract
+test: "no build caller happened to instantiate it" is not evidence that a public
+declaration is safe.
+
+**Measurement lesson worth keeping:** a literal-shape grep is not an exhaustive
+public-type falsifier. `guardrails` was missed by searching for
+`(tree: ISignalTree<T>) => ISignalTree<T> &` because it expresses the same
+semantic dependency through a generic constraint,
+`<Tree extends ISignalTree<any>>(tree: Tree) => Tree & …`. The compiler was the
+direct measure; the text search was a proxy.
+
+### B — delete the three built-in `.with()` overrides: TRUE FOR TWO, FALSE FOR ONE
+
+```
+batching    pure forwarder                      -> vestigial, safe to delete
+timeTravel  pure forwarder                      -> vestigial, safe to delete
+devTools    forwarder + composition reporting   -> NOT vestigial
+```
+
+`devtools-impl.ts`'s override pushes the enhancer name onto a `compositionChain`,
+calls `trackComposition(...)`, and sends a `SignalTree/with` action to Redux
+DevTools. Found because deleting it made `compositionChain` an unused variable —
+lint caught what reading one sibling's body had not.
+
+**CORRECTION to `7a6bd4c9`.** That commit stated "Overwriting the built-ins'
+`with` loses nothing — theirs only forwarded." That is true for two of three and
+FALSE for `devTools`. The claim came from reading `batching`'s body and
+generalizing. History is not rewritten; this entry and the corrected comment in
+`signal-tree.ts` are the current authority.
+
+**NOT YET MEASURED — whether the composition reporting was ever observably
+functioning.** A first probe captured zero `SignalTree/with` actions BOTH before
+and after `7a6bd4c9`, which means the probe did not exercise the path, not that
+the feature is dead. Recorded as inconclusive rather than promoted to a
+regression claim.
+
+### Sequencing — Gate B may NOT freeze with the overload still present
+
+Retaining a second `.with()` authoring grammar whose only justification is
+"some packages have not migrated yet" is exactly what Rule 0e forbids. The
+external migrations are therefore on the Gate B critical path, not deferrable.
+
+```
+#4c-1  DevTools composition-tracking falsifier   <- NEXT
+       deterministic probe around the real transport, WITH a control action
+       proving the fake connection captures an ordinary send; run at
+       7a6bd4c9^, 7a6bd4c9, current, and v14.1.1 to separate
+       "working 14.x feature -> regression" from "already dead in 14.x"
+#4a    migrate the external concrete-tree enhancers, ONE AT A TIME
+       guardrails / schema / realtime / ng-forms  (item #3 is CLOSED for core;
+       this is not reopening it)
+#4b    delete the realization overload — only once every public consumer is neutral
+#4c    delete batching + timeTravel overrides; resolve devTools per #4c-1
+#5     variadic .with(...)
+```
+
+If one of the four cannot be represented honestly as `Enhancer<TAdded>` without
+degrading inference or semantics, STOP — that is a Gate B architecture decision.
+Do not keep the overload merely to avoid answering it.
+
+**Likely endpoint for devTools, stated as a HYPOTHESIS pending #4c-1:** if the
+tracking is real, keeping a DevTools-owned `.with()` override would restore two
+owners immediately after establishing one. The shape that preserves both
+properties is `.with()` owning application and DevTools OBSERVING it through a
+hook — not DevTools replacing `.with()` to learn that application happened.
 
 ## Phase 3 — Packaging Proof
 

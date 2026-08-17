@@ -1418,8 +1418,19 @@ function create<T extends object>(
       // applied to it and must still reach this guard. Re-installing this exact
       // function overwrites the minimal, guard-less `with` that
       // batching/timeTravel/devTools each define on their replacement — which
-      // is the whole bypass. Their versions only forwarded to the enhancer, so
-      // nothing is lost by replacing them.
+      // is the whole bypass.
+      //
+      // CORRECTION to what `7a6bd4c9` claimed. That commit said "theirs only
+      // forwarded, so nothing is lost". MEASURED since: true for `batching` and
+      // `timeTravel`, FALSE for `devTools`, whose override also pushes the
+      // enhancer name onto a composition chain and reports a `SignalTree/with`
+      // action to Redux DevTools. Whether that reporting was observably
+      // FUNCTIONING before this adoption is NOT YET MEASURED — a first probe
+      // returned zero both before and after, which means the probe did not
+      // exercise the path, not that the feature is dead. Release queue item
+      // #4c-1 owns that falsifier and the resulting ownership decision.
+      //
+      // Do not read this adoption as "devTools lost nothing".
       if (result !== currentRealization && isTraversableNode(result)) {
         currentRealization = result;
         try {
