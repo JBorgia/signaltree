@@ -10,7 +10,7 @@ import { withWriteContext } from '../../lib/write-context';
 /**
  * v6 DevTools Enhancer
  *
- * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods
+ * Contract: (config?) => Enhancer<DevToolsMethods>
  */
 import type {
   Enhancer,

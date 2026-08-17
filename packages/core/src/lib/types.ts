@@ -390,11 +390,21 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
   /**
    * Realization-facing overload, for enhancers written against a CONCRETE tree.
    *
-   * Two authoring styles genuinely exist and this is not a compatibility hack:
-   * core's built-ins are declared `<T>(tree: ISignalTree<T>) => ISignalTree<T> &
-   * Methods` and legitimately read the realized surface, while third-party
-   * enhancers built with `createEnhancer` are neutral. A single signature cannot
-   * accept both, because `Enhancer` is a function-type alias and therefore has a
+   * STALE PREMISE, CORRECTED. This overload was justified by "core's built-ins
+   * are declared `<T>(tree: ISignalTree<T>) => ISignalTree<T> & Methods` and
+   * legitimately read the realized surface". As of the 15.0 built-in migration
+   * that is FALSE — all six (`batching`, `timeTravel`, `devTools`,
+   * `serialization`, `persistence`, `transactions`) are declared
+   * `Enhancer<Methods>`, each with one boundary cast at its own return.
+   *
+   * So core no longer justifies this overload. Whether anything still does is
+   * release queue item #4's question: `guardrails`, `realtime`, `schema` and
+   * `ng-forms` declare enhancers against `ISignalTree`, and that is what must
+   * be measured before deleting it. Do NOT read this note as "the overload is
+   * unused" — read it as "its recorded reason no longer applies".
+   *
+   * The variance fact below is unchanged and is why a single signature cannot
+   * accept both: `Enhancer` is a function-type alias and therefore has a
    * CONTRAVARIANT parameter under `strictFunctionTypes` — accepting a concrete
    * enhancer through it would require `EnhancerHost` to be assignable to
    * `ISignalTree<unknown>`, i.e. the neutral host to be a SUBTYPE of the tree,

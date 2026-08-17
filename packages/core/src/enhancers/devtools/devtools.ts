@@ -1,7 +1,7 @@
 /**
  * v6 DevTools Enhancer — thin shell.
  *
- * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods
+ * Contract: (config?) => Enhancer<DevToolsMethods>
  *
  * This shell exists to make devtools tree-shake out of production bundles. In a
  * prod build (`ngDevMode` defined as false), `devTools()` returns a tiny noop

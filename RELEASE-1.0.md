@@ -1903,7 +1903,7 @@ batching-shaped.
 2. ~~Delete `composeEnhancers`.~~ **DONE** — characterized `2f46115b`, deleted
    `6c3d73a8`, equivalence claim refuted and corrected `d09525d6`, migration
    `2ae531c1`. See "Slice 2" below.
-3. Migrate remaining built-ins to `Enhancer<Methods>`, one at a time. <- NEXT
+3. ~~Migrate remaining built-ins to `Enhancer<Methods>`, one at a time.~~ **DONE** — all six migrated, one per commit: `batching` `cc7ad43f`, `timeTravel` `cfbd4985`, `devTools` `a0ebaf3f`, `serialization` `7850acf8`, `persistence` `37e59e1c`, `transactions` `5fa0053e`. Protocol prerequisites first: capability authority `681ffb8e`, continuity across identity replacement `7a6bd4c9`. <- item #4 is NEXT
    **Also owns the `requires` namespace defect** found in slice 2 (below), and
    the transitional tests in `planned-enhancer-dependencies.spec.ts` that record
    it. Those tests are NOT a compatibility contract — changing the behaviour
@@ -1911,6 +1911,15 @@ batching-shaped.
 4. Remove the realization-facing `.with()` overload; add heterogeneous variadic
    `.with(...enhancers)` with runtime order-equivalence tests and an
    identity-replacing enhancer case.
+   **ITS RECORDED JUSTIFICATION NO LONGER HOLDS.** The overload's docblock said
+   it exists because "core's built-ins are declared `<T>(tree: ISignalTree<T>)
+   => ISignalTree<T> & Methods`". After item #3 that is FALSE — all six are
+   `Enhancer<Methods>`. Core no longer justifies it. That is NOT proof it is
+   unused: `guardrails`, `realtime`, `schema` and `ng-forms` still declare
+   enhancers against `ISignalTree`, and THAT is what must be measured before
+   deleting. The stale premise is corrected in `types.ts` so the next reader
+   does not treat it as current evidence either way.
+
    **Also delete the three built-in `.with()` overrides** (`batching.ts:355`,
    `time-travel.ts:2820`, `devtools-impl.ts:1733`). `7a6bd4c9` made the
    canonical `with` overwrite them on adoption, so they are now dead machinery —
