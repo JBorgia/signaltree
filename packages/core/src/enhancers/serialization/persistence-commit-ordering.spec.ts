@@ -307,3 +307,83 @@ describe('persistence() autoSave survives a REFUSED ROLLBACK PLAN', () => {
     expect(rec.writes.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * Seventh defect on this boundary, found by the verification of ed7b4d02 — and
+ * NOT in the new authority. `commit-consequence.ts` faithfully executes the
+ * outcome it is handed; the wrong outcome is chosen one level up.
+ *
+ * Both compensation doors settle 'discard' from a `finally` that cannot tell
+ * "compensation APPLIED" (discard is right) from "compensation REFUSED"
+ * (nothing was reversed, so the authored effects are still live truth and must
+ * flush). The PLAN-level door already gets this right. Same semantic condition,
+ * two doors, opposite outcomes.
+ *
+ * Release invariant: "A rollback REFUSAL is not a rollback success and not a
+ * transaction abort... durable truth must never be made to disagree with live
+ * truth in order to honour a reversal that did not happen."
+ */
+describe('a REFUSED compensation flushes surviving truth', () => {
+  it('leaves stored() durable truth agreeing with the live tree', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+    const { getTreeRealizationPort } = await import(
+      '../../lib/internals/causal-runtime/tree-realization-adapter'
+    );
+    const { stored } = await import('../../lib/markers/stored');
+
+    const map = new Map<string, string>();
+    const adapter: Storage = {
+      getItem: (k) => map.get(k) ?? null,
+      setItem: (k, v) => void map.set(k, v),
+      removeItem: (k) => void map.delete(k),
+      clear: () => map.clear(),
+      key: (i) => Array.from(map.keys())[i] ?? null,
+      get length() {
+        return map.size;
+      },
+    };
+    map.set('pcr-refuse', JSON.stringify({ __v: 1, data: 'v0' }));
+
+    const tree = signalTree({
+      v: stored('pcr-refuse', 'v0', { storage: adapter, debounceMs: 0 }),
+    }).with(transactions()) as {
+      $: { v: { (): string; set(x: string): void } };
+      transaction: (fn: () => void) => { confirm(): void; rollback(): void };
+    };
+
+    const port = getTreeRealizationPort(
+      (tree as unknown as { $: object }).$
+    ) as { validateEffects?: (...a: unknown[]) => unknown } | undefined;
+    const original = port?.validateEffects;
+    if (port && typeof original === 'function') {
+      port.validateEffects = () => ({ kind: 'structural-drift' });
+    }
+
+    const pending = tree.transaction(() => tree.$.v.set('a'));
+    let refused = false;
+    try {
+      pending.rollback();
+    } catch {
+      refused = true;
+    } finally {
+      if (port && typeof original === 'function') {
+        port.validateEffects = original as typeof port.validateEffects;
+      }
+    }
+
+    // Guard against a vacuous pass: the refusal must actually have happened.
+    expect(refused).toBe(true);
+
+    // Nothing was compensated, so 'a' is still the live authoritative state...
+    expect(tree.$.v()).toBe('a');
+    // ...and durable truth must not be made to disagree with it in order to
+    // honour a reversal that did not happen.
+    // Compare the PARSED payload, never a substring of the JSON: `toContain('a')`
+    // matches the 'a' inside `"data"` and asserts nothing.
+    const durable = JSON.parse(
+      adapter.getItem('pcr-refuse') as string
+    ).data as string;
+    expect(durable).toBe('a');
+  });
+});

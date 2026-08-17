@@ -1122,14 +1122,23 @@ export function getOrCreateInternalTransactionRuntime<T>(
         const { effects, baselineValues } = drainTransactionRollbackInput(
           transactionId
         );
+        // Starts true: "nothing to reverse" is a rollback that succeeded
+        // trivially, NOT a refusal. Only the port throwing means nothing was
+        // compensated.
+        let compensated = true;
         try {
           if (effects.length > 0) {
-            rollbackPendingEffectsThroughRealizationPort(
-              transactionId,
-              effects,
-              baselineValues,
-              error
-            );
+            try {
+              rollbackPendingEffectsThroughRealizationPort(
+                transactionId,
+                effects,
+                baselineValues,
+                error
+              );
+            } catch (refusal) {
+              compensated = false;
+              throw refusal;
+            }
           }
         } finally {
           // Settle AFTER compensation, but UNCONDITIONALLY. Late, so consumers
@@ -1140,7 +1149,18 @@ export function getOrCreateInternalTransactionRuntime<T>(
           // settle there left the scope open forever, and since nothing can
           // ever settle it afterwards, autoSave was wedged for the life of the
           // tree: post-commit silently degraded to never-commit.
-          settleCommitScope(transactionOwnerToken, transactionId, 'discard');
+          //
+          // The OUTCOME depends on whether compensation actually applied, which
+          // a bare `finally` cannot see. Refused (or nothing to reverse) means
+          // the authored effects are still the live authoritative state, so
+          // their consequences must FLUSH; discarding them would make durable
+          // truth disagree with live truth to honour a reversal that did not
+          // happen. This is the same rule the plan-level door already applies.
+          settleCommitScope(
+            transactionOwnerToken,
+            transactionId,
+            compensated ? 'discard' : 'commit'
+          );
         }
       } finally {
         try {
@@ -1238,6 +1258,9 @@ export function getOrCreateInternalTransactionRuntime<T>(
           }
 
           const compensation = rollbackPlan.compensation;
+          // Starts true: "nothing to reverse" is a rollback that succeeded
+          // trivially, NOT a refusal.
+          let compensated = true;
           try {
             if (compensation.length > 0) {
               try {
@@ -1247,6 +1270,7 @@ export function getOrCreateInternalTransactionRuntime<T>(
                   discardedTurn?.__baselineValues ?? new Map()
                 );
               } catch (error) {
+                compensated = false;
                 throw createRollbackError({
                   kind: 'effect-validation-failed',
                   pendingTurnId: pendingTurnId as number,
@@ -1264,8 +1288,17 @@ export function getOrCreateInternalTransactionRuntime<T>(
             // refused compensation cannot strand the scope. `lifecycle` is
             // already 'rejected' at this point, so no later confirm() or
             // rollback() could ever settle it — skipping here wedged autoSave
-            // permanently. See the thrown-callback path for the full note.
-            settleCommitScope(transactionOwnerToken, transactionId, 'discard');
+            // permanently.
+            //
+            // Outcome tracks whether compensation APPLIED. A refusal reverses
+            // nothing, so the authored effects remain live truth and flush; a
+            // successful compensation restored the baseline, so they are
+            // discarded. See the thrown-callback path for the full note.
+            settleCommitScope(
+              transactionOwnerToken,
+              transactionId,
+              compensated ? 'discard' : 'commit'
+            );
           }
 
           if (discardedTurn) {
