@@ -63,6 +63,7 @@ bulk.
 - PRIVATE COMMIT consumes prepared instructions only.
 - Atomicity is externally observable coherence, not a count of internal
   revision increments. Specifically:
+
   - physical revisions are monotonic implementation stamps, never transaction
     identities, and never rewind — compensation is itself a physical commit;
   - each actual private physical commit may advance the revision;
@@ -73,10 +74,12 @@ bulk.
   "One physical commit = one shared revision bump" still holds. "One
   transaction = one physical commit = one revision bump" does not, and was
   never the contract. Proven at `e74e63d1`.
+
 - PROJECT reflects committed truth; it never determines authority.
 - Persistence is post-commit.
 - **Durable storage never gets ahead of the tree's settled commit state.** One
   authority answers this for every durable consequence:
+
   - no open commit scope on this tree → durable consequences may run;
   - one or more open commit scopes → durable consequences wait;
   - scopes settle → persist current surviving truth.
@@ -86,6 +89,7 @@ bulk.
   "outside a transaction callback" is not the same as "this tree has no
   speculative state". Callers describe a consequence; they do not decide when it
   runs.
+
 - A rollback REFUSAL is not a rollback success and not a transaction abort. The
   reversal attempt failed; nothing was compensated; the authored effects remain
   the live authoritative state, so their deferred consequences flush. Durable
@@ -134,20 +138,20 @@ Never include unrelated dirt in release commits.
    each produced a confident conclusion that survived until something
    contradicted it:
 
-   | Weak | Said | Strong | Truth |
-   | --- | --- | --- | --- |
-   | `grep -c '^export'` on `index.ts` | core 141 | checker export graph | 209 across 6 entrypoints |
-   | `SymbolFlags.Value` on an alias | 2 runtime exports | `getAliasedSymbol` first | 84 |
-   | `signal(` | `stored` uses none | `signal\s*[<(]` | 1 — it is `signal<T>(` |
-   | `toContain('a')` on a JSON payload | test green | parse, compare the value | red — matched the `a` in `"data"` |
+   | Weak                               | Said               | Strong                   | Truth                             |
+   | ---------------------------------- | ------------------ | ------------------------ | --------------------------------- |
+   | `grep -c '^export'` on `index.ts`  | core 141           | checker export graph     | 209 across 6 entrypoints          |
+   | `SymbolFlags.Value` on an alias    | 2 runtime exports  | `getAliasedSymbol` first | 84                                |
+   | `signal(`                          | `stored` uses none | `signal\s*[<(]`          | 1 — it is `signal<T>(`            |
+   | `toContain('a')` on a JSON payload | test green         | parse, compare the value | red — matched the `a` in `"data"` |
 
    **(b) Correct measurements of DIFFERENT properties.** These do not contradict
    each other; all can be true at once, and each answers its own question:
 
-   | Measurement | Property it governs |
-   | --- | --- |
-   | Angular imported by source files | implementation coupling |
-   | Angular in the public `.d.ts` | type-contract coupling |
+   | Measurement                       | Property it governs          |
+   | --------------------------------- | ---------------------------- |
+   | Angular imported by source files  | implementation coupling      |
+   | Angular in the public `.d.ts`     | type-contract coupling       |
    | Angular in the emitted entrypoint | runtime / package dependency |
 
    Core is 169-of-209 by the first, 3-of-209 by the second, and requires Angular
@@ -184,6 +188,7 @@ Never include unrelated dirt in release commits.
   the kernel unfrozen. This is NOT permission to ship red: the budget must be
   green before `1.0.0-rc.1`, because a release gate that is red at RC means
   nothing. It moves to `GATE C`/`GATE D`:
+
   - establish a trustworthy current bundle baseline;
   - decide whether the budgets are stale or the implementation is oversized
     (`AGENTS.md` still claims bare 5.46KB/5.8 budget; the tool says 9.26/5.9 —
@@ -192,6 +197,7 @@ Never include unrelated dirt in release commits.
   - green before RC.
 
   Do not optimize bundle size during kernel freeze.
+
 - `GATE B — API freeze`
   public exports/types/features intentionally selected
 - `GATE C — Package proof`
@@ -220,16 +226,16 @@ Exit condition: `GATE A` — **SATISFIED**
 Post-freeze regression work, recorded rather than held (none kernel-blocking;
 each belongs to a later gate):
 
-| Case | Gate |
-| --- | --- |
-| undo/redo overlapping an open commit scope | next correctness pass — closest to GATE A, expected to follow from the tree-level rule |
-| structural (`entityMap`) consequences via the HELD path | next correctness pass |
-| `stored()` `debounceMs > 0` / `maxWaitMs` interacting with a hold | `GATE D` persistence contract |
-| SSR / `storage === null` | `GATE D` SSR decision |
-| packages other than core | `GATE C` ecosystem verification |
-| a natural (unmocked) port-level refusal | next correctness pass |
-| remove dead exports `hasOpenCommitScope` / `onCommitScopesSettled` | cleanup; `scheduleDurableConsequence` replaced both |
-| rename settle outcome `'commit'` → `'flush'` | cleanup; settlement is not causal confirmation |
+| Case                                                               | Gate                                                                                   |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| undo/redo overlapping an open commit scope                         | next correctness pass — closest to GATE A, expected to follow from the tree-level rule |
+| structural (`entityMap`) consequences via the HELD path            | next correctness pass                                                                  |
+| `stored()` `debounceMs > 0` / `maxWaitMs` interacting with a hold  | `GATE D` persistence contract                                                          |
+| SSR / `storage === null`                                           | `GATE D` SSR decision                                                                  |
+| packages other than core                                           | `GATE C` ecosystem verification                                                        |
+| a natural (unmocked) port-level refusal                            | next correctness pass                                                                  |
+| remove dead exports `hasOpenCommitScope` / `onCommitScopesSettled` | cleanup; `scheduleDurableConsequence` replaced both                                    |
+| rename settle outcome `'commit'` → `'flush'`                       | cleanup; settlement is not causal confirmation                                         |
 
 Checkpoint record for this phase:
 
@@ -242,21 +248,21 @@ Checkpoint record for this phase:
 
 Commits in this slice:
 
-| Commit | What |
-| --- | --- |
-| `83e241ef` | characterize the pre-decision behavior (falsifier) |
+| Commit     | What                                                         |
+| ---------- | ------------------------------------------------------------ |
+| `83e241ef` | characterize the pre-decision behavior (falsifier)           |
 | `51a98699` | `stored()` post-commit via `internals/commit-consequence.ts` |
-| `367f8678` | `persistence()` autoSave post-commit + discard-ordering fix |
-| `f0da4dc8` | kernel framework-neutrality lint gate |
-| `e74e63d1` | heterogeneous atomicity proof, forward authoring path |
-| `59bed701` | atomicity contract stated as observable coherence |
-| `1f94f74a` | close 3 blockers from the fresh HEAD antagonistic audit |
-| `49a8ab34` | close 2 more blockers from the targeted regression audit |
+| `367f8678` | `persistence()` autoSave post-commit + discard-ordering fix  |
+| `f0da4dc8` | kernel framework-neutrality lint gate                        |
+| `e74e63d1` | heterogeneous atomicity proof, forward authoring path        |
+| `59bed701` | atomicity contract stated as observable coherence            |
+| `1f94f74a` | close 3 blockers from the fresh HEAD antagonistic audit      |
+| `49a8ab34` | close 2 more blockers from the targeted regression audit     |
 
 ### Verification of the new authority — PASSED, one caller fixed
 
-Freeze criterion: *can either persistence surface write while its own tree has
-unresolved speculative state?* **No** — not reproducible by any path, including
+Freeze criterion: _can either persistence surface write while its own tree has
+unresolved speculative state?_ **No** — not reproducible by any path, including
 the ones that produced the previous six defects.
 
 Properties re-proven by executed probe: bare writes still durable at
@@ -278,11 +284,11 @@ compensation actually applied.
 
 Two lessons worth keeping:
 
-- *"Nothing to reverse" is a rollback that succeeded trivially, not a refusal.*
+- _"Nothing to reverse" is a rollback that succeeded trivially, not a refusal._
   The first fix treated an empty effect list as un-compensated and flushed a
   `clear()` that had just been rolled back. Only the port THROWING means
   nothing was compensated.
-- *A single-character `toContain` on a serialized payload asserts nothing.*
+- _A single-character `toContain` on a serialized payload asserts nothing._
   `expect(getItem(key)).toContain('a')` passed against the buggy code because
   `{"__v":1,"data":"v0"}` contains the 'a' in `"data"`. Compare parsed values.
 
@@ -339,15 +345,15 @@ the same instant: `persistence()` writes nothing (it gates on
 ambient write context has four distinguishable states; the code collapses them
 into two:
 
-| | Ambient state | Truth | Today |
-| --- | --- | --- | --- |
-| 1 | no transaction anywhere | committed | write now ✅ |
-| 2 | inside my tree's transaction | speculative | defer ✅ |
-| 3 | inside a FOREIGN tree's transaction | committed for me | write now ✅ (`1f94f74a`) |
-| 4 | no transaction on the stack, but my tree has an open scope | **NOT committed** | **indistinguishable from 1** ❌ |
+|     | Ambient state                                              | Truth             | Today                           |
+| --- | ---------------------------------------------------------- | ----------------- | ------------------------------- |
+| 1   | no transaction anywhere                                    | committed         | write now ✅                    |
+| 2   | inside my tree's transaction                               | speculative       | defer ✅                        |
+| 3   | inside a FOREIGN tree's transaction                        | committed for me  | write now ✅ (`1f94f74a`)       |
+| 4   | no transaction on the stack, but my tree has an open scope | **NOT committed** | **indistinguishable from 1** ❌ |
 
-State 4 is reachable from the realization port *without any transaction on the
-stack*, which is exactly why an ambient-context test cannot see it. Every one of
+State 4 is reachable from the realization port _without any transaction on the
+stack_, which is exactly why an ambient-context test cannot see it. Every one of
 the six defects has been a path reaching durable storage unable to answer "is
 this committed?", and answering "yes" by default. `persistence()` never had the
 class only because its timer could not read the write context at all, forcing it
@@ -407,13 +413,13 @@ Two things gate the freeze decision:
 
    The persistence consequence per outcome:
 
-   | Outcome | Physical state | Persistence consequence |
-   | --- | --- | --- |
-   | `confirm()` | authored state survives | **flush** |
-   | successful `rollback()` | authored state compensated | **discard** |
-   | thrown callback, compensated | baseline restored | **discard** |
-   | rollback REFUSED before compensation | authored state still survives | **flush surviving truth** |
-   | compensation begins then fails catastrophically | catastrophic boundary | error; never pretend rollback succeeded |
+   | Outcome                                         | Physical state                | Persistence consequence                 |
+   | ----------------------------------------------- | ----------------------------- | --------------------------------------- |
+   | `confirm()`                                     | authored state survives       | **flush**                               |
+   | successful `rollback()`                         | authored state compensated    | **discard**                             |
+   | thrown callback, compensated                    | baseline restored             | **discard**                             |
+   | rollback REFUSED before compensation            | authored state still survives | **flush surviving truth**               |
+   | compensation begins then fails catastrophically | catastrophic boundary         | error; never pretend rollback succeeded |
 
    `abandon()` is NOT added for this release. "Drop this pending causal
    relationship without compensating its physical state" is a real feature with
@@ -423,7 +429,7 @@ Two things gate the freeze decision:
    **Terminology debt, deliberately deferred:** the outcome is spelled
    `'commit'`, which risks being read as causal confirmation. `'flush'` /
    `'discard'` describes the persistence consequence more precisely —
-   *persistence settlement is not causal confirmation*. Not renamed now: it
+   _persistence settlement is not causal confirmation_. Not renamed now: it
    would churn the exact delta the third audit is reviewing. Do it after freeze.
 
 **Audit result (read-only `release-reviewer`, independent context, ran the
@@ -470,11 +476,11 @@ Semantics now enforced — "persistence observes committed physical truth, never
 speculative authored state", worded to survive every path rather than keying on
 `confirm()`:
 
-| Path | Durable consequence |
-| --- | --- |
-| bare `set()` | immediate; commits in its own stack, `debounceMs: 0` unchanged |
-| successful transaction | one coherent write per key, final values only |
-| thrown / rolled back | zero speculative writes — never wrote, not wrote-then-repaired |
+| Path                      | Durable consequence                                              |
+| ------------------------- | ---------------------------------------------------------------- |
+| bare `set()`              | immediate; commits in its own stack, `debounceMs: 0` unchanged   |
+| successful transaction    | one coherent write per key, final values only                    |
+| thrown / rolled back      | zero speculative writes — never wrote, not wrote-then-repaired   |
 | undo / redo / realization | non-authoring, but the result IS committed truth, so it persists |
 
 - newly discovered work:
@@ -569,6 +575,7 @@ the kernel before `GATE A`.
       already exists rather than inventing one. Design it during the
       framework-neutral interface migration — it is the natural shape for a
       multi-framework adapter, and it must NOT be attempted before freeze.
+
 - [ ] Split the metadata getters out of `internals/owned-mutation.ts`. Cheap:
       the adapter uses only `getOwnedOwnerPath`/`getOwnedPositionIds`, while
       `untracked()` is confined to `runOwnedMutation`, which the adapter never
@@ -591,14 +598,14 @@ Exit condition: `GATE B`
 
 ### Measured public surface (`6e7bf16a`, checker-resolved, not regex)
 
-| Package | Total | Runtime | Type-only | **Angular in public TYPE** | Angular in decl | Internal-decl leaks |
-| --- | --: | --: | --: | --: | --: | --: |
-| `core` | 209 | 84 | 125 | **3** | 169 | **17** |
-| `events` | 116 | 63 | 53 | **0** | 11 | 0 |
-| `ng-forms` | 34 | 15 | 19 | **3** | 26 | 0 |
-| `guardrails` | 33 | 11 | 22 | **0** | 2 | 0 |
-| `realtime` | 13 | 5 | 8 | **0** | 7 | 0 |
-| `schema` | 4 | 1 | 3 | **0** | 4 | 0 |
+| Package      | Total | Runtime | Type-only | **Angular in public TYPE** | Angular in decl | Internal-decl leaks |
+| ------------ | ----: | ------: | --------: | -------------------------: | --------------: | ------------------: |
+| `core`       |   209 |      84 |       125 |                      **3** |             169 |              **17** |
+| `events`     |   116 |      63 |        53 |                      **0** |              11 |                   0 |
+| `ng-forms`   |    34 |      15 |        19 |                      **3** |              26 |                   0 |
+| `guardrails` |    33 |      11 |        22 |                      **0** |               2 |                   0 |
+| `realtime`   |    13 |       5 |         8 |                      **0** |               7 |                   0 |
+| `schema`     |     4 |       1 |         3 |                      **0** |               4 |                   0 |
 
 `core` by entrypoint: `.` 142 (36 runtime) · `./authoring` 48 (39) · `./security` 7 ·
 `./edit-session` 6 · `./lazy` 3 · `./storage` 3.
@@ -616,22 +623,22 @@ Transitive external imports of each BUILT entrypoint. This is the question that
 settles a peer dependency; `angularInType` does not, and the tool docblock has
 been corrected to say so.
 
-| Entrypoint | Emitted external imports |
-| --- | --- |
-| `core` `.` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators`, `tslib` |
-| `core/authoring` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators` |
-| `core/lazy`, `core/edit-session` | `@angular/core` |
-| **`core/security`, `core/storage`** | **(none)** |
-| **`events` `.`** | **`zod` only — no Angular, no Nest, no rxjs** |
-| `events/angular` | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/webSocket`, `tslib` |
-| `events/nestjs` | `@nestjs/common`, `bullmq`, `tslib` |
-| `events/testing` | (none) |
-| `guardrails` (all) | `@signaltree/core/authoring` only — **no Angular anywhere** |
-| `ng-forms` `.` | `@angular/core`, `@angular/forms`, `@signaltree/core{,/authoring}`, `rxjs` |
-| `ng-forms/audit` | `@signaltree/core` only — confirms it is a pure re-export |
-| `ng-forms/signals` | `@angular/core`, `@angular/forms/signals`, `@signaltree/core{,/authoring}` |
-| **`realtime` `.` and `./supabase`** | **`@angular/core`** |
-| **`schema` `.`** | **`@angular/core`, `@signaltree/core/authoring`** |
+| Entrypoint                          | Emitted external imports                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `core` `.`                          | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators`, `tslib` |
+| `core/authoring`                    | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/operators`          |
+| `core/lazy`, `core/edit-session`    | `@angular/core`                                                                  |
+| **`core/security`, `core/storage`** | **(none)**                                                                       |
+| **`events` `.`**                    | **`zod` only — no Angular, no Nest, no rxjs**                                    |
+| `events/angular`                    | `@angular/core`, `@angular/core/rxjs-interop`, `rxjs`, `rxjs/webSocket`, `tslib` |
+| `events/nestjs`                     | `@nestjs/common`, `bullmq`, `tslib`                                              |
+| `events/testing`                    | (none)                                                                           |
+| `guardrails` (all)                  | `@signaltree/core/authoring` only — **no Angular anywhere**                      |
+| `ng-forms` `.`                      | `@angular/core`, `@angular/forms`, `@signaltree/core{,/authoring}`, `rxjs`       |
+| `ng-forms/audit`                    | `@signaltree/core` only — confirms it is a pure re-export                        |
+| `ng-forms/signals`                  | `@angular/core`, `@angular/forms/signals`, `@signaltree/core{,/authoring}`       |
+| **`realtime` `.` and `./supabase`** | **`@angular/core`**                                                              |
+| **`schema` `.`**                    | **`@angular/core`, `@signaltree/core/authoring`**                                |
 
 **This corrects an earlier claim of mine.** I called `schema` "the strongest
 candidate for eliminating Angular" on the basis that 0 of its 4 public types
@@ -711,13 +718,13 @@ Every Angular primitive in all five marker modules is inside the `create*Signal`
 REALIZATION function. Zero are in the authorship factories, which return inert
 objects.
 
-| Module | Angular primitives | Location | Authorship |
-| --- | --- | --- | --- |
-| `form` | `signal`×6, `computed`×9 | all in `createFormSignal` | inert |
-| `status` | `signal`×2, `computed`×6 | all in `createStatusSignal` | inert |
-| `stored` | `signal`×1, `untracked`×2 | all in `createStoredSignal` | inert |
-| `async-query` | `signal`×4, `untracked`×1, `effect`×1 | all in `createAsyncQuerySignal` | inert |
-| `async-source` | `signal`×3 | all in `createAsyncSourceSignal` | inert |
+| Module         | Angular primitives                    | Location                         | Authorship |
+| -------------- | ------------------------------------- | -------------------------------- | ---------- |
+| `form`         | `signal`×6, `computed`×9              | all in `createFormSignal`        | inert      |
+| `status`       | `signal`×2, `computed`×6              | all in `createStatusSignal`      | inert      |
+| `stored`       | `signal`×1, `untracked`×2             | all in `createStoredSignal`      | inert      |
+| `async-query`  | `signal`×4, `untracked`×1, `effect`×1 | all in `createAsyncQuerySignal`  | inert      |
+| `async-source` | `signal`×3                            | all in `createAsyncSourceSignal` | inert      |
 
 So `@signaltree/authoring` needs no new abstraction — it needs the existing
 separation made physical. The `create*Signal` functions are Angular REALIZATIONS,
@@ -834,11 +841,11 @@ Release debt. Do not derail a split to fix it unless a split directly requires i
 All five splits are done. Bundling the `authoring.ts` entrypoint with Angular
 external and tree-shaking on, then inspecting what the OUTPUT retains:
 
-| Class | n | Detail |
-| --- | --: | --- |
-| Type-only | 9 | Cannot retain a runtime dep by construction |
-| Value, neutral | 29 | `registerMarkerProcessor`, every guard and marker symbol, all 8 `*_READERS`, `onHydrateDecision`, `onTreeError`, `getPathNotifier`, write-context, enhancer authoring |
-| **Value, retains Angular** | **8** | below |
+| Class                      |     n | Detail                                                                                                                                                                |
+| -------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type-only                  |     9 | Cannot retain a runtime dep by construction                                                                                                                           |
+| Value, neutral             |    29 | `registerMarkerProcessor`, every guard and marker symbol, all 8 `*_READERS`, `onHydrateDecision`, `onTreeError`, `getPathNotifier`, write-context, enhancer authoring |
+| **Value, retains Angular** | **8** | below                                                                                                                                                                 |
 
 Seven of the eight are symbols ALREADY slated to leave authoring:
 
@@ -1058,11 +1065,11 @@ the implementation boundary is right, the DECLARATION ownership is wrong.
 not grep — a regex first reported four false `@signaltree/core` dependencies by
 matching JSDoc `import` examples as code):
 
-| Bucket | n | Meaning |
-| --- | --: | --- |
-| 1 — declaration co-location | 28 | Neutral declarations sharing a `.d.ts` with Angular-typed ones |
-| 2 — already leaving authoring | 5 | `createFormSignal`, `createAsyncSourceSignal`, `createAsyncQuerySignal`, `composeEnhancers`, `isAnySignal` |
-| 3 — genuine Angular-shaped SDK | 1 | `isSignalTree` |
+| Bucket                         |   n | Meaning                                                                                                    |
+| ------------------------------ | --: | ---------------------------------------------------------------------------------------------------------- |
+| 1 — declaration co-location    |  28 | Neutral declarations sharing a `.d.ts` with Angular-typed ones                                             |
+| 2 — already leaving authoring  |   5 | `createFormSignal`, `createAsyncSourceSignal`, `createAsyncQuerySignal`, `composeEnhancers`, `isAnySignal` |
+| 3 — genuine Angular-shaped SDK |   1 | `isSignalTree`                                                                                             |
 
 **Bucket 1 has one dominant root cause: `lib/types.d.ts`.** Its Angular import
 exists for `ISignalTree` and the leaf types, but `ENHANCER_META` (a Symbol),
@@ -1157,17 +1164,17 @@ may legitimately remain if it appears in neutral async contracts.
 
 ### Historical — the dependency check that produced the sequence above
 
-The gate was: *can `@signaltree/authoring` be consumed by a third-party
+The gate was: _can `@signaltree/authoring` be consumed by a third-party
 extension package without importing `@signaltree/core` implementation modules or
-Angular?* **No, on both counts.** Files were NOT moved.
+Angular?_ **No, on both counts.** Files were NOT moved.
 
 Module-level import graph for the 37 SDK symbols — 14 declaring modules:
 
-| Class | Modules | Verdict |
-| --- | --- | --- |
-| **Runtime-neutral** | `internals/error-reporter.ts` (zero imports of any kind), `write-context.ts`, `path-notifier.ts`, `enhancers/index.ts` | could move today |
-| **Type-only Angular** — erasable, not a barrier | `types.ts` (`Signal`, `WritableSignal` as types), `readonly.ts` (`import type`) | not blocking |
-| **Runtime Angular** | `internals/materialize-markers.ts` (`computed`, `isSignal`), `markers/{form,status,stored,async-query,async-source}.ts` (`signal`, `computed`, `untracked`) | **blocks the split** |
+| Class                                           | Modules                                                                                                                                                     | Verdict              |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| **Runtime-neutral**                             | `internals/error-reporter.ts` (zero imports of any kind), `write-context.ts`, `path-notifier.ts`, `enhancers/index.ts`                                      | could move today     |
+| **Type-only Angular** — erasable, not a barrier | `types.ts` (`Signal`, `WritableSignal` as types), `readonly.ts` (`import type`)                                                                             | not blocking         |
+| **Runtime Angular**                             | `internals/materialize-markers.ts` (`computed`, `isSignal`), `markers/{form,status,stored,async-query,async-source}.ts` (`signal`, `computed`, `untracked`) | **blocks the split** |
 
 `markers/derived.ts` looked Angular-coupled but its `computed` mention is inside
 a JSDoc comment; it has no imports at all.
@@ -1205,12 +1212,12 @@ nobody outside SignalTree implementation needs it -> stop exporting it
 
 **`core/authoring` — 48 symbols. The seam is clean enough to justify a split.**
 
-| Class | n | Disposition |
-| --- | --: | --- |
-| Extension SDK — marker processing, hydrate/error hooks, enhancer composition, write context, path notifier, 4 `create*Signal` factories | 24 | MOVE to `@signaltree/authoring` if the split lands; otherwise keep, but relocate the 10 declared under `internals/` |
-| Marker introspection — 8 `*_READERS`, 6 `is*Marker`, `*_MARKER` tokens | 13 | MOVE with the SDK; coherent as a set |
-| General utilities — `composeEnhancers`, `isAnySignal`, `isNodeAccessor`, `isTraversableNode`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` | 7 | KEEP in core — ordinary-user API mis-filed under authoring |
-| **Private-package leakage** — `isBuiltInObject`, `parsePath` | 2 | **REMOVE.** Declared in `@signaltree/shared`, which is `"private": true`. Publishing them makes a private package's internals part of core's public contract |
+| Class                                                                                                                                         |   n | Disposition                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Extension SDK — marker processing, hydrate/error hooks, enhancer composition, write context, path notifier, 4 `create*Signal` factories       |  24 | MOVE to `@signaltree/authoring` if the split lands; otherwise keep, but relocate the 10 declared under `internals/`                                          |
+| Marker introspection — 8 `*_READERS`, 6 `is*Marker`, `*_MARKER` tokens                                                                        |  13 | MOVE with the SDK; coherent as a set                                                                                                                         |
+| General utilities — `composeEnhancers`, `isAnySignal`, `isNodeAccessor`, `isTraversableNode`, `SIGNAL_TREE_CONSTANTS`, `SIGNAL_TREE_MESSAGES` |   7 | KEEP in core — ordinary-user API mis-filed under authoring                                                                                                   |
+| **Private-package leakage** — `isBuiltInObject`, `parsePath`                                                                                  |   2 | **REMOVE.** Declared in `@signaltree/shared`, which is `"private": true`. Publishing them makes a private package's internals part of core's public contract |
 
 37 of 48 are genuine extension-author surface with no ordinary-app use. That is
 an SDK, not a convenience subpath — `@signaltree/authoring` is justified on
@@ -1231,11 +1238,11 @@ content. **Core owns audit; remove the republication.** Also eliminate
 
 **`realtime` — 13 symbols, the abstraction is real.**
 
-| Class | n | Detail |
-| --- | --: | --- |
-| Provider-neutral | 9 | The whole root; `RealtimeAdapter` is a genuine seam |
-| Supabase-specific | 4 | The whole `./supabase` subpath |
-| Angular-specific | 0 | — |
+| Class             |   n | Detail                                              |
+| ----------------- | --: | --------------------------------------------------- |
+| Provider-neutral  |   9 | The whole root; `RealtimeAdapter` is a genuine seam |
+| Supabase-specific |   4 | The whole `./supabase` subpath                      |
+| Angular-specific  |   0 | —                                                   |
 
 **KEEP the name.** A rename to `@signaltree/supabase` would destroy a working
 provider boundary. The defect is that Angular sits in the NEUTRAL half —
@@ -1259,6 +1266,182 @@ events: root neutral, Angular peer scoped to ./angular, Nest to ./nestjs
 
 Two facts support this being achievable rather than aspirational: `guardrails`
 already imports zero Angular across 6 files, and `shared` zero across 12.
+
+### GATE-B BLOCKER — shipped declaration closure is invalid
+
+The packed `@signaltree/core` artifact contains `src/lib/markers/entity-map.d.ts`
+references to `EntityMapComputedSlices`, `EntityMapMarkerWithSlices`, and
+`DefaultKey` with no corresponding declarations. Measured on the tarball produced
+by `npm pack` in `dist/packages/core`, not on source.
+
+| name                        | raw `tsc` | rolled `dist` | packed |
+| --------------------------- | --------- | ------------- | ------ |
+| `EntityMapComputedSlices`   | GOOD      | BAD           | BAD    |
+| `EntityMapMarkerWithSlices` | GOOD      | BAD           | BAD    |
+| `DefaultKey`                | GOOD      | BAD           | BAD    |
+
+`tsc --declaration --emitDeclarationOnly` emits all three correctly, so the
+defect is introduced AFTER ordinary TypeScript declaration emission.
+
+RULED OUT, both by test rather than by reading code:
+
+- **`stripInternal`** (`packages/core/tsconfig.lib.prod.json`). Two of the three
+  are `@internal`, which would explain stripped declarations with surviving
+  references — the classic footgun. Removing the tags changed the output not at
+  all.
+- **Root-barrel reachability** as the general cause. `DefaultKey` is exported
+  from its defining module AND from `packages/core/src/index.ts:129`, and is
+  omitted anyway. Discovered because a probe adding that export failed with
+  `TS2300: Duplicate identifier` — it was already there. This does not prove the
+  other two would behave identically if barrel-exported, but it does mean barrel
+  reachability cannot be the root cause. **Do not spend another cycle widening
+  exports.**
+
+A previous fix attempt is documented in-file at `entity-map.ts` (exporting
+`DefaultKey`, with a correct diagnosis of the symptom). It did not resolve the
+defect. This is therefore a known problem that has already resisted one
+plausible correction.
+
+NEXT DISCRIMINATOR, and the only question the next session should answer:
+
+```
+raw tsc                     GOOD
+      v
+@rollup/plugin-typescript      ?   <-- measure this
+      v
+Nx / Rollup final output    BAD
+      v
+npm pack                    BAD
+```
+
+Capture the plugin's declaration writes in isolation before Nx's remaining
+processing touches them. If the plugin output is already BAD, compare its
+effective compiler options and input set against the known-good raw `tsc`
+invocation. If it is GOOD, stop investigating TypeScript — the later Nx/Rollup
+step is deleting or replacing declarations. Do not modify source types during the
+investigation, and do not change public API to compensate for a build defect.
+
+Sequence: locate destructive stage -> fix it -> prove the entity-map regression
+gone -> THEN add a minimal synthetic fixture (a non-root-exported support type
+referenced from a public declaration) -> packed external compile. The existing
+entity-map bug is already an excellent real failing fixture; a synthetic one
+added before the cause is known may interact with the broken processor and prove
+little.
+
+#### Acceptance invariant
+
+> A type reachable from a shipped public declaration must itself be present in
+> the shipped declaration closure. Direct root importability is a SEPARATE
+> API-design decision.
+
+#### Permanent gate
+
+Public declaration validation runs against the **packed** artifact, from an
+external consumer, with no workspace path aliases, `skipLibCheck: false`, and
+asserts `tsc` exit status 0. The repo may use `skipLibCheck` for speed; this gate
+never may — an earlier "passing" external compile passed ONLY because
+`skipLibCheck` suppressed errors inside `.d.ts` files, i.e. it suppressed exactly
+the property under test.
+
+#### Build-experiment evidence rule
+
+A missing error string is not evidence that a build succeeded. `grep -c "error
+TS"` returned 0 for a build that failed and emitted no artifact at all. Every
+decisive build experiment must assert all three: command exit status 0, expected
+artifact exists, artifact has/lacks the property being tested.
+
+### GATE B needs three independent dimensions
+
+No single proxy can freeze the API. Each of these has now been observed passing
+while another failed:
+
+| dimension             | question                                  | failure it missed                                                                                                                    |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Export inventory      | what names exist?                         | `TimeTravelMethods<T>` -> `TimeTravelMethods` (arity change, symbol set identical); `StateOf` (inventory clean, declaration invalid) |
+| Public type contracts | what do those names mean to TypeScript?   | not yet systematic — targeted contract tests are sufficient for 1.0                                                                  |
+| Declaration closure   | can the shipped types be consumed at all? | the entity-map blocker above                                                                                                         |
+
+`tools/api-inventory.mjs` compares symbol sets and metadata; it structurally
+cannot see a type-shape change to an existing symbol. Generic-arity plus
+signature fingerprinting is a possible later improvement, NOT a 1.0 requirement.
+
+### Enhancer + tree-type vocabulary — decided
+
+`Enhancer` is framework-neutral (`8e294c4c`), the demo authors against it
+(`6b302bb9`), and time-travel no longer needs a state generic (`b266457d`).
+FROZEN unless a deterministic counterexample appears — do not reopen.
+
+Settled by measurement, with the evidence recorded in those commit messages:
+
+- `createEnhancer` stays; the two-stage model wanted no second verb.
+- `EnhancerHost` stays private.
+- Return-additions authoring REJECTED on runtime evidence: 8 of 9 enhancer
+  bodies do something a generic `tree + additions` combiner cannot express
+  (`batching` replaces tree identity, `copyTreeProperties` exists because
+  `Object.assign` dropped non-enumerable methods, `transactions` attaches a
+  side-channel key).
+- The neutral / realization-facing `.with()` overload split reflects two real
+  authoring models, not legacy accommodation.
+- `SignalTreeBase<T>` — DELETE. Character-identical to `SignalTree<T>`, zero
+  consumers (declaration + barrel re-export are its only occurrences).
+- `SignalTree<T>` — canonical public tree type.
+- `ISignalTree<T>` — remove from public API, but only AFTER the enhancer
+  migration; its remaining legitimate use is realization-facing enhancer
+  signatures in `guardrails`, `realtime`, `schema`, `ng-forms`. Every demo use is
+  paired with a cast or a compensating `& Methods` annotation.
+- `composeEnhancers` — DELETE. `enhancers.reduce((t, e) => e(t), tree)` typed
+  `(tree: T) => T`, so it erases `TAdded` entirely. Not a synonym for
+  `.with(a).with(b)` — a strictly worse path. Independent of variadic `.with()`.
+
+Variadic `.with(a, b, c)` is typing-proven for neutral enhancers and for real
+converted built-ins, INCLUDING `as const` spread and negative controls. It is
+blocked only on migrating each built-in's public contract to
+`Enhancer<Methods>` — a mechanical candidate proven on `batching` (three lines:
+signature, `import type`, one boundary cast; body untouched), to be migrated
+one at a time with per-enhancer characterization rather than assumed
+batching-shaped.
+
+### API cleanup queue, after the declaration fix
+
+1. Delete `SignalTreeBase`.
+2. Delete `composeEnhancers`.
+3. Migrate remaining built-ins to `Enhancer<Methods>`, one at a time.
+4. Remove the realization-facing `.with()` overload; add heterogeneous variadic
+   `.with(...enhancers)` with runtime order-equivalence tests and an
+   identity-replacing enhancer case.
+5. Realistic `SignalTree` vs `ISignalTree` matrix (state containing nested
+   object + `entityMap` + marker + primitive leaf, with negative controls), then
+   remove public `ISignalTree`.
+6. `FORM_MARKER` / `isFormMarker` — one owner. Declared in
+   `@signaltree/core/authoring`, re-exported by `ng-forms`
+   (`form-bridge.ts:582`); pick the marker-contract owner.
+7. Un-publish `@signaltree/guardrails/./noop` as a public subpath, keeping it as
+   the conditional-export target. Falsifiers first: repo/docs explicit imports of
+   it = 0, no compelling external usage.
+8. Authority audit — `flushAllStoredSignals`, `clearStoragePrefix`,
+   `invalidateTag` fit no grammar bucket. Decide whether the authority is
+   genuinely process-wide or leaked implementation ownership.
+9. Deletion-first audit — `deepEqual`, `isDev`, `toWritableSignal`, `asReadonly`.
+10. Metadata polish — `readonly`/literal-friendly `EnhancerMeta` arrays.
+
+### NEEDS RECONCILIATION — "guardrails dead in prod"
+
+Investigated: `@signaltree/guardrails` root resolves to `dist/noop.js` under the
+`production` export condition, documented at `README.md:66-77`, with `default`
+deliberately mapping to the REAL implementation so a bundler setting neither
+condition gets the functional build. The rules measured are authoring-time
+architectural diagnostics (`noDeepNesting`, `noFunctionsInState`,
+`noCacheInPersistence`).
+
+**No correctness defect demonstrated. The production no-op is intentional,
+documented package behavior.** That is deliberately weaker than "loses nothing a
+consumer depends on" — not every supported build environment has been shown to
+select the intended branch, and rule names do not prove nobody relies on them as
+enforcement. The original ledger item must either identify a narrower failing
+invariant or be retired with evidence. Do not silently convert it to "false".
+
+The real finding is API hygiene, queued above: `./noop` is separately public
+though users should never select it themselves.
 
 ## Phase 3 — Packaging Proof
 
@@ -1384,6 +1567,13 @@ recommend speculative optimizations.
 ```
 
 ## Current Sequence From Here
+
+**NEXT SESSION, one question only:** does `@rollup/plugin-typescript` already
+emit the broken declaration, or does something after it break a correct one? See
+"GATE-B BLOCKER — shipped declaration closure is invalid" above. Nothing in the
+API cleanup queue should start before that boundary is measured, because the
+declaration artifact is not currently trustworthy enough to measure the API being
+frozen.
 
 1. Finish `stored()`/persistence atomic consequence semantics.
 2. Add final heterogeneous atomicity forcing test.
