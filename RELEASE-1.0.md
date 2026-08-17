@@ -2720,6 +2720,79 @@ SUBSTRATE FACTS (candidate ingredients, not endorsements)
                         themselves (time-travel does exactly this)
 ```
 
+### DEMO EVIDENCE — what a real application actually reaches for
+
+Measured by parsing every `import { … } from '@signaltree/*'` in
+`apps/demo/src` (excluding specs), multi-line aware. **METHOD NOTE:** the first
+attempt used a single-line regex and silently missed multi-line imports —
+including `guardrails`, which it reported as unused. Corrected before any
+conclusion was drawn. This is evidence about CURRENT DEMO USAGE, which is one
+signal about function, not proof of it.
+
+**The authoring SDK is barely used by an application.** Six symbols, once each:
+
+```
+onHydrateDecision, onTreeError          observation hooks
+createEnhancer, ENHANCER_META,
+  resolveEnhancerOrder                  enhancer authoring
+registerMarkerProcessor                 marker authoring
+```
+
+That is 6 of ~36 `./authoring` exports.
+
+**ZERO demo usage — the symbols this whole MUT investigation is about:**
+
+```
+interceptLeafSignals     0     the mechanism schema depends on
+getPathNotifier          0     the candidate observation substrate
+withWriteContext         0
+getActiveWriteContext    0
+```
+
+No application reaches for leaf interception, the notifier, or write context.
+They are used only by core internals and by `@signaltree/schema`'s
+implementation. **That is direct evidence for the subtraction hypothesis:** if
+the only consumers of a "public observation protocol" are the library's own
+internals, it is not serving an authoring function.
+
+**Other zero-usage results relevant to the survival audit:**
+
+```
+plannedSignalTree        0     the second construction concept
+transactions             0     as an enhancer import
+asReadonly               0
+isSignalTree             0
+```
+
+**Counter-evidence worth recording — things a real app DOES use:**
+
+```
+ISignalTree              5 files   <- relevant to item #7 (internalize).
+                                      Internalizing it breaks real consumer code
+                                      unless SignalTree<T> is the stated
+                                      replacement.
+clearStoragePrefix       1
+flushAllStoredSignals    1         <- the three "global authority" symbols
+invalidateTag            1            already flagged as suspicious: each has
+                                      exactly one real consumer.
+```
+
+**ng-forms shape — evidence for the adapter hypothesis:**
+
+```
+signalForm      6 files   from @signaltree/ng-forms/signals
+createFormTree  2
+ngFormValidators 2
+formBridge      2         <- the ENHANCER is the least-used entry point
+```
+
+The most-used ng-forms surface is `signalForm`, an Angular Signal Forms
+integration — not the enhancer. **OPEN QUESTION for the audit:** is ng-forms
+primarily an Angular realization adapter that happens to ship an enhancer,
+rather than an enhancer package? If so, forcing `formBridge` through
+`Enhancer<TAdded>` merely to enable deleting the realization overload would be
+letting a desired deletion procedure drive the ontology.
+
 ### MUT-1 — PARTICIPATION MODEL — **DERIVED PROPOSAL, NOT FROZEN**
 
 Answers ONE question: *at which lifecycle phases may external authoring
