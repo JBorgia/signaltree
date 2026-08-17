@@ -10,12 +10,21 @@ import { createStorageAdapter } from '../enhancers/serialization/storage-adapter
 /**
  * Heterogeneous atomicity — RELEASE-1.0.md Phase 1.
  *
- * The acceptance criteria are TODO.md §1:
+ * The contract, per RELEASE-1.0.md Release Invariants:
  *
- *   - scalar + structural change in the same frame
- *   - failure before commit leaves everything neutral
- *   - success advances ONE physical revision
- *   - PROJECT / PUBLISH / persistence happen only after a coherent commit
+ *   - atomicity is externally observable coherence, NOT a count of internal
+ *     revision increments;
+ *   - physical revisions are monotonic implementation stamps, never
+ *     transaction identities, and never rewind;
+ *   - a semantic transaction may span more than one private substrate commit;
+ *   - no observer, publication adapter, or persistence consequence may see an
+ *     intermediate heterogeneous state;
+ *   - failure before commit leaves the SEMANTIC state neutral.
+ *
+ * TODO.md §1 originally asked for "success advances ONE physical revision".
+ * That was superseded: it conflated a semantic transaction with a private
+ * physical commit. Measured here, a heterogeneous transaction advances two —
+ * and no consumer can tell, which is the property that actually matters.
  *
  * `causal-runtime/tree-realization-adapter.spec.ts` already proves the RESTORE
  * path: a mixed add + scalar effect set realized together through the port.
@@ -74,7 +83,7 @@ function harness(key: string): Harness {
 }
 
 describe('heterogeneous atomicity: scalar + structural in one transaction', () => {
-  it('RECORDED: a heterogeneous transaction advances TWO physical revisions, not one', async () => {
+  it('spans two private substrate commits, which is permitted and not a transaction identity', async () => {
     const { resetPathNotifier, getPathNotifier } = await import(
       './path-notifier'
     );
@@ -98,11 +107,12 @@ describe('heterogeneous atomicity: scalar + structural in one transaction', () =
     expect(before).toBeTypeOf('number');
     expect(after).toBeTypeOf('number');
 
-    // TODO.md §1 asks for "success advances one physical revision". It does
-    // not: the scalar substrate and the structural substrate each commit their
-    // own frame. Recorded as measured fact rather than asserted as desired,
-    // because whether this matters depends entirely on whether anything can
-    // OBSERVE between the two — which the next test settles.
+    // Two private substrate commits: one scalar, one structural. This is the
+    // contract, not a defect — a semantic transaction is allowed to span more
+    // than one private physical commit, because atomicity is defined by what
+    // an observer can see, which the next test pins. Asserted exactly so that
+    // collapsing or splitting the substrates becomes a deliberate, visible
+    // change rather than a silent one.
     expect((after as number) - (before as number)).toBe(2);
   });
 
