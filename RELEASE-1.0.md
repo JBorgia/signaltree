@@ -199,6 +199,14 @@ whole class of API "fixes" that would have widened the public surface to
 satisfy a build bug. A green experiment that measured the wrong property costs
 far more than a red one that measured the right property.
 
+0c. **"Public" is determined by declaration reachability, not by the `export`
+keyword or by JSDoc intent.** If a public signature needs a type, that type
+cannot be treated as removable implementation detail by the production
+declaration pipeline, however inconvenient that is. `stripInternal` makes this
+operationally enforceable rather than merely stylistic: an `@internal` tag on
+anything a public declaration references produces a shipped `.d.ts` that names
+what it does not declare. See the entity-map resolution under Phase 2.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
@@ -1306,66 +1314,72 @@ events: root neutral, Angular peer scoped to ./angular, Nest to ./nestjs
 Two facts support this being achievable rather than aspirational: `guardrails`
 already imports zero Angular across 6 files, and `shared` zero across 12.
 
-### GATE-B BLOCKER — shipped declaration closure is invalid
+### RESOLVED at `56572c5d` — declaration closure, entity-map instance
 
-The packed `@signaltree/core` artifact contains `src/lib/markers/entity-map.d.ts`
-references to `EntityMapComputedSlices`, `EntityMapMarkerWithSlices`, and
-`DefaultKey` with no corresponding declarations. Measured on the tarball produced
-by `npm pack` in `dist/packages/core`, not on source.
+`@rollup/plugin-typescript` compiles with `tsconfig.lib.prod.json`, which sets
+`stripInternal: true`. `EntityMapComputedSlices`, `EntityMapMarkerWithSlices`, and
+`DefaultKey` were referenced by PUBLIC declarations while marked `@internal`, so
+their declarations were stripped and every reference to them survived — shipping
+a `.d.ts` naming types it does not declare.
 
-| name                        | raw `tsc` | rolled `dist` | packed |
-| --------------------------- | --------- | ------------- | ------ |
-| `EntityMapComputedSlices`   | GOOD      | BAD           | BAD    |
-| `EntityMapMarkerWithSlices` | GOOD      | BAD           | BAD    |
-| `DefaultKey`                | GOOD      | BAD           | BAD    |
+**`stripInternal` was functioning exactly as configured. The defect was
+classifying declaration dependencies as `@internal` while public signatures
+reference them.** The fix is therefore source-contract hygiene — remove the
+incorrect classification — NOT disabling `stripInternal`, which remains a
+legitimate mechanism for genuinely internal declarations.
 
-`tsc --declaration --emitDeclarationOnly` emits all three correctly, so the
-defect is introduced AFTER ordinary TypeScript declaration emission.
+| name                        | raw `tsc` | plugin | rolled `dist` | packed | after fix |
+| --------------------------- | --------- | ------ | ------------- | ------ | --------- |
+| `EntityMapComputedSlices`   | GOOD      | BAD    | BAD           | BAD    | GOOD      |
+| `EntityMapMarkerWithSlices` | GOOD      | BAD    | BAD           | BAD    | GOOD      |
+| `DefaultKey`                | GOOD      | BAD    | BAD           | BAD    | GOOD      |
 
-RULED OUT, both by test rather than by reading code:
+Raw emission looked correct only because that probe used a different tsconfig
+(`tsconfig.typecheck.json`) with no production stripping. Flipping `stripInternal`
+as a single variable in a reproduction of the plugin stage turned every column
+GOOD; removing the three tags with `stripInternal` left ON did the same.
 
-- **`stripInternal`** (`packages/core/tsconfig.lib.prod.json`). Two of the three
-  are `@internal`, which would explain stripped declarations with surviving
-  references — the classic footgun. Removing the tags changed the output not at
-  all.
-- **Root-barrel reachability** as the general cause. `DefaultKey` is exported
-  from its defining module AND from `packages/core/src/index.ts:129`, and is
-  omitted anyway. Discovered because a probe adding that export failed with
-  `TS2300: Duplicate identifier` — it was already there. This does not prove the
-  other two would behave identically if barrel-exported, but it does mean barrel
-  reachability cannot be the root cause. **Do not spend another cycle widening
-  exports.**
+CORRECTION — this ledger previously recorded `stripInternal` as RULED OUT. **That
+was invalid.** The experiment removed the tags, checked the result with
+`grep -c "error TS"` returning 0, and then read a `dist` file that was very likely
+stale: it asserted neither build success nor artifact freshness. This is the Rule
+0b step-4 failure, and it was already written down as a rule while sitting in this
+document as a conclusion — which is exactly how a wrong causal claim survives.
+Root-barrel reachability remains correctly ruled out (`DefaultKey` is exported
+from its module AND `index.ts:129` and was dropped anyway); do not spend a cycle
+widening exports.
 
-A previous fix attempt is documented in-file at `entity-map.ts` (exporting
-`DefaultKey`, with a correct diagnosis of the symptom). It did not resolve the
-defect. This is therefore a known problem that has already resisted one
-plausible correction.
+A prior in-file fix attempt at `entity-map.ts` exported `DefaultKey` with a
+correct diagnosis of the SYMPTOM but left the tag in place, so it did not resolve
+the defect.
 
-NEXT DISCRIMINATOR, and the only question the next session should answer:
+#### OPEN — second instance, possibly a second mechanism
 
-```
-raw tsc                     GOOD
-      v
-@rollup/plugin-typescript      ?   <-- measure this
-      v
-Nx / Rollup final output    BAD
-      v
-npm pack                    BAD
-```
+`isDev`, `createFormSignal`, and `HydrateMode` are also publicly exported yet
+`@internal`. Removing `isDev`'s tag did NOT restore its declaration, so at least
+one of these is a DIFFERENT mechanism. `isDev` is `export const isDev = _isDev`,
+making the alias target the obvious suspect.
 
-Capture the plugin's declaration writes in isolation before Nx's remaining
-processing touches them. If the plugin output is already BAD, compare its
-effective compiler options and input set against the known-good raw `tsc`
-invocation. If it is GOOD, stop investigating TypeScript — the later Nx/Rollup
-step is deleting or replacing declarations. Do not modify source types during the
-investigation, and do not change public API to compensate for a build defect.
+The one question to answer, in an isolated fixture on the SAME production
+tsconfig/plugin path — no API changes during the measurement:
 
-Sequence: locate destructive stage -> fix it -> prove the entity-map regression
-gone -> THEN add a minimal synthetic fixture (a non-root-exported support type
-referenced from a public declaration) -> packed external compile. The existing
-entity-map bug is already an excellent real failing fixture; a synthetic one
-added before the cause is known may interact with the broken processor and prove
-little.
+> Does `stripInternal` remove a public alias's declaration because the aliased
+> implementation symbol is `@internal`, even when the public alias itself is not?
+
+Four minimal forms: exported-`@internal` target with a public alias;
+module-local-`@internal` target with a public alias; `@internal` function target
+with a public alias; and a plain public value as control. Property measured is
+"public alias declaration survives production `.d.ts` emit" — not "the name
+appears somewhere". Assert exit 0, fresh artifact, alias declaration count == 1,
+and that packed matches rolled.
+
+**Decide intent BEFORE de-internalizing any of the three.** `isDev` is already in
+the deletion-first utility audit below, so the product fix may be to remove it
+from the public surface rather than to make its declaration survive. For each of
+`isDev`, `createFormSignal`, `HydrateMode`: intended public API -> its declaration
+closure must survive; not intended -> remove from public reachability instead of
+de-internalizing. Otherwise a build-tool investigation quietly preserves an API
+already slated for deletion.
 
 #### Acceptance invariant
 
@@ -1381,6 +1395,21 @@ asserts `tsc` exit status 0. The repo may use `skipLibCheck` for speed; this gat
 never may — an earlier "passing" external compile passed ONLY because
 `skipLibCheck` suppressed errors inside `.d.ts` files, i.e. it suppressed exactly
 the property under test.
+
+The fixture must install the packed tarball PLUS its declared required peers
+(`@angular/core`), while still excluding workspace aliases, monorepo source paths,
+and undeclared dependencies. The harness must distinguish two failures that look
+identical in the output:
+
+| symptom                                   | meaning        |
+| ----------------------------------------- | -------------- |
+| missing required PEER dependency          | fixture defect |
+| missing transitive DECLARATION dependency | package defect |
+
+NOT YET GREEN. `56572c5d` proved the entity-map instance is gone. It did not prove
+the packed consumer gate passes: the temp consumer had no `node_modules`, so
+`@angular/core` was unresolved (fixture defect), and the `isDev` instance above is
+a real remaining package defect.
 
 #### Build-experiment evidence rule
 
@@ -1607,12 +1636,17 @@ recommend speculative optimizations.
 
 ## Current Sequence From Here
 
-**NEXT SESSION, one question only:** does `@rollup/plugin-typescript` already
-emit the broken declaration, or does something after it break a correct one? See
-"GATE-B BLOCKER — shipped declaration closure is invalid" above. Nothing in the
-API cleanup queue should start before that boundary is measured, because the
-declaration artifact is not currently trustworthy enough to measure the API being
-frozen.
+**NEXT SESSION, one question only:** does `stripInternal` remove a PUBLIC alias's
+declaration because its aliased target is `@internal`? See "OPEN — second
+instance" under Phase 2. Answered by an isolated fixture on the production
+tsconfig/plugin path, with no API changes during the measurement; then decide
+whether `isDev` / `createFormSignal` / `HydrateMode` are intended public API at
+all before touching their tags. Nothing in the API cleanup queue starts before
+the packed gate is green, because the declaration artifact is not yet trustworthy
+enough to measure the API being frozen.
+
+The plugin-stage question is ANSWERED: the plugin emits the broken declaration
+(`stripInternal` under `tsconfig.lib.prod.json`), not a later Nx/Rollup step.
 
 1. Finish `stored()`/persistence atomic consequence semantics.
 2. Add final heterogeneous atomicity forcing test.
