@@ -19,6 +19,7 @@ export default [
             '{projectRoot}/vitest.config.ts',
           ],
           ignoredDependencies: [
+            '@nx/rollup',
             '@signaltree/core',
             'tslib',
             '@rollup/plugin-commonjs',

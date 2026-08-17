@@ -14,6 +14,9 @@ export default [
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
           ignoredDependencies: [
             '@signaltree/shared',
+            // Build-time only: rollup.config.cjs requires @nx/rollup/with-nx
+            // since the convert-to-inferred migration. Never a runtime peer.
+            '@nx/rollup',
             '@angular/forms',
             'jest-preset-angular',
           ],

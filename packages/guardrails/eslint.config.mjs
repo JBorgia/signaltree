@@ -10,7 +10,7 @@ export default [
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
-          ignoredDependencies: ['@signaltree/shared', 'tslib'],
+          ignoredDependencies: ['@signaltree/shared', 'tslib', '@nx/rollup'],
         },
       ],
     },
