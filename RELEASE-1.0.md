@@ -829,15 +829,63 @@ different incompatible adapter   -> deterministic failure
 
 Release debt. Do not derail a split to fix it unless a split directly requires it.
 
+#### Closure proof — measured, 38 of 46 already neutral
+
+All five splits are done. Bundling the `authoring.ts` entrypoint with Angular
+external and tree-shaking on, then inspecting what the OUTPUT retains:
+
+| Class | n | Detail |
+| --- | --: | --- |
+| Type-only | 9 | Cannot retain a runtime dep by construction |
+| Value, neutral | 29 | `registerMarkerProcessor`, every guard and marker symbol, all 8 `*_READERS`, `onHydrateDecision`, `onTreeError`, `getPathNotifier`, write-context, enhancer authoring |
+| **Value, retains Angular** | **8** | below |
+
+Seven of the eight are symbols ALREADY slated to leave authoring:
+
+```text
+createFormSignal, createAsyncSourceSignal, createAsyncQuerySignal
+    Angular realizations -> core, not the SDK
+
+composeEnhancers, isAnySignal, isNodeAccessor, isTraversableNode
+    ordinary-user utilities from utils.ts, already classified as mis-filed
+```
+
+**`interceptLeafSignals` is the only genuine SDK symbol still dragging Angular.**
+It reaches `../utils` (for `isTraversableNode`) and `./owned-mutation` (which
+calls `untracked`). `utils.ts` is genuinely runtime-coupled — `isSignal` x7,
+`signal`, `computed` — so this is not a type-only fix.
+
+Two candidate resolutions, to decide next session:
+
+- Extract the purely structural guards from `utils.ts` into a neutral module,
+  the same contract pattern. `isTraversableNode` is pure structure and needs
+  nothing; `isAnySignal`/`isNodeAccessor` call Angular's `isSignal` and cannot
+  follow — but both are ordinary-user API leaving authoring anyway.
+- `owned-mutation`'s `untracked` is a realization concern. Either
+  `interceptLeafSignals` gains a narrow port like marker materialization did
+  (`064f19ab`), or it is accepted as an Angular-side SDK piece and stays in core.
+
+MEASUREMENT NOTE, Rule 0 again. The first attempt reported ALL 46 symbols as
+framework-dragging, including ones known neutral. It was measuring module-graph
+TRAVERSAL, not RETAINED closure — importing any name from a barrel walks the
+whole barrel regardless of tree-shaking. Only the output-inspection version
+measures the property that governs the decision. Caught because the result was
+implausible, not because the method was reviewed.
+
 #### Progress
 
 - [x] Neutralize marker materialization behind a realization port — `064f19ab`.
       `internals/materialize-markers.ts` now imports zero framework code.
-- [ ] `async-source` split (sets the canonical pattern)
-- [ ] `stored` split (consequence-bearing proof)
-- [ ] `status`, `form` splits
-- [ ] `async-query` split (effect/lifecycle, last)
-- [ ] Re-run the module graph; confirm the closure criterion
+- [x] `async-source` split — `af273898` (canonical pattern)
+- [x] `stored` split — `6bb04f1d` (consequence-bearing proof)
+- [x] `status` split — `7d2e51ca`
+- [x] `form` split — `d09407b7` (type-only `HistoryFeature` edge)
+- [x] `async-query` split — `3c5521fc` (lifecycle proven realization-side)
+- [x] Contract-neutrality gate — `tools/check-contract-neutrality.mjs`, 5/5 pass
+- [x] Closure proof run — 38/46 neutral; see the table above
+- [ ] Move the 3 realizations + 4 ordinary-user utilities out of authoring
+- [ ] Resolve `interceptLeafSignals` (port, or accept as Angular-side)
+- [ ] Re-run the closure proof; require 0 retained Angular
 - [ ] Create `@signaltree/authoring`, move the SDK, repoint `guardrails`
 - [ ] Remove `@signaltree/core/authoring` as a 15.0 breaking change
 - [ ] Regenerate the API baseline deliberately, then `GATE B`
