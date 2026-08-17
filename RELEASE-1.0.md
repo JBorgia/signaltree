@@ -1041,6 +1041,88 @@ scoped this migration at 45 modules against a true 23, and earlier reported all
 46 authoring exports as framework-dragging when 38 were clean. Both times an
 implausible result caught it, not the method. Use the metafile.
 
+#### Declaration preflight — MEASURED, classified, decision taken
+
+Measurement B is done. Runtime and declaration closures disagree, exactly as
+predicted:
+
+```text
+retained RUNTIME closure       23 modules, 0 Angular, 0 core
+shipped DECLARATION closure    29 files,  11 import @angular/core, 0 core
+```
+
+Neither closure depends on `@signaltree/core`. The architecture is NOT reopened:
+the implementation boundary is right, the DECLARATION ownership is wrong.
+
+**Symbol-level classification of all 46 authoring exports** (TypeScript parser,
+not grep — a regex first reported four false `@signaltree/core` dependencies by
+matching JSDoc `import` examples as code):
+
+| Bucket | n | Meaning |
+| --- | --: | --- |
+| 1 — declaration co-location | 28 | Neutral declarations sharing a `.d.ts` with Angular-typed ones |
+| 2 — already leaving authoring | 5 | `createFormSignal`, `createAsyncSourceSignal`, `createAsyncQuerySignal`, `composeEnhancers`, `isAnySignal` |
+| 3 — genuine Angular-shaped SDK | 1 | `isSignalTree` |
+
+**Bucket 1 has one dominant root cause: `lib/types.d.ts`.** Its Angular import
+exists for `ISignalTree` and the leaf types, but `ENHANCER_META` (a Symbol),
+`EnhancerMeta` (five plain fields) and `NodeAccessor<T>` (three call signatures
+over `T`) need none of it. Eight module groups inherit the edge purely by
+co-location: `enhancers/index`, `intercept-leaf-signals`, `materialize-markers`
+(via `position-registry`), `node-shape`, `form.contract`, `path-notifier`,
+`write-context`. `readonly.d.ts` is the same pattern independently — `import
+type` for the `Pick` sources while the eight `*_READERS` are key allowlists.
+
+**DECIDED — `isSignalTree` moves to `@signaltree/core`.** Its runtime is
+framework-agnostic, but its predicate narrows to `ISignalTree<T>`, whose public
+shape exposes Angular `WritableSignal` leaves. The rule this establishes:
+
+> Runtime neutrality does not make an API authoring-neutral if its supported
+> TYPE contract describes the framework realization.
+
+**DECIDED — `isNodeAccessor` stays in authoring.** `NodeAccessor<T>` is neutral;
+its Angular edge is co-location in `types.ts`, not intrinsic coupling.
+
+**DECIDED — no Angular peer on `@signaltree/authoring`**, not optional, not
+type-only. A non-Angular TypeScript consumer must not need `@angular/core`
+installed to typecheck a framework-neutral SDK. `rxjs` is a separate question and
+may legitimately remain if it appears in neutral async contracts.
+
+#### Next session — in this order
+
+1. Split the two declaration hotspots, using the pattern already proven five
+   times on markers. Extract ONLY the neutral substrate the SDK consumes; do not
+   move all of `types.ts`.
+
+   ```text
+   types.ts     -> neutral: ENHANCER_META, EnhancerMeta, NodeAccessor, ...
+                -> stays:   ISignalTree, leaf/realization-facing types
+   readonly.ts  -> neutral: the eight *_READERS allowlists
+                -> stays:   Angular-derived source types
+   ```
+
+2. **Preserve nominal identity.** `ENHANCER_META` is a `Symbol` and must remain
+   exactly ONE authoritative runtime instance — extract it, do not duplicate it
+   into neutral and core copies with matching names. Same for any brand symbol
+   behind `NodeAccessor`: ownership moves to the neutral side and core CONSUMES
+   it, consistent with `core -> authoring`.
+
+3. Relocate the five bucket-2 symbols. NOTE: they were moved to `./authoring`
+   FROM the root barrel in 14.0.0, so removing them from authoring without
+   giving them a home in core deletes them from the public API. This is an API
+   move, not an export deletion.
+
+4. Move `isSignalTree` to core.
+
+5. Rerun the parsed emitted-declaration closure. **Required: 0 `@angular/*`,
+   0 `@signaltree/core`, 0 `packages/core/src`, 0 core-relative shipped paths.**
+   If a genuine authoring declaration still imports Angular, STOP and classify
+   before proceeding.
+
+6. FREEZE that result, then and only then compute A (runtime SCCs) and C
+   (combined physical closure + topological order). Computing them now would
+   bake in declaration edges that steps 1-4 are about to remove.
+
 #### Progress
 
 - [x] Neutralize marker materialization behind a realization port — `064f19ab`.
