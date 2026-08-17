@@ -227,6 +227,59 @@ and the value-space alias are EXAMPLES of the invariant above, not separate
 architectural principles. The general statement is: public declaration closure is
 transitive across every dependency needed to interpret the shipped contract.
 
+0d. **FROZEN CONTRACT — a branch node IS a `NodeAccessor<T>`, not an Angular
+`Signal<T>`.** This is the rule most at risk during the 15.0 type/API cleanup,
+because an agent simplifying `SignalTree`/`ISignalTree`, neutral authoring types,
+or enhancer contracts can look at `NodeAccessor` and conclude it "could just be
+`Signal<T>`". It cannot.
+
+The model:
+
+```
+NodeAccessor<T>   what a SignalTree branch IS
+Signal<T>         one way a framework can OBSERVE it
+```
+
+Plain object branches such as `tree.$.user` must keep all three call forms:
+
+```ts
+tree.$.user(); // read User
+tree.$.user({ age: 44 }); // partial / deep branch merge
+tree.$.user((c) => ({ ...c, age: c.age + 1 })); // functional update
+```
+
+and must stay structurally navigable — `tree.$.user.name`, `tree.$.user.age`.
+
+Required, non-negotiable:
+
+- Do NOT add `.set()` / `.update()` to `NodeAccessor`.
+- Do NOT make branch accessors pass Angular's `isSignal()`.
+- Preserve the distinction: branch `NodeAccessor<T>` is the SignalTree
+  structural/state API; a leaf signal is the framework reactive primitive.
+- A branch MAY be reactive when called inside Angular `computed()` / `effect()`
+  without itself being an Angular Signal. That is the intended design, not a gap.
+- If an Angular API genuinely requires a real `Signal<T>` for a branch, supply it
+  through an EXPLICIT adapter/view — never by changing `NodeAccessor<T>`.
+- Prefer that branch-to-Signal view be READ-ONLY unless a writable semantic
+  contract is separately justified. Angular's `.set()` must not ambiguously mean
+  SignalTree deep merge.
+
+Permanent contract tests to add and retain:
+
+```
+node()                     reads the exact typed snapshot
+node(partial)              deep-merges, preserves omitted state
+node(curr => next)         functional update
+nested branch navigation   intact
+branch  isSignal()         false
+leaf    isSignal()         true in the Angular realization
+computed(() => node())     reacts correctly
+```
+
+Any proposed change to these semantics is a **breaking architectural decision
+requiring an explicit counterexample** — not routine type/API cleanup. This
+distinction also belongs in the Gate-B realistic type/runtime matrix.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
