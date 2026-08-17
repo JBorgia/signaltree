@@ -1337,8 +1337,29 @@ function create<T extends object>(
    * @returns The enhanced tree with additional methods or capabilities.
    * @see BatchingConfig, TimeTravelConfig, DevToolsConfig, SerializationConfig
    */
-  Object.defineProperty(tree, 'with', {
-    value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
+  /**
+   * The tree an enhancer must be applied TO. Not `tree` — an identity-replacing
+   * enhancer returns a NEW callable, and everything after it must see that one.
+   *
+   * MEASURED, both directions, because the two failure modes are complementary
+   * and no existing pattern avoided both:
+   *
+   *   copy `with`'s descriptor onto the replacement  bookkeeping SURVIVES,
+   *   (a hand-written replacer)                      receiver is the ORIGINAL
+   *
+   *   redefine `with` on the replacement             receiver is CURRENT,
+   *   (batching / timeTravel / devTools)             bookkeeping is LOST
+   *
+   * The first is wrong because `with` closed over `tree`; the second is wrong
+   * because the replacement's own `with` reaches none of the state below. One
+   * mutable reference plus re-installing THIS function on each replacement gives
+   * both: validation keeps using one tree's bookkeeping, invocation always uses
+   * the latest realization.
+   */
+  let currentRealization: unknown = tree;
+
+  const canonicalWith = function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
+    {
       if (typeof enhancer !== 'function') {
         throw new Error('Enhancer must be a function');
       }
@@ -1383,7 +1404,7 @@ function create<T extends object>(
       // prerequisite that never took effect, and would make a retry look like a
       // duplicate. Dependency state obeys the same fail-closed principle as the
       // validation above.
-      const result = enhancer(tree) as R;
+      const result = enhancer(currentRealization as ISignalTree<T>) as R;
 
       if (meta?.name) {
         appliedEnhancerNames.add(meta.name);
@@ -1392,8 +1413,35 @@ function create<T extends object>(
         providedEnhancerCapabilities.add(capability);
       }
 
+      // ADOPT a replacement. An identity-replacing enhancer hands back a new
+      // callable; from here on it IS the tree, so the next enhancer must be
+      // applied to it and must still reach this guard. Re-installing this exact
+      // function overwrites the minimal, guard-less `with` that
+      // batching/timeTravel/devTools each define on their replacement — which
+      // is the whole bypass. Their versions only forwarded to the enhancer, so
+      // nothing is lost by replacing them.
+      if (result !== currentRealization && isTraversableNode(result)) {
+        currentRealization = result;
+        try {
+          Object.defineProperty(result, 'with', {
+            value: canonicalWith,
+            enumerable: false,
+            writable: false,
+            configurable: true,
+          });
+        } catch {
+          // Non-configurable `with` on a replacement: the tree keeps working,
+          // but the chain past it is outside the protocol. Never seen in-repo;
+          // swallowing beats throwing from a successful application.
+        }
+      }
+
       return result;
-    },
+    }
+  };
+
+  Object.defineProperty(tree, 'with', {
+    value: canonicalWith,
     enumerable: false,
     writable: false,
     configurable: true,
