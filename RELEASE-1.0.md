@@ -3098,6 +3098,103 @@ survive.
 **Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
 inventory.
 
+### RULE 0g DERIVATION — Reactive Forms interoperability — **RESULT: REDESIGN / MOVE**
+
+First full application of Rule 0g. Requirement stated with the existing name and
+mechanism withheld:
+
+> A supported Angular application using Reactive Forms must interoperate a
+> SignalTree-backed state model with `FormGroup`/`FormControl` **without
+> creating a second authority for application truth.**
+
+**THE DECIDING FALSIFIER:** does this require CHANGING THE SEMANTIC CAPABILITIES
+of a SignalTree, or merely ADAPTING between Angular's forms model and an already
+published SignalTree realization?
+
+**MEASURED — it is purely adaptive.** The implementation is bidirectional sync
+and nothing else:
+
+```
+createFormGroupFromValues(...)                 build FormGroup from marker values
+formGroup.valueChanges.subscribe -> set(...)   FormGroup  -> SignalTree
+effect(() => syncSignalToControl(), {injector}) SignalTree -> FormGroup
+```
+
+No new semantic capability is added to the tree. **So the enhancer is the wrong
+owner.**
+
+#### Three findings that make this conclusive, not merely stylistic
+
+**1. It requires an Angular INJECTION CONTEXT the enhancer cannot guarantee.**
+It imports `inject`, `Injector`, `DestroyRef`, and its config carries escape
+hatches — with this comment:
+
+> *"Injector for reactive FormSignal -> FormGroup sync (auto-injected if in
+> injection context). **Without one, signal-side writes only reach the FormGroup
+> at creation time.**"*
+
+A tree-mutating enhancer applied via `tree.with(...)` may run anywhere, so the
+integration **silently degrades to one-way** when the context is absent. An
+Angular-owned adapter always has the context by construction. The escape hatch
+is a symptom of the wrong owner, not a convenience.
+
+**2. Lifecycle owner is mismatched.** Cleanup keys on `DestroyRef` — Angular
+injector/component lifetime. The enhancer attaches to TREE lifetime. Those are
+different lifetimes, and the tree's is usually longer.
+
+**3. Cardinality is wrong.** `formBridge: Map<string, AngularFormBridge>` keyed
+by path is SINGLETON STATE ON THE TREE. Two components each wanting their own
+`FormGroup` over the same `form()` marker — a routine Angular scenario — collide.
+The natural cardinality of a forms binding is PER COMPONENT, not per tree.
+
+#### The eight questions
+
+```
+1 synchronization owner  BIDIRECTIONAL, and the write-back must go through the
+                         canonical SignalTree write path — never a second authority
+2 what is truth          FormGroup carries UI state (dirty/touched/pristine) that
+                         must NOT enter SignalTree semantics. Only VALUES cross.
+3 identity needed        public node accessors suffice — no PositionId, no
+                         realization identity. Evidence for adapter, not kernel.
+4 topology change        UNRESOLVED — entity add/remove/rekey under a bound form.
+                         Must be answered by whatever owns the adapter.
+5 validation owner       TWO independently-owned systems bridged explicitly;
+                         `@signaltree/schema` already owns its side
+6 must it be tree.method()?  NO. Nothing measured requires `tree.getAngularForm(p)`
+                         over `createReactiveFormsAdapter(node, …)`
+7 multiple FormGroups?   YES, legitimately -> tree-attached singleton bridge state
+                         is inherited architecture (see finding 3)
+8 lifecycle owner        Angular injection context / component — NOT tree lifetime
+```
+
+#### Disposition
+
+```
+FUNCTION       SignalTree <-> Reactive Forms interoperability          KEEP
+CURRENT FORM   tree-mutating enhancer + AngularFormsMethods +
+               tree-attached bridge Map                                DELETE
+GREENFIELD     Angular-owned adapter over SignalTree publication /
+FORM           node accessors, with Angular lifecycle ownership        KEEP
+DISPOSITION    REDESIGN / MOVE TO OWNER
+```
+
+```
+                  DERIVED                          CURRENT
+SignalTree truth                      tree.with(formBridge())
+   -> Angular publication                -> mutates realization
+   <-> Reactive Forms adapter            -> adds getAngularForm() + Map
+   <-> FormGroup / FormControl           -> hopes for an injection context
+```
+
+**CONSEQUENCE FOR #4a — `formBridge` must NOT be migrated to
+`Enhancer<TAdded>`.** That would convert a form this derivation concludes should
+not survive, purely to enable deleting the realization overload. Rule 0h: the
+deletion procedure does not get to drive the ontology.
+
+**STILL OPEN, and honestly so:** question 4 (topology change under a bound form)
+is unanswered by either design, and the derived adapter's exact surface is not
+specified — this slice establishes OWNERSHIP, not API.
+
 ### SUBTRACTION TEST — `formBridge` — **FUNCTION SURVIVES; FORM UNPROVEN**
 
 Pulled forward as a cheap functional falsifier: delete it and ask what capability
