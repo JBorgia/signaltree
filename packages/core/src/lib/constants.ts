@@ -96,7 +96,6 @@ const _isDev =
 /**
  * Whether the current environment is development mode.
  * Uses Angular's `ngDevMode` when available, otherwise falls back to NODE_ENV.
- * @internal Exported for use by enhancers and internal modules.
  */
 export const isDev = _isDev;
 
