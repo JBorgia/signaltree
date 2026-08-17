@@ -30,52 +30,34 @@ import {
 } from 'rxjs/operators';
 
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+import {
+  ASYNC_QUERY_MARKER,
+  isAsyncQueryMarker,
+  type AsyncQueryConfig,
+  type AsyncQueryMarker,
+} from './async-query.contract';
+
+// Identity, query signature, config/descriptor shapes and the guard live in the
+// neutral contract module; this file owns the Angular realization and all of the
+// lifecycle. Re-exported so the public surface is unchanged by the split.
+export { ASYNC_QUERY_MARKER, isAsyncQueryMarker } from './async-query.contract';
+export type {
+  AsyncQueryFn,
+  AsyncQueryConfig,
+  AsyncQueryMarker,
+} from './async-query.contract';
 
 // =============================================================================
 // SYMBOL
 // =============================================================================
 
-export const ASYNC_QUERY_MARKER = Symbol('ASYNC_QUERY_MARKER');
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-/**
- * Query function for an async query. Receives the current input and returns
- * either an Observable or a Promise of the result.
- */
-export type AsyncQueryFn<TInput, TResult> = (
-  input: TInput
-) => Observable<TResult> | Promise<TResult>;
 
-/**
- * Configuration for an {@link asyncQuery} marker.
- */
-export interface AsyncQueryConfig<TInput, TResult> {
-  /** Initial input value (default: `undefined` — query won't fire until set). */
-  initialInput?: TInput;
-  /** Initial result value (default: `undefined`). */
-  initialResult?: TResult;
-  /** Query function — runs every time input changes (after debounce/dedup). */
-  query: AsyncQueryFn<TInput, TResult>;
-  /** Debounce input changes by N ms (default: 0 — no debounce). */
-  debounce?: number;
-  /** Filter inputs — query only fires when this returns true. */
-  filter?: (input: TInput) => boolean;
-  /** Equality function for deduping consecutive inputs (default: `Object.is`). */
-  equal?: (a: TInput, b: TInput) => boolean;
-}
 
-/**
- * Marker placeholder that gets materialized into an {@link AsyncQuerySignal}.
- */
-export interface AsyncQueryMarker<TInput, TResult> {
-  [ASYNC_QUERY_MARKER]: true;
-  config: AsyncQueryConfig<TInput, TResult>;
-  readonly __inputType?: TInput;
-  readonly __resultType?: TResult;
-}
 
 /**
  * The materialized async-query accessor.
@@ -192,16 +174,6 @@ export function asyncQuery<TInput, TResult>(
 // TYPE GUARD
 // =============================================================================
 
-export function isAsyncQueryMarker(
-  value: unknown
-): value is AsyncQueryMarker<unknown, unknown> {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    ASYNC_QUERY_MARKER in value &&
-    (value as Record<symbol, unknown>)[ASYNC_QUERY_MARKER] === true
-  );
-}
 
 // =============================================================================
 // SIGNAL FACTORY (materializer)

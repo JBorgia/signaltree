@@ -104,7 +104,7 @@ export {
 // Marker brand symbols — for recognising a marker you did not create.
 export { FORM_MARKER } from './lib/markers/form.contract';
 export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source.contract';
-export { ASYNC_QUERY_MARKER } from './lib/markers/async-query';
+export { ASYNC_QUERY_MARKER } from './lib/markers/async-query.contract';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
 export { isFormMarker } from './lib/markers/form.contract';
@@ -112,7 +112,7 @@ export { isStoredMarker } from './lib/markers/stored.contract';
 export { isStatusMarker } from './lib/markers/status.contract';
 export { isDerivedMarker } from './lib/markers/derived';
 export { isAsyncSourceMarker } from './lib/markers/async-source.contract';
-export { isAsyncQueryMarker } from './lib/markers/async-query';
+export { isAsyncQueryMarker } from './lib/markers/async-query.contract';
 
 // Structural guards and path plumbing — tree-walking tools.
 // `isTraversableNode` in particular is what the repo's own lint rule points
