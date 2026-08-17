@@ -132,6 +132,24 @@ export type _RootAccessor = [
 // @ts-expect-error `state` is not part of the public SignalTree contract
 export type _NoStateOnPublicTree = (typeof rootTree)['state'];
 
+// FROZEN GRAMMAR — state is addressed through `$`, and ONLY through `$`.
+//
+// `SignalTree<T>` used to be `ISignalTree<T> & TreeNode<T>`, which typed the
+// state keys on the root object as well. That was a type describing a
+// different API grammar from the runtime: `Object.keys(signalTree({count:0}))`
+// is `[]` and `tree.count` is `undefined`, yet `tree.count` typechecked green
+// as a writable signal. These rows are the permanent guard against the root
+// surface being reintroduced — by a re-added `& TreeNode<T>`, by runtime
+// property copying, or by any other route. Two ways to address one node is the
+// duplicate grammar this API deliberately does not have.
+// @ts-expect-error state lives under `$`, never on the root
+export type _NoRootLeaf = (typeof rootTree)['count'];
+// @ts-expect-error state lives under `$`, never on the root
+export type _NoRootBranch = (typeof rootTree)['user'];
+// The supported grammar, green:
+export const _viaAccessor: number = rootTree.$.count();
+export const _viaAccessorBranch: RootState['user'] = rootTree.$.user();
+
 // Read returns the exact snapshot type; both write forms are callable.
 export const _rootRead: RootState = rootTree();
 rootTree({ count: 1 });
@@ -344,58 +362,37 @@ export const _builtChanged: string[] = built.updateAndReport({ count: 3 });
 //
 //     const tree: SignalTree<MyState> = signalTree({ ... });
 //
-// TODAY THIS DOES NOT COMPILE. There are TWO independent mismatches, and the
-// second is only visible once the first is neutralized — TypeScript stops
-// elaborating at the first decisive member incompatibility, so the initial
-// error is the FIRST blocker, never proof that it is the ONLY one. That was
-// established by a one-variable experiment: changing `SignalTreeBuilder.bind`
-// alone left the assignment red with an entirely different error.
+// TODAY THIS DOES NOT COMPILE, and the remaining cause is now exactly ONE
+// member. Getting to that statement took a one-variable experiment rather than
+// a reading of the error text: TypeScript stops elaborating at the first
+// decisive member incompatibility, so its message names the FIRST blocker and
+// is silent about anything behind it.
 //
-//   (1) bind    SignalTreeBuilder<S, …>.bind(thisArg?) -> (value?: S) => S | void
-//               ISignalTree<S>.bind(thisArg?)          -> NodeAccessor<S>
+// There were TWO independent mismatches, pointing in OPPOSITE directions:
 //
-//               The DECLARATION is the lossy side. At runtime the builder
-//               copies the base tree's `bind` verbatim (`signal-tree.ts:1802`)
-//               and that function returns a `NodeAccessor<T>`
-//               (`signal-tree.ts:1365`). Same runtime-present / type-missing
-//               drift class that `internals/builder-types.ts` documents in its
-//               own docblocks for `destroyed`, `registerCleanup` and
-//               `updateAndReport`.
+//   (1) root state keys — the ANNOTATION OVER-PROMISED.
+//       `SignalTree<T>` was `ISignalTree<T> & TreeNode<T>`, requiring the state
+//       keys on the tree object itself ("missing the following properties from
+//       type 'TreeNode<RootState>': count, tags, user"). The runtime root has
+//       none of them: `Object.keys(tree)` is `[]`, `tree.count` is `undefined`,
+//       and only `tree.$` carries the keys. RESOLVED — the false root surface
+//       is gone and section A1 now guards against its return.
 //
-//   (2) root    `SignalTree<T>` is `ISignalTree<T> & TreeNode<T>`, so it
-//       state   requires the STATE KEYS on the tree object itself —
-//       keys    "missing the following properties from type 'TreeNode<RootState>':
-//               count, tags, user". `SignalTreeBuilder` does not declare them.
+//   (2) bind — the BUILDER DECLARATION UNDER-PROMISES.
+//       `SignalTreeBuilder<S, …>.bind(thisArg?)` is declared
+//       `(value?: S) => S | void`; `ISignalTree<S>.bind(thisArg?)` is
+//       `NodeAccessor<S>`. The runtime already satisfies the stronger contract
+//       — the builder copies the base tree's `bind` verbatim and that function
+//       returns a `NodeAccessor<T>`. Same runtime-present / type-missing drift
+//       class `internals/builder-types.ts` documents for `destroyed`,
+//       `registerCleanup` and `updateAndReport`. STILL OPEN at this commit.
 //
-//               Here the ANNOTATION is the wrong side, not the builder. At
-//               runtime the root carries NO state keys: for
-//               `signalTree({ count, tags, user })`, `Object.keys(tree)` is
-//               `[]`, and `tree.count` is `undefined`. Only `tree.$` has them.
-//               `types.ts` still explains the `& TreeNode<T>` as "properties
-//               copied to the root callable ... legacy consumers rely on this";
-//               that copying does not happen for state keys.
+// Do not collapse these into "the builder was wrong" or "the annotation was
+// wrong". Each side was wrong about a different member, in a different
+// direction, and only (1) is closed here.
 //
-//               So the builder is HONEST and the canonical annotation
-//               OVER-PROMISES. Making the builder satisfy `SignalTree<T>` as
-//               currently written would mean inventing a root surface that the
-//               design deliberately puts behind `$`.
-//
-// `name` is absent from the missing-property list only because a function
+// `name` never appeared in the missing-property list, because a function
 // already has `Function.prototype.name`. Do not read that as `name` being fine.
-//
-// This is a public-type DECISION (queue item 5 owns the tree-type vocabulary),
-// not a local repair, so it is characterized rather than fixed here.
 declare const builtForAlignment: ReturnType<typeof signalTree<RootState>>;
-// @ts-expect-error KNOWN DEFECT: see (1) and (2) above. Fixing only bind leaves this red.
+// @ts-expect-error mismatch (2) only: builder `bind()` is declared `(value?: T) => T | void`
 export const _constructorMatchesAnnotation: SignalTree<RootState> = builtForAlignment;
-
-// The over-promise, pinned on its own because it is the more serious half and
-// it compiles — nothing else in this file would catch a type that lies about
-// runtime. `rootTree.count` typechecks as a writable signal; the same access on
-// a real constructed tree is `undefined`.
-//
-// KEEP THIS ROW RED-IN-SPIRIT: it is green today ONLY because the type is
-// wrong. When `SignalTree<T>` stops claiming a root state surface, this line
-// starts failing to compile, and THAT is the fix landing — not a regression.
-export const _annotationOverPromisesRootState: CallableWritableSignal<number> =
-  rootTree.count;

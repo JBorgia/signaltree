@@ -1529,22 +1529,34 @@ export interface EnhancerMeta {
   description?: string;
 }
 
-// Main public SignalTree interface expected by downstream packages
-
-// Backwards-compatible aliases expected by older consumers
-// v6: remove legacy `SignalTree` alias and multi-overload `WithMethod`.
-// Consumers should use `SignalTree<T>` for the minimal runtime shape.
-
-// Note: `SignalTree` alias is provided by the separate `types` package.
-// Core now uses `SignalTree<T>` and the dedicated `types` package
-// supplies the legacy `SignalTree<T>` declaration to avoid duplicate
-// identifier collisions during monorepo type-checking.
-
-// Provide lightweight aliases for legacy consumers importing from core.
-// These are simple re-exports of the internal `ISignalTree` shape.
-// Backwards-compatible alias: include TreeNode<T> so properties copied to
-// the root callable are visible in TypeScript (legacy consumers rely on this)
-export type SignalTree<T> = ISignalTree<T> & TreeNode<T>;
+/**
+ * Canonical public tree contract — the ONE name a consumer should annotate
+ * with:
+ *
+ * ```ts
+ * function inspect(tree: SignalTree<AppState>) { ... }
+ * interface Store { tree: SignalTree<AppState>; }
+ * ```
+ *
+ * **State nodes are reached through `$`. State properties are NOT copied onto
+ * the root callable.** `tree.$.count()` is the grammar; `tree.count` is not,
+ * and there is deliberately only one way to address a node.
+ *
+ * This alias previously read `ISignalTree<T> & TreeNode<T>`, justified in a
+ * comment as "properties copied to the root callable ... legacy consumers rely
+ * on this". No such copying happens for state keys — the only copy loop
+ * (`signal-tree.ts`) copies ENHANCER result keys and skips tree members. A
+ * runtime probe on `signalTree({ count, tags, user })` reports
+ * `Object.keys(tree)` as `[]` and `tree.count` as `undefined`, while the keys
+ * are present on `tree.$`. So the type described a DIFFERENT API grammar from
+ * the runtime, and typechecked `tree.count` green against a value that has no
+ * such property. Removing `& TreeNode<T>` makes the contract honest.
+ *
+ * Currently REPRESENTED BY `ISignalTree<T>`; that is implementation vocabulary
+ * scheduled for internalization, not a promise about the future algebra.
+ * `SignalTree<T>` is the contract, and it is the name that survives.
+ */
+export type SignalTree<T> = ISignalTree<T>;
 
 // ============================================
 // TYPE GUARDS
