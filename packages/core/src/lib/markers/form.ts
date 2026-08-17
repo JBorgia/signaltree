@@ -337,7 +337,6 @@ export function form<T extends Record<string, unknown>>(
 
 /**
  * Creates a materialized FormSignal from a FormMarker.
- * @internal
  */
 export function createFormSignal<T extends Record<string, unknown>>(
   marker: FormMarker<T>,

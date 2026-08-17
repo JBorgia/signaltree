@@ -24,8 +24,6 @@ import {
  *
  * Not exported from the public barrel — this is an internal building block for
  * core's own walkers and the enhancer authoring surface.
- *
- * @internal
  */
 interface VisitTreeOptions {
   /** Max recursion depth (default 32). Guards runaway / cyclic structures. */

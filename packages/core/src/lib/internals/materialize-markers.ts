@@ -38,8 +38,6 @@ const NODE_STORE_SYMBOL = Symbol.for('SignalTree:NodeStore');
  * Built-in markers (entityMap, status, stored) self-register when
  * their factory functions are first called. If you never use a marker,
  * its code is completely tree-shaken from your bundle.
- *
- * @internal
  */
 
 // =============================================================================
