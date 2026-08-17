@@ -280,6 +280,99 @@ Any proposed change to these semantics is a **breaking architectural decision
 requiring an explicit counterexample** — not routine type/API cleanup. This
 distinction also belongs in the Gate-B realistic type/runtime matrix.
 
+0e. **15.0 HARD-CUTOFF RULE. No compatibility surface may preserve an API path,
+type decomposition, package dependency, or runtime protocol that the 15.0
+architecture has assigned to a different semantic owner. Migration
+documentation replaces shims.**
+
+15.0 is the point where the old architecture stops being REPRESENTABLE, not
+merely where a preferred API appears alongside it. The test, applied whenever
+someone asks "should we keep an alias just in case?":
+
+```
+Does keeping it allow consumers to continue expressing the old architecture?
+
+YES -> delete it in 15.0.
+NO  -> compatibility may be harmless; evaluate normally.
+```
+
+> **Do not preserve an architectural boundary violation just because we can
+> write a compatibility shim for it.** In a major, a shim becomes tomorrow's
+> compatibility obligation.
+
+Four cutoff tests:
+
+1. **One semantic concept, one public owner.** `SignalTree<T>` survives;
+   `ISignalTree` goes private. `NodeAccessor` owns branch semantics; `TreeNode`
+   is the `$` structural view. Enhancer identity and capability dependencies
+   have separate authorities. No aliases that let consumers keep coding against
+   the discarded ontology.
+2. **One operation, one canonical protocol.** Enhancers go through `.with()`;
+   no `composeEnhancers` escape hatch. State is addressed through `$`; no root
+   surface. Cite only protocols this release plan has actually accepted — an
+   example here reads as a 15.0 commitment.
+3. **The package boundary is PHYSICAL, not documentary.** When
+   `@signaltree/authoring` exists: no Angular runtime dependency, no dependency
+   back on core, no `core/authoring` compatibility subpath, no workspace-source
+   imports, no framework realization primitives masquerading as neutral
+   contracts. If something cannot cross cleanly it stays on the realization
+   side — do not weaken the boundary to ease migration.
+4. **Old grammar must fail at COMPILE/IMPORT time**, not be silently routed:
+
+```
+tree.count                  compile error
+SignalTreeBase<T>           no export
+ISignalTree<T>              no public export
+composeEnhancers            no export
+@signaltree/core/authoring  no shim once the package extraction lands
+provided.has(req) || appliedNames.has(req)   never — two namespaces again
+```
+
+The goal for 15.0 is not "new API available". It is: **there is one obvious way
+to express each SignalTree concept, and the old architectural divisions are no
+longer part of the public language.**
+
+Once `GATE B` freezes, the ontology is FINISHED. Gates C-G prove and ship that
+architecture; they must not discover that half of 14.x was left reachable for
+convenience.
+
+0f. **DEFECT DISPOSITION. 14.x stays maintained while 15.0 is built. A major
+release is not an excuse to leave a known 14.x bug unfixed.**
+
+```
+If behavior in 14.x is objectively defective and can be corrected WITHOUT
+intentionally breaking the supported 14.x contract
+    -> document it and ship it in a 14.x PATCH.
+
+If fixing it requires changing the public contract, removing an API path, or
+enforcing the new architectural division
+    -> it belongs to 15.0.
+```
+
+Every finding gets exactly one of three dispositions:
+
+| disposition | meaning |
+| --- | --- |
+| **14.x DEFECT -> PATCH** | incorrect implementation or documentation under the EXISTING 14.x contract. Fix on the 14.x line, document, patch-release, and ensure 15.0 inherits the correction. |
+| **15.0 BREAKING CORRECTION** | 14.x publicly promised or permitted the wrong thing; correcting it necessarily changes consumer-visible semantics. Document the defect against 14.x; the contract change lands only in 15.0. |
+| **15.0 ARCHITECTURAL CUTOFF** | not necessarily a 14.x bug — a supported old design deliberately removed or reassigned in the major. |
+
+Each 14.x defect needs a record carrying:
+
+```
+Affected versions        Impact
+Observed behavior        Workaround, if any
+Expected behavior        Patch disposition / target version
+Regression test added    15.0 disposition
+```
+
+**STANDING GATE-B REQUIREMENT.** Before `GATE B` freezes, review every
+`KNOWN DEFECT`, `TRANSITIONAL` marker, and audit-discovered inconsistency and
+classify it explicitly. **No defect may disappear into the major-release ledger
+without a 14.x disposition.** Expect this to bite hardest during the built-in
+enhancer migration, where runtime behaviour is most likely to disagree with
+documented 14.x semantics.
+
 1. Characterize before fixing.
 2. Do not reopen frozen semantics without a failing falsifier.
 3. Never optimize a green path because timing merely looks high.
