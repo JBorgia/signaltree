@@ -872,6 +872,67 @@ whole barrel regardless of tree-shaking. Only the output-inspection version
 measures the property that governs the decision. Caught because the result was
 implausible, not because the method was reviewed.
 
+#### Package move — scoped, NOT started
+
+`9e193a7f` closed the last neutrality blocker. The SDK surface is proven neutral;
+what remains is a physical migration.
+
+**Retained closure of the proposed SDK: 23 modules, zero Angular in output.**
+Measured with esbuild's metafile (bytes contributed), not module traversal:
+
+```text
+path-notifier (12.7KB)  intercept-leaf-signals  materialize-markers
+constants               enhancers/index         owned-metadata
+visit-tree              readonly                node-shape
+types (252B runtime)    write-context           causal-write-mode
+error-reporter          materialization-realization
+production-substrate-stats
+5 marker contracts      markers/derived         shared/lib/constants
+```
+
+NOT retained, despite appearing in a traversal measurement: `utils`,
+`entity-signal`, `entity-map`, all of `physical/*`, the three marker
+realizations, and most of `shared`.
+
+**This settles the dependency direction, and it is the harder answer.** Core
+needs `path-notifier`, `materialize-markers`, `write-context`, `types` and
+`constants` centrally, so they cannot simply leave core. Since
+`@signaltree/authoring` must NOT depend on core, the direction must be:
+
+```text
+@signaltree/authoring   owns the 23-module neutral closure
+        ^
+@signaltree/core        imports it
+```
+
+That is a real physical migration of ~22 core modules plus one shared module,
+with circular-import risk, not a re-export shuffle. Scoped here so it can start
+cold rather than be discovered mid-move.
+
+Constraints already decided, do not relitigate:
+
+- No `@signaltree/core` peer on authoring, not even for convenience. If the
+  manifest ends up with one, stop and find out why.
+- Move public CAPABILITY, not internal substrate. `OWNED_NODE_METADATA` and the
+  other newly extracted internals stay private unless extension authors need
+  them in the supported contract.
+- No `@signaltree/core/authoring` forwarding shim. 15.0 is the breaking reset;
+  a forwarding path has to be supported for all of 15.x and invites continued
+  use. The migration guide carries the one-line import change instead.
+- Packed-artifact proof before `GATE B`: pack the tarball, install it in a temp
+  consumer OUTSIDE the workspace with no Angular installed and no tsconfig path
+  aliases, import every runtime export, typecheck the type exports, and grep the
+  tarball for `packages/core/src`, `../core`, `@angular/core`,
+  `@signaltree/core/authoring`, `workspace:*`.
+
+**MEASUREMENT WARNING — this error was made TWICE in one session.** Module-graph
+TRAVERSAL is not RETAINED closure. `onLoad`/`onResolve` fire during graph
+construction, before tree-shaking; only the metafile's `bytesInOutput` (or
+inspecting the bundled output) reports what survives. The traversal reading
+scoped this migration at 45 modules against a true 23, and earlier reported all
+46 authoring exports as framework-dragging when 38 were clean. Both times an
+implausible result caught it, not the method. Use the metafile.
+
 #### Progress
 
 - [x] Neutralize marker materialization behind a realization port — `064f19ab`.
