@@ -1522,15 +1522,6 @@
         "internalDecl": false
       },
       {
-        "name": "isBuiltInObject",
-        "subpath": "./authoring",
-        "kind": "runtime",
-        "declFile": "packages/shared/src/lib/is-built-in-object.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
-      },
-      {
         "name": "isDerivedMarker",
         "subpath": "./authoring",
         "kind": "runtime",
@@ -1610,15 +1601,6 @@
         "angularInDecl": false,
         "angularInType": false,
         "internalDecl": true
-      },
-      {
-        "name": "parsePath",
-        "subpath": "./authoring",
-        "kind": "runtime",
-        "declFile": "packages/shared/src/lib/parse-path.ts",
-        "angularInDecl": false,
-        "angularInType": false,
-        "internalDecl": false
       },
       {
         "name": "PathNotifierHandler",

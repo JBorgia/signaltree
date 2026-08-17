@@ -117,12 +117,18 @@ export { isAsyncQueryMarker } from './lib/markers/async-query';
 // Structural guards and path plumbing — tree-walking tools.
 // `isTraversableNode` in particular is what the repo's own lint rule points
 // contributors at instead of hand-rolling an "object or function" check.
+//
+// `isBuiltInObject` and `parsePath` were removed from this surface in the 15.0
+// major. They are declared in `@signaltree/shared`, which is `"private": true`
+// and bundled at build time — publishing them made a private implementation
+// package's internals part of core's public contract, so its utilities could
+// not be changed without a breaking change to core. Both remain in use inside
+// core; only the public re-export is gone. No compatibility shim: a major is
+// exactly when an accidental export should stop existing.
 export {
   isNodeAccessor,
   isAnySignal,
   isTraversableNode,
-  isBuiltInObject,
-  parsePath,
 } from './lib/utils';
 export { isSignalTree } from './lib/types';
 
