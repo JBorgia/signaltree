@@ -2392,7 +2392,7 @@ decisive lines.
 | false `SignalTree<T>` root-state surface | `export type SignalTree<T> = ISignalTree<T> & TreeNode<T>` (`types.ts:1297`) | **PATCH DOCS / KNOWN ISSUE** — do not silently make a breaking type correction on 14.x | **BREAKING CORRECTION** (`243dd5fb`) |
 | `composeEnhancers` broken types + bypass semantics | implementation byte-identical (`utils.ts:377`) | **PATCH DOCS / DEPRECATION** — see the warning below | **ARCHITECTURAL CUTOFF** (`6c3d73a8`) |
 | `SignalTreeBase` | present (`types.ts:1298`); no defect | **NO ACTION** | **ARCHITECTURAL CUTOFF** (`6a515699`) |
-| **identity-replacing enhancers silently disable the enhancer protocol** | `Object.defineProperty(enhancedTree, 'with', …)` in `batching.ts`, `time-travel.ts`, `devtools-impl.ts` — all three byte-identical at the tag; the replacement `with` only type-checks its argument and calls `enhancer(enhancedTree)` | **PATCH CODE** | **BLOCKS #3b** — see below |
+| **identity-replacing enhancers silently disable the enhancer protocol** | `Object.defineProperty(enhancedTree, 'with', …)` in `batching.ts`, `time-travel.ts`, `devtools-impl.ts` — independently present in all three at the tag; the replacement `with` only type-checks its argument and calls `enhancer(enhancedTree)` | **PATCH CODE** | **BLOCKS #3b** — see below |
 | stale generated API-surface docs | **NOT MEASURED at 14.1.1** — the staleness found was relative to HEAD source | **UNCLASSIFIED** | 15.0 cleanup (`7772effa`) |
 | `nx test core` unreliable + swallows the reporter; `api-inventory` member/shape blind spot | tooling, not a consumer contract | **NO ACTION** | **TOOLING DEBT** — Phase 5 |
 
@@ -2419,15 +2419,41 @@ repair in exactly the configurations most real apps use**, since batching,
 devTools and timeTravel are the common enhancers. The protocol is disabled for
 the remainder of the chain from the moment any of them is applied.
 
-**Why this is not a one-line fix, and therefore not a #3b sub-task.** The
-bookkeeping (`appliedEnhancerNames`, `providedEnhancerCapabilities`) is per-tree
-closure state inside `create()`. A replacement tree is a new object and cannot
-reach it. Delegating naively to the original `tree.with` is wrong too: the
-original invokes `enhancer(tree)` against the ORIGINAL receiver, so a delegating
-call would hand the enhancer the pre-replacement tree. Making this correct means
-factoring the guard into a reusable "apply against THIS receiver" operation that
-shares one tree's bookkeeping — a small architectural change touching three
-built-ins.
+**Why this is not a #3b sub-task.** MEASURED: the bookkeeping
+(`appliedEnhancerNames`, `providedEnhancerCapabilities`) is per-tree closure
+state inside `create()`, and a replacement tree is a new object that does not
+reach it. Also measured: the original `with` invokes `enhancer(tree)` against the
+ORIGINAL receiver, so naive delegation would hand the enhancer the
+pre-replacement tree.
+
+HYPOTHESIS, NOT YET PROVEN — that the fix requires factoring the guard into a
+reusable "apply against THIS receiver" operation sharing one tree's bookkeeping.
+That is a candidate implementation shape, not a derived requirement. The
+SEMANTIC requirement is proven; the implementation must be selected from the
+falsifier matrix below, not assumed.
+
+#### Falsifier matrix — run BEFORE choosing an implementation
+
+Two independent properties, and an implementation can satisfy one while failing
+the other:
+
+```
+1. protocol bookkeeping follows the semantic tree lineage across replacement
+2. enhancer invocation uses the CURRENT realization, not the original receiver
+```
+
+```
+A  provides[cap] -> REPLACE -> requires[cap]          must PASS
+B  REPLACE -> provides[cap] -> requires[cap]          must PASS
+C  REPLACE -> requires[missing]                       must FAIL before it runs
+D  REPLACE -> A -> A                                  duplicate must FAIL
+E  REPLACE -> throwing provides[cap] -> requires[cap] contributes NEITHER
+F  REPLACE -> B                                       B receives CURRENT tree
+G  provider -> batching -> timeTravel -> requires[provider cap]
+                                                      survives MULTIPLE handoffs
+```
+
+G matters because a fix that repairs only the first replacement would pass A-F.
 
 **Recommended sequencing — do NOT fold this into #3b.** It is a shared-protocol
 defect, not a per-enhancer one, and #3b must not absorb fixes to other built-ins.
