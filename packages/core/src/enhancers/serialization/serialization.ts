@@ -9,7 +9,7 @@ import {
 } from '../../lib/internals/commit-consequence';
 import { isTraversableNode } from '../../lib/utils';
 import { ISignalTree } from '../../lib/types';
-import type { EnhancerMeta } from '../../lib/types';
+import type { Enhancer, EnhancerMeta } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
 import type { StorageAdapter } from './storage-adapters';
@@ -445,7 +445,7 @@ function resolveCircularReferences(
  */
 export function serialization(
   defaultConfig: SerializationConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SerializationMethods {
+): Enhancer<SerializationMethods> {
   const enhancerFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & SerializationMethods => {
@@ -965,7 +965,14 @@ export function serialization(
   };
   (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
   (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
-  return enhancerFn;
+
+  // THE ONE BOUNDARY CAST, re-justified for this enhancer: `enhancerFn` reads
+  // the realized tree so its parameter is `ISignalTree<T>`, while
+  // `Enhancer<TAdded>` takes the neutral `EnhancerHost` and parameters are
+  // contravariant under `strictFunctionTypes`. Body untouched. Unlike
+  // `timeTravel` there is no receiver-derived member here to preserve —
+  // `SerializationMethods` erases state to `SerializedState<unknown>` already.
+  return enhancerFn as unknown as Enhancer<SerializationMethods>;
 }
 
 // v12: removed the deprecated `withSerialization` alias — use `serialization()`.
@@ -1047,10 +1054,20 @@ export function persistence(
   const persistenceFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & SerializationMethods & PersistenceMethods => {
-    // First enhance with serialization
+    // First enhance with serialization.
+    //
+    // The cast on the ARGUMENT is the consequence of `serialization()` now
+    // returning the neutral `Enhancer<SerializationMethods>`: its parameter is
+    // `EnhancerHost`, and `ISignalTree<Model>` is not assignable to that,
+    // because `NodeAccessor<T>` has input positions and is therefore
+    // contravariant in `T` (see the `EnhancerHost` note in `lib/types.ts`).
+    // This is an INTERNAL direct application, not `.with()`, so it needs the
+    // same library-owned assertion `with()`'s implementation makes. It does not
+    // change `persistence()`'s own public signature, which is migrated in its
+    // own slice.
     const serializable = serialization(serializationConfig)(
-      tree
-    ) as ISignalTree<T> & SerializationMethods;
+      tree as unknown as Parameters<ReturnType<typeof serialization>>[0]
+    ) as unknown as ISignalTree<T> & SerializationMethods;
 
     // Add persistence methods
     const enhanced = serializable as ISignalTree<T> &
@@ -1316,5 +1333,8 @@ export function persistence(
 export function applySerialization<T extends Record<string, unknown>>(
   tree: ISignalTree<T>
 ): ISignalTree<T> & SerializationMethods {
-  return serialization()(tree) as ISignalTree<T> & SerializationMethods;
+  // Same internal-direct-application assertion as in `persistence()` above.
+  return serialization()(
+    tree as unknown as Parameters<ReturnType<typeof serialization>>[0]
+  ) as unknown as ISignalTree<T> & SerializationMethods;
 }
