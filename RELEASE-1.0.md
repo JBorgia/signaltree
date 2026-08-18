@@ -6184,10 +6184,26 @@ B is rejected on evidence, not convenience: teaching 14.x history to record
 interaction state would ADD the coupling this row just rejected on ownership
 grounds.
 
-### AUDIT ROW — F3 `submitting`
+### AUDIT ROWS — F3a `submitting` and F3b `submit()`
 
-Asked in the order that avoids the trap. NOT "does `form.submit()` toggle a
-flag" -- it plainly does, and observing that answers nothing:
+**The row was nearly mis-scoped.** `submit()` bundles three independent things:
+
+```
+1  operational lifecycle       submittingSignal.set(true / false)
+2  validation orchestration    await validateAll()
+3  application operation       await handler(valuesSignal())
+```
+
+Auditing only #1 would delete the flag and leave `tree.$.p.submit(handler)`
+alive purely because it rode alongside it -- the exact pattern this audit keeps
+finding in `form()`: **auditing the attached state while preserving the
+convenience method that justified the state in the first place.** #2 is already
+dead by validation ownership. #3 and the wrapper itself get their own row.
+
+#### F3a `submitting`
+
+Asked in the order that avoids the trap -- NOT "does `form.submit()` toggle a
+flag", which answers nothing:
 
 > **What semantic fact does `submitting` represent, WHO CAN KNOW it became true,
 > and does that fact describe SignalTree TRUTH or the LIFECYCLE OF AN EXTERNAL
@@ -6196,77 +6212,144 @@ flag" -- it plainly does, and observing that answers nothing:
 ```
 FUNCTION       Report that an operation which SENDS state somewhere -- an HTTP
                POST, an IPC call, a save -- is currently in flight.
-OWNER          Whoever RUNS the operation. It is the only party that can know
-               it started, and the only one that learns it finished.
+OWNER          Whoever RUNS the operation. It is the only party that can know it
+               started and the only one that learns it finished.
 GREENFIELD     const saving = signal(false);
 MECHANISM      try { saving.set(true); await save(v); } finally { saving.set(false); }
-               ...or Angular's `resource()`, which models the whole lifecycle.
 SIGNALTREE?    NO. SignalTree cannot observe an HTTP request. The subject of the
                operation may be tree values, but the FACT is about the
-               operation, not about the state.
-CONSTRUCTION?  NO. An in-flight boolean is not a property of a position; the
-               same position is submitting at some times and not at others.
+               operation.
+CONSTRUCTION?  NO -- because nothing about submission lifecycle needs graph
+               compilation or construction-time specialization of the position.
+               Any value can be submitted by an external operation after
+               construction.
 ```
+
+**The construction-time reason is stated carefully.** "An in-flight boolean is
+not a property of a position because the same position is submitting sometimes
+and not others" was the earlier draft, and it is WRONG as a test: a marker may
+declare an intrinsic semantic type whose runtime state changes -- `status()` is
+exactly that shape. Changing state does not fail the marker test. Not needing
+construction-time specialization does.
 
 **MEASURED — the flag does not mean what its name says.** Only
 `marker.submit()` sets it. An application that saves the very same values
-through its own service -- an ordinary thing to do -- leaves `submitting()`
-`false` throughout:
+through its own service leaves `submitting()` `false` throughout. So it does not
+report *"a submission of this state is running"*; it reports *"one particular
+API on this marker was called"* -- a fact about an API call, not about truth.
+
+**MEASURED — one boolean cannot describe N concurrent operations:**
 
 ```
-appSave(marker())          submitting() === false   before, during and after
-```
-
-So `submitting` does not report *"a submission of this state is running"*. It
-reports *"one particular API on this marker was called"*. That is a fact about
-an API call, not a fact about truth -- which is the whole question this row
-asked, answered against the marker.
-
-**MEASURED — one boolean cannot describe N concurrent operations, and the
-failure is real, not hypothetical:**
-
-```
-slow  = marker.submit(async () => { await neverYet; return 'slow'; })
+slow  = marker.submit(async () => { await blocked; return 'slow'; })
         submitting() === true
-await marker.submit(async () => 'fast')     // second, faster submission
+await marker.submit(async () => 'fast')
         submitting() === false   <-- while `slow` is STILL RUNNING
 ```
 
-The fast submission's `finally` clears a flag the slow one is still relying on.
-A UI disabling its save button on `submitting()` re-enables it mid-flight.
+**CHARACTERIZATION, NOT JUSTIFICATION — `status()`.** Core's `status()`
+distinguishes NotLoaded / Loading / Loaded / Error and carries the error, where
+`submitting` is a boolean collapsing all four. That is *evidence that
+`submitting` duplicates an already-recognized operational-state category*. **It
+does not justify either abstraction.** `status()` is itself unaudited and does
+not get a vote on what should exist; ownership of `submitting` is decided
+independently, by who owns the external operation. The inference "legacy A
+duplicates legacy B, therefore preserve B" is exactly what this audit rejects.
 
-**MEASURED — core already models this category, and models it better.**
-`status()` distinguishes NotLoaded / Loading / Loaded / Error and carries the
-error value; `submitting` is a boolean that collapses all four. The marker's own
-processor registration already concedes the classification:
-
-> *"`submitting` is in-flight, the exact category as `status()`'s `Loading`."*
-
-It says this while excluding `submitting` from the snapshot -- correctly, since
-"persist mid-submit, restore, and the form is permanently submitting with
-nothing running to finish it". **A field the marker will not persist because it
-does not describe the state is a field that does not belong to the state.**
-That reasoning is right; it just does not stop where it should.
+**PERSISTENCE EXCLUSION, stated at its true width.** The marker excludes
+`submitting` from the snapshot, reasoning that restoring it would leave "a form
+permanently submitting with nothing running to finish it". An earlier draft
+generalized this to *"a field the marker will not persist because it does not
+describe the state is a field that does not belong to the state"* -- **too
+broad. Non-durability does not prove non-statehood**; plenty of legitimate
+runtime state should not survive persistence. The narrow claim: persistence
+exclusion is CONSISTENT with `submitting` being transient operational state
+whose lifetime is coupled to an operation. **Ownership removes it from
+SignalTree, not persistence.**
 
 One argument checked and NOT found: `submit()` does not lock the marker, so
-`submitting` is not a write-gate. There is no tree-side effect that would make
-it a fact about the tree.
+`submitting` is not a write-gate.
 
 ```
-DISPOSITION    F3 submitting -> DELETE from SignalTree.
-               It is the lifecycle of an EXTERNAL OPERATION, owned by whoever
-               runs it. The marker's version additionally cannot see
-               submissions it did not wrap, and mis-reports under concurrency.
+DISPOSITION    F3a submitting -> DELETE from SignalTree.
 ```
 
-**14.x disposition, decided on 14.x evidence (Rule 0f).** The concurrency
-behaviour is a REAL DEFECT independent of 15.0: `submitting` is a documented
-public signal (`FormSignal.submitting`, "Whether form is currently
-submitting"), and it reports `false` during a submission that is still running.
-Filed as `14.x DEFECT` -- disposition deferred to the 14.x line rather than
-decided here, since the fix (a counter rather than a boolean, or refusing
-concurrent submits) is a behaviour change needing its own semver call.
-`15.0 ARCHITECTURAL CUTOFF` for the surface itself.
+#### F3b `submit()` — the orchestration wrapper
+
+> Erase `form()`, validation, `submitting` and the current implementation. A
+> SignalTree-backed value must be sent through an application-owned async
+> operation. What becomes impossible with `await handler(node())`?
+
+Six candidates, none granted in advance. **All six fail, and one produces a new
+defect.**
+
+```
+VALUE COHERENCE      FAILS, and INVERTS -- see below
+CAUSAL ATTRIBUTION   FAILS  a submit records nothing; getHistory() unchanged
+                            under timeTravel. It is not an event in the tree.
+WRITE GATING         FAILS  the tree stays writable mid-submit; patch() lands
+ERROR OWNERSHIP      FAILS  a throwing handler propagates exactly as the null
+                            does, and no error is retained on the marker
+                            (`submitError`, `lastError`: undefined)
+CANCELLATION         FAILS  `abort`, `cancel`, `abortSubmit`: undefined
+AUTO STATE CHANGE    FAILS  nothing transitions on success or failure
+```
+
+**VALUE COHERENCE is the interesting one, because the marker is WORSE than the
+null.** `submit()` reads `valuesSignal()` AFTER awaiting validation, so a write
+landing between the button press and the handler is silently included:
+
+```
+marker.submit(h)                 // user presses Save
+marker.patch({ name: 'RACED' })  // a write lands during the await
+handler receives                 name === 'RACED'
+```
+
+**What is submitted is not what was on screen when the user pressed the
+button.** The null snapshots at call time and submits exactly what the user saw:
+
+```
+const submitted = save(tree.$.p());   // reads NOW
+tree.$.p({ name: 'RACED' });
+(await submitted).name === 'Ada'
+```
+
+So the one place orchestration could have added a real capability -- deciding
+WHEN the value is read -- it decides wrongly.
+
+```
+DISPOSITION    F3b submit() -> DELETE from SignalTree.
+               With validation gone, submit() reduces to `await handler(node())`
+               minus value coherence, plus a flag whose owner is the operation.
+               No surviving orchestration function.
+```
+
+**F3 IS THEREFORE A COMPLETE DELETION**, not merely the removal of a boolean.
+
+#### 14.x dispositions, decided on 14.x evidence (Rule 0f)
+
+**F3a concurrency -> `14.x DEFECT`** (promoted from DEFECT CANDIDATE once the
+contract question was answered):
+
+```
+Does the 14.x contract forbid or serialize overlapping submit() calls?
+  public docs (README / llms.txt / llms-full.txt)   NO STATEMENT
+  JSDoc on submit()                                  NO STATEMENT
+  runtime guard                                      NONE -- the call is accepted
+  documented meaning of the signal                   "Whether form is currently
+                                                      submitting"
+```
+
+Nothing forbids them and the API accepts them, so a signal documented as
+"currently submitting" reading `false` while an accepted submit promise is still
+unresolved is a clean falsifier. **The FIX is a separate decision** and is NOT
+made here -- reference counting, serializing, and rejecting-while-active have
+different observable semantics and need their own semver call on the 14.x line.
+
+**F3b value coherence -> `14.x DEFECT CANDIDATE`.** Reading values after the
+validation await is defensible as "submit what is valid now", and no public text
+states which instant is submitted. Recorded with the evidence; the 14.x line
+must decide whether the contract implies call-time capture.
 
 ## Phase 3 — Packaging Proof
 

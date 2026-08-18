@@ -337,3 +337,111 @@ describe('F3 submitting — a fact about truth, or about an operation?', () => {
     expect(saving()).toBe(false);
   });
 });
+
+// ============================================================================
+// F3b — `submit()` ITSELF, the orchestration wrapper.
+//
+// Deleting `submitting` must not leave `marker.submit(handler)` alive merely
+// because it rode alongside the flag. Validation ownership already removed the
+// validateAll() step, so what remains to justify is orchestration.
+//
+// NULL:  const result = await save(tree.$.p());
+// ============================================================================
+describe('F3b submit() — what does the orchestration add?', () => {
+  it('VALUE COHERENCE: submit reads values AFTER an await, not at call time', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+
+    let seen: Profile | undefined;
+    const pending = marker.submit(async (values) => {
+      seen = values;
+      return values;
+    });
+
+    // A write that lands after submit() was called but before the handler runs.
+    marker.patch({ name: 'RACED' });
+    await pending;
+
+    // The handler received the LATER value: submit() reads valuesSignal() after
+    // awaiting, so what is submitted is not what was on screen when the user
+    // pressed the button.
+    expect(seen?.name).toBe('RACED');
+  });
+
+  it('NULL: reading at call time submits exactly what the user saw', async () => {
+    const tree = signalTree({ p: { name: 'Ada', age: 36 } });
+
+    const save = async (values: Profile) => values;
+
+    // The application snapshots when it decides to submit.
+    const submitted = save(tree.$.p() as Profile);
+    tree.$.p({ name: 'RACED' });
+
+    expect((await submitted).name).toBe('Ada');
+  });
+
+  it('CAUSAL ATTRIBUTION: a submit records nothing — it is not an event in the tree', async () => {
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    }).with(timeTravel());
+    const marker = tree.$.p;
+
+    await tick();
+    const before = tree.getHistory().length;
+
+    await marker.submit(async (v) => v);
+    await tick();
+
+    expect(tree.getHistory().length).toBe(before);
+  });
+
+  it('ERROR OWNERSHIP: a throwing handler propagates, exactly as the null does', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+
+    await expect(
+      marker.submit(async () => {
+        throw new Error('server said no');
+      })
+    ).rejects.toThrow('server said no');
+
+    // No error is retained anywhere on the marker for the app to read.
+    const api = marker as unknown as Record<string, unknown>;
+    expect(api['submitError']).toBeUndefined();
+    expect(api['lastError']).toBeUndefined();
+  });
+
+  it('CANCELLATION / WRITE GATING: neither is offered', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+    const api = marker as unknown as Record<string, unknown>;
+
+    for (const c of ['abort', 'cancel', 'abortSubmit']) {
+      expect(api[c]).toBeUndefined();
+    }
+
+    // And the tree stays writable mid-submit: no gate, no lock.
+    let release: (() => void) | undefined;
+    const pending = marker.submit(async () => {
+      await new Promise<void>((r) => (release = r));
+      return 'done';
+    });
+    // submit() awaits validation before invoking the handler, so let the
+    // handler actually start before asserting anything about mid-flight state.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(marker.submitting()).toBe(true);
+
+    marker.patch({ age: 99 });
+    expect(marker().age).toBe(99);
+
+    release?.();
+    await pending;
+  });
+});
