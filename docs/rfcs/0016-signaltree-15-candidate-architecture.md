@@ -466,6 +466,13 @@ E  another realization's PRIVATE object    ZERO
 
 Only D or E could establish a genuine dependency, and both are empty.
 
+**The import scan alone would NOT have earned this result.** Feature coupling can
+hide behind a registry, a shared token, a global map or a lookup API without any
+direct cross-feature import. What earns Outcome A is the CONSUMPTION
+CLASSIFICATION — D and E measured empty, with everything consumed being
+independently owned kernel material. The import scan is corroboration, not the
+argument.
+
 #### The shape, which the release invariants already predicted
 
 `transactions` and `time-travel` share eight kernel modules. That is not
@@ -517,6 +524,93 @@ This measures the SURVIVING built-in and first-party realizations. It does not
 prove no future feature could need another's output. If one ever does, outcome C
 would apply and the FACT to communicate would be derived then — not called
 `requires`, not assumed to be a string token, not assumed to be an order.
+
+### DERIVATION 3 — semantic multiplicity: **cardinality differs per function. No generic identity earned.**
+
+**Null:** assume no declaration id, no name-based duplicate rule, no generic
+duplicate detector, and no assumption that all optional authoring inputs belong
+in one collection. Which combinations are semantically invalid, and *why*?
+
+Excluded up front, because they are already owned elsewhere: incompatible public
+contribution keys (contribution collision, T0-G/T1 CASE 3), repeated substrate
+requests (set union, idempotent), realization order (Derivation 2, DELETE).
+
+#### The two measurements that decide it, and they point OPPOSITE ways
+
+```text
+transactions()          getOrCreateInternalTransactionRuntime() returns the
+                        EXISTING runtime if one is present — the authority is
+                        ALREADY a per-tree singleton, and the factory takes no
+                        config, so two declarations are literally identical.
+                        -> outcome A: canonicalize. Nothing fails.
+
+stored()                MEASURED IN REAL CODE: 12 occurrences in one demo
+                        component, 10 in another. Multiple durable consequences
+                        per tree is not merely legitimate, it is the NORMAL case.
+                        -> plural, by a wide margin.
+```
+
+**That pair alone refutes a generic rule.** "One declaration of each kind" is
+false for durable consequences; "duplicates are always fine" is not obviously
+true for a singular authority. There is no single rule to be had.
+
+#### Cardinality per function, with its semantic basis
+
+| Function | Cardinality | Semantic basis | Generic id needed? |
+|---|---|---|---|
+| transaction authority | idempotent / canonicalizing | already a per-tree singleton; no config to conflict | no |
+| temporal history policy | 0..1 (candidate) | two configured histories over ONE causal lineage would compete | no — the OWNER is singular |
+| durable consequence | 0..N | **MEASURED plural** | no — distinguished by external target |
+| call interception | 0..N, compositional | three built-ins intercept today and coexist | no |
+| cleanup registration | 0..N, additive | `registerCleanup` is a list | no |
+| substrate requirement | set, idempotent | union; repetition is meaningless | no |
+
+**Every row answers "no" to a generic id.** Where instances must be
+distinguished — durable consequences — the distinguishing fact is SEMANTIC (the
+external target), not an invented identity. That is the outcome that matters:
+
+```text
+GENERIC DECLARATION IDENTITY     NOT EARNED
+GENERIC DUPLICATE GUARD          NOT EARNED
+per-function CARDINALITY         SURVIVES, and differs per function
+```
+
+#### Exclusivity is a property of the AUTHORITY, not of the declaration
+
+The temporal-history row is the only singular candidate, and even there the rule
+is not *"reject a second `timeTravel` declaration"*. It is *"one history policy
+per causal lineage"* — a property of the owner. An authority that is singular
+cannot be doubled regardless of how many declarations mention it, which is
+exactly how `transactions` already behaves without any duplicate guard.
+
+**Honesty about this row:** that `transactions` canonicalizes is MEASURED.
+That two configured `timeTravel` declarations would genuinely conflict is
+INFERRED from the config being meaningful and from the absence of any
+canonicalizing `getOrCreate` in that module. If the singular/plural split ever
+becomes load-bearing, it needs a bounded prototype rather than this inference.
+
+#### This challenges the `features: []` assumption
+
+We have been picturing one homogeneous collection. **That premise is not
+earned.** If durable consequences are plural and distinguished by external
+target, while a history policy is singular and owner-bound, then a flat array
+plus a runtime duplicate rule is exactly the kind of generic mechanism this
+audit keeps deleting. A grammar that makes the invalid combination
+UNREPRESENTABLE is preferable to one that detects it — and structural
+impossibility is not available inside a homogeneous array.
+
+Recorded as an open consequence, not a proposal: **do not assume all surviving
+optional authoring inputs belong in a common collection.** The `features: []`
+candidate must survive this too, and the step-7 criteria now have a seventh
+question to answer — whether one property can honestly hold things with
+different cardinalities.
+
+#### `name` is explicitly out of scope here
+
+A human-readable label may later survive for diagnostics or devtools. That is a
+DIFFERENT function with a different owner, and it gets audited when diagnostics
+does. *"We need a useful diagnostic label"* must never become *"therefore
+declaration identity exists"*.
 
 ### Table F — legacy dispositions (a ledger, not an agenda)
 
