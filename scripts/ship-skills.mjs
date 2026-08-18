@@ -48,7 +48,6 @@ const PACKAGES = [
   { name: 'guardrails', nested: 'guardrails' },
   { name: 'events', nested: 'events' },
   { name: 'realtime', nested: 'realtime' },
-  { name: 'schema', nested: 'schema' },
 ];
 
 const color = {
@@ -220,9 +219,9 @@ async function main() {
   //
   // verify-publish-artifacts checks the FORWARD direction: every declared entry
   // resolves. It cannot catch this, which is the REVERSE: an artifact produced
-  // and never declared. @signaltree/schema shipped that way — it has a
-  // sub-skill, ship-skills copied it, and `files` did not list it, so every
-  // consumer of that package got no skill while every other package's shipped.
+  // and never declared. The since-deleted @signaltree/schema shipped that way
+  // — it had a sub-skill, ship-skills copied it, and `files` did not list it,
+  // so every consumer of that package got no skill while the others' shipped.
   const undeclared = [];
   for (const pkg of PACKAGES) {
     const manifest = path.join(DIST_ROOT, pkg.name, 'package.json');

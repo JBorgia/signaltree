@@ -453,33 +453,31 @@ const fieldTree = signalForm(tree.$.profile, {
 });
 ```
 
-### Bridge: `@signaltree/schema` → Signal Forms `FieldTree`
+### StandardSchema validation: Angular's own, over published tree state
 
-If you register Zod/Valibot/ArkType schemas via `@signaltree/schema`, the
-`signalForm(tree, rootPath, subtree)` call shape wires them into a Signal Forms
-`FieldTree` automatically via `validateStandardSchema`:
+SignalTree ships **no validation API**. A plain subtree is published with
+`toWritableSignal()`, Angular's own `form()` composes over it, and Angular's own
+`validateStandardSchema` runs the schemas your application already owns:
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { schemas } from '@signaltree/schema';
-import { signalForm } from '@signaltree/ng-forms/signals';
+import { form, validateStandardSchema } from '@angular/forms/signals';
+import { signalTree, toWritableSignal } from '@signaltree/core';
 import { z } from 'zod';
 
-const tree = signalTree({ user: { name: '', email: '' } }).with(
-  schemas({
-    schemas: {
-      'user.name': z.string().min(2),
-      'user.email': z.string().email(),
-    },
-  })
-);
+const tree = signalTree({ user: { name: '', email: '' } });
 
-const userForm = signalForm<{ name: string; email: string }>(tree, 'user', tree.$.user);
-// userForm is a FieldTree with validation auto-wired from the schema registry.
+const userForm = form(
+  toWritableSignal(tree.$.user),
+  (u) => {
+    validateStandardSchema(u.name, z.string().min(2));
+    validateStandardSchema(u.email, z.string().email());
+  },
+  { injector }
+);
 ```
 
-Both call shapes of `signalForm()` are exported from `@signaltree/ng-forms/signals`
-and require Angular 22+.
+SignalTree owns the truth, Angular owns the observation, and your validator does
+the judging. `signalForm()` is for `form()` markers and requires Angular 22+.
 
 ### Bridging classic Reactive Forms
 

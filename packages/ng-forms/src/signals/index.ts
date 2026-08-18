@@ -3,12 +3,12 @@
  *
  * Requires Angular 22+ (`@angular/forms` ships Signal Forms in v22.0.0).
  *
- * Apps on Angular 20/21 can use `@signaltree/schema` directly via
- * `tree.schemas.errorsAt(path)` without this subpath.
+ * Validation is Angular's: declare it with the `schema` callback and
+ * `validateStandardSchema` from `@angular/forms/signals`, against the schemas
+ * your application already owns. SignalTree publishes the model.
  *
  * @packageDocumentation
  */
 
 export { signalForm } from './signal-form';
-export { applySignalTreeSchemas } from './bridge';
 export { type SignalFormOptions } from './marker-bridge';

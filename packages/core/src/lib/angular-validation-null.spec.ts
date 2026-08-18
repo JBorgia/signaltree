@@ -2,8 +2,6 @@ import { computed, effect, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { entityMap, form, LoadingState, signalTree, status } from '../index';
-import { interceptLeafSignals } from '../authoring';
-import { lazy } from '../lazy';
 
 /**
  * ANG-V0 — THE NULL HYPOTHESIS FOR ANGULAR VALIDATION.
@@ -28,6 +26,13 @@ import { lazy } from '../lazy';
  * NOTHING in this file may import from `@signaltree/core/authoring`, and
  * nothing may use `interceptLeafSignals`. If the null needs privileged access
  * it has failed, and that failure is the finding.
+ *
+ * A section characterizing `interceptLeafSignals`' own misses (depth cap,
+ * array-valued leaves) lived here while the deletion was being decided. It was
+ * EVIDENCE, and it is gone: `@signaltree/schema` is deleted, and a mechanism
+ * already queued for hostile audit under MUT must not gain test-backed
+ * legitimacy from a suite that pins its current deficiencies. The four measured
+ * rows live in RELEASE-1.0.md, which is where a one-shot measurement belongs.
  *
  * THE FALSIFIER IS NOT "a projection API would be convenient". It is a
  * REQUIRED WORKFLOW that cannot be implemented correctly without
@@ -407,112 +412,5 @@ describe('ANG-V0-E — root snapshot as the validated value', () => {
       plain: 1,
       j: { state: 'NOT_LOADED', error: null },
     });
-  });
-});
-
-// ============================================================================
-// ANG-V0-F — PUSH vs PULL, measured head to head.
-//
-// D found no truth change invisible to `computed`. This section asks the
-// converse, which is the honest test of the privileged mechanism: are there
-// truth changes visible to PULL that the PUSH mechanism MISSES?
-//
-// This is the only place in this file that touches `interceptLeafSignals`, and
-// it does so to characterize it — not to build the null on it.
-// ============================================================================
-describe('ANG-V0-F — push is not a superset of pull', () => {
-  it('DEPTH: pull tracks past the interceptor depth cap', () => {
-    // The interceptor documents `maxDepth = 32`.
-    const DEPTH = 40;
-    let leafHolder: Record<string, unknown> = { v: 'start' };
-    for (let i = 0; i < DEPTH; i++) leafHolder = { n: leafHolder };
-    const tree = signalTree(leafHolder as { n: unknown });
-
-    // Walk down to the leaf accessor.
-    let node: Record<string, unknown> = tree.$ as unknown as Record<
-      string,
-      unknown
-    >;
-    for (let i = 0; i < DEPTH; i++) {
-      node = node['n'] as Record<string, unknown>;
-    }
-    const leaf = node['v'] as { (): string; set(v: string): void };
-
-    const seen: string[] = [];
-    const restore = interceptLeafSignals(tree.$, (path) => seen.push(path));
-
-    const pulled = computed(() => leaf());
-    expect(pulled()).toBe('start');
-
-    leaf.set('changed');
-
-    // PULL saw it.
-    expect(pulled()).toBe('changed');
-    // PUSH SAW NOTHING. Measured, then asserted so the differential is a
-    // permanent falsifier rather than a one-off printout.
-    expect(seen).toEqual([]);
-    restore();
-  });
-
-  it('LAZY SHAPE: a node not yet materialized at attach time', () => {
-    // The interceptor wraps by WALKING THE TREE AT ATTACH TIME. A lazy tree
-    // only materializes a node on first access, so nodes untouched at attach
-    // are not in the walk. `computed` has no such snapshot — it subscribes to
-    // whatever it reads, when it reads it.
-    const big: Record<string, unknown> = {};
-    for (let i = 0; i < 300; i++) big[`f${i}`] = { a: `v${i}` };
-
-    const tree = signalTree(big, { lazy: lazy(), useLazySignals: true }) as
-      unknown as { $: Record<string, { a: { (): string; set(v: string): void } }> };
-
-    const seen: string[] = [];
-    const restore = interceptLeafSignals(tree.$, (path) => seen.push(path));
-
-    // First access to f299 happens AFTER the interceptor attached.
-    const leaf = tree.$['f299'].a;
-    const pulled = computed(() => leaf());
-    expect(pulled()).toBe('v299');
-
-    leaf.set('mutated');
-
-    expect(pulled()).toBe('mutated');
-    // PUSH DID see this one — lazy materialization is not the gap.
-    expect(seen).toEqual(['f299.a']);
-    restore();
-  });
-
-  it('ARRAY LEAF: pull tracks an array write', () => {
-    const tree = signalTree({ tags: ['a'] });
-
-    const seen: string[] = [];
-    const restore = interceptLeafSignals(tree.$, (path) => seen.push(path));
-
-    const pulled = computed(() => tree.$.tags().length);
-    expect(pulled()).toBe(1);
-
-    tree.$.tags.set(['a', 'b']);
-
-    expect(pulled()).toBe(2);
-    // PUSH SAW NOTHING. An array-valued leaf is one of the most ordinary
-    // things an application validates.
-    expect(seen).toEqual([]);
-    restore();
-  });
-
-  it('ENTITY COLLECTION: pull tracks CRUD the interceptor documents skipping', () => {
-    const tree = signalTree({ rows: entityMap<{ id: string; n: number }>() });
-
-    const seen: string[] = [];
-    const restore = interceptLeafSignals(tree.$, (path) => seen.push(path));
-
-    const pulled = computed(() => tree.$.rows.all().length);
-    expect(pulled()).toBe(0);
-
-    tree.$.rows.addMany([{ id: 'a', n: 1 }]);
-
-    expect(pulled()).toBe(1);
-    // PUSH DID see this one, through the collection's own notification.
-    expect(seen).toEqual(['rows']);
-    restore();
   });
 });

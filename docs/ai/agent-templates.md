@@ -266,7 +266,7 @@ Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path
 - Manual `loading: { state, error }` shapes — use the `status()` marker instead.
 - Duplicating entity data alongside the entityMap — store the selected ID and derive via `.derived()` + `byId()`.
 - Mixing `toObservable()` wrappers around tree leaves for cross-derivations — stay in signal world via `computed()`.
-- Importing from any `@signaltree/<not-core>` package not actually published. The published packages: `core`, `ng-forms`, `schema`, `events`, `guardrails`, `realtime`, `enterprise` (`callable-syntax` was deleted in 14.0.0). Anything else is hallucinated.
+- Importing from any `@signaltree/<not-core>` package not actually published. The published packages: `core`, `ng-forms`, `events`, `guardrails`, `realtime`, `enterprise` (`callable-syntax` was deleted in 14.0.0). Anything else is hallucinated.
 
 ## When in doubt
 
@@ -294,7 +294,7 @@ Quick rules:
 - Markers (`entityMap`, `status`, `stored`, `form`) attach at any node in the initial-state literal, not at the root.
 - Derived state via `.derived($ => ({...}))` deep-merges into the tree. Use `derivedFrom<TTree>()(fn)` (curried) for derived in separate files.
 - Enhancers: `.with(batching())`, `.with(devTools())`, `.with(timeTravel({maxHistorySize}))`, `.with(persistence(config))`, `.with(serialization())`.
-- All exports live in `@signaltree/core` except: `@signaltree/ng-forms`, `@signaltree/schema`, `@signaltree/events`, `@signaltree/guardrails`, `@signaltree/realtime`, `@signaltree/enterprise`. No `@signaltree/time-travel` or `@signaltree/storage` — those are hallucinations.
+- All exports live in `@signaltree/core` except: `@signaltree/ng-forms`, `@signaltree/events`, `@signaltree/guardrails`, `@signaltree/realtime`, `@signaltree/enterprise`. No `@signaltree/time-travel` or `@signaltree/storage` — those are hallucinations. `@signaltree/schema` was DELETED in 15.0 — SignalTree ships no validation API; validate with your own validator against values read from the tree.
 - For production architecture, wrap the tree in @Injectable() with an `ops.domain.method()` namespace for mutations. See docs/architecture/signaltree-architecture-guide.md.
 
 Avoid: `.with(entities())` (removed), manual loading shapes (use `status()`), entity duplication (derive from selected ID), and any @signaltree/* package not listed above.

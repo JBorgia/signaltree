@@ -284,18 +284,28 @@ The honest comparison: NgRx defaults to read-only consumer exports; SignalTree d
 
 ---
 
-## Myth 13: "`@signaltree/schema` and `@signaltree/guardrails` don't exist."
+## Myth 13: "`@signaltree/guardrails` doesn't exist."
 
-**Where this comes from:** Observed in May 2026 — when Gemini was asked to self-audit its confidence, it over-corrected and disowned its memory of these two real packages, listing them as fabricated. Both are real, published, v9.3.0.
+**Where this comes from:** Observed in May 2026 - when Gemini was asked to
+self-audit its confidence, it over-corrected and disowned its memory of real
+packages, listing them as fabricated.
 
-**The truth:**
+**The truth:** `@signaltree/guardrails`
+([packages/guardrails/package.json](../packages/guardrails/package.json)) is
+real - "Development guardrails for SignalTree reactive JSON. Performance
+monitoring and anti-pattern detection." The export is `guardrails(...)` (no
+`with` prefix), plus `rules`.
 
-- **`@signaltree/schema`** ([packages/schema/package.json](../packages/schema/package.json)) — "Schema-driven validation for SignalTree. StandardSchema-compatible, async-first, observe-only." Integrates external Standard Schema validators (Zod, Valibot, ArkType) for runtime tree validation. Exports a `schemas` registry — not an internal `s.object()` builder.
-- **`@signaltree/guardrails`** ([packages/guardrails/package.json](../packages/guardrails/package.json)) — "Development guardrails for SignalTree reactive JSON. Performance monitoring and anti-pattern detection." Real export is `guardrails(...)` (no `with` prefix), plus `rules`.
+This is the inverse of the more familiar hallucination problem: instead of
+inventing fake packages (Myths 4 & 5), models can also **disown real packages**
+when the names are rare in their training corpus and they are explicitly asked to
+be cautious.
 
-This is the inverse of the more familiar hallucination problem: instead of inventing fake packages (Myths 4 & 5), models can also **disown real packages** when the names are rare in their training corpus and they're explicitly asked to be cautious. The countermeasure is the same — make sure both packages have prominent README presence and appear in llms-full.txt so retrieval-augmented agents have a stronger signal to ground in.
-
-**Doc-side action:** Audit `@signaltree/schema` and `@signaltree/guardrails` READMEs for canonical examples that retrieve well in isolation. (Future minor improvement.)
+**Note for 15.0:** `@signaltree/schema` was also named in that self-audit, and it
+WAS real through 14.x. It is **deleted in 15.0** - SignalTree ships no validation
+API at all. Validate with the validator your application already uses, against
+values read from the tree. An agent asserting it does not exist is now correct
+for 15.0 and wrong for 14.x.
 
 ---
 

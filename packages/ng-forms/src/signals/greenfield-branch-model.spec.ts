@@ -8,6 +8,12 @@ import {
   transactions,
 } from '@signaltree/core';
 
+// `getPathNotifier`/`resetPathNotifier` were deliberately dropped from the
+// @signaltree/core root barrel in v12 (see packages/core/src/index.ts) — they
+// are internals. This spec asserts that core's notifier fires for ng-forms
+// branch models, which cannot be observed through the public API, so it reaches
+// across the project boundary on purpose.
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { getPathNotifier, resetPathNotifier } from '../../../core/src/lib/path-notifier';
 
 interface Profile {

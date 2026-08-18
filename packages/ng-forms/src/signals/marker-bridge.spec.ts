@@ -8,8 +8,6 @@ import {
   RequiredValidationError,
 } from '@angular/forms/signals';
 import { form, signalTree, validators } from '@signaltree/core';
-import { schemas } from '@signaltree/schema';
-import { z } from 'zod';
 
 import { signalForm } from './signal-form';
 import { __resetNativeErrorsNoticeForTests } from './marker-bridge';
@@ -418,33 +416,6 @@ describe('signalForm (marker form)', () => {
       expect(tree.$.onboarding.profile().name).toBe('Ada');
       tree.$.onboarding.profile.patch({ email: 'ada@acme.test' });
       expect(fieldTree.email().value()).toBe('ada@acme.test');
-    });
-
-    it('schema call shape — signalForm(tree, rootPath, subtree) — produces a working FieldTree', async () => {
-      interface Account {
-        username: string;
-        age: number;
-      }
-      const tree = signalTree({
-        account: { username: '', age: 0 } as Account,
-      }).with(
-        schemas({
-          schemas: {
-            'account.username': z.string().min(3, 'Too short'),
-          },
-        })
-      );
-
-      const fieldTree = TestBed.runInInjectionContext(() =>
-        signalForm<Account>(tree, 'account', tree.$.account)
-      );
-
-      // Schema path taken: FieldTree is bound to the SignalTree subtree
-      fieldTree.username().value.set('ada');
-      expect(tree.$.account.username()).toBe('ada');
-      tree.$.account.username.set('grace');
-      await stable();
-      expect(fieldTree.username().value()).toBe('grace');
     });
   });
 });

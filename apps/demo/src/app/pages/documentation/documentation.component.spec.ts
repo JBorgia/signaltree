@@ -61,15 +61,17 @@ describe('DocumentationComponent', () => {
   });
 
   it('selectPackage() updates selectedPackage() and re-issues the README fetch for the new package', () => {
-    const schemaPkg = component.packages.find((p) => p.id === 'schema');
-    expect(schemaPkg).toBeDefined();
+    const guardrailsPkg = component.packages.find(
+      (p) => p.id === 'guardrails'
+    );
+    expect(guardrailsPkg).toBeDefined();
 
-    component.selectPackage(schemaPkg!);
+    component.selectPackage(guardrailsPkg!);
 
-    expect(component.selectedPackage().id).toBe('schema');
+    expect(component.selectedPackage().id).toBe('guardrails');
     // expectOne removes the request from the pending queue, so it must be
     // flushed here rather than left for the afterEach's blanket drain.
-    httpMock.expectOne(schemaPkg!.readmePath).flush('# Schema\n');
+    httpMock.expectOne(guardrailsPkg!.readmePath).flush('# Guardrails\n');
   });
 
   it('clicking a package button in the DOM drives the same selection', () => {

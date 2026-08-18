@@ -228,7 +228,7 @@ For teams migrating NgRx `rxMethod` code: the SignalTree-native mapping is `asyn
 |                       | NgRx SignalStore                     | SignalTree                                                                             |
 | --------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
 | **Forms integration** | Manual binding or community packages | `@signaltree/ng-forms` — Angular Forms bridge                                          |
-| **Schema validation** | Manual                               | `@signaltree/schema` — Standard Schema (Zod, Valibot, ArkType)                         |
+| **Schema validation** | Manual                               | Your own validator (Zod, Valibot, ArkType) over values read from the tree — SignalTree ships no validation API      |
 | **Form-state marker** | n/a                                  | `form<T>(config)` marker — validation, wizard, persistence at the form's data location |
 
 ### 10. Type safety and IDE performance

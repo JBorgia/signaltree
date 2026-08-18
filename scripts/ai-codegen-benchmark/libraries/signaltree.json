@@ -5,7 +5,6 @@
   "packages": [
     "@signaltree/core",
     "@signaltree/ng-forms",
-    "@signaltree/schema",
     "@signaltree/events",
     "@signaltree/guardrails",
     "@signaltree/realtime",

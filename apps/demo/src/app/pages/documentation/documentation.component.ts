@@ -65,12 +65,6 @@ export class DocumentationComponent implements OnInit {
       description: 'Development-time guardrails for safer state usage patterns',
       readmePath: 'assets/docs/guardrails/README.md',
     },
-    {
-      id: 'schema',
-      name: '@signaltree/schema',
-      description: 'Schema-based validation enhancer with path-level error reporting',
-      readmePath: 'assets/docs/schema/README.md',
-    },
   ];
 
   readonly quickLinks: DocQuickLink[] = [

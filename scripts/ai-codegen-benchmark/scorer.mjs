@@ -24,7 +24,6 @@ const VALID_PACKAGES = new Set([
   '@signaltree/realtime',
   '@signaltree/enterprise',
   '@signaltree/guardrails',
-  '@signaltree/schema',
   '@signaltree/shared',
   // Angular
   '@angular/core',

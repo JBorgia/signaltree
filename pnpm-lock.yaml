@@ -389,9 +389,6 @@ importers:
       '@signaltree/core':
         specifier: workspace:*
         version: link:../core
-      '@signaltree/schema':
-        specifier: workspace:*
-        version: link:../schema
       '@signaltree/shared':
         specifier: workspace:*
         version: link:../shared
@@ -417,22 +414,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@3.2.4)(happy-dom@20.11.0)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.100.0)(sass@1.101.3)(terser@5.43.1)
-
-  packages/schema:
-    dependencies:
-      '@angular/core':
-        specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
-        version: 22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2)(zone.js@0.16.2)
-      tslib:
-        specifier: ^2.0.0
-        version: 2.8.1
-    devDependencies:
-      '@signaltree/core':
-        specifier: workspace:*
-        version: link:../core
-      '@standard-schema/spec':
-        specifier: ^1.0.0
-        version: 1.1.0
 
   packages/shared:
     dependencies:
@@ -5928,6 +5909,7 @@ packages:
   cron-parser@4.9.0:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
+    deprecated: v4 is no longer maintained, upgrade to v5
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}

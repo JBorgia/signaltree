@@ -17,10 +17,16 @@ import {
   required,
   schema,
   validate,
+  validateStandardSchema,
 } from '@angular/forms/signals';
-import { form, signalTree, trackHistory, validators } from '@signaltree/core';
+import {
+  form,
+  signalTree,
+  toWritableSignal,
+  trackHistory,
+  validators,
+} from '@signaltree/core';
 import { signalForm } from '@signaltree/ng-forms/signals';
-import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 import {
@@ -57,13 +63,14 @@ interface TeamPlan extends Record<string, unknown> {
 /**
  * Angular 22 Signal Forms × SignalTree.
  *
- * One entry point — `signalForm()` — with two call shapes, both live on
- * this page:
+ * Two shapes live on this page, and the split is the architecture:
  *  1. `signalForm(marker)` — a `form()` marker becomes a Signal Forms
  *     `FieldTree` sharing the marker's values signal as its model.
- *  2. `signalForm(tree, rootPath, subtree)` — `@signaltree/schema`
- *     registrations (Zod here) auto-wire into a FieldTree via
- *     `validateStandardSchema`.
+ *  2. NO SignalTree validation API at all. `toWritableSignal()` publishes a
+ *     plain subtree, Angular's own `form()` + `schema()` compose over it, and
+ *     Angular's own `validateStandardSchema` runs the app's Zod schemas.
+ *     SignalTree owns the truth; Angular owns the observation; the
+ *     application owns the validators.
  */
 @Component({
   selector: 'app-signal-forms-demo',
@@ -165,27 +172,26 @@ export class SignalFormsDemoComponent {
     schema: this.planSchema,
   });
 
-  // ── 2. schema registrations ↔ FieldTree ──────────────────────────────────
+  // ── 2. StandardSchema validation, owned by the APPLICATION ──────────────
+  //      There is no SignalTree validation enhancer here and no SignalTree
+  //      validation API. The tree publishes; Angular composes; Zod judges.
   readonly schemaTree = signalTree({
     account: { username: '', age: 0 } as Account,
-  }).with(
-    schemas({
-      schemas: {
-        'account.username': z
-          .string()
-          .min(3, 'Username needs at least 3 characters'),
-        'account.age': z.coerce
-          .number()
-          .min(13, 'Must be at least 13')
-          .max(120, 'Must be at most 120'),
-      },
-    })
-  );
+  });
 
-  readonly account = signalForm<Account>(
-    this.schemaTree,
-    'account',
-    this.schemaTree.$.account
+  readonly account = ngForm(
+    toWritableSignal(this.schemaTree.$.account),
+    (a) => {
+      validateStandardSchema(
+        a.username,
+        z.string().min(3, 'Username needs at least 3 characters')
+      );
+      validateStandardSchema(
+        a.age,
+        z.coerce.number().min(13, 'Must be at least 13').max(120, 'Must be at most 120')
+      );
+    },
+    { injector: this.injector }
   );
 
   // Marker-side write to prove the FieldTree and marker share one model
@@ -262,27 +268,24 @@ err.min;                           // 18 — typed constraint, not string-parsed
 
   readonly schemaCode: CodeFile[] = [
     {
-      label: 'schema-bridge.ts',
+      label: 'standard-schema.ts',
       language: 'typescript',
-      source: `import { signalTree } from '@signaltree/core';
-import { schemas } from '@signaltree/schema';
-import { signalForm } from '@signaltree/ng-forms/signals';
+      source: `import { form, validateStandardSchema } from '@angular/forms/signals';
+import { signalTree, toWritableSignal } from '@signaltree/core';
 import { z } from 'zod';
 
-const tree = signalTree({
-  account: { username: '', age: 0 },
-}).with(
-  schemas({
-    schemas: {
-      'account.username': z.string().min(3),
-      'account.age': z.coerce.number().min(13).max(120),
-    },
-  })
-);
+const tree = signalTree({ account: { username: '', age: 0 } });
 
-// FieldTree with every registered schema auto-applied
-readonly account = signalForm<Account>(
-  tree, 'account', tree.$.account
+// No SignalTree validation enhancer, and no SignalTree validation API.
+// toWritableSignal() publishes the subtree; Angular composes over it;
+// your own Zod schemas do the judging.
+readonly account = form(
+  toWritableSignal(tree.$.account),
+  (a) => {
+    validateStandardSchema(a.username, z.string().min(3));
+    validateStandardSchema(a.age, z.coerce.number().min(13).max(120));
+  },
+  { injector }
 );`,
     },
   ];

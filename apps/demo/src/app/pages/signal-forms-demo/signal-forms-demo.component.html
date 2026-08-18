@@ -2,7 +2,7 @@
   <st-example
     heading="Angular Signal Forms × SignalTree"
     [headingLevel]="1"
-    intro="Angular 22's stable Signal Forms and SignalTree share one model — no copying, no sync. One entry point, signalForm(), with two call shapes: a form() marker as a FieldTree, and @signaltree/schema registrations auto-applied to a FieldTree."
+    intro="Angular 22's stable Signal Forms and SignalTree share one model — no copying, no sync. A form() marker becomes a FieldTree via signalForm(); a plain subtree is published with toWritableSignal() and validated with Angular's own schema() and validateStandardSchema. SignalTree ships no validation API."
   >
     <section class="demo-grid">
       <!-- Path 0: trackHistory() — marker-FREE undo/redo over a raw Signal Forms model -->
@@ -230,14 +230,17 @@
         <st-code-tabs [files]="schemaOptionCode" />
       </article>
 
-      <!-- Path 2: schema registrations ↔ FieldTree -->
+      <!-- Path 2: the application owns validation -->
       <article class="card">
-        <h2><code>signalForm(tree, rootPath, subtree)</code> — schemas auto-applied</h2>
+        <h2>
+          <code>toWritableSignal()</code> — the application owns validation
+        </h2>
         <p class="hint">
-          Zod schemas registered with <code>@signaltree/schema</code> at
-          <code>account.username</code> and <code>account.age</code> are wired
-          into the FieldTree with <code>validateStandardSchema</code> — no
-          per-field wiring.
+          No SignalTree validation enhancer and no SignalTree validation API.
+          <code>toWritableSignal()</code> publishes the subtree, Angular's own
+          <code>form()</code> composes over it, and Angular's own
+          <code>validateStandardSchema</code> runs your Zod schemas. SignalTree
+          owns the truth, Angular owns the observation, your validator judges.
         </p>
 
         <div class="field">

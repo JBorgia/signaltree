@@ -352,19 +352,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Signal Forms',
       description:
-        'Angular 22 Signal Forms interop via signalForm(): a form() marker as a FieldTree, @signaltree/schema registrations auto-applied to a FieldTree, plus 13.1.0: trackHistory() marker-free undo/redo, schema-driven disabled/hidden rules, and WebMCP passthrough.',
-    },
-  },
-  {
-    path: 'schema',
-    loadComponent: () =>
-      import('./pages/schema-demo/schema-demo.component').then(
-        (c) => c.SchemaDemoComponent
-      ),
-    data: {
-      title: 'Schema validation',
-      description:
-        'StandardSchema-driven validation against tree leaf paths. Zod / Valibot / ArkType compatible. Async-first, observe-only.',
+        "Angular 22 Signal Forms interop via signalForm(): a form() marker as a FieldTree, plus 13.1.0: trackHistory() marker-free undo/redo, Angular schema()-driven disabled/hidden rules, and WebMCP passthrough.",
     },
   },
 
@@ -400,7 +388,7 @@ export const appRoutes: Route[] = [
     data: {
       title: 'Documentation',
       description:
-        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, events, and schema packages.',
+        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, and events packages.',
     },
   },
 

@@ -2,10 +2,13 @@
  * `signalForm()` — the single entry point for producing an Angular Signal
  * Forms `FieldTree` from SignalTree state.
  *
- * One name, two sources:
+ * One name, one source: a `form()` marker —
+ * `signalForm(tree.$.path.to.marker, options?)`.
  *
- * - **`form()` marker** — `signalForm(tree.$.path.to.marker, options?)`
- * - **schema registry** — `signalForm<TModel>(tree, rootPath, subtree)`
+ * There is deliberately NO SignalTree-side schema route. StandardSchema
+ * validation is applied with Angular's own `schema` callback and Angular's own
+ * `validateStandardSchema`; SignalTree publishes the model and nothing else.
+ * See RELEASE-1.0.md, ANG-V0 / SCHEMA-DEL.
  *
  * **Requires Angular 22+** (`@angular/forms/signals`).
  *
@@ -14,9 +17,7 @@
 
 import type { FieldTree } from '@angular/forms/signals';
 import type { FormSignal } from '@signaltree/core';
-import type { SchemaMethods } from '@signaltree/schema';
 
-import { signalFormBridgeImpl } from './bridge';
 import { markerSignalFormImpl, type SignalFormOptions } from './marker-bridge';
 
 /**
@@ -83,69 +84,6 @@ import { markerSignalFormImpl, type SignalFormOptions } from './marker-bridge';
 export function signalForm<T extends Record<string, unknown>>(
   marker: FormSignal<T>,
   options?: SignalFormOptions<T>
-): FieldTree<T>;
-/**
- * Create an Angular Signal Forms `FieldTree` bound to a SignalTree subtree
- * with every schema registered via `@signaltree/schema` auto-applied
- * (`validateStandardSchema` per bound leaf path under `rootPath`).
- *
- * Reads from the tree's schema registry — no schema arguments needed. The
- * `SchemaMethods` constraint on `tree` enforces single-source-of-truth at
- * the type level: `schemas()` must be applied before `signalForm()`.
- *
- * **Reach for this form when your validation lives in StandardSchema
- * schemas** (Zod/Valibot/ArkType) registered with the `schemas()` enhancer,
- * rather than in a `form()` marker.
- *
- * @example
- * ```ts
- * import { signalTree } from '@signaltree/core';
- * import { schemas } from '@signaltree/schema';
- * import { signalForm } from '@signaltree/ng-forms/signals';
- * import { z } from 'zod';
- *
- * const tree = signalTree({ user: { name: '', email: '' } }).with(
- *   schemas({
- *     schemas: {
- *       'user.name': z.string().min(2),
- *       'user.email': z.string().email(),
- *     },
- *   }),
- * );
- *
- * const userForm = signalForm<User>(tree, 'user', tree.$.user);
- * // userForm is a FieldTree<User> with validation auto-wired.
- * ```
- *
- * @param tree - A SignalTree carrying `SchemaMethods` (i.e. after
- *   `.with(schemas(...))`).
- * @param rootPath - Dotted path of the subtree the form is rooted at.
- * @param subtree - The matching node accessor (`tree.$.<rootPath>`).
- *
- * @public
- */
-export function signalForm<TModel>(
-  tree: SchemaMethods,
-  rootPath: string,
-  subtree: unknown
-): FieldTree<TModel>;
-export function signalForm<T extends Record<string, unknown>, TModel>(
-  source: FormSignal<T> | SchemaMethods,
-  optionsOrRootPath?: SignalFormOptions<T> | string,
-  subtree?: unknown
-): FieldTree<T> | FieldTree<TModel> {
-  // Overload discrimination: the schema form is the only one whose second
-  // argument is a string (rootPath); the marker form takes an options object
-  // or nothing. The first arguments are structurally disjoint too (a form()
-  // marker is callable with patch/reset/submit and has no `schemas`; a
-  // schema tree carries the `schemas` methods object), so the string check
-  // is unambiguous.
-  if (typeof optionsOrRootPath === 'string') {
-    return signalFormBridgeImpl<TModel>(
-      source as SchemaMethods,
-      optionsOrRootPath,
-      subtree
-    );
-  }
-  return markerSignalFormImpl(source as FormSignal<T>, optionsOrRootPath);
+): FieldTree<T> {
+  return markerSignalFormImpl(marker, options);
 }

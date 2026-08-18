@@ -36,8 +36,12 @@ import { visitTree } from './visit-tree';
  * original methods.
  *
  * @public — Enhancer-author API. Used by `@signaltree/core`'s built-in
- *   devtools / time-travel enhancers and by external enhancers like
- *   `@signaltree/schema`. Application code should not use this directly.
+ *   devtools / time-travel enhancers. Application code should not use this
+ *   directly, and 15.0 removed its last external consumer: measured against
+ *   plain Angular `computed` observation it showed no capability advantage —
+ *   it misses writes past `maxDepth` and misses array-valued leaves entirely
+ *   (RELEASE-1.0.md, ANG-V0). It is queued for hostile audit under MUT; do not
+ *   build new consumers on it.
  */
 export function interceptLeafSignals(
   root: unknown,

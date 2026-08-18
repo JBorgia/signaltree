@@ -109,17 +109,17 @@ export class CartView {
       audience: 'I want the full reference',
       title: 'Browse package docs',
       description:
-        'Core API surface, plus optional packages: ng-forms, realtime, events, schema. Every type, every signature.',
+        'Core API surface, plus optional packages: ng-forms, realtime, events. Every type, every signature.',
       route: '/docs',
       cta: 'Open docs →',
     },
     {
       audience: 'I need form / data validation',
-      title: 'See the schema enhancer',
+      title: 'See Signal Forms interop',
       description:
-        'StandardSchema-driven validation against tree paths. Zod / Valibot / ArkType compatible. Async-first, observe-only — verdicts surface as signals.',
-      route: '/schema',
-      cta: 'Open schema demo →',
+        'SignalTree ships no validation API. It publishes the model, Angular Signal Forms observes it, and your own Zod / Valibot / ArkType schemas do the judging via validateStandardSchema.',
+      route: '/signal-forms',
+      cta: 'Open Signal Forms demo →',
     },
     {
       audience: 'I want proof, not promises',

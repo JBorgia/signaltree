@@ -5598,7 +5598,14 @@ refuted and the substrate is not what it claims to be.
 **STATUS: DEFERRED. No API designed, no kernel requirement created.** Revisit
 only when realtime product semantics establish that divergent histories exist.
 
-## SCHEMA REGRESSION — BISECTED AND CHARACTERIZED, repair NOT yet chosen
+## SCHEMA REGRESSION — **CLOSED AS MOOT.** Package deleted, not repaired
+
+**The package is gone (SCHEMA-DEL EXECUTED). Nothing below is a release
+blocker.** It is kept because the investigation produced one finding that
+survives the deletion and belongs to MUT: *ordinary leaf writes do not enter a
+canonical semantic mutation pipeline.* Read the rest as evidence for that, not
+as work.
+
 
 ```
 FIRST BAD    d8824b91  feat(history): scaffold causal runtime kernel
@@ -5697,7 +5704,8 @@ The deciding question is whether `interceptLeafSignals` is still meant to be the
 supported leaf-observation contract for third-party authors. That is a Gate B
 API decision, not a repair detail.
 
-## VALIDATION LADDER — workspace test rung (added at the schema blocker)
+## VALIDATION LADDER — workspace test rung (rung retained; its trigger is gone)
+
 
 **Building a package is not evidence that its runtime contract passes.** The
 ladder ran `nx run-many -t build --all` and tested CORE ONLY, so
@@ -5727,7 +5735,8 @@ sitting red unnoticed.
 false readings for Jest projects — "no tests" for `ng-forms`, "27 failed" for
 `demo`. Both were artifacts.
 
-## BLOCKER FOUND DURING #4a-2 — `@signaltree/schema` is 25 tests RED
+## ~~BLOCKER #4a-2~~ — **VOID.** The 25 RED tests were deleted with the package
+
 
 Found while capturing the pre-migration runtime baseline for `schemas()`.
 
@@ -5818,6 +5827,94 @@ Repair schema and establish a green baseline first. The characterization at
 
 The `schemas()` CONSUMER CONTRACT characterization is unaffected and green — it
 is type-only.
+
+## SCHEMA-DEL — **EXECUTED**
+
+The frozen endpoint, applied. One bounded migration, no new abstraction.
+
+```
+DELETED
+packages/schema/**                      the whole package, 40 files
+packages/ng-forms/src/signals/bridge.ts applySignalTreeSchemas
+signalForm(tree, rootPath, subtree)     the schema overload
+apps/demo/.../schema-demo/**            the demo page + route
+docs/architecture/schema-enhancer-plan.md
+docs/skills/using-signaltree/schema/**
+```
+
+Config followed the code out: `tsconfig.base.json` path mappings, ng-forms
+`package.json` peer + peerDependenciesMeta + devDependency, its `tsconfig.lib`
+paths and `jest.config` moduleNameMapper, the demo's asset-copy glob and
+`project.json`, `lint-skills` resolver, `ship-skills` package list, the
+AI-codegen benchmark library list and scorer, and the pnpm lockfile.
+
+**NOTHING WAS RECREATED.** No `applySignalTreeSchemas(form, tree, schemaMap)`,
+no registry, no wildcard utility. The demo, the ng-forms README and `llms*.txt`
+now show the surviving pattern, which is ordinary Angular:
+
+```ts
+form(
+  toWritableSignal(tree.$.user),
+  (u) => {
+    validateStandardSchema(u.name, z.string().min(2));
+  },
+  { injector }
+);
+```
+
+`toWritableSignal()` is PUBLICATION and survives on its own terms. It is what
+"SignalTree owns truth, Angular owns observation" actually looks like.
+
+One consequence worth naming: the deleted overload was the only way to build a
+Signal Forms `FieldTree` from a NON-MARKER subtree. That capability is not lost,
+it is relocated to where it belonged — Angular's own `form()` over a published
+writable signal.
+
+### ANG-V0-F removed from the null spec, as required
+
+The negative characterization of `interceptLeafSignals` is gone from
+`angular-validation-null.spec.ts`; the 17 positive Angular-publication tests
+remain. Its four measured rows live in this ledger. The mechanism's own docblock
+in `intercept-leaf-signals.ts` now records that it lost its last external
+consumer and shows no measured advantage over `computed`, and that it is queued
+for hostile audit under MUT — a comment, not a test contract.
+
+### VERIFICATION — by identity, not by count
+
+```
+core:test        1761 passed / 20 skipped / 1 todo    exit 0 ALONE
+ng-forms:test    109 passed  (11 suites)              exit 0
+demo:test        174 passed  (25 suites)              exit 0  <- was 4 FAILED
+guardrails / realtime / events / shared                exit 0
+lint  (all projects, + scripts separately)             exit 0
+build core/ng-forms/guardrails/realtime/events/shared  exit 0, fresh artifacts
+```
+
+`demo:test` was the recorded baseline's only test-rung red — *"4 failed / 177
+passed, all SchemaDemoComponent, same defect."* Those four died with the
+component. **The workspace test ladder is now green.**
+
+TWO PRE-EXISTING REDS, stated so they are not silently inherited:
+
+```
+core:test under PARALLEL run-many
+  1 failed: production-scalar-substrate.benchmark.spec.ts
+            "public undo-of-remove realizes through one incremental restore"
+            10885ms — the documented Phase-5 flaky TIMING class. Green alone.
+
+nx build demo
+  4 TS errors, ALL in files this change never touched:
+    form-marker-demo.component.html:600,625,627  FormHistoryApi
+      'clearHistory' / 'history' do not exist
+    packages/core/src/lib/types.ts:638           TS4114 missing 'override'
+  Confirmed untouched via `git diff --name-only HEAD`; neither file imports
+  the deleted package. Recorded BY IDENTITY so the next build compares
+  diagnostics, not counts.
+```
+
+The `types.ts:638` TS4114 is worth a look on its own — a missing `override` in
+core surfacing only through the demo's compiler settings is a real defect, just
+not this one's.
 
 ## Phase 3 — Packaging Proof
 

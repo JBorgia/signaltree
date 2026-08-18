@@ -670,27 +670,28 @@ const fieldTree = signalForm(tree.$.profile, {
 
 `experimentalWebMcpTool` requires Angular's `provideExperimentalWebMcpForms()` to be configured in the app (or the injector under test) — Angular's own `form()` throws in dev mode if the tool option is set without it; SignalTree doesn't add or relax that requirement, it just forwards the option.
 
-**2. Schema-registry overload — `signalForm<TModel>(tree, rootPath, subtree)`.** For trees whose validation lives in StandardSchema schemas (Zod/Valibot/ArkType) registered via `@signaltree/schema`'s `schemas()` enhancer, rather than in a `form()` marker: returns a `FieldTree<TModel>` bound to the subtree with every registered schema under `rootPath` auto-applied per leaf path (`validateStandardSchema`) — no schema arguments needed; `schemas()` must be applied before `signalForm()`.
+**2. StandardSchema validation is ANGULAR'S, not SignalTree's.** SignalTree ships **no validation API**: there is no validation enhancer, no validation registry, no validation result model, and no SignalTree-owned validation projection. `@signaltree/schema` was DELETED in 15.0. For a plain (non-marker) subtree, publish it with `toWritableSignal()` and use Angular's own `form()` + `validateStandardSchema` with the schemas your application already owns.
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { schemas } from '@signaltree/schema';
-import { signalForm } from '@signaltree/ng-forms/signals';
+import { form, validateStandardSchema } from '@angular/forms/signals';
+import { signalTree, toWritableSignal } from '@signaltree/core';
 import { z } from 'zod';
 
-const tree = signalTree({ user: { name: '', email: '' } }).with(
-  schemas({
-    schemas: {
-      'user.name': z.string().min(2),
-      'user.email': z.string().email(),
-    },
-  })
-);
+const tree = signalTree({ user: { name: '', email: '' } });
 
-const userForm = signalForm<User>(tree, 'user', tree.$.user);
+const userForm = form(
+  toWritableSignal(tree.$.user),
+  (u) => {
+    validateStandardSchema(u.name, z.string().min(2));
+    validateStandardSchema(u.email, z.string().email());
+  },
+  { injector }
+);
 ```
 
-**Naming:** `markerSignalForm()` (marker overload) and `signalFormBridge()` (schema overload) shipped in 11.5.0 and are **deprecated aliases** of `signalForm()` as of 11.6.0 (removed next major) — emit `signalForm` in new code. **Angular version boundary:** the `/signals` subpath requires Angular 22+ (`@angular/forms/signals`); apps on Angular 20/21 use the Reactive Forms path (`createFormTree()`/`formBridge()` from `@signaltree/ng-forms`) or read schema validation directly via `tree.schemas.errorsAt(path)` from `@signaltree/schema`.
+SignalTree owns the truth, Angular owns the observation, your validator judges the value. Do not emit `tree.schemas.*`, `schemas()`, `errorsAt()`, `isValidAt()` or `@signaltree/schema` — none of them exist in 15.0.
+
+**Naming:** `markerSignalForm()` shipped in 11.5.0 and is a **deprecated alias** of `signalForm()` as of 11.6.0 — emit `signalForm` in new code. **Angular version boundary:** the `/signals` subpath requires Angular 22+ (`@angular/forms/signals`); apps on Angular 20/21 use the Reactive Forms path (`createFormTree()`/`formBridge()` from `@signaltree/ng-forms`).
 
 ### Custom markers via `registerMarkerProcessor(spec)`
 
@@ -1154,8 +1155,7 @@ session.pullFromSource();
 
 | Package | Purpose | Key API |
 |---|---|---|
-| `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup`, with Standard Schema validation | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
-| `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
+| `@signaltree/ng-forms` | Angular forms bridges: **Signal Forms** (`/signals` subpath, Angular 22+) + Reactive Forms `FormGroup` | `signalForm()` (from `@signaltree/ng-forms/signals`), `createFormTree()`, `formBridge()` |
 | `@signaltree/events` | Primarily a standalone full-stack event bus (Zod-validated, NestJS/Angular/Redis) — the bus itself does NOT integrate with the signal tree. Exception (v13+): `@signaltree/events/angular`'s `entityEventHandler`/`applyOptimisticEntityChange` bridge event batches onto `@signaltree/core`'s `entityMap` batch ops | `createEventSchema()`, `EventBusModule`, `entityEventHandler()` |
 | `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
 | `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
@@ -1438,7 +1438,7 @@ Do NOT model tokens as an array you `.push()` to (arrays are signals — no `.pu
 | "SignalTree is anti-DI / doesn't integrate with Angular services." | Marketing focus on the data-shape framing. | SignalTree is DI-agnostic. `@Injectable()` service-wrapping is the documented production pattern. |
 | "SignalTree has no answer to NgRx's `rxMethod`." | True at the API name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. | The SignalTree-native async story is the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual `tap()/setLoading()` wiring. For migrating from NgRx `rxMethod` see the dedicated migration guide. |
 | "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
-| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real and published in lockstep with core (same version as `@signaltree/core`). `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
+| "`@signaltree/guardrails` doesn't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | It is real and published in lockstep with core. `guardrails` is dev-mode invariants and performance monitoring; the real export is `guardrails(...)`, not `withGuardrails(...)`. (`@signaltree/schema` was named in the same self-audit and WAS real through 14.x — it is DELETED in 15.0, so asserting its absence is now correct.) |
 | "`tree` has a `.state` accessor." | Older docs referenced `tree.state`. | `tree.state` was **removed in v11** — `$` is the only node accessor (`tree.$`). For a non-reactive full snapshot, call `tree()`. |
 | "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
 | "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |
