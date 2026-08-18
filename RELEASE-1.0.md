@@ -7191,7 +7191,7 @@ demo     form-marker-demo, signal-forms-demo (page + fundamentals example),
          their routes, and the marker zoo's form article
 ```
 
-### Survived, and NOT by accident
+### Retained mechanically — NOT audited survivors
 
 ```
 trackHistory()    takes a plain WritableSignal; never referenced the marker
@@ -7203,6 +7203,72 @@ history adapter   zero marker refs
 `createFormTree()`'s deprecation is **DE-POINTED, NOT RE-POINTED** — it now says
 its migration target was removed and no replacement has been chosen. Reactive
 Forms and Signal Forms interoperability stay DEFERRED OBLIGATIONS.
+
+**CORRECTED — "not forced to die" is not "survived".** The line above read
+*"Survivals were measured, not assumed"*, which is the SAME inference just
+removed for `@signaltree/ng-forms` one section earlier. Zero marker references
+establish INDEPENDENCE, not necessity:
+
+```
+PROVED        trackHistory() does not depend on the deleted marker
+              -> FORM-DEL does not force its deletion
+NOT PROVED    trackHistory() is something greenfield SignalTree 15 should ship
+```
+
+```
+trackHistory()        RETAINED MECHANICALLY; survival UNPROVEN
+createFormTree()      RETAINED MECHANICALLY; survival UNPROVEN
+ng-forms wizard       RETAINED MECHANICALLY; survival UNPROVEN
+ng-forms history      RETAINED MECHANICALLY; survival UNPROVEN
+```
+
+**Do NOT audit them now** — subtraction-only says stop calling them survivors,
+not go prosecute them. Each keeps its own hostile audit, unfrozen.
+
+Reactive Forms and Signal Forms INTEROPERABILITY are different, and the
+distinction is exact: those FUNCTIONS survived prior architectural decisions, so
+they are DEFERRED OBLIGATIONS. **Their particular retained implementations do
+not inherit that status** — an obligation attaches to the function, never to the
+code that happened to provide it.
+
+
+### COMMIT-BOUNDARY BLEMISH in `b57ba293` — recorded, NOT rewritten
+
+The `SignalTreeRollbackError.cause` repair is UNRELATED PRODUCTION WORK folded
+into a 10 499-line deletion commit because it blocked the green gate.
+
+```
+blocked verification -> fix needed before the gate      TRUE
+                     -> fix belongs in THIS commit      DOES NOT FOLLOW
+```
+
+History is not rewritten. It is recorded so a future bisect does not attribute
+every semantic change in `b57ba293` to marker removal:
+
+```
+b57ba293 CONTAINS one unrelated gate repair: SignalTreeRollbackError no longer
+         declares `cause` as a field; it is assigned through a cast.
+14.x     LIB-TARGET DISAGREEMENT remains INDEPENDENTLY OPEN — the demo's
+         compiler options and core's rollup build disagree about whether
+         `Error.cause` exists at their lib targets. The cast satisfies both;
+         it does not resolve the disagreement.
+```
+
+### TEST-STRIPPING CAVEAT — do not over-credit "mechanical and bounded"
+
+Form-dependent `it()` blocks were removed from nine mixed specs by an automated
+stripper. It produced a green suite, but it **malformed `marker-roundtrip.spec.ts`
+once and had to be repaired by hand.** The parser and the suite caught it, so
+FORM-DEL stands — but a green suite after automated surgery is NOT proof that
+every removed assertion was semantically marker-only.
+
+```
+OBLIGATION (deferred, cheap, not an architecture cycle)
+  A deletion-diff sanity pass over `b57ba293`: for every test block removed from
+  a MIXED surviving spec, did that assertion protect ONLY the deleted surface, or
+  did it also protect a surviving general invariant? Where the latter, restore
+  the invariant using a surviving trigger.
+```
 
 ### Two unrelated defects fixed because they blocked the gate
 
@@ -7264,6 +7330,41 @@ have the same problem.
 (`migration-v11-v12`, `v12-v13`, `v13.2`, `v14-v14.1`). They record what was true
 when written. `docs/guides/migration-v14-v15.md` is the LIVE one and must gain
 the marker deletion.
+
+### MUT EVIDENCE BOUNDARY — frozen BEFORE MUT begins
+
+The doc surface was classified as shipping-correctness on the grounds that "MUT
+derives against code, not prose". **That is defensible only if MUT's evidence
+boundary actually excludes those files** — otherwise a repo-wide search for
+`mutation`, `write`, `history` or `participation` surfaces stale architecture
+prose exactly as readily as production source, and roughly a hundred live
+references currently teach deleted APIs. The two `llms` files exist SPECIFICALLY
+to steer agents, which makes the risk concrete rather than theoretical.
+
+So the boundary is frozen rather than assumed:
+
+```
+MUT PRIMARY EVIDENCE
+  packages/** production source
+  surviving tests and type tests
+  frozen RELEASE-1.0 decisions
+  measured runtime experiments
+
+NOT MUT ARCHITECTURAL EVIDENCE
+  llms.txt, llms-full.txt
+  package READMEs
+  shipped skills
+  general guides
+  demo explanatory prose
+  historical audits, RFCs, migration guides
+
+EXCEPTION
+  prose may be consulted LAST, and only to DISCOVER a claimed capability or a
+  14.x contract. Never to derive the 15.0 endpoint.
+```
+
+**Without this exclusion, Rule 0j would in fact require cleaning the live prose
+first.** With it, the doc surface genuinely waits for the shipping gate.
 
 ## Phase 3 — Packaging Proof
 
