@@ -165,10 +165,20 @@ Run the authoritative ladder before checkpointing a release slice.
 
 ## Workspace Dirt Not Owned By Release Tasks
 
-- `eslint.config.mjs`
-- `packages/ng-forms/src/signals/greenfield-branch-model.spec.ts`
+**Both former entries are cleared. The list is empty.**
 
-Never include unrelated dirt in release commits.
+- ~~`eslint.config.mjs`~~ — committed alone at `e5fe21e7` (the `@nx/rollup`
+  build-tooling allowlist entry, and a `no-empty-function` exemption for
+  `tools/`). Validated directly rather than by proxy: `nx lint core` is green,
+  `eslint 'tools/**'` reports 0 errors, and forcing the rule back on produces 9
+  violations — so the exemption is load-bearing rather than dead config.
+- ~~`packages/ng-forms/src/signals/greenfield-branch-model.spec.ts`~~ — deleted
+  by FORM-DEL (`b57ba293`). The file has not existed since; the entry was
+  outliving its subject.
+
+The rule stands for whatever appears next: never include unrelated dirt in
+release commits. Committing it ALONE is not a violation of that rule — leaving
+it to accumulate until it has to be untangled from a release slice is.
 
 ## Rules
 
