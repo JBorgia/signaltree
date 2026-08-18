@@ -2184,6 +2184,103 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## B2-1 ITEM 0 — `plannedSignalTree`: the FUNCTION SURVIVES, and it is not the one I attributed to it
+
+Derived with the implementation held aside, then revealed. **This CORRECTS the
+opening measurement below**, which recorded `requires` as downstream of
+`plannedSignalTree`'s survival. That coupling is an artifact of a shared call
+site, not a semantic dependency.
+
+### FUNCTION — survives, and it is capability-driven substrate construction
+
+```
+ordinary signalTree()
+  LEGACY_TREE_BUILD_PLAN = ['causal-runtime', 'temporal-snapshots']
+  and 'causal-runtime' depends on 'mutation-capture' + 'position-topology'
+  -> ALL FOUR capabilities are ALWAYS installed, whatever the app uses
+
+plannedSignalTree().build()
+  buildPlan = buildTreePlan(enhancers)      from their declared `capabilities`
+  physicalCommitClock created ONLY IF buildPlan.has('causal-runtime')
+  -> the substrate is built from what was actually asked for
+```
+
+The `capabilities` axis is EXERCISED in production, unlike `requires`:
+
+```
+transactions   capabilities: ['causal-runtime']
+time-travel    capabilities: ['causal-runtime', 'temporal-snapshots']
+```
+
+**Positional `.with()` structurally cannot express this.** `.with()` applies an
+enhancer to an ALREADY-CONSTRUCTED tree whose substrate is already fixed to the
+legacy plan; a capability that must exist at construction time — leaf
+specialization, the causal substrate, position topology — cannot be retrofitted
+onto it. The spec names say exactly this: *"installs causal capability before
+exposure so retained set refs stay correct"*, *"keeps status marker source leaves
+non-authoring without mutation-capture"*.
+
+So the NULL is answered: something real is lost. Deferred construction is not
+ordinary application composition here — it is the only point at which the
+substrate decision can be made.
+
+### THE CORRECTION — `requires` is NOT downstream of this
+
+`build()` currently bundles THREE separable things:
+
+```
+1  capability collection -> substrate planning     field: `capabilities`
+     REAL, exercised, and the reason plannedSignalTree has a function
+
+2  enhancer ordering                                field: `requires`/`provides`
+     resolveEnhancerOrder; a no-op on every production input (zero requires)
+
+3  duplicate + dependency guard
+     ALSO present on the ordinary .with() path — not unique to this call
+```
+
+Only (1) gives `plannedSignalTree` its function. (2) merely has its only call site
+here. So `plannedSignalTree` surviving does NOT carry `requires`/`provides` with
+it, and the earlier claim that it did was wrong — I inferred a semantic
+dependency from a shared call site, which is the same class of error as inferring
+function from current form.
+
+**`requires` must be judged on its own**, and the narrower null is the right one
+regardless of how item 0 resolves:
+
+> Does SignalTree need a PUBLIC dependency GUARD for enhancer capabilities on the
+> ordinary positional `.with()` path?
+
+### DISPOSITION — function SURVIVES; the PUBLIC SPELLING is UNPROVEN
+
+```
+FUNCTION           SURVIVES — substrate built from declared capabilities
+OWNER              SignalTree; it owns the substrate. Not arguable.
+PUBLIC NEED        the FUNCTION is CORE-INTERNAL at minimum.
+                   Whether the plannedSignalTree SPELLING must be PUBLIC is
+                   UNPROVEN — zero consumers anywhere, and
+                   docs/architecture/causal-runtime-contract.md already lists it
+                   as "a public API candidate", i.e. never settled.
+MINIMUM PRIMITIVE  capability declaration on enhancer metadata, plus a plan
+                   computed BEFORE construction.
+CURRENT FORM       a second public constructor with a deferred build()
+DISPOSITION        NOT DELETE. Function survives. Form UNPROVEN.
+```
+
+**The live alternative, which must be refuted before `plannedSignalTree` is kept
+public:** `signalTree()` itself could compute the plan from its enhancer chain,
+which would make the second public constructor unnecessary while KEEPING the
+function. That is a REDESIGN candidate, not authorized here — it changes when
+construction happens on the primary path, which is a GATE A-adjacent question.
+
+### One consequence worth carrying to GATE C/D
+
+Every ordinary `signalTree()` pays for all four capabilities whether or not the
+app uses transactions or time travel. That is a measured substrate cost, and it
+is relevant to the bundle-budget reconciliation already queued. Recorded here as
+an observation; it is not a B2 item and must not be optimized during a surface
+audit.
+
 ## B2-1 OPENING MEASUREMENT — `requires` is unexercised, and its only reordering consumer is unaudited
 
 Run with the implementation held aside, per the B2 rule that an existing export
