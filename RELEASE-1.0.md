@@ -3264,6 +3264,107 @@ survive.
 **Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
 inventory.
 
+### V0 — **CLOSED. PRODUCT DECISION FROZEN.**
+
+```
+PRODUCT DECISION       SignalTree 15 DOES ship a general first-party validation
+                       facility
+OWNERSHIP              downstream DERIVED facility over SignalTree truth
+FRAMEWORK              framework-neutral BY FUNCTION (neutrality follows from
+                       ownership; it was not chosen independently)
+KERNEL VALIDATION      NONE
+ONTOLOGY
+DEFAULT EXECUTION      EXPLICIT evaluation
+CONTINUOUS CURRENCY    NOT part of the baseline contract
+ANGULAR                owns reactive observation and lifecycle for Angular
+                       validation experiences
+STANDARD SCHEMA        format/interoperability ADAPTER, not a second authority
+@signaltree/schema     REDESIGN candidate; package and API not yet derived
+```
+
+**THE REASONING IS FUNCTIONAL, NOT HISTORICAL.** Validation of SignalTree state
+is useful *without Angular Forms existing at all*:
+
+```ts
+const result = await validate(tree.$.order, orderRules);
+if (!result.valid) { … }
+```
+
+Nothing there is Angular-specific, form-specific or presentation-specific — it
+is useful in services, imports, workflows, pre-submit checks and background
+processing. Angular Forms being one major consumer does not make Angular the
+semantic owner of the operation. Putting validation *only* inside Angular Forms
+would make a general state concern subordinate to a UI integration.
+
+**THE DISTINCTION THAT SPLITS THE PRODUCT:**
+
+```
+VALIDATING TRUTH                        general, SignalTree-adjacent  -> WE PROVIDE
+OBSERVING TRUTH SO VALIDATION STAYS     framework/runtime-specific    -> WE DO NOT
+CURRENT
+```
+
+Providing only the first preserves *"SignalTree owns truth, Angular owns
+observation"* — and prevents validation from being used to smuggle a generic
+mutation observer back into the kernel.
+
+**THE CONTRACT, negatively stated:**
+
+```
+SignalTree 15 provides OPTIONAL, DESCRIPTIVE validation of current truth.
+It does NOT:
+  make validation part of kernel truth      refuse writes by default
+  own validation observation                require Angular
+  require continuous validity               require mutation events
+  require public PositionId/path ontology
+```
+
+#### Two constraints carried into the derivation
+
+**NOT AN ENHANCER** unless a later derivation proves installation changes what
+the tree semantically DOES. The primitive currently looks like
+`validate(node, rules)`, not `tree.with(validation(…))` — installing an
+evaluator onto a tree so methods can hang off it would repeat the `formBridge`
+mistake exactly.
+
+**NOT A MARKER** — `signalTree({ profile: validated(…) })` is unjustified unless
+a separate CONSTRUCTION-TIME semantic requirement appears.
+
+#### Consequence for `form()`
+
+Validation no longer gives `form()` any reason to exist. The target shape:
+
+```
+              validation facility
+              /                 \
+   Reactive Forms adapter   Signal Forms adapter
+              \                 /
+              SignalTree truth
+```
+
+not `form()` owning validators + Angular Reactive Forms + Signal Forms + wizard
++ touched + submitting. After the facility's API is frozen, `form()` can be
+audited with essentially ALL of its inherited justifications stripped.
+
+#### Next — kernel-first derivation, everything hidden
+
+Derive the facility's minimal API with `@signaltree/schema`, `form()`,
+enhancers, paths, Angular signals and the current API ALL HIDDEN. Only three
+candidate responsibilities:
+
+```
+EVALUATION       run rules against current readable truth
+RESULT           normalized validity / errors
+ASYNC LIFECYCLE  obsolete async runs must never overwrite newer results
+```
+
+**Even `pending` may not belong in the primitive.** `await validate(…)` needs no
+persistent pending model; a consumer wanting `pending` / `isValid` / `errors` /
+`lastResult` maintains that operational projection around the evaluator.
+
+Package naming (`@signaltree/schema` -> `@signaltree/validation`?) is FORM and is
+deliberately NOT decided — Rule 0g, function first.
+
 ### MUT-0 ROW — VALIDATION OWNERSHIP — **OPEN. Higher priority than realtime R0.**
 
 Promoted ahead of realtime because RF-M1 produced evidence that 15.0 may carry
