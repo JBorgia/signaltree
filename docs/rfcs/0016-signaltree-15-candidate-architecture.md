@@ -196,6 +196,37 @@ they do not enter the deferred pass in the way that degraded.
 `this`-polymorphism. The encoding is NOT REFUTED; it is not established either,
 and RFC 0015's own false green is the reason that distinction is worth stating.
 
+### SHAPE-T0 RESULT — two positive facts, not one negative one
+
+`packages/core/src/lib/declarative-extension-contract.typing.spec.ts`. Recording
+this as "not refuted" understates it in one direction and overstates it in
+another, so it is stated as what was actually proved:
+
+```text
+DECLARATIVE TYPE ACCUMULATION      PROVED FEASIBLE
+SEQUENTIAL this & TAdded REQUIRED  REFUTED
+NAIVE UNCHECKED INTERSECTION       REFUTED
+FINAL COLLISION RULE               UNPROVEN
+```
+
+**Fact 1.** For non-colliding contributions, public type accumulation does not
+require sequential enhancer application. The declaration is inert — not
+callable, never handed a host tree — and store typing, nested `NodeAccessor`
+behavior, derived inference, the callable-tree contract and multiple contributed
+capabilities all survive simultaneously. That removes the strongest plausible
+defense of the chained form.
+
+**Fact 2.** Plain intersection is insufficient as the final lowering strategy.
+Two incompatible contributions to the same key become an overloaded member with
+NO declaration-site error, and the LAST one wins under probing — so declaration
+order silently decides which survives.
+
+Fact 2 does not count against the declarative model. It counts against
+`type Final = A & B & C` as an *unchecked* lowering. And the declarative model is
+strictly better positioned here than the chain: a compiler that sees the complete
+set before construction can detect the collision, which sequential `.with()`
+structurally cannot.
+
 ### Ledger rows
 
 | Concept | Direction |
@@ -203,12 +234,14 @@ and RFC 0015's own false green is the reason that distinction is worth stating.
 | extension/plugin function | likely SURVIVES |
 | construction capability declaration (`capabilities`) | **SURVIVES — measured, exercised in production** |
 | generic "enhancer" runtime abstraction | UNPROVEN |
-| chained `.with()` as primary extension API | strong REDESIGN/DELETE candidate |
+| chained `.with()` as primary extension API | strong REDESIGN/DELETE candidate — its type-accumulation defense is REFUTED |
 | `plannedSignalTree()` function | SURVIVES |
 | `plannedSignalTree()` as a separate public constructor | strong REDESIGN candidate |
 | extension descriptors in the initial declaration | strong candidate |
 | `requires`/`provides` ordering graph | highly suspect; audit independently |
 | "enhancer" as the future NOUN (`(tree) => tree`) | suspect — inherently post-construction |
+| naive intersection of contributions | **REFUTED as a lowering** — silent last-wins shadowing |
+| inert extension declaration | **type-proved feasible** |
 
 ## Frozen baseline this matrix may not re-derive
 
