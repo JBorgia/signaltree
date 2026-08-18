@@ -306,6 +306,155 @@ type _f_first_contribution_shadowed = Expect<
   Equal<Equal<ReturnType<typeof collided.shared>, number>, false>
 >;
 
+/* ------------------------------------------------------------------ *
+ * T0-G — STATIC COLLISION REJECTION
+ *
+ * T0-F measured the hole: incompatible same-key contributions form an
+ * overloaded member with NO declaration-site error. SHAPE-T1 CASE 3 closed the
+ * RUNTIME half (whole-set DISCOVER refuses before exposure). This section asks
+ * the remaining half:
+ *
+ *   Can the construction signature reject incompatible contributions AT THE
+ *   DECLARATION SITE, while preserving every T0 inference property?
+ *
+ * The mechanism: walk the tuple accumulating contributed keys, and yield the
+ * colliding key names. When that set is non-empty, the config parameter gains a
+ * REQUIRED property the caller has not written, so the object literal fails
+ * where it is authored — and the message names the offending key.
+ * ------------------------------------------------------------------ */
+
+type ContributionsOf<E extends readonly unknown[]> = {
+  [I in keyof E]: AddedOf<E[I]>;
+};
+
+/** Keys contributed by more than one declaration, with INCOMPATIBLE types. */
+type CollidingKeys<
+  Parts extends readonly unknown[],
+  Seen = unknown
+> = Parts extends readonly [infer H, ...infer R]
+  ? // keys of H already present in Seen, whose types disagree
+    | {
+        [K in Extract<keyof H, keyof Seen>]: Equal<
+          H[K],
+          Seen[K & keyof Seen]
+        > extends true
+          ? never
+          : K;
+      }[Extract<keyof H, keyof Seen>]
+    | CollidingKeys<R, Seen & H>
+  : never;
+
+type Collisions<E extends readonly unknown[]> = CollidingKeys<
+  ContributionsOf<E>
+>;
+
+/** Empty unless a collision exists; then a property the caller cannot satisfy. */
+type CollisionGuard<E extends readonly unknown[]> = [Collisions<E>] extends [
+  never
+]
+  ? unknown
+  : { readonly CONFLICTING_EXTENSION_CONTRIBUTION: Collisions<E> };
+
+declare function guardedTree<
+  S,
+  const D extends Record<string, ($: TreeNode<S>) => unknown>,
+  const E extends readonly ExtensionDeclaration<unknown>[]
+>(
+  config: { store: S; derived?: D; extensions?: E } & CollisionGuard<E>
+): DeclaredTree<S, D, E>;
+
+// g1 — disjoint contributions still compile, and still accumulate
+const guardedOk = guardedTree({
+  store: { count: 0, label: 'a' },
+  derived: { doubled: ($) => $.count() * 2 },
+  extensions: [transactionsDecl(), timeTravelDecl()],
+});
+type _g1_accumulates = Expect<
+  Equal<typeof guardedOk.transaction, (fn: () => void) => void>
+>;
+type _g1_other_side = Expect<Equal<typeof guardedOk.undo, () => void>>;
+
+// g2 — store inference stays precise under the guard
+type _g2_store = Expect<Equal<ReturnType<typeof guardedOk.$.count>, number>>;
+type _g2_label = Expect<Equal<ReturnType<typeof guardedOk.$.label>, string>>;
+
+// g3 — derived `$` is still not `any`, asserted positively under the guard
+const guardedDetect = guardedTree({
+  store: { count: 0 },
+  derived: {
+    detect: ($) => {
+      const dollarIsNotAny: IsAny<typeof $> = false;
+      return dollarIsNotAny;
+    },
+  },
+  extensions: [transactionsDecl()],
+});
+type _g3_not_any = Expect<Equal<typeof guardedDetect.derived.detect, false>>;
+
+// g4 — derived results survive an operation that cannot launder `any`
+const guardedSum = guardedTree({
+  store: { count: 0 },
+  derived: { sum: ($) => $.count() + $.count() },
+  extensions: [timeTravelDecl()],
+});
+type _g4_sum = Expect<Equal<typeof guardedSum.derived.sum, number>>;
+
+// g5 — THE ROW THIS SECTION EXISTS FOR.
+// Incompatible same-key contributions now fail where they are authored.
+// @ts-expect-error `shared` is contributed twice with incompatible types; the
+// guard names the offending key in the message
+guardedTree({
+  store: { count: 0 },
+  extensions: [collidesA(), collidesB()],
+});
+
+// g6 — and in the reverse order, so the guard is not order-sensitive
+// @ts-expect-error same collision in the reverse order — the guard is not
+// order-sensitive
+guardedTree({
+  store: { count: 0 },
+  extensions: [collidesB(), collidesA()],
+});
+
+// g7 — order reversal does not change the valid resulting type
+const guardedAB = guardedTree({
+  store: { count: 0 },
+  extensions: [transactionsDecl(), timeTravelDecl()],
+});
+const guardedBA = guardedTree({
+  store: { count: 0 },
+  extensions: [timeTravelDecl(), transactionsDecl()],
+});
+type _g7_order_irrelevant = Expect<
+  Equal<
+    [typeof guardedAB.transaction, typeof guardedAB.undo] extends [
+      typeof guardedBA.transaction,
+      typeof guardedBA.undo
+    ]
+      ? true
+      : false,
+    true
+  >
+>;
+
+/**
+ * CHARACTERIZED, not designed: two declarations contributing the SAME key with
+ * an IDENTICAL type are accepted by this guard, because the comparison is
+ * `Equal<H[K], Seen[K]>`. Whether identical duplicate contribution should be
+ * legal is a POLICY question this file does not answer — it is recorded so the
+ * behaviour is a known choice rather than an accident.
+ */
+declare function twinA(): ExtensionDeclaration<{ shared(): number }>;
+declare function twinB(): ExtensionDeclaration<{ shared(): number }>;
+const twins = guardedTree({
+  store: { count: 0 },
+  extensions: [twinA(), twinB()],
+});
+type _g8_identical_twins_allowed = Expect<
+  Equal<ReturnType<typeof twins.shared>, number>
+>;
+
+export { guardedOk, guardedDetect, guardedSum, guardedAB, guardedBA, twins };
 export { _c2_nested_read, _c8_callable_read, _d_missing_key, _d_wrong_derived };
 
 export type {
@@ -324,4 +473,12 @@ export type {
   _e_both_orders_have_both,
   _f_collision_is_silent,
   _f_first_contribution_shadowed,
+  _g1_accumulates,
+  _g1_other_side,
+  _g2_store,
+  _g2_label,
+  _g3_not_any,
+  _g4_sum,
+  _g7_order_irrelevant,
+  _g8_identical_twins_allowed,
 };
