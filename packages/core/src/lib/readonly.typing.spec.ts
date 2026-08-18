@@ -18,7 +18,7 @@
  *  (c) entity mutators (`upsertOne`, …) and loader triggers (`load`,
  *      `refresh`, `invalidate`) are not reachable; `byId` is re-signed to a
  *      read-only entity node;
- *  (e) status / form / stored / async reader members remain readable, with
+ *  (e) status / stored / async reader members remain readable, with
  *      `WritableSignal` readers (`status.state`, `asyncQuery.input`) demoted
  *      to plain `Signal`s.
  * ((d) — plain-object factory with `expose: 'readonly'` is a compile error —
@@ -30,7 +30,6 @@ import {
   asyncQuery,
   asyncSource,
   entityMap,
-  form,
   linked,
   signalTree,
   status,
@@ -41,7 +40,6 @@ import { loader } from './markers/loader';
 import type {
   ReadonlyEntityNode,
   ReadonlyEntitySignal,
-  ReadonlyFormWizard,
   ReadonlyLoadingEntitySignal,
 } from './readonly';
 import { asReadonly } from './readonly';
@@ -63,10 +61,6 @@ interface User {
   address: { city: string };
   tags: string[];
 }
-// form<T> constrains T to Record<string, unknown> (see
-// marker-resolution.typing.spec.ts for the same fixture note).
-type Profile = { name: string; email: string; [k: string]: unknown };
-
 const tree = signalTree({
   count: 0,
   selectedId: null as number | null,
@@ -81,7 +75,6 @@ const tree = signalTree({
   }),
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
-  profile: form<Profile>({ initial: { name: '', email: '' } }),
   reports: asyncSource<User[]>({
     initial: [],
     load: () => Promise.resolve([]),
@@ -108,7 +101,6 @@ type ROUsers = RO$['users'];
 type ROCached = RO$['cached'];
 type ROPlants = RO$['plants'];
 type ROStatus = RO$['load'];
-type ROForm = RO$['profile'];
 type ROStored = RO$['theme'];
 type ROSource = RO$['reports'];
 type ROQuery = RO$['search'];
@@ -192,7 +184,7 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROPlants, 'refresh'>>,
 
   // ---------------------------------------------------------------------------
-  // (e) status / form / stored / async readers remain readable
+  // (e) status / stored / async readers remain readable
   // ---------------------------------------------------------------------------
   Expect<Equal<ROStatus['loading'], Signal<boolean>>>,
   Expect<Equal<ROStatus['hasError'], Signal<boolean>>>,
@@ -205,31 +197,6 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROStatus, 'setError'>>,
   Expect<NotOffered<ROStatus, 'reset'>>,
   Expect<NotOffered<ROStatus, 'fail'>>,
-
-  Expect<Equal<ReturnType<ROForm['data']>, Profile>>,
-  Expect<Equal<ReturnType<ROForm>, Profile>>, // callable read kept
-  Expect<Equal<ROForm['valid'], Signal<boolean>>>,
-  Expect<
-    Equal<
-      ROForm['errors'],
-      Signal<Partial<Record<keyof Profile, string | null>>>
-    >
-  >,
-  Expect<NotOffered<ROForm, 'set'>>,
-  Expect<NotOffered<ROForm, 'patch'>>,
-  Expect<NotOffered<ROForm, 'submit'>>,
-  Expect<NotOffered<ROForm, 'validate'>>,
-  Expect<NotOffered<ROForm, 'touch'>>,
-  Expect<NotOffered<ROForm, '$'>>, // deep-writable field accessors not offered
-  // wizard: re-signed to progress reads (optional, mirroring FormSignal);
-  // navigation mutators not offered.
-  Expect<Equal<ROForm['wizard'], ReadonlyFormWizard | undefined>>,
-  Expect<Equal<NonNullable<ROForm['wizard']>['currentStep'], Signal<number>>>,
-  Expect<Equal<NonNullable<ROForm['wizard']>['canNext'], Signal<boolean>>>,
-  Expect<NotOffered<NonNullable<ROForm['wizard']>, 'next'>>,
-  Expect<NotOffered<NonNullable<ROForm['wizard']>, 'prev'>>,
-  Expect<NotOffered<NonNullable<ROForm['wizard']>, 'goTo'>>,
-  Expect<NotOffered<NonNullable<ROForm['wizard']>, 'reset'>>,
 
   Expect<Equal<ReturnType<ROStored>, 'light' | 'dark'>>,
   Expect<Equal<ROStored['key'], string>>,

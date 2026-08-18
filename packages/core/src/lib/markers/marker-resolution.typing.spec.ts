@@ -23,7 +23,6 @@ import type {
   AsyncSourceSignal,
   CallableWritableSignal,
   EntitySignal,
-  FormSignal,
   StatusSignal,
   StoredSignal,
 } from '../../index';
@@ -31,7 +30,6 @@ import {
   asyncQuery,
   asyncSource,
   entityMap,
-  form,
   loader,
   signalTree,
   status,
@@ -56,15 +54,10 @@ interface User {
   id: number;
   name: string;
 }
-// form<T> constrains T to Record<string, unknown>; a bare interface lacks the
-// index signature (a real ergonomic wart — interface-typed forms need it).
-type Profile = { name: string; email: string; [k: string]: unknown };
-
 const tree = signalTree({
   users: entityMap<User, number>(),
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
-  profile: form<Profile>({ initial: { name: '', email: '' } }),
   reports: asyncSource<User[]>({ initial: [], load: () => Promise.resolve([]) }),
   search: asyncQuery<string, User[]>({
     initialResult: [],
@@ -84,7 +77,6 @@ export type _MarkerResolutionChecks = [
   Expect<Equal<$['users'], EntitySignal<User, number>>>,
   Expect<Equal<$['load'], StatusSignal<Error>>>,
   Expect<Equal<$['theme'], StoredSignal<'light' | 'dark'>>>,
-  Expect<Equal<$['profile'], FormSignal<Profile>>>,
   Expect<Equal<$['reports'], AsyncSourceSignal<User[]>>>,
   Expect<Equal<$['search'], AsyncQuerySignal<string, User[]>>>,
   // marker nested at depth resolves too (the "any depth" differentiator)

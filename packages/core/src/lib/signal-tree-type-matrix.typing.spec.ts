@@ -67,14 +67,13 @@
  */
 import type { Signal } from '@angular/core';
 
-import { asyncQuery, entityMap, form, signalTree, status, stored } from '../index';
+import { asyncQuery, entityMap, signalTree, status, stored } from '../index';
 import type {
   AccessibleNode,
   AsyncQuerySignal,
   CallableWritableSignal,
   EntitySignal,
   Enhancer,
-  FormSignal,
   NodeAccessor,
   SignalTree,
   StatusSignal,
@@ -110,8 +109,6 @@ interface User {
   id: number;
   name: string;
 }
-
-type Profile = { name: string; email: string; [k: string]: unknown };
 
 interface RootState {
   count: number;
@@ -303,7 +300,6 @@ built.$.user.set({ name: 'Bob', age: 1, address: { city: 'x' } });
 const builtMarkers = signalTree({
   load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
-  profile: form<Profile>({ initial: { name: '', email: '' } }),
   search: asyncQuery<string, User[]>({
     initialResult: [],
     query: () => Promise.resolve([]),
@@ -314,7 +310,6 @@ const builtMarkers = signalTree({
 export type _BuiltMarkers = [
   Expect<Equal<(typeof builtMarkers)['$']['load'], StatusSignal<Error>>>,
   Expect<Equal<(typeof builtMarkers)['$']['theme'], StoredSignal<'light' | 'dark'>>>,
-  Expect<Equal<(typeof builtMarkers)['$']['profile'], FormSignal<Profile>>>,
   Expect<
     Equal<(typeof builtMarkers)['$']['search'], AsyncQuerySignal<string, User[]>>
   >,

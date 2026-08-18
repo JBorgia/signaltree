@@ -166,10 +166,32 @@ or whether the function survives at all.
 
 ## Note on the typecheck gate
 
-`tsc -p packages/core/tsconfig.typecheck.json` is red on HEAD independently of
-this RFC: 16 errors, from `marker-resolution.typing.spec.ts`,
-`readonly.typing.spec.ts` and `signal-tree-type-matrix.typing.spec.ts` importing
-`form` / `FormSignal` / `ReadonlyFormWizard`, which the ng-forms reslice removed,
-plus ten failing `Expect` rows in `readonly.typing.spec.ts`. Unrelated to this
-work and not fixed here, but a type-level gate that is already red cannot defend
-anything.
+When this RFC landed, `npm run typecheck` was red independently of it: 16 errors
+across `marker-resolution.typing.spec.ts`, `readonly.typing.spec.ts` and
+`signal-tree-type-matrix.typing.spec.ts`. A type-level gate that is already red
+cannot defend anything, so it was restored in the follow-up commit before any
+further audit.
+
+Attribution, verified by `git log -S` rather than inferred: the subjects were
+removed by **`b57ba293` "feat!: FORM-DEL — delete the form() marker, its
+processor and its bridges"**. An earlier draft of this section attributed them to
+the ng-forms reslice; that was wrong. FORM-DEL deleted `form` / `FormSignal` /
+`ReadonlyFormWizard` and left the assertions about them in place.
+
+The ten failing `Expect` rows deserve their own note, because they looked like
+ten independent readonly-contract defects and were not. All ten were
+`NotOffered<…>` rows over `ROForm` or `ROForm['wizard']`. With `form` unresolved,
+`ROForm` collapsed to `any`, and `keyof any` is `string | number | symbol`, so
+`NotOffered<any, 'set'>` answers `false` for EVERY key and each row fails. The
+measurement that established this was revealing `keyof ROForm` directly; the
+neighbouring `Equal` rows over the same `any` still passed, which is what made a
+"stale imports only" reading look incomplete. Two lessons, both general:
+
+- a row asserting the ABSENCE of a member is not merely stale when its subject is
+  deleted, it inverts — so deleting a type can turn its negative assertions red
+  while its positive assertions stay green, and the split is not evidence of two
+  different causes;
+- classify by measuring the subject, not by grouping on file or error code.
+
+No live contract failure was found. Every surviving readonly, marker-resolution
+and type-matrix assertion was preserved.
