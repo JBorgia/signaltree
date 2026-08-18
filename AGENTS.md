@@ -15,6 +15,114 @@ pending when the work has shipped: four RFC statuses said "proposed" or "Accepte
 for work already in a release, and 0012 claimed it had not shipped when all three
 of its items had.
 
+## Release work
+
+Read [`RELEASE-1.0.md`](RELEASE-1.0.md) before release-related work.
+
+### Continuous execution rule
+
+Continue working autonomously through the current release phase.
+
+After completing an item:
+
+1. Run focused validation.
+2. Run the required authoritative test/build/lint gates.
+3. Inspect `git status` and `git diff`.
+4. Commit only files belonging to that conceptual change.
+5. Update `RELEASE-1.0.md` with the completed item, commit hash, validation performed, and any newly discovered work.
+6. Immediately select the next highest-priority unchecked item in the same phase.
+7. Continue without asking for permission.
+
+Do not stop merely to:
+
+- report progress
+- ask whether to continue
+- ask permission to run normal tests
+- ask permission to make an obvious follow-up fix
+- ask permission to commit a validated isolated change
+- choose between equivalent implementation details
+
+For every release slice:
+
+1. Inspect current HEAD, relevant implementation, and the nearest existing tests.
+2. Identify the cheapest falsifier.
+3. Add characterization before production changes when practical.
+4. Make the smallest change that closes the demonstrated problem.
+5. Run focused validation first.
+6. Run the authoritative relevant test/build/lint gates before checkpointing.
+7. Review `git diff` and `git status`.
+8. Commit only files belonging to the slice.
+9. Update `RELEASE-1.0.md` after the checkpoint.
+10. Report the invariant proven, files changed, tests run, commit hash, and next recommended unchecked item.
+
+## STOP and ask Jonathan only when a real decision is required
+
+A decision is required if:
+
+- two materially different public API designs are viable
+- a frozen architecture invariant appears to be wrong
+- fixing a test requires changing documented semantics
+- a backward-compatibility/product-scope decision is required
+- a feature must be removed, deferred, or substantially redesigned
+- the change affects package naming/versioning/public exports
+- security or destructive operations require authorization
+- the next step cannot be determined from `RELEASE-1.0.md`
+- tests expose contradictory requirements
+- proceeding would require modifying unrelated user work
+
+When stopping, provide:
+
+```text
+DECISION REQUIRED
+
+Question:
+<one precise question>
+
+Why it matters:
+<short explanation>
+
+Option A:
+<consequences>
+
+Option B:
+<consequences>
+
+Recommendation:
+<recommended option and reason>
+
+Work completed before stopping:
+<commits/tests>
+```
+
+### Failed test rule
+
+A failed test is not itself a reason to stop.
+
+If the failure has an unambiguous local fix consistent with the current architecture and task, repair it, rerun validation, and continue.
+
+Stop only if resolving the failure requires choosing or changing semantics, API, scope, compatibility, or another release invariant.
+
+### Commit authority
+
+The agent may create local git commits without requesting approval when:
+
+- the change is one conceptual release item
+- relevant focused tests pass
+- authoritative required gates pass
+- staged files have been inspected
+- unrelated dirty files are excluded
+
+Do not push, publish, tag, merge, or rewrite shared history without explicit user authorization.
+
+Do not:
+
+- optimize already-green paths
+- mix infrastructure work with kernel work
+- alter unrelated dirty files
+- change frozen causal semantics without a red correctness test
+- weaken public types to simplify runtime implementation
+- start the next release phase in the same session unless the current phase gate is satisfied
+
 ## For Contributors
 
 Quick-reference distilled from [`.cursorrules`](.cursorrules). That file remains the full rulebook — read it before non-trivial changes.

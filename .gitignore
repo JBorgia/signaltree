@@ -80,7 +80,12 @@ tmp/
 .ralphy/
 .versus/
 .mcp.json
-.claude/
+.claude/*
+# ...except the agent assets that belong to the repo, not the machine.
+# Claude Code and OpenCode both discover .claude/skills/; the reviewer subagent
+# and release skill are release infrastructure and must be reviewable.
+!.claude/skills/
+!.claude/agents/
 .claude-octopus/
 .octo/
 
