@@ -374,9 +374,10 @@ export { devTools } from './enhancers/devtools/devtools';
  * @see {@link SIGNAL_TREE_MESSAGES} for error/warning messages
  */
 // SIGNAL_TREE_CONSTANTS / SIGNAL_TREE_MESSAGES moved to
-// '@signaltree/core/authoring' in 14.0.0; `isDev` stays, since an app legitimately
-// branches on it.
-export { isDev } from './lib/constants';
+// '@signaltree/core/authoring' in 14.0.0. `isDev` was removed from the public
+// surface in 15.0: it had no consumer in this workspace or any first-party
+// package, and an app branching on dev mode uses its framework's own primitive
+// (Angular's isDevMode()). Core still determines dev-ness internally.
 
 // ============================================
 // PUBLIC API SUMMARY
