@@ -98,9 +98,19 @@ not merely "the kernel architecture is complete". The first 3-4 items finish the
 engineering redesign. Everything after that is what turns the repo into a library
 that strangers can safely `npm install`.
 
-## 1. Finish the last kernel architecture work
+## 1. Finish the last kernel architecture work — **SUPERSEDED. GATE A is SATISFIED.**
 
-These are still release blockers because they affect correctness guarantees.
+**Everything in this section is done.** The kernel was frozen at `4f7a2169`:
+seven defects found and closed across three antagonistic audits plus one
+verification, the defect curve running 3 -> 2 -> 1 -> 1 with the final one in a
+caller rather than in the redesigned authority. The persistence invariants this
+section was reaching for are now frozen in `RELEASE-1.0.md`, in a stronger form
+than stated here — notably that the durability authority is tree-scoped and that
+commit-ness is never inferred from the call stack.
+
+Retained below as a record of what the freeze had to prove, NOT as open work.
+The closing line "Freeze the kernel architecture once this passes" is what made
+this file read as though the kernel were still open, months after it was not.
 
 - Finish `stored()` / persistence consequence ordering.
 - failed PREPARE -> zero persistence writes
@@ -935,34 +945,14 @@ Have:
 
 ## Concrete sequence from here
 
-1. Finish stored()/persistence atomic consequence semantics.
-2. Add final heterogeneous atomicity forcing test.
-3. Perform fresh correctness/complexity audit of HEAD.
-4. Fix every release-blocking audit finding.
-5. Freeze public API.
-6. Add exhaustive public type/API tests.
-7. Establish Angular/TS/Node compatibility matrix.
-8. Audit built package output.
-9. npm-pack every publishable package.
-10. Build clean external consumer projects from the tarballs.
-11. Complete runtime/browser/SSR decisions and tests.
-12. Run lifecycle/memory/churn tests.
-13. Audit errors and persistence API semantics.
-14. Complete README.
-15. Complete signaltree.io docs.
-16. Generate public API reference.
-17. Build a production example/demo.
-18. Complete package metadata/licenses/security audit.
-19. Configure CI release gate.
-20. Configure automated trusted publishing/provenance.
-21. Generate final performance baseline.
-22. Publish `1.0.0-rc.1`.
-23. Test RC from genuinely external projects.
-24. Fix RC packaging/DX/documentation issues only.
-25. Freeze v1 public API.
-26. Run clean-clone final release matrix.
-27. Publish `1.0.0`.
-28. Verify the published package and documentation from scratch.
+**Release execution order is owned exclusively by
+[`RELEASE-1.0.md`](RELEASE-1.0.md). Do not duplicate the sequence here.**
+
+A 28-step sequence used to be copied into this section. It had already drifted
+from the controller's copy — which is the whole argument against keeping two.
+The controller carries the live sequence, the current phase, the gate model and
+the stop conditions; this file carries backlog and context that the controller
+does not own.
 
 ---
 
