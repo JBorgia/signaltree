@@ -5540,19 +5540,44 @@ REALTIME CONFLICT     ZERO        no conflict / lastWrite / authoritative
                                   vocabulary anywhere in packages/realtime/src
 ```
 
-**The eviction finding is the sharp one.** `TurnStore` is a CAPACITY-BOUNDED RING
-that evicts (`capacity`, `onEvictConfirmedTurn`, and a `'history-evicted'`
-failure reason on both pending-turn transitions). A bounded window that drops old
-turns is architecturally incompatible with "the state both sides descended from",
-because the base is by definition OLD — it is the point BEFORE the divergence,
-so the longer branches live the more certain its eviction becomes. Three-way
-merge would require BASE RETENTION as a durable concept distinct from the
-history window. That constraint was discovered for free and should not be
-rediscovered later.
+**The eviction finding is the sharp one, stated at exactly its true width.**
+`TurnStore` is a CAPACITY-BOUNDED RING that evicts (`capacity`,
+`onEvictConfirmedTurn`, and a `'history-evicted'` failure reason on both
+pending-turn transitions). The base is by definition OLD -- it is the point
+BEFORE the divergence -- so the longer branches live, the more certain its
+eviction becomes. The requirement this proves:
 
-`frontiers` is the one existing seed: a per-position latest-turn map is exactly
-what divergence detection would compare. But there is one of them, for one
-lineage.
+> **The current bounded `TurnStore` cannot serve as durable merge ancestry.
+> Three-way merging would require an INDEPENDENTLY RETAINED ancestry/base
+> concept whose lifetime is NOT governed by the reversible-history capacity.**
+
+**It does NOT prove `merge support -> unbounded TurnStore`.** That inference is
+unestablished and must not be smuggled in later. A separately justified design
+could retain parent ids, checkpoint identity, a base snapshot or hash, or a
+compacted causal summary while still evicting detailed reversible turns. What is
+ruled out is only reusing the reversible-history window AS the ancestry.
+
+`frontiers` deserves LESS credit than "exactly what divergence detection
+compares". A `PositionId -> latest TurnId` map is potentially useful input, but
+WITHOUT ANCESTRY IT CANNOT DISTINGUISH SUCCESSION FROM CONCURRENCY. Given only
+
+```
+ours[P]   = T41
+theirs[P] = T57
+```
+
+nothing answers whether T41 is an ancestor of T57, T57 of T41, or neither -- so
+these two shapes are indistinguishable:
+
+```
+linear evolution          divergence
+T41 -> ... -> T57              Tbase
+                               /   \
+                             T41   T57
+```
+
+Different latest-turn ids are not evidence of divergence. That is a constraint
+for realtime, not just for merge.
 
 ### TWO DEFECTS IN THE SKETCH, named now so they are not inherited
 
