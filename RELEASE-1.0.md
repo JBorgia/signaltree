@@ -5941,6 +5941,97 @@ The `types.ts:638` TS4114 is worth a look on its own — a missing `override` in
 core surfacing only through the demo's compiler settings is a real defect, just
 not this one's.
 
+## `form()` AUDIT — seven functions, INDEPENDENTLY
+
+The field is cleared: no schema package, no SignalTree validation ontology, no
+Angular validation wrapper, no Reactive Forms justification, no Signal Forms
+justification. `form()` inherits nothing.
+
+**The unit of audit is the FUNCTION, not `form()` and not "form session".**
+Each gets the same seven rows, with the current implementation revealed LAST
+(Rule 0g). Only after all seven dispositions are known:
+
+> Did any surviving function establish an INTRINSIC SEMANTIC PROPERTY OF A
+> POSITION that must participate in construction / compilation?
+
+If not, `form()` the MARKER dies — however many useful helpers survive
+elsewhere.
+
+**`dirty` and `touched` are deliberately NOT paired.** Frameworks present them
+together, which is exactly why the pairing must not be assumed:
+
+```
+dirty     a COMPARISON question   has value diverged from some baseline?
+touched   an INTERACTION question has a user/UI interaction occurred?
+```
+
+Different questions, potentially different owners. Evidence for this section:
+`packages/core/src/lib/form-function-audit.spec.ts` (TEMPORARY; deleted when the
+dispositions freeze, same protocol as ANG-V0-F).
+
+### AUDIT ROW — F1 `dirty`
+
+```
+FUNCTION       Report whether current values differ from a baseline the user
+               would recognize as "saved" / "unchanged".
+OWNER          Whoever owns the BASELINE. That is the application: only it knows
+               when a save succeeded, when a draft was accepted, when a
+               server-hydration is the new zero point.
+GREENFIELD     const baseline = signal(tree.$.p());
+MECHANISM      const dirty = computed(() => !eq(tree.$.p(), baseline()));
+               ...and after a successful save: baseline.set(tree.$.p());
+SIGNALTREE?    NO. It needs a value read and an equality function. The read is
+               already published; the equality is the application's (deep,
+               shallow, field-subset, ignore-whitespace are all legitimate and
+               domain-dependent).
+CONSTRUCTION?  NO -- and MEASURED to be actively harmful, see below.
+```
+
+**CURRENT FORM, revealed last.** `initial` is captured at CONSTRUCTION and never
+moves:
+
+```ts
+const dirty = computed(() => {
+  const current = valuesSignal();
+  const eq = config.equalityFn ?? defaultEquality;
+  return Object.keys(initial).some((k) => !eq(current[k], initial[k]));
+});
+```
+
+**MEASURED — the marker exposes no way to move the baseline.** `markPristine`,
+`commit`, `setInitial`, `setBaseline`, `rebase`, `markClean`: all `undefined`.
+
+**MEASURED — the consequence is a defect, not a preference:**
+
+```
+marker.patch({ name: 'Ada' })          dirty() === true
+await marker.submit(save)              save SUCCEEDS
+                                       dirty() === true   <-- still
+marker.reset()                         dirty() === false, name === ''
+```
+
+**After a successful save, the form is permanently dirty, and the only way to
+clear it is to discard the saved work.** `form().dirty` does not mean "has
+unsaved changes" -- the thing every form UI binds it to. It means "differs from
+the values this tree was CONSTRUCTED with", and it cannot mean anything else,
+BECAUSE the baseline is construction-time.
+
+So construction time is not merely unnecessary for `dirty`. **It is the cause of
+the defect.** The null also captures a baseline LATE -- after hydration, after a
+server write, after any point the application decides is the zero -- which a
+construction-time capture structurally cannot express.
+
+```
+DISPOSITION    F1 dirty -> DELETE from SignalTree.
+               Function real, owner is the application, mechanism is
+               `computed` over a published read and an app-held baseline.
+               No SignalTree API, no marker, no construction-time capture.
+```
+
+One thing NOT concluded here: this says nothing yet about whether some OTHER
+function needs construction time. F1 contributes one row to that question and
+nothing more.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
