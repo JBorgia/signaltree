@@ -6843,6 +6843,149 @@ DISPOSITION  F8c -> DELETE from the form marker. If imperative
        defect claim: no contract says it should report.
 ```
 
+## `form()` — WHOLESALE DELETION, and the audit STOPS HERE
+
+**The legacy audit is halted, and not because every method was individually
+prosecuted.** Continuing to try each remaining surface would violate the spirit
+of Rule 0g: once "form" is shown not to be an intrinsic SignalTree concept, the
+old `FormSignal` surface must stop being the UNIT OF ANALYSIS. Whittling a
+legacy abstraction down is the wrong direction; deleting it and greenfielding
+forward is the right one.
+
+**What the rows did establish is that the abstraction's cohesion is ARTIFICIAL.**
+Its pieces have already scattered to at least seven different owners:
+
+```
+dirty          baseline comparison            application policy
+touched        interaction state              UI / session
+submitting     external operation lifecycle   operation owner
+submit()       operation orchestration        application
+validation     judging a value                validator ecosystem
+wizard         step position + workflow       routing / session / app policy
+reset          restore a chosen baseline      application + ordinary write
+clear          what "empty" means             domain + ordinary write
+patch          partial state update           ORDINARY SIGNALTREE AUTHORING
+persistence    durability                     the governed consequence (GATE A)
+```
+
+Once a supposed abstraction decomposes into that many owners, asking whether its
+remaining helper aliases survive is backwards. **Nothing left could establish the
+only claim that would save the marker:**
+
+> *this position INTRINSICALLY IS A FORM and must therefore be COMPILED
+> differently.*
+
+The single construction-time coupling found anywhere in the audit (F8c) is a
+STORAGE KEY -- persistence's property, borrowed. It is not form-ness.
+
+### FROZEN
+
+```
+FORM POSITION ONTOLOGY     NONE
+form() marker              DELETE
+FormMarker                 DELETE
+FormSignal                 DELETE as a semantic type
+form processor             DELETE
+form-specific state model  DELETE
+```
+
+Subject to exactly one reopening condition: **a deterministic counterexample
+showing some required capability cannot exist without construction-time form
+semantics.** Not "the API is nice". Not "users like `.reset()`". Not "Angular
+forms need integration". A genuine construction requirement. None was found.
+
+### The legacy surface is now a CHECKLIST, not an agenda
+
+From here the old API gets **zero weight** -- names, grouping, methods, marker
+representation, lifecycle and implementation all count for nothing. It survives
+only as a capability-discovery list, answering one question: *did it contain a
+useful user capability we have not considered?*
+
+```
+CAPABILITY                 STATUS
+field navigation           already provided by the kernel
+whole-value read/write     already provided by the kernel
+partial write              already provided by the kernel (deeper, too)
+baseline comparison        WORTH GREENFIELDING -- as a checkpoint/baseline
+                           concept, NOT as form state
+interaction tracking       owned elsewhere (UI / session)
+validation                 owned elsewhere (validator ecosystem) -- CLOSED
+submission                 owned elsewhere (operation owner) -- CLOSED
+workflow navigation        WORTH GREENFIELDING -- as workflow/navigation,
+                           NOT as "form state"
+storage                    owned elsewhere (persistence consequence, GATE A)
+history                    already core's (`history()`, `trackHistory()`)
+clear / reset              collapses into baseline + ordinary write
+```
+
+**The anchoring trap this avoids.** "What should replace `persistNow()`?" is the
+wrong question; `persistNow()` does not get to frame it. The right question is
+"given 15.0's persistence architecture, does a user need an imperative
+durability control at all?" -- which may answer no.
+
+### The greenfield DX pass — DEFERRED, and hostile by default
+
+Deleting `form()` does not mean deleting good UX, and the freedom to invent
+pleasant first-party APIs is explicitly preserved. But the DEFAULT is:
+
+```
+DO NOT ADD A SIGNALTREE FEATURE.
+```
+
+A capability survives only if first-party support gives SUBSTANTIAL VALUE BEYOND
+ORDINARY COMPOSITION. `tree.$.profile({ name: 'Jon' })` already has excellent
+DX; `profile.patch({ name: 'Jon' })` adds nothing but a name form libraries
+happen to use. `const saving = signal(false)` is already excellent Angular DX;
+wrapping it as `tree.$.profile.submitting()` improves nothing unless SignalTree
+owns semantics Angular does not. **That is the ANG-V0 lesson applied to DX
+rather than to architecture.**
+
+**SEQUENCING: the greenfield pass runs AFTER the core / causal / API owners are
+frozen** -- MUT in particular. Some candidate capabilities may collapse further
+once those primitives exist, and designing on top of unfrozen primitives would
+just re-run this audit later.
+
+### EVIDENCE DISPOSITION — one judgment call, surfaced
+
+`form-function-audit.spec.ts` is deleted under the ANG-V0-F protocol: its
+dispositions are frozen, and a suite pinning a doomed mechanism's behaviour
+would give it test-backed legitimacy.
+
+**But one of its tests is not about `form()` at all.** The cross-tree
+contamination reproducer documents a live defect in TIME TRAVEL, a surviving
+mechanism whose root cause is UNPROVEN. Deleting it silently would lose the
+reproducer. It also cannot simply be kept, because it REQUIRES `form()` to
+trigger -- a permanent test would block the deletion it is filed alongside.
+
+Resolved by recording it here verbatim, as evidence rather than as a live test:
+
+```ts
+// THROWS: Unsupported scoped undo effect at structural-drift
+const marked = signalTree({
+  p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+}).with(timeTravel());
+const other = signalTree({ q: { n: 1 } }).with(timeTravel());
+await tick();
+
+marked.$.p.patch({ name: 'Grace' });
+other.$.q({ n: 2 });          // an UNRELATED tree
+await tick();
+
+marked.undo();                // throws
+```
+
+```
+CONTROLS (all clean): marker tree alone; second tree idle; two PLAIN trees
+                      both written
+```
+
+**MUT OBLIGATION.** When `form()` is deleted this reproducer becomes
+unrunnable. That is NOT evidence the defect is fixed. MUT must determine why
+foreign-tree activity affected the first tree, and must look for a second
+trigger path that does not involve `form()`. If none is found, the finding is
+recorded as *closed by removal of the only known trigger* -- explicitly not as
+*resolved*.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
