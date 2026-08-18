@@ -7499,11 +7499,19 @@ entityMap CRUD         yes      +1          rows.a
 status() transition    yes      +1          job.state
 ```
 
-#### R1 — LANDED is the precondition for every other dimension
+#### R1 — a non-landed write produced no consequence ON THE MEASURED PATHS
 
-The deep-equal write is the clean negative control: truth did not change, and
-**nothing downstream observed it** — no history entry, no notification. Nothing
-in the surviving machinery reacts to an ATTEMPTED write.
+**CORRECTED — narrowed to the experiment.** The earlier wording, *"LANDED is the
+precondition for every other dimension"*, converted one negative control into
+ontology. What was measured:
+
+> **For the HISTORY and PATHNOTIFIER paths, a non-landed deep-equal write
+> produces no observable consequence.**
+
+Two subsystems, one write shape. It was NOT established that no other surviving
+subsystem can observe an attempted, refused or non-landed operation — transactions
+and guardrails, to name two, were not exercised. Whether `LANDED` is UNIVERSALLY
+prerequisite is a later MUT question, not a settled one.
 
 #### R2 — PathNotifier emits exactly the LANDED LEAVES, on a BARE tree
 
@@ -7514,25 +7522,48 @@ root writes are decomposed to the leaves that actually changed.
 
 So notification is a property of CORE'S WRITE PATH, not of an enhancer.
 
-#### R3 — THE DISCRIMINATOR: PathNotifier is a LANDING signal, not an AUTHORSHIP signal
+#### R3 — THE DISCRIMINATOR: a notification cannot encode WHY truth changed
 
 ```
-authored write   landed  yes   history +1   notified  a.n
-UNDO             landed  yes   history  0   notified  a.n
+ordinary authored-looking write   truth changes   notifier emits   history +1
+undo                              truth changes   notifier emits   history  0
 ```
 
-**Undo is indistinguishable from an authored write at the notifier.** Truth
-changed, publication happened, and no new authorship was created. Any consumer
-inferring *"the user changed this"* from a PathNotifier event is wrong, and the
-error is invisible.
+**Undo is indistinguishable from an authored write AT THE NOTIFIER.** Any
+consumer inferring *"the user changed this"* from a PathNotifier event is wrong,
+and the error is invisible.
 
-This is the first hard evidence that the three dimensions genuinely separate:
+**CORRECTED — history is EVIDENCE of a category distinction, not the DEFINITION
+of authorship.** The earlier wording let time travel's history stand in for the
+causal model before MUT-2 derives it. What the measurement supports:
+
+> **PathNotifier cannot distinguish an ordinary write that current history
+> records from an undo realization that current history does not. It therefore
+> lacks information required to separate at least these two semantic
+> categories.**
+
+That the current history machinery differentiates them is evidence such a
+distinction is real and load-bearing. It does NOT establish `history delta` as
+the canonical authorship oracle. **MUT-2 must ask which surviving authority
+actually owns that distinction.**
+
+**CORRECTED — PathNotifier is NOT "publication".** The earlier row read
+`PUBLICATION tracks LANDED exactly`, which quietly redefined a frozen term. What
+was measured is a CORE CALLBACK BUS firing at landed-leaf granularity. Under the
+frozen invariant *Angular owns observation*, that is not automatically the
+Angular publication boundary:
 
 ```
-LANDED            deep-equal fails it; everything else passes
-PUBLICATION       tracks LANDED exactly
-CAUSAL AUTHORSHIP undo is landed AND published but NOT authored
+LANDED                measured
+PATH NOTIFICATION     measured; tracks landed leaves in the tested write shapes
+ANGULAR PUBLICATION   NOT TESTED HERE
+AUTHORSHIP            NOT represented by PathNotifier
 ```
+
+So the claim travels as:
+
+> **`PathNotifier` is AT LEAST a landing-notification bus. Whether it
+> participates in, implements, or merely PARALLELS publication is UNPROVEN.**
 
 #### R4 — the `interceptLeafSignals` docblock premise is FALSE AT HEAD
 
@@ -7560,17 +7591,49 @@ Consequence, stated at its true width: **the stated justification for
 absence of its original reason does not decide its fate, and the derivation, not
 this row, must do that.
 
-#### Correction to the SCHEMA-era finding
+#### Correction to the SCHEMA-era finding — stated without a mirror overclaim
 
 The schema investigation concluded *"ordinary leaf writes do not enter a
-canonical semantic mutation pipeline."* **They do enter PathNotifier**, measured
-above. What remains genuinely open is the different and harder question:
+canonical semantic mutation pipeline."* Replacing that with *"they DO enter a
+canonical semantic mutation pipeline"* would be the same overclaim inverted.
+What is proved:
 
-> Is `PathNotifier` the canonical SEMANTIC mutation pipeline, or a
-> LANDING/PUBLICATION bus that merely looks like one?
+> **Ordinary leaf writes DO enter PathNotifier. The earlier claim that they
+> bypass all common core notification machinery was therefore FALSE. Whether
+> PathNotifier is SEMANTIC AUTHORITY remains open.**
 
-R3 is evidence for the second reading — a semantic mutation model that cannot
-distinguish undo from authorship is not carrying semantics.
+R3 is evidence for the sceptical reading: a mechanism that cannot distinguish
+undo from authorship is not, on its own, carrying semantics.
+
+### CARRIED INTO MUT-3 — a falsifier candidate, NOT YET RUN
+
+The MUT-1 harness itself surfaced something. The subscription interface is
+
+```ts
+resetPathNotifier();
+getPathNotifier().subscribe('**', handler);
+```
+
+— visibly **not tree-qualified at subscription time**, with a callback that
+carries a path but no obvious tree identity. **Do not conclude global scope from
+an interface shape.** Recorded as the candidate falsifier for MUT-3:
+
+```
+tree A and tree B both contain the path "a.n"
+one subscription to PathNotifier '**'
+write ONLY B's a.n
+
+Can the observer distinguish A's a.n from B's a.n using
+NOTIFIER-OWNED INFORMATION ALONE?
+```
+
+If not, that is stronger scope evidence than the deleted reproducer ever was: it
+uses SURVIVING machinery and asks a direct IDENTITY question rather than
+observing a thrown error.
+
+**Deliberately not run yet.** MUT-3's sequence stands: first derive what scope
+information a landing notification actually NEEDS, if any. Running the falsifier
+first would let the mechanism's shape write the contract.
 
 ## Phase 3 — Packaging Proof
 
