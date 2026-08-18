@@ -6573,8 +6573,13 @@ plain.$.p({ a: { y: 99 } })   ->  { a: { x: 1, y: 99 }, b: 3 }
 even a convenience win where composite values are nested.
 
 ```
-DISPOSITION    F7 patch -> DELETE. A duplicate of a shipped, more capable
-               operation.
+FUNCTION SURVIVES          partial state update
+FORM-SPECIFIC ABSTRACTION  does not
+
+DISPOSITION    F7 patch -> DELETE THE SURFACE. The required function is real and
+               is ALREADY OWNED by ordinary SignalTree authoring; `patch()`
+               collapses into it, contributing no distinct semantics while being
+               strictly less capable.
 ```
 
 #### F5 `reset`
@@ -6590,7 +6595,20 @@ CONSTRUCTION?  NO.
 
 `reset` and `dirty` are the SAME QUESTION seen from two sides -- *"does this
 differ from the baseline"* and *"put the baseline back"* -- so `reset` inherits
-F1's defect exactly:
+F1's OWNERSHIP problem exactly:
+
+> **SignalTree has no basis for deciding WHICH historical value is the baseline.**
+
+At least five application meanings are legitimate, and nothing distinguishes
+them from inside SignalTree:
+
+```
+reset = construction defaults        reset = last explicit checkpoint
+reset = last loaded server state     reset = blank / new-record state
+reset = last successful save
+```
+
+**MEASURED — the current implementation silently picks the first:**
 
 ```
 patch({ name: 'Ada' });  await submit(save);   // the save SUCCEEDS
@@ -6598,16 +6616,22 @@ reset()                                        // user presses "Revert"
 marker().name === ''                           // the BUILD-TIME value
 ```
 
-**After a successful save, "Revert" discards the saved work** and returns to
-what the tree was constructed with, because that is the only baseline the marker
-has. The null moves the baseline on save, so Revert returns to `'Ada'`.
+An earlier draft called that a DEFECT and asserted Revert "should" return to the
+saved values. **Neither is established.** Construction-baseline reset is a
+coherent policy; it is simply one of five, chosen without authority. Calling it
+wrong would repeat the F3b capture-instant error -- letting one application's
+expectation stand in for a SignalTree invariant. It is only a 14.x defect if the
+14.x contract promises a different baseline, and it does not: the JSDoc says
+"Reset to initial values", which is exactly what it does.
 
 The current `reset()` also clears `touched`, `asyncErrors` and the wizard step --
 all now DELETE by F2, validation ownership and F4 respectively. Once those are
-gone, `reset()` is one write.
+gone, `reset()` is one ordinary write of a value the application chose.
 
 ```
-DISPOSITION    F5 reset -> DELETE. Same owner and same defect as F1.
+DISPOSITION    F5 reset -> DELETE THE SURFACE. Restoring an
+               application-defined baseline is an ordinary write; the
+               baseline is not SignalTree's to choose or to hold.
 ```
 
 #### F6 `clear`
@@ -6671,15 +6695,39 @@ to an unrelated `timeTravel()` tree. Two plain trees do not contaminate each
 other, so this is not generic time-travel scoping -- the marker's write is what
 makes the difference.
 
+**WHAT IS ESTABLISHED, and no more:**
+
+> **An unrelated tree's activity changes whether undo of a valid form-marker
+> write succeeds.**
+
+**ROOT CAUSE — UNPROVEN.** An earlier draft asserted "the contaminating
+mechanism is in time-travel / the realization port, not in the marker". That is
+not measured. The stack frame says WHERE THE REFUSAL IS RAISED, not where the
+contamination originated -- and assigning ownership to the place an error throws
+is exactly the failure mode this audit has been policing. The experiment
+requires a form-marker write, so all of these remain live:
+
+```
+form emits incorrectly scoped effects
+timeTravel stores global / shared state
+the realization port mixes identities
+marker hydration uses process-global metadata
+an interaction of two otherwise-correct mechanisms
+```
+
 ```
 14.x   DEFECT. `tree.undo()` throws on a tree whose own writes were valid,
        because of activity in a DIFFERENT tree. Nothing in the public contract
-       says undo is process-global. Fix undecided.
-15.0   NOT resolved by deleting form() -- the contaminating mechanism is in
-       time-travel / the realization port, not in the marker.
-MUT-3  Direct evidence for the SCOPE question already filed there: "how is
+       says undo is process-global. Root cause and fix both undecided.
+15.0   The specific form-triggered REPRODUCER may well disappear when `form()`
+       is deleted. **Do NOT claim the underlying scoping defect is resolved by
+       that deletion** until MUT determines why foreign-tree activity affected
+       the first tree. What survives the deletion regardless is the warning:
+       tree-local causal/undo machinery has demonstrated CROSS-TREE SENSITIVITY
+       under at least one supported semantic write path.
+MUT-3  DIRECT COUNTEREXAMPLE motivating tree-lineage isolation -- "how is
        observation bound to ONE tree lineage rather than process-global state?"
-       This is a measured instance of the answer being "it is not."
+       Here is a measured case where it is not.
 ```
 
 ## Phase 3 — Packaging Proof
