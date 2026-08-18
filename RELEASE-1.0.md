@@ -8541,13 +8541,29 @@ WHAT ACTUALLY REMAINS IN B1
    scan found no defects, and the one symbol whose declaration had been repaired
    (`isDev`, at `bc50d960`) turned out not to be public — so the repair was
    withdrawn with the export rather than kept.
-4. Re-baseline `tools/api-baseline.json` — AFTER the intended surface is
-   established, never before. **NOW UNBLOCKED for the symbols above, but still
-   premature:** the queue's remaining items (`bind()`, `requires`, the
-   realization-facing `.with()` overload, `ENTITY_LOADER_READERS`, and the rest
-   of the deletion-first utility audit — `deepEqual`, `toWritableSignal`,
-   `asReadonly`) each change the surface the baseline is meant to record.
-   Re-baseline once, at the end, not per-symbol.
+4. Re-baseline `tools/api-baseline.json` — **ONCE, after B2 AND B3 both settle,
+   immediately before the GATE B freeze.** Not at the end of B2: B3's
+   authoring/realization package separation can move declaration locations and
+   exported paths even where semantic APIs are unchanged, and the baseline
+   records both. Regenerating after B2 would produce a baseline that B3
+   invalidates, and a baseline that has to be regenerated twice is a baseline
+   nobody trusts. Everything still pending — `bind()`, `requires`, the
+   realization-facing `.with()` overload, `ENTITY_LOADER_READERS`, and the
+   deletion-first utilities `deepEqual` / `toWritableSignal` / `asReadonly` —
+   changes the surface it exists to record.
+
+### The `isDev` episode, as a permanent methodology note
+
+```text
+Declaration correctness does not imply public survival.
+bc50d960 proved isDev COULD ship correctly;
+the intent audit proved it should not ship AT ALL.
+```
+
+So the sequence is `measure artifact -> decide public intent -> repair only
+survivors`, never `broken declaration -> repair the public API`. The second
+order silently converts a build-tool investigation into a decision to keep an
+API, and it does so without anyone stating the decision.
 
 The plugin-stage question is ANSWERED: the plugin emits the broken declaration
 (`stripInternal` under `tsconfig.lib.prod.json`), not a later Nx/Rollup step.
