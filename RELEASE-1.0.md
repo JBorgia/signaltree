@@ -7800,7 +7800,8 @@ And the falsifier resolves cleanly:
 NOTHING. Provably — they are collapsed by the single function every reader uses.
 ```
 
-So `'authoring'` is **ASPIRATIONAL VOCABULARY**: a member of the union that no
+So `'authoring'` is **IMPLICIT / DEFAULTED** (see amendment 1 below; the
+earlier word here was "aspirational vocabulary", which overreached): a member of the union that no
 production code writes and no reader names. Of the three candidate ontologies,
 `undefined = authoring` is the one implemented, in exactly one place.
 
@@ -7834,6 +7835,129 @@ explicit 'realization'   correct, and excluded from capture
 absent                   collapsed to authoring, and CAPTURED
 explicit 'authoring'     never occurs in production
 ```
+
+### MUT-2A AMENDED, and MUT-2B — the falsifier that earns the contract
+
+Three MUT-2A claims are narrowed first; the falsifier then earns a stronger,
+narrower result than the one they reached for.
+
+#### AMENDMENT 1 — `'authoring'` is IMPLICIT/DEFAULTED, not "aspirational"
+
+Calling it *"a union member no code writes and no reader names"* went too far.
+No production site writes the STRING, true — but `getCausalWriteMode()` PRODUCES
+`'authoring'` as its normalized result, and that is production behaviour. Its
+callers branch against realization, so `'authoring'` is the complementary
+normalized state whether or not anyone spells the comparison.
+
+```
+authoring     IMPLICIT — synthesized by normalization
+realization   EXPLICIT — positively transported
+```
+
+The asymmetry criticism is untouched; only the word "aspirational" goes.
+
+#### AMENDMENT 2 — the capture claim was broader than the trace supports
+
+*"An unmarked write is CAPTURED as authored history"* generalized over readers
+that do different jobs. `PathNotifier` uses the mode for BATCH IDENTITY, not
+causal capture, and `mode != realization` does not by itself imply
+`will become history` — other predicates may apply. The trace supports only:
+
+> **At capture gates that reject `realization`, an unmarked change takes the
+> same branch as authoring and therefore cannot be excluded on causal-mode
+> grounds.**
+
+The phantom-history consequence needed proving separately. It is proved below.
+
+#### AMENDMENT 3 — `UNKNOWN != AUTHORING` is DOWNGRADED to design pressure
+
+MUT-2A proved the REPRESENTATION behaves as a two-state ontology with absence
+normalizing to authoring. It did NOT prove the SEMANTIC ontology must have three
+states. A greenfield architecture could legitimately hold that all ordinary
+authoring entry points establish authorship BY CONSTRUCTION, with realization as
+an exceptional internal mode requiring explicit establishment — negative-tagging
+risk and all, without a third state.
+
+Earning `UNKNOWN != AUTHORING` would need a required class of landed changes for
+which NOBODY has authority to claim either mode at the moment the distinction
+becomes load-bearing. That class has not been demonstrated.
+
+```
+UNKNOWN != AUTHORING     CANDIDATE DESIGN PRESSURE, not an earned invariant
+```
+
+### MUT-2B — ONE-VARIABLE FALSIFIER
+
+Physically identical write, otherwise eligible for capture, differing in
+**exactly one field**. Both arms run through `withWriteContext`, so the
+transport path is identical.
+
+```
+                                   causalMode      HISTORY d   value
+no write context at all            (absent)        +1          1
+A  { causalMode: 'realization',
+     source: 'system',
+     intent: 'system' }            realization      0          1
+B  { source: 'system',
+     intent: 'system' }            (absent)        +1          1
+```
+
+**A and B differ only in `causalMode`. B produced a history entry that A did
+not.**
+
+```
+OMITTING THE REALIZATION CLASSIFICATION MANUFACTURES AUTHORSHIP.
+Deterministic, one variable, same physical effect, same resulting value.
+```
+
+#### THE EARNED CONTRACT
+
+> **Realization versus authoring must be authoritatively established BEFORE
+> causal capture. Omission cannot be allowed to create authorship.**
+
+This is narrower and harder than `UNKNOWN != AUTHORING`, and it is proved rather
+than argued. It says nothing yet about how many semantic states exist.
+
+#### A DIVERGENCE RESULT, obtained for free
+
+Amendment 2 of MUT-2A recorded `source === 'system'` and
+`causalMode === 'realization'` as CORRELATED INDICATORS pending a divergence
+test. **Arm B is that test.** It carries `source: 'system'` and `intent:
+'system'` WITHOUT `causalMode`, and it was captured anyway.
+
+```
+source: 'system' occurred WITHOUT the exclusion behaviour
+-> for the capture gate, `causalMode` is LOAD-BEARING and `source` is NOT
+```
+
+They are correlated in EMISSION but not equivalent in EFFECT. The reverse
+direction — `causalMode: 'realization'` without `source: 'system'` — is still
+unmeasured.
+
+#### THE STRUCTURAL FINDING — normalization happens at READ TIME
+
+```
+transport   causalMode?: CausalWriteMode        OPTIONAL
+consumer    getCausalWriteMode(meta)            SUPPLIES THE SEMANTIC DEFAULT
+```
+
+Every consumer trusts an optional transport field and RECONSTRUCTS semantic
+meaning from its absence. So the question MUT-2 is actually converging on is a
+boundary question, not an enum question:
+
+> **At what boundary must authored-versus-realized become TOTAL?**
+
+Candidates, none chosen: total before a `MutationEnvelope` is admitted to causal
+machinery; separate entry points for authoring and realization; an ambient causal
+context that owns it.
+
+The requirement, stated without presupposing a mechanism:
+
+> **A load-bearing causal classification must be established by its OWNER before
+> any consumer whose behaviour depends on it. Consumers must not manufacture the
+> STRONGER semantic claim from missing transport metadata.**
+
+That does not imply an `'unknown'` enum member, and does not decide the boundary.
 
 ## Phase 3 — Packaging Proof
 

@@ -2,6 +2,7 @@ import { computed } from '@angular/core';
 
 import { entityMap, signalTree, status, timeTravel } from '../index';
 import { getCausalWriteMode } from './causal-write-mode';
+import { withWriteContext } from './write-context';
 import { getPathNotifier, PathNotifier, resetPathNotifier } from './path-notifier';
 
 /**
@@ -455,5 +456,49 @@ describe('MUT-2A — what does ABSENCE of causalMode mean?', () => {
     expect(getCausalWriteMode({ causalMode: 'authoring' })).toBe(
       getCausalWriteMode(undefined)
     );
+  });
+});
+
+describe('MUT-2B — does OMITTING the realization stamp manufacture authorship?', () => {
+  /**
+   * The one-variable falsifier. Take a physically identical write, otherwise
+   * eligible for capture, and change ONLY whether it carries
+   * `causalMode: 'realization'`.
+   *
+   *   A   causalMode: 'realization'   -> expected: not captured
+   *   B   causalMode absent           -> ?
+   *
+   * If B is captured, omission manufactures authorship deterministically, and
+   * the requirement stops being a plausibility argument.
+   */
+  const run = async (meta: Record<string, unknown>) => {
+    const tree = signalTree({ a: { n: 0 } }).with(timeTravel());
+    await tick();
+    const before = tree.getHistory().length;
+
+    withWriteContext(meta as never, () => {
+      tree.$.a.n.set(1);
+    });
+    await tick();
+
+    return { delta: tree.getHistory().length - before, value: tree.$.a.n() };
+  };
+
+  it('CONTROL — no write context at all', async () => {
+    const r = await run({});
+    expect(r).toEqual({ delta: 1, value: 1 });
+  });
+
+  it('A — explicitly classified realization', async () => {
+    const r = await run({ causalMode: 'realization', source: 'system', intent: 'system' });
+    // Classified realization: NOT captured.
+    expect(r).toEqual({ delta: 0, value: 1 });
+  });
+
+  it('B — SAME meta, realization classification OMITTED', async () => {
+    const r = await run({ source: 'system', intent: 'system' });
+    // Identical to A except for the one field. CAPTURED — a history entry that
+    // A did not produce. Omission manufactured authorship.
+    expect(r).toEqual({ delta: 1, value: 1 });
   });
 });
