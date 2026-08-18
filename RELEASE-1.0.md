@@ -2176,6 +2176,30 @@ batching-shaped.
 
 ### API cleanup queue, after the declaration fix
 
+**Two verified surface findings, added to this queue.** Both were measured while
+building RFC 0016, both are Gate B mechanics rather than architecture, and
+neither implies any replacement design:
+
+- **`ENTITY_LOADER_READERS` is an orphan public export.** Exported from
+  `@signaltree/core/authoring`, referenced only by `readonly.ts:191`, and there
+  is **no `entityLoader` factory anywhere in any package source** — verified by
+  a whole-`packages/` scan, not by an index grep. A public reader allowlist for
+  a factory that does not exist is a surface-cleanup item. Rule 0j-1 applies: do
+  NOT infer a replacement `entityLoader` design from its readers.
+- **`tools/api-baseline.json` is stale and cannot currently defend anything.**
+  It still carries `form`, `FORM_MARKER`, `FORM_READERS`, `FORM_WIZARD_READERS`,
+  `createFormSignal`, `isFormMarker` and the entire `schema` package — all
+  deleted by FORM-DEL (`b57ba293`) and SCHEMA-DEL. Any `--check` run compares
+  HEAD to an architecture that no longer exists, so a "clean" result is
+  meaningless and a dirty one is uninformative.
+
+  **Sequencing, and it is the part that is easy to get backwards:** re-baseline
+  only AFTER the intended public surface is established, never before. The
+  baseline must record what the surface is intended to be; using it to decide
+  what to repair would let a stale artifact select the API being frozen. An
+  existing export is not evidence of intended public API.
+
+
 1. ~~Delete `SignalTreeBase`.~~ **DONE** — characterized `9f0d1464`, deleted
    `6a515699`. See "Slice 1 — `SignalTreeBase`" below.
 2. ~~Delete `composeEnhancers`.~~ **DONE** — characterized `2f46115b`, deleted
