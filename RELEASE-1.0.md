@@ -8027,16 +8027,31 @@ FORGED CLAIM        1 000 000       0        false
 HONEST CONTROL      1 000 000      +1        true
 ```
 
-**An ordinary application mutation, claimed as realization, lands in full and
-becomes INVISIBLE to causal history.** The tree reports it cannot undo a change
-that demonstrably happened.
+**An ordinary tree write, executed under CALLER-SUPPLIED authoring metadata
+claiming realization, lands in full and is suppressed from the MEASURED
+TIME-TRAVEL capture and undo surface.**
+
+**CORRECTED — the measured owner is `timeTravel()`, not "causal history".** The
+experiment used `.with(timeTravel())`, `tree.getHistory()` and `tree.canUndo()`.
+Promoting that to canonical causal history would annex an authority MUT has not
+established, and the unified-substrate hypothesis is explicitly unproven.
 
 #### THE ANSWER
 
+**CORRECTED — ownership and enforcement are different claims.**
+
 ```
-causalMode is NOT a fact the kernel owns and verifies.
-It is a fact SUPPLIED BY AMBIENT CALLER METADATA and TRUSTED without check.
+OWNER        UNPROVEN     MUT is still deriving who should own the fact
+EXCLUSIVITY  REFUTED      at the current API boundary
+VALIDATION   ABSENT       for the measured capture path
 ```
+
+> **The current implementation does not exclusively control or validate the
+> realization classification before the measured capture decision.**
+
+A design can hold that the causal kernel OWNS this fact while having an API that
+lets other code forge it. That gap may itself be the defect — but it is a
+statement about ENFORCEMENT, not about ownership.
 
 #### STATED AT ITS TRUE WIDTH — this is NOT yet a security finding
 
@@ -8047,7 +8062,7 @@ established. The finding is architectural:
 
 ```
 PROVED        the claim is reachable from a published subpath and TAKES EFFECT
-PROVED        the kernel does not own or verify the classification
+PROVED        the current implementation neither restricts nor validates it
 NOT PROVED    that this constitutes a vulnerability — no threat model exists,
               and the subpath is documented as internal plumbing
 NOT DECIDED   who SHOULD own the classification
@@ -8064,10 +8079,18 @@ causal-kernel operation is exactly what MUT must now derive.
 
 > *"`activeContext` is a module-level singleton."*
 
-**The write context is PROCESS-GLOBAL, not tree-scoped.** That is the MUT-3
-scope question arriving from a completely different direction than the deleted
-cross-tree reproducer — and from surviving, non-deprecated machinery. Recorded,
-NOT yet run: MUT-3's sequence still says derive the scope contract first.
+**Write-context STORAGE is MODULE-GLOBAL and not intrinsically keyed by tree.**
+
+**CORRECTED — that is not yet a semantic defect.** `withWriteContext` is
+synchronous and stacks/restores the prior context, and may legitimately describe
+an operation whose nested writes span some allowed scope. Module-global storage
+does not by itself prove foreign-tree contamination. What it creates is exactly
+the question MUT-3 needs:
+
+> **An ambient classification exists and is not keyed by tree. WHICH WRITES is
+> it legitimately allowed to govern?**
+
+Recorded, NOT yet run: MUT-3 derives the scope contract first.
 
 ### FROZEN AFTER MUT-2C
 
