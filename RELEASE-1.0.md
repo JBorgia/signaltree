@@ -107,6 +107,51 @@ bulk.
   "is not wedged forever when compensation refuses".)
 - Local scalar/structural operations must not scale with unrelated `n`.
 
+## Two Independent Work Lanes
+
+The remaining work runs in two lanes. Neither lane may silently redefine the
+other, and neither is a universal blocker on the other.
+
+```text
+RELEASE LANE
+  Gate B work proceeds independently toward a trustworthy public
+  declaration/package surface.
+
+DERIVATION LANE
+  Architecture audits proceed in bounded evidence-only slices, so long as
+  they change no production semantics and contaminate no Gate B artifact.
+```
+
+**A derivation blocks Gate B in exactly one case:** it produces a concrete,
+deterministic counterexample to a public contract Gate B is about to freeze.
+Interest, elegance, or an attractive unfilled cell in RFC 0016 is not that case.
+
+**And the reverse, which is the easier mistake to make:** Gate-B mechanics are
+not evidence that an architectural function survives. A symbol appearing in a
+clean declaration artifact, a green packed gate, a passing API baseline — none
+of these earn a function, an owner, or a lowering. They establish only that the
+current surface is accurately represented.
+
+The dependency edges are specific, not blanket:
+
+- Tier 2 concepts do NOT wait on MUT-3 to have their function derived — Rule 0k
+  says so explicitly, and "almost everything waits on MUT-3" must not become a
+  universal blocker.
+- Causal machinery — history, undo/redo/rollback, transactions, devtools capture,
+  batching where publication semantics intersect — DOES wait on MUT.
+- Package verdicts (Tier 4) wait on their semantic owners being known.
+- Gate B waits on the declaration artifact, not on architecture.
+
+RFC 0016 is the ledger for the derivation lane; this file remains the controller
+for execution sequencing. **Do not record execution sequencing in RFC 0016, and
+do not promote RFC 0016 content into this file** — the RFC is CANDIDATE, and a
+candidate that gets cited from the controller becomes indistinguishable from a
+frozen result within one session.
+
+There is no "architecture design" work item. There are independent derivations
+that gradually fill RFC 0016. Architecture is earned when those rows converge —
+and a repeated shape in CURRENT FORM is not convergence.
+
 ## Required Validation
 
 ```bash
