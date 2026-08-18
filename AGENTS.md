@@ -228,7 +228,22 @@ Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, 
 
 ## For Agents Consuming SignalTree
 
-If you are helping a user build on top of `@signaltree/*` packages, read [`docs/skills/using-signaltree/SKILL.md`](docs/skills/using-signaltree/SKILL.md) first — that is the canonical vendor-neutral skill with the mental model, quick-start, enhancer decision tree, and pointers into `reference/*.md`. Per-package sub-skills are nested one level deep (`docs/skills/using-signaltree/{ng-forms,enterprise,guardrails,events,realtime}/SKILL.md`); harnesses that scan recursively will discover them automatically, and the primary skill tells agents when to load each one. Cursor and Claude Code shims at `.cursor/skills/using-signaltree/SKILL.md` and `.claude/skills/using-signaltree/SKILL.md` are pointer files that redirect to the canonical location.
+**There is currently no consumer-facing skill, and that is deliberate.** The
+`using-signaltree` skill, its per-package sub-skills, and the harness shims were
+deleted in `7696225d` along with the rest of the AI-discoverability artifacts.
+They taught APIs that no longer exist and, more importantly, most of what they
+taught that was still accurate described concepts that have not been
+survival-audited.
+
+Until the surviving public surface freezes, fall back to the package types and
+the READMEs. That is the intended behaviour, not a gap to route around: a
+missing skill makes an agent read the types; a stale one makes it emit deleted
+APIs with conviction.
+
+Writing a replacement is a deferred obligation owed after the API freeze — see
+`RELEASE-1.0.md` § "AI DISCOVERABILITY". Do not recreate a pointer shim to the
+deleted path; two have already been committed pointing at targets that did not
+exist.
 
 ## Type-checking gates
 
