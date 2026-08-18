@@ -2184,6 +2184,97 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## RULE 0l — LEGACY MECHANISMS ARE EVIDENCE REPOSITORIES, NOT MIGRATION TARGETS
+
+> **A legacy mechanism may identify a problem worth solving. It may not
+> constrain the solution.**
+
+The audit has crossed the point where `.with()`, `Enhancer`, `plannedSignalTree`,
+`bind()`, `requires`, `provides` and `name` deserve to be treated as candidate
+architecture. They are now HISTORICAL EVIDENCE about functions the old system
+happened to provide.
+
+The question stops being *"how do we replace enhancers?"* and becomes:
+
+> **What useful functions existed, which still matter, which are already
+> satisfied naturally by the derived architecture, and what is the optimal
+> greenfield solution for any remaining gap?**
+
+### Why this correction is earned rather than stylistic
+
+Three times now, a function survived while its mechanism evaporated — and in
+each case the mechanism would have survived if it had been the unit of audit:
+
+```
+plannedSignalTree   looked essential      -> function is PRECONSTRUCTION
+                                             PLANNING; the second constructor
+                                             is not part of it
+identity replacement looked like a need   -> function is ALTER FINAL CALLABLE
+                                             BEHAVIOUR; replacement is fallout
+                                             from doing it after construction
+.with() accumulation looked structural    -> T0 proved type contribution never
+                                             needed sequential application
+```
+
+Auditing the noun would have preserved all three.
+
+### The extraction process, replacing "does X survive?"
+
+```
+1  USE CASE            what concrete application need exists?
+2  OWNER               is it actually SignalTree's job?
+3  NEW-SYSTEM COVERAGE does the already-derived architecture satisfy it?
+4  NULL                remove the function entirely — what becomes impossible?
+5  GREENFIELD MINIMUM  if a real gap remains, the smallest optimal mechanism
+                       ASSUMING SIGNALTREE 14 NEVER EXISTED
+6  LOWERING            declaration / compiler / kernel / realization /
+                       publication / external adapter
+7  LEGACY DISPOSITION  only at the end, map old concepts onto the result
+```
+
+**No proposed solution may cite compatibility with a current mechanism as a
+reason for its shape.** No `.with()`-compatible declaration, no `Enhancer`
+adapter, no `plannedSignalTree` bridge, no `requires`/`provides` compatibility
+layer. If a greenfield result happens to resemble an old mechanism, it must earn
+that resemblance independently.
+
+### ADAPTERS — one class is legitimate, one is prohibited
+
+```
+ALLOWED — the adapter IS the surviving function
+
+  SignalTree-owned truth  <->  external system representation
+  e.g. Angular Reactive Forms, a storage implementation, a devtools protocol,
+       a network transport
+
+FORBIDDEN by default — the adapter exists only to preserve something rejected
+
+  new SignalTree architecture  <->  rejected SignalTree 14 mechanism
+  e.g. a declarative compiler with an old `.with()` enhancer shim
+```
+
+The test is whether the boundary being crossed is EXTERNAL. Crossing from the
+new architecture to our own discarded architecture is not a boundary, it is a
+compatibility obligation we chose to create. Build one only if an external
+compatibility requirement independently survives GATE B.
+
+## B2-1 STEPS 2-8 — **WITHDRAWN.** Replaced by functional extraction
+
+Steps 2-8 were written as `Enhancer` -> `plannedSignalTree` -> `bind()` ->
+`requires`/`provides` survival audits. **That is still letting old nouns
+determine the investigation**, which is what Rule 0l now forbids. Running an
+"`Enhancer` null" in particular starts from the legacy abstraction: it asks
+whether `(tree) => tree & TAdded` survives, when the real question is whether
+authoring intent, type contribution and runtime realization are even the same
+concept.
+
+`.with()`'s DELETE stands as a LEGACY DISPOSITION — it was reached by extracting
+the supposed function and finding no surviving use, not by comparing forms.
+
+The active work is now **extension-cluster functional extraction and coverage
+audit**. See RFC 0016 Amendment 2 for the functional matrix; the legacy symbols
+appear there only in an evidence column.
+
 ## B2-1 STEP 1 — `.with()` FUNCTION: **DELETE**. No surviving function found.
 
 Run against the sharpened null, which prevents `.with()` reclaiming functions
