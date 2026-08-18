@@ -2184,6 +2184,69 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## B2-1 STEP 7 CRITERIA — frozen NOW, spelling deferred
+
+The public authoring property name must not be chosen before steps 1-6 establish
+the surviving ontology, and it must not be chosen by taste by anyone. The
+criteria are frozen here so the eventual choice is scored rather than preferred.
+
+A candidate spelling scores positively only if it:
+
+```
+1  reads as DECLARATIVE INPUT, not mutation of an existing tree
+2  does not imply sequential application or source-order execution
+3  makes sense for both first-party and third-party declarations
+4  does not imply the authoring value is a runtime object
+5  accommodates declarations affecting construction capabilities, runtime
+   realization, and public/type contribution — WITHOUT claiming every
+   declaration does all three
+6  reads naturally beside `store` and `derived` in one declaration
+7  does not smuggle the rejected enhancer mental model back in through naming
+```
+
+**Do not preserve `extensions` merely because the prototype used
+`ExtensionDeclaration`.** Three candidates stay alive — `features`,
+`extensions`, `using` — and they are NOT equally promising:
+
+```
+features    strongest IF the survivors are declarative selections of optional
+            tree behaviour. Says what the tree HAS, not what is done to it.
+extensions  strongest IF the dominant survivor is an open third-party extension
+            protocol. Weaker if this is mainly compiler input for first-party
+            capabilities. Fails criterion 1 by default reading: "here is a
+            finished thing, now extend it" — the exact mental model under audit.
+using       avoids "bolted on" and reads well at declaration time, but is less
+            noun-like beside `store`/`derived` and says almost nothing about
+            what the values ARE.
+```
+
+Working hypothesis, explicitly not a disposition: `features` leads. It must win
+on the derived semantics — "optional capabilities the tree is declared to have"
+— not on sounding better.
+
+### The identical-contribution policy, deferred with a warning
+
+T0-G accepts two declarations contributing the same key with an identical type,
+because its comparison is `Equal<H[K], Seen[K]>`. When that policy comes due:
+
+> **Type compatibility cannot establish semantic compatibility.** Two
+> declarations may each expose `refresh(): void` with completely different
+> ownership and implementation. Do not let `Equal<A, B>` become the
+> architectural rule because it made the type guard convenient.
+
+### What T0-G bought, stated once
+
+The compiler can now own BOTH sides of the same contract, which the current
+model does not:
+
+```
+TYPE COMPILATION     incompatible contributions -> authoring-site compile error
+RUNTIME COMPILATION  incompatible/duplicate realization -> refuse before EXPOSE
+```
+
+That is materially cleaner than a type system silently accumulating one thing
+while runtime composition does another.
+
 ## SHAPE-T1 DERIVED — with four corrections to what the prototype actually proved
 
 Evidence: `single-pass-construction.spec.ts`, plus the CASE 0 repository
