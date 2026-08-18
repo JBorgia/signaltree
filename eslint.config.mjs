@@ -140,6 +140,10 @@ export default [
             '@signaltree/shared',
             // @nx/devkit is build/tooling-only.
             '@nx/devkit',
+            // @nx/rollup is required by each package's rollup.config.cjs
+            // (`withNx`) since the convert-to-inferred migration in a9774f01.
+            // Build-time only — never a runtime peer.
+            '@nx/rollup',
           ],
         },
       ],
@@ -182,6 +186,15 @@ export default [
       '@typescript-eslint/no-empty-function': 'off',
       'no-empty': 'off',
       'prefer-const': 'off',
+    },
+  },
+  {
+    // Benchmark harnesses in tools/ use empty `prepare()`/`destroy()` stubs to
+    // satisfy a uniform mode interface, and no-op subscribers whose whole point
+    // is to attach an observer that does nothing. Not shipped library code.
+    files: ['tools/**/*.{mjs,js,ts}'],
+    rules: {
+      '@typescript-eslint/no-empty-function': 'off',
     },
   },
   {
