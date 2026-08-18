@@ -2184,6 +2184,78 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## B2-1 OPENING MEASUREMENT — `requires` is unexercised, and its only reordering consumer is unaudited
+
+Run with the implementation held aside, per the B2 rule that an existing export
+is evidence of CURRENT FORM only.
+
+### The capability axis, measured across all production code
+
+```
+requires:  non-empty declarations in production      ZERO
+           the only production occurrence is serialization.ts:1305 `requires: []`
+           everything else is the implementation, one JSDoc example, and specs
+
+provides:  six declarations, and FIVE RESTATE `name`
+           batching     -> ['batching']
+           devTools     -> ['devTools']
+           timeTravel   -> ['timeTravel']
+           transactions -> ['transactions']
+           serialization-> ['serialization']
+           persistence  -> ['persistence','serialization']   <- the only one that
+                                                                names a second token
+```
+
+So the capability system's CONSUMER SIDE is entirely unexercised. `provides` is,
+in five of six production instances, a synonym for `name` — exactly the
+`name != provides` distinction the docs assert and the code has never once
+exercised. And with zero non-empty `requires`, the dependency graph
+`resolveEnhancerOrder` builds has NO EDGES, so its topological sort is the
+identity function on every real input.
+
+### The finding that changes the sequence
+
+**`resolveEnhancerOrder` has exactly one internal caller: `plannedSignalTree()`'s
+`build()`.** The ordinary `signalTree().with(...)` path never calls it — order on
+that path is positional, exactly as the consumer wrote it.
+
+```
+ordinary .with() chain     order is positional; resolver NOT consulted
+                           `requires` acts only through the .with() dependency
+                           guard — which the identity-replacing built-ins
+                           DISABLE (see BLOCKER for #3b)
+
+plannedSignalTree().build() the resolver's ONLY caller; with zero requires in
+                           production it reorders nothing
+
+plannedSignalTree consumers ZERO outside its own export line
+```
+
+So `requires` today has no reordering effect anywhere, and its validation effect
+is bypassed in the configurations most applications use.
+
+### Why no verdict is recorded yet
+
+Two reasons, and neither is squeamishness:
+
+1. **Zero consumers is evidence, not a verdict.** The TP case — a third-party
+   enhancer author declaring "apply me after capability X" — is exactly the level
+   workspace evidence cannot refute. It has to be argued, not assumed absent.
+2. **`requires`'s reordering function is downstream of `plannedSignalTree`'s
+   survival, and that is MUT-0 order item 9 — unaudited.** If
+   `plannedSignalTree` does not survive, the resolver loses its only caller and
+   `requires` loses its only reordering authority, leaving just the guard. If it
+   does survive, the ordering function has a home and the question is real.
+
+**SEQUENCING CONSEQUENCE:** `plannedSignalTree`'s PUBLIC-SURFACE status is B2
+work, not derivation-lane work, and it was not in the B2-1 list. It should be
+settled before `requires`, because it determines what `requires` can even mean.
+Deciding `requires` first would be deciding a dependent before its dependency.
+
+**Do not repair the protocol yet.** The BLOCKER for #3b is a real defect, but
+repairing it would be building coherence into a protocol whose individual
+functions have not yet survived — the explicit B2-1 guard.
+
 ### API cleanup queue, after the declaration fix
 
 **Two verified surface findings, added to this queue.** Both were measured while
