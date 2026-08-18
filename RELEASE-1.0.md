@@ -7366,6 +7366,212 @@ EXCEPTION
 **Without this exclusion, Rule 0j would in fact require cleaning the live prose
 first.** With it, the doc surface genuinely waits for the shipping gate.
 
+## MUT — the mutation-participation derivation
+
+### FRAMING CORRECTION, before any experiment
+
+My opening question was *"what makes a write a semantic participant in exactly
+one tree/lineage?"* **That contains part of the answer.** "Exactly one
+tree/lineage" is a CANDIDATE INVARIANT, not part of the definition of
+participation — and collapsing `tree` with `lineage` behind a slash assumes they
+are the same scope before anything has established it.
+
+### MUT-0 — THE NULL
+
+> **Assume SignalTree exposes NO generic mutation-observation protocol. A change
+> to physical truth occurs. What information MUST exist for SignalTree ITSELF to
+> remain correct?**
+
+For every fact proposed:
+
+```
+who requires it?          when must it exist?      who owns it?
+is it per-tree?           is it causal?
+is it SEMANTIC, or merely REALIZATION / PUBLICATION?
+```
+
+### MUT-1 — the first decisive question
+
+> **What distinguishes a physical change that merely REALIZES or RESTORES truth
+> from a SEMANTIC MUTATION that must participate in SignalTree authority?**
+
+This deliberately gets UNDERNEATH `interceptLeafSignals`, `PathNotifier`, change
+reporting, time travel and the causal runtime, rather than starting from any of
+them.
+
+**The three are not synonyms**, and the audit must keep them apart:
+
+```
+LANDED WRITE            physical truth changed
+SEMANTIC MUTATION       it participates in SignalTree's mutation model
+CAUSALLY AUTHORED       a turn authored it
+```
+
+Restore, rollback and realization already change truth without obviously
+creating authorship; persistence observes committed truth without becoming
+mutation authority. A chain of `write -> participant -> lineage -> causal turn`
+would rebuild the universal mutation ontology this audit exists to challenge.
+
+### DIMENSIONS, derived independently — not one object
+
+```
+LANDED               did physical truth actually change?
+SEMANTIC MUTATION    does the landed change participate in the mutation model?
+SCOPE                which tree or authority owns it?
+CAUSAL ATTRIBUTION   was it authored by a turn, and which?
+IDENTITY             which PositionId, SubjectId, physical location participated?
+PUBLICATION          what Angular-visible realization must update?
+CONSEQUENCE          which post-commit consequences may observe it?
+```
+
+### THREE HYPOTHESES — `tree` and `lineage` held apart
+
+```
+H1  every semantic mutation has exactly ONE OWNING TREE
+      near-definitional for signalTree(), but still stated as a hypothesis
+
+H2  every AUTHORED mutation belongs to exactly ONE CAUSAL LINEAGE
+      depends on what causal authority turns out to be
+
+H3  tree ownership and causal-lineage ownership are THE SAME SCOPE
+      NOT EARNED. Nothing yet establishes it.
+```
+
+A tree may plausibly contain confirmed causal history, speculative causal
+history, non-authored realization, restore and rollback effects, and post-commit
+consequences — without all of those being one simple lineage. **Do not invent a
+`TreeLineageId` or equivalent before necessity appears.**
+
+### MUT-3 SEQUENCING — the old defect is a FALSIFIER, not the starting model
+
+```
+CORRECT                              WRONG
+1 derive the scope contract from     old bug involved two trees
+  surviving code                     -> hunt global state
+2 construct minimal two-tree         -> derive the scope model around
+  falsifiers against that contract      whatever caused it
+3 ONLY THEN hunt a second analogue
+  of the deleted reproducer
+```
+
+Otherwise MUT degenerates into a defect investigation wearing an architecture
+derivation's clothes.
+
+The strongest two-tree falsifier is broader and cleaner than "does undo throw":
+
+> **Can an operation performed solely against tree B alter any semantic result
+> subsequently obtained solely from tree A, absent an explicitly established
+> relationship between A and B?**
+
+To be tested across surviving semantic machinery: ordinary writes, transactions,
+time travel, devtools capture, persistence scheduling, surviving marker
+realization, and the causal runtime. If B changes A's result, that is evidence of
+SCOPE LEAKAGE without assuming its mechanism.
+
+### MUT-4 CONSUMERS — last, and with a hard limit
+
+> **Consumers may FALSIFY an insufficient contract. They may NOT DEFINE the
+> contract merely because current code wants certain metadata.**
+
+Without that limit, time travel wanting paths plus devtools wanting snapshots
+plus persistence wanting authored sequence unions into a giant mutation-event
+object — precisely the abstraction this audit exists to challenge.
+
+### MUT-1 — FIRST MEASUREMENTS (evidence, not yet a contract)
+
+`packages/core/src/lib/mut-participation.spec.ts`, 15 tests, GREEN. TEMPORARY
+under the ANG-V0-F protocol — deleted when MUT-1's contract freezes; the rows
+below are what survives.
+
+**A control was needed and taken.** The first pass subscribed with `''`, which
+`PathNotifier.matches()` treats as a literal path, so every row read "no
+notification". The catch-all is `'**'`. All rows below use it.
+
+```
+OPERATION              LANDED   HISTORY d   PATHNOTIFIER
+leaf .set()            yes      +1          a.n
+branch call form       yes      +1          a.n
+root call form         yes      +1          a.n, top      LANDED leaves only
+root updater form      yes      +1          top
+deep-equal write       NO        0          (none)
+UNDO                   yes       0          a.n
+entityMap CRUD         yes      +1          rows.a
+status() transition    yes      +1          job.state
+```
+
+#### R1 — LANDED is the precondition for every other dimension
+
+The deep-equal write is the clean negative control: truth did not change, and
+**nothing downstream observed it** — no history entry, no notification. Nothing
+in the surviving machinery reacts to an ATTEMPTED write.
+
+#### R2 — PathNotifier emits exactly the LANDED LEAVES, on a BARE tree
+
+Measured without any enhancer applied. A root write of
+`{ a: { n: 4 }, top: 7 }` over `{ a: { n: 1, s: 'x' }, top: 0 }` emits `a.n` and
+`top` — **`a.s` is absent**, having been rewritten with its own value. Branch and
+root writes are decomposed to the leaves that actually changed.
+
+So notification is a property of CORE'S WRITE PATH, not of an enhancer.
+
+#### R3 — THE DISCRIMINATOR: PathNotifier is a LANDING signal, not an AUTHORSHIP signal
+
+```
+authored write   landed  yes   history +1   notified  a.n
+UNDO             landed  yes   history  0   notified  a.n
+```
+
+**Undo is indistinguishable from an authored write at the notifier.** Truth
+changed, publication happened, and no new authorship was created. Any consumer
+inferring *"the user changed this"* from a PathNotifier event is wrong, and the
+error is invisible.
+
+This is the first hard evidence that the three dimensions genuinely separate:
+
+```
+LANDED            deep-equal fails it; everything else passes
+PUBLICATION       tracks LANDED exactly
+CAUSAL AUTHORSHIP undo is landed AND published but NOT authored
+```
+
+#### R4 — the `interceptLeafSignals` docblock premise is FALSE AT HEAD
+
+Its justification reads:
+
+> *"SignalTree's recursive update pipeline writes to leaf signals directly
+> without invoking PathNotifier ... a direct call like
+> `tree.$.user.profile.name.set(x)` never produces a PathNotifier event by
+> itself. Enhancers that need to observe every mutation must intercept those
+> leaf writes themselves."*
+
+Tested on its own named example:
+
+```
+tree.$.user.profile.name.set('b')   ->   notified: ['user.profile.name']
+```
+
+**Refuted verbatim.** Every write path measured reaches the notifier on a bare
+tree. `git log` on `path-notifier.ts` shows `45d06959 feat(history): distinguish
+causal realization writes` as the most plausible point where this changed —
+NOTED, not asserted, since causation was not measured.
+
+Consequence, stated at its true width: **the stated justification for
+`interceptLeafSignals` no longer holds.** That is not by itself a disposition —
+absence of its original reason does not decide its fate, and the derivation, not
+this row, must do that.
+
+#### Correction to the SCHEMA-era finding
+
+The schema investigation concluded *"ordinary leaf writes do not enter a
+canonical semantic mutation pipeline."* **They do enter PathNotifier**, measured
+above. What remains genuinely open is the different and harder question:
+
+> Is `PathNotifier` the canonical SEMANTIC mutation pipeline, or a
+> LANDING/PUBLICATION bus that merely looks like one?
+
+R3 is evidence for the second reading — a semantic mutation model that cannot
+distinguish undo from authorship is not carrying semantics.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
