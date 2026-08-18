@@ -2184,6 +2184,71 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## SHAPE-T1 DERIVED — with four corrections to what the prototype actually proved
+
+Evidence: `single-pass-construction.spec.ts`, plus the CASE 0 repository
+measurement. **Four claims from my own summary are narrowed here before any
+disposition is built on them.**
+
+```text
+MEASURED CURRENT USE
+  genuine post-exposure extension attachment              ZERO
+
+PROVED IN THE MODEL
+  runtime contribution can occur pre-EXPOSE               YES
+  callable interception can occur pre-EXPOSE              YES
+  runtime collision refusal can occur pre-EXPOSE          YES
+  cleanup registration can occur pre-EXPOSE               YES
+  dependent realization can occur pre-EXPOSE              YES
+  duplicate refusal can occur pre-EXPOSE                  YES
+
+NOT YET PROVED
+  static/type-level collision rejection
+  minimum representation of realization dependencies
+  minimum representation of duplicate identity
+  exhaustive absence of TP post-exposure need
+
+CONSEQUENCE
+  no TESTED function requires public post-exposure composition
+  the .with() chain has lost its known semantic justification
+```
+
+### The four corrections
+
+1. **CASE 3 does NOT close the T0 collision defect.** It closes the RUNTIME
+   half: whole-set DISCOVER can refuse conflicting contributions before
+   exposure. T0's defect was also a TYPESCRIPT CONTRACT defect — the declaration
+   expression stays type-valid while an incompatible intersection silently
+   resolves to one overload. Either a typing theorem makes incompatible
+   declarations fail AT THE DECLARATION SITE, or collision rejection is
+   consciously chosen as runtime-only. For a compiler-like authoring surface the
+   former is strongly preferred, and it is step 0 of cluster closure.
+
+2. **CASE 5 does not establish how realization order is OBTAINED.** The
+   prototype succeeds because `producer` precedes `consumer` in the array. That
+   proves an internal order is SUFFICIENT — and therefore that `.with()` is not
+   required — but not that the order is derivable without some dependency
+   relation. `requires`/`provides` stay unproven; the underlying FUNCTION
+   "declare or derive a realization dependency" becomes a legitimate survivor
+   candidate.
+
+3. **CASE 6 does not establish that a declaration `id` is MINIMAL.** It shows an
+   explicit `id` is SUFFICIENT to reject duplicates. Whether duplicate semantics
+   can instead be derived from contribution, capability or type identity — with
+   no separate identity axis — has not been asked. The prototype's convenient
+   field must not become the architecture.
+
+4. **`Object.freeze(tree)` is model ENFORCEMENT, not evidence.** It proves the
+   prototype does not cheat by composing after exposure. The evidence that no
+   late composition is needed is CASE 0's repository measurement. Do not count
+   the freeze as an independent reason `.with()` is unnecessary.
+
+### Naming
+
+This is the **current construction-model cluster** — `.with()`, `Enhancer`,
+`plannedSignalTree`, `bind()`, `requires`, `provides`, `name`. Calling it the
+"obsolete" cluster would embed the verdict the audit has not yet emitted.
+
 ## SHAPE-T1 CASE 2 — IDENTITY REPLACEMENT IS AN ARTIFACT, MEASURED IN PRODUCTION CODE
 
 Not a prototype. This is why the three identity-replacing built-ins replace
