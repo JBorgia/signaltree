@@ -6280,24 +6280,57 @@ DISPOSITION    F3a submitting -> DELETE from SignalTree.
 > SignalTree-backed value must be sent through an application-owned async
 > operation. What becomes impossible with `await handler(node())`?
 
-Six candidates, none granted in advance. **All six fail, and one produces a new
-defect.**
+Six candidates, none granted in advance.
+
+**MEASURED — no latent SignalTree-specific capability is present in the current
+wrapper:**
 
 ```
-VALUE COHERENCE      FAILS, and INVERTS -- see below
-CAUSAL ATTRIBUTION   FAILS  a submit records nothing; getHistory() unchanged
-                            under timeTravel. It is not an event in the tree.
-WRITE GATING         FAILS  the tree stays writable mid-submit; patch() lands
-ERROR OWNERSHIP      FAILS  a throwing handler propagates exactly as the null
-                            does, and no error is retained on the marker
-                            (`submitError`, `lastError`: undefined)
-CANCELLATION         FAILS  `abort`, `cancel`, `abortSubmit`: undefined
-AUTO STATE CHANGE    FAILS  nothing transitions on success or failure
+CAUSAL ATTRIBUTION   a submit records nothing; getHistory() unchanged under
+                     timeTravel
+WRITE GATING         the tree stays writable mid-submit; patch() lands
+ERROR OWNERSHIP      a throwing handler propagates exactly as the null does, and
+                     no error is retained (`submitError`, `lastError`: undefined)
+CANCELLATION         `abort`, `cancel`, `abortSubmit`: undefined
+AUTO STATE CHANGE    nothing transitions on success or failure
 ```
 
-**VALUE COHERENCE is the interesting one, because the marker is WORSE than the
-null.** `submit()` reads `valuesSignal()` AFTER awaiting validation, so a write
-landing between the button press and the handler is silently included:
+**Those five rows are ABSENCE EVIDENCE, not the architectural falsifier.**
+"The current implementation does not do X" must never become "SignalTree should
+never do X" -- a distinction that will matter directly when realtime introduces
+genuinely causal external operations. What closes the row is greenfield
+OWNERSHIP:
+
+```
+save / POST / IPC operation      operation owner
+errors, cancellation, retries    operation owner
+write locking during save        application workflow policy
+snapshot timing                  application workflow policy
+result-driven tree mutation      an explicit subsequent SignalTree write
+```
+
+No orchestration responsibility remains for SignalTree to hold.
+
+#### VALUE-CAPTURE POLICY — the sharpest row, corrected
+
+An earlier draft said the marker "decides wrongly" about when the value is read.
+**That is not established, and it let current behaviour answer a semantic
+question.** Both policies are legitimate:
+
+```
+CALL-TIME CAPTURE          user presses Save at T1 -> submit snapshot T1
+POST-VALIDATION CAPTURE    user presses Save -> async validation -> submit
+                           currently-valid truth at T2
+```
+
+Neither is universally correct. A draft editor may want exactly what was on
+screen; a system validating against a moving server may want the currently-valid
+value. Others are equally legitimate: reread immediately before send, or refuse
+if truth changed meanwhile.
+
+**MEASURED — the current wrapper silently picks one.** `submit()` reads
+`valuesSignal()` AFTER awaiting validation, so a write landing between the
+button press and the handler is included:
 
 ```
 marker.submit(h)                 // user presses Save
@@ -6305,26 +6338,55 @@ marker.patch({ name: 'RACED' })  // a write lands during the await
 handler receives                 name === 'RACED'
 ```
 
-**What is submitted is not what was on screen when the user pressed the
-button.** The null snapshots at call time and submits exactly what the user saw:
+The null leaves the choice with the operation owner, who can capture at call
+time, after validation, immediately before send, or refuse on change:
 
 ```
-const submitted = save(tree.$.p());   // reads NOW
+const submitted = save(tree.$.p());   // this app chose call-time
 tree.$.p({ name: 'RACED' });
 (await submitted).name === 'Ada'
 ```
 
-So the one place orchestration could have added a real capability -- deciding
-WHEN the value is read -- it decides wrongly.
+```
+NO SIGNALTREE INVARIANT ESTABLISHES ONE CAPTURE INSTANT AS CANONICAL.
+Submission snapshot timing is APPLICATION / OPERATION policy.
+```
+
+That is the argument -- **SignalTree has no authority to choose the capture
+instant**, so choosing one is an unearned policy commitment, not a capability.
+The race is retained below as 14.x characterization, where it is genuinely
+useful.
 
 ```
 DISPOSITION    F3b submit() -> DELETE from SignalTree.
                With validation gone, submit() reduces to `await handler(node())`
-               minus value coherence, plus a flag whose owner is the operation.
-               No surviving orchestration function.
+               plus a capture-instant choice SignalTree has no authority to make
+               and a flag whose owner is the operation.
 ```
 
 **F3 IS THEREFORE A COMPLETE DELETION**, not merely the removal of a boolean.
+
+**F3 FROZEN:**
+
+```
+F3a submitting
+  FUNCTION      operational in-flight state
+  OWNER         external operation owner
+  SIGNALTREE    NO
+  CONSTRUCTION  NO
+  DISPOSITION   DELETE
+
+F3b submit()
+  FUNCTION      orchestrate an application-owned operation over tree values
+  OWNER         application / operation
+  SIGNALTREE    NO
+  CONSTRUCTION  NO
+  DISPOSITION   DELETE
+
+SIGNALTREE DOES NOT CHOOSE submission snapshot timing, concurrency policy,
+cancellation, error retention, or write gating. Those are operation / workflow
+semantics.
+```
 
 #### 14.x dispositions, decided on 14.x evidence (Rule 0f)
 
