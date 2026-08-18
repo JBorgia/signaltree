@@ -2184,6 +2184,80 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## B2-1 GOVERNING NULL — REPLACED. The question is the construction shape, not `.with()`'s consumers
+
+Item 0 changed what this cluster is asking. The old question — does `.with()`
+have consumers, does `requires` have consumers — is too weak, because it can only
+ever confirm current form. The replacement:
+
+> **Assume there is no chained `.with()`. Given a single declarative
+> `signalTree({...})` that receives extension descriptors BEFORE compilation,
+> what SignalTree-owned function becomes impossible?**
+
+If the answer is "none", `.with()` dies even though extension functionality
+survives completely. That is the strong form, and it is the one to run.
+
+**Why the reframe is earned rather than attractive:** item 0 measured that
+capability planning must happen BEFORE construction, and that chained `.with()`
+structurally cannot do it because the tree already exists when an enhancer is
+applied. That is a property of the API SHAPE. Every remaining question in this
+cluster — `requires`, `provides`, `bind()`, the realization overload — is a
+question about a chain that may not survive.
+
+**Working hypothesis, recorded so it is not mistaken for a conclusion:** the
+extension FUNCTION may survive; the post-construction CHAIN probably does not.
+The candidate shape and its ledger live in
+[RFC 0016 Amendment 1](docs/rfcs/0016-signaltree-15-candidate-architecture.md) —
+CANDIDATE, nothing frozen, and it must not be cited from here as authority.
+
+### Sequence, revised to follow the dependency the measurement found
+
+```text
+construction shape  <- the null above; decides whether a chain exists at all
+        |
+        +-- if a chain survives:  requires -> provides -> bind() -> .with() overload
+        |
+        +-- if it does not:       those four are moot as CHAIN concepts and each
+                                  must be re-asked against the declarative form
+```
+
+**Do not audit `requires`, `bind()` or the `.with()` overload before the shape
+question.** Judging them as chain features would answer a question that may not
+exist, and repairing the #3b protocol defect would build coherence into a chain
+that may not survive.
+
+### What the shape null needs, and what it must not accept
+
+The decisive falsifier is TYPING, not usage. `.with()` accumulates through
+`this & TAdded`, and `this`-polymorphism is what carries every prior
+accumulation forward; a tuple of descriptors must reproduce that against the
+REAL `ISignalTree`/`TreeNode`/`NodeAccessor` types, with callable trees.
+
+A scratch probe against simplified types is clean — tuple accumulation resolves,
+the store type survives, `derived` infers, `$` is provably not `any`, and three
+negative controls fire. **That is not acceptance.** RFC 0015 recorded an encoding
+that appeared to infer correctly and did not, and the only thing that exposed it
+was revealing the inferred generic. The shape null is answered by a typing SPEC
+in `packages/core`, built the way `derived-projection-contract.typing.spec.ts`
+was, or it is not answered.
+
+Other functions to test independently, none of them assumed:
+
+```
+1  order-independent contribution   does anything need enhancers to arrive
+                                    without one owner controlling order?
+2  deferred construction            already ANSWERED YES by item 0
+3  capability resolution pre-tree    already ANSWERED YES by item 0
+4  TP extension contract            reproducible externally, or does it duplicate
+                                    SignalTree-owned semantics?
+5  identity replacement             three built-ins replace the tree today. Is
+                                    that a function, or an artifact of applying
+                                    changes to an already-built tree?
+```
+
+Item 5 is the one most likely to dissolve: if construction happens once with full
+knowledge, there may be nothing to replace.
+
 ## B2-1 ITEM 0 — `plannedSignalTree`: the FUNCTION SURVIVES, and it is not the one I attributed to it
 
 Derived with the implementation held aside, then revealed. **This CORRECTS the
