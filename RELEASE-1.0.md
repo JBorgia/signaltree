@@ -2184,6 +2184,75 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## B2-1 STEP 1 — `.with()` FUNCTION: **DELETE**. No surviving function found.
+
+Run against the sharpened null, which prevents `.with()` reclaiming functions
+T0/T1/T0-G already removed from its column:
+
+> Assume all authoring declarations are supplied to `signalTree({...})` before
+> compilation, static contribution conflicts are rejected at the declaration
+> site, all tested runtime realization completes before EXPOSE, and no measured
+> consumer performs genuine late attachment. **What independently required
+> PUBLIC function remains that requires `.with()` itself?**
+
+### THE DISTINCTION THAT LOOKED LIKE A COUNTEREXAMPLE AND IS NOT
+
+`@signaltree/realtime` was the strongest candidate: connections come and go, and
+it contributes `connect()`, `disconnect()`, `subscribe()`, `isConnected()`.
+Those are called long after the tree is live.
+
+```
+post-exposure INVOCATION    calling a capability contributed before EXPOSE
+post-exposure COMPOSITION   adding a capability after EXPOSE
+```
+
+Only the second requires `.with()`. Realtime is entirely the first — it is the
+shape T1 CASE 1 already modeled. **This distinction is the one thing that could
+have saved the chain, and it does not.**
+
+### Measured, not assumed
+
+```
+@signaltree/realtime          touches ZERO `tree.*` APIs at application time.
+                              It wraps and returns; its runtime methods live on
+                              the contributed object.
+
+withUndo (TP-STYLE authoring, custom-extensions-demo)
+                              captures `tree` in a closure and reads `tree.$`
+                              LAZILY inside takeSnapshot, i.e. at INVOCATION.
+                              Needs a CONSTRUCTED tree, never an EXPOSED one.
+
+docs/guides/custom-markers-enhancers.md
+                              no dynamic-installation, plugin-registration,
+                              conditional-late-attachment or attach/detach
+                              pattern is documented anywhere.
+
+CASE 0 repository sweep       zero genuine post-exposure attachment.
+```
+
+The TP-style example is the important row. `withUndo` is the closest thing this
+repo has to a third-party enhancer author, and what it needs from the chain is
+nothing: a constructed tree it can close over. A REALIZE phase supplies that.
+
+### Disposition
+
+```
+FUNCTION      public post-exposure / incremental tree composition
+OWNER         no surviving SignalTree-owned requirement found
+PUBLIC NEED   no CI evidence. No FP evidence — realtime, guardrails, ng-forms
+              and events all contribute rather than compose late.
+              TP remains HYPOTHETICAL; for this symbol the standing rule is that
+              keeping it requires POSITIVE evidence, and none was found.
+CURRENT FORM  post-construction chained enhancer application
+DISPOSITION   DELETE
+```
+
+**The physical cut is NOT authorized by this row.** Steps 2-6 must first
+determine which functions currently hanging off the chain have to migrate into
+the declarative model — type contribution, realization, planning, dependency,
+duplicate identity. Rule 0j-2 permits removing the mechanism only once its
+surviving functions have somewhere to live.
+
 ## B2-1 STEP 7 CRITERIA — frozen NOW, spelling deferred
 
 The public authoring property name must not be chosen before steps 1-6 establish
