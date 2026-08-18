@@ -407,6 +407,117 @@ capability set is a CLOSED SET OF SIGNALTREE-OWNED FACILITIES
 vocabulary, not an open declaration of arbitrary needs. That is a much smaller
 thing than the current field implies.
 
+### DERIVATION 2 — realization dependency satisfaction: **OUTCOME A. Function DELETE.**
+
+**Null:** assume declarations cannot depend on declarations, realizers cannot
+consume another declaration's public facade, and source order has no semantic
+meaning. Each realization receives only its own configuration, compiler-owned
+information, kernel-owned services, and tree lifetime registration. What
+surviving use case becomes impossible?
+
+Answer: **none found.**
+
+#### The measurement that decides it
+
+Cross-feature imports exist in the codebase — and every single one is in a SPEC
+file:
+
+```text
+serialization/persistence-commit-ordering.spec.ts  -> ../transactions
+time-travel/documented-defects.spec.ts             -> ../serialization
+time-travel/time-travel.spec.ts                    -> ../transactions
+
+PRODUCTION cross-feature imports                    ZERO
+```
+
+Those specs test that two INDEPENDENT consumers of the same kernel authority
+behave correctly together — persistence ordering while a transaction is open, for
+instance. Testing an interaction is not a dependency, and reading the spec
+imports as one would have manufactured exactly the relationship this derivation
+exists to test.
+
+#### What the realizations actually consume — all class A
+
+```text
+transactions   causal-types · causal-write-mode · intercept-leaf-signals ·
+               mutation-capture-runtime · path-notifier · position-registry ·
+               owned-mutation · commit-consequence · turn-store ·
+               pending-rollback · applied-history · realization-context ·
+               tree-realization-adapter · write-context
+
+time-travel    causal-types · causal-write-mode · intercept-leaf-signals ·
+               mutation-capture-runtime · path-notifier · position-registry ·
+               tree-realization-adapter · write-context · visit-tree
+
+serialization  commit-consequence · materialize-markers
+
+devtools       intercept-leaf-signals · path-notifier · write-context
+
+batching       visit-tree
+```
+
+```text
+A  kernel semantic authority     ALL measured consumption
+B  tree lifecycle service        registerCleanup (already LANDED)
+C  author configuration          yes
+D  another feature's PUBLIC contribution   ZERO
+E  another realization's PRIVATE object    ZERO
+```
+
+Only D or E could establish a genuine dependency, and both are empty.
+
+#### The shape, which the release invariants already predicted
+
+`transactions` and `time-travel` share eight kernel modules. That is not
+"transactions provides X, timeTravel requires X" — it is:
+
+```text
+                    +-- transactions
+   causal authority-+
+                    +-- timeTravel
+```
+
+Two consumers of something with an independently established owner. *Causal
+history owns meaning* was already frozen; this is that invariant showing up as a
+dependency graph with no feature-to-feature edges in it.
+
+**`serialization` is the sharpest case.** Persistence observing committed truth
+could very easily have been modeled as *"persistence requires transactions"*,
+because a transaction plainly affects when state settles. It is not. It consumes
+`commit-consequence` — the durability authority — directly. The frozen
+persistence semantics put the authority in the right place, and the absence of a
+`requires` edge is the consequence.
+
+#### The T1 prototype's own dependency is confirmed an artifact
+
+T1 CASE 5 used `producer.publish('token')` / `consumer.consume('token')`. Treated
+as suspect and now resolved: the prototype OFFERED `publish`/`consume`, so the
+dependency it demonstrated was created by the harness. CASE 5 established only
+that IF such a dependency existed, internal pre-EXPOSE realization could satisfy
+it. It is not evidence that SignalTree has one — and the production measurement
+says it does not.
+
+#### Result
+
+```text
+REALIZATION DEPENDENCY FUNCTION      DELETE — no surviving use case
+GREENFIELD MINIMUM                   none
+PUBLIC DEPENDENCY PROTOCOL           cannot be earned from this function
+ORDER REVERSAL                       moot; with zero edges there is nothing
+                                     for an order to express
+```
+
+Order reversal was not run as a characterization because it can only discover
+coupling, and the import measurement already shows there is none to discover at
+the module level.
+
+#### Scope limit
+
+This measures the SURVIVING built-in and first-party realizations. It does not
+prove no future feature could need another's output. If one ever does, outcome C
+would apply and the FACT to communicate would be derived then — not called
+`requires`, not assumed to be a string token, not assumed to be an order.
+
 ### Table F — legacy dispositions (a ledger, not an agenda)
 
 | Legacy symbol | What it happened to provide | Disposition |
