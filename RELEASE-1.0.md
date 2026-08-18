@@ -8480,20 +8480,44 @@ recommend speculative optimizations.
 
 ## Current Sequence From Here
 
-**NEXT SESSION:** (1) re-test `isDev` rigorously per the falsifier in "OPEN —
-second instance" — public-import property, whole declaration tree, no location
-assumption; (2) AST characterization scan for the value-space route; (3) decide
-public intent for `isDev` / `createFormSignal` / `HydrateMode` and each scan hit
-BEFORE repairing anything; (4) repair only intended public contracts; (5) packed
-gate with legitimate peers installed. The alias-target hypothesis is REFUTED — do
-not re-run it. Formerly this asked whether `stripInternal` strips a public alias
-whose target is `@internal`; See "OPEN — second
-instance" under Phase 2. Answered by an isolated fixture on the production
-tsconfig/plugin path, with no API changes during the measurement; then decide
-whether `isDev` / `createFormSignal` / `HydrateMode` are intended public API at
-all before touching their tags. Nothing in the API cleanup queue starts before
-the packed gate is green, because the declaration artifact is not yet trustworthy
-enough to measure the API being frozen.
+**THE DECLARATION ARTIFACT IS NOW TRUSTWORTHY. The precondition on the API
+cleanup queue is DISCHARGED.** Re-measured at HEAD on a freshly built artifact
+(`c5dd6320`), because the `dist/` on disk predated three package-surface
+deletions:
+
+```text
+declaration closure   stripped-but-referenced = 0, self-contained
+packed exports        core 13 · guardrails 7 · ng-forms 2 · realtime 5 ·
+                      events 9 — all shipped; shared skipped as private
+core consumer         all six documented subpaths resolve from a real install
+```
+
+**Steps 1 and 5 of the former NEXT-SESSION note were already done, and the note
+outlived them.** The `isDev` falsifier ran at `bc50d960` with the mandated 2x5
+table filled by searching the whole declaration tree; it confirmed the SAME
+mechanism as entity-map, which by the recorded scope limit CLOSES the mechanism
+— do not investigate declaration tooling further. The packed gate was recorded
+green at `f1e951ba` and is green again now.
+
+**Step 3 lost a third of its subject.** `createFormSignal` no longer exists;
+FORM-DEL (`b57ba293`) deleted it. The intent decision is over two symbols, not
+three.
+
+WHAT ACTUALLY REMAINS IN B1
+
+1. AST characterization scan for the value-space route — NOT a fix list. The
+   property is whether an emitted public type contains a value query
+   (`typeof InternalThing`) whose target will not survive production emission.
+   Not limited to functions.
+2. Decide public intent for `isDev`, `HydrateMode`, and each scan hit, BEFORE
+   repairing anything. `isDev` is deletion-favoured by the utility audit, so
+   keeping it requires POSITIVE evidence; `HydrateMode`'s inclusion is already
+   argued in `authoring.ts` (a marker processor's `hydrate` hook receives one,
+   and `HydrateDecisionEvent.mode` is typed with it) — that argument needs
+   accepting or refuting, not re-deriving.
+3. Repair only intended public contracts.
+4. Re-baseline `tools/api-baseline.json` — AFTER the intended surface is
+   established, never before.
 
 The plugin-stage question is ANSWERED: the plugin emits the broken declaration
 (`stripInternal` under `tsconfig.lib.prod.json`), not a later Nx/Rollup step.
