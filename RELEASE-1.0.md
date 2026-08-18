@@ -5352,6 +5352,128 @@ at the END whether any surviving function requires CONSTRUCTION-TIME form
 semantics. If none does, the marker dies even if several helpers survive
 elsewhere.
 
+## MERGE — DEFERRED PRODUCT QUESTION, with preconditions MEASURED
+
+Raised as a forward-looking model, not a slice: if SignalTree gains divergent
+causal histories, merging could be modelled on Git's ancestry + three-way merge
+rather than on `merge(current, incoming)`.
+
+```
+             BASE                 base=A ours=B theirs=A  -> B
+              |                   base=A ours=A theirs=C  -> C
+        +-----+-----+             base=A ours=B theirs=B  -> B
+        |           |             base=A ours=B theirs=C  -> CONFLICT
+      OURS        THEIRS
+        \         /
+          MERGED STATE
+```
+
+The genuinely interesting part is SCOPE, not mechanism: Git merges text hunks,
+SignalTree would merge SEMANTIC POSITIONS. `ours.users[42].name` vs
+`theirs.users[42].age` need not conflict; with `entityMap`, editing entity 42
+while another branch adds entity 73 need not treat the collection as one blob.
+
+**CARRIED FORWARD — the narrow form, which is all that is claimed:**
+
+> If SignalTree eventually supports divergent causal histories, model merging as
+> ANCESTRY-AWARE RECONCILIATION, keep DETECTION separate from RESOLUTION, and
+> allow resolution policy to vary by SEMANTIC SCOPE.
+
+Three sub-claims worth keeping distinct, because they have different owners:
+
+```
+DETECTION    "these two semantic changes disagree"     engine, truth-bearing
+RESOLUTION   "therefore ours wins"                     policy, replaceable
+LEGALITY     "these histories cannot merge at all"     REFUSED, a third outcome
+```
+
+Keeping detection replaceable-independent is the load-bearing bit: a strategy
+swap must not weaken the truth of conflict detection. And LAST-WRITE-WINS IS ONE
+SELECTABLE POLICY, NOT THE DEFINITION OF MERGING. Equally, SignalTree must never
+infer policy from type — seeing two numbers and deciding "numbers get summed" is
+the domain owner's call, never the framework's.
+
+Also carried: a conflicted merge should NOT immediately become canonical truth.
+Git's conflicted index is the right precedent — a candidate merge is a value
+OUTSIDE canonical state until committed.
+
+### PRECONDITIONS — MEASURED AT HEAD, and they do not hold
+
+Before any of this is designable, three-way merge needs a merge base. Measured
+rather than assumed:
+
+```
+CausalTurn = { id, effects, participants, state }
+                              causal-runtime/causal-types.ts:30
+
+ANCESTRY GRAPH        ABSENT      no parent / ancestors field on CausalTurn
+MERGE BASE            NOT COMPUTABLE
+DIVERGENT LINEAGE     ABSENT      TurnStore holds ONE linear
+                                  `orderedConfirmedTurnIds` and ONE
+                                  `frontiers: Record<PositionId, TurnId>`
+BASE DURABILITY       CONTRADICTED
+REALTIME CONFLICT     ZERO        no conflict / lastWrite / authoritative
+                                  vocabulary anywhere in packages/realtime/src
+```
+
+**The eviction finding is the sharp one.** `TurnStore` is a CAPACITY-BOUNDED RING
+that evicts (`capacity`, `onEvictConfirmedTurn`, and a `'history-evicted'`
+failure reason on both pending-turn transitions). A bounded window that drops old
+turns is architecturally incompatible with "the state both sides descended from",
+because the base is by definition OLD — it is the point BEFORE the divergence,
+so the longer branches live the more certain its eviction becomes. Three-way
+merge would require BASE RETENTION as a durable concept distinct from the
+history window. That constraint was discovered for free and should not be
+rediscovered later.
+
+`frontiers` is the one existing seed: a per-position latest-turn map is exactly
+what divergence detection would compare. But there is one of them, for one
+lineage.
+
+### TWO DEFECTS IN THE SKETCH, named now so they are not inherited
+
+**1 — the rule address silently picks the one identity kind that cannot cross.**
+
+```ts
+rules: [{ at: tree.$.preferences, resolve: 'theirs' }]
+```
+
+`tree.$.preferences` is a live NodeAccessor from OUR tree — a REALIZATION HANDLE.
+The entire premise of merging is that the two sides diverged, so a rule must
+address a position in a tree it is not attached to. Under the frozen invariant
+`PositionId != SubjectId != SlotIndex != key/path`, a realization handle is the
+one address with no meaning on the other side. Any future merge API must choose
+its address kind DELIBERATELY and say which of the four it is; the ergonomic
+spelling is what makes this easy to get wrong.
+
+**2 — "the kernel makes it possible" is not "SignalTree should ship it."**
+
+This is the V0.6 trap verbatim, and it is worth stating explicitly one slice
+after paying for it. A capability enabling something is not a requirement to
+offer it. Merging is a PRODUCT DECISION gated on realtime/multi-writer
+semantics actually demanding branching and reconciliation — and three-way
+semantic merge is only one candidate product there, alongside CRDTs and
+server-authoritative overwrite. The kernel should carry stable identity, causal
+ancestry, atomic turns and canonical truth because THOSE are derivable; merge
+POLICY is a different layer and must not be pulled into the kernel because it
+would be convenient to have it there.
+
+### ONE FALSIFIABLE HYPOTHESIS, worth tracking through MUT
+
+> undo, redo, rollback, branch, merge and conflict resolution are all operations
+> over ONE causal-history substrate, not five unrelated features.
+
+As a description of HEAD this is FALSE, and measurably so: `new TurnStore()`
+appears in exactly one place — `transactions.ts:926` — so time travel does not
+run on the causal runtime, and history, transactions and time travel are three
+separate mechanisms today. That makes the statement a DESIGN TARGET with a known
+current truth value, which is the useful kind. If MUT's contract lands and those
+features still cannot be expressed over the one substrate, the hypothesis is
+refuted and the substrate is not what it claims to be.
+
+**STATUS: DEFERRED. No API designed, no kernel requirement created.** Revisit
+only when realtime product semantics establish that divergent histories exist.
+
 ## SCHEMA REGRESSION — BISECTED AND CHARACTERIZED, repair NOT yet chosen
 
 ```
