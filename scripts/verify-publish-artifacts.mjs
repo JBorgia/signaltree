@@ -8,7 +8,11 @@
  * and they live in different places:
  *
  *   - `dist/**\/*.js` + `src/**\/*.d.ts`  — the nx build
- *   - `skills/**\/*`                      — scripts/ship-skills.mjs, which runs
+ * HISTORICAL — the entries below were REMOVED in 15.0 with the artifacts
+ * themselves (RELEASE-1.0.md, "AI DISCOVERABILITY"). They are kept here because
+ * they are why this verifier exists at all.
+ *
+ *   - `skills/**\/*`                      — scripts/ship-skills.mjs, which ran
  *                                           from `npm run build:all`, NOT from
  *                                           `nx run-many -t build`
  *   - `llms.txt`, `llms-full.txt`         — copied inside the publish scripts
@@ -136,7 +140,7 @@ if (failures.length) {
   console.error(
     '\nnpm does NOT warn about a `files` glob that matches nothing — the tarball\n' +
       'just ships without it. If the entry is real, run the step that produces it\n' +
-      '(`npm run build:all` runs ship-skills; the publish scripts copy llms.txt).\n' +
+      '(the publish scripts run the step that produces it).\n' +
       'If it is not real, remove it from `files`.'
   );
   process.exit(1);

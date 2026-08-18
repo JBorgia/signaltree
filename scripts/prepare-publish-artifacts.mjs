@@ -47,15 +47,18 @@ const PACKAGES = [
   'guardrails',
   'ng-forms',
   'realtime',
-  'schema',
   'shared',
 ];
 
-/** Source → destination, relative to the repo root. Both must exist. */
-const COPIES = [
-  ['apps/demo/public/llms.txt', 'dist/packages/core/llms.txt'],
-  ['apps/demo/public/llms-full.txt', 'dist/packages/core/llms-full.txt'],
-];
+/**
+ * Source → destination, relative to the repo root. Both must exist.
+ *
+ * EMPTY as of 15.0. The llms.txt / llms-full.txt entries were removed with the
+ * artifacts themselves — see RELEASE-1.0.md, "AI DISCOVERABILITY". The
+ * hard-fail below is deliberately kept for whatever gets added next: a missing
+ * source must never be skipped silently.
+ */
+const COPIES = [];
 
 function run(label, argv) {
   process.stdout.write(`  · ${label} ... `);
@@ -80,7 +83,6 @@ if (!existsSync(join(ROOT, 'dist/packages/core'))) {
 if (!VERIFY_ONLY) {
   console.log('\nPreparing publish artifacts\n');
 
-  run('ship AI skills into each package', ['node', 'scripts/ship-skills.mjs']);
 
   for (const [from, to] of COPIES) {
     const src = join(ROOT, from);

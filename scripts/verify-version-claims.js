@@ -15,9 +15,8 @@
  * Canonical claim sites checked:
  *   - README.md
  *   - packages/core/README.md
- *   - apps/demo/public/llms.txt
- *   - apps/demo/public/llms-full.txt
- *   - docs/skills/using-signaltree/reference/install.md
+ *   (the llms.txt / llms-full.txt claim sites were removed in 15.0 with the
+ *    artifacts themselves — see RELEASE-1.0.md, "AI DISCOVERABILITY")
  *
  * EXPLICIT EXCLUSIONS (claims that carry semantics NOT derivable from core's
  * peerDependencies — deliberately not checked):
@@ -46,9 +45,6 @@ const ROOT = path.resolve(__dirname, '..');
 const CLAIM_SITES = [
   'README.md',
   'packages/core/README.md',
-  'apps/demo/public/llms.txt',
-  'apps/demo/public/llms-full.txt',
-  'docs/skills/using-signaltree/reference/install.md',
   // Added 2026-07-28: this page had drifted to "Latest release (7.6.0)" and
   // "Angular 20.3+" while the packages shipped 13.2.0 on Angular 20/21/22.
   // It rotted precisely because it wasn't gated.

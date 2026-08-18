@@ -7,7 +7,6 @@ import { provideRouter, RouterLink } from '@angular/router';
 
 import { appRoutes } from '../app.routes';
 import { BenchmarkComponent } from './benchmark/benchmark.component';
-import { BuiltForAIComponent } from './built-for-ai/built-for-ai.component';
 import { DocumentationComponent } from './documentation/documentation.component';
 import { StartHereComponent } from './start-here/start-here.component';
 
@@ -60,38 +59,12 @@ describe('demo content pages: every routerLink resolves to a real route', () => 
     }
   });
 
-  it('benchmark', async () => {
-    await TestBed.configureTestingModule({
-      imports: [BenchmarkComponent],
-      providers: [provideRouter([])],
-    }).compileComponents();
-    const fixture = TestBed.createComponent(BenchmarkComponent);
-    fixture.detectChanges();
+  // 'benchmark' had exactly one routerLink — to /built-for-ai, deleted in 15.0
+  // with the AI-discoverability artifacts. The page now has no internal links,
+  // so this case would trip the non-vacuity guard rather than test anything.
+  // RESTORE IT when the greenfielded discoverability surface gives the page an
+  // internal destination again.
 
-    const targets = routerLinkTargets(fixture);
-    expect(targets.length).toBeGreaterThan(0);
-    for (const target of targets) {
-      expect(validRoutePaths.has(target)).toBe(true);
-    }
-  });
-
-  it('built-for-ai', async () => {
-    await TestBed.configureTestingModule({
-      imports: [BuiltForAIComponent],
-      providers: [provideRouter([])],
-    }).compileComponents();
-    const fixture = TestBed.createComponent(BuiltForAIComponent);
-    fixture.detectChanges();
-
-    const targets = routerLinkTargets(fixture);
-    // built-for-ai also carries several plain external <a href> links (GitHub,
-    // llms.txt) which are NOT RouterLink-directive-backed and are correctly
-    // excluded by querying By.directive(RouterLink) rather than any [href].
-    expect(targets.length).toBeGreaterThan(0);
-    for (const target of targets) {
-      expect(validRoutePaths.has(target)).toBe(true);
-    }
-  });
 
   it('documentation', async () => {
     await TestBed.configureTestingModule({

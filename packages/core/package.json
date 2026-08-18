@@ -57,10 +57,7 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
-    "skills/**/*",
-    "README.md",
-    "llms.txt",
-    "llms-full.txt"
+    "README.md"
   ],
   "repository": {
     "type": "git",

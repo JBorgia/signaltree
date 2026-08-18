@@ -283,16 +283,15 @@ fi
 # dist/packages/*). Between lint (step 4) and the build above makes no sense
 # because dist isn't present yet; we run it as soon as the build completes so any
 # skill/guide API drift fails fast before release assets ship.
-print_header "7a. Skill + Guide Code-Block Lint"
-print_step "Type-checking SKILL.md / reference/*.md + authoring-guide code blocks"
-if node scripts/lint-skills.mjs 2>&1 | tee /tmp/lint-skills.log; then
-    print_success "Skill code blocks all type-check"
-else
-    print_error "Skill code blocks failed type-check"
-    cat /tmp/lint-skills.log
-    print_info "Fix the SKILL.md / reference files flagged above, then re-run"
-    exit 1
-fi
+# 7a. RETIRED IN 15.0 — Skill + Guide Code-Block Lint
+#
+# The gate type-checked SKILL.md / reference code blocks against the built
+# d.ts files. It is retired because the SKILLS THEMSELVES were deleted
+# (RELEASE-1.0.md, "AI DISCOVERABILITY"), not because the gate was wrong.
+#
+# OBLIGATION: when the AI-discoverability artifacts are greenfielded, an
+# EQUIVALENT gate must come back with them. A doc surface that teaches code
+# and is not type-checked is the exact drift this gate existed to stop.
 
 # 7b. Built-Barrel Smoke Test
 # Bundles each package's PUBLISHED dist/index.js — fails if any internal
@@ -536,35 +535,20 @@ fi
 # (RFC 0004 §3 V-P6). Doc code-blocks are covered by the blocking skill
 # code-block lint (section 7a) and the taught-symbol gate below (13a).
 
-# 13a. Taught-Symbol Verification (BLOCKING)
-# Reverse diff: every symbol llms-full.txt claims is importable from
-# @signaltree/core (root or subpath) must exist in the built d.ts of that
-# exact entry point (catches phantom/removed APIs — the hallucination vector).
-# Golden API list: ~30 curated capabilities must be BOTH exported AND taught
-# (catches "shipped a capability, never taught it"). Needs the core build
-# (step 7). Self-test runs first: a gate that cannot fail is presumed inert
-# (RFC 0004 §5 rule 2).
-print_header "13a. Taught-Symbol Verification"
-print_step "Self-testing the taught-symbol gate (negative test)"
-if node scripts/verify-taught-symbols.js --self-test 2>&1 | tee /tmp/taught-symbols-selftest.log; then
-    print_success "Taught-symbol gate self-test passed (gate can fail)"
-else
-    print_error "Taught-symbol gate self-test FAILED — the gate is inert, refusing to continue"
-    cat /tmp/taught-symbols-selftest.log
-    exit 1
-fi
-print_step "Checking llms-full.txt taught symbols against built @signaltree/core d.ts"
-if node scripts/verify-taught-symbols.js 2>&1 | tee /tmp/taught-symbols.log; then
-    print_success "All taught symbols exist; golden API list exported AND taught"
-else
-    print_error "Taught-symbol verification failed — doc teaches a phantom API or a capability is untaught"
-    cat /tmp/taught-symbols.log
-    exit 1
-fi
+# 13a. RETIRED IN 15.0 — Taught-Symbol Verification
+#
+# Reverse diff: every symbol llms-full.txt claimed had to exist in the built
+# d.ts of that exact entry point, plus a golden list that had to be both
+# exported AND taught. It caught the hallucination vector in both directions.
+# Retired because llms.txt / llms-full.txt were deleted, not because it failed.
+#
+# OBLIGATION: this is the single most valuable gate the AI surface had. The
+# greenfielded artifacts must restore it — including its self-test, since a
+# gate that cannot fail is presumed inert.
 
 # 13b. Version-Claims Verification (BLOCKING)
 # Check-only: canonical claim sites (README.md, packages/core/README.md,
-# llms.txt, llms-full.txt, install.md) must match the authoritative Angular
+# install.md) must match the authoritative Angular
 # range in packages/core/package.json peerDependencies. Precedent: install.md
 # said "derived from peerDependencies" and still drifted a full major.
 print_header "13b. Version-Claims Verification"

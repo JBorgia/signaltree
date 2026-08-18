@@ -198,14 +198,6 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
-      id: 'built-for-ai',
-      title: 'Built for AI coding agents',
-      description:
-        'llms.txt, agent skills, drop-in templates, and the codegen accuracy benchmark',
-      route: '/built-for-ai',
-      category: 'learn',
-    },
-    {
       id: 'benchmark',
       title: 'AI-codegen benchmark scorecard',
       description:

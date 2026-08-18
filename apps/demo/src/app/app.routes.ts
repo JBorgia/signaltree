@@ -107,18 +107,6 @@ export const appRoutes: Route[] = [
     },
   },
   {
-    path: 'built-for-ai',
-    loadComponent: () =>
-      import('./pages/built-for-ai/built-for-ai.component').then(
-        (c) => c.BuiltForAIComponent
-      ),
-    data: {
-      title: 'Built for AI coding agents',
-      description:
-        'SignalTree treats AI agents as a first-class consumer of the API. llms.txt, agent skills in every tarball, drop-in .cursorrules / CLAUDE.md templates, and a reproducible codegen accuracy benchmark.',
-    },
-  },
-  {
     path: 'benchmark',
     loadComponent: () =>
       import('./pages/benchmark/benchmark.component').then(
