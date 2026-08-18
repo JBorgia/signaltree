@@ -5237,8 +5237,17 @@ ARRAY-VALUED LEAF write                saw       MISSED  (seen === [])
 entityMap CRUD                         saw       saw     ('rows')
 ```
 
-**PUSH IS A STRICT SUBSET OF PULL.** The privileged mechanism is not more
-capable than the null — it is LESS capable, and its own docblock says why: it
+**CORRECTED CLAIM.** "Push is a strict subset of pull" asserts a universal
+set-theoretic relation the evidence does not reach. The measured claim:
+
+> **In the tested mutation classes, Angular pull observation covered every case
+> push covered, and additionally covered ordinary cases push missed. NO
+> CAPABILITY ADVANTAGE FOR PUSH WAS ESTABLISHED.**
+
+That is what the four rows support -- two misses, two parities -- and it is
+sufficient, because the abstraction needed an advantage and has none. The
+privileged mechanism is not more capable than the null, and its own docblock
+says why: it
 wraps `.set`/`.update` by WALKING THE TREE AT ATTACH TIME, with `maxDepth = 32`,
 skipping built-ins and arrays. `computed` has no depth cap and no shape
 snapshot; it subscribes to whatever it reads, when it reads it.
@@ -5351,6 +5360,121 @@ Leaving only the underived historical bundle: `dirty`/`touched`, `submitting`,
 at the END whether any surviving function requires CONSTRUCTION-TIME form
 semantics. If none does, the marker dies even if several helpers survive
 elsewhere.
+
+## SCHEMA-DEL — EXECUTION BOUNDARY, derived before any production change
+
+Rule 0h: the endpoint is frozen, so the order is ENDPOINT -> BLAST RADIUS ->
+MIGRATE. Auditing `form()` while a dead package and its consumer wiring stay in
+place would let deleted structure keep shaping the next audit.
+
+```
+FROZEN
+@signaltree/schema                         DELETE
+SignalTree validation API                  NONE
+SignalTree Angular validation projection   NONE
+
+NOT ALLOWED
+recreating schemas() under another name    new validation registry
+a new tree enhancer                        new validation result model
+new observer / invalidation machinery      a generic topology utility
+```
+
+### THE DERIVATION — what is the minimum input the Signal Forms adapter needs?
+
+The proposed replacement was `applySignalTreeSchemas(form, tree, schemaMap)`,
+with wildcard expansion local to the adapter. Run hostile, the answer subtracts
+further than that.
+
+**MEASURED — Angular Signal Forms already has a first-class schema mechanism,
+and this adapter already supports it.** `signal-form-schema.spec.ts` (3 tests,
+pre-existing) exercises `signalForm(tree.$.profile, { injector, schema })` where
+`schema` is Angular's own `SchemaFn`, calling Angular's own `disabled()` and
+`validate()`. And `validateStandardSchema` — the function the deleted bridge
+ends up calling — is an `@angular/forms/signals` export, not ours.
+
+So the application already has, from Angular alone:
+
+```ts
+signalForm(tree.$.account, {
+  injector,
+  schema: (root) => {
+    validateStandardSchema(root.username, z.string().min(3));
+  },
+});
+```
+
+**MINIMUM INPUT REQUIRED FROM SIGNALTREE: NONE.**
+
+Therefore `applySignalTreeSchemas` and the `signalForm(tree, rootPath, subtree)`
+overload are DELETED, not rewritten. **Do not build
+`applySignalTreeSchemas(form, tree, schemaMap)`** — it would be a thinner
+version of the same mistake: SignalTree packaging an Angular composition the
+consumer can already write, which is the `formBridge` pattern one more time.
+
+Supporting measurement — the deleted route was never load-bearing. The
+`schemas()` call shape has exactly ONE test
+(`marker-bridge.spec.ts:422`), and that test asserts only two-way binding
+between the FieldTree and the subtree. **It never asserts that a validation
+error surfaces.** Two-way binding comes from `toWritableSignal`, which the
+marker route provides anyway.
+
+### THE WILDCARD SUBTRACTION — asked, and it deletes too
+
+> Does Angular Signal Forms actually require wildcard declarations like
+> `items.*.name`, or is that convenience inherited from `schemas()`?
+
+```
+WILDCARD COVERAGE IN packages/ng-forms/src/signals/     ZERO
+```
+
+Never supported, never tested, on the Signal Forms side. Wildcard IS an
+established product capability — but of the REACTIVE FORMS adapter, which is a
+different consumer, and it does not come from `@signaltree/schema`:
+
+```
+packages/shared/src/lib/match-path.ts   matchPath(pattern, path), isGlobKey(key)
+packages/ng-forms/src/core/ng-forms.ts  glob validator keys ('phones.*.value')
+                                        LAZY MATCH-ON-DEMAND — no enumeration,
+                                        no registry, no bound-path list
+```
+
+So schema's `compilePattern` / `enumerateLeafPaths` / `matchLeaf` is a SECOND
+implementation of a capability that already ships elsewhere, in a worse shape
+(eager registry vs lazy match). **Deleting `@signaltree/schema` deletes a
+duplicate, not a capability.** Nothing is extracted, nothing is generalized, and
+no topology utility is created — the surviving implementation is the one already
+in use by the adapter that actually has the requirement.
+
+`boundPaths()` and `schemaFor()` existed only because the enhancer compiled a
+path registry. The registry dies with the enhancer.
+
+### EXECUTION PLAN — one bounded migration, its own commit
+
+```
+1  remove the @signaltree/schema package, workspace entry and path mappings
+2  remove schemas() and its types / internals / tests
+3  remove the schema dependency from consumers
+4  delete the ng-forms/signals schema route; apps use Angular's own `schema:`
+5  delete schema-specific release blockers
+6  retain ONLY the independent MUT finding
+7  run affected package tests / types / lint
+8  commit as its own architectural boundary
+```
+
+Historical records — CHANGELOGs, `docs/audits/**`, `docs/research/**`,
+`docs/rfcs/**` — are NOT rewritten. They record what was true when written.
+
+### ONE EVIDENCE-HYGIENE RULE FOR THE NULL SPEC
+
+`angular-validation-null.spec.ts` must NOT permanently contract the deficiencies
+of `interceptLeafSignals`. The POSITIVE Angular-publication tests are the
+durable result and stay. The ANG-V0-F negative characterization served its
+evidentiary purpose the moment the deletion was decided, and a mechanism already
+headed for hostile audit under MUT must not acquire accidental test-backed
+legitimacy — a suite asserting `maxDepth = 32` behaviour is a suite that has to
+be updated when the mechanism is deleted, which is backwards. F is therefore
+marked EVIDENCE, SUPERSEDED and removed at execution; its four measured rows
+survive in this ledger, which is where a one-shot measurement belongs.
 
 ## MERGE — DEFERRED PRODUCT QUESTION, with preconditions MEASURED
 
