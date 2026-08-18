@@ -7906,7 +7906,9 @@ B  { source: 'system',
 not.**
 
 ```
-OMITTING THE REALIZATION CLASSIFICATION MANUFACTURES AUTHORSHIP.
+OMITTING THE REALIZATION CLASSIFICATION PRODUCES A CAPTURE ENTRY.
+(See MUT-2C amendment 1 — the earlier wording said "manufactures authorship",
+which hands history back the authority we spent three rounds removing.)
 Deterministic, one variable, same physical effect, same resulting value.
 ```
 
@@ -7958,6 +7960,134 @@ The requirement, stated without presupposing a mechanism:
 > STRONGER semantic claim from missing transport metadata.**
 
 That does not imply an `'unknown'` enum member, and does not decide the boundary.
+
+### MUT-2B AMENDED, and MUT-2C — the classification is SUPPLIED, not owned
+
+#### AMENDMENT 1 — "manufactures authorship" reclaims what we just took away
+
+The heading read *"OMITTING THE REALIZATION CLASSIFICATION MANUFACTURES
+AUTHORSHIP"*. Three rounds were spent preventing time-travel history from
+becoming the DEFINITION of causal authorship, and that wording hands it back.
+What the experiment deterministically proves:
+
+> **A realization-shaped write whose classification is omitted is not excluded by
+> the current capture machinery, and produces a history entry that the
+> explicitly-classified equivalent does not.**
+
+Ontology-neutral, and already severe. It may be promoted to "authorship" only
+once causal authority establishes that such capture CONSTITUTES creation of a
+turn.
+
+#### AMENDMENT 2 — "authoritatively established" is premature
+
+The BEFORE-CAPTURE half is earned. The AUTHORITATIVELY half is not, while the
+semantic owner is still UNPROVEN. Frozen as:
+
+> **The authored-versus-realized classification must be RESOLVED BEFORE any
+> causal capture decision that depends on it. A missing classification must not
+> silently take the capture branch merely because the transport field is
+> optional.**
+
+#### AMENDMENT 3 — the control was MISLABELLED
+
+The row *"no write context at all"* was wrong: the helper always wrapped the
+write, so `run({})` was an EMPTY CONTEXT. Corrected with a true no-context arm
+and a four-rung ladder:
+
+```
+no ambient context                                        d +1
+empty ambient context {}                                  d +1
+{ source:'system', intent:'system' }                      d +1
+{ source:'system', intent:'system', causalMode:'realization' }   d  0
+```
+
+**The MODE FIELD is decisive, not the presence of a context.** The first three
+rungs are indistinguishable at this gate. And `source: 'system'` is not a
+substitute for realization classification at the measured time-travel capture
+gate.
+
+### MUT-2C — OWNERSHIP AND FORGEABILITY
+
+> **Is `causalMode` merely transport for a fact owned by the causal kernel, or
+> can ordinary authoring code MANUFACTURE that fact?**
+
+`withWriteContext` is exported from `@signaltree/core/authoring`, which
+`package.json#exports` publishes as a real subpath. So the question is not
+hypothetical.
+
+```ts
+withWriteContext({ causalMode: 'realization' }, () => {
+  tree.$.balance.set(1_000_000);
+});
+```
+
+```
+                    landed      history d   canUndo()
+FORGED CLAIM        1 000 000       0        false
+HONEST CONTROL      1 000 000      +1        true
+```
+
+**An ordinary application mutation, claimed as realization, lands in full and
+becomes INVISIBLE to causal history.** The tree reports it cannot undo a change
+that demonstrably happened.
+
+#### THE ANSWER
+
+```
+causalMode is NOT a fact the kernel owns and verifies.
+It is a fact SUPPLIED BY AMBIENT CALLER METADATA and TRUSTED without check.
+```
+
+#### STATED AT ITS TRUE WIDTH — this is NOT yet a security finding
+
+`/authoring` self-documents as *"Enhancer- and marker-author plumbing ...
+application code should not need any of it."* So this is a DOCUMENTED-INTERNAL
+surface, not an untrusted-input boundary, and no threat model has been
+established. The finding is architectural:
+
+```
+PROVED        the claim is reachable from a published subpath and TAKES EFFECT
+PROVED        the kernel does not own or verify the classification
+NOT PROVED    that this constitutes a vulnerability — no threat model exists,
+              and the subpath is documented as internal plumbing
+NOT DECIDED   who SHOULD own the classification
+```
+
+The architectural consequence stands regardless of threat model: **a semantic
+distinction that determines whether a change enters causal history is asserted
+by the caller and believed.** Whether realization should be exclusively a
+causal-kernel operation is exactly what MUT must now derive.
+
+#### A SECOND FINDING, for MUT-3
+
+`write-context.ts` documents its own storage:
+
+> *"`activeContext` is a module-level singleton."*
+
+**The write context is PROCESS-GLOBAL, not tree-scoped.** That is the MUT-3
+scope question arriving from a completely different direction than the deleted
+cross-tree reproducer — and from surviving, non-deprecated machinery. Recorded,
+NOT yet run: MUT-3's sequence still says derive the scope contract first.
+
+### FROZEN AFTER MUT-2C
+
+```
+PROVED
+  causalMode changes the measured time-travel capture behaviour
+  explicitly-realized       -> history d 0
+  otherwise-identical unmarked -> history d +1
+  the mode FIELD is decisive, not context presence
+  source:'system' does not substitute for it at this gate
+  classification must be resolved before this capture decision
+  the classification is caller-supplied and unverified
+  it is reachable from a published subpath and takes effect
+
+NOT YET PROVED
+  extra history entry == canonical authorship
+  who owns authored-vs-realized classification
+  that caller-supplied classification is a vulnerability
+  that a third semantic UNKNOWN state is required
+```
 
 ## Phase 3 — Packaging Proof
 

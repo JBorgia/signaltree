@@ -502,3 +502,79 @@ describe('MUT-2B — does OMITTING the realization stamp manufacture authorship?
     expect(r).toEqual({ delta: 1, value: 1 });
   });
 });
+
+describe('MUT-2B CONTROL LADDER — is it the FIELD or merely the CONTEXT?', () => {
+  /**
+   * The earlier row labelled "no write context at all" was mislabelled: the
+   * helper always wrapped the write in withWriteContext, so `run({})` was an
+   * EMPTY CONTEXT, not the absence of one. Corrected here with a true
+   * no-context arm and a four-rung ladder.
+   */
+  const withCtx = async (meta: Record<string, unknown> | null) => {
+    const tree = signalTree({ a: { n: 0 } }).with(timeTravel());
+    await tick();
+    const before = tree.getHistory().length;
+    if (meta === null) {
+      tree.$.a.n.set(1);
+    } else {
+      withWriteContext(meta as never, () => {
+        tree.$.a.n.set(1);
+      });
+    }
+    await tick();
+    return tree.getHistory().length - before;
+  };
+
+  it('the mode FIELD is decisive, not the presence of a context', async () => {
+    const noContext = await withCtx(null);
+    const emptyContext = await withCtx({});
+    const systemNoMode = await withCtx({ source: 'system', intent: 'system' });
+    const realization = await withCtx({
+      source: 'system',
+      intent: 'system',
+      causalMode: 'realization',
+    });
+
+    // The first three are indistinguishable at this gate; only the mode moves it.
+    expect([noContext, emptyContext, systemNoMode]).toEqual([1, 1, 1]);
+    expect(realization).toBe(0);
+  });
+});
+
+describe('MUT-2C — is realization FORGEABLE from ordinary authoring code?', () => {
+  /**
+   * `withWriteContext` is exported from `@signaltree/core/authoring`, which
+   * `package.json#exports` publishes as a public subpath. So the question is
+   * not hypothetical: can arbitrary consumer code claim `realization` over an
+   * ordinary application mutation, and does the claim take effect?
+   */
+  it('an ORDINARY application write, claimed as realization', async () => {
+    const tree = signalTree({ balance: 0 }).with(timeTravel());
+    await tick();
+    const before = tree.getHistory().length;
+
+    withWriteContext({ causalMode: 'realization' } as never, () => {
+      tree.$.balance.set(1_000_000);
+    });
+    await tick();
+
+    // The claim TAKES EFFECT: truth changed, and the change is invisible to
+    // causal history.
+    expect(tree.$.balance()).toBe(1_000_000);
+    expect(tree.getHistory().length - before).toBe(0);
+    expect(tree.canUndo()).toBe(false);
+  });
+
+  it('the same write WITHOUT the claim — the control', async () => {
+    const tree = signalTree({ balance: 0 }).with(timeTravel());
+    await tick();
+    const before = tree.getHistory().length;
+
+    tree.$.balance.set(1_000_000);
+    await tick();
+
+    expect(tree.$.balance()).toBe(1_000_000);
+    expect(tree.getHistory().length - before).toBe(1);
+    expect(tree.canUndo()).toBe(true);
+  });
+});
