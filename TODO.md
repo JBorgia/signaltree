@@ -91,6 +91,881 @@ they come before any of Scope B's implementation.
 
 ---
 
+# PUBLISH-READY ROADMAP
+
+This is the master checklist for "SignalTree is actually done and publish-ready",
+not merely "the kernel architecture is complete". The first 3-4 items finish the
+engineering redesign. Everything after that is what turns the repo into a library
+that strangers can safely `npm install`.
+
+## 1. Finish the last kernel architecture work
+
+These are still release blockers because they affect correctness guarantees.
+
+- Finish `stored()` / persistence consequence ordering.
+- failed PREPARE -> zero persistence writes
+- atomic multi-field/frame commit -> persistence sees only final coherent state
+- undo/redo/rollback/realization persistence semantics pinned
+- persistence failure semantics documented
+- Add the final heterogeneous atomicity proof.
+- scalar + structural change in same frame
+- failure before commit leaves everything neutral
+- success advances one physical revision
+- PROJECT/PUBLISH/persistence happen only after coherent commit
+- Run a fresh antagonistic audit of current HEAD.
+- Revalidate old findings rather than trusting historical issue labels.
+- Fix every remaining correctness violation.
+- Fix every remaining accidental O(n) hot-path violation.
+- Freeze the kernel architecture once this passes.
+
+Exit condition: no known correctness redesign or semantic blocker remains.
+
+## 2. Complete every public feature you intend to advertise
+
+Make an explicit list of what SignalTree v1 actually promises.
+
+At minimum, verify the production behavior of:
+
+- scalar reads/writes
+- nested object signals
+- recursive typed facade
+- entity collections
+- add
+- remove
+- update
+- rekey/change ID
+- restore
+- held entity facade behavior
+- key reuse/new SubjectId behavior
+- transactions
+- explicit pending transaction rollback
+- thrown transaction rollback
+- confirmed undo
+- redo
+- pending rollback
+- confirm/seal behavior
+- history retention
+- subject reclamation
+- structural causal history
+- Angular observation/publication
+- zoneless/OnPush behavior if advertised
+- `stored()` / persistence
+- any forms integration you intend to publish
+- any plugin/enhancer APIs you intend to support
+
+Anything incomplete should either be finished or explicitly removed from the v1 public surface.
+
+## 3. Freeze the public API
+
+Before publishing, stop treating exported API shape as fluid.
+
+Audit:
+
+- package exports
+- public types
+- public interfaces
+- enhancer APIs
+- helper functions
+- error classes
+- public symbols/constants
+- factory functions
+- entity APIs
+- history APIs
+- transaction APIs
+- persistence APIs
+
+Then:
+
+- remove accidental exports
+- expose anything users genuinely need
+- remove internal escape hatches
+- mark internal/test-only APIs properly
+- make names consistent
+- remove obsolete compatibility APIs you don't intend to support
+- ensure the public API doesn't expose `SlotIndex` or other physical implementation details
+- ensure runtime identity abstractions remain properly separated
+- generate an API surface snapshot so accidental future export changes become detectable in CI
+
+## 4. Lock TypeScript DX
+
+SignalTree's recursive typing is part of the product, so this deserves release-level testing.
+
+Create compile-time tests for:
+
+```typescript
+tree.$.profile.name();
+tree.$.profile.name.set('Jonathan');
+
+tree.$.orders.byId(id).status();
+tree.$.orders.byId(id).status.set('done');
+```
+
+And test that invalid operations fail compilation.
+
+Cover:
+
+- deeply nested objects
+- arrays if supported
+- entity collections
+- optional fields
+- nullable fields
+- unions
+- readonly values
+- literal types
+- generic state definitions
+- nested collections if supported
+- enhancer-composed tree types
+- transaction APIs
+- history APIs
+- persistence APIs
+- emitted `.d.ts` files from the actual published build
+
+## 5. Define supported Angular / TypeScript / Node versions
+
+You need an explicit compatibility matrix.
+
+Decide what v1 supports for:
+
+- Angular versions
+- TypeScript versions
+- Node versions
+- RxJS versions if relevant
+- zone.js / zoneless configurations
+- ESM
+- browsers
+
+Then test those combinations in CI.
+
+Don't let `peerDependencies` imply support you haven't actually tested.
+
+## 6. Package-output audit
+
+Test the actual package consumers will install, not just source code inside Nx.
+
+For every published SignalTree package:
+
+- run the production build
+- inspect generated package directory
+- inspect `package.json`
+- inspect `exports`
+- inspect `.d.ts`
+- inspect ESM output
+- make sure source/test files aren't unintentionally shipped
+- make sure internal package paths aren't broken
+- verify source maps if shipped
+- check tree-shaking
+- confirm `sideEffects` metadata is correct
+- confirm Angular metadata is correct where needed
+- make sure package-to-package imports resolve from built artifacts
+
+Then do `npm pack` or equivalent and inspect the tarball.
+
+## 7. Install the packed package into clean consumer applications
+
+Do not release based only on monorepo tests.
+
+Create clean smoke consumers that install the generated tarballs.
+
+At least:
+
+### Angular consumer
+
+```text
+new Angular app
+-> install packed SignalTree package
+-> build production
+-> run simple SignalTree example
+```
+
+Test:
+
+- normal component
+- OnPush
+- zoneless if supported
+- computed/effect/template observation
+- entity operations
+- transactions/history
+- production build
+
+### TypeScript-only consumer
+
+If the core package is meant to remain framework-neutral:
+
+```text
+plain TS project
+-> install core package
+-> construct tree
+-> mutate/read
+-> compile and run
+```
+
+This proves you haven't accidentally leaked Angular into the kernel.
+
+## 8. Browser/runtime compatibility tests
+
+If this is a browser library, test actual runtime behavior beyond Vitest.
+
+At minimum:
+
+- Chromium
+- Firefox
+- WebKit/Safari equivalent
+
+Especially for:
+
+- Angular publication
+- persistence
+- structured values
+- scheduling/microtasks
+- serialization if used
+
+You don't necessarily need a giant E2E suite. A small release smoke suite is enough.
+
+## 9. Complete the correctness suite
+
+Before v1, make sure permanent tests cover the architectural invariants we've spent all this time establishing.
+
+Especially:
+
+```text
+PositionId != SubjectId != SlotIndex != key/path
+```
+
+and:
+
+```text
+all fallible semantic work before PRIVATE COMMIT
+```
+
+and:
+
+```text
+one physical commit -> one revision
+```
+
+and:
+
+```text
+PROJECT never determines authority
+```
+
+and:
+
+```text
+realization does not create causal authorship
+```
+
+and:
+
+```text
+semantic refusal has no physical/public/persistence side effects
+```
+
+Include adversarial cases involving:
+
+- key reuse
+- remove->restore
+- remove->fresh-add same key
+- restore->rekey->scalar
+- fresh-add->rekey->scalar
+- multiple effects sharing causal owner PositionId
+- transaction abort
+- pending rollback
+- confirmed undo/redo
+- stale structural state
+- occupied destination refusal
+- reclamation
+- history retention
+- held facades
+- projection failure seams
+- equality throws
+- preparation throws
+
+## 10. Finish the permanent performance suite
+
+You already have much of this.
+
+Make sure the final benchmark gate covers:
+
+```text
+10
+100
+1,000
+10,000
+100,000
+```
+
+for the meaningful operations.
+
+Permanent logical assertions should prove:
+
+- scalar read O(1)
+- scalar write O(1)
+- value update O(1)
+- add O(1)-shaped
+- remove O(1)-shaped
+- rekey O(1)-shaped
+- restore O(1)-shaped
+- frame O(k)
+- zero unrelated projection visits
+- zero unrelated structural visits
+- no public fresh-add key-order copying
+- appropriate bounded causal work
+
+Heavy timing stays behind `ST_PERF`.
+
+Also preserve a final baseline report for the release.
+
+## 11. Production-bundle cleanliness
+
+Verify the things used for proving performance do not leak into production.
+
+Check that production output contains no:
+
+- performance counters
+- benchmark hooks
+- test-only integrity methods if they aren't intended
+- instrumentation strings
+- debug assertions
+- test injection seams
+- accidental Angular TestBed code
+- development logging
+
+Run the existing stripping/instrumentation guard against final HEAD.
+
+## 12. Memory / lifecycle testing
+
+SignalTree has semantic lifetimes, shells, tombstones and retained values, so release testing should include memory behavior.
+
+Test long-running sequences such as:
+
+```text
+add
+remove
+restore
+remove
+retire
+add another subject
+repeat thousands of times
+```
+
+Verify:
+
+- retired backing can actually be reclaimed
+- SubjectIds aren't incorrectly reused
+- retained shells don't accidentally retain huge payload graphs
+- history retention behaves as configured
+- pending transactions don't leak indefinitely
+- publication tokens don't accumulate
+- descriptor maps don't grow without bound
+
+You don't need perfect heap science, but you should run at least one sustained churn test.
+
+## 13. Error model
+
+Audit all errors users can actually receive.
+
+Define/export meaningful error types for things such as:
+
+- invalid transaction operations
+- rollback failure
+- structural drift
+- illegal restore
+- persistence error
+- unsupported operation
+- history exhaustion if applicable
+
+Errors should:
+
+- have stable names
+- carry useful context
+- not expose internal SlotIndexes unless intentionally diagnostic
+- preserve `cause` appropriately
+- distinguish semantic refusal from catastrophic invariant failure
+
+Document which failures leave state unchanged and which occur after committed state.
+
+## 14. Persistence contract
+
+Beyond implementation, document what persistence actually guarantees.
+
+Specify:
+
+- when writes happen
+- what is serialized
+- atomicity expectations
+- initialization/hydration behavior
+- migration/version behavior
+- error behavior
+- asynchronous adapter behavior
+- whether multiple rapid commits coalesce
+- interaction with undo/redo
+- interaction with realization
+- whether persistence restoration creates history
+
+Treat this as a real API contract, not an implementation detail.
+
+## 15. SSR/hydration decision
+
+For an Angular library in 2026, users will ask.
+
+Either support SSR/hydration and test it, or explicitly document:
+
+> SignalTree v1 does/does not support SSR/hydration.
+
+If persistence touches browser globals, make sure imports don't explode under Node SSR merely from loading the package.
+
+## 16. Security / dependency audit
+
+Before publishing:
+
+- dependency vulnerability audit
+- eliminate unnecessary runtime dependencies
+- check dependency licenses
+- check transitive dependency exposure
+- verify no secrets/test credentials exist
+- scan package tarballs for accidental files
+- verify generated sourcemaps don't contain anything sensitive
+- inspect postinstall/preinstall scripts; ideally none
+- inspect prototype/key handling around user-generated entity IDs where relevant
+
+## 17. Licensing and ownership
+
+Make sure the repository and package are legally publishable.
+
+You need:
+
+- `LICENSE`
+- copyright attribution
+- package `license`
+- third-party notices if required
+- dependency license review
+- contributor/license policy if accepting outside contributions
+
+## 18. Package metadata
+
+Every published package should have polished metadata.
+
+Check:
+
+- `name`
+- `version`
+- `description`
+- `keywords`
+- `license`
+- `author`
+- repository URL
+- homepage
+- bugs URL
+- `type`
+- `exports`
+- `types`
+- peer dependencies
+- engines
+- side effects
+- publish config
+- files whitelist
+
+No placeholder metadata.
+
+## 19. Decide the package structure
+
+Freeze what you're actually shipping.
+
+For example:
+
+```text
+@signaltree/core
+@signaltree/angular
+@signaltree/forms
+...
+```
+
+Avoid publishing packages merely because they happen to exist in the monorepo.
+
+Define:
+
+- which are public
+- which are experimental
+- which are private
+- how versions relate
+- whether packages version together
+
+## 20. Versioning policy
+
+Choose and document SemVer behavior.
+
+For example:
+
+```text
+1.0.0
+```
+
+means public APIs are now subject to compatibility expectations.
+
+Define what counts as:
+
+- patch
+- minor
+- major
+
+Especially for:
+
+- inferred TypeScript types
+- causal semantics
+- persistence format
+- enhancer APIs
+- error types
+
+## 21. Changelog
+
+Create a useful `CHANGELOG.md`.
+
+For the initial release, summarize major capabilities rather than dumping hundreds of internal commits.
+
+Something like:
+
+```text
+SignalTree 1.0.0
+
+- Recursive typed SignalTree facade
+- Angular signal integration
+- Entity collections
+- Transactions
+- Causal undo/redo
+- Structural time travel
+- Persistence
+- O(1)-shaped local mutation kernel
+...
+```
+
+## 22. Migration / compatibility guide
+
+Even for a first public release, you have had major internal/API changes during development.
+
+If anyone may be using an earlier SignalTree version, document:
+
+- breaking API changes
+- old -> new syntax
+- transaction changes
+- entity API changes
+- persistence changes
+- history semantics
+
+If nobody external uses it yet, this can be very small.
+
+## 23. README worthy of a stranger
+
+The README needs to sell and teach SignalTree without this conversation.
+
+It should answer:
+
+1. What problem does SignalTree solve?
+2. Why not plain Angular signals?
+3. Why not NgRx / SignalStore / another state library?
+4. What does the syntax look like?
+5. How do I install it?
+6. How do I create a tree?
+7. How do entities work?
+8. How do transactions work?
+9. How does undo/redo work?
+10. How does persistence work?
+11. What Angular versions are supported?
+12. What guarantees does the library provide?
+
+The first example should probably be extremely small:
+
+```typescript
+const tree = signalTree({
+  user: {
+    name: 'Jonathan',
+    age: 43,
+  },
+});
+
+tree.$.user.name();
+tree.$.user.name.set('Jon');
+```
+
+Then move into the advanced capabilities.
+
+## 24. Full documentation site
+
+For a serious public library, README alone isn't enough.
+
+For signaltree.io, I'd want sections such as:
+
+```text
+Introduction
+Installation
+Quick Start
+Core Concepts
+Recursive Signals
+Entities
+Transactions
+Undo / Redo
+Causal History
+Persistence
+Angular Integration
+Performance
+API Reference
+Architecture
+Recipes
+FAQ
+Migration
+```
+
+Use the architecture sophistication as a selling point, but don't make users learn PositionId and SubjectId just to set a name.
+
+## 25. API reference generation
+
+Generate docs from the public API only.
+
+Users need searchable documentation for:
+
+- functions
+- types
+- configuration
+- enhancers
+- transaction objects
+- entity methods
+- time-travel methods
+- persistence interfaces
+- errors
+
+Keep physical-kernel internals out of the normal API docs.
+
+## 26. Examples
+
+Have copy/paste examples for:
+
+- basic nested state
+- computed/effects
+- entity CRUD
+- transactions
+- rollback
+- undo/redo
+- persistence
+- Angular component
+- OnPush
+- zoneless
+- forms if shipping
+- async flows where appropriate
+
+Ideally have at least one runnable example app.
+
+## 27. A showcase/demo application
+
+For SignalTree specifically, this matters.
+
+Build a small but nontrivial application demonstrating:
+
+```text
+entities
+nested state
+transactions
+undo/redo
+persistence
+Angular templates
+```
+
+A todo app is probably too trivial for what SignalTree does.
+
+Something like an editable order/project interface with undo/history would communicate the value much better.
+
+## 28. CI release gate
+
+Your required checks before merging/releasing should include at least:
+
+```text
+test
+build
+lint
+type tests
+package smoke test
+consumer installation test
+production instrumentation guard
+```
+
+Optionally:
+
+- browser E2E
+- performance logical gate
+- dependency audit
+
+No release should depend on remembering to run these manually.
+
+## 29. Release automation
+
+Set up the actual publishing workflow.
+
+Prefer an automated pipeline that:
+
+```text
+tag/version
+-> clean checkout
+-> install locked dependencies
+-> test
+-> build
+-> lint
+-> package
+-> smoke install
+-> publish
+-> create GitHub release
+```
+
+Use npm trusted publishing/OIDC/provenance if the publishing setup supports it rather than a long-lived npm token.
+
+## 30. Release provenance / supply-chain hygiene
+
+For a modern npm package, ensure:
+
+- lockfile committed
+- deterministic builds as practical
+- protected release branch/tag
+- npm 2FA/trusted publishing
+- provenance enabled
+- CI-only publishing
+- no local developer machine required to publish production releases
+
+## 31. Release candidate
+
+Do not jump immediately from development to `1.0.0`.
+
+Publish something like:
+
+```text
+1.0.0-rc.1
+```
+
+Then:
+
+- install it from npm into fresh projects
+- use it yourself
+- ask a few people to try it
+- verify documentation against the actual package
+- collect packaging/DX failures
+- fix them
+
+Release candidates are especially valuable for TypeScript libraries because package/export/type problems often appear only outside the monorepo.
+
+## 32. Real external consumer test
+
+Have at least one project that is not inside the SignalTree monorepo consume the release candidate.
+
+That catches:
+
+- undeclared dependencies
+- bad exports
+- path aliases
+- missing files
+- source-only imports
+- Nx assumptions
+- test-only dependencies accidentally required at runtime
+- bad TypeScript declarations
+
+This is one of the highest-value release checks.
+
+## 33. Final public API review
+
+After RC feedback:
+
+- remove anything embarrassing or clearly wrong
+- don't casually add more features
+- decide what is experimental
+- mark experimental features explicitly
+- freeze v1 API
+
+Then generate the final API snapshot.
+
+## 34. Final release regression run
+
+Immediately before `1.0.0`:
+
+```text
+clean clone
+install
+test
+build
+lint
+type tests
+package
+external consumer smoke
+browser smoke
+production bundle audit
+logical complexity gates
+ST_PERF baseline
+dependency/security audit
+```
+
+No dirty working tree.
+
+No ignored failures.
+
+No known flaky critical tests.
+
+## 35. Publish `1.0.0`
+
+Then:
+
+- publish packages
+- publish docs
+- tag repository
+- GitHub release
+- changelog
+- release notes
+- verify npm pages
+- install exact `1.0.0` into a clean project
+- verify signaltree.io installation instructions actually work
+
+## 36. Post-release operational readiness
+
+"Done" also means knowing what happens when somebody reports a problem.
+
+Have:
+
+- GitHub issue templates
+- bug report template
+- reproduction instructions
+- feature request policy
+- security reporting contact/policy
+- contribution guide
+- code of conduct if accepting community contributions
+- support/version policy
+
+## Concrete sequence from here
+
+1. Finish stored()/persistence atomic consequence semantics.
+2. Add final heterogeneous atomicity forcing test.
+3. Perform fresh correctness/complexity audit of HEAD.
+4. Fix every release-blocking audit finding.
+5. Freeze public API.
+6. Add exhaustive public type/API tests.
+7. Establish Angular/TS/Node compatibility matrix.
+8. Audit built package output.
+9. npm-pack every publishable package.
+10. Build clean external consumer projects from the tarballs.
+11. Complete runtime/browser/SSR decisions and tests.
+12. Run lifecycle/memory/churn tests.
+13. Audit errors and persistence API semantics.
+14. Complete README.
+15. Complete signaltree.io docs.
+16. Generate public API reference.
+17. Build a production example/demo.
+18. Complete package metadata/licenses/security audit.
+19. Configure CI release gate.
+20. Configure automated trusted publishing/provenance.
+21. Generate final performance baseline.
+22. Publish `1.0.0-rc.1`.
+23. Test RC from genuinely external projects.
+24. Fix RC packaging/DX/documentation issues only.
+25. Freeze v1 public API.
+26. Run clean-clone final release matrix.
+27. Publish `1.0.0`.
+28. Verify the published package and documentation from scratch.
+
+---
+
 Ordered by what unblocks the most. Reasoning is compressed — the full derivation
 is in the linked audits. What went wrong in 14.0.0, including what I broke myself,
 is in [14.0.0-what-actually-happened.md](docs/audits/2026-08/14.0.0-what-actually-happened.md).
