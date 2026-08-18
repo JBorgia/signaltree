@@ -6036,22 +6036,25 @@ nothing more.
 
 ```
 FUNCTION       Record that a user/UI INTERACTION occurred at a field, so errors
-               can be shown for fields the user has visited and hidden for ones
-               they have not.
-OWNER          Where interaction happens: the view. SignalTree has no inputs, no
-               focus, no blur.
+               show for fields the user has visited and hide for ones they
+               have not.
+OWNER          The interaction / session layer -- view or forms control.
+               SignalTree has no inputs, no focus, no blur.
 GREENFIELD     const touched = signal<Record<string, boolean>>({});
 MECHANISM      const touch = (f) => touched.update(t => ({ ...t, [f]: true }));
-SIGNALTREE?    NO -- see the write-direction measurement below.
-CONSTRUCTION?  NO, and the current construction-time shape is a LIMIT, not a
-               feature.
+SIGNALTREE?    NO
+CONSTRUCTION?  NO
+UNDO           Baseline truth-undo does NOT imply interaction-undo. Session
+               rewind, if ever required, is a SEPARATE product capability.
 ```
 
 Unlike F1 this is NOT derivable from values -- you cannot recompute "the user
-focused this field". So the interesting question is not derivability. It is
-**who writes it**, and whether SignalTree's version buys anything.
+focused this field". Derivability was never the question. The questions are who
+writes it, and whether SignalTree's version buys anything.
 
-**MEASURED — SignalTree never sets `touched`. Not once, on any path.**
+**MEASURED — no SignalTree VALUE-WRITE path moves `touched`.** Stated at the
+width of the experiment: the marker's principal write APIs were exercised, not
+every conceivable internal path.
 
 ```
 marker.patch({ name: 'Ada' })    touched -> { name: false, age: false }
@@ -6060,78 +6063,126 @@ marker.$.name.set('Grace')       touched -> { name: false, age: false }
 marker.touch('name')             touched -> { name: true,  age: false }
 ```
 
-Every value write leaves it untouched; only the APPLICATION calling `touch()`
-moves it. So the marker holds a **write-only bag the application fills and
-reads** -- with no SignalTree semantics attached to the contents. A plain
-`signal<Record<string, boolean>>({})` in the component is the same object with
-one less indirection.
+Inspection strengthens the measurement: `touch()` / `touchAll()` mutate
+`touchedSignal` directly and are the only writers in the module. So the marker
+holds a bag the application fills and reads, with no SignalTree semantics
+attached to the contents. A plain `signal<Record<string, boolean>>({})` in the
+component is the same object with one less indirection.
 
-**MEASURED — the map shape is frozen at construction.** Keys come from
+**MEASURED — the map shape is frozen at construction** from
 `Object.keys(initial)`. The null is not shape-locked and can record
 `'phones.0.value'` for a repeated row, a dynamically added control, or a field
 the server sent late. Construction time is a CEILING here, not a capability.
 
-#### The one non-trivial claim — and it is REFUTED
+#### The undo question — answered by OWNERSHIP, not by current failure
 
-The marker's processor registration argues at length that `touched` must ride in
-the snapshot:
+The marker's processor registration argues that `touched` must ride in the
+snapshot:
 
 > *"`touched` is restored for UNDO/REDO ... Undo must land the user exactly
 > where they were, errors and all -- a cleaned-up undo is a lie about what they
 > did."*
 
-That is a real argument, and it is the only thing in this row that could have
-made `touched` SignalTree-owned. **Both undo paths were measured. Neither
-delivers it.**
+**THE ARCHITECTURAL ANSWER COMES FIRST, and it is independent of what the code
+does today** (Rule 0g -- a current failure may not answer a product question):
+
+```
+1. user focuses Name       touched.name = true
+2. user edits Name  A -> B
+3. user clicks Undo        value B -> A
+```
+
+Should step 3 make it false that the user ever visited Name? **No.** They did
+interact with it; reverting the value does not un-happen the focus. The same
+holds for focus/blur/edit/undo-edit: undoing the edit does not mean the focus
+never occurred.
+
+```
+value history        causal / state history      SignalTree
+interaction history  UI / session history        the view
+```
+
+So baseline truth-undo SHOULD NOT rewind interaction state. A product that
+genuinely wants SESSION REWIND -- "put the whole editing experience back
+exactly as it was" -- is a separate compound capability needing explicit
+session-history semantics (focus, scroll, cursor, selection, not just a boolean
+map). It must not arrive by making `touched` part of ordinary SignalTree undo.
+
+**SEPARATELY, and NOT as the architectural reason:** the current implementation
+does not deliver the fidelity its comment claims. Measured on both paths:
 
 ```
 setup   patch name='Ada'; touch('name')      -> { name: true,  age: false }
         patch name='Grace'; touch('age')     -> { name: true,  age: true  }
 
 form({ history: history() }).undo()
-        values   'Ada'      CORRECT
-        touched  { name: true, age: true }   NOT restored
+        values   'Ada'                        CORRECT
+        touched  { name: true, age: true }    NOT restored
 
 .with(timeTravel()) -> tree.undo()
-        values   { name: 'Ada', age: 0 }     CORRECT
-        touched  { name: true, age: true }   NOT restored
+        values   { name: 'Ada', age: 0 }      CORRECT
+        touched  { name: true, age: true }    NOT restored
 ```
 
-Expected under the comment's own standard: `{ name: true, age: false }`.
+Descriptively, why: `history()` records `project(ctx.read())` -- values only --
+so the snapshot/hydrate pair that carries `touched` is not the path
+`form({ history })` undo uses; it keeps its own buffer. And `touch()` /
+`touchAll()` do not `announce`, `recordHistory` or `schedulePersist`, measured
+directly: a `touch()` plus a `touchAll()` leave `tree.getHistory().length`
+unchanged, so no entry ever exists at a distinct touched state. (Free
+consequence nobody has claimed: a touch alone therefore never persists either.)
 
-**THE MECHANISM, not just the symptom.** Two independent reasons:
-
-```
-1  history() records `project(ctx.read())` -- VALUES ONLY. The marker-processor
-   snapshot/hydrate pair (which does carry `touched`) is not the path
-   `form({ history })` undo uses at all; it has its own buffer.
-
-2  `touch()` and `touchAll()` update `touchedSignal` and NOTHING else -- no
-   announce, no recordHistory, no schedulePersist. MEASURED: a touch() plus a
-   touchAll() leave `tree.getHistory().length` unchanged.
-```
-
-Because a touch never records, **no history entry ever exists at a distinct
-touched state.** Undo can only ever restore whatever `touched` happened to be at
-the moment of the last VALUE write. The fidelity the comment argues for is not
-merely missing -- it is unreachable without also making interaction state a
-recordable event, which nothing has asked for.
-
-The same gap has a second consequence nobody has claimed: since `touch()` does
-not `schedulePersist()`, a touch alone never persists either.
+The `snapshot`/`hydrate` touched path is NOT dead -- it has exactly one
+consumer, `applyState`, reached only from DEVTOOLS REPLAY
+(`devtools-impl.ts:1444`), which passes mode `'restore'`. The comment is
+accurate about a mechanism existing and over-claims about which operations use
+it.
 
 ```
 DISPOSITION    F2 touched -> DELETE from SignalTree.
-               Function real and genuinely irreducible, but the owner is the
-               VIEW. SignalTree never writes it, the sole coupling argument
-               (undo fidelity) is refuted on both undo paths and is unreachable
-               by construction, and the construction-time shape is a ceiling.
+               Function real and genuinely irreducible; owner is the VIEW.
+               Undo ownership rejects the coupling on greenfield grounds, not
+               because today's code fails.
 ```
 
-**14.x DEFECT NOTE (Rule 0f).** The registration comment documents behaviour the
-code does not implement. Under the two-axis rule this is `14.x DOC-DEFECT` /
-`15.0 MOOT` -- the comment dies with the marker, so no 14.x patch is proposed.
-Recorded because a future reader finding that comment would otherwise trust it.
+#### 14.x disposition — decided from the 14.x contract, NOT from 15.0
+
+Rule 0f exists to stop exactly the inference "15 deletes it, so skip the 14.x
+defect". The earlier draft of this row made that error; corrected here. The
+14.x question is asked on its own evidence:
+
+```
+A  comment wrong          patch the misleading documentation
+B  behaviour wrong        repair if that is the promised 14.x contract
+C  non-contractual        record why no customer-facing patch is required
+```
+
+**MEASURED, to choose between them:**
+
+```
+public docs claiming undo restores touched     NONE
+  (README / llms.txt / llms-full.txt / skills: no such claim; the one
+   llms-full hit is "password untouched", an unrelated sense of the word)
+shipped type-level contract                     NONE
+  FormSignal.touched documents only "Per-field touched state"
+the claim's location                            an in-function source comment
+emitted dist/packages/core/.../form.d.ts        0 occurrences
+```
+
+```
+14.x DISPOSITION   C, with an A component.
+                   No customer-facing patch: the claim is internal and
+                   non-contractual, and no published surface promises
+                   undo-restores-touched, so no consumer can be relying on it.
+                   The misleading INTERNAL comment is still a real defect and
+                   should be corrected in whichever 14.x line is live, because
+                   the next maintainer will read it and believe it.
+15.0 DISPOSITION   ARCHITECTURAL CUTOFF -- the marker goes, comment included.
+```
+
+B is rejected on evidence, not convenience: teaching 14.x history to record
+interaction state would ADD the coupling this row just rejected on ownership
+grounds.
 
 ## Phase 3 — Packaging Proof
 
