@@ -227,32 +227,19 @@ let hasShownCreateFormTreeDeprecation = false;
 /**
  * Creates a form tree with Angular FormGroup integration.
  *
- * @deprecated Legacy classic-Reactive-Forms bridge. Prefer the signal-native
- * path: the `form()` marker with `signalForm()` (Angular Signal Forms
- * `FieldTree`) from `@signaltree/ng-forms/signals`. If you specifically need a
- * classic `FormGroup`, use the `form()` marker with the `formBridge()`
- * enhancer. Both give better tree-shaking, composability, and separation of
- * concerns, and neither carries the hand-rolled sync this classic tree does.
+ * @deprecated Legacy classic-Reactive-Forms bridge, carrying hand-rolled
+ * FormGroup sync.
  *
- * Migration example:
- * ```typescript
- * // OLD (deprecated)
- * const form = createFormTree({ name: '', email: '' }, { validators: {...} });
+ * NO MIGRATION TARGET IS NAMED. The previous notice pointed at the `form()`
+ * marker with `formBridge()` / `signalForm()`, all of which were DELETED in
+ * 15.0 (RELEASE-1.0.md, FORM-DEL). Under Rule 0j re-pointing this at another
+ * API would endorse an endpoint that has not been audited, so the deprecation
+ * stands bare on purpose.
  *
- * // NEW (recommended)
- * import { signalTree, form } from '@signaltree/core';
- * import { formBridge } from '@signaltree/ng-forms';
- *
- * const tree = signalTree({
- *   profile: form({
- *     initial: { name: '', email: '' },
- *     validators: {...}
- *   })
- * }).with(formBridge());
- *
- * // Access form: tree.$.profile
- * // Access FormGroup: tree.getAngularForm('profile')?.formGroup
- * ```
+ * Reactive Forms interoperability remains a SURVIVING FUNCTION whose
+ * realization is deferred to the greenfield pass; whether `createFormTree()`
+ * is itself the survivor is its own audit, UNPROVEN, and is not decided by the
+ * form-marker deletion.
  */
 export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
@@ -262,9 +249,9 @@ export function createFormTree<T extends Record<string, unknown>>(
   if (isDevEnvironment() && !hasShownCreateFormTreeDeprecation) {
     hasShownCreateFormTreeDeprecation = true;
     console.warn(
-      `[@signaltree/ng-forms] createFormTree() is deprecated. ` +
-        `Use signalTree({ myForm: form({...}) }).with(formBridge()) instead. ` +
-        `See https://signaltree.dev/migration/ng-forms for migration guide.`
+      `[@signaltree/ng-forms] createFormTree() is deprecated. Its previous ` +
+        `migration target was removed in 15.0; a replacement has not been ` +
+        `chosen yet.`
     );
   }
 
@@ -842,12 +829,12 @@ function createAbstractControl(
  * There is no Angular API to attach an existing `FormControl` to an external
  * signal — the signal-native path is a *separate*, constructor-based primitive
  * (`SignalFormControl` in `@angular/forms/signals`, surfaced by SignalTree as
- * `signalForm()`), which owns its own value signal rather than adopting one.
+ * a signal-native bridge), which owns its own value signal rather than adopting one.
  * So this manual `valueChanges`↔`set` bridge is the real and only sync path
  * for `createFormTree`, on every supported Angular version.
  *
  * @deprecated `createFormTree` (classic Reactive Forms) is legacy — prefer the
- * signal-native `form()` marker + `signalForm()` from
+ * signal-native path (no first-party bridge ships in 15.0) from
  * `@signaltree/ng-forms/signals`.
  */
 function connectControlAndSignal(
@@ -939,10 +926,10 @@ function connectControlAndSignal(
  *
  * As with {@link connectControlAndSignal}, Angular exposes no way to attach an
  * existing `FormArray` to an external signal; this manual bridge is the real
- * and only sync path. The signal-native alternative is `signalForm()`.
+ * and only sync path. No signal-native first-party alternative ships in 15.0.
  *
  * @deprecated `createFormTree` (classic Reactive Forms) is legacy — prefer the
- * signal-native `form()` marker + `signalForm()`.
+ * signal-native path; no first-party bridge ships in 15.0.
  */
 function connectFormArrayAndSignal(
   formArray: FormArray,
@@ -1013,7 +1000,7 @@ function connectFormArrayAndSignal(
  * {@link connectControlAndSignal}).
  *
  * @deprecated Belongs to the legacy `createFormTree` classic-forms bridge —
- * prefer the signal-native `form()` marker + `signalForm()`.
+ * prefer the signal-native path; no first-party bridge ships in 15.0.
  */
 function syncFormArrayFromValue(
   formArray: FormArray,

@@ -4,7 +4,6 @@ export * from './history';
 // createFormTree users", and exported from nowhere — so no consumer could reach
 // it. Same gap class as the entityMap builder types in core.
 export * from './wizard';
-export * from './enhancer';
 
 import { debounce, unique } from './core/async-validators';
 import {

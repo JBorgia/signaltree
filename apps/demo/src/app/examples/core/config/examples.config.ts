@@ -18,7 +18,6 @@ import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/f
 import {
     RecommendedArchitectureComponent,
 } from '../../features/fundamentals/examples/recommended-architecture/recommended-architecture.component';
-import { SignalFormsDemoComponent } from '../../features/fundamentals/examples/signal-forms/signal-forms-demo.component';
 import { SignalsExamplesComponent } from '../../features/fundamentals/examples/signals/signals-examples.component';
 import { TimeTravelDemoComponent } from '../../features/fundamentals/examples/time-travel/time-travel-demo.component';
 import { WhatsNewComponent } from '../../features/fundamentals/examples/whats-new/whats-new.component';
@@ -261,30 +260,6 @@ export const formsExampleMeta: ExampleMeta = {
 };
 
 /**
- * Signal Forms (Angular 20+) Examples
- */
-export const signalFormsExampleMeta: ExampleMeta = {
-  id: 'signal-forms',
-  title: 'Signal Forms (Angular 20+)',
-  description:
-    'Angular Signal Forms integration with toWritableSignal() for slices and direct connect() for leaves.',
-  category: 'Angular',
-  focusAreas: ['signal-forms', 'forms', 'angular-20'],
-  functionalUse: ['form-binding', 'two-way-sync', 'toWritableSignal'],
-  enhancers: [],
-  route: FUNDAMENTALS_ROUTE,
-  component: SignalFormsDemoComponent,
-  difficulty: 'intermediate',
-  tags: [
-    'angular',
-    'signal-forms',
-    'connect',
-    'toWritableSignal',
-    'reactive-forms',
-  ],
-};
-
-/**
  * Async Examples
  */
 export const asyncExampleMeta: ExampleMeta = {
@@ -359,7 +334,6 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   serializationExampleMeta,
   timeTravelExampleMeta,
   formsExampleMeta,
-  signalFormsExampleMeta,
   asyncExampleMeta,
   recommendedArchitectureExampleMeta,
   // Note: customExtensionsExampleMeta removed - loaded separately via route

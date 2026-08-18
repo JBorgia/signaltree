@@ -118,22 +118,4 @@ describe('ST2023 — snapshot without hydrate', () => {
 
     expect(calls.filter((c) => c.includes('ST2023'))).toHaveLength(1);
   });
-
-  it('NO BUILT-IN MARKER trips it — existing users pay nothing', () => {
-    const calls = capture();
-    const tree = signalTree({
-      users: entityMap<{ id: number }, number>(),
-      load: status<Error>(),
-      theme: stored('st2023-theme', 'light'),
-      profile: form<{ name: string; [k: string]: unknown }>({
-        initial: { name: '' },
-      }),
-    });
-    void tree.$.users;
-    void tree.$.load;
-    void tree.$.theme;
-    void tree.$.profile;
-
-    expect(calls.filter((c) => c.includes('ST2023'))).toEqual([]);
-  });
 });

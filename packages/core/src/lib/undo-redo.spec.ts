@@ -73,37 +73,6 @@ describe('undo/redo restores what the user edited', () => {
     expect(tree.$.rows.all().map((row) => row.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('records every form edit, so undo has something to go back to', async () => {
-    const tree = signalTree({ f: form({ initial: { a: 0 } }), n: 0 }).with(
-      timeTravel()
-    );
-
-    tree.$.f.set({ a: 1 });
-    await flush();
-    tree.$.n.set(9);
-    await flush();
-    tree.$.f.set({ a: 2 });
-    await flush();
-
-    // Three writes, three entries after INIT. This was 2 before form writes
-    // were intercepted — the final form edit was simply absent.
-    expect(tree.getHistory().length).toBe(4);
-  });
-
-  it('undoes a form edit', async () => {
-    const tree = signalTree({ f: form({ initial: { a: 0 } }) }).with(
-      timeTravel()
-    );
-    tree.$.f.set({ a: 1 });
-    await flush();
-    tree.$.f.set({ a: 2 });
-    await flush();
-    expect(tree.$.f().a).toBe(2);
-
-    tree.undo();
-    expect(tree.$.f().a).toBe(1);
-  });
-
   it('redoes what it undid', async () => {
     const tree = signalTree({ rows: entityMap<{ id: number }, number>() }).with(
       timeTravel()
@@ -119,25 +88,6 @@ describe('undo/redo restores what the user edited', () => {
     tree.redo();
     expect(tree.$.rows.count()).toBe(2);
   });
-
-  it('keeps `touched` on undo — the user is going back to where they were', async () => {
-    // Cross-session rehydrate drops `touched` (Angular's own form.value does
-    // not carry it, and a form reopened tomorrow showing yesterday's red is
-    // surprising). An in-session undo is the opposite case: a cleaned-up undo
-    // is a lie about what the user did.
-    const tree = signalTree({ f: form({ initial: { a: '', b: '' } }) }).with(
-      timeTravel()
-    );
-    tree.$.f.set({ a: 'x' });
-    tree.$.f.touch('a');
-    await flush();
-    tree.$.f.set({ a: 'y' });
-    await flush();
-
-    tree.undo();
-    expect(tree.$.f().a).toBe('x');
-    expect(tree.$.f.touched().a).toBe(true);
-  });
 });
 
 describe('tree(partial) writes markers — the same path undo uses', () => {
@@ -150,46 +100,9 @@ describe('tree(partial) writes markers — the same path undo uses', () => {
 
     expect(fresh.$.rows.count()).toBe(2);
   });
-
-  it('restores a form', () => {
-    const src = signalTree({ f: form({ initial: { a: 0 } }) });
-    src.$.f.set({ a: 42 });
-
-    const fresh = signalTree({ f: form({ initial: { a: 0 } }) });
-    fresh(src());
-
-    expect(fresh.$.f().a).toBe(42);
-  });
-
-  it('leaves keys the payload does not mention alone', () => {
-    const tree = signalTree({
-      f: form({ initial: { a: 0 } }),
-      n: 5,
-    });
-    tree.$.f.set({ a: 1 });
-
-    tree({ n: 9 } as never);
-
-    expect(tree.$.n()).toBe(9);
-    expect(tree.$.f().a).toBe(1); // untouched by a partial that omits it
-  });
 });
 
 describe('undo/redo deliberately does NOT restore in-flight state', () => {
-  it('never resurrects a submit that was in progress', async () => {
-    const tree = signalTree({ f: form({ initial: { a: 0 } }) }).with(
-      timeTravel()
-    );
-    tree.$.f.set({ a: 1 });
-    await flush();
-    tree.$.f.set({ a: 2 });
-    await flush();
-
-    tree.undo();
-    // A submit that was in flight when the snapshot was taken is not in flight
-    // now, in any mode.
-    expect(tree.$.f.submitting()).toBe(false);
-  });
 
   it('an in-process undo keeps LOADING — the request may still be running', async () => {
     // This is the one place `restore` and `rehydrate` genuinely differ. Undo is

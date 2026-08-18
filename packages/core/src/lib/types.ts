@@ -3,7 +3,6 @@ import { Signal, WritableSignal } from '@angular/core';
 import { AsyncQueryMarker, AsyncQuerySignal } from './markers/async-query';
 import { AsyncSourceMarker, AsyncSourceSignal } from './markers/async-source';
 import type { EntityLoaderSurface } from './markers/entity-loader';
-import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
 
@@ -304,7 +303,7 @@ type ApplyComputedSlices<TMarker, TBase> = TMarker extends {
 // enhancer or helper used a different generic parameter name. Relax the
 // index signature to permit dynamic string indexing while still preserving
 // the mapped keys for better editor DX.
-// Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
+// Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends LoadingEntityMapMarker<
@@ -319,8 +318,6 @@ export type TreeNode<T> = {
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
-    : T[K] extends FormMarker<infer F>
-    ? FormSignal<F>
     : T[K] extends AsyncSourceMarker<infer V>
     ? AsyncSourceSignal<V>
     : T[K] extends AsyncQueryMarker<infer In, infer Out>
@@ -635,7 +632,10 @@ export interface TimeTravelMethods extends TransactionMethods {
  */
 export class SignalTreeRollbackError extends Error {
   readonly code = 'SIGNALTREE_ROLLBACK_FAILED';
-  cause?: unknown;
+  // NOT declared as a field. Whether `cause` exists on `Error` depends on the
+  // lib target, and the workspace disagrees: the demo's compiler requires
+  // `override` (TS4114) while core's rollup build rejects it as not present in
+  // the base (TS4113). Assigning without declaring satisfies both.
 
   constructor(
     message = 'SignalTree could not rollback the pending transaction',
@@ -643,7 +643,7 @@ export class SignalTreeRollbackError extends Error {
   ) {
     super(message);
     this.name = 'SignalTreeRollbackError';
-    this.cause = options?.cause;
+    (this as { cause?: unknown }).cause = options?.cause;
     Object.setPrototypeOf(this, SignalTreeRollbackError.prototype);
   }
 }
@@ -834,7 +834,7 @@ export interface LoaderFeature<E, P = void> {
   readonly __params?: P;
 }
 
-/** Options for the {@link HistoryFeature} produced by `history()`. */
+/** Options for `trackHistory()`. */
 export interface FormHistoryOptions<T> {
   /** Maximum number of past entries retained (default: 10). */
   capacity?: number;
@@ -874,28 +874,6 @@ export interface FormHistoryApi<_T> {
   __bindSharedAuthority?(authority: FormHistorySharedAuthority): void;
 }
 
-/**
- * Branded form-history feature produced by the `history()` helper and passed
- * as the `history` option of a `form()` marker: `form({ history: history() })`.
- *
- * Exact `security()`/`loader()` precedent: the helper closure is the *only*
- * reference to the history engine (snapshot buffer, deep-clone, undo/redo), so
- * importing `form` without `history` tree-shakes the engine out of the bundle.
- * A raw (non-branded) value on `history` fails closed at the `form()` call site.
- */
-export interface HistoryFeature<T extends Record<string, unknown>> {
-  readonly __signalTreeFormHistory: true;
-  /**
-   * @internal Bind the engine to a form marker's value funnel. `read` returns
-   * the live values; `write` applies a restored snapshot through the form
-   * (merged, so excluded fields survive). Returns the public api plus a
-   * `record()` hook the marker calls after each mutation.
-   */
-  attach(ctx: { read: () => T; write: (next: Partial<T>) => void }): {
-    api: FormHistoryApi<T>;
-    record: () => void;
-  };
-}
 
 // ============================================
 // FEATURE TYPES
@@ -1316,8 +1294,6 @@ export type DeepEntityAwareTreeNode<T> = {
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
-    : T[K] extends FormMarker<infer F>
-    ? FormSignal<F>
     : T[K] extends AsyncSourceMarker<infer V>
     ? AsyncSourceSignal<V>
     : T[K] extends AsyncQueryMarker<infer In, infer Out>
@@ -1347,8 +1323,6 @@ export type EntityAwareTreeNode<T> = {
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
-    : T[K] extends FormMarker<infer F>
-    ? FormSignal<F>
     : T[K] extends AsyncSourceMarker<infer V>
     ? AsyncSourceSignal<V>
     : T[K] extends AsyncQueryMarker<infer In, infer Out>

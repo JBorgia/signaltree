@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { entityMap } from './types';
-import { form } from './markers/form';
 import { serialization } from '../enhancers/serialization/serialization';
 import { signalTree } from './signal-tree';
 import { status } from './markers/status';
@@ -37,9 +36,6 @@ const mkTree = () =>
     user: { name: 'initial' },
     rows: entityMap<{ id: number; n: string }, number>({ selectId: (e) => e.id }),
     job: status<Error>(),
-    profile: form<{ name: string; [k: string]: unknown }>({
-      initial: { name: '' },
-    }),
   }).with(serialization());
 
 /** What 13.x actually left in storage, after a JSON round trip. */
@@ -55,7 +51,6 @@ const LEGACY_PAYLOAD = JSON.stringify({
     // status used to emit computeds and setter METHODS; functions do not
     // survive JSON, so only the data-ish keys remain.
     job: { state: 'LOADED', error: null, loading: null, loaded: null },
-    // `form()` was absent from snapshots entirely.
   },
 });
 
@@ -95,7 +90,6 @@ describe('a legacy 1.0.0 payload against a 14.0.0 tree', () => {
     const tree = mkTree();
     tree.deserialize(LEGACY_PAYLOAD);
 
-    expect(tree.$.profile()).toEqual({ name: '' });
     vi.restoreAllMocks();
   });
 
@@ -119,7 +113,6 @@ describe('a 14.0.0 payload round-trips completely (the control)', () => {
       { id: 2, n: 'y' },
     ]);
     a.$.job.setLoaded();
-    a.$.profile.patch({ name: 'zed' });
 
     const b = mkTree();
     b.deserialize(a.serialize());
@@ -127,7 +120,6 @@ describe('a 14.0.0 payload round-trips completely (the control)', () => {
     expect(b.$.count()).toBe(7);
     expect(b.$.rows.count()).toBe(2); // was 0 before the shape change
     expect(b.$.job.state()).toBe('LOADED');
-    expect(b.$.profile()).toEqual({ name: 'zed' }); // was absent entirely
   });
 });
 

@@ -50,13 +50,6 @@ export const appRoutes: Route[] = [
   // V7 Feature Demos
   // =========================================================================
   {
-    path: 'form-marker',
-    loadComponent: () =>
-      import('./pages/form-marker-demo/form-marker-demo.component').then(
-        (c) => c.FormMarkerDemoComponent
-      ),
-  },
-  {
     path: 'stored-versioning',
     loadComponent: () =>
       import(
@@ -342,18 +335,6 @@ export const appRoutes: Route[] = [
       import('./pages/ng-forms-demo/ng-forms-demo.component').then(
         (c) => c.NgFormsDemoComponent
       ),
-  },
-  {
-    path: 'signal-forms',
-    loadComponent: () =>
-      import('./pages/signal-forms-demo/signal-forms-demo.component').then(
-        (c) => c.SignalFormsDemoComponent
-      ),
-    data: {
-      title: 'Signal Forms',
-      description:
-        "Angular 22 Signal Forms interop via signalForm(): a form() marker as a FieldTree, plus 13.1.0: trackHistory() marker-free undo/redo, Angular schema()-driven disabled/hidden rules, and WebMCP passthrough.",
-    },
   },
 
   // Architecture overview (renamed from /architecture for clarity vs. /examples/.../recommended-architecture)

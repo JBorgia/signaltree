@@ -11,27 +11,12 @@ describe('MarkerZooComponent', () => {
     }).compileComponents();
   });
 
-  it('renders all six markers without mid-render signal writes', () => {
+  it('renders every marker without mid-render signal writes', () => {
     const fixture = TestBed.createComponent(MarkerZooComponent);
     fixture.detectChanges();
 
-    const component = fixture.componentInstance;
-    // form marker: empty required fields → honest invalid badge
-    expect(component.store.$.onboarding.profile.valid()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('✗ invalid');
-  });
-
-  it('form marker validates live through patch()', () => {
-    const fixture = TestBed.createComponent(MarkerZooComponent);
-    fixture.detectChanges();
-    const profile = fixture.componentInstance.store.$.onboarding.profile;
-
-    profile.patch({ name: '8888', email: 'mail.com' });
-    // The original audit screenshot: this exact input showed "✓ valid"
-    expect(profile.valid()).toBe(false);
-    expect(profile.errors()['email']).toBe('Invalid email');
-
-    profile.patch({ email: 'real@mail.com' });
-    expect(profile.valid()).toBe(true);
+    // The form marker section was removed in 15.0 (FORM-DEL); the
+    // remaining markers must still render in a single pass.
+    expect(fixture.nativeElement.textContent).toContain('depth');
   });
 });

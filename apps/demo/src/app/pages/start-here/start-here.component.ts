@@ -115,11 +115,11 @@ export class CartView {
     },
     {
       audience: 'I need form / data validation',
-      title: 'See Signal Forms interop',
+      title: 'See the Angular forms bridge',
       description:
-        'SignalTree ships no validation API. It publishes the model, Angular Signal Forms observes it, and your own Zod / Valibot / ArkType schemas do the judging via validateStandardSchema.',
-      route: '/signal-forms',
-      cta: 'Open Signal Forms demo →',
+        'SignalTree ships no validation API and no form marker. It publishes the model; Angular observes it; your own Zod / Valibot / ArkType schemas do the judging.',
+      route: '/ng-forms',
+      cta: 'Open the forms demo →',
     },
     {
       audience: 'I want proof, not promises',

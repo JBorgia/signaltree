@@ -55,34 +55,6 @@ describe('serialization round-trips every marker', () => {
     expect(b.$.r.byId(2)?.()).toEqual({ id: 2, v: 'b' });
   });
 
-  it('form()', () => {
-    const { a, restore } = roundTrip(() => ({
-      f: form({ initial: { name: '' } }),
-    }));
-    a.$.f.set({ name: 'Ada' });
-    const b = restore();
-    expect(b.$.f()).toEqual({ name: 'Ada' });
-  });
-
-  it('a mixed tree, all at once', () => {
-    const { a, restore } = roundTrip(() => ({
-      j: status(),
-      r: entityMap<{ id: number }, number>(),
-      f: form({ initial: { a: 0 } }),
-      n: 0,
-    }));
-    a.$.j.setLoaded();
-    a.$.r.setAll([{ id: 1 }]);
-    a.$.f.set({ a: 7 });
-    a.$.n.set(3);
-
-    const b = restore();
-    expect(b.$.j.state()).toBe(LoadingState.Loaded);
-    expect(b.$.r.count()).toBe(1);
-    expect(b.$.f().a).toBe(7);
-    expect(b.$.n()).toBe(3);
-  });
-
   it('normalises LOADING — deserialize crosses a process boundary', () => {
     // The one place `rehydrate` differs from `restore`. A fetch in flight when
     // the payload was written is not in flight in a new process, and believing
@@ -93,19 +65,6 @@ describe('serialization round-trips every marker', () => {
     const b = restore();
     expect(b.$.j.state()).toBe(LoadingState.NotLoaded);
     expect(b.$.j.idle()).toBe(true);
-  });
-
-  it('drops form touched — Angular form.value omits it too', () => {
-    const { a, restore } = roundTrip(() => ({
-      f: form({ initial: { a: '', b: '' } }),
-    }));
-    a.$.f.set({ a: 'x' });
-    a.$.f.touch('a');
-    expect(a.$.f.touched().a).toBe(true);
-
-    const b = restore();
-    expect(b.$.f().a).toBe('x'); // the value survives
-    expect(b.$.f.touched().a).toBe(false); // the interaction state does not
   });
 });
 

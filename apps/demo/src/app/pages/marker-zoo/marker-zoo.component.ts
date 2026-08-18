@@ -6,12 +6,10 @@ import {
   asyncQuery,
   asyncSource,
   entityMap,
-  form,
   loader,
   signalTree,
   status,
   stored,
-  validators,
 } from '@signaltree/core';
 import { delay, of } from 'rxjs';
 
@@ -66,7 +64,6 @@ const ALL_PLANTS: Plant[] = [
  * Depth map:
  *   depth 1: orgStatus (status marker)
  *   depth 2: directory.users (asyncSource), settings.theme (stored),
- *            onboarding.profile (form marker)
  *   depth 3: organization.teams.list (entityMap), organization.teams.search (asyncQuery)
  *   depth 4: organization.teams.catalog.plants (entityMap in its cache-aware,
  *            self-loading form — not a separate marker)
@@ -206,19 +203,6 @@ store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it
       theme: stored('marker-zoo-theme', 'light' as 'light' | 'dark'),
     },
 
-    // depth 2 — form marker
-    onboarding: {
-      profile: form<{ name: string; email: string }>({
-        initial: { name: '', email: '' },
-        validators: {
-          name: validators.required('Required'),
-          email: [
-            validators.required('Required'),
-            validators.email('Invalid email'),
-          ],
-        },
-      }),
-    },
   });
 
   loadDirectory(): void {
@@ -264,7 +248,6 @@ store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it
     this.store.$.organization.teams.search.reset();
     this.store.$.organization.teams.catalog.plants.clear();
     this.store.$.organization.teams.catalog.plants.invalidate();
-    this.store.$.onboarding.profile.reset();
     this.store.$.orgStatus.reset();
     this.store.$.demoStatus.reset();
   }

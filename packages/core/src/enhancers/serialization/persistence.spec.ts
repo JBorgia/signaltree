@@ -178,36 +178,6 @@ describe('persistence(): autoSave', () => {
 });
 
 describe('persistence(): the 14.0.0 payload actually round-trips markers', () => {
-  it('entityMap, status and form survive save -> load', async () => {
-    const { adapter } = memoryStorage();
-    const cfg = { key: 'markers', storage: adapter, autoSave: false, autoLoad: false };
-    const mk = () =>
-      signalTree({
-        rows: entityMap<{ id: number; n: string }, number>({ selectId: (e) => e.id }),
-        job: status<Error>(),
-        profile: form<{ name: string; [k: string]: unknown }>({
-          initial: { name: '' },
-        }),
-      }).with(persistence(cfg));
-
-    const a = mk();
-    a.$.rows.addMany([
-      { id: 1, n: 'x' },
-      { id: 2, n: 'y' },
-    ]);
-    a.$.job.setLoaded();
-    a.$.profile.patch({ name: 'zed' });
-    await a.save();
-
-    const b = mk();
-    await b.load();
-
-    // Before 14.0.0 all three of these were dropped: `persistence()` wrote `{}`
-    // for a form and reported success.
-    expect(b.$.rows.count()).toBe(2);
-    expect(b.$.job.state()).toBe('LOADED');
-    expect(b.$.profile()).toEqual({ name: 'zed' });
-  });
 
   it('a LOADING status is normalised on load — nothing is in flight after a reload', async () => {
     const { adapter } = memoryStorage();

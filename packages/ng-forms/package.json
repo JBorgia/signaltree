@@ -13,11 +13,6 @@
       "types": "./src/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./signals": {
-      "types": "./src/signals/index.d.ts",
-      "import": "./dist/signals/index.js",
-      "default": "./dist/signals/index.js"
     }
   },
   "peerDependencies": {

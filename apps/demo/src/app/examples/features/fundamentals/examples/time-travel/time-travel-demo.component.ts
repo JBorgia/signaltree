@@ -7,7 +7,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   entityMap,
-  form,
   signalTree,
   status,
   timeTravel,
@@ -80,7 +79,7 @@ export class TimeTravelDemoComponent {
   private markerTree = signalTree({
     people: entityMap<Person, number>({ selectId: (p) => p.id }),
     job: status<Error>(),
-    profile: form<ProfileModel>({ initial: { name: '', email: '' } }),
+    profile: { name: '', email: '' } as ProfileModel,
   }).with(timeTravel({ maxHistorySize: 50 }));
 
   private get markerTT(): TimeTravelMethods {
@@ -149,7 +148,7 @@ export class TimeTravelDemoComponent {
 
   editProfile() {
     const n = this.people().length;
-    this.markerTree.$.profile.patch({
+    this.markerTree.$.profile({
       name: `Editor ${n}`,
       email: `e${n}@x.io`,
     });

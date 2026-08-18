@@ -45,8 +45,6 @@ export {
   type ReadonlyEntityLoaderSurface,
   type ReadonlyLoadingEntitySignal,
   type ReadonlyStatusSignal,
-  type ReadonlyFormSignal,
-  type ReadonlyFormWizard,
   type ReadonlyStoredSignal,
   type ReadonlyAsyncSourceSignal,
   type ReadonlyAsyncQuerySignal,
@@ -197,34 +195,11 @@ export {
   type StoredReloadResult,
 } from './lib/markers/stored';
 
-// Form marker (v7.2) - tree-integrated forms with validation
-// createFormSignal moved to '@signaltree/core/authoring' in 11.6.0
-// (authoring-only factory, zero application consumers).
-export {
-  form,
-  validators,
-  withKind,
-  type FormMarker,
-  type FormSignal,
-  type FormConfig,
-  type FormFields,
-  type FormWizard,
-  type WizardConfig,
-  type WizardStepConfig,
-  type Validator,
-  type AsyncValidator,
-} from './lib/markers/form';
-
-// `history()` — signal-native undo/redo for form() markers, and the
-// tree-shakeable way to add it: importing `form` WITHOUT `history` keeps the
-// snapshot/undo engine out of the bundle (security()/loader() precedent, RFC 0006).
-// Attaches to the marker's values signal, so it also drives a bound signalForm().
-export { history, trackHistory } from './lib/form-history/form-history';
-export type {
-  HistoryFeature,
-  FormHistoryApi,
-  FormHistoryOptions,
-} from './lib/types';
+// `trackHistory()` — signal-native undo/redo over ANY WritableSignal. Marker
+// free: it takes the model signal directly, so it survived FORM-DEL untouched.
+// Tree-shakeable — unused means the snapshot/undo engine is never bundled.
+export { trackHistory } from './lib/form-history/form-history';
+export type { FormHistoryOptions } from './lib/types';
 
 // Audit tracker — framework-agnostic tree change logging (moved from
 // @signaltree/ng-forms in v13, RFC 0006). Tree-shakeable: unused → not bundled.
@@ -417,7 +392,6 @@ export { isDev } from './lib/constants';
  * - `entityMap<T, K>()` - Normalized collections
  * - `status()` - Async operation state
  * - `stored(key, default)` - localStorage persistence
- * - `form(fields)` - Tree-integrated forms
  *
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications

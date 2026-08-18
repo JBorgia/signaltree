@@ -1,7 +1,7 @@
 import { computed, effect, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { entityMap, form, LoadingState, signalTree, status } from '../index';
+import { entityMap, LoadingState, signalTree, status } from '../index';
 
 /**
  * ANG-V0 — THE NULL HYPOTHESIS FOR ANGULAR VALIDATION.
@@ -344,24 +344,6 @@ describe('ANG-V0-D — is any truth change invisible to the pull surface?', () =
 
     expect(phase()).not.toBe(before);
     expect(phase()).toBe(LoadingState.Loading);
-  });
-
-  it('form-marker field writes are visible through the pull surface', () => {
-    const tree = signalTree({
-      f: form<{ email: string }>({ initial: { email: '' } }),
-    });
-    let runs = 0;
-    const email = computed(() => {
-      runs++;
-      return tree.$.f().email;
-    });
-    expect(email()).toBe('');
-    expect(runs).toBe(1);
-
-    tree.$.f.$.email.set('a@b.c');
-
-    expect(email()).toBe('a@b.c');
-    expect(runs).toBe(2);
   });
 
   it('CONTROL — a computed that reads nothing never recomputes', () => {

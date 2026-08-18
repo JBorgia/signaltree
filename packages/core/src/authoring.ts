@@ -57,10 +57,9 @@ export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
 export { ENHANCER_META } from './lib/types';
 export type { EnhancerMeta } from './lib/types';
 
-// Marker signal factories — the raw builders behind form()/asyncSource()/
-// asyncQuery() markers, for authors building custom marker processors on top
-// of the built-in signal shapes.
-export { createFormSignal } from './lib/markers/form';
+// Marker signal factories — the raw builders behind asyncSource()/asyncQuery()
+// markers, for authors building custom marker processors on top of the built-in
+// signal shapes.
 export { createAsyncSourceSignal } from './lib/markers/async-source';
 export { createAsyncQuerySignal } from './lib/markers/async-query';
 
@@ -94,20 +93,16 @@ export {
   ENTITY_READERS,
   ENTITY_LOADER_READERS,
   STATUS_READERS,
-  FORM_READERS,
-  FORM_WIZARD_READERS,
   STORED_READERS,
   ASYNC_SOURCE_READERS,
   ASYNC_QUERY_READERS,
 } from './lib/readonly';
 
 // Marker brand symbols — for recognising a marker you did not create.
-export { FORM_MARKER } from './lib/markers/form.contract';
 export { ASYNC_SOURCE_MARKER } from './lib/markers/async-source.contract';
 export { ASYNC_QUERY_MARKER } from './lib/markers/async-query.contract';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
-export { isFormMarker } from './lib/markers/form.contract';
 export { isStoredMarker } from './lib/markers/stored.contract';
 export { isStatusMarker } from './lib/markers/status.contract';
 export { isDerivedMarker } from './lib/markers/derived';

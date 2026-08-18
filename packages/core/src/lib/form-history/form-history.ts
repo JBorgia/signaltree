@@ -7,7 +7,7 @@
  * from one implementation — no RxJS, no `valueChanges`, no second substrate.
  *
  * Tree-shaking: this module is imported ONLY by the `history()` helper. The
- * `form()` marker imports the {@link HistoryFeature} *type* alone, so a bundle
+ * `trackHistory()` takes the model signal directly, so a bundle
  * that never calls `history()` drops the snapshot/undo machinery entirely
  * (the `security()`/`loader()` injected-feature precedent — RFC 0007).
  *
@@ -30,7 +30,6 @@ import type {
   FormHistoryApi,
   FormHistoryOptions,
   FormHistorySharedAuthority,
-  HistoryFeature,
 } from '../types';
 
 interface TrackHistorySnapshot<T> {
@@ -176,42 +175,6 @@ function attachHistory<T extends Record<string, unknown>>(
       history: computed(() => snapshotHistory()),
     },
     record,
-  };
-}
-
-/**
- * Create an undo/redo feature for a `form()` marker.
- *
- * @example
- * ```ts
- * import { signalTree, form, history } from '@signaltree/core';
- *
- * const tree = signalTree({
- *   profile: form<{ name: string; password: string }>({
- *     initial: { name: '', password: '' },
- *     history: history({ capacity: 20, exclude: ['password'] }),
- *   }),
- * });
- *
- * tree.$.profile.patch({ name: 'Ada' });
- * tree.$.profile.history!.undo();          // name reverts; password untouched
- * tree.$.profile.history!.canRedo();       // true
- * ```
- *
- * @param options - {@link FormHistoryOptions} (capacity, excluded fields).
- * @public
- */
-export function history<T extends Record<string, unknown>>(
-  options: FormHistoryOptions<T> = {}
-): HistoryFeature<T> {
-  return {
-    __signalTreeFormHistory: true,
-    attach(ctx) {
-      return attachHistory(ctx, options, false) as {
-        api: FormHistoryApi<T>;
-        record: () => void;
-      };
-    },
   };
 }
 

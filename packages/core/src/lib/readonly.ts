@@ -4,7 +4,6 @@ import type { SignalTreeBuilder } from './internals/builder-types';
 import type { AsyncQuerySignal } from './markers/async-query';
 import type { AsyncSourceSignal } from './markers/async-source';
 import type { EntityLoaderSurface } from './markers/entity-loader';
-import type { FormSignal, FormWizard } from './markers/form';
 import type { StatusSignal } from './markers/status';
 import type { StoredSignal } from './markers/stored';
 import type {
@@ -87,39 +86,6 @@ export const STATUS_READERS = [
   'settled',
 ] as const;
 
-/**
- * Readers on {@link FormSignal}. `set`/`patch`/`reset`/`clear`, validation
- * triggers (`validate`, `validateField`, `touch`, `touchAll`, `submit` — they
- * write error/touched/submitting state), persistence (`persistNow`, `reload`,
- * `clearStorage`), and the deep-writable `$` field accessors are deliberately
- * absent. Read individual fields through `data()`/the call form. `wizard` is
- * not in this list because it is re-signed (its full surface carries the
- * navigation mutators) — see {@link ReadonlyFormWizard}.
- */
-export const FORM_READERS = [
-  'data',
-  'valid',
-  'dirty',
-  'submitting',
-  'touched',
-  'errors',
-  'errorList',
-] as const;
-
-/**
- * Readers on {@link FormWizard} — the pure progress signals, so a readonly
- * consumer can render wizard position. `next`/`prev`/`goTo`/`reset` navigate
- * (they write step state) and are deliberately absent.
- */
-export const FORM_WIZARD_READERS = [
-  'currentStep',
-  'stepName',
-  'steps',
-  'canNext',
-  'canPrev',
-  'isLastStep',
-  'isFirstStep',
-] as const;
 
 /** Readers on {@link StoredSignal}. The mutators — `set`/`update`/`clear`/`reload`/`flush` — are absent. */
 export const STORED_READERS = ['key', 'version'] as const;
@@ -238,20 +204,6 @@ export type ReadonlyStatusSignal<E = Error> = PickReaders<
   (typeof STATUS_READERS)[number]
 >;
 
-/** Read-only view of {@link FormWizard}: progress signals only, navigation not offered. */
-export type ReadonlyFormWizard = PickReaders<
-  FormWizard,
-  (typeof FORM_WIZARD_READERS)[number]
->;
-
-/** Read-only view of {@link FormSignal}: value + validation reads, callable read kept. */
-export type ReadonlyFormSignal<F extends Record<string, unknown>> = {
-  (): F;
-} & PickReaders<FormSignal<F>, (typeof FORM_READERS)[number]> & {
-    /** Re-signed (and optional, mirroring {@link FormSignal}): progress reads only. */
-    readonly wizard?: ReadonlyFormWizard;
-  };
-
 /** Read-only view of {@link StoredSignal}: callable read + storage metadata. */
 export type ReadonlyStoredSignal<V> = {
   (): V;
@@ -317,8 +269,6 @@ type ReadonlyViewOf<T> = T extends EntitySignal<
   ? ReadonlyEntitySignal<E, K> & ReadonlyExtras<T, EntitySignal<E, K>>
   : T extends StatusSignal<infer Err>
   ? ReadonlyStatusSignal<Err> & ReadonlyExtras<T, StatusSignal<Err>>
-  : T extends FormSignal<infer F>
-  ? ReadonlyFormSignal<F> & ReadonlyExtras<T, FormSignal<F>>
   : T extends StoredSignal<infer V>
   ? ReadonlyStoredSignal<V> & ReadonlyExtras<T, StoredSignal<V>>
   : T extends AsyncQuerySignal<infer In, infer Out>

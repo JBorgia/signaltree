@@ -11,9 +11,7 @@ const options = {
     './src/core/validators.ts',
     './src/core/async-validators.ts',
     './src/history/history.ts',
-    './src/enhancer/form-bridge.ts',
     './src/wizard/wizard.ts',
-    './src/signals/index.ts',
   ],
   assets: [
     {
