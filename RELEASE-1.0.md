@@ -2184,6 +2184,87 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## SHAPE-T1 CASE 2 — IDENTITY REPLACEMENT IS AN ARTIFACT, MEASURED IN PRODUCTION CODE
+
+Not a prototype. This is why the three identity-replacing built-ins replace
+identity, read out of the shipping implementations.
+
+### The root cause
+
+All three build a NEW FUNCTION and copy the old tree onto it:
+
+```text
+batching.ts:307      const enhancedTree = function (this, ...args) { ... }
+time-travel.ts:2739  const enhancedTree = function (this, ...args) { ... }
+devtools-impl.ts:1653 const enhancedTree = function (this, ...args) { ... }
+
+then, in each:  Object.setPrototypeOf(enhancedTree, getPrototypeOf(tree))
+                copyTreeProperties(tree, enhancedTree)
+                redefine $, redefine .with()
+```
+
+**The tree is CALLABLE, and JavaScript cannot change a function's call behaviour
+in place.** Batching must intercept `tree(...)` to schedule its notification;
+time travel and devtools must intercept it to record. On an ALREADY-CONSTRUCTED
+tree the only way to do that is to construct a replacement and copy everything
+across.
+
+So identity replacement is not a capability any enhancer wanted. It is the only
+mechanism available for modifying a callable that already exists.
+
+### The circularity, in the code's own words
+
+`batching.ts:353` and `devtools-impl.ts:1736` carry the same comment:
+
+> *"Define new .with() method that passes enhancedTree (not the original tree) to
+> subsequent enhancers. This is critical for preserving the enhancer chain."*
+
+The replacement redefines `.with()` **in order to preserve the chain**, and the
+replacement itself exists only because the chain applies changes after
+construction. The chain requires replacement; replacement exists to serve the
+chain.
+
+### Consequence under single-pass construction
+
+If the compiler knows before constructing that batching, time travel or devtools
+want to intercept the call, it builds ONE callable with those interceptions
+already in it. There is nothing to replace, and no second `.with()` to redefine.
+
+**That deletes BLOCKER #3b rather than fixing it.** The guard bypass exists
+because a replacement tree is a new object that cannot reach the original's
+per-tree bookkeeping closure. No replacement, no unreachable bookkeeping, no
+bypass. The defect is a property of the mechanism, and the mechanism is
+compensation for the chaining architecture.
+
+**T1 case 2 verdict: no surviving function requires application to an
+already-exposed tree.** Identity replacement is CURRENT FORM explained, not a
+function.
+
+### T1 case 4 — lifetime, partial measurement
+
+`registerCleanup(fn: EnhancerCleanup)` is already a TREE method, and all five
+built-ins that need teardown call `tree.registerCleanup(...)` — serialization,
+transactions, devtools, batching, time travel. It is a lifecycle registration on
+the tree, not a property of `.with()`. So teardown registration during a REALIZE
+phase needs nothing that does not already exist.
+
+**Not yet answered:** whether any surviving function requires LATE attachment or
+REMOVAL after exposure. That is the hard falsifier for case 4 and it is still
+open.
+
+### Still open in T1
+
+```
+1  runtime contribution      can behaviour bind post-kernel, pre-exposure?
+3  collision detection       can the compiler reject the T0 silent shadowing
+                             before exposure?
+4  late attach/remove        the hard falsifier above
+5  cross-extension dependency does realization B need runtime OUTPUT of A?
+                             note: outcome B (compiler-known dependency) does
+                             NOT save `.with()` — an internal topological order
+                             is not a public composition API
+```
+
 ## B2-1 GOVERNING NULL — REPLACED. The question is the construction shape, not `.with()`'s consumers
 
 Item 0 changed what this cluster is asking. The old question — does `.with()`
