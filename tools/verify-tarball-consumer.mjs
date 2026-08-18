@@ -39,12 +39,15 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist', 'packages');
+// Every publishable workspace package. `schema` was removed by SCHEMA-DEL —
+// leaving it here made the gate report `no built dist ... run the build first`,
+// which is indistinguishable from a genuinely missing build, so the gate could
+// not pass at HEAD no matter what the artifacts contained.
 const PACKAGES = [
   'core',
   'guardrails',
   'ng-forms',
   'realtime',
-  'schema',
   'events',
   'shared',
 ];
