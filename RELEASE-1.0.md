@@ -7635,6 +7635,93 @@ observing a thrown error.
 information a landing notification actually NEEDS, if any. Running the falsifier
 first would let the mechanism's shape write the contract.
 
+### MUT-2 — WHICH AUTHORITY DISTINGUISHES AUTHORED FROM REALIZED?
+
+Started from the corrected question rather than an inventory:
+
+> **A landed truth change may be an ordinary authored change, an undo/redo
+> realization, a rollback, a restore, or some other non-authoring realization.
+> Which surviving authority, if any, MUST distinguish those categories for
+> SignalTree to remain correct?**
+
+#### The authority exists, and it is named
+
+```ts
+type CausalWriteMode = 'authoring' | 'realization';   // types.ts
+interface WriteAttribution { causalMode?: ...; source?: ...; intent?: ... }
+interface MutationEnvelope { positionId; path; ownerPath?; before; after;
+                             kind; subjectId?; structural?; attribution?; }
+```
+
+`packages/core/src/lib/causal-write-mode.ts` owns the mode. This is what
+`45d06959 feat(history): distinguish causal realization writes` added.
+
+#### MEASURED — the distinction DOES reach observers
+
+**This REFINES R3.** R3 said a consumer inferring *"the user changed this"* from
+a notification is wrong. That holds for the PATH, and only for the path. The
+notification's META does carry the distinction:
+
+```
+AUTHORED write   path a.n   source null       meta { mutationIntent: 'replace' }
+UNDO             path a.n   source 'system'   meta { intent: 'system',
+                                                     source: 'system',
+                                                     causalMode: 'realization',
+                                                     positionIds: [3] }
+REDO             path a.n   source 'system'   causalMode 'realization'
+```
+
+So the corrected R3 is:
+
+> **The notification PATH cannot separate authored from realized. The
+> notification META can, on two independent channels (`source === 'system'` and
+> `causalMode === 'realization'`).**
+
+A consumer using path alone is wrong; a consumer reading meta is not.
+
+#### THE ARCHITECTURAL FINDING — the marking is ASYMMETRIC
+
+```
+REALIZATION   POSITIVELY MARKED     causalMode: 'realization', source: 'system'
+AUTHORING     NOT MARKED AT ALL     no causalMode; only mutationIntent
+```
+
+**Authorship is signalled by ABSENCE.** `CausalWriteMode` names two modes, but
+only one is ever stamped; `'authoring'` is inferred from the realization mark not
+being there.
+
+That is fragile in a specific, nameable way:
+
+```
+any write path that FORGETS to stamp causalMode is SILENTLY CLASSIFIED AS
+AUTHORED — the default is the semantically stronger claim.
+```
+
+A new enhancer, a new marker, a new internal restore path, or a refactor that
+drops the stamp all fail in the direction that INVENTS authorship rather than
+losing it. And the failure is invisible: nothing distinguishes "authored" from
+"nobody stamped this".
+
+This is a MUT-2 candidate requirement, stated as a requirement rather than a
+design:
+
+> **If the authored/realized distinction is load-bearing, the SAFE DEFAULT is
+> the weaker claim. A change whose mode nobody established should not silently
+> present as authored.**
+
+Whether that becomes an explicit `'authoring'` stamp, a required mode on every
+write, or something else is NOT decided here — MUT-2 establishes the requirement;
+the contract decides the mechanism.
+
+#### Still open for MUT-2
+
+```
+rollback / restore / hydrate / devtools replay   modes NOT yet measured
+transaction writes                               NOT yet measured
+does every consumer that needs the distinction actually READ it?  NOT measured
+how long must the mode survive, and can it be reconstructed later? NOT derived
+```
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output

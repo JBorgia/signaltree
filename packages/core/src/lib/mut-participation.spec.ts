@@ -281,3 +281,137 @@ describe('MUT-1 — the interceptLeafSignals docblock, tested verbatim', () => {
     expect(notified).toEqual(['user.profile.name']);
   });
 });
+
+describe('MUT-2 — does surviving machinery carry the AUTHORED vs REALIZED distinction?', () => {
+  /**
+   * `CausalWriteMode = 'authoring' | 'realization'` exists, and
+   * `WriteAttribution.causalMode` carries it. R3 showed the notifier's PATH
+   * cannot separate an authored write from an undo. The sharper question is
+   * whether the notification's META does.
+   */
+  const capture = () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const off = getPathNotifier().subscribe(
+      '**',
+      (
+        _next: unknown,
+        _prev: unknown,
+        path: string,
+        _ownerPath?: string,
+        source?: unknown,
+        _subjectIds?: unknown,
+        _positionIds?: unknown,
+        meta?: unknown
+      ) => {
+        seen.push({
+          path,
+          source: source ?? null,
+          meta: (meta as Record<string, unknown>) ?? null,
+        });
+      }
+    );
+    return { seen, off };
+  };
+
+  it('AUTHORED write — what meta reaches the observer?', async () => {
+    resetPathNotifier();
+    const tree = signalTree({ a: { n: 1 } }).with(timeTravel());
+    await tick();
+    const { seen, off } = capture();
+
+    tree.$.a.n.set(2);
+    await tick();
+    off();
+
+    // NO causalMode. Authorship is not positively marked.
+    expect(seen).toEqual([
+      { path: 'a.n', source: null, meta: { mutationIntent: 'replace' } },
+    ]);
+  });
+
+  it('UNDO realization — what meta reaches the observer?', async () => {
+    resetPathNotifier();
+    const tree = signalTree({ a: { n: 1 } }).with(timeTravel());
+    await tick();
+    tree.$.a.n.set(2);
+    await tick();
+
+    const { seen, off } = capture();
+    tree.undo();
+    await tick();
+    off();
+
+    // Realization IS positively marked, on two independent channels.
+    expect(seen).toEqual([
+      {
+        path: 'a.n',
+        source: 'system',
+        meta: {
+          intent: 'system',
+          source: 'system',
+          causalMode: 'realization',
+          positionIds: [3],
+        },
+      },
+    ]);
+  });
+});
+
+describe('MUT-2 — is the authored/realized marking SYMMETRIC?', () => {
+  const capture = () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const off = getPathNotifier().subscribe(
+      '**',
+      (
+        _n: unknown,
+        _p: unknown,
+        path: string,
+        _op?: string,
+        source?: unknown,
+        _s?: unknown,
+        _pi?: unknown,
+        meta?: unknown
+      ) => {
+        const m = (meta ?? {}) as Record<string, unknown>;
+        seen.push({ path, source: source ?? null, causalMode: m['causalMode'] ?? null });
+      }
+    );
+    return { seen, off };
+  };
+
+  it('REDO is also marked realization', async () => {
+    resetPathNotifier();
+    const tree = signalTree({ a: { n: 1 } }).with(timeTravel());
+    await tick();
+    tree.$.a.n.set(2);
+    await tick();
+    tree.undo();
+    await tick();
+
+    const { seen, off } = capture();
+    tree.redo();
+    await tick();
+    off();
+
+    expect(seen).toEqual([
+      { path: 'a.n', source: 'system', causalMode: 'realization' },
+    ]);
+  });
+
+  it('THE ASYMMETRY: authorship is signalled by ABSENCE, not by a positive mark', async () => {
+    resetPathNotifier();
+    const tree = signalTree({ a: { n: 1 } }).with(timeTravel());
+    await tick();
+
+    const { seen, off } = capture();
+    tree.$.a.n.set(2);
+    await tick();
+    off();
+
+    // An ordinary authored write carries NO causalMode at all. A consumer can
+    // only conclude "authored" from the ABSENCE of the realization mark.
+    expect(seen).toHaveLength(1);
+    expect(seen[0]['causalMode']).toBeNull();
+    expect(seen[0]['source']).toBeNull();
+  });
+});
