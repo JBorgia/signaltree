@@ -292,19 +292,19 @@ because `Enhancer` needed replacing.
 Columns: what the function is · whether the derived architecture already covers
 it · where the evidence came from. `LEGACY SOURCES` is citation only.
 
-| Function | Status | Already satisfied by the derived architecture? | Legacy sources (evidence only) |
+| Function | Status | Coverage, and by what evidence | Legacy sources (evidence only) |
 |---|---|---|---|
-| select optional tree behaviour at authoring time | survives | candidate declarative init | `.with()` call sites, built-ins |
-| know required substrate capabilities before construction | **SURVIVES — measured** | yes: full-declaration compiler sees them pre-CONSTRUCT | `plannedSignalTree`, `EnhancerMeta.capabilities` |
-| contribute public/type surface | **SURVIVES — type-proved feasible** | yes: SHAPE-T0 accumulation from inert declarations | `Enhancer<TAdded>`, `this & TAdded` |
-| bind runtime behaviour to the constructed tree/kernel | **SURVIVES** | yes: REALIZE phase, pre-EXPOSE sufficient in every tested case | enhancer bodies |
-| alter final callable behaviour | **SURVIVES** | yes: FINALIZE builds one callable with interception inside | batching / timeTravel / devTools replacement |
-| register teardown / lifetime behaviour | **SURVIVES** | yes: already a tree-owned method, unrelated to `.with()` | `registerCleanup` |
-| reject conflicting public contributions | **SURVIVES** | yes, BOTH halves: T0-G statically, T1 CASE 3 at runtime | nothing — the old system had no such check |
-| reject semantically duplicate declarations | likely useful | partly: T1 CASE 6 refused via an explicit id, NOT proved minimal | `name`, `.with()` duplicate guard |
-| order realizations when one genuinely depends on another | possible | unproven: T1 CASE 5 showed an internal order SUFFICES; representation is open | `requires`, `provides`, `resolveEnhancerOrder` |
-| express substrate capability dependency | survives in some form | partly: `TREE_CAPABILITY_DEPENDENCIES` already models it internally | `capabilities` |
-| invoke contributed capabilities after exposure | **obviously survives** | yes — an ordinary runtime API, never composition | `realtime.connect()`, every enhancer method |
+| select optional tree behaviour at authoring time | survives | PROVED-IN-MODEL (declarative init candidate) | `.with()` call sites, built-ins |
+| know required substrate capabilities before construction | **SURVIVES — measured** | PROVED-IN-MODEL | `plannedSignalTree`, `EnhancerMeta.capabilities` |
+| contribute public/type surface | **SURVIVES** | PROVED-IN-MODEL (SHAPE-T0, inert declarations) | `Enhancer<TAdded>`, `this & TAdded` |
+| bind runtime behaviour to the constructed tree/kernel | **SURVIVES** | PROVED-IN-MODEL (T1 CASE 1) | enhancer bodies |
+| alter final callable behaviour | **SURVIVES** | PROVED-IN-MODEL (T1 CASE 2) | batching / timeTravel / devTools replacement |
+| register teardown / lifetime behaviour | **SURVIVES** | **LANDED** — `registerCleanup` is already tree-owned and unrelated to `.with()` | `registerCleanup` |
+| reject conflicting public contributions | **SURVIVES** | PROVED-IN-MODEL, both halves (T0-G static, T1 CASE 3 runtime) | nothing — the old system had no such check |
+| **semantic duplicate / exclusivity rule** — *what combinations of declarations are actually invalid, independent of public-key collisions?* | **OPEN** | T1 CASE 6 refused via an explicit id; SUFFICIENT, never proved minimal | `name`, `.with()` duplicate guard |
+| **realization dependency satisfaction** — *does one realization genuinely require something established by another, and if so what fact must the compiler know?* | **OPEN** | T1 CASE 5 showed an internal order SUFFICES; the dependency itself may be an artifact of the prototype's publish/consume | `requires`, `provides`, `resolveEnhancerOrder` |
+| **substrate requirement determination** — *how does the compiler know which substrate capabilities are required before construction?* | **OPEN** | `TREE_CAPABILITY_DEPENDENCIES` already models capability-to-capability implication internally | `capabilities` |
+| invoke contributed capabilities after exposure | **SURVIVES** | **LANDED** — an ordinary runtime API, never composition | `realtime.connect()`, every enhancer method |
 | **compose new capabilities after exposure** | **DELETE — no surviving use found** | n/a | `.with()` |
 | replace public tree identity | **NOT A FUNCTION** | n/a — mechanism debt of post-construction application | the three replacing built-ins |
 | sequentially accumulate types | **NOT A FUNCTION** | n/a — declarative typing handles it | `this & TAdded` |
@@ -313,6 +313,99 @@ it · where the evidence came from. `LEGACY SOURCES` is citation only.
 Note what is absent from the left column: `Enhancer`, `bind()`, `requires`,
 `provides`, `plannedSignalTree`. **Those are not functions.** They are possible
 historical implementations of functions that are.
+
+
+**Two evidence statuses, deliberately not merged.** `LANDED` means the existing
+shipped architecture already supplies the function. `PROVED-IN-MODEL` means only
+the SHAPE-T0/T1 prototypes demonstrated it. Both mean "no new greenfield
+primitive has been shown necessary" — they are not the same claim, and merging
+them would let a prototype's success read as production truth.
+
+**The three OPEN rows are named as questions on purpose.** Earlier drafts called
+them "duplicate identity", "realization ordering" and "substrate dependency
+representation" — each of which smuggles its answer into its name: *identity*
+presumes an id, *ordering* presumes an order, *representation* presumes the fact
+already exists and only needs encoding. Rule 0l applies to our own phrasing.
+
+### DERIVATION 1 — substrate requirement determination
+
+**Null:** assume authors declare no substrate capabilities at all. Can the
+compiler determine every required substrate property from the semantic
+declarations themselves?
+
+Three sources tested separately, because only the third could earn a public
+protocol.
+
+```text
+A  INTRINSIC     the declaration KIND fully determines the requirement
+B  CONFIGURABLE  the requirement varies with author-selected options
+C  THIRD-PARTY   the compiler cannot know unless the declaration says so
+```
+
+#### Measured
+
+```text
+A  2 of 2 production cases, and both are unconditional
+     transactions()  capabilities: ['causal-runtime']
+                     the factory takes NO CONFIG AT ALL, so its requirement
+                     cannot vary
+     timeTravel(cfg) capabilities: ['causal-runtime','temporal-snapshots']
+                     the factory DOES take config (including `enabled`), and
+                     the capabilities literal does not reference it
+
+B  ZERO instances. Not refuted as possible — simply never exercised, including
+   by the one factory that has options available to vary it.
+
+C  STRUCTURALLY IMPOSSIBLE TODAY:
+     `TreeCapability` is exported from NEITHER `index.ts` NOR `authoring.ts`
+     the custom-markers-enhancers guide never teaches the field
+     zero third-party capability declarations exist in the workspace
+```
+
+The `timeTravel` row is the one that matters. It is the only case with the
+*opportunity* to be config-dependent, and it isn't — which is evidence for A
+rather than merely absence of evidence for B.
+
+#### Result
+
+```text
+FUNCTION            compiler must know required substrate before construction
+                    SURVIVES — measured and exercised
+
+SOURCE              INTRINSIC in every measured case
+
+PUBLIC PROTOCOL     NOT EARNED. The compiler can hold the
+                    declaration-kind -> substrate mapping itself; a public
+                    field carrying a fact SignalTree already knows is a
+                    restatement, not information.
+
+GREENFIELD MINIMUM  none. No new primitive is needed for the measured cases.
+```
+
+An application should not have to write `transactions({ capabilities:
+['causal-runtime'] })` when SignalTree already knows that transactions entail a
+causal runtime.
+
+#### The half-exposed protocol, worth recording
+
+`capabilities` sits on `EnhancerMeta`, which is reachable through the exported
+`ENHANCER_META` symbol — but its value type `TreeCapability` is **not public**.
+So the current protocol is exposed enough for a third party to write, and not
+typed enough for them to write correctly: they would be authoring bare strings
+against a closed internal enum. That is a defect in the current form regardless
+of which way the function resolves.
+
+#### What would change the answer
+
+Only source C, and it is currently impossible by construction rather than merely
+unused. If a third-party declaration ever genuinely needs to request a
+SignalTree substrate facility, a protocol could be earned then — and Rule 0j-1
+says a rejected artifact does not require a replacement design now. Note the
+capability set is a CLOSED SET OF SIGNALTREE-OWNED FACILITIES
+(`mutation-capture`, `position-topology`, `causal-runtime`,
+`temporal-snapshots`), so such a protocol would be a REQUEST against a known
+vocabulary, not an open declaration of arbitrary needs. That is a much smaller
+thing than the current field implies.
 
 ### Table F — legacy dispositions (a ledger, not an agenda)
 
