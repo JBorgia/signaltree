@@ -3288,7 +3288,9 @@ anyway, not validation.
 #### B — marker/kernel-aware meaning — **FAILS**
 
 Is there a REQUIRED rule whose meaning cannot be represented by the resulting
-snapshot? **MEASURED** on a tree containing every marker class:
+snapshot? **MEASURED across REPRESENTATIVE structural / storage / status / async
+marker classes** — not an exhaustive enumeration, and the claim does not need
+one:
 
 ```
 users  (entityMap)     {"all":[{"id":1,"name":"Ada"},{"id":2,"name":"Bob"}]}
@@ -3307,14 +3309,34 @@ The one gap found — `asyncSource` snapshots `{value}` WITHOUT load state — i
 **not a validation gap**. "Do not validate while loading" is about WHEN to
 validate, not WHAT is valid, and the caller already decides whether to call.
 
+**THE ARGUMENT IN ITS HARDER-TO-FALSIFY FORM**, which does not depend on
+exhaustive coverage:
+
+> **No established validation requirement needs MARKER IDENTITY rather than the
+> VALUE exposed by the read surface.**
+
+If a future marker carries semantically meaningful information omitted from its
+value projection, that is a NEW counterexample to evaluate then. It does not
+justify preserving a validation facility now.
+
 #### C — issue-to-tree correspondence — **FAILS**
 
-Must issues stay associated with semantic SignalTree locations across topology
-change? Not for any required workflow. Issues are located by the validated
-value's own shape and domain keys (`users.all[0].id`), which is what a user
-reads and displays. Kernel identity surviving rekey would matter only for a
-continuously-maintained issue projection — which V0 already placed outside the
-baseline.
+**CORRECTED — do NOT claim issues locate by "domain keys".** A validator's issue
+path over that snapshot is typically structural, e.g. `all[0].name`. The entity's
+domain key merely happens to sit INSIDE the value; it is not necessarily the
+locator. The sufficient argument is narrower and does not depend on that claim:
+
+```
+explicit validation evaluates snapshot X
+its issues describe snapshot X
+no baseline requirement says those issues must retain SEMANTIC IDENTITY across
+  future topology changes
+```
+
+That alone removes any need for `PositionId`, rekey-stable issue ownership, or
+tree-addressed results. A later requirement that *"a result stays attached to
+entity 42 across reorder/rekey"* would be a CONTINUOUSLY MAINTAINED PROJECTION
+and must be derived independently.
 
 #### D — cross-format normalization — **FAILS, and it is the dangerous one**
 
@@ -3361,12 +3383,72 @@ CURRENT FORM   Angular-coupled tree enhancer
                shipped as a SignalTree package   -> DELETE CANDIDATE
 ```
 
-So the package is not a REDESIGN into a neutral evaluator; on this evidence it
-is a **DELETE candidate whose one genuine function belongs in the Angular
-adapter layer** beside the two forms adapters.
+**CORRECTED — Angular-owned does NOT mean forms-adapter-owned.** I wrote that
+the surviving function belongs "beside the two forms adapters". The first arrow
+is supported; the second is not. An Angular app may reasonably want
+`validation.errors()` / `validation.isValid()` in a component **without using
+Angular Forms at all**.
 
-**DECISION REQUIRED — reversing V0.6 is a product decision, not a derivation.**
-Everything else in the V0 block stays frozen regardless.
+```
+ESTABLISHED    function: maintain an Angular-reactive validation projection over
+                         SignalTree truth
+               owner:    Angular observation / integration layer
+NOT ESTABLISHED owner:   Reactive Forms or Signal Forms adapter
+```
+
+The forms adapters may CONSUME it; that does not make them its owner. Concluding
+otherwise would repeat the same error in reverse — correctly pulling validation
+out of SignalTree, then shoving all validation observation into "forms" because
+forms happen to consume it.
+
+```
+@signaltree/schema PACKAGE                 DELETE CANDIDATE
+explicit validation function               DELETE from the SignalTree product
+                                           -> validator ecosystem + docs
+continuous Angular validation projection   FUNCTION UNPROVEN; owner is the
+                                           Angular layer IF it survives
+current tree-enhancer form                 REJECTED
+```
+
+**Do NOT preserve the package while that question is open.**
+
+### V0.6 — **REVERSED AND CLOSED**
+
+```
+APPLICATION VALIDATION IS USEFUL              YES
+SIGNALTREE MUST PROVIDE VALIDATION            NO
+KERNEL VALIDATION ONTOLOGY                    NONE
+VALIDATION OBSERVATION                        NONE
+NORMALIZED VALIDATION-RESULT ONTOLOGY         NONE
+
+15.0 GUIDANCE
+  read SignalTree truth
+  -> validate with the validator/schema the application already uses
+```
+
+The last clause is load-bearing and comes from V1.1-D, probably the deepest
+result of the slice: **Standard Schema already supplies interoperability.**
+SignalTree wrapping validator ecosystems in a second normalized representation
+would be an invented layer.
+
+**THEREFORE THE V1 SCAFFOLDING IS ALSO DELETED — not parked as "maybe later":**
+
+```
+validate(value, rules)   Result   Issue   rules
+```
+
+Those were DERIVATION SCAFFOLDING that let the question be asked precisely. They
+are not surviving SignalTree concepts and must not sit in the architecture as
+future options.
+
+**WHAT V1.1 ACTUALLY ESTABLISHED**, stated at full strength:
+
+> After removing observation, installation, markers, addressing, identity,
+> retained state and normalization, **there is no remaining SignalTree-owned
+> validation function.**
+
+Not merely "we could not find coupling". The audit found a requirement we had
+INVENTED OURSELVES — and deleted it.
 
 ### V1 — VALIDATION FACILITY, MINIMAL CONTRACT — **DERIVED PROPOSAL, NOT FROZEN**
 
@@ -3647,7 +3729,16 @@ a separate CONSTRUCTION-TIME semantic requirement appears.
 
 #### Consequence for `form()`
 
-Validation no longer gives `form()` any reason to exist. The target shape:
+**WORDING CORRECTED — `form()` has not lost its "last" justification.** It has
+lost two large INHERITED ones — Angular Reactive Forms integration (RF-M1) and
+validation ownership (V0/V1.1). Precisely:
+
+> **`form()` now inherits NO justification from Angular interop or from
+> validation. Its remaining functions must independently justify BOTH themselves
+> AND any construction-time `form` marker.**
+
+Those remaining functions — `dirty`/`touched`, `submitting`, `wizard`,
+`reset`/`clear`/`patch` — are underived. The target shape:
 
 ```
               validation facility
