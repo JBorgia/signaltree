@@ -5148,6 +5148,210 @@ rather than the old-mechanism-centred:
 **Do not repair `interceptLeafSignals`. Do not promote `PathNotifier` to public
 architecture. `schemas()` migration remains blocked.**
 
+### ANG-V0 — the Angular question, run against the HARSHEST null — **CLOSED**
+
+V0.6's reversal left exactly one open function: whether an ANGULAR-REACTIVE
+VALIDATION PROJECTION must be owned by SignalTree's Angular layer.
+
+The first phrasing was too generous. It named the candidate — "a general
+Angular-reactive validation projection" — and asking whether that is required
+already concedes that a SignalTree-owned projection OBJECT is the thing under
+discussion. Starting from `validation.errors()` / `validation.isValid()` builds
+the answer into the question. The null was hardened to:
+
+> **ASSUME `@signaltree/schema` DOES NOT EXIST and SignalTree exposes NO
+> validation-specific Angular API. What required Angular workflow becomes
+> impossible?**
+
+with the null implementation being ordinary Angular composition:
+
+```
+SignalTree publishes Angular-readable truth
+            v
+       Angular computed / effect
+            v
+  application-owned validator
+            v
+     validator-native result
+```
+
+Falsifier: **not** "a projection API is convenient" — a REQUIRED WORKFLOW that
+cannot be implemented correctly without SignalTree-specific knowledge.
+
+Evidence: `packages/core/src/lib/angular-validation-null.spec.ts`, 21 tests,
+GREEN. The file may not import `@signaltree/core/authoring` for the null; the
+one section that touches `interceptLeafSignals` does so to characterize it.
+
+#### ANG-V0-A/B — sync
+
+The null tracks every published write form: nested leaf `.set()`, branch
+call-form, branch updater, root write, root read after a deep leaf write, and
+leaf-scoped reads. It is also already PRECISE — it does not recompute for an
+unrelated sibling write, does not recompute for a deep-equal write that never
+landed, and a per-field projection recomputes only for its own field
+(`nameRuns` stayed 1 while `ageRuns` went to 2).
+
+This kills the strongest sync argument, which was that SignalTree knows WHICH
+PATHS a write touched and plain `computed` does not, so the null must
+over-validate. Measured: it does not.
+
+#### ANG-V0-C — async, tested separately so it could not rescue the abstraction
+
+The question was never "is manual async validation annoying". It was whether
+correct async validation needs information only SignalTree can provide.
+
+An `effect` + an evaluator-local generation counter, owned entirely by the
+consumer, handles out-of-order resolution correctly: three runs dispatched
+(initial, W1, W2), resolved newest-first, stale verdicts discarded, final state
+`verdict-for-second`. Pending/settled fall out as ordinary Angular signals.
+
+Same async ownership result V1 already established, now confirmed in the
+Angular-reactive case. No SignalTree semantic primitive was required.
+
+#### ANG-V0-D — is any truth change invisible to the pull surface?
+
+The real reason `@signaltree/schema` exists in its current form is that it does
+NOT use `computed`. It attaches `interceptLeafSignals` and validates PUSH-side.
+So: is there validation-relevant truth that changes without notifying the
+Angular read surface?
+
+Measured across marker classes: `entityMap` CRUD, `status` transitions and
+`form`-marker field writes are ALL visible to a plain `computed`. A control
+confirms a computed that reads nothing never recomputes, so the section is
+falsifiable. A `status` marker projects its VALUE into the root snapshot
+(`{ state: 'NOT_LOADED', error: null }`), so a whole-object validator receives
+ordinary data, not a marker object.
+
+**No candidate found.**
+
+#### ANG-V0-F — the converse, and the decisive result
+
+D found nothing invisible to pull. F asks the honest converse: does PUSH see
+anything PULL misses?
+
+```
+CASE                                   PULL      PUSH
+nested leaf write, depth 40            saw       MISSED  (seen === [])
+lazily materialized node write         saw       saw     ('f299.a')
+ARRAY-VALUED LEAF write                saw       MISSED  (seen === [])
+entityMap CRUD                         saw       saw     ('rows')
+```
+
+**PUSH IS A STRICT SUBSET OF PULL.** The privileged mechanism is not more
+capable than the null — it is LESS capable, and its own docblock says why: it
+wraps `.set`/`.update` by WALKING THE TREE AT ATTACH TIME, with `maxDepth = 32`,
+skipping built-ins and arrays. `computed` has no depth cap and no shape
+snapshot; it subscribes to whatever it reads, when it reads it.
+
+The array miss deserves naming. An array-valued leaf — `tags: string[]`,
+`items: T[]` — is one of the most ordinary things an application validates, and
+the interceptor reports nothing for it.
+
+SCOPE OF THAT CLAIM: measured on `interceptLeafSignals` directly, from core.
+`@signaltree/schema` was NOT executed here, so this is not yet a proven
+end-to-end schema defect — but schema's continuous invalidation routes through
+that callback, so it is the expected consequence.
+
+#### ANG-V0-G — the forms adapter, which INVERTS the last candidate
+
+Candidate 4 was that the forms adapters need a shared Angular validation
+projection they cannot get from validator-native results. Measured against
+`@signaltree/ng-forms/signals`, which is the only first-party consumer.
+
+`applySignalTreeSchemas` reads exactly two things:
+
+```
+tree.schemas.boundPaths()        -> dotted paths
+tree.schemas.schemaFor(fullPath) -> the raw StandardSchemaV1 the APP registered
+```
+
+then calls Angular's own `validateStandardSchema(field, schema)`.
+
+It reads **`errors()`, `errorList()`, `isValid()`, `pending()`, `pendingPaths()`,
+`errorsAt()`, `isValidAt()`, `isPendingAt()`, `validate()`, `validatePath()` —
+NONE of them.** The entire validation-projection surface of
+`@signaltree/schema` is UNUSED by SignalTree's own forms adapter. Angular Signal
+Forms runs the validator itself.
+
+Candidate 4 does not merely fail. It INVERTS: the adapter is already an existence
+proof of the correct architecture — the application supplies validators, Angular
+runs them, SignalTree publishes truth. The bridge treats `schemas()` as a
+**path -> schema REGISTRY**, and that registry's content is the plain object
+literal the application handed to `schemas({ schemas: { ... } })`.
+
+The only genuinely tree-aware residue is WILDCARD EXPANSION — resolving
+`items.*.name` against actual topology (`WILDCARD`, `compilePattern`,
+`enumerateLeafPaths`). Name it honestly: that is PATH-PATTERN EXPANSION OVER
+TREE TOPOLOGY, not validation. It is needed only because the registry is keyed
+by path, and a bridge given the schema map directly could expand it against the
+tree with no enhancer, no installation and no projection.
+
+#### ANG-V0 — RESULT
+
+```
+@signaltree/schema PACKAGE                    DELETE
+SignalTree validation API                     NONE
+SignalTree Angular validation projection      NONE
+
+Angular application
+    observes SignalTree using Angular
+    validates using its chosen validator
+```
+
+The continuous-Angular-projection requirement is DELETED, not relocated. The
+package is not moved sideways into the Angular layer; it is deleted, and its
+one first-party consumer is rewritten to take the schema map directly.
+
+**WHAT THIS SECTION PROTECTS AGAINST.** "Angular owns observation" must never be
+allowed to become "therefore SignalTree ships wrappers for every useful Angular
+observation." Those are different claims. The first says Angular mechanisms are
+the correct LAYER for observation. It does not make SignalTree responsible for
+packaging every `computed`, `effect` or projection an Angular consumer might
+want. Precomposed application code attached to a tree is the `formBridge`
+failure pattern with computed validation state substituted for `FormGroup`s:
+
+> useful behaviour != semantic capability != reason to hang methods on
+> SignalTree.
+
+Final ownership, no fourth owner required:
+
+```
+SignalTree     publish state so Angular can observe it
+Application    compose computed/effect/resource over that state
+Validator      judge the supplied value
+Forms adapter  translate between Angular Forms and validator results
+```
+
+#### Consequence for the SCHEMA REGRESSION blocker below
+
+The 25 RED schema tests and the leaf-realization root cause are now **MOOT AS A
+RELEASE BLOCKER**. The package is deleted, not repaired. What survives from that
+investigation is the CORE finding it exposed — ordinary leaf writes do not enter
+a canonical semantic mutation pipeline — which belongs to MUT, not to schema,
+and is where it was already filed.
+
+#### Consequence for `form()`
+
+`form()` now enters its audit with ZERO validation residue:
+
+```
+gone as justifications:
+  Reactive Forms integration
+  Signal Forms integration
+  validation declaration
+  validation execution
+  validation results
+  validation observation
+```
+
+Leaving only the underived historical bundle: `dirty`/`touched`, `submitting`,
+`wizard`, `reset`/`clear`/`patch`.
+
+**Do not audit `form()` as a unit.** Audit each function independently, then ask
+at the END whether any surviving function requires CONSTRUCTION-TIME form
+semantics. If none does, the marker dies even if several helpers survive
+elsewhere.
+
 ## SCHEMA REGRESSION — BISECTED AND CHARACTERIZED, repair NOT yet chosen
 
 ```
