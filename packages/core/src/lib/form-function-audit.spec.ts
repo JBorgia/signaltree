@@ -567,3 +567,215 @@ describe('F4 wizard — is step position TREE STATE at all?', () => {
     expect(isLast()).toBe(true);
   });
 });
+
+// ============================================================================
+// F7 — `patch`.  Attacked FIRST, because it carries the heaviest burden:
+// SignalTree already has partial-merge branch writes.
+//
+// The burden is NOT "is form.patch() convenient". It is:
+//   WHAT OPERATION BECOMES IMPOSSIBLE WITHOUT A FORM-SPECIFIC PATCH?
+// ============================================================================
+describe('F7 patch — what does a form-specific partial write add?', () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it('EQUIVALENCE: a plain branch call-form write is the same partial merge', () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const plain = signalTree({ p: { name: 'Ada', age: 36 } });
+
+    marked.$.p.patch({ name: 'Grace' });
+    plain.$.p({ name: 'Grace' });
+
+    expect(marked.$.p()).toEqual({ name: 'Grace', age: 36 });
+    expect(plain.$.p()).toEqual({ name: 'Grace', age: 36 });
+  });
+
+  it('EQUIVALENCE: both record history under timeTravel', async () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    }).with(timeTravel());
+    const plain = signalTree({ p: { name: 'Ada', age: 36 } }).with(timeTravel());
+
+    await tick();
+    const mBase = marked.getHistory().length;
+    const pBase = plain.getHistory().length;
+
+    marked.$.p.patch({ name: 'Grace' });
+    plain.$.p({ name: 'Grace' });
+    await tick();
+
+    expect(marked.getHistory().length).toBeGreaterThan(mBase);
+    expect(plain.getHistory().length).toBeGreaterThan(pBase);
+  });
+
+  it('the PLAIN branch write undoes cleanly', async () => {
+    const plain = signalTree({ p: { name: 'Ada', age: 36 } }).with(timeTravel());
+    await tick();
+
+    plain.$.p({ name: 'Grace' });
+    await tick();
+
+    plain.undo();
+    await tick();
+
+    expect(plain.$.p().name).toBe('Ada');
+  });
+
+  it('a form-marker patch undoes cleanly WHEN ITS TREE IS ALONE', async () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    }).with(timeTravel());
+    await tick();
+
+    marked.$.p.patch({ name: 'Grace' });
+    await tick();
+
+    marked.undo();
+    await tick();
+    expect(marked.$.p().name).toBe('Ada');
+  });
+
+  it('CROSS-TREE CONTAMINATION: a second timeTravel tree breaks the first undo', async () => {
+    // Same marker, same write, same undo as the test above. The ONLY new
+    // variable is that a SECOND, unrelated timeTravel tree exists and has been
+    // written to.
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    }).with(timeTravel());
+    const other = signalTree({ q: { n: 1 } }).with(timeTravel());
+    await tick();
+
+    marked.$.p.patch({ name: 'Grace' });
+    other.$.q({ n: 2 });
+    await tick();
+
+    expect(() => marked.undo()).toThrow(/Unsupported scoped undo effect/);
+  });
+
+  it('NARROWING: two PLAIN timeTravel trees do not contaminate each other', async () => {
+    const a = signalTree({ p: { name: 'Ada', age: 36 } }).with(timeTravel());
+    const b = signalTree({ q: { n: 1 } }).with(timeTravel());
+    await tick();
+
+    a.$.p({ name: 'Grace' });
+    b.$.q({ n: 2 });
+    await tick();
+
+    a.undo();
+    await tick();
+    expect(a.$.p().name).toBe('Ada');
+  });
+
+  it('NARROWING: the second tree must be WRITTEN, not merely constructed', async () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    }).with(timeTravel());
+    const idle = signalTree({ q: { n: 1 } }).with(timeTravel());
+    void idle;
+    await tick();
+
+    marked.$.p.patch({ name: 'Grace' });
+    await tick();
+
+    marked.undo();
+    await tick();
+    expect(marked.$.p().name).toBe('Ada');
+  });
+
+  it('the plain branch write is also DEEP, which patch is not', () => {
+    const plain = signalTree({ p: { a: { x: 1, y: 2 }, b: 3 } });
+
+    // A branch write merges at every depth.
+    plain.$.p({ a: { y: 99 } });
+    expect(plain.$.p()).toEqual({ a: { x: 1, y: 99 }, b: 3 });
+  });
+});
+
+// ============================================================================
+// F5 — `reset`.
+// ============================================================================
+describe('F5 reset — restore WHICH values?', () => {
+  it('restores the CONSTRUCTION-TIME values, inheriting F1s defect', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: '', age: 0 } }),
+    });
+    const marker = tree.$.p;
+
+    marker.patch({ name: 'Ada' });
+    await marker.submit(async (v) => v); // the save SUCCEEDS
+
+    // A user pressing "Revert" after a successful save expects to return to the
+    // SAVED values. reset() returns to the values the tree was BUILT with.
+    marker.reset();
+    expect(marker().name).toBe('');
+  });
+
+  it('NULL: restoring a baseline the application owns is one write', () => {
+    const tree = signalTree({ p: { name: '', age: 0 } });
+    const baseline = signal(tree.$.p());
+
+    tree.$.p({ name: 'Ada' });
+    baseline.set(tree.$.p()); // save succeeded -> this is the new zero
+
+    tree.$.p({ name: 'typo' });
+    tree.$.p(baseline()); // "Revert"
+
+    expect(tree.$.p().name).toBe('Ada');
+  });
+});
+
+// ============================================================================
+// F6 — `clear`.
+// ============================================================================
+describe('F6 clear — who decides what "empty" means?', () => {
+  it('MEASURES the type-guessing table', () => {
+    const tree = signalTree({
+      p: form<Record<string, unknown>>({
+        initial: {
+          text: 'hello',
+          count: 7,
+          list: [1, 2],
+          obj: { a: 1 },
+          nul: null,
+          bool: true,
+        },
+      }),
+    });
+    const marker = tree.$.p;
+
+    marker.clear();
+
+    expect(marker()).toEqual({
+      text: '',
+      count: 0,
+      list: [],
+      obj: {},
+      nul: null,
+      bool: true,
+    });
+  });
+
+  it('the number rule collapses "empty" with a VALID DOMAIN VALUE', () => {
+    const tree = signalTree({
+      p: form<{ rating: number }>({ initial: { rating: 5 } }),
+    });
+    const marker = tree.$.p;
+
+    marker.clear();
+
+    // A rating of 0 is a legitimate answer, not the absence of an answer.
+    // After clear() nothing can distinguish "cleared" from "the user said 0".
+    expect(marker().rating).toBe(0);
+  });
+
+  it('and BOOLEAN is left ALONE — the table is not even internally consistent', () => {
+    const tree = signalTree({
+      p: form<{ agreed: boolean }>({ initial: { agreed: true } }),
+    });
+    tree.$.p.clear();
+
+    // `true` survives a "clear". A checkbox the user ticked stays ticked.
+    expect(tree.$.p().agreed).toBe(true);
+  });
+});

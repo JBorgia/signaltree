@@ -6534,6 +6534,154 @@ consumer would reasonably read as permission, and `next()` can refuse when it is
 `true`. Promotion requires checking whether any published example binds a
 control to `canNext`; not decided here.
 
+### AUDIT ROWS — F5 `reset`, F6 `clear`, F7 `patch`
+
+Attacked as ORDINARY OPERATIONS before any "form" semantics are granted.
+
+#### F7 `patch` — heaviest burden, taken first
+
+SignalTree already has partial-merge branch writes, so the burden is not "is
+`form.patch()` convenient":
+
+> **What operation becomes impossible without a form-specific patch?**
+
+```
+FUNCTION       Write some fields of a composite value, leaving the rest.
+OWNER          SignalTree -- writing state IS its job.
+GREENFIELD     tree.$.p({ name: 'Grace' })
+MECHANISM
+SIGNALTREE?    YES, and it ALREADY SHIPS IT. The question is whether a SECOND,
+               form-specific spelling adds anything.
+CONSTRUCTION?  NO.
+```
+
+**MEASURED — nothing.**
+
+```
+marked.$.p.patch({ name: 'Grace' })    -> { name: 'Grace', age: 36 }
+plain.$.p({ name: 'Grace' })           -> { name: 'Grace', age: 36 }
+both record history under timeTravel
+```
+
+**And the plain branch write is MORE capable: it merges at EVERY DEPTH.**
+
+```
+plain.$.p({ a: { y: 99 } })   ->  { a: { x: 1, y: 99 }, b: 3 }
+```
+
+`patch` is a shallow spread over one level. So the form-specific spelling is not
+even a convenience win where composite values are nested.
+
+```
+DISPOSITION    F7 patch -> DELETE. A duplicate of a shipped, more capable
+               operation.
+```
+
+#### F5 `reset`
+
+```
+FUNCTION       Return values to a baseline the user calls "unchanged".
+OWNER          Whoever owns the BASELINE -- the application. Identical to F1.
+GREENFIELD     tree.$.p(baseline())      // one ordinary write
+SIGNALTREE?    NO -- the write is already published; the baseline is not
+               SignalTree's to hold.
+CONSTRUCTION?  NO.
+```
+
+`reset` and `dirty` are the SAME QUESTION seen from two sides -- *"does this
+differ from the baseline"* and *"put the baseline back"* -- so `reset` inherits
+F1's defect exactly:
+
+```
+patch({ name: 'Ada' });  await submit(save);   // the save SUCCEEDS
+reset()                                        // user presses "Revert"
+marker().name === ''                           // the BUILD-TIME value
+```
+
+**After a successful save, "Revert" discards the saved work** and returns to
+what the tree was constructed with, because that is the only baseline the marker
+has. The null moves the baseline on save, so Revert returns to `'Ada'`.
+
+The current `reset()` also clears `touched`, `asyncErrors` and the wizard step --
+all now DELETE by F2, validation ownership and F4 respectively. Once those are
+gone, `reset()` is one write.
+
+```
+DISPOSITION    F5 reset -> DELETE. Same owner and same defect as F1.
+```
+
+#### F6 `clear`
+
+```
+FUNCTION       Set fields to "empty".
+OWNER          The DOMAIN. What "empty" means is a domain fact, not a type fact.
+GREENFIELD     tree.$.p(EMPTY)   // an application-declared empty value
+SIGNALTREE?    NO.
+CONSTRUCTION?  NO.
+```
+
+**MEASURED — `clear()` infers domain policy from the TypeScript type:**
+
+```
+text: 'hello'  ->  ''
+count: 7       ->  0
+list: [1, 2]   ->  []
+obj: { a: 1 }  ->  {}
+nul: null      ->  null
+bool: true     ->  true      <-- UNCHANGED
+```
+
+Two independent problems, both measured.
+
+**1 — the number rule collapses "empty" with a VALID DOMAIN VALUE.** A
+`rating: 5` clears to `0`. Zero is a legitimate answer, not the absence of one,
+and after `clear()` nothing can distinguish "cleared" from "the user said 0".
+Only the domain knows whether the empty rating is `0`, `null` or `undefined`.
+
+**2 — the table is not even internally consistent.** `boolean` is left alone, so
+a checkbox the user ticked stays ticked through a "clear". Whatever rule
+produced `''` and `0` was not applied to `true`.
+
+This is precisely the antipattern the MERGE row already condemned -- *"SignalTree
+must never infer policy from type; seeing two numbers and deciding numbers get
+summed is the domain owner's call"* -- shipped and running.
+
+```
+DISPOSITION    F6 clear -> DELETE. Type-inferred domain policy SignalTree has no
+               authority to choose, and the choice is inconsistent besides.
+```
+
+### DEFECT FOUND WHILE MEASURING F7 — cross-tree undo contamination
+
+Not a `form()` question, and it outlives every deletion above. Narrowed by
+one-variable experiment:
+
+```
+form-marker patch + a second WRITTEN timeTravel tree   THROWS
+    Error: Unsupported scoped undo effect at structural-drift
+    time-travel.ts:2175 -> applyTurnEffectsThroughRealizationPort
+
+form-marker patch + a second IDLE timeTravel tree      CLEAN
+form-marker patch, its tree ALONE                      CLEAN
+two PLAIN timeTravel trees, both written               CLEAN
+```
+
+**Both conditions are required**: a `form()` marker write AND a concurrent write
+to an unrelated `timeTravel()` tree. Two plain trees do not contaminate each
+other, so this is not generic time-travel scoping -- the marker's write is what
+makes the difference.
+
+```
+14.x   DEFECT. `tree.undo()` throws on a tree whose own writes were valid,
+       because of activity in a DIFFERENT tree. Nothing in the public contract
+       says undo is process-global. Fix undecided.
+15.0   NOT resolved by deleting form() -- the contaminating mechanism is in
+       time-travel / the realization port, not in the marker.
+MUT-3  Direct evidence for the SCOPE question already filed there: "how is
+       observation bound to ONE tree lineage rather than process-global state?"
+       This is a measured instance of the answer being "it is not."
+```
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
