@@ -110,6 +110,106 @@ without duplicating SignalTree semantics. Note the competitor is not
 hypothetical: a readonly `$` paired with a separate `@Injectable` Ops service for
 writes is already the documented production architecture on `defineStore`.
 
+## Amendment 1 — the construction-shape hypothesis
+
+Added after B2-1 item 0 measured something the original draft did not anticipate.
+**Status unchanged: CANDIDATE. Nothing here is frozen.**
+
+### What was measured, and it is not a hypothesis
+
+`plannedSignalTree()` can inspect requested capabilities BEFORE the substrate is
+constructed. Chained `.with()` structurally cannot, because the tree already
+exists by the time an enhancer is applied. Ordinary `signalTree()` therefore
+installs all four capabilities always; `plannedSignalTree().build()` installs
+what the enhancers' `capabilities` metadata actually asked for, and that metadata
+is exercised in production (`transactions` -> `['causal-runtime']`, `timeTravel`
+-> `['causal-runtime','temporal-snapshots']`).
+
+That is a sequencing property inherent in the API SHAPE, not a defect in the
+implementation of `.with()`.
+
+### The hypothesis it motivates
+
+> The extension FUNCTION may survive; the post-construction enhancer CHAIN
+> probably does not.
+
+Shape, with the name deliberately unsettled — `extensions`, `features`, `using`
+are all placeholders and none is chosen:
+
+```text
+signalTree({ store, derived, <extension descriptors>, ... })
+        |
+        +-- discover everything first: required capabilities, semantic topology,
+        |   conflicts, realization requirements
+        |
+        +-- construct ONCE, correctly
+```
+
+against today's `construct -> modify -> modify again`. This fits the compiler
+framing that Amendment 0 kept, and it is the first evidence that the framing
+predicts something rather than merely re-describing what exists.
+
+**Consequence for `plannedSignalTree`:** if the primary constructor receives
+extension descriptors, it can see them all before constructing, so the surviving
+function no longer needs a second public constructor. Function SURVIVES, public
+FORM becomes a strong REDESIGN candidate.
+
+**Consequence for ordering:** the default becomes *extensions are
+order-independent unless a surviving function proves otherwise*. Capability union
+is commutative — `[timeTravel(), transactions()]` and its reverse request the
+same substrate — so no procedural ordering is needed for the one axis that is
+actually exercised. A genuine ordering relationship would have to earn itself
+independently rather than being inherited from the enhancer model.
+
+### The governing null
+
+> Assume there is no chained `.with()`. Given a single declarative
+> `signalTree({...})` that receives extension descriptors before compilation,
+> what SignalTree-owned function becomes impossible?
+
+If the answer is "none", `.with()` dies even though extension functionality
+survives completely.
+
+### PROBE — not refuted at the type level, and NOT a spec
+
+The obvious falsifier is typing: `.with()` accumulates through `this & TAdded`,
+and `this`-polymorphism is what carries prior accumulations along a chain. A
+tuple must reproduce that. A scratch probe with the guards RFC 0015 taught —
+an `IsAny` detector applied INSIDE the projector, an operation that cannot
+survive imprecision (`any + any`), and three negative controls — compiles clean:
+
+```text
+tuple accumulation      tree.transaction / tree.undo / tree.redo    resolve
+store type              $.count: number, $.name: string             survive
+derived inference       derived.doubled: number                     correct
+$ inside projector      IsAny<typeof $> assignable to false         NOT any
+negative controls       unknown method / missing key / wrong type   all fire
+```
+
+Note this does not contradict RFC 0015: its refutation was about a facade
+depending on SIBLING DERIVED RETURN inference, and extension descriptors are
+ordinary values whose types are known without checking any projector body, so
+they do not enter the deferred pass in the way that degraded.
+
+**A probe is not a spec.** It used a simplified `Tree<T>`, not the real
+`ISignalTree`/`TreeNode`/`NodeAccessor` with callable trees and
+`this`-polymorphism. The encoding is NOT REFUTED; it is not established either,
+and RFC 0015's own false green is the reason that distinction is worth stating.
+
+### Ledger rows
+
+| Concept | Direction |
+|---|---|
+| extension/plugin function | likely SURVIVES |
+| construction capability declaration (`capabilities`) | **SURVIVES — measured, exercised in production** |
+| generic "enhancer" runtime abstraction | UNPROVEN |
+| chained `.with()` as primary extension API | strong REDESIGN/DELETE candidate |
+| `plannedSignalTree()` function | SURVIVES |
+| `plannedSignalTree()` as a separate public constructor | strong REDESIGN candidate |
+| extension descriptors in the initial declaration | strong candidate |
+| `requires`/`provides` ordering graph | highly suspect; audit independently |
+| "enhancer" as the future NOUN (`(tree) => tree`) | suspect — inherently post-construction |
+
 ## Frozen baseline this matrix may not re-derive
 
 - `SignalTree owns truth · Angular owns observation · causal history owns meaning`
