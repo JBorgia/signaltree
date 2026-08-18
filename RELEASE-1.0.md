@@ -7015,6 +7015,45 @@ framework integration conveniences
 The list means only: *things users may find useful enough to reconsider after
 stabilization.* Default remains **DO NOT ADD A SIGNALTREE FEATURE.**
 
+**AMENDED — CANDIDATE is not the only bucket.** The list above was too weak: it
+placed capabilities that ALREADY SURVIVED hostile audit next to ones that never
+earned ownership. Two buckets, not one:
+
+```
+DEFERRED CANDIDATE   a useful-looking capability that never earned first-party
+                     or product ownership. May come back. May not.
+
+DEFERRED OBLIGATION  a function that ALREADY SURVIVED hostile audit, whose
+                     CURRENT FORM was rejected. Replacement design deferred
+                     until the architecture stabilizes. It does NOT revert to
+                     "maybe useful" merely because its implementation happened
+                     to depend on a deleted mechanism.
+```
+
+```
+CANDIDATES                        OBLIGATIONS
+checkpoint / baseline UX          Reactive Forms interoperability
+interaction / touched helpers       (the FUNCTION survived the formBridge
+workflow / step navigation           subtraction test; only the marker-coupled
+operation lifecycle helpers          enhancer dies)
+imperative durability controls    Angular Signal Forms interoperability
+                                    (inside the frozen Angular product boundary)
+```
+
+So FORM-DEL means:
+
+```
+formBridge() current enhancer / API     DELETE
+signalForm() current marker bridge      DELETE
+
+Reactive Forms interoperability         SURVIVING FUNCTION, realization deferred
+Signal Forms interoperability           SURVIVING PRODUCT FUNCTION, deferred
+```
+
+No replacement design now -- but these are OBLIGATIONS on the later greenfield
+pass, not candidates that may quietly evaporate.
+
+
 ### 0j-2 — the corpse does not participate in the next experiment
 
 **ARCHITECTURAL deletion and PHYSICAL deletion are different events, and the gap
@@ -7034,6 +7073,24 @@ dead mechanism influences the derived contract
 > BOUNDARY — not deferrable work.** Deriving a new contract while declared-dead
 > machinery is still live measures the new architecture against something
 > already ruled non-architectural.
+
+**AMENDED — the rule travels at the width of its justification.** "Once a death
+certificate is signed, executing it is the NEXT EXECUTION BOUNDARY" is too
+universal; it would forbid batching frozen deletions or landing an unrelated
+documentation fix. The evidence-hygiene rule actually justified is:
+
+> **A frozen architectural deletion must be PHYSICALLY EXECUTED before any
+> subsequent derivation whose EVIDENCE SURFACE can include, or be affected by,
+> that dead mechanism.**
+
+For the current case the outcome is unchanged:
+
+```
+form() frozen DELETE
+MUT's evidence surface includes mutation machinery that form() participates in
+-> FORM-DEL MUST PRECEDE MUT
+```
+
 
 **This is not cleanup. It is evidence hygiene**, and it directly improves the
 next two derivations:
@@ -7078,9 +7135,34 @@ ng-forms enhancer/form-bridge    19 refs         DIES
 ng-forms signals/marker-bridge    5 refs         DIES
 ```
 
-**`@signaltree/ng-forms` SURVIVES the deletion** — most of it never depended on
-the marker. What dies is `formBridge()` and `signalForm()` (whose only remaining
+**What dies is `formBridge()` and `signalForm()`** (whose only remaining
 overload is the marker one, the schema overload having gone with SCHEMA-DEL).
+
+**AMENDED — dependency independence is not survival proof.** "`@signaltree/ng-forms`
+SURVIVES the deletion" claims more than the measurement supports, and would let
+"nothing forces it to die" become "it lives", which is the inference Rule 0g
+forbids. What was measured:
+
+> **FORM-DEL does not force deletion of `@signaltree/ng-forms`; a
+> marker-independent remainder exists. The package's own architectural survival
+> remains UNPROVEN pending its survival audit.**
+
+**`createFormTree()` — REMOVE THE DEAD POINTER, DO NOT RE-POINT.** Its runtime
+deprecation currently steers users to the deleted API. Under subtraction-only,
+re-pointing would endorse another endpoint before that endpoint is audited.
+
+```
+REMOVE       guidance naming form() / formBridge() as the migration target
+DO NOT       re-point to another API
+DO NOT       declare createFormTree the survivor
+DO NOT       un-deprecate it
+STATUS       createFormTree deprecation AND survival -> UNPROVEN, its own audit
+```
+
+A bare deprecation notice may stand temporarily. What cannot stand is guidance
+toward a deleted API.
+
+
 
 **CONSEQUENCE TO SURFACE, not to silently resolve:** `createFormTree()` is
 currently DEPRECATED IN FAVOUR OF the thing being deleted — its warning tells
