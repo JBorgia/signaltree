@@ -8505,10 +8505,19 @@ three.
 
 WHAT ACTUALLY REMAINS IN B1
 
-1. AST characterization scan for the value-space route — NOT a fix list. The
-   property is whether an emitted public type contains a value query
-   (`typeof InternalThing`) whose target will not survive production emission.
-   Not limited to functions.
+1. ~~AST characterization scan for the value-space route.~~ **DONE — ZERO
+   DEFECTS.** Run against the freshly built production declarations rather than
+   source, which is the only place the property is observable. Seven value
+   queries ship in core's declarations — `timeTravelHistory` in `time-travel`,
+   and three each in `causal-runtime/confirmed-undo` and `confirmed-redo`. Every
+   target is declared or imported from a file that declares it, consistent with
+   the closure gate's `stripped-but-referenced = 0`; and neither `confirmed-*`
+   file is reachable from a public entrypoint, so they are not public surface at
+   all.
+
+   `isDev` emits as `export declare const isDev: boolean` — the primitive
+   inlined its literal type exactly as the fixture predicted, so `bc50d960`'s
+   fix holds at HEAD. The value-space route is CLOSED with no repairs owed.
 2. Decide public intent for `isDev`, `HydrateMode`, and each scan hit, BEFORE
    repairing anything. `isDev` is deletion-favoured by the utility audit, so
    keeping it requires POSITIVE evidence; `HydrateMode`'s inclusion is already
