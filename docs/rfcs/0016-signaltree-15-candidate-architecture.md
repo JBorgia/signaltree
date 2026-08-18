@@ -1,0 +1,410 @@
+# RFC 0016 — The SignalTree 15 candidate architecture, as a matrix
+
+Status: **CANDIDATE — NOTHING FROZEN.** No cell of this document may be cited as
+authority. It exists to hold a shape while the evidence that would earn it is
+still being gathered.
+
+Companion to [RFC 0015](0015-derived-projection-contract.md), which is the only
+part of this picture that is actually frozen.
+
+## Why this is a matrix and not a design
+
+A candidate architecture was drafted that framed `signalTree()` as a compiler
+from a declarative authoring language into a visible state topology plus hidden
+behavior wiring over a small physical/causal kernel. The compiler framing is
+worth keeping. The rest of the draft did something this release process
+explicitly forbids: it assigned lowering targets — `loader → Operation`,
+`compared → Policy`, `resource → Position + Operation` — to concepts whose
+FUNCTION has never been derived.
+
+That is the Rule 0k error in a new mask. Rule 0k caught *"Angular has a
+primitive, therefore delete the feature."* This is *"a smaller abstraction
+exists, therefore demote the feature."* Same invalid inference, same direction of
+travel, and `form()` is what it cost last time.
+
+So the deliverable is the grid, not the algebra. **The `LOWERING HYPOTHESIS`
+column starts blank for every row and is filled only by a NULL that earns it.**
+Empty cells are the finding. Rows that need two or more lowering targets are the
+"multiple concepts cobbled together" signal. Combinations that recur across many
+earned rows are the evidence that Position / Operation / Policy / Command really
+are a minimal basis — and if they do not recur, the basis is wrong.
+
+## What is kept from the candidate draft
+
+**The compiler / lowering boundary.** This is the genuinely new contribution and
+it is already supported by measured structure rather than by hope. The marker
+analysis for the `@signaltree/authoring` split proved the mechanism exists
+today:
+
+```text
+authorship factory  ->  inert descriptor { [X_MARKER]: true, config }
+                            ->  materializer
+                                    ->  framework create*Signal realization
+```
+
+with **zero** Angular primitives in any authorship factory across all five
+marker modules, and every Angular primitive confined to `create*Signal`. The
+architecture the repo has been building for twenty commits is a lowering
+pipeline; it had simply never been named as one.
+
+The useful principle that follows, and the reason the framing earns its place:
+
+> **Rich authoring concepts may disappear during lowering.** A concept can be
+> valuable at the authoring surface and have no representative in the kernel.
+
+That is the honest form of the `REDESIGN` disposition, and it lets a concept
+survive as sugar without the kernel growing a runtime object for it.
+
+Everything else from the draft is a row in the grid below, not a conclusion.
+
+## Ledger — where the candidate draft contradicted frozen results
+
+Recorded so the draft cannot be mined later as if it agreed with the freeze.
+
+| Draft claim | Status | Governing result |
+|---|---|---|
+| `linked()` sits under `derived:` | **CONTRADICTS** | RFC 0015: `linked()` as derived is REFUTED; function, owner and placement are all three UNPROVEN. Current `.derived()` placement is the conflation, not a precedent. |
+| persistence is an Operation with `trigger: AFTER_COMMIT` and a definition-time `source` | **CONTRADICTS, twice** | Frozen persistence invariants: the durability gate is TREE-SCOPED and SCOPE-BASED — *"commit-ness is NEVER inferred from where the JavaScript call happened"*; and invariant 7 — durable consequences *"resolve surviving truth at EXECUTION time, never a value captured when the write was authored."* |
+| Operation authority is a six-value enum (OBSERVE / REALIZE / CONSEQUENCE / INGRESS / AUTHOR / RECONCILE) | **OVERBUILT** | MUT-2C froze that a two-valued authored/realized classification is decisive in the measured capture path, is caller-supplied and unverified, and that **its owner is NOT PROVED**. Six values rest on an unowned two. |
+| `resource` / `loader` / `status` / `compared` / `serialization` lower to sugar or policy | **PREMATURE** | Rule 0k Tier 2: each gets its own NULL and its own verdict. None has been run. |
+
+### Two corrections in the other direction
+
+The review that produced this RFC also overstated twice. Both corrections stand.
+
+**1. Derived `PositionId` is UNPROVEN, not contradicted.** RFC 0015's
+`Identity — DELETE` answered a narrower question: whether *cross-derived
+composition* requires an identity relationship. It established that downstream
+projections consume values rather than references. It did **not** establish that
+a derived projection cannot hold a stable semantic position identity, and
+"no causal identity / no persistence identity" is fully compatible with one. The
+correct ledger:
+
+```text
+DERIVED PositionId              UNPROVEN
+DERIVED causal authorship       NO   (frozen projection contract)
+DERIVED persistence identity    NO   (frozen projection contract)
+```
+
+**2. `asReadonly` and `_` are different axes, not competitors.** The claim that
+`_` would make `asReadonly` "the tree without `_`" does not hold, because the
+proposed `$` still permits canonical store writes (`tree.$.search.set('Ada')`).
+So `asReadonly` narrows *mutation capability on `$`*, while `_` would expose
+*intentional command invocation*, which is not a state write at all. `_` may
+still fail its own survival audit; it does not fail it by redundancy with
+`asReadonly`.
+
+### The sharpened NULL for `_`
+
+The candidate function is known, so the NULL should be stated against it rather
+than against a vague alternative:
+
+> **Does SignalTree need to compile intentionally-invokable behavior into the
+> same typed semantic topology as its Positions — including position and subject
+> association — or is an ordinary typed application service fully equivalent?**
+
+If the service is equivalent, `_` is application architecture, not SignalTree
+architecture. `_` survives only if something like subject-scoped command
+association, or the compiled topology itself, cannot be reproduced externally
+without duplicating SignalTree semantics. Note the competitor is not
+hypothetical: a readonly `$` paired with a separate `@Injectable` Ops service for
+writes is already the documented production architecture on `defineStore`.
+
+## Frozen baseline this matrix may not re-derive
+
+- `SignalTree owns truth · Angular owns observation · causal history owns meaning`
+- `PositionId != SubjectId != SlotIndex != key/path`
+- `PREPARE → PRIVATE COMMIT → PROJECT → PUBLISH → CONSEQUENCE`
+- All expected fallible semantic work precedes private commit; PROJECT reflects
+  committed truth and never determines authority; persistence is post-commit.
+- Atomicity is externally observable coherence, not a count of revision bumps. A
+  semantic transaction may span more than one private substrate commit; no
+  observer, publication adapter or persistence consequence may see an
+  intermediate heterogeneous state.
+- The durability authority is TREE-SCOPED; unresolved scopes hold that tree's
+  durable consequences; foreign-tree scopes never interfere.
+- A rollback REFUSAL is not a rollback success: surviving authoritative truth
+  FLUSHES.
+- The derived projection contract (RFC 0015), in full.
+
+## Legend
+
+```text
+FROZEN         established by a recorded derivation; reopen only on a concrete
+               deterministic counterexample
+DERIVED        a derivation ran and recorded a result; nothing was frozen
+MEASURED       a fact about HEAD, carrying no disposition
+CANDIDATE      hypothesis only
+NULL NOT RUN   no derivation has been attempted
+—              deliberately blank. Filling it requires running the NULL.
+```
+
+Tier is [Rule 0k](../../RELEASE-1.0.md)'s four-tier triage: **T1** finish MUT
+first · **T2** auditable after MUT, own NULL each · **T3** needs its own
+derivation once the kernel settles · **T4** package verdicts last.
+
+---
+
+## Table A — Function and ownership
+
+MUT-0's rule governs this table: existing code may prove a FUNCTION is useful, it
+may NEVER prove its current ABSTRACTION is necessary. `FUNCTION` and `OWNER` are
+therefore blank wherever the NULL has not been run — filling them from the
+current implementation is the exact reflex MUT-0 exists to block.
+
+`PUBLIC NEED` uses the three levels that must never be collapsed:
+**CI** core-internal · **FP** first-party package · **TP** third-party SDK.
+
+| # | Concept | Tier | Function | Owner | Public need | Current form (MEASURED at HEAD) |
+|---|---|---|---|---|---|---|
+| 1 | `signalTree()` construction | — | construct a tree from a declaration | — | TP | `signalTree(obj)`; callable tree; `.with()` chain |
+| 2 | store / canonical truth | — | hold authoritative state | SignalTree (FROZEN) | TP | nested signals over slot substrate |
+| 3 | `$` state facade | — | address state | SignalTree (FROZEN cutoff test 2: no root surface) | TP | `tree.$`, `tree.state` |
+| 4 | derived projection | T3 | — | — | TP | `derived:` block contract FROZEN; `.derived()` chain is a DELETE candidate |
+| 5 | `derivedFrom()` | T3 | PROVED — TS7006 at a module boundary is real | — | TP | exported helper; form unsettled |
+| 6 | `linked()` | T3 | — | — | — | wraps `linkedSignal`; writable; reads own prior value; lives in `.derived()` for facade access only |
+| 7 | `asReadonly()` | — | narrow mutation capability on `$` | — | TP | type-level narrowing; not an `as any` guard |
+| 8 | `entityMap` | T3 | — | — | TP | SubjectId frozen; Angular supplies no normalized identity |
+| 9 | `byKeys` | T3 | — | — | — | entity key selection |
+| 10 | `stored()` | T3 | — | persistence consequence (FROZEN) | TP | realization UNPROVEN |
+| 11 | `persistence()` enhancer | T3 | — | persistence consequence (FROZEN) | — | enhancer |
+| 12 | storage adapters | T3 | — | — | TP | `core/storage`; emits **no** external imports |
+| 13 | `serialization` | T2 | — | — | — | enhancer |
+| 14 | `compared()` | T2 | — | — | — | marker; own NULL: *what does SignalTree itself need to know about equality?* |
+| 15 | `status()` | T2 | — | — | — | marker; own NULL: *what semantic state does it carry that ordinary signals do not?* |
+| 16 | `loader()` | T2 | — | — | — | marker; own NULL: *what acquisition capability is lost?* |
+| 17 | `asyncSource()` | T2 | — | — | — | marker |
+| 18 | `asyncQuery()` | T2 | — | — | — | marker; NULL must include the input→result relationship |
+| 19 | `batching()` | T1 | — | — | — | enhancer |
+| 20 | `transactions()` | T1 | — | — | — | enhancer; tree-local gate FROZEN |
+| 21 | `timeTravel()` / history | T1 | — | — | — | enhancer; separate from causal runtime (MEASURED, not a disposition) |
+| 22 | `trackHistory` | T1 | — | — | — | survives in `lib/form-history/` after FORM-DEL; **retained mechanically, not an audited survivor** |
+| 23 | undo / redo / rollback | T1 | — | — | — | cross-tree contamination defect found during F7, OPEN |
+| 24 | merge / branch | T1 | — | — | — | deferred product question; preconditions MEASURED and DO NOT HOLD |
+| 25 | `devTools()` | T1 | — | — | — | MUT-0 hypothesis: diagnostic projection |
+| 26 | enhancer protocol | T1 | — | — | TP? | `.with()` canonical; `composeEnhancers` DELETED; `SignalTreeBase` DELETED; `bind()` needs consumer proof; `requires` has no coherent semantic owner |
+| 27 | marker processor protocol | T1 | — | — | TP? | `registerMarkerProcessor`, marker symbols, reader allowlists |
+| 28 | write context | T1 | — | — | — | `getActiveWriteContext` / `withWriteContext`; `causalMode` field decisive at the capture gate (FROZEN) |
+| 29 | `PathNotifier` | T1 | — | — | — | **candidate substrate only.** Ordinary leaf writes produce ZERO events through it |
+| 30 | `interceptLeafSignals` | T1 | — | — | — | does not wrap a leaf's `.set` at all |
+| 31 | error authority | — | — | — | TP | `onTreeError`, `SignalTreeRollbackError`; branded factories were RFC 0004 plan-of-record |
+| 32 | hydration | T1 | — | — | — | `onHydrateDecision`, `HydrateMode`; ingress, distinct from persist |
+| 33 | SSR state transfer | — | — | — | — | RFC 0014; distinct ingress |
+| 34 | lazy / incremental materialization | — | — | — | — | `core/lazy`, threshold-driven; unassigned to any layer |
+| 35 | `security` | — | — | — | TP | `core/security`; emits **no** external imports |
+| 36 | audit tracker | — | — | — | — | `createAuditTracker` / `createAuditCallback` |
+| 37 | `edit-session` | — | — | — | TP | `core/edit-session` |
+| 38 | `invalidateTag` / tags | — | — | — | — | tag authority |
+| 39 | `isDev` / dev-only gating | — | — | — | — | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION |
+| 40 | `defineStore` | — | Angular DI integration | Angular (realization) | TP | injectable wrapper; `expose: 'readonly'` |
+| 41 | `plannedSignalTree` | — | — | — | — | MUT-0 order item 9 |
+| 42 | `toWritableSignal` | — | — | — | TP | one of only 3 symbols exposing Angular in a public TYPE |
+| 43 | `_` command facade | — | **CANDIDATE** (see sharpened NULL above) | — | — | **DOES NOT EXIST.** No `_`, no Command, no Operation, no `OperationId` anywhere in any package |
+| 44 | `@signaltree/events` | T4 | — | — | — | root emits `zod` only — the neutrality shape the others should reach |
+| 45 | `@signaltree/guardrails` | T4 | — | — | — | no Angular anywhere |
+| 46 | `@signaltree/ng-forms` | T4 | — | — | — | Angular adapter?; `/audit` is a pure re-export |
+| 47 | `@signaltree/realtime` | T4 | — | — | — | reset to R0 OWNERSHIP; emits `@angular/core` |
+| 48 | `@signaltree/shared` | T4 | — | — | — | version drift flagged |
+| 49 | `@signaltree/authoring` | — | make the descriptor/realization split physical | — | TP | **DOES NOT EXIST.** Phase 2, IN PROGRESS |
+
+---
+
+## Table B — Constraints, falsifiers, disposition
+
+| # | Concept | Governing constraints it must satisfy | Constraint status | NULL / falsifier | Disposition | Evidence status |
+|---|---|---|---|---|---|---|
+| 1 | `signalTree()` construction | old grammar must fail at compile/import time | FROZEN (cutoff test 4) | — | KEEP | MEASURED |
+| 2 | store / canonical truth | SignalTree owns truth; PREPARE precedes PRIVATE COMMIT | FROZEN | — | KEEP | FROZEN |
+| 3 | `$` state facade | one operation one protocol; no root surface | FROZEN (cutoff tests 1-2) | — | KEEP | FROZEN |
+| 4 | derived projection | read-only · direct projection of store truth · no derived→derived · no causal identity · no persistence identity · nested namespaces · composes into `$` · no terminal collision | FROZEN (RFC 0015) | ran; recorded | contract FROZEN, `.derived()` cut NOT AUTHORIZED | FROZEN + DERIVED |
+| 5 | `derivedFrom()` | — | — | ran | function PROVED, form unsettled | DERIVED |
+| 6 | `linked()` | must not re-enter `derived:` without a new falsifier | DERIVED (refutation) | **NOT RUN** | UNPROVEN ×3 (function, owner, placement) | DERIVED (refutation only) |
+| 7 | `asReadonly()` | type-only narrowing; not a bypass guard | MEASURED | — | — | MEASURED |
+| 8 | `entityMap` | SubjectId is structural lifetime | FROZEN | **NOT RUN** | strong survival candidate | CANDIDATE |
+| 10 | `stored()` | all 8 persistence invariants; execution-time truth resolution; tree-scoped gate | FROZEN | realization NULL **NOT RUN** | owner FROZEN, realization UNPROVEN | FROZEN owner |
+| 13 | `serialization` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 14 | `compared()` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 15 | `status()` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 16 | `loader()` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 17 | `asyncSource()` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 18 | `asyncQuery()` | — | — | **NOT RUN** | — | NULL NOT RUN |
+| 19 | `batching()` | observational atomicity | FROZEN | blocked on MUT | — | T1 |
+| 20 | `transactions()` | tree-local gate; foreign scopes never interfere; refusal FLUSHES; scope settlement must survive a throwing compensation | FROZEN | MUT-3 two-tree falsifier | — | partially FROZEN |
+| 21-24 | `timeTravel()` / `trackHistory` / undo-redo-rollback / merge-branch | causal history owns meaning | FROZEN (invariant only) | MUT-3 | — | T1, merge preconditions FAIL |
+| 26 | enhancer protocol | `.with()` only; no escape hatch; enhancer identity and capability dependencies have separate authorities | FROZEN (cutoff tests 1-2) | MUT-0 item 2 | — | **blocking GATE B** |
+| 28 | write context | classification is caller-supplied and unverified, reachable from a published subpath, and takes effect | FROZEN (behaviour only) | ownership NULL **NOT RUN** | — | FROZEN (behaviour), owner UNPROVEN |
+| 29 | `PathNotifier` | — | — | join test already refutes promotion | **NOT the observation boundary** | DERIVED (R1) |
+| 30 | `interceptLeafSignals` | — | — | — | — | MEASURED |
+| 43 | `_` command facade | must not manufacture PositionIds for facade organization | **CANDIDATE** — proposed by the draft, not derived | **sharpened NULL above — NOT RUN** | — | CANDIDATE |
+
+Rows omitted from Table B are those where no governing constraint and no stated
+falsifier yet exist; their Table A row already reads `NULL NOT RUN`.
+
+**The lowering boundary is deliberately NOT a constraint in row 1.** The
+compiler/lowering framing is a strong CANDIDATE interpretation of measured
+structure — the descriptor → materializer → realization pipeline is real and was
+measured for the authoring split — but it is not a GATE A invariant and nothing
+has frozen it. It was removed from row 1 for exactly the reason this RFC exists:
+in six months someone will read the table and not the preamble, and a framing
+sitting in a column headed "constraints" reads as settled. If the framing is ever
+earned, it earns its way in through filled rows, not by being the heading they
+were written under.
+
+---
+
+## Table C — Lowering hypothesis grid
+
+**Every cell in the four category columns is blank by design.** `VISIBLE IN $`
+is a measured fact about HEAD and carries no lowering commitment; it is included
+so the grid is anchored to something real.
+
+A concept earns a category mark only from its own NULL. A row that ends up
+marked in two or more categories is a **cobbled concept** — that is the signal
+this table exists to produce.
+
+| # | Concept | Visible in `$` today (MEASURED) | Position? | Hidden behavior? | Policy? | Public command? | Lowering hypothesis |
+|---|---|---|---|---|---|---|---|
+| 2 | store / canonical truth | yes | — | — | — | — | — |
+| 4 | derived projection | yes (frozen: composes into `$`) | — | — | — | — | — |
+| 6 | `linked()` | yes, via `.derived()` | — | — | — | — | — |
+| 8 | `entityMap` | yes | — | — | — | — | — |
+| 10 | `stored()` | yes (marker surface) | — | consequence (FROZEN owner) | — | — | — |
+| 13 | `serialization` | no | — | — | — | — | — |
+| 14 | `compared()` | no | — | — | — | — | — |
+| 15 | `status()` | yes | — | — | — | — | — |
+| 16 | `loader()` | yes | — | — | — | — | — |
+| 17 | `asyncSource()` | yes | — | — | — | — | — |
+| 18 | `asyncQuery()` | yes | — | — | — | — | — |
+| 20 | `transactions()` | no | — | — | — | — | — |
+| 21 | `timeTravel()` / history | no | — | — | — | — | — |
+| 25 | `devTools()` | no | — | — | — | — | — |
+| 26 | enhancer protocol | n/a | — | — | — | — | — |
+| 32 | hydration | no | — | ingress | — | — | — |
+| 34 | lazy / incremental materialization | n/a | — | — | — | — | — |
+| 43 | `_` command facade | n/a | — | — | — | — | — |
+
+The only two pre-filled behavior cells are the ones already frozen
+independently: `stored()` has a persistence-consequence owner, and hydration is
+an ingress distinct from persistence.
+
+**What that proves, and what it does not.** It proves that persistence and
+hydration require DIFFERENT AUTHORITY. It does **not** prove that the surviving
+`stored()` function owns both. Those are two separate facts, and only the first
+is established.
+
+The joining claim — *"hydration is semantically part of the `stored()` authoring
+concept"* — has never been derived. Current form couples them:
+`loadFromStorage()` in `markers/stored.ts` is shared by init and `reload()` and
+carries versioning and migration, so today one descriptor does span an outbound
+consequence and an inbound acquisition. But that is CURRENT FORM, and this RFC's
+whole method is that current form may prove a function is useful and may never
+prove its abstraction is necessary. Reading a cobbled concept out of the
+implementation would be the exact inference Table A's blank `FUNCTION` column
+exists to block.
+
+So whether `stored()` is a cobbled concept is not a finding of this grid. It is a
+direct question for `stored()`'s own derivation, and the coupling gives that
+derivation a sharper falsifier than it had:
+
+> **Assume `stored()` provides the persistence consequence only. What
+> independently required function, if any, requires hydration to remain part of
+> that same authoring concept?**
+
+If the answer is none, the current `stored()` is a cobbling of outbound
+persistence and inbound acquisition — and that will be a real result when it is
+earned, not before.
+
+---
+
+## Table D — Kernel participation axes
+
+Blank means the NULL has not been run. `n/a` means the concept is not a state
+concept at all.
+
+| # | Concept | Identity needed? | Tree scope? | Subject scope? | Causal participation? | Lifecycle needed? |
+|---|---|---|---|---|---|---|
+| 2 | store / canonical truth | PositionId + SlotIndex (FROZEN) | yes (FROZEN) | — | yes (FROZEN) | no |
+| 4 | derived projection | **UNPROVEN** (see ledger) | — | — | **no** (FROZEN) | no |
+| 6 | `linked()` | — | — | — | **UNPROVEN — the whole question** | — |
+| 8 | `entityMap` | SubjectId (FROZEN) | — | yes (FROZEN) | — | — |
+| 10 | `stored()` | — | yes — tree-scoped durability (FROZEN) | — | no — post-commit consequence (FROZEN) | — |
+| 15 | `status()` | — | — | — | — | — |
+| 16 | `loader()` | — | — | — | — | — |
+| 17-18 | `asyncSource()` / `asyncQuery()` | — | — | — | — | — |
+| 20 | `transactions()` | — | yes — tree-local, foreign scopes never interfere (FROZEN) | — | — | — |
+| 21 | `timeTravel()` / history | PositionId (MEASURED) | MUT-3 | — | — | — |
+| 32 | hydration | — | — | — | — | — |
+| 43 | `_` command facade | must NOT manufacture PositionIds for facade organization | — | subject association is the candidate function | — | — |
+
+Column `LIFECYCLE NEEDED?` is deliberately empty everywhere except where frozen.
+The candidate draft asserted *"lifecycle belongs to execution, not resources"* —
+plausible, and entirely unearned. Filling this column from the current
+`status()` implementation would be MUT-4's forbidden move: letting what existing
+code wants define the contract.
+
+---
+
+## How a cell gets filled
+
+1. State the NULL for the concept, with its current API name **hidden** (MUT-0).
+2. Derive FUNCTION, then OWNER, then PUBLIC NEED at the correct one of the three
+   levels, then MINIMUM PRIMITIVE.
+3. Only then reveal CURRENT FORM and compare.
+4. Only then propose a `LOWERING HYPOTHESIS`, and only if the derived function
+   actually requires a kernel representative. A concept may lower to nothing.
+5. Record the DISPOSITION from the six-term vocabulary — KEEP / REDESIGN / MOVE /
+   INTERNALIZE / DELETE / UNPROVEN — never `DELETE` where the function survives
+   and only the abstraction is wrong.
+
+The basis question is answered by the filled grid, not before it: if
+Position / Operation / Policy / Command recur across many independently-earned
+rows, they are the minimal basis. If earned rows keep needing a fifth category,
+or keep leaving three of four blank, the basis is wrong and should be redrawn
+from what the rows actually needed.
+
+### The rule that makes the grid worth building
+
+> **A repeated shape in CURRENT FORM is not evidence for a primitive. A
+> primitive is earned only when the same lowering requirement recurs across
+> independently derived surviving FUNCTIONS.**
+
+This is the whole point of the grid in one sentence, and it is the protection
+against the largest remaining failure mode. Five markers sharing a
+descriptor/materializer shape today proves that one implementation strategy was
+applied five times. It does not prove those five concepts need the same kernel
+representative — it may equally mean the shape was convenient, or copied, or
+that four of the five should not exist. Recurrence in Table A's `CURRENT FORM`
+column therefore carries no weight at all; recurrence in the `LOWERING
+HYPOTHESIS` column carries all of it, and only because every cell there was
+filled by a NULL that ran with the current API name hidden.
+
+## Sequencing this does not change
+
+MUT-3 (scope) and MUT-4 (consumers) are not run. Until MUT-3 establishes the
+tree-scope boundary, no behavior abstraction can be trusted to absorb
+persistence, history or causal behavior, because it cannot yet express:
+
+```text
+an operation performed solely against tree A
+must not alter a semantic result obtained solely from tree B
+```
+
+And GATE B is blocked by the declaration artifact, not by architecture. Nothing
+in the API cleanup queue starts before the packed gate is green.
+
+**Do not build the Operation / Execution / Lifecycle / Command algebra next.**
+
+## Findings surfaced while building this matrix
+
+Two, both incidental to the RFC and both real:
+
+1. **`ENTITY_LOADER_READERS` is an orphan.** It is exported from
+   `@signaltree/core/authoring` and referenced only by `lib/readonly.ts`. No
+   `entityLoader` factory is exported from any entrypoint. A public reader
+   allowlist for a factory that does not exist is a GATE B API-cleanup item.
+2. **`tools/api-baseline.json` is stale.** It still carries `form`,
+   `FORM_MARKER`, `FORM_READERS`, `FORM_WIZARD_READERS`, `createFormSignal`,
+   `isFormMarker` and the entire `schema` package, all of which were deleted by
+   FORM-DEL and SCHEMA-DEL. Any `--check` run against it compares HEAD to an
+   architecture that no longer exists. Re-baseline before it is used to defend
+   the export freeze.
