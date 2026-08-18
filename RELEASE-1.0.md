@@ -3264,6 +3264,155 @@ survive.
 **Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
 inventory.
 
+### V1 — VALIDATION FACILITY, MINIMAL CONTRACT — **DERIVED PROPOSAL, NOT FROZEN**
+
+Derived from `validate(node, rules)` with `@signaltree/schema`, `form()`,
+enhancers, paths and Angular signals hidden. Each responsibility proven
+independently; everything else absent unless required.
+
+#### R1 — EVALUATION
+
+What does the evaluator minimally need? A VALUE to judge, and RULES to judge it
+by. So the first question is what the first parameter actually has to be:
+
+```
+CANDIDATE A   validate(value, rules)         caller reads; evaluator gets a snapshot
+CANDIDATE B   validate(() => value, rules)   evaluator reads on demand
+CANDIDATE C   validate(nodeAccessor, rules)  evaluator holds a SignalTree node
+```
+
+**Under EXPLICIT evaluation, A suffices.** The caller already holds the tree; it
+reads and passes `tree.$.order()`. B and C are only needed if the evaluator must
+re-read on its own initiative — which is precisely the CONTINUOUS-CURRENCY
+function that V0 placed outside the baseline.
+
+Cross-field rules do not change this: a rule needing other parts of the tree
+CLOSES OVER them, and the caller decides what snapshot to pass.
+
+```
+R1 RESULT   the evaluator needs a VALUE and RULES.
+            It does NOT need NodeAccessor, paths, PositionId, revisions, or any
+            kernel primitive.
+```
+
+#### R2 — RESULT
+
+Minimum normalized shape:
+
+```
+{ valid: boolean, issues: Issue[] }
+Issue: a message + a location RELATIVE TO THE VALIDATED VALUE
+```
+
+Location must be relative to the validated value, not a tree address —
+otherwise the result type acquires a tree-addressing ontology it does not need.
+Normalizing a rule format's native issue shape into this is the **ADAPTER's**
+job, not the evaluator's.
+
+#### R3 — ASYNC LIFECYCLE — **COLLAPSES**
+
+The stated responsibility was *"obsolete async runs must never overwrite newer
+results"*. Attack it directly:
+
+> **Overwrite WHAT?**
+
+Under explicit evaluation the facility STORES NOTHING. `await validate(…)`
+returns a value to the caller. With no retained result, there is nothing an
+obsolete run could overwrite — staleness is only a problem for something holding
+a mutable current-result slot.
+
+```
+R3 RESULT   NOT a facility responsibility. Whoever RETAINS a result owns
+            deciding which result to keep — the Angular adapter, or any consumer
+            building a continuous projection. No generation counters, no
+            revisions, no invocation registry in the primitive.
+```
+
+That also removes the last candidate reason to touch kernel identity.
+
+#### THE SMALLEST SUFFICIENT PUBLIC CONTRACT
+
+```
+validate(value, rules) -> Result | Promise<Result>
+```
+
+- **`Result | Promise<Result>`**, not always a Promise: forcing every sync rule
+  through a microtask would make the primitive strictly worse for the common
+  case and cannot be undone by a consumer. (An always-async variant CAN be built
+  on a sync-capable one; the reverse cannot.)
+- no stored state, no registration, no installation, no tree coupling.
+
+#### REJECTED ALTERNATIVES, each with its falsifier
+
+```
+tree.with(validation())      REJECTED. Installation changes nothing the tree
+                             semantically DOES; hanging methods off a tree is
+                             the formBridge mistake.
+                             FALSIFIER: a validation capability that alters
+                             tree semantics.
+
+validated() marker           REJECTED. No construction-time semantic
+                             requirement.
+                             FALSIFIER: validation that must participate in
+                             graph COMPILATION.
+
+continuous validation obj    REJECTED from the baseline. That bundles a SECOND
+                             function — observation/invalidation.
+                             FALSIFIER: V0's continuous-currency question
+                             reopening.
+
+pending in the primitive     REJECTED. No stored state -> nothing pends.
+                             FALSIFIER: a required result the caller cannot
+                             derive from the promise it is already holding.
+
+rule registry / registration REJECTED. The caller holds its own rules.
+                             FALSIFIER: rules that must be discoverable by a
+                             party that does not hold them.
+
+dependency tracking          REJECTED. Explicit evaluation reads what it needs
+                             at call time.
+                             FALSIFIER: continuous currency being required.
+
+NodeAccessor parameter       REJECTED for the baseline (see R1).
+                             FALSIFIER: the evaluator needing to re-read on its
+                             own initiative.
+```
+
+#### THE SEVERE FINDING — and it must not be buried
+
+The derived primitive has **ZERO SignalTree coupling**. It is a pure function
+over a value and rules. Which raises the question this derivation is obliged to
+ask:
+
+> **If the facility needs nothing from SignalTree, why is it a SignalTree
+> package rather than any existing validation library?**
+
+```
+(a) IT SHOULD NOT BE. A caller can already write
+    `await someSchema.parseAsync(tree.$.order())`. V0's product decision would
+    then be satisfied by DOCUMENTATION, not by a package.
+(b) SOME SIGNALTREE COUPLING IS GENUINELY REQUIRED and this derivation has not
+    yet found it.
+```
+
+**This is unresolved and is the next thing to attack.** Candidate couplings that
+would justify (b), none yet proven:
+
+```
+- validating a SUBTREE where the shape must be derived from tree structure
+  rather than supplied by the caller
+- marker-aware validation (entityMap collections, async markers) where reading
+  a raw snapshot loses semantics the rules need
+- issue locations that must survive tree topology changes
+- a normalized result shape shared across MULTIPLE rule formats, which is
+  integration value rather than evaluation value
+```
+
+**Do not answer this by adding coupling to justify the package.** If (a) is
+true, the honest 15.0 outcome is that the validation FUNCTION is satisfied
+without a first-party evaluator — which would REOPEN V0.6's answer rather than
+implement it.
+
 ### V0 — **CLOSED. PRODUCT DECISION FROZEN.**
 
 ```
