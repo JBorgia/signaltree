@@ -1,6 +1,6 @@
 import { computed, signal } from '@angular/core';
 
-import { form, history, signalTree, timeTravel } from '../index';
+import { form, history, LoadingState, signalTree, status, timeTravel } from '../index';
 
 /**
  * EVIDENCE — `form()` function-by-function audit (RELEASE-1.0.md, F1..F7).
@@ -241,5 +241,99 @@ describe('F2 touched — the OTHER undo, which is the one the comment describes'
     // Interaction state changed twice. History did not move, so there is no
     // entry holding the earlier touched state for undo to return to.
     expect(tree.getHistory().length).toBe(base);
+  });
+});
+
+// ============================================================================
+// F3 — `submitting`
+//
+// The question is NOT "does form.submit() toggle a flag" — it plainly does.
+// It is: what semantic fact does `submitting` represent, WHO CAN KNOW it became
+// true, and does that fact describe SignalTree TRUTH or the LIFECYCLE OF AN
+// EXTERNAL OPERATION?
+// ============================================================================
+describe('F3 submitting — a fact about truth, or about an operation?', () => {
+  it('WHO KNOWS: only calling marker.submit() sets it — a save the app runs itself is invisible', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+
+    // The application saves the very same values, through its own service.
+    // This is an ordinary thing to do, and SignalTree cannot see it.
+    const appSave = async () => {
+      await Promise.resolve();
+      return 'saved';
+    };
+    const inFlight = appSave();
+
+    expect(marker.submitting()).toBe(false);
+    await inFlight;
+    expect(marker.submitting()).toBe(false);
+
+    // So `submitting` does not report "a submission of this state is running".
+    // It reports "ONE PARTICULAR API ON THIS MARKER was called".
+  });
+
+  it('CARDINALITY: one boolean cannot describe two concurrent operations', async () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+
+    let releaseSlow: (() => void) | undefined;
+    const slow = new Promise<void>((r) => (releaseSlow = r));
+
+    const slowSubmit = marker.submit(async () => {
+      await slow;
+      return 'slow';
+    });
+    expect(marker.submitting()).toBe(true);
+
+    // A second, faster submission starts and finishes while the first runs.
+    await marker.submit(async () => 'fast');
+
+    // The fast one's `finally` cleared the flag. The SLOW one is still running.
+    expect(marker.submitting()).toBe(false);
+
+    releaseSlow?.();
+    await slowSubmit;
+    expect(marker.submitting()).toBe(false);
+  });
+
+  it('CATEGORY: core already models in-flight external work, with more states', () => {
+    const tree = signalTree({ job: status() });
+
+    expect(tree.$.job.state()).toBe(LoadingState.NotLoaded);
+    tree.$.job.setLoading();
+    expect(tree.$.job.state()).toBe(LoadingState.Loading);
+
+    // `status()` distinguishes not-started / running / succeeded / failed and
+    // carries the error. `submitting` is a boolean that collapses all four.
+    tree.$.job.setError('boom');
+    expect(tree.$.job.state()).toBe(LoadingState.Error);
+    expect(tree.$.job.error()).toBe('boom');
+  });
+
+  it('NULL: the operation lifecycle belongs to whoever runs the operation', async () => {
+    const tree = signalTree({ p: { name: 'Ada', age: 36 } });
+
+    // Owned where the operation is owned.
+    const saving = signal(false);
+    const save = async (values: Profile) => {
+      saving.set(true);
+      try {
+        await Promise.resolve();
+        return values;
+      } finally {
+        saving.set(false);
+      }
+    };
+
+    expect(saving()).toBe(false);
+    const p = save(tree.$.p() as Profile);
+    expect(saving()).toBe(true);
+    await p;
+    expect(saving()).toBe(false);
   });
 });

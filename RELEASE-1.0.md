@@ -6184,6 +6184,90 @@ B is rejected on evidence, not convenience: teaching 14.x history to record
 interaction state would ADD the coupling this row just rejected on ownership
 grounds.
 
+### AUDIT ROW — F3 `submitting`
+
+Asked in the order that avoids the trap. NOT "does `form.submit()` toggle a
+flag" -- it plainly does, and observing that answers nothing:
+
+> **What semantic fact does `submitting` represent, WHO CAN KNOW it became true,
+> and does that fact describe SignalTree TRUTH or the LIFECYCLE OF AN EXTERNAL
+> OPERATION?**
+
+```
+FUNCTION       Report that an operation which SENDS state somewhere -- an HTTP
+               POST, an IPC call, a save -- is currently in flight.
+OWNER          Whoever RUNS the operation. It is the only party that can know
+               it started, and the only one that learns it finished.
+GREENFIELD     const saving = signal(false);
+MECHANISM      try { saving.set(true); await save(v); } finally { saving.set(false); }
+               ...or Angular's `resource()`, which models the whole lifecycle.
+SIGNALTREE?    NO. SignalTree cannot observe an HTTP request. The subject of the
+               operation may be tree values, but the FACT is about the
+               operation, not about the state.
+CONSTRUCTION?  NO. An in-flight boolean is not a property of a position; the
+               same position is submitting at some times and not at others.
+```
+
+**MEASURED — the flag does not mean what its name says.** Only
+`marker.submit()` sets it. An application that saves the very same values
+through its own service -- an ordinary thing to do -- leaves `submitting()`
+`false` throughout:
+
+```
+appSave(marker())          submitting() === false   before, during and after
+```
+
+So `submitting` does not report *"a submission of this state is running"*. It
+reports *"one particular API on this marker was called"*. That is a fact about
+an API call, not a fact about truth -- which is the whole question this row
+asked, answered against the marker.
+
+**MEASURED — one boolean cannot describe N concurrent operations, and the
+failure is real, not hypothetical:**
+
+```
+slow  = marker.submit(async () => { await neverYet; return 'slow'; })
+        submitting() === true
+await marker.submit(async () => 'fast')     // second, faster submission
+        submitting() === false   <-- while `slow` is STILL RUNNING
+```
+
+The fast submission's `finally` clears a flag the slow one is still relying on.
+A UI disabling its save button on `submitting()` re-enables it mid-flight.
+
+**MEASURED — core already models this category, and models it better.**
+`status()` distinguishes NotLoaded / Loading / Loaded / Error and carries the
+error value; `submitting` is a boolean that collapses all four. The marker's own
+processor registration already concedes the classification:
+
+> *"`submitting` is in-flight, the exact category as `status()`'s `Loading`."*
+
+It says this while excluding `submitting` from the snapshot -- correctly, since
+"persist mid-submit, restore, and the form is permanently submitting with
+nothing running to finish it". **A field the marker will not persist because it
+does not describe the state is a field that does not belong to the state.**
+That reasoning is right; it just does not stop where it should.
+
+One argument checked and NOT found: `submit()` does not lock the marker, so
+`submitting` is not a write-gate. There is no tree-side effect that would make
+it a fact about the tree.
+
+```
+DISPOSITION    F3 submitting -> DELETE from SignalTree.
+               It is the lifecycle of an EXTERNAL OPERATION, owned by whoever
+               runs it. The marker's version additionally cannot see
+               submissions it did not wrap, and mis-reports under concurrency.
+```
+
+**14.x disposition, decided on 14.x evidence (Rule 0f).** The concurrency
+behaviour is a REAL DEFECT independent of 15.0: `submitting` is a documented
+public signal (`FormSignal.submitting`, "Whether form is currently
+submitting"), and it reports `false` during a submission that is still running.
+Filed as `14.x DEFECT` -- disposition deferred to the 14.x line rather than
+decided here, since the fix (a counter rather than a boolean, or refusing
+concurrent submits) is a behaviour change needing its own semver call.
+`15.0 ARCHITECTURAL CUTOFF` for the surface itself.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
