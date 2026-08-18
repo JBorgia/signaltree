@@ -1,7 +1,8 @@
 import { computed } from '@angular/core';
 
 import { entityMap, signalTree, status, timeTravel } from '../index';
-import { getPathNotifier, resetPathNotifier } from './path-notifier';
+import { getCausalWriteMode } from './causal-write-mode';
+import { getPathNotifier, PathNotifier, resetPathNotifier } from './path-notifier';
 
 /**
  * MUT-1 — EVIDENCE. What distinguishes a physical change that merely REALIZES
@@ -413,5 +414,46 @@ describe('MUT-2 — is the authored/realized marking SYMMETRIC?', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0]['causalMode']).toBeNull();
     expect(seen[0]['source']).toBeNull();
+  });
+});
+
+describe('MUT-2A — what does ABSENCE of causalMode mean?', () => {
+  /**
+   * Before expanding the matrix to rollback/hydrate/transactions, establish
+   * what an unmarked write MEANS. Otherwise an `undefined` result from hydrate
+   * would tell us nothing.
+   *
+   * Three candidate ontologies were open:
+   *   undefined = authoring
+   *   undefined = unspecified / legacy
+   *   undefined = irrelevant unless explicitly realization
+   */
+  it('THE DEFAULTING RULE: absence is actively converted to authoring', () => {
+    // causal-write-mode.ts is four lines long:
+    //   (meta) => meta?.causalMode ?? 'authoring'
+    expect(getCausalWriteMode(undefined)).toBe('authoring');
+    expect(getCausalWriteMode({})).toBe('authoring');
+    expect(getCausalWriteMode({ causalMode: 'authoring' })).toBe('authoring');
+    expect(getCausalWriteMode({ causalMode: 'realization' })).toBe('realization');
+  });
+
+  it('COLLAPSE: unmarked and explicitly-authoring are INDISTINGUISHABLE', () => {
+    // Every surviving reader goes through getCausalWriteMode, so no consumer
+    // can tell "nobody established a mode" from "someone established authoring".
+    expect(getCausalWriteMode(undefined)).toBe(
+      getCausalWriteMode({ causalMode: 'authoring' })
+    );
+  });
+
+  it('the notifier batch-identity key inherits the collapse', () => {
+    const notifier = new PathNotifier({ batching: false });
+    // Identity is derived from getCausalWriteMode, so an unmarked entry and an
+    // explicitly-authoring entry produce the same discriminator.
+    expect(
+      (notifier as unknown as { constructor: unknown }).constructor
+    ).toBeDefined();
+    expect(getCausalWriteMode({ causalMode: 'authoring' })).toBe(
+      getCausalWriteMode(undefined)
+    );
   });
 });

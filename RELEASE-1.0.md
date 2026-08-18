@@ -7644,7 +7644,7 @@ Started from the corrected question rather than an inventory:
 > Which surviving authority, if any, MUST distinguish those categories for
 > SignalTree to remain correct?**
 
-#### The authority exists, and it is named
+#### A representation exists and is named — see MUT-2A for what it is NOT
 
 ```ts
 type CausalWriteMode = 'authoring' | 'realization';   // types.ts
@@ -7671,7 +7671,7 @@ UNDO             path a.n   source 'system'   meta { intent: 'system',
 REDO             path a.n   source 'system'   causalMode 'realization'
 ```
 
-So the corrected R3 is:
+So the corrected R3 is (further qualified by MUT-2A):
 
 > **The notification PATH cannot separate authored from realized. The
 > notification META can, on two independent channels (`source === 'system'` and
@@ -7720,6 +7720,119 @@ rollback / restore / hydrate / devtools replay   modes NOT yet measured
 transaction writes                               NOT yet measured
 does every consumer that needs the distinction actually READ it?  NOT measured
 how long must the mode survive, and can it be reconstructed later? NOT derived
+```
+
+### MUT-2A — ABSENCE SEMANTICS, run BEFORE expanding the matrix
+
+Three MUT-2 claims outran their evidence and are corrected below. The pass was
+run first because **an `undefined` result from hydrate or rollback would have
+told us almost nothing until `undefined` itself had a known meaning.**
+
+#### CORRECTION 1 — "the authority exists, and it is named" -> too strong
+
+Finding `type CausalWriteMode` plus a field on `WriteAttribution` proves
+**VOCABULARY AND TRANSPORT** exist. It does not prove semantic ownership, which
+would require answering who decides the mode, who may establish it, when, who
+relies on it for correctness, and what happens when nobody establishes it.
+
+> **A REPRESENTATION for the distinction exists and reaches the measured
+> notification path. Its SEMANTIC OWNER is UNPROVEN.**
+
+#### CORRECTION 2 — "two independent channels" -> two CORRELATED indicators
+
+`source === 'system'` and `causalMode === 'realization'` were observed together
+on undo and redo. They may be two fields stamped from ONE ambient context.
+Independence needs a divergence test — can either occur without the other? —
+which was not run. Recorded as **two correlated indicators**, so we do not
+conclude there are two semantic authorities where there may be redundant
+transport.
+
+#### CORRECTION 3 — the absence claim, now MEASURED rather than inferred
+
+MUT-2 asserted *"`'authoring'` is inferred from the realization mark's absence"*
+and *"a forgotten stamp is silently classified as authored"*. That needed a
+defaulting rule to exist. **It does**, and the whole of it is four lines:
+
+```ts
+// packages/core/src/lib/causal-write-mode.ts
+export const getCausalWriteMode = (
+  meta?: Pick<UpdateMetadata, 'causalMode'> | undefined
+): CausalWriteMode => meta?.causalMode ?? 'authoring';
+```
+
+#### THE FULL TRACE
+
+```
+WRITERS OF 'realization'        8 sites
+  time-travel.ts:1628
+  internals/causal-runtime/tree-realization-adapter.ts   x7
+
+WRITERS OF 'authoring'          ZERO production sites
+  the string appears exactly twice in packages/core/src: in the type union,
+  and as the `??` default above
+
+READERS                         7 call sites, ALL testing === 'realization'
+  transactions.ts:968, 1021
+  time-travel.ts:2604, 2647, 2777
+  internals/causal-runtime/transaction-capture-bridge.ts:51
+  path-notifier.ts:518, 555, 571   (batch-identity discriminator)
+```
+
+**No reader tests `=== 'authoring'`. No reader distinguishes absence from
+`'authoring'`** — every one routes through `getCausalWriteMode`, which collapses
+them first.
+
+#### THE ANSWER, to the sharpened question
+
+> **Does SignalTree represent authorship POSITIVELY anywhere, or does its causal
+> machinery merely mark EXCEPTIONS to an implicit default?**
+
+```
+IT MARKS EXCEPTIONS. Authorship is never written, only synthesized by `??`.
+```
+
+And the falsifier resolves cleanly:
+
+> *"If I construct a landed change with no `causalMode`, what surviving semantic
+> consumer treats it differently from one explicitly marked `'authoring'`?"*
+
+```
+NOTHING. Provably — they are collapsed by the single function every reader uses.
+```
+
+So `'authoring'` is **ASPIRATIONAL VOCABULARY**: a member of the union that no
+production code writes and no reader names. Of the three candidate ontologies,
+`undefined = authoring` is the one implemented, in exactly one place.
+
+#### THE EARNED REQUIREMENT — and it is stronger than MUT-2 stated
+
+The unsafe default is real, and the failure direction is concrete. Every reader
+tests `=== 'realization'` in order to EXCLUDE such writes from capture. So an
+unmarked write is CAPTURED as authored history — meaning a realization path that
+forgets its stamp produces **phantom undo entries**, a failure this repository
+has already paid for once (`history-scoped-capture.spec.ts`, "no PHANTOM undo
+steps").
+
+The candidate invariant is therefore not merely *"realization must be stamped"*:
+
+> **UNKNOWN != AUTHORING.** A landed change whose mode nobody established must
+> not silently acquire authorship. Absence is a THIRD state, and collapsing it
+> into the semantically stronger claim is what makes the current default unsafe.
+
+**NOT a design.** Whether that becomes a required mode on every write, an
+explicit `'authoring'` stamp, or a distinct `'unknown'` member is the contract's
+call. MUT-2A establishes only that the requirement is real and that the current
+representation cannot express it.
+
+#### NOW the matrix can be expanded
+
+rollback, restore, hydrate, devtools replay and transaction writes become
+interpretable, because each result now has a known meaning:
+
+```
+explicit 'realization'   correct, and excluded from capture
+absent                   collapsed to authoring, and CAPTURED
+explicit 'authoring'     never occurs in production
 ```
 
 ## Phase 3 — Packaging Proof
