@@ -2203,11 +2203,15 @@ then, in each:  Object.setPrototypeOf(enhancedTree, getPrototypeOf(tree))
                 redefine $, redefine .with()
 ```
 
-**The tree is CALLABLE, and JavaScript cannot change a function's call behaviour
-in place.** Batching must intercept `tree(...)` to schedule its notification;
-time travel and devtools must intercept it to record. On an ALREADY-CONSTRUCTED
-tree the only way to do that is to construct a replacement and copy everything
-across.
+**The tree is CALLABLE, and JavaScript cannot change a function's `[[Call]]`
+behaviour in place.** Batching must intercept `tree(...)` to schedule its
+notification; time travel and devtools must intercept it to record. On an
+ALREADY-CONSTRUCTED tree that requires SOME new callable identity — the current
+copy-and-redefine is one realization of that constraint, and a Proxy would be
+another. **WORDING CORRECTED:** the surviving requirement is *change callable
+behaviour*, not *replace identity*; an earlier draft said "the only way", which
+overclaimed. The architectural conclusion is unchanged, because every mechanism
+that satisfies the constraint post-construction produces a new callable.
 
 So identity replacement is not a capability any enhancer wanted. It is the only
 mechanism available for modifying a callable that already exists.
@@ -2251,6 +2255,36 @@ phase needs nothing that does not already exist.
 **Not yet answered:** whether any surviving function requires LATE attachment or
 REMOVAL after exposure. That is the hard falsifier for case 4 and it is still
 open.
+
+### T1 CASE 0 — late attachment, measured before prototyping
+
+Searched every `.with()` call site outside core's own implementation and specs,
+separating *syntax split across statements during construction* from *a live,
+exposed tree extended later*.
+
+```
+demo call sites                         all construction-time
+two that LOOKED like late attachment    both are factory-then-enhance
+  batching-comparison.ts:89               createCountingTree() -> base.with(...)
+                                          nothing reads `base` in between
+  serialization-demo.ts:113               baseStore -> this.store = baseStore.with(...)
+                                          same constructor, nothing in between
+genuine post-exposure attachment        ZERO
+conditional/dynamic registration        ZERO
+attach-then-detach                      ZERO
+```
+
+Zero hits is evidence, not a verdict — but it sharply constrains what T1B must
+model, and it means no existing consumer would lose a capability if composition
+ended at EXPOSE.
+
+**One incidental observation with independent weight.** The
+`serialization-demo` site needs `as any` TWICE, with an eslint-disable around it,
+to make `.with()` typecheck. So the chain's type accumulation is already failing
+a real first-party consumer in a case the SHAPE-T0 declarative form handled
+without any assertion. That is not proof of anything on its own — the cast may
+be masking an unrelated defect — but it is the opposite of evidence that the
+chain's typing is serving people well.
 
 ### Still open in T1
 
