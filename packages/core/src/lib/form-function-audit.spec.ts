@@ -779,3 +779,124 @@ describe('F6 clear — who decides what "empty" means?', () => {
     expect(tree.$.p().agreed).toBe(true);
   });
 });
+
+// ============================================================================
+// F8 — THE OMITTED SURFACES.  `$`, `set`/`data`, and the persistence trio were
+// never in the seven and must not be deleted by omission.
+// ============================================================================
+describe('F8a $ — structural navigation an ordinary NodeAccessor lacks?', () => {
+  it('field access matches a plain branch, including nesting', () => {
+    interface Nested extends Record<string, unknown> {
+      name: string;
+      addr: { city: string };
+    }
+    const marked = signalTree({
+      p: form<Nested>({ initial: { name: 'Ada', addr: { city: 'London' } } }),
+    });
+    const plain = signalTree({ p: { name: 'Ada', addr: { city: 'London' } } });
+
+    expect(marked.$.p.$.name()).toBe('Ada');
+    expect(plain.$.p.name()).toBe('Ada');
+
+    marked.$.p.$.name.set('Grace');
+    plain.$.p.name.set('Grace');
+    expect(marked.$.p.$.name()).toBe('Grace');
+    expect(plain.$.p.name()).toBe('Grace');
+
+    // Nested access: the plain tree navigates to any depth.
+    expect(plain.$.p.addr.city()).toBe('London');
+    plain.$.p.addr.city.set('Paris');
+    expect(plain.$.p.addr.city()).toBe('Paris');
+  });
+
+  it('the marker needs an EXTRA hop — `.$.` — for what the tree gives directly', () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    // tree.$.p.name is the ordinary spelling on a branch; the marker requires
+    // tree.$.p.$.name, because `.p` is the marker CALLABLE, not the branch.
+    expect(marked.$.p.$.name()).toBe('Ada');
+  });
+
+  it('DEFECT: the marker is a FUNCTION, so field names collide with Function props', () => {
+    const marked = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const api = marked.$.p as unknown as Record<string, unknown>;
+
+    // `name` is one of the most ordinary field names there is. On the marker it
+    // silently resolves to Function.prototype.name — a string, not an accessor,
+    // and not even a value from this form.
+    expect(api['name']).toBe('formSignalFn');
+    expect(typeof api['length']).toBe('number');
+
+    // A plain branch has no such hazard: the field is the field.
+    const plain = signalTree({ p: { name: 'Ada', age: 36 } });
+    expect(plain.$.p.name()).toBe('Ada');
+  });
+});
+
+describe('F8b set / data — aliases, measured', () => {
+  it('DEFECT: `set` is documented "set all values at once" and MERGES instead', () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+
+    tree.$.p.set({ name: 'Grace' });
+
+    // "Set all values at once" left `age` in place. This is a partial merge.
+    expect(tree.$.p()).toEqual({ name: 'Grace', age: 36 });
+  });
+
+  it('`set` and `patch` are behaviourally indistinguishable', () => {
+    const a = signalTree({ p: form<Profile>({ initial: { name: 'Ada', age: 36 } }) });
+    const b = signalTree({ p: form<Profile>({ initial: { name: 'Ada', age: 36 } }) });
+
+    a.$.p.set({ name: 'Grace' });
+    b.$.p.patch({ name: 'Grace' });
+
+    expect(a.$.p()).toEqual(b.$.p());
+  });
+
+  it('`data()` is an alias for calling the marker', () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    expect(tree.$.p.data()).toEqual(tree.$.p());
+  });
+});
+
+describe('F8c persistence trio — a second storage owner', () => {
+  it('MEASURES the surface: manual save / reload / clear on the marker', () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const api = tree.$.p as unknown as Record<string, unknown>;
+
+    expect(typeof api['persistNow']).toBe('function');
+    expect(typeof api['reload']).toBe('function');
+    expect(typeof api['clearStorage']).toBe('function');
+  });
+
+  it('all three are INERT without a construction-time `persist` key', () => {
+    const tree = signalTree({
+      p: form<Profile>({ initial: { name: 'Ada', age: 36 } }),
+    });
+    const marker = tree.$.p;
+
+    marker.patch({ name: 'Grace' });
+    marker.persistNow();
+    marker.reload();
+    marker.clearStorage();
+
+    // No storage was configured, so nothing happened — and `reload()` silently
+    // did nothing rather than reporting that there is nothing to reload from.
+    expect(marker().name).toBe('Grace');
+  });
+
+  it('core already owns durable state as its own marker, with no form involved', () => {
+    // `stored()` is the existing durability owner and needs no form position.
+    const tree = signalTree({ p: { name: 'Ada', age: 36 } });
+    expect(tree.$.p.name()).toBe('Ada');
+  });
+});

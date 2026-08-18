@@ -6730,6 +6730,119 @@ MUT-3  DIRECT COUNTEREXAMPLE motivating tree-lineage isolation -- "how is
        Here is a measured case where it is not.
 ```
 
+### AUDIT ROW — F8, THE OMITTED SURFACES
+
+The seven were not the whole marker. `$`, `set`/`data` and the persistence trio
+were never in the list and **must not be deleted by omission** -- a surface that
+dies unexamined is a surface that can be resurrected unexamined.
+
+#### F8a `$` — structural navigation
+
+> Does a form position expose any navigation an ordinary compiled
+> `NodeAccessor` would not already provide?
+
+**MEASURED — no.** Field read/write through `marker.$.name` matches
+`plain.$.p.name` exactly, and the plain branch additionally navigates to
+arbitrary depth (`plain.$.p.addr.city`). `$` is INHERITED TREE MACHINERY
+presented as form functionality.
+
+It is also strictly WORSE ergonomically, and one measurement shows why that is
+not merely taste:
+
+```
+plain tree     tree.$.p.name()          the field
+form marker    tree.$.p.$.name()        the field
+               tree.$.p.name            'formSignalFn'   <-- a STRING
+               typeof tree.$.p.length   'number'
+```
+
+**DEFECT — the marker is a callable, so field names collide with
+`Function.prototype`.** `name` is among the most ordinary field names there is;
+on a form marker `tree.$.p.name` silently yields the JavaScript function name,
+not an accessor and not a value from this form. `length`, and by the same route
+`caller`, `arguments` and `constructor`, are in the same class. A plain branch
+has no such hazard.
+
+```
+14.x   DEFECT CANDIDATE. Not a crash -- a silent wrong value on a plausible
+       field name. Whether it is contractual depends on whether the extra `.$.`
+       hop is documented as REQUIRED; not decided here.
+DISPOSITION  F8a $ -> DELETE WITH THE MARKER. Nothing to preserve: the
+             capability is the tree's, and the marker's version degrades it.
+```
+
+#### F8b `set` / `data`
+
+**MEASURED — `set` and `patch` have identical behaviour**, and inspection shows
+identical bodies (`{ ...curr, ...values }` + announce + persist + record). Two
+names, one function.
+
+**DEFECT — `set` is documented "Set all values at once" and MERGES:**
+
+```
+initial { name: 'Ada', age: 36 }
+set({ name: 'Grace' })
+result  { name: 'Grace', age: 36 }      <-- `age` survived
+```
+
+A caller trusting the JSDoc would expect the omitted field to be reset or the
+call to be rejected; instead it is a partial merge under a total-write name. It
+is also typed `Partial<T>`, which contradicts the prose rather than the code --
+so the TYPE tells the truth and the DOC does not.
+
+`data()` is an alias for calling the marker, and is documented as one. Its
+stated rationale is that AI agents trained on `FormGroup` / Formik /
+react-hook-form reach for `.data()`. **That is a familiarity argument, not a
+capability argument** -- exactly the class this audit rejects. An alias does not
+survive because it makes an API look familiar.
+
+```
+14.x   `set` prose/behaviour mismatch -> DEFECT CANDIDATE. The fix is almost
+       certainly documentation (the type already says Partial), but that is the
+       14.x line's call.
+DISPOSITION  F8b set / data -> DELETE. `set` is `patch` is the branch write;
+             `data` is an alias for a call.
+```
+
+#### F8c `persistNow` / `reload` / `clearStorage`
+
+Their burden is high before measurement, because GATE A already froze the owner:
+
+> **PERSISTENCE CONSEQUENCE -- a governed mechanism.**
+
+A form marker must not regain survival by carrying manual storage controls whose
+semantic owner is frozen elsewhere.
+
+**MEASURED — all three exist, and all three are INERT without a
+construction-time `persist` key.** Called on a marker with no `persist`
+configured, `persistNow()`, `reload()` and `clearStorage()` all silently do
+nothing; `reload()` in particular does not report that there is nothing to
+reload from.
+
+```
+FUNCTION       force a save, force a reload, drop the stored copy
+OWNER          the persistence consequence (GATE A, already frozen), and
+               `stored()` is core's existing durability marker, which needs no
+               form position
+SIGNALTREE?    the CONSEQUENCE is; these three imperative escapes are not
+CONSTRUCTION?  the trio is inert without a construction-time key, so the
+               construction coupling is real -- but it is persistence's
+               construction coupling, borrowed. It establishes nothing about
+               FORM-ness.
+```
+
+That last row matters for the final question. The trio does depend on something
+declared at construction -- but what is declared is a STORAGE KEY, which is
+persistence's property, not evidence that a position is intrinsically "a form".
+
+```
+DISPOSITION  F8c -> DELETE from the form marker. If imperative
+             flush/reload/clear controls are required at all, they are the
+             persistence consequence's surface to justify, on its own terms.
+14.x   silent no-op `reload()` with no storage configured -> NOTE only, not a
+       defect claim: no contract says it should report.
+```
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
