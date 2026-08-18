@@ -3423,12 +3423,34 @@ The current validation package is **not framework-neutral**. So "a
 framework-neutral validation package" is a requirement I was about to INVENT,
 not one that exists. It must earn its place like any other:
 
+**V0.6 REPLACED — neutrality is not a free-standing switch.** Asking it
+independently permits an OWNERLESS MIDDLE GROUND:
+
 ```
-V0.6  is FRAMEWORK NEUTRALITY a required property of the validation facility?
-      NO  -> Angular reactivity is available; automatic currency is solvable
-             with computed/effect and NO kernel integration is implied
-      YES -> the automatic-currency falsifier bites, and only then
+REJECTED SHAPE
+a general "SignalTree validation" package that REQUIRES Angular for observation
+-> the public abstraction says SignalTree; the actual owner is Angular
+   realization
 ```
+
+Neutrality should FALL OUT of ownership, so V0.6 becomes the higher-order
+product question:
+
+> **Does SignalTree 15 deliberately ship a GENERAL FIRST-PARTY VALIDATION
+> FACILITY, independent of any UI/framework integration?**
+
+```
+YES -> neutrality FOLLOWS from the owner's function
+       SignalTree truth -> neutral evaluator -> Standard Schema / custom rules
+       Angular observation is OPTIONAL downstream realization
+
+NO  -> no general facility is needed. Do NOT neutralize `@signaltree/schema`;
+       question whether the package should exist in its current conceptual role
+       at all. Validation then lives in the Angular forms adapters.
+```
+
+Do not preserve a generic Angular-coupled validation package merely because one
+exists today.
 
 **The burden of proof for KERNEL ownership is therefore very high — and the
 automatic-currency falsifier only applies CONDITIONALLY on V0.6.**
@@ -3451,14 +3473,26 @@ async evaluation      NO                  NO              reads only
 pending               NO                  NO              evaluator state
 staleness/cancel      NO                  NO              evaluator-local
                                                           generation counter
-cross-field deps      NO                  MAYBE           reads + a dependency
-                                                          model
-subtree validation    NO                  NO              reads only
+cross-field deps      NO                  NO*             reads only
+subtree validation    NO                  NO*             reads only
 AUTOMATIC CURRENCY    NO                  REAL FALSIFIER  conditional on V0.6
 authoritative refusal YES (PREPARE)       YES             ONLY if the product
                                                           requires refusal —
                                                           nothing measured does
 ```
+
+`*` **UNDER EXPLICIT EVALUATION these collapse from MAYBE to NO.** Cross-field
+and subtree rules are simply THINGS THE EVALUATOR READS. Several values
+participating does not imply a dependency-NOTIFICATION system. Both MAYBEs
+existed only because continuous currency was being assumed.
+
+**CORRECTED SUMMARY.** "Every capability answers NO to kernel validation
+semantics" was too absolute — authoritative refusal answers YES if that product
+function is ever required. Methodologically stronger:
+
+> **Every CURRENTLY ESTABLISHED validation requirement can be satisfied with
+> ZERO application-validation semantics in the kernel. No established
+> requirement falsifies that null.**
 
 **The shape this produces is internally consistent and worth stating:**
 
@@ -3488,14 +3522,83 @@ EXPLICIT   await validation.run(); validation.errors();
 CONTINUOUS validation.isValid() must ALWAYS correspond to current truth
 ```
 
-Only if CONTINUOUS is required, AND V0.6 says neutrality is required, does the
-falsifier bite. And even then the result is **NOT** "validation belongs in the
+**GREENFIELD BASELINE — EXPLICIT EVALUATION.** Adopt this as the default:
+
+> Validation evaluation is EXPLICIT unless a specific product function
+> independently requires continuously-current derived validation.
+
+```
+BASELINE   const result = await validate(node, rules);
+           result.valid; result.errors;
+NOT        validation.isValid()  // a perpetual promise to track future truth
+```
+
+Because *"evaluate current truth against rules"* is unquestionably validation,
+while *"remain continuously synchronized with future truth"* is a SECOND
+function — observation/invalidation of changing dependencies. Those must not be
+silently bundled. Angular layers the second naturally, because Angular owns
+observation; a future non-Angular adapter supplies its own mechanism.
+
+Only if CONTINUOUS is required, AND V0.6 says a general neutral facility is
+required, does the falsifier bite. And even then the result is **NOT** "validation belongs in the
 kernel". It is:
 
 ```
 zero kernel VALIDATION ontology still survives
 + some narrow neutral dependency-invalidation integration may be required
 ```
+
+#### THE ARCHITECTURE TO ATTACK NEXT
+
+```
+SignalTree kernel -> truth -> NodeAccessor / reads
+                                   |
+                          validation evaluator
+                        /          |          \
+                custom rules   Standard    other formats
+                                Schema
+                                   |
+                          validation result
+                          /                \
+              Angular Reactive        Angular Signal
+               Forms adapter           Forms adapter
+                          \                /
+                    Angular observation / lifecycle
+```
+
+```
+kernel owns application validation      NO
+kernel owns validation observation      NO
+evaluator owns evaluation               YES
+format adapters own input translation   YES
+Angular owns reactive observation       YES
+```
+
+Whether that evaluator deserves a FIRST-PARTY PACKAGE is the remaining product
+question — i.e. V0.6.
+
+#### `@signaltree/schema` — the audit question, sharpened
+
+Do NOT ask *"should `@signaltree/schema` become neutral?"* Ask:
+
+> Assuming 15.0 deliberately ships a general validation facility, ERASE
+> `@signaltree/schema`. What would the optimal evaluator + Standard Schema
+> integration look like today?
+
+Then reveal the package. Candidate outcome, to be tested rather than assumed:
+
+```
+FUNCTION       first-party validation + Standard Schema interoperability   KEEP
+CURRENT FORM   Angular-signal-backed schema ENHANCER attached to a tree
+                                                        likely DELETE / REDESIGN
+GREENFIELD     neutral evaluator + Standard Schema format adapter
+FORM                                                    HYPOTHESIS to test
+```
+
+If V0.6 answers NO, even the FUNCTION does not survive as a SignalTree concern.
+
+**Audit it as a possible evaluator / format adapter — NOT as an enhancer, and
+NOT as the canonical authority by inheritance.**
 
 **CRITICAL DISTINCTION — dependency invalidation is NOT mutation observation.**
 The minimum sufficient information may be only:
