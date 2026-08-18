@@ -6032,6 +6032,107 @@ One thing NOT concluded here: this says nothing yet about whether some OTHER
 function needs construction time. F1 contributes one row to that question and
 nothing more.
 
+### AUDIT ROW — F2 `touched`
+
+```
+FUNCTION       Record that a user/UI INTERACTION occurred at a field, so errors
+               can be shown for fields the user has visited and hidden for ones
+               they have not.
+OWNER          Where interaction happens: the view. SignalTree has no inputs, no
+               focus, no blur.
+GREENFIELD     const touched = signal<Record<string, boolean>>({});
+MECHANISM      const touch = (f) => touched.update(t => ({ ...t, [f]: true }));
+SIGNALTREE?    NO -- see the write-direction measurement below.
+CONSTRUCTION?  NO, and the current construction-time shape is a LIMIT, not a
+               feature.
+```
+
+Unlike F1 this is NOT derivable from values -- you cannot recompute "the user
+focused this field". So the interesting question is not derivability. It is
+**who writes it**, and whether SignalTree's version buys anything.
+
+**MEASURED — SignalTree never sets `touched`. Not once, on any path.**
+
+```
+marker.patch({ name: 'Ada' })    touched -> { name: false, age: false }
+marker.set({ age: 36 })          touched -> { name: false, age: false }
+marker.$.name.set('Grace')       touched -> { name: false, age: false }
+marker.touch('name')             touched -> { name: true,  age: false }
+```
+
+Every value write leaves it untouched; only the APPLICATION calling `touch()`
+moves it. So the marker holds a **write-only bag the application fills and
+reads** -- with no SignalTree semantics attached to the contents. A plain
+`signal<Record<string, boolean>>({})` in the component is the same object with
+one less indirection.
+
+**MEASURED — the map shape is frozen at construction.** Keys come from
+`Object.keys(initial)`. The null is not shape-locked and can record
+`'phones.0.value'` for a repeated row, a dynamically added control, or a field
+the server sent late. Construction time is a CEILING here, not a capability.
+
+#### The one non-trivial claim — and it is REFUTED
+
+The marker's processor registration argues at length that `touched` must ride in
+the snapshot:
+
+> *"`touched` is restored for UNDO/REDO ... Undo must land the user exactly
+> where they were, errors and all -- a cleaned-up undo is a lie about what they
+> did."*
+
+That is a real argument, and it is the only thing in this row that could have
+made `touched` SignalTree-owned. **Both undo paths were measured. Neither
+delivers it.**
+
+```
+setup   patch name='Ada'; touch('name')      -> { name: true,  age: false }
+        patch name='Grace'; touch('age')     -> { name: true,  age: true  }
+
+form({ history: history() }).undo()
+        values   'Ada'      CORRECT
+        touched  { name: true, age: true }   NOT restored
+
+.with(timeTravel()) -> tree.undo()
+        values   { name: 'Ada', age: 0 }     CORRECT
+        touched  { name: true, age: true }   NOT restored
+```
+
+Expected under the comment's own standard: `{ name: true, age: false }`.
+
+**THE MECHANISM, not just the symptom.** Two independent reasons:
+
+```
+1  history() records `project(ctx.read())` -- VALUES ONLY. The marker-processor
+   snapshot/hydrate pair (which does carry `touched`) is not the path
+   `form({ history })` undo uses at all; it has its own buffer.
+
+2  `touch()` and `touchAll()` update `touchedSignal` and NOTHING else -- no
+   announce, no recordHistory, no schedulePersist. MEASURED: a touch() plus a
+   touchAll() leave `tree.getHistory().length` unchanged.
+```
+
+Because a touch never records, **no history entry ever exists at a distinct
+touched state.** Undo can only ever restore whatever `touched` happened to be at
+the moment of the last VALUE write. The fidelity the comment argues for is not
+merely missing -- it is unreachable without also making interaction state a
+recordable event, which nothing has asked for.
+
+The same gap has a second consequence nobody has claimed: since `touch()` does
+not `schedulePersist()`, a touch alone never persists either.
+
+```
+DISPOSITION    F2 touched -> DELETE from SignalTree.
+               Function real and genuinely irreducible, but the owner is the
+               VIEW. SignalTree never writes it, the sole coupling argument
+               (undo fidelity) is refuted on both undo paths and is unreachable
+               by construction, and the construction-time shape is a ceiling.
+```
+
+**14.x DEFECT NOTE (Rule 0f).** The registration comment documents behaviour the
+code does not implement. Under the two-axis rule this is `14.x DOC-DEFECT` /
+`15.0 MOOT` -- the comment dies with the marker, so no 14.x patch is proposed.
+Recorded because a future reader finding that comment would otherwise trust it.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
