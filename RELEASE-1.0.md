@@ -6986,6 +6986,109 @@ trigger path that does not involve `form()`. If none is found, the finding is
 recorded as *closed by removal of the only known trigger* -- explicitly not as
 *resolved*.
 
+## RULE 0j — SUBTRACTION-ONLY, and PHYSICAL deletion follows ARCHITECTURAL deletion
+
+### 0j-1 — a rejected feature does not require a replacement design
+
+> **During the subtraction audit, a rejected feature does not require a
+> replacement design. Preserve only the USER CAPABILITY as a future
+> consideration where it looks genuinely useful. Architecture first;
+> convenience reconstruction later.**
+
+So the question is never *"what should replace `persistNow()`?"* It is *"does
+`persistNow()` belong on this abstraction as written?"* If no: DELETE, and the
+replacement is DEFERRED — possibly to nothing.
+
+**DEFERRED CAPABILITY CANDIDATES** — deliberately weak. Not "future SignalTree
+features"; these have NOT earned first-party ownership, and the old
+implementation gets **no vote** when the pass runs.
+
+```
+checkpoint / baseline UX
+interaction / touched helpers
+workflow / step navigation
+operation lifecycle helpers
+imperative durability controls
+framework integration conveniences
+```
+
+The list means only: *things users may find useful enough to reconsider after
+stabilization.* Default remains **DO NOT ADD A SIGNALTREE FEATURE.**
+
+### 0j-2 — the corpse does not participate in the next experiment
+
+**ARCHITECTURAL deletion and PHYSICAL deletion are different events, and the gap
+between them is a contamination window:**
+
+```
+endpoint frozen
+      v
+dead mechanism REMAINS AT HEAD
+      v
+next architecture audit observes it
+      v
+dead mechanism influences the derived contract
+```
+
+> **Once a death certificate is signed, executing it is the NEXT EXECUTION
+> BOUNDARY — not deferrable work.** Deriving a new contract while declared-dead
+> machinery is still live measures the new architecture against something
+> already ruled non-architectural.
+
+**This is not cleanup. It is evidence hygiene**, and it directly improves the
+next two derivations:
+
+```
+WITH form() LIVE     MUT can drift into "how should mutation participation
+                     support this weird form write?" — a question about a
+                     mechanism with no future standing.
+AFTER DELETION       "For the SURVIVING mutation universe, what constitutes
+                     participation in one tree/lineage, and can activity
+                     belonging to ANOTHER tree alter it?"
+```
+
+Git preserves retired experiments; HEAD does not need to. The cross-tree
+reproducer is recorded verbatim in this ledger and remains executable at the
+audit-boundary commit, which is sufficient — keeping dead production code alive
+to host a test is the wrong trade.
+
+### CORRECTED QUEUE
+
+```
+1  EXECUTE the frozen deletions
+     @signaltree/schema                                DONE (5bd821d3)
+     form() / FormMarker / FormSignal / processor       NEXT
+2  PROVE the resulting package / type / build surface clean
+3  MUT — derive the mutation-participation contract against the SURVIVING
+     architecture only
+4  Causal owner convergence, including the common-substrate falsifier
+5  Remaining survival / package / API audits
+6  Stabilization
+7  SEPARATE greenfield UX pass, starting from NULL, using the old APIs only as
+     a historical capability inventory
+```
+
+### BLAST-RADIUS MEASUREMENT for step 1 (taken before executing)
+
+```
+ng-forms core/ng-forms.ts        0 marker refs   createFormTree takes plain values
+ng-forms wizard/wizard.ts        0 marker refs
+ng-forms history/history.ts      0 marker refs
+ng-forms enhancer/form-bridge    19 refs         DIES
+ng-forms signals/marker-bridge    5 refs         DIES
+```
+
+**`@signaltree/ng-forms` SURVIVES the deletion** — most of it never depended on
+the marker. What dies is `formBridge()` and `signalForm()` (whose only remaining
+overload is the marker one, the schema overload having gone with SCHEMA-DEL).
+
+**CONSEQUENCE TO SURFACE, not to silently resolve:** `createFormTree()` is
+currently DEPRECATED IN FAVOUR OF the thing being deleted — its warning tells
+users to migrate to the marker plus `formBridge()`. Deleting `form()` therefore
+INVERTS a live deprecation. The notice must be removed or re-pointed as part of
+the execution; whether `createFormTree()` is itself the right survivor is a
+SEPARATE audit and is not decided by this deletion.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
