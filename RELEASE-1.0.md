@@ -7171,6 +7171,100 @@ INVERTS a live deprecation. The notice must be removed or re-pointed as part of
 the execution; whether `createFormTree()` is itself the right survivor is a
 SEPARATE audit and is not decided by this deletion.
 
+## FORM-DEL — EXECUTED (`b57ba293`), with the DOC SURFACE still open
+
+```
+58 files changed, 46 insertions, 10 499 deletions
+```
+
+### Deleted
+
+```
+core     markers/form.ts, form.contract.ts, form.spec.ts, form-shapes.spec.ts
+         the factory, FormMarker, FormSignal, FormConfig, FormFields, FormWizard
+         validators, withKind, createFormSignal, FORM_MARKER, isFormMarker
+         history()   — its ONLY consumer was the marker's `history` option
+         FormHistoryApi KEPT: trackHistory() still uses that shape
+ng-forms enhancer/**  formBridge()
+         signals/**   signalForm(), applySignalTreeSchemas, the ./signals export
+demo     form-marker-demo, signal-forms-demo (page + fundamentals example),
+         their routes, and the marker zoo's form article
+```
+
+### Survived, and NOT by accident
+
+```
+trackHistory()    takes a plain WritableSignal; never referenced the marker
+createFormTree()  zero marker refs
+wizard adapter    zero marker refs
+history adapter   zero marker refs
+```
+
+`createFormTree()`'s deprecation is **DE-POINTED, NOT RE-POINTED** — it now says
+its migration target was removed and no replacement has been chosen. Reactive
+Forms and Signal Forms interoperability stay DEFERRED OBLIGATIONS.
+
+### Two unrelated defects fixed because they blocked the gate
+
+The demo build had been red all session on `TS4114` at `types.ts` —
+`SignalTreeRollbackError` redeclaring `cause`. Adding `override` fixed the demo
+and instantly broke core's rollup build with `TS4113`, *"not declared in the base
+class"*. **The two configs disagree about whether `Error.cause` exists at their
+lib targets.** Resolved by not declaring the field and assigning through a cast,
+which satisfies both; the disagreement is recorded in a comment at the site.
+
+```
+14.x   LIB-TARGET DISAGREEMENT between the demo's compiler options and core's
+       rollup build. Recorded, not chased — a real config defect that outlives
+       FORM-DEL and deserves its own look.
+```
+
+### VERIFICATION
+
+```
+core 1651 · ng-forms 40 · demo 158 in 22 suites · guardrails, realtime, events, shared
+run-many across all seven projects            exit 0  (including core)
+lint, every project                           exit 0
+every package build, fresh artifacts          exit 0
+demo build                                    exit 0  <- first time this session
+```
+
+### OPEN — the doc surface, roughly 100 references
+
+**This is a SHIPPING-CORRECTNESS obligation, not an evidence-hygiene one.** The
+amended Rule 0j-2 requires physical deletion before a derivation whose EVIDENCE
+SURFACE is affected; MUT derives against CODE, not prose. So this blocks
+**Phase 3/4, NOT MUT.**
+
+```
+apps/demo/public/llms-full.txt              26   ships in the core tarball
+docs/skills/using-signaltree/ng-forms/      16   ships in the package
+docs/skills/using-signaltree/SKILL.md        9   ships in the package
+apps/demo/public/llms.txt                    7   ships in the core tarball
+packages/ng-forms/README.md                 37   whole sections are marker-built
+packages/core/README.md                      4
+docs/skills/.../reference/core.md            2
+docs/ai/agent-templates.md                   2
+docs/overview.md                             1
+```
+
+plus live prose in `docs/errors/README.md`,
+`docs/guides/custom-markers-enhancers.md`,
+`docs/guides/time-travel-in-production.md`, `docs/architecture/*.md`,
+`docs/compare/ngrx-signalstore.md`, `docs/myths-and-misconceptions.md`, and
+several demo component templates.
+
+**Highest harm first:** `llms.txt` and `llms-full.txt` ship INSIDE the core
+tarball and exist to steer AI agents. Every reference there currently teaches an
+agent to emit APIs that no longer exist. The skills ship inside the packages and
+have the same problem.
+
+**NOT rewritten (historical records):** `docs/audits/**`, `docs/research/**`,
+`docs/rfcs/**`, the CHANGELOGs, and the past-version migration guides
+(`migration-v11-v12`, `v12-v13`, `v13.2`, `v14-v14.1`). They record what was true
+when written. `docs/guides/migration-v14-v15.md` is the LIVE one and must gain
+the marker deletion.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
