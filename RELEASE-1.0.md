@@ -8518,15 +8518,36 @@ WHAT ACTUALLY REMAINS IN B1
    `isDev` emits as `export declare const isDev: boolean` — the primitive
    inlined its literal type exactly as the fixture predicted, so `bc50d960`'s
    fix holds at HEAD. The value-space route is CLOSED with no repairs owed.
-2. Decide public intent for `isDev`, `HydrateMode`, and each scan hit, BEFORE
-   repairing anything. `isDev` is deletion-favoured by the utility audit, so
-   keeping it requires POSITIVE evidence; `HydrateMode`'s inclusion is already
-   argued in `authoring.ts` (a marker processor's `hydrate` hook receives one,
-   and `HydrateDecisionEvent.mode` is typed with it) — that argument needs
-   accepting or refuting, not re-deriving.
-3. Repair only intended public contracts.
+2. ~~Decide public intent for `isDev`, `HydrateMode`, and each scan hit.~~
+   **BOTH DECIDED. The scan produced no hits.**
+
+   - `isDev` — **NOT public. REMOVED at `f075f3b1`.** Zero consumers in the
+     workspace, in any first-party package, or inside core itself; guardrails
+     takes a `boolean` parameter and has its own `isDevEnvironment()`, and the
+     demo uses Angular's `isDevMode()`. The third-party argument (an enhancer
+     author wanting core's exact ngDevMode-then-NODE_ENV determination) was
+     available and NOT accepted — for this symbol the rule requires evidence to
+     keep, not evidence to remove. Both declarations went, not just the
+     re-export, since `lib/constants` is not a published subpath and the
+     survivor would have been an orphan of the class already queued here.
+   - `HydrateMode` — **PUBLIC. Argument ACCEPTED, no repair owed.** The need is
+     third-party-implementer level: `onHydrateDecision` is exported, so
+     `HydrateDecisionEvent.mode` must be nameable and a marker processor's
+     `hydrate` hook must be able to type its own parameter. Zero workspace usage
+     is structurally incapable of refuting a TP need — that is exactly the level
+     MUT-0 says demo evidence cannot answer. Its declaration already ships.
+
+3. ~~Repair only intended public contracts.~~ **NOTHING OWED.** The value-space
+   scan found no defects, and the one symbol whose declaration had been repaired
+   (`isDev`, at `bc50d960`) turned out not to be public — so the repair was
+   withdrawn with the export rather than kept.
 4. Re-baseline `tools/api-baseline.json` — AFTER the intended surface is
-   established, never before.
+   established, never before. **NOW UNBLOCKED for the symbols above, but still
+   premature:** the queue's remaining items (`bind()`, `requires`, the
+   realization-facing `.with()` overload, `ENTITY_LOADER_READERS`, and the rest
+   of the deletion-first utility audit — `deepEqual`, `toWritableSignal`,
+   `asReadonly`) each change the surface the baseline is meant to record.
+   Re-baseline once, at the end, not per-symbol.
 
 The plugin-stage question is ANSWERED: the plugin emits the broken declaration
 (`stripInternal` under `tsconfig.lib.prod.json`), not a later Nx/Rollup step.
