@@ -243,6 +243,112 @@ structurally cannot.
 | naive intersection of contributions | **REFUTED as a lowering** — silent last-wins shadowing |
 | inert extension declaration | **type-proved feasible** |
 
+## Amendment 2 — the matrix becomes FUNCTION-FIRST
+
+**Status unchanged: CANDIDATE. Nothing here is frozen.**
+
+Tables A-D are organised by CONCEPT, and concept means *legacy symbol*. That was
+right while the question was "which of these survives". It is wrong now, because
+three separate times in the extension cluster a FUNCTION survived while its
+MECHANISM evaporated — and each time, auditing the noun would have preserved the
+mechanism.
+
+Under [Rule 0l](../../RELEASE-1.0.md), legacy mechanisms are evidence
+repositories, not migration targets. So the architecture rows become FUNCTIONS,
+and the old symbols move to an evidence column where they cannot vote on the
+shape.
+
+```text
+                 OLD SYSTEM
+                     |  evidence only
+                     v
+             FUNCTION EXTRACTION
+                     v
+               HOSTILE NULL
+             /                \
+     function dies        function survives
+                                v
+                         ownership audit
+                                v
+                  does the derived architecture
+                     already supply it?
+                    /                  \
+                  yes                   no
+                   v                     v
+                 DONE            GREENFIELD DERIVE
+                                         v
+                                 minimum primitive
+                                         v
+                                     LOWERING
+```
+
+Only afterwards do we look horizontally and ask whether independently derived
+functions recur enough to justify a common concept. That is where a compiler IR,
+a policy concept, a declaration concept or a command topology may emerge — not
+because `Enhancer` needed replacing.
+
+### Table E — EXTENSION CLUSTER, functional inventory
+
+Columns: what the function is · whether the derived architecture already covers
+it · where the evidence came from. `LEGACY SOURCES` is citation only.
+
+| Function | Status | Already satisfied by the derived architecture? | Legacy sources (evidence only) |
+|---|---|---|---|
+| select optional tree behaviour at authoring time | survives | candidate declarative init | `.with()` call sites, built-ins |
+| know required substrate capabilities before construction | **SURVIVES — measured** | yes: full-declaration compiler sees them pre-CONSTRUCT | `plannedSignalTree`, `EnhancerMeta.capabilities` |
+| contribute public/type surface | **SURVIVES — type-proved feasible** | yes: SHAPE-T0 accumulation from inert declarations | `Enhancer<TAdded>`, `this & TAdded` |
+| bind runtime behaviour to the constructed tree/kernel | **SURVIVES** | yes: REALIZE phase, pre-EXPOSE sufficient in every tested case | enhancer bodies |
+| alter final callable behaviour | **SURVIVES** | yes: FINALIZE builds one callable with interception inside | batching / timeTravel / devTools replacement |
+| register teardown / lifetime behaviour | **SURVIVES** | yes: already a tree-owned method, unrelated to `.with()` | `registerCleanup` |
+| reject conflicting public contributions | **SURVIVES** | yes, BOTH halves: T0-G statically, T1 CASE 3 at runtime | nothing — the old system had no such check |
+| reject semantically duplicate declarations | likely useful | partly: T1 CASE 6 refused via an explicit id, NOT proved minimal | `name`, `.with()` duplicate guard |
+| order realizations when one genuinely depends on another | possible | unproven: T1 CASE 5 showed an internal order SUFFICES; representation is open | `requires`, `provides`, `resolveEnhancerOrder` |
+| express substrate capability dependency | survives in some form | partly: `TREE_CAPABILITY_DEPENDENCIES` already models it internally | `capabilities` |
+| invoke contributed capabilities after exposure | **obviously survives** | yes — an ordinary runtime API, never composition | `realtime.connect()`, every enhancer method |
+| **compose new capabilities after exposure** | **DELETE — no surviving use found** | n/a | `.with()` |
+| replace public tree identity | **NOT A FUNCTION** | n/a — mechanism debt of post-construction application | the three replacing built-ins |
+| sequentially accumulate types | **NOT A FUNCTION** | n/a — declarative typing handles it | `this & TAdded` |
+| preserve an enhancer chain | **NOT A FUNCTION** | n/a — mechanism self-maintenance | the redefined `.with()` on replacements |
+
+Note what is absent from the left column: `Enhancer`, `bind()`, `requires`,
+`provides`, `plannedSignalTree`. **Those are not functions.** They are possible
+historical implementations of functions that are.
+
+### Table F — legacy dispositions (a ledger, not an agenda)
+
+| Legacy symbol | What it happened to provide | Disposition |
+|---|---|---|
+| `.with()` | sequential accumulation; late-application syntax | **DELETE** (function extracted, no surviving use) |
+| `Enhancer` | authoring + realization + type contribution, conflated in one callable | functions extracted; form UNPROVEN — do NOT run an "Enhancer null" |
+| `plannedSignalTree` | preconstruction capability planning | function relocates to ordinary compilation; public form UNPROVEN |
+| `bind()` | binding to an already-constructed host | reference evidence only |
+| `requires` / `provides` | an attempt at ordering + dependency validation | reference evidence only — evidence that someone anticipated a dependency problem, not evidence of the right solution |
+| `name` | enhancer identity | reference evidence only |
+| `capabilities` | substrate requirement declaration | the one legacy field whose FUNCTION is measured and exercised |
+
+### Extend this treatment to the rest of the matrix
+
+Tables A-D's remaining rows must be converted the same way as they come up. Do
+**not** ask "does `asyncSource()` survive?" Ask what applications were getting:
+represent pending/value/error, trigger acquisition, invalidate, retry, connect a
+result to tree state, track request identity — then ask which of those are
+SignalTree-owned, which the store/derived/command architecture already provides,
+and what is left that ordinary application code cannot express well. The old
+concept may evaporate entirely, or one function may survive and produce a small
+new primitive.
+
+`stored()` is the sharpest case, because its two halves already have DIFFERENT
+frozen authorities. Do not ask what a new `stored()` looks like. Ask separately
+how committed truth produces durable consequences, how external durable state
+enters construction, whether a position needs a declarative durability policy,
+and whether hydration belongs to that same declaration. Only if those converge
+independently should a combined concept reappear.
+
+And `derived` is the worked example: its function was never "preserve
+`.derived()`", it was "represent read-only projections of canonical state". The
+object-literal form survived because it fit the independently derived function —
+not because the old system had derived state.
+
 ## Frozen baseline this matrix may not re-derive
 
 - `SignalTree owns truth · Angular owns observation · causal history owns meaning`
