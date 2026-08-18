@@ -6413,6 +6413,127 @@ validation await is defensible as "submit what is valid now", and no public text
 states which instant is submitted. Recorded with the evidence; the 14.x line
 must decide whether the contract implies call-time capture.
 
+### AUDIT ROW — F4 `wizard`
+
+**INTEGRITY NOTE.** Rule 0g wants the current mechanism hidden until last. It
+was not, here: the wizard implementation was read earlier in the same session
+while inventorying `form()`'s surface. That is declared rather than papered
+over, and the row is therefore built on STRUCTURAL MEASUREMENTS that do not
+depend on recall.
+
+The null:
+
+> **No concept called "wizard" exists. An application has state, and a UI
+> containing several views. What required capability becomes impossible?**
+
+**The bundle is split BEFORE measuring**, so "wizard" cannot smuggle five
+separately-owned things through as one:
+
+```
+current step                 where am I
+allowed transition / guard   may I move
+step ordering                what follows what
+step completion              is this step done
+next / previous              convenience over the above
+```
+
+#### The decisive measurement — is the step TREE STATE at all?
+
+```
+after goTo(1):
+  wizard.currentStep()        1
+  JSON.stringify(tree())      {"p":{"values":{...},"touched":{...}}}
+                              NO step, NO currentStep, NO 'step' substring
+```
+
+**The step index is invisible to the tree's own value.** It is a private signal
+that happens to be reachable through a marker. Two more measurements confirm it
+is not tree state in any operational sense:
+
+```
+timeTravel undo    values rewind 'Grace' -> 'Ada'; currentStep STAYS 1
+two next() calls   tree.getHistory().length UNCHANGED
+```
+
+So navigation is not persisted, not undone, not serialized, and not recorded.
+**A wizard step already behaves as session/routing state that merely lives
+inside the tree object graph.** Nothing has to be argued to move it out; it is
+already out, in every respect except where the variable is declared.
+
+#### Per-concept ownership
+
+```
+CURRENT STEP        Session / routing state. In a real app this is usually the
+                    URL -- a step you cannot deep-link to or reload into is a
+                    known UX defect, and SignalTree has no routing authority.
+                    OWNER: router / session.   SIGNALTREE: NO
+
+STEP ORDERING       A static list the application declares. `['one','two']` is
+                    domain data, not tree structure.
+                    OWNER: application.        SIGNALTREE: NO
+
+ALLOWED TRANSITION  Workflow policy: "may the user leave this step". Depends on
+                    completion rules the application owns -- and, in the current
+                    design, on validation, which SignalTree no longer has.
+                    OWNER: application.        SIGNALTREE: NO
+
+STEP COMPLETION     "Is this step done" is a domain predicate over values. It is
+                    `computed` over a published read, exactly like F1's dirty.
+                    OWNER: application.        SIGNALTREE: NO
+
+NEXT / PREVIOUS     Convenience over an integer.
+                    OWNER: whoever owns the integer.
+```
+
+**MEASURED — the guard does not guard.** `canNext()` is `true` on step 0 of a
+freshly constructed wizard with nothing filled in:
+
+```
+currentStep() === 0    canNext() === true     nothing completed, nothing valid
+goTo(2)                canNext() === false    isLastStep() === true
+```
+
+`canNext` answers *"is there a later step"* -- step ARITHMETIC -- not *"may I go
+there"*. A template binding `[disabled]="!wizard.canNext()"` therefore enables a
+Next button that `next()` may refuse, which is the button-that-does-nothing
+defect. Naming aside, this confirms the split above: **ordering and permission
+are different concepts, and the current API conflates them.**
+
+#### The null
+
+The entire surface is one integer plus `computed`s over a static list:
+
+```ts
+const steps = ['one', 'two', 'three'] as const;
+const step  = signal(0);
+const stepName = computed(() => steps[step()]);
+const canPrev  = computed(() => step() > 0);
+const isLast   = computed(() => step() === steps.length - 1);
+const next = () => step.update((i) => Math.min(i + 1, steps.length - 1));
+```
+
+Measured working. No SignalTree involvement of any kind -- not even a published
+read, because **the wizard never touches tree values.**
+
+```
+CONSTRUCTION?  NO. Nothing about a step index needs graph compilation or
+               construction-time specialization of a position. The step list is
+               data the application already has; declaring it at tree-build time
+               buys nothing and costs deep-linkability.
+
+DISPOSITION    F4 wizard -> DELETE from SignalTree, and do NOT recombine.
+               Five concepts with at least three different owners were travelling
+               as one word. Current step is session/routing, ordering and
+               completion are application domain, transition permission is
+               workflow policy. None is SignalTree's.
+```
+
+**14.x (Rule 0f).** `canNext` reporting arithmetic while reading as permission
+is a `14.x DEFECT CANDIDATE` -- the JSDoc says "Can navigate forward", which a
+consumer would reasonably read as permission, and `next()` can refuse when it is
+`true`. Promotion requires checking whether any published example binds a
+control to `canNext`; not decided here.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output

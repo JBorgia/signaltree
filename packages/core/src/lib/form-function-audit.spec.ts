@@ -445,3 +445,125 @@ describe('F3b submit() — what does the orchestration add?', () => {
     await pending;
   });
 });
+
+// ============================================================================
+// F4 — "wizard".
+//
+// NULL: no concept called "wizard" exists. An application has state, and a UI
+// containing several views. What required capability becomes impossible?
+//
+// The bundle is split BEFORE measuring, so "wizard" cannot smuggle five
+// separately-owned things through as one:
+//
+//   current step      allowed transition / guard    step ordering
+//   step completion   next / previous convenience
+// ============================================================================
+describe('F4 wizard — is step position TREE STATE at all?', () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  const makeWizardTree = () =>
+    signalTree({
+      p: form<Profile>({
+        initial: { name: '', age: 0 },
+        wizard: { steps: ['one', 'two', 'three'] },
+      }),
+    });
+
+  it('DECISIVE: the step is INVISIBLE to the tree snapshot', async () => {
+    const tree = makeWizardTree();
+    await tree.$.p.wizard?.goTo(1);
+
+    const snap = JSON.stringify(tree());
+    // The step index reached 1, yet nothing in the tree's own value carries it.
+    expect(tree.$.p.wizard?.currentStep()).toBe(1);
+    expect(snap).not.toContain('currentStep');
+    expect(snap).not.toContain('step');
+    // Recorded while here: the root read projects the marker's SNAPSHOT shape
+    // ({ values, touched }), not `T`. `values` and `touched` are in; the
+    // wizard's position is in neither.
+    expect(snap).toBe(
+      JSON.stringify({
+        p: { values: { name: '', age: 0 }, touched: { name: false, age: false } },
+      })
+    );
+  });
+
+  it('DECISIVE: timeTravel undo does not move the step', async () => {
+    const tree = signalTree({
+      p: form<Profile>({
+        initial: { name: '', age: 0 },
+        wizard: { steps: ['one', 'two', 'three'] },
+      }),
+    }).with(timeTravel());
+    const w = tree.$.p.wizard;
+
+    tree.$.p.patch({ name: 'Ada' });
+    await tick();
+    await w?.next();
+    tree.$.p.patch({ name: 'Grace' });
+    await tick();
+
+    expect(w?.currentStep()).toBe(1);
+
+    tree.undo();
+    await tick();
+
+    // Values rewound; navigation did not. The step is not part of tree history.
+    expect(tree.$.p().name).toBe('Ada');
+    expect(w?.currentStep()).toBe(1);
+  });
+
+  it('a bare navigation records NO history entry', async () => {
+    const tree = signalTree({
+      p: form<Profile>({
+        initial: { name: '', age: 0 },
+        wizard: { steps: ['one', 'two', 'three'] },
+      }),
+    }).with(timeTravel());
+
+    tree.$.p.patch({ name: 'Ada' });
+    await tick();
+    const before = tree.getHistory().length;
+
+    await tree.$.p.wizard?.next();
+    await tree.$.p.wizard?.next();
+    await tick();
+
+    expect(tree.getHistory().length).toBe(before);
+  });
+
+  it('GUARD: canNext reports step ARITHMETIC, not permission', async () => {
+    const tree = makeWizardTree();
+    const w = tree.$.p.wizard;
+
+    // No completion of step one has occurred; nothing has been filled in.
+    expect(w?.currentStep()).toBe(0);
+    expect(w?.canNext()).toBe(true);
+
+    // So `canNext` answers "is there a later step", not "may I go there".
+    await w?.goTo(2);
+    expect(w?.canNext()).toBe(false);
+    expect(w?.isLastStep()).toBe(true);
+  });
+
+  it('NULL: the whole surface is one integer plus computeds over a static list', () => {
+    const steps = ['one', 'two', 'three'] as const;
+    const step = signal(0);
+
+    const stepName = computed(() => steps[step()]);
+    const canPrev = computed(() => step() > 0);
+    const isLast = computed(() => step() === steps.length - 1);
+    const next = () => step.update((i) => Math.min(i + 1, steps.length - 1));
+    const prev = () => step.update((i) => Math.max(i - 1, 0));
+
+    expect(stepName()).toBe('one');
+    expect(canPrev()).toBe(false);
+    next();
+    expect(stepName()).toBe('two');
+    prev();
+    expect(step()).toBe(0);
+    next();
+    next();
+    expect(isLast()).toBe(true);
+  });
+});
