@@ -3264,6 +3264,110 @@ survive.
 **Realtime R0 is UNBLOCKED** — the Angular conditional no longer hangs over the
 inventory.
 
+### V1.1 — DOES A FIRST-PARTY VALIDATION FACILITY SURVIVE? — **NO COUNTEREXAMPLE FOUND**
+
+```
+NULL   SignalTree ships NO validation evaluator/package.
+       A user reads a value/snapshot, passes it to their own validator/schema,
+       and receives that validator's native result.
+
+       What REQUIRED SignalTree workflow becomes impossible?
+```
+
+Four candidate counterexamples, no fifth escape hatch.
+
+#### A — SignalTree-specific snapshot semantics — **FAILS**
+
+Does validation require a coherent read that ordinary access cannot provide?
+No. `tree()` and `tree.$.order()` already ARE coherent reads — the frozen
+atomicity invariant guarantees no external consumer observes intermediate
+heterogeneous state. Nothing new is needed, and per the corrected cross-field
+model the owner of coherent multi-position reads would be READ SEMANTICS
+anyway, not validation.
+
+#### B — marker/kernel-aware meaning — **FAILS**
+
+Is there a REQUIRED rule whose meaning cannot be represented by the resulting
+snapshot? **MEASURED** on a tree containing every marker class:
+
+```
+users  (entityMap)     {"all":[{"id":1,"name":"Ada"},{"id":2,"name":"Bob"}]}
+load   (status)        {"state":"NOT_LOADED","error":null}
+theme  (stored)        "light"
+remote (asyncSource)   {"value":[]}
+plain                  42
+```
+
+Markers flatten to plain data, and that data carries what rules judge: entity
+collections arrive as arrays with their domain keys, status arrives with its
+state, stored/async arrive as values. Uniqueness, existence, membership,
+cross-entity and status-dependent rules are all expressible.
+
+The one gap found — `asyncSource` snapshots `{value}` WITHOUT load state — is
+**not a validation gap**. "Do not validate while loading" is about WHEN to
+validate, not WHAT is valid, and the caller already decides whether to call.
+
+#### C — issue-to-tree correspondence — **FAILS**
+
+Must issues stay associated with semantic SignalTree locations across topology
+change? Not for any required workflow. Issues are located by the validated
+value's own shape and domain keys (`users.all[0].id`), which is what a user
+reads and displays. Kernel identity surviving rekey would matter only for a
+continuously-maintained issue projection — which V0 already placed outside the
+baseline.
+
+#### D — cross-format normalization — **FAILS, and it is the dangerous one**
+
+Standard Schema ALREADY IS the cross-format interoperability boundary; that is
+its entire purpose. SignalTree normalizing validator libraries on top of it adds
+a layer over an existing standard.
+
+> **"A normalized result shared across multiple formats" is the last refuge of a
+> package whose real function has disappeared.** The question is not whether
+> normalization is useful, but whether users need SIGNALTREE to normalize
+> validation libraries — or whether SignalTree should support a standard
+> validation interface and get out of the way.
+
+#### RESULT — **PROPOSED REVERSAL of V0.6**
+
+```
+APPLICATION VALIDATION IS USEFUL              YES  (never in doubt)
+SIGNALTREE MUST PROVIDE A VALIDATION FACILITY NO   (no counterexample found)
+```
+
+The honest 15.0 shape becomes:
+
+```ts
+const value  = tree.$.order();
+const result = await mySchema['~standard'].validate(value);
+```
+
+plus DOCUMENTATION showing validation libraries how to consume SignalTree truth.
+V0's product decision is then satisfied without a package.
+
+#### What this makes `@signaltree/schema`
+
+Its measured surface does something `validate(value, rules)` does not: it
+maintains a CONTINUOUS, per-path validation projection wired into the tree, with
+`isValid`/`errors`/`pending` as live signals, using Angular's `signal`/`computed`.
+
+**That extra function is exactly the one V0 excluded from the baseline** —
+continuous currency, i.e. observation. And observation is Angular-owned.
+
+```
+FUNCTION       explicit validation of truth      -> user's own validator + docs
+FUNCTION       CONTINUOUS validation projection  -> Angular observation layer
+CURRENT FORM   Angular-coupled tree enhancer
+               shipped as a SignalTree package   -> DELETE CANDIDATE
+```
+
+So the package is not a REDESIGN into a neutral evaluator; on this evidence it
+is a **DELETE candidate whose one genuine function belongs in the Angular
+adapter layer** beside the two forms adapters.
+
+**DECISION REQUIRED — reversing V0.6 is a product decision, not a derivation.**
+Everything else in the V0 block stays frozen regardless.
+
 ### V1 — VALIDATION FACILITY, MINIMAL CONTRACT — **DERIVED PROPOSAL, NOT FROZEN**
 
 Derived from `validate(node, rules)` with `@signaltree/schema`, `form()`,
@@ -3286,8 +3390,36 @@ reads and passes `tree.$.order()`. B and C are only needed if the evaluator must
 re-read on its own initiative — which is precisely the CONTINUOUS-CURRENCY
 function that V0 placed outside the baseline.
 
-Cross-field rules do not change this: a rule needing other parts of the tree
-CLOSES OVER them, and the caller decides what snapshot to pass.
+**RETRACTED — the cross-field closure argument.** I wrote that a rule needing
+other parts of the tree simply CLOSES OVER them. That smuggles live SignalTree
+reads back in through the rule body:
+
+```ts
+validate(order(), (value) => {
+  const customer = tree.$.customer();   // ambient SECOND read
+});
+```
+
+The supposedly pure `value + rules -> result` operation can then observe TWO
+DIFFERENT MOMENTS OF TRUTH. Even where JS execution makes most cases safe in
+practice, the architecture is wrong: a snapshot evaluator must not secretly
+acquire more truth through closures when input consistency matters.
+
+**CORRECTED MODEL — all dependencies belong in the EXPLICIT validation input**
+unless a live-reader model is separately specified and proven:
+
+```ts
+validate({ order: tree.$.order(), customer: tree.$.customer() }, rules);
+// or, when a subtree snapshot already contains everything:
+validate(tree.$.order(), orderRules);
+```
+
+Cross-field validation still does not prove SignalTree coupling — but for a
+STRONGER reason than the one I gave. And it raises a real candidate: if
+SignalTree must supply a COHERENT MULTI-POSITION SNAPSHOT, that could be genuine
+SignalTree-specific functionality — **but its owner would be SNAPSHOT/READ
+SEMANTICS, not validation.** Do not give validation ownership of a primitive it
+merely consumes.
 
 ```
 R1 RESULT   the evaluator needs a VALUE and RULES.
@@ -3336,10 +3468,17 @@ That also removes the last candidate reason to touch kernel identity.
 validate(value, rules) -> Result | Promise<Result>
 ```
 
-- **`Result | Promise<Result>`**, not always a Promise: forcing every sync rule
-  through a microtask would make the primitive strictly worse for the common
-  case and cannot be undone by a consumer. (An always-async variant CAN be built
-  on a sync-capable one; the reverse cannot.)
+- **SYNC/ASYNC SHAPE IS UNPROVEN.** The argument that always-Promise imposes
+  microtask semantics is valid, but it does not establish that a
+  `Result | Promise<Result>` UNION is optimal — a union pushes uncertainty onto
+  every caller. `validate` + `validateAsync`, always-async, or a format-driven
+  distinction are all live. **This cannot be settled until we know what `rules`
+  actually are.**
+
+```
+ASYNC LIFECYCLE OWNERSHIP    COLLAPSED — keep this result
+PUBLIC SYNC/ASYNC API SHAPE  UNPROVEN
+```
 - no stored state, no registration, no installation, no tree coupling.
 
 #### REJECTED ALTERNATIVES, each with its falsifier
@@ -3416,8 +3555,10 @@ implement it.
 ### V0 — **CLOSED. PRODUCT DECISION FROZEN.**
 
 ```
-PRODUCT DECISION       SignalTree 15 DOES ship a general first-party validation
-                       facility
+PRODUCT DECISION       **REOPENED at `238b971d` — see V1.1.** V1 derived a
+                       primitive with ZERO SignalTree coupling, which falsifies
+                       the reasoning that produced this line. Everything else in
+                       this block REMAINS FROZEN.
 OWNERSHIP              downstream DERIVED facility over SignalTree truth
 FRAMEWORK              framework-neutral BY FUNCTION (neutrality follows from
                        ownership; it was not chosen independently)
@@ -3431,8 +3572,33 @@ STANDARD SCHEMA        format/interoperability ADAPTER, not a second authority
 @signaltree/schema     REDESIGN candidate; package and API not yet derived
 ```
 
-**THE REASONING IS FUNCTIONAL, NOT HISTORICAL.** Validation of SignalTree state
-is useful *without Angular Forms existing at all*:
+**THE REASONING THAT WAS WRONG, recorded because the shape of the error
+matters.** The argument ran: `await validate(tree.$.order(), orderRules)` is
+generally useful, THEREFORE SignalTree should provide `validate`. That does not
+follow. Once V1 erased SignalTree and derived `validate(value, rules)`, the
+function is no longer *validate SignalTree state* — it is *validate a JavaScript
+value*. **The value having come from SignalTree gives SignalTree no ownership
+claim over the operation.**
+
+```
+STILL FROZEN
+  kernel application-validation ontology   NONE
+  authoritative refusal                    NOT ESTABLISHED
+  validation observation                   NOT KERNEL-OWNED
+  continuous currency                      NOT BASELINE
+  Angular observation/lifecycle            ANGULAR-OWNED
+  validation enhancer                      UNJUSTIFIED
+  validation marker                        UNJUSTIFIED
+
+REOPENED
+  15.0 ships a general first-party
+  validation facility                      UNPROVEN
+```
+
+The original functional argument is preserved below for the record, but it
+proves only that the CAPABILITY is useful — never that SignalTree must PROVIDE
+it. Validation of SignalTree state is useful *without Angular Forms existing at
+all*:
 
 ```ts
 const result = await validate(tree.$.order, orderRules);
