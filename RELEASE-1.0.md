@@ -8112,6 +8112,164 @@ NOT YET PROVED
   that a third semantic UNKNOWN state is required
 ```
 
+## RULE 0k — "ANGULAR HAS A PRIMITIVE" IS EVIDENCE, NOT A FALSIFIER
+
+The audit has deleted three large surfaces in a row. That builds momentum toward
+a shortcut which would be as unprincipled as keeping everything:
+
+```
+WRONG                                  RIGHT
+Angular has resource()                 What becomes IMPOSSIBLE without the
+-> asyncSource unnecessary             SignalTree concept?
+Angular has signals                          v
+-> status unnecessary                  Only THEN: does Angular already supply
+Angular has equality                   the minimum primitive for that function?
+-> compared unnecessary
+```
+
+**The function must be derived BEFORE the primitive is compared**, or we conclude
+redundancy without ever proving the two things mean the same thing. That is the
+`form()` category error with a different mask.
+
+### THE COUNTEREXAMPLE, and it was caught by review rather than by the audit
+
+I cited `derived()`'s removal in 6.3.1 as precedent — *"the project already
+applied this test once and deleted."* **It did not.** Measured:
+
+```
+REMOVED     the standalone `derived()` FACTORY
+ALIVE       `.derived($ => ({...}))`   a first-class tree API
+ALIVE       `derivedFrom()`            exported helper
+ALIVE       `linked()`                 writable-derived over Angular linkedSignal
+ALIVE       `isDerivedMarker`          runtime, merge-derived.ts:158
+ALIVE       `DerivedMarker`            drives ProcessDerived / WithDerived types
+```
+
+**One SPELLING died; the CAPABILITY was kept and reshaped.** So it is a data
+point AGAINST the deletion prior, not for it:
+
+```
+Angular has computed()
+   !=
+all SignalTree derived functionality is redundant
+```
+
+The surviving function may be something like *"compile additional state whose
+identity and TYPE SURFACE derive from the tree and participate in the resulting
+facade"* — categorically different from *"give me a computed signal"*. And
+`linked()` may differ again: **Angular owns the reactive primitive while
+SignalTree may own how that primitive participates in a compiled tree surface.**
+
+> **Sometimes Angular owns the MECHANISM while SignalTree still owns
+> COMPILATION, STRUCTURAL INTEGRATION, IDENTITY, or tree-level DX. The next
+> phase must not become "find the Angular primitive and delete the SignalTree
+> feature."**
+
+### REVISED TRIAGE — four tiers, and NOT one shared verdict
+
+An earlier draft proposed running `asyncSource`, `asyncQuery`, `loader`,
+`status` and `compared` against ONE shared Angular-null falsifier. **Rejected —
+too heterogeneous.** Their functions are not obviously the same thing:
+
+```
+asyncSource / asyncQuery   orchestration + async result lifecycle?
+loader                     acquisition / loading?
+status                     semantic operation state?
+compared                   equality and change semantics?
+```
+
+They may be audited CHEAPLY and in ONE PASS, but **each gets its own NULL and
+its own verdict**:
+
+```
+asyncSource   assume it does not exist. What async-state capability is lost?
+asyncQuery    same, INCLUDING the input -> result relationship
+loader        what acquisition/loading capability is lost?
+status        what semantic state does it carry that ordinary signals do not?
+compared      what does SIGNALTREE ITSELF need to know about equality?
+```
+
+#### The four tiers
+
+```
+1  FINISH MUT FIRST — their semantics depend on the contract
+     timeTravel · transactions · PathNotifier · interceptLeafSignals
+     devtools causal behaviour · batching (if mutation/publication affects it)
+     the cross-tree undo defect
+
+2  AUDITABLE AFTER MUT, but MUT does not define their function
+     asyncSource · asyncQuery · loader · status · compared
+     cheap, one pass, five separate verdicts
+
+3  NEEDS ITS OWN DERIVATION once the kernel settles
+     entityMap        KERNEL-ADJACENT, strong survival candidate
+                      (SubjectId is frozen; Angular provides no normalized identity)
+     stored           OWNER FROZEN (persistence consequence), REALIZATION unproven
+     derived surface  STRUCTURALLY SIGNIFICANT, FUNCTION SURVIVAL UNPROVEN
+
+4  PACKAGE VERDICTS LAST
+     ng-forms · guardrails · realtime · events · shared
+```
+
+**Tier 3 is deliberately not one bucket.** An earlier draft called all three
+"the right realization of something we have already frozen" — too generous.
+`entityMap` has frozen identity concepts making its function plausible; `stored`
+has a frozen owner but an unproven realization; **the derived surface has no
+established function at all yet.** We know only that it is substantial and
+structural enough to deserve a real audit.
+
+**Package survival must never be inferred from surviving files.** That inference
+has already been caught twice in this audit.
+
+#### One sequencing guard
+
+"Almost everything waits on MUT-3" is broadly right for causal machinery and must
+not become a universal blocker. Tier 2 does not need MUT to define its function.
+
+#### And one status correction
+
+The substrate hypothesis — undo/redo/rollback/branch/merge as operations over one
+causal substrate — is recorded as FALSE AT HEAD. That is a **current
+implementation fact, not an architectural disposition.** Time travel and the
+causal runtime being separate today refutes *"already unified"*, not
+*"should unify."*
+
+### AI DISCOVERABILITY — artifacts deleted, function retained
+
+```
+AI DISCOVERABILITY FUNCTION     SURVIVES
+current llms / skills ARTIFACTS DELETE
+REPLACEMENT                     DEFERRED OBLIGATION
+```
+
+**Reason:** they are DERIVED DESCRIPTIONS of an architecture that is not frozen.
+They teach APIs that were deleted, and — more importantly — most of what they
+teach that is still ACCURATE describes concepts that have not been
+survival-audited. Patching only the schema and marker references would produce a
+document accurate today and wrong again after the next disposition.
+
+Greenfield them only after the surviving public surface freezes. This is Rule
+0j-1: a rejected artifact does not require a replacement design now.
+
+**Confidently-wrong AI guidance is worse than none.** A missing `llms.txt` makes
+an agent fall back to types and README; a stale one makes it emit deleted APIs
+with conviction.
+
+**READMEs are a DIFFERENT CLASS.** A package cannot have no front door. They are
+REDUCED to frozen truths only — anything UNPROVEN disappears from instructional
+prose until audited, rather than the file being deleted.
+
+**Publish wiring must follow.** `prepare-publish-artifacts.mjs` hard-fails on a
+missing source ON PURPOSE:
+
+> *"NOT conditional. A missing source is the failure this script exists to
+> surface ... Either produce the file or remove its entry from
+> @signaltree/core's `files` — do not restore the silent skip."*
+
+So the deletion must also remove the copy-list entries and the `files` entries,
+exactly as that error instructs. The guard itself stays intact for everything
+else.
+
 ## Phase 3 — Packaging Proof
 
 - [ ] audit built package output
