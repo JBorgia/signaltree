@@ -318,6 +318,47 @@ survival entitlement, and none may force a fixture into existence.
 each protects something genuinely earned alongside its marker specimen, so the
 earned assertions stay and only the specimen withdraws.
 
+#### MIXED-ROW GUARD — DISCHARGED. Both frozen theorems keep independent specimens
+
+A regression test has no survival entitlement, but **a frozen theorem still
+does.** So each mixed row was checked for whether the earned property retains
+coverage after the specimen withdraws. It does, in both cases, without moving
+anything onto another marker.
+
+**`transactions.spec` — the frozen property is "rollback works without
+feature-specific logic".** The test immediately following the status one is
+*"rolls back pending stored writes and restores persisted state"* — the same
+property, a different specimen, already present. Alongside it:
+
+```text
+"rolls back a pending optimistic transaction without reverting later …"
+"aborts a thrown transaction callback by undoing only transaction writes"
+"aborts a mixed structural thrown rollback through the realization port"
+"throws rollback error with preserved callback failure when realization …"
+```
+
+Five independent specimens remain. Nothing frozen is lost, and critically the
+status case is not MIGRATED to `stored()` — an independent `stored()` case
+already exists on its own merits.
+
+**`greenfield-transactions.spec` — the frozen property is heterogeneous-write
+participation.** Its fixture carries FOUR write kinds:
+
+```text
+profile      plain nested state
+users        entityMap structural
+request      status marker        <- withdraws
+preference   stored marker
+```
+
+Removing one leaves three genuinely distinct kinds — plain, structural, and a
+marker. Heterogeneity is still exercised, so the falsifier survives the
+withdrawal rather than needing reconstruction.
+
+**`planned-signal-tree`** keeps only assertions that falsify the earned
+pre-exposure planning function; anything asserting the rejected separate public
+constructor goes.
+
 #### Recorded obligation
 
 ```text
