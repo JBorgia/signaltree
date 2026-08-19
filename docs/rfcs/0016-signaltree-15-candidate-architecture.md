@@ -1325,21 +1325,64 @@ Its job is to catch one specific failure: converting *"the runtime does not need
 this machinery"* into *"the author may not express this"*. Those are different
 claims, and lowering is what separates them.
 
-| Function | Semantic result | DX capability worth preserving | Does the semantics actually forbid it? | DX status |
+| Function | Semantic result | DX capability worth preserving | Semantics forbid it? | DX status |
 |---|---|---|---|---|
-| derived projections | canonical -> read-only projection; no runtime derived->derived graph | compose named projections naturally | **NO** — the dependency can expand transitively to canonical inputs at lowering | UNPROVEN |
+| derived projections | canonical -> read-only projection; no runtime derived->derived graph | compose named projections naturally | **NO** — candidate lowering is transitive expansion to canonical inputs (HYPOTHESIS, not proved) | UNPROVEN |
 | optional behaviour selection | compile before exposure; no post-exposure composition | declare optional behaviour concisely in one place | **NO** — a declaration form is unconstrained by the absence of a chain | UNPROVEN |
 | external acquisition | application/service-owned | bind an acquired result into tree state easily | **NO** — ownership says who executes, not how authoring reads | DEFERRED |
 | input -> acquisition | Angular/application reactive layer | express "when this changes, fetch" without ceremony | **NO** | DEFERRED |
 | workflow state (`status`) | ordinary store truth + derived predicates | name a workflow state and read its predicates | **NO** — the predicates are ordinary projections | DEFERRED |
 | request cache policy | ordinary request cache, no SignalTree ownership | declare staleness/invalidation near the data | **NO** | DEFERRED |
-| commands (`_`) | function itself UNPROVEN | colocated, typed, intentional actions | n/a — no function to constrain yet | UNPROVEN |
-| entity collections | not yet derived | address entities by key with good inference | not yet derived | UNPROVEN |
+| commands (`_`) | function itself UNPROVEN | colocated, typed, intentional actions | **N/A** — no function to constrain yet | UNPROVEN |
+| entity collections | not yet derived | address entities by key with good inference | **UNDETERMINED** | UNPROVEN |
 
-**Every row's fourth column currently reads NO.** Not one semantic result so far
-forbids the authoring capability it might have seemed to. That is the point of
-the table: the deletions have been of RUNTIME MACHINERY, and none of them has
-yet earned a corresponding restriction on what an author may write.
+**Status vocabulary, because the distinction is load-bearing:**
+
+```text
+NO             semantics ARE derived and do not prohibit the capability
+UNDETERMINED   semantic derivation has not closed far enough to answer
+N/A            the underlying function has not earned existence
+```
+
+**UNPROVEN must never be silently read as NO** — that would presume a capability
+eligible on the strength of an unfinished derivation.
+
+**Corrected summary.** Six of the eight rows read NO; one is N/A and one is
+UNDETERMINED. So the honest claim is:
+
+> Every derived semantic result examined so far has FAILED to prohibit its
+> corresponding authoring capability. **No semantic derivation has yet earned a
+> DX prohibition.** Rows whose function or semantics remain unproven stay
+> UNDETERMINED or N/A.
+
+An earlier draft of this section said "every row reads NO", which overstated the
+evidence by two rows. The weaker claim is the stronger one, because it asserts
+nothing beyond what was measured.
+
+### `derived` — two propositions, kept apart
+
+```text
+SEMANTIC THEOREM              PROVED (RFC 0015)
+  finite acyclic projection composition is expressible as a function of
+  canonical truth
+
+AUTHORING/COMPILER CLAIM      UNPROVEN
+  SignalTree can recognise named projection references, expand them
+  transitively, detect cycles, preserve typing, and realize them WITHOUT
+  derived->derived runtime edges
+```
+
+Only the FIRST supports reopening the DX capability. The second is what an
+implementation would have to earn, and it is untested. The mathematical
+substitution is easy; building the authoring compiler without runtime `a -> b`
+topology is the real falsifier, and it is what:
+
+```ts
+derived: { a: ($) => $.x() + 1, b: ($) => $.a() * 2 }
+```
+
+would have to be measured against. Stating it as fact would let LOWERING
+HYPOTHESIS quietly become LOWERING PROVED.
 
 ### What must NOT go in this table
 
