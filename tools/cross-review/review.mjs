@@ -98,6 +98,23 @@ const rfcSection = (heading) => {
   return text.slice(start, next === -1 ? undefined : next);
 };
 
+/* AUTHORITATIVE CONTEXT — always first, so a reviewer cannot drift back toward
+   superseded conclusions that happen to be prominent in a transcript. */
+const contextPath = join(ROOT, 'docs/architecture/SIGNALTREE-15-CONTEXT.md');
+if (existsSync(contextPath)) {
+  sections.push(
+    `## AUTHORITATIVE CONTEXT — read as CURRENT TRUTH\n\n` +
+      `Conversation transcripts and 14.x code are EVIDENCE ONLY. Where they\n` +
+      `conflict with the context below, the context wins unless you supply a\n` +
+      `deterministic counterexample.\n\n` +
+      readFileSync(contextPath, 'utf8')
+  );
+} else {
+  sections.push(
+    `## AUTHORITATIVE CONTEXT\n\nMISSING: ${contextPath} — treat every claim in this packet as unanchored.`
+  );
+}
+
 if (rfcHeading) {
   const sec = rfcSection(rfcHeading);
   sections.push(
