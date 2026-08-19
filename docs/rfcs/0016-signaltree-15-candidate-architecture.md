@@ -1314,6 +1314,83 @@ nothing about obsolete data being MARKED FRESH. The conclusion the earlier
 wording reached still holds, for different reasons: cache policy surviving would
 not have rescued the acquisition mechanism.
 
+## DERIVATION M — GENERIC MARKER MACHINERY: opening measurement
+
+Run against the post-STATUS-DEL surface. Rule 0l: the marker protocol is
+evidence, not architecture. **The null is not "do we need markers?"** but:
+
+> What becomes impossible in a greenfield compiler if declaration kinds are
+> recognised and lowered DIRECTLY, with no generic runtime `Marker` concept?
+
+paired with Rule 0m's companion:
+
+> Would eliminating the runtime marker ontology prevent any authoring capability
+> that direct declaration compilation could not preserve?
+
+### The measured contract is FOUR members, not a large protocol
+
+`materialize-markers.ts:97` —
+
+```ts
+interface MarkerProcessor {
+  check:     (value) => boolean;                    // declaration recognition
+  create:    (marker, notifier, path, ctx, parentPositionId) => unknown;
+  snapshot?: (node) => unknown;                     // OPTIONAL
+  hydrate?:  (node, value, mode: HydrateMode) => void;
+}
+```
+
+`snapshot` and `hydrate` are OPTIONAL, and the docblock records that omitting
+`snapshot` means *"my node is already a plain signal, the normal walk handles
+me"* — true of `stored()` **and nothing else today**.
+
+### THE CODEBASE ALREADY WARNS ABOUT THIS EXACT AUDIT
+
+Verbatim from the stamp docblock:
+
+> *"⚠️ There is NO `owns()` hook. Earlier revisions of this comment referred to
+> one as though it existed, and a research doc then repeated it as fact — the
+> exact stale-comment-becomes-canon failure this codebase keeps hitting."*
+
+Ownership is decided INSIDE each marker's `hydrate`, which already receives the
+mode. That is a fifth function someone previously believed existed and does not.
+It is the same class as this session's four vocabulary collisions, and it is why
+this derivation measures the contract rather than adopting an inventory.
+
+### Presumed functions that are NOT marker concerns — measured
+
+```text
+traversal participation    visit-tree contains ZERO marker references.
+                           Traversal is marker-BLIND.
+teardown / lifetime        NO marker calls registerCleanup. Zero.
+capability / substrate     markers declare NO capabilities — that axis belongs
+                           to enhancer metadata (Derivation 1)
+lazy realization           a TREE OPTION, `signalTree(state, { lazy: lazy() })`,
+                           not a marker function
+serialization hook         not separate — it IS `snapshot`, already in the
+                           contract
+```
+
+Five presumed rows placed elsewhere or dissolved before the derivation begins.
+
+### The measured function inventory
+
+| # | Function | Contract member | Notes |
+|---|---|---|---|
+| M1 | declaration recognition | `check` | does construction need to distinguish special declaration values from ordinary canonical ones? |
+| M2 | pre-exposure realization | `create` | receives notifier, path, context, parent position |
+| M3 | snapshot projection | `snapshot?` | truth -> payload; optional, and only `stored()` omits it |
+| M4 | reconstruction | `hydrate?` | payload -> live node, carrying `HydrateMode` |
+| M5 | reconstruction decision reporting | `onHydrateDecision` | `HydrateDecision = 'declined' \| 'normalised'`; lives in the same module |
+
+Each gets the full treatment — use case, owner, need, coverage, gap, greenfield
+minimum, lowering hypothesis, **and DX pressure** — and none may be bundled
+because today's protocol bundles them.
+
+**The restore-vs-rehydrate distinction is deliberately NOT listed as its own
+row.** It is a parameter of M4, and whether it is a generic distinction or an
+artifact of deleted features is one of the questions M4 must answer.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
