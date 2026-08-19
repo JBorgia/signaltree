@@ -194,23 +194,39 @@ collections FUNCTION          **SURVIVES** — dynamic membership + granular
                               misses exactly one axis: an array lacks
                               granularity, a record lacks membership (fixed at
                               construction; no write path reopens it), app-held
-                              signals lack canonicality (E5 PATH A). FORM
-                              UNPROVEN — entityMap's API, selectId, all(),
-                              sorting, bulk ops and rekey identity are all
-                              untested; derive the minimum from zero.
-
-entityMap / collections       OPEN — null corrected by measurement. Granular
-                              write/observation FALL to an ordinary record; an
-                              array gives dynamic membership but not
-                              granularity; a record gives granularity but its
-                              membership is FIXED AT CONSTRUCTION (the accessor
-                              merges — no add, no remove). The surviving function
-                              is the CONJUNCTION: dynamic membership WITH
-                              granular observation, which no ordinary canonical
-                              shape provides. Whether SignalTree must own it, and
-                              in what form, is next. Public collection API is
-                              INHERITED (2025-12); the SubjectId/identity
-                              machinery is 15-EFFORT (post-2026-08-11).
+                              signals lack canonicality (E5 PATH A).
+collections FORM              **DERIVED — E CLOSED.** All 31 public members
+                              accounted for. Five are the minimum: addOne,
+                              removeOne, byId, byIdOrFail, ids. Seven are derived
+                              projections (all count empty asMap find where has).
+                              Thirteen are bulk/convenience — atomicity across
+                              them belongs to the TRANSACTION KERNEL, not the
+                              collection. One more is EARNED: `changeId`, which
+                              survives its null because remove+add ORPHANS a held
+                              reference. Ordering is a real function the
+                              zero-state under-derived, but the intrinsic order
+                              is WEAKER than an ordinary array of keys (no move /
+                              reorder / sort / swap; only setAll, which rebuilds
+                              membership) — so `prepend*` are membership ops and
+                              ordering belongs to the application. activeId /
+                              activeEntity / setActiveId / clearActiveId: NO
+                              FUNCTION — the docblock records them as elf/Akita
+                              feature parity and names its own alternative, and a
+                              plain position + byId gives IDENTICAL granularity.
+                              tap: no function — the pull surface already
+                              delivers it (O(width) diff vs O(delta) push is FORM
+                              pressure). intercept: no function — a write-path
+                              guard is the same category error as status, and its
+                              async form FAILS OPEN (public type invites
+                              `Promise<void>`; call sites never await).
+subject-identity substrate    AUDITED — SOUND. Entirely third-bucket
+                              (post-2026-08-11, empty commit bodies, planRekey
+                              revised 3x in 4 days). No aliasing on key reuse;
+                              collision/self/missing policies safe; undo lands
+                              consistent. ONE CONFINED DEFECT: after `changeId`
+                              the member's own `id` field disagrees with its
+                              slot. Load-bearing — it is the stated reason
+                              `setOne(entity)` cannot exist. OPEN form question.
 stored                        OPEN — split inbound/outbound before reading it
 linked                        OPEN — derived placement refuted; owner unproven
 readonly / serialization /    OPEN
@@ -236,11 +252,17 @@ absorbing a SHAPE mismatch, not expressing representation semantics. The codebas
 contains the precedent: `stored` had the identical defect and was fixed by
 conformance, not by a hook.
 
-**Disposition waits on `entityMap`.** If its accessor conforms, the hook has no
-surviving implementer and deletes. If the shape is independently earned, what
-survives is *"a realized value must be able to declare its state when its shape
-hides it"* — narrower and differently owned than *"declaration kinds own their
-representation"*.
+**`entityMap` no longer blocks it.** Derivation E is CLOSED: the collection
+function survives, and its earned form requires per-member addressability
+(`byId`) plus enumeration (`ids`) — a shape that is neither a plain signal nor a
+plain node accessor. So the branch that fires is the second one, and the question
+to derive next is whether what survives is:
+
+> *"a realized value must be able to declare its state when its shape hides it"*
+
+which is narrower, and differently owned, than *"declaration kinds own their
+representation."* That is the next derivation — it has NOT yet been run, and the
+branch above is a reading of E's result, not a measured disposition.
 
 ## Deferred DX pressures (Table G) — capability, never spelling
 
