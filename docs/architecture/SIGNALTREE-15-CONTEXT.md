@@ -277,7 +277,19 @@ subject-identity substrate    AUDITED — SOUND. Entirely third-bucket
                               slot. Load-bearing — it is the stated reason
                               `setOne(entity)` cannot exist. OPEN form question.
 stored                        OPEN — split inbound/outbound before reading it
-linked                        OPEN — derived placement refuted; owner unproven
+linked                        NOT EARNED. A 4-line pass-through to Angular's
+                              `linkedSignal`; "derived-but-writable" is ANGULAR'S
+                              function. The null holds at runtime on both call
+                              forms, and writability at the type level comes from
+                              ProcessDerived, not from `linked`. It DID fail once:
+                              Angular's overload lets `equal` participate in
+                              inference so V collapses to `unknown`, while
+                              LinkedOptions annotates `NoInfer<V>` — the first
+                              incumbent in this audit to contribute something the
+                              null missed. But `linkedSignal<S,V>({...})` with
+                              explicit type arguments recovers it exactly, so the
+                              contribution is an ANNOTATION SAVED, not a behaviour
+                              gained. Rule 0m -> DX pressure, not a derivation.
 readonly / serialization /    OPEN
   diagnostics
 final authoring grammar       DEFERRED to one system-wide DX pass
@@ -349,6 +361,24 @@ All three were invisible to reading and obvious to a test. Any surface carried
 into 15 needs an executable check that every declared member is reachable and
 every declared signature does what it says — three of three probed surfaces had
 drifted.
+
+## Typechecking — what is gated, and what is not
+
+```text
+typecheck:source   tsc -p tsconfig.typecheck-all.json    strict, ALL package +
+                   demo source, EXCLUDES **/*.spec.ts            0 errors
+typecheck:typing   tsc -p core/tsconfig.typecheck.json   ONLY *.typing.spec.ts
+                   and enhancers/typing/**                       0 errors
+```
+
+Ordinary `.spec.ts` files are typechecked by **no** gate, by design — the
+`*.typing.spec.ts` convention exists so type-level assertions get gated. **Any
+derivation resting on a compile-time claim must put it in a `*.typing.spec.ts`
+file**, or it is unverified: vitest does not typecheck.
+
+Do not point `tsc` at `packages/core/tsconfig.spec.json` and read the result as
+debt — nothing runs that config, and it reports 853 errors across 85 files. That
+mistake was made here once already.
 
 ## Do not reopen without a deterministic counterexample
 

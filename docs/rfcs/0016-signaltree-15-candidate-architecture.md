@@ -3437,6 +3437,91 @@ GATE ADDITION (candidate)
   all three of these were invisible to reading and obvious to a test.
 ```
 
+## DERIVATION — `linked`. NOT EARNED, and the null failed once before holding.
+
+Evidence: `linked-null.spec.ts` (4 runtime rows) + `linked-inference.typing.spec.ts`
+(4 gated type rows).
+
+`linked` is 82 lines whose implementation is four:
+
+```ts
+if (typeof arg === 'function') return linkedSignal(arg);
+const { source, computation, equal } = arg;
+return linkedSignal({ source, computation, ...(equal ? { equal } : {}) });
+```
+
+A pass-through to Angular's `linkedSignal`, with the same two call forms Angular
+already offers. Its docblock attributes the type-level writability to the
+`ProcessDerived` fix — which lives in the derived pipeline, **not here** — so the
+null is: use `linkedSignal` directly inside `.derived()`.
+
+### The null holds at runtime, on both forms
+
+```text
+sticky selection across a source change   identical
+short form, override then re-derive       identical
+writable at runtime                       identical
+writable AT THE TYPE LEVEL, no cast       identical  (ProcessDerived's doing)
+```
+
+### It FAILED on `equal` — the one real contribution
+
+```text
+linkedSignal({ source, computation, equal: (a, b) => a.boxed === b.boxed })
+  TS2769  No overload matches this call
+          '(a: {boxed:number}, b: {boxed:number}) => boolean' is not assignable
+          to 'ValueEqualityFn<unknown>'
+```
+
+Angular's overload lets `equal` participate in inference, so `V` collapses to
+`unknown`. `LinkedOptions` annotates `equal?: (a: NoInfer<V>, b: NoInfer<V>)`, so
+`V` resolves from `computation`'s return instead. **`linked` is not a pure
+pass-through at the type level** — the first time in this audit an incumbent
+turned out to contribute something the null missed.
+
+### But the null is REACHABLE, which settles it
+
+```ts
+linkedSignal<number, Boxed>({ source, computation, equal })   // compiles
+```
+
+Explicit type arguments recover the behaviour exactly. So the contribution is an
+**annotation saved**, not a behaviour gained.
+
+```text
+linked
+  FUNCTION   "derived-but-writable" — ANGULAR'S, not SignalTree's
+  CONTRIBUTION  a type-inference fix over a third-party signature, on one option
+  SURVIVES   NO. Rule 0m: the CAPABILITY is reachable; only the spelling differs.
+             Recorded as DX pressure (Table G), not a derivation.
+```
+
+### Methodology — the type claim was ungated, and my first alarm was wrong
+
+The whole derivation turns on a compile-time fact, and vitest does not typecheck.
+Running `tsc` by hand surfaced it. But the first thing I did with `tsc` was point
+it at `packages/core/tsconfig.spec.json` and report **853 errors across 85
+files** — a config **nothing runs**.
+
+The configured gates are both CLEAN:
+
+```text
+typecheck:source   tsc -p tsconfig.typecheck-all.json        0 errors
+                   strict, all package + demo source, EXCLUDES **/*.spec.ts
+typecheck:typing   tsc -p core/tsconfig.typecheck.json       0 errors
+                   ONLY *.typing.spec.ts + enhancers/typing/**
+```
+
+So ordinary `.spec.ts` files are typechecked by no gate — **by design**. The
+`*.typing.spec.ts` convention exists precisely so type-level assertions get
+gated, and the repo was already right. The correct action was to put the claim
+where the gate reaches it, which is what
+`linked-inference.typing.spec.ts` does.
+
+Same error class as measuring `loader.ts` instead of `entity-loader.ts`:
+**measure the thing that actually runs.** Third instance of it in this effort,
+and the second time the false alarm was mine.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
