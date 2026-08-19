@@ -1314,6 +1314,45 @@ nothing about obsolete data being MARKED FRESH. The conclusion the earlier
 wording reached still holds, for different reasons: cache policy surviving would
 not have rescued the acquisition mechanism.
 
+## Table G — DX PRESSURE LEDGER
+
+**Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
+the architectural matrix would be filled with concrete syntax within a week, and
+then defended. This records CAPABILITY only. See
+[Rule 0m](../../RELEASE-1.0.md).
+
+Its job is to catch one specific failure: converting *"the runtime does not need
+this machinery"* into *"the author may not express this"*. Those are different
+claims, and lowering is what separates them.
+
+| Function | Semantic result | DX capability worth preserving | Does the semantics actually forbid it? | DX status |
+|---|---|---|---|---|
+| derived projections | canonical -> read-only projection; no runtime derived->derived graph | compose named projections naturally | **NO** — the dependency can expand transitively to canonical inputs at lowering | UNPROVEN |
+| optional behaviour selection | compile before exposure; no post-exposure composition | declare optional behaviour concisely in one place | **NO** — a declaration form is unconstrained by the absence of a chain | UNPROVEN |
+| external acquisition | application/service-owned | bind an acquired result into tree state easily | **NO** — ownership says who executes, not how authoring reads | DEFERRED |
+| input -> acquisition | Angular/application reactive layer | express "when this changes, fetch" without ceremony | **NO** | DEFERRED |
+| workflow state (`status`) | ordinary store truth + derived predicates | name a workflow state and read its predicates | **NO** — the predicates are ordinary projections | DEFERRED |
+| request cache policy | ordinary request cache, no SignalTree ownership | declare staleness/invalidation near the data | **NO** | DEFERRED |
+| commands (`_`) | function itself UNPROVEN | colocated, typed, intentional actions | n/a — no function to constrain yet | UNPROVEN |
+| entity collections | not yet derived | address entities by key with good inference | not yet derived | UNPROVEN |
+
+**Every row's fourth column currently reads NO.** Not one semantic result so far
+forbids the authoring capability it might have seemed to. That is the point of
+the table: the deletions have been of RUNTIME MACHINERY, and none of them has
+yet earned a corresponding restriction on what an author may write.
+
+### What must NOT go in this table
+
+```text
+$.subtotal()          derived.subtotal        derive(subtotal)
+features: [...]       using: [...]            extensions: [...]
+tree._.users.reload()
+```
+
+None of those is frozen, and recording one here would make it look like it were.
+The capability is *"let authors compose named projections naturally"*; the
+spelling is a later, single, system-wide decision.
+
 ### Extend this treatment to the rest of the matrix
 
 Tables A-D's remaining rows must be converted the same way as they come up. Do
