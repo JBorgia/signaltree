@@ -2814,6 +2814,139 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## RULE 0o — LEGACY CONTINUITY IS NEVER A PREMISE
+
+> **No SignalTree 14 API, abstraction, capability, extension point, test,
+> documentation, package boundary, representation or behaviour receives survival
+> weight merely because it existed, was public, was documented, was intentional,
+> or may have users.**
+>
+> Legacy evidence may establish only that a problem was PREVIOUSLY BELIEVED
+> valuable enough to address. The corresponding 15 function must independently
+> survive greenfield derivation.
+>
+> **If the function does not independently survive, there is no replacement,
+> migration form, minimised equivalent, compatibility adapter or "better version"
+> to derive. A failed function has no form question.**
+
+### Why 0o exists when 0l and 0n already do
+
+They were not strong enough in EXECUTION. The pattern recurred:
+
+```text
+v14 has X -> X is public/tested/documented/used -> therefore some 15 equivalent
+must exist -> derive a smaller, better X
+```
+
+and required a human to interrupt with *"we don't need to keep that."* That
+interruption should never be necessary. **The burden drifted** from
+
+```text
+CORRECT     prove the function is NECESSARY
+DRIFTED TO  prove the old FORM is UNNECESSARY
+```
+
+The second lets legacy survive by default. The standing default for anything
+inherited is now:
+
+```text
+SURVIVAL = NO ASSUMPTION
+
+not  KEEP until disproved
+not  REDESIGN until disproved
+not  "function probably survives, form unproven"
+just NOTHING
+```
+
+Legacy may submit evidence FOR a function. The function then earns existence
+from zero.
+
+### Replacement-seeking is prohibited, not just compatibility-seeking
+
+Legacy gravity has a subtler form: preserving a mechanism's NEGATIVE SPACE after
+deleting the mechanism.
+
+```text
+MarkerProcessor rejected      -> "so what is the smaller extension boundary?"
+derived->derived unnecessary  -> "so users cannot author it"
+status deleted                -> "so where does error-retention move?"
+```
+
+All three are the deleted thing still steering. The answers may be *no boundary*,
+*users can*, and *nowhere*. **Never propose a replacement for a rejected
+mechanism in the same reasoning step that rejects it.**
+
+```text
+CORRECT   DELETE X -> nothing -> keep deriving -> later find gap Y
+          independently -> derive Y
+WRONG     DELETE X -> invent X2
+```
+
+### The four-way capability split, required BEFORE the first experiment
+
+"The capability survives" is ambiguous and was used ambiguously. Classify:
+
+```text
+HISTORICAL     v14 could do this
+SEMANTIC       this application/kernel outcome independently matters
+DX             this way of EXPRESSING the outcome may be desirable
+ARCHITECTURAL  SignalTree itself must own machinery to provide it
+```
+
+The custom-marker row resolved `historical YES · semantic YES · DX deferred ·
+architectural NO EVIDENCE`. That split should have existed before the first
+experiment, not after four rounds.
+
+### ZERO-STATE CHECKPOINT — mandatory before implementation detail
+
+```text
+Assume SignalTree 14 never existed.
+
+known surviving architecture     ...
+function under consideration     ...
+what independently requires it   ...
+what breaks without it           ...
+can surviving primitives already solve it   ...
+
+LEGACY EVIDENCE MAY NOW BE OPENED:  YES / NO
+```
+
+**If the first questions cannot be answered without naming `marker`, `enhancer`,
+`.with()`, `status`, `stored`, `linked`, `serialization` or `entityMap`, the
+function has not been stated yet.**
+
+### Legacy gets LAST look, not first
+
+```text
+WRONG   read what entityMap does -> ask what survives
+RIGHT   derive the collection functions SignalTree requires -> THEN open
+        entityMap to see whether it names a use case we missed
+```
+
+Same for `stored` (derive inbound/outbound durability and reconstruction
+functions first) and `linked` (derive whatever synchronisation relation might
+exist, if any).
+
+### Phrases that are warning signs
+
+```text
+"we need an equivalent"    "we still need a way to"   "replace X with"
+"the new version of"       "preserve the ability to"  "third parties may rely on"
+"this is public"           "this was documented"      "tests cover"
+"migration"                "compatibility"
+```
+
+Not always wrong — but each can hide *old thing existed -> new thing must fill an
+equivalent role*. The response is **"why must that role exist at all?"** before
+any discussion of what fills it.
+
+### Consequence for arbitration
+
+*"Should we preserve this because v14 had it?"* is **NOT a valid arbitration
+question** and must never be escalated as one. It is answered mechanically by
+this rule. The only admissible restatement is *"does greenfield SignalTree need
+this function?"*
+
 ## RULE 0n — MAJOR-VERSION CONTINUITY IS NON-SEMANTIC
 
 > **SignalTree 15 has no obligation to preserve SignalTree 14 APIs, extension
