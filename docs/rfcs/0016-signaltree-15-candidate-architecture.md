@@ -1497,6 +1497,124 @@ treatment as the Tier-2 defects. If acquisition ever survives under SignalTree
 ownership, it becomes a greenfield correctness requirement; if it does not, it
 belongs to whatever execution owner survives.
 
+## DERIVATION A1-2 — input -> acquisition orchestration: **NOT EARNED**
+
+Evidence: `async-query-a1-2-equivalence.spec.ts`, six executable falsifiers,
+stable across five consecutive runs.
+
+**Null:** assume SignalTree never automatically performs external work because a
+tree-visible input changed. Angular/RxJS composition may observe that input and
+invoke acquisition externally. **What SignalTree semantic fact must that external
+composition duplicate?**
+
+### The measured pipeline is stock, end to end
+
+```text
+inputSignal -> effect() -> trigger$ (Subject)
+  -> filter(config.filter)
+  -> debounceTime(config.debounce)
+  -> distinctUntilChanged(config.equal)
+  -> merge(rerun$)
+  -> switchMap(query)
+  -> tap(set results / error / loading)
+```
+
+Every stage is an Angular or RxJS primitive. Nothing in it reads tree topology,
+position identity, causal state, or any other SignalTree authority.
+
+| # | Behaviour | Result |
+|---|---|---|
+| A1-Q1 | input change drives acquisition | reproduced by `toObservable` + `switchMap` |
+| A1-Q2 | equal successive inputs suppressed | reproduced by `distinctUntilChanged` |
+| A1-Q3 | `filter` skips inputs | reproduced by an ordinary `filter` |
+| A1-Q4 | stale exclusion | **`switchMap` does it on BOTH sides** |
+| A1-Q5 | `rerun` bypasses dedup | reproduced by merging a `Subject` after the dedup stage |
+| A1-Q6 | outside an Angular injection context | **input changes silently stop driving queries** |
+
+### A1-Q4 corrects the family framing AGAIN
+
+`asyncQuery` IS protected against stale landing — `switchMap` unsubscribes the
+previous inner source. So the three concurrency pictures differ:
+
+```text
+asyncSource, Observable loader   protected by unsubscribe
+asyncSource, Promise loader      UNPROTECTED
+asyncQuery, either               protected by switchMap
+entity-loader                    protected by runId/myRun
+```
+
+Three of four protect stale landing; the exception is the one path with no
+cancellation primitive available. **"The async family has no stale-result
+exclusion" was wrong three times over** — first from the wrong file, then from
+the wrong vocabulary, and it would have been wrong again here from generalising
+across markers that do not share an implementation.
+
+### A1-Q6 is the ownership row
+
+Outside an injection context, `effect()` throws, the marker swallows it, and
+input changes stop driving queries — silently. The orchestration does not merely
+USE Angular primitives; **it does not function without Angular's context.** And
+`plainQuery` has exactly the same requirement: `toObservable()` also asserts an
+injection context.
+
+So the external composition duplicates nothing SignalTree-specific. It needs
+Angular — same as the marker.
+
+### Disposition
+
+```text
+INPUT -> ACQUISITION ORCHESTRATION
+
+USE CASE            real
+OWNER               Angular / application reactive layer
+SIGNALTREE FUNCTION not earned
+```
+
+### Harness defect, recorded
+
+An earlier draft passed ONE shared `query` closure to both the marker and the
+plain composition, so a single counter tallied both pipelines; Q5 read 4 where it
+expected 3. That was a defect in the falsifier, not in either subject. Each side
+now has its own counter. Noted because a miscounting harness is exactly the kind
+of thing that produces a confident wrong disposition.
+
+## TIER 1 — CLOSED. `asyncSource` / `asyncQuery` legacy dispositions
+
+Both A1 questions return NOT EARNED, so A1 is no longer suspended.
+
+```text
+A1-1  external acquisition execution      owner: application / service
+A1-2  input -> acquisition orchestration  owner: Angular / application reactive
+```
+
+| Legacy | What it happened to provide | Disposition |
+|---|---|---|
+| `asyncSource` | acquisition + pending/error state + refresh/reset/lazy | **DELETE** — every behaviour reproduced by `plainAcquire`, and A1-C3's plain version is strictly MORE correct |
+| `asyncQuery` | the same, plus input binding and shaping | **DELETE** — the pipeline is stock Angular/RxJS and requires Angular's context to work at all |
+| `status` | workflow state recording | **DELETE** (S1) — two store positions and derived predicates |
+| `loader` / entity-loader cache | request-scoped cache policy | **no SignalTree ownership earned** (T2/A2) — parked, not deleted, pending the `entityMap` derivation it is spelled inside |
+
+**The surviving functions and their owners:**
+
+```text
+external work            application / service
+input orchestration      Angular / application reactive layer
+canonical result         store
+workflow + error state   ordinary store positions
+projections              derived
+request cache policy     ordinary cache — no owner earned in SignalTree
+```
+
+**SignalTree async primitive: nothing left.** That is a successful derivation,
+not a missing replacement — no successor is designed, and Rule 0l forbids an
+adapter whose only purpose is preserving a rejected form.
+
+**What is NOT concluded.** `entityMap` itself is untouched by any of this; only
+the cache spelled inside it was audited. `stored()`'s hydration half remains for
+the persistence derivation. And the concurrency defects stay in the ledger as
+correctness falsifiers against any future feature that claims acquisition
+ownership — they are not repairs owed on a deleted mechanism.
+
 ## DERIVATION A1 — bare acquisition: **SUSPENDED, not closed**
 
 Rule 0l. Suspended because the discovery pass measured a re-export: the family
