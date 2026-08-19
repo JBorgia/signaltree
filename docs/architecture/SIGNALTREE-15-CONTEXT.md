@@ -27,8 +27,26 @@ presents *"open extension registration survives the null"* with the same
 prominence as the correction that withdrew it three exchanges later. Consult
 transcripts for provenance; never for current truth.
 
-If any source conflicts with this file, **this file wins** unless the source
-supplies a deterministic counterexample.
+### Authority order — when sources disagree
+
+```text
+1  a NEW deterministic counterexample: an executable falsifier or observed
+   control flow that contradicts a claim
+2  frozen invariant / frozen disposition
+3  this file
+4  current RFC matrix / release controller
+5  git history and prior checkpoints
+6  conversation transcripts
+7  SignalTree 14 code, docs, tests, public API
+```
+
+**A lower layer may challenge a higher one only by supplying NEW deterministic
+evidence — never by contradiction alone.**
+
+Note the careful shape of (1) versus (2). A *new* executable counterexample can
+legitimately reopen something frozen; that is the stated reopen condition. A
+*passing legacy test* is not a counterexample — it demonstrates that current code
+does what current code does, which is layer 7 wearing a green check.
 
 ## North star
 
@@ -52,15 +70,36 @@ before.
 
 ## Methodology rules (RELEASE-1.0.md carries them in full)
 
+Each carries the failure that earned it. **A rule can be understood
+linguistically and still violated in intent; the scar names the pattern it
+defends against.**
+
 ```text
 0j  subtraction-only; physical deletion follows architectural deletion
+      EARNED BY  a deleted mechanism's corpse contaminating the next experiment
+
 0k  "Angular has a primitive" is evidence, not a falsifier — derive the
     FUNCTION before comparing primitives
+      EARNED BY  derived() cited as deletion precedent when only a SPELLING had
+                 died and the capability was reshaped
+
 0l  legacy mechanisms are evidence repositories, not migration targets
+      EARNED BY  the extension audit repeatedly turning public APIs into
+                 presumed requirements
+
 0m  DX capability is evidence; DX spelling is not architecture.
     A semantic deletion does not imply a DX prohibition.
+      EARNED BY  a derived RUNTIME restriction almost becoming an AUTHORING
+                 prohibition
+
 0n  major-version continuity is non-semantic; no internal 14->15 adapter
+      EARNED BY  publicness acting as a survival bonus — "it is documented and
+                 exercised, therefore the null is harder"
+
 0o  legacy continuity is never a premise; replacement-seeking is prohibited
+      EARNED BY  the burden drifting from "prove it is necessary" to "prove the
+                 old form is unnecessary", requiring a human to interrupt with
+                 "we don't need to keep that"
 ```
 
 Standing measurement discipline, each earned by a real failure in this audit:

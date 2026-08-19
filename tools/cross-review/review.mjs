@@ -98,6 +98,30 @@ const rfcSection = (heading) => {
   return text.slice(start, next === -1 ? undefined : next);
 };
 
+/* STALE-CONTEXT TRIPWIRE. An authoritative file that lags the matrix is worse
+   than none: it becomes an authoritative source of stale claims, which is the
+   exact failure it exists to prevent. Proven to fire by an executable probe, not
+   by reading the condition. */
+const lastCommit = (path) => {
+  try {
+    return execFileSync('git', ['log', '-1', '--format=%ct', '--', path], {
+      encoding: 'utf8',
+    }).trim();
+  } catch {
+    return '';
+  }
+};
+const rfcTime = Number(lastCommit('docs/rfcs/0016-signaltree-15-candidate-architecture.md'));
+const ctxTime = Number(lastCommit('docs/architecture/SIGNALTREE-15-CONTEXT.md'));
+if (rfcTime && ctxTime && rfcTime > ctxTime && !flag('allow-stale-context')) {
+  console.error(
+    `\nSTALE CONTEXT — the RFC matrix has moved since SIGNALTREE-15-CONTEXT.md last did.\n` +
+      `Reviewing against a stale worldview reintroduces exactly the drift the context file prevents.\n` +
+      `Update the context file, or pass --allow-stale-context if the RFC change was not a disposition.\n`
+  );
+  process.exit(4);
+}
+
 /* AUTHORITATIVE CONTEXT — always first, so a reviewer cannot drift back toward
    superseded conclusions that happen to be prominent in a transcript. */
 const contextPath = join(ROOT, 'docs/architecture/SIGNALTREE-15-CONTEXT.md');
