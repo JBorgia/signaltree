@@ -2354,6 +2354,93 @@ No DX capability is at stake either way. `tree()` returning
 the author never writes. **The synthetic `all` key is not a DX pressure to
 preserve** — it is an artifact, and no measured use case depends on it.
 
+## PROVENANCE CLASSIFICATION — a third bucket the audit has been collapsing
+
+**The last shipped release is `v14.1.1` (2026-08-11). 367 commits sit after it.**
+That boundary discriminates something this audit has not been tracking, and the
+omission has mislabelled evidence in at least two closed rows.
+
+```text
+INHERITED LEGACY        pre-v14.1.1, shipped
+                        -> Rule 0o: evidence only, no survival weight
+
+15-EFFORT, GATE A       created after v14.1.1, frozen by the kernel freeze
+                        -> frozen, but frozen BY THIS EFFORT. Reopenable only by
+                           deterministic counterexample — the ordinary rule.
+
+15-EFFORT, NOT FROZEN   created after v14.1.1, never through the derivation
+                        -> UNREVIEWED NEW WORK. Deserves the MOST scrutiny and
+                           has been getting the least, because it reads as
+                           "current code" and therefore as inherited.
+```
+
+The third bucket is the gap. **A 15-effort artifact is not legacy — Rule 0o does
+not apply to it — but it also has not earned survival, and it may have been built
+to serve a design the derivation has since deleted.**
+
+### Measured
+
+```text
+production files added since v14.1.1        49  (non-spec)
+  of which causal-runtime / atomic-state    26  GATE A kernel
+  everything else                           23
+```
+
+The other 23 include `transactions.ts`, `tree-capabilities.ts`, `physical/*`,
+`owned-metadata.ts`, `owned-mutation.ts`, `position-registry.ts`,
+`commit-consequence.ts`, `mutation-capture-runtime.ts`, and the three marker
+`*.contract.ts` files.
+
+### Two closed rows used 15-effort artifacts as INHERITED evidence
+
+**`transactions` did not exist at v14.1.1.** No file matching it in the release
+tree. It is entirely a SignalTree 15 creation.
+
+```text
+DERIVATION 1   cited transactions' `capabilities: ['causal-runtime']` as evidence
+               that substrate requirement is INTRINSIC to declaration kind — one
+               of only TWO declarations, and it turns out to be work from this
+               effort rather than inherited practice
+
+DERIVATION 2   measured transactions' consumption of kernel internals to
+               establish zero feature->feature dependency
+
+STATUS-DEL     leaned on transactions.spec rollback coverage as a frozen theorem
+```
+
+**`tree-capabilities.ts` is also 15-effort.** Derivation 1 audited
+`TREE_CAPABILITY_ORDER` and `TREE_CAPABILITY_DEPENDENCIES` as though inherited.
+
+### Does this invalidate those conclusions? NO — but it changes their weight
+
+Both rows resolved in the DELETION direction: *no public substrate protocol
+earned*, *zero feature-to-feature dependency*. **15-effort provenance makes a
+deletion finding EASIER to justify, not harder** — there is no shipped-ecosystem
+argument to answer, and Rule 0n does not even need invoking.
+
+What it changes is the reverse case. **A 15-effort artifact must never be cited
+as evidence that a practice is established.** Derivation 1's "intrinsic in every
+measured case" rested on n=2, and one of the two was a design decision made
+during this effort. The conclusion stands; the phrase "measured practice"
+overstated what n=1-inherited-plus-n=1-self-authored supports.
+
+### Consequence: `tree-capabilities.ts` needs its own look
+
+It exists to serve `plannedSignalTree`'s pre-construction planning. That
+function survives; **its public form is a REDESIGN candidate and no public
+capability protocol was earned.** So a 15-effort file may be machinery built for
+a design decision now in question — exactly the third-bucket hazard.
+
+Not reopened here. Recorded as a row for the construction-model cluster when the
+declaration-lowering question resumes.
+
+### Standing rule this adds
+
+> **Date the evidence before weighting it.** Anything created after `v14.1.1` is
+> not inherited practice. It may be frozen kernel work, or it may be unreviewed
+> new work built for a design the derivation has since changed — and the second
+> deserves more scrutiny than legacy, not less.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

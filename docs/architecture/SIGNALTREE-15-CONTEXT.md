@@ -102,6 +102,24 @@ defends against.**
                  "we don't need to keep that"
 ```
 
+### Provenance — date evidence before weighting it
+
+Last shipped release: **`v14.1.1`**, 2026-08-11. Three buckets, not two:
+
+```text
+INHERITED LEGACY       pre-v14.1.1  -> Rule 0o, evidence only
+15-EFFORT, GATE A      post, frozen -> frozen by THIS effort; deterministic
+                                       counterexample to reopen
+15-EFFORT, NOT FROZEN  post, unreviewed -> MOST scrutiny; may serve a design the
+                                       derivation has since deleted
+```
+
+49 non-spec production files postdate the release; 26 are GATE A kernel.
+`transactions` and `tree-capabilities.ts` are 15-effort and were cited in closed
+rows as inherited evidence — the conclusions stand (both delete-direction) but
+**a 15-effort artifact must never be cited as evidence that a practice is
+established.**
+
 Standing measurement discipline, each earned by a real failure in this audit:
 
 ```text
