@@ -3133,6 +3133,95 @@ The measurement fires the **first** branch instead. The earned form is a set of
 members, and members ride on a callable signal. The label is why this cost a
 paragraph rather than a retraction.
 
+## M4 — RECONSTRUCTION. Split result: the representational half dissolves, the ownership half survives and is BLOCKED.
+
+Evidence: `m4-reconstruction.spec.ts`, 4 rows.
+
+M4 is M3's mirror: is a realized value **reconstructible** by a uniform rule?
+`hydrate` has exactly two implementers, `entityMap` and `asyncSource`, and
+`asyncSource` is already a frozen DELETE — so on the far side of that deletion
+`hydrate` reduces to ONE implementer, exactly as `snapshot` did. Per Rule 0l
+`asyncSource` is measured here as an evidence repository, not as a thing to
+preserve.
+
+### The conformance spectrum — this strengthens M3
+
+`asyncSource` sits BETWEEN a plain leaf and `entityMap`, and measuring it turns
+M3's single data point into a gradient:
+
+```text
+                isSignal   callable   surface        hook?
+plain leaf        YES        YES       —              NO
+stored            YES        YES       + methods      NO
+asyncSource       no         YES       + methods      YES
+entityMap         no         NO        + methods      YES
+```
+
+`asyncSource` is **callable, and `src()` returns `[7]` — the exact value its own
+hook re-publishes as `{ value: [7] }`**. It fails `isSignal` only because it is
+not built on an Angular signal primitive; it carries a
+`Symbol(SignalTree:MarkerProcessor)` instead, with a `refresh/set/update/reset`
+surface.
+
+So the hook re-publishes, inside an envelope, a value the accessor already
+returns correctly. **The hook is needed in exact proportion to the accessor's
+distance from a signal, and nothing in either declaration kind's FUNCTION
+requires that distance.** M3's result was not a peculiarity of collections.
+
+### The envelope is a systematic habit
+
+```text
+tree()  ->  { rows:  { all:   [ ... ] },     two kinds, two envelope keys,
+              src:   { value: [ 7 ]   },     both wrapping a SINGLE value
+              plain: 1 }                     ordinary positions publish bare
+```
+
+### What actually survives: DECLINE ON OWNERSHIP
+
+Both implementers do the same non-representational thing:
+
+```text
+asyncSource   mode 'rehydrate' -> DECLINE, reason 'loader-owns-source':
+              "the loader has already re-run and its result is newer."
+entityMap     loader-backed    -> DECLINE:
+              "Writing the tree snapshot over it does not add a second opinion,
+               it WINS PERMANENTLY."
+```
+
+This is **not** representation, so M3's conformance result does not dissolve it.
+A uniform rule cannot express it: *"set the position to the payload"* has no way
+to know another mechanism holds fresher truth.
+
+And it is **mode-dependent**. `HydrateMode` is `merge | restore | rehydrate |
+transfer`, and `asyncSource` declines only `rehydrate` — a storage payload of
+unknown age — while accepting `transfer`, an SSR handoff that is the freshest
+thing available. RFC 0014 measured declining transfer at 54.3KB wasted for 500
+rows. **The same payload is authoritative or stale depending on where it came
+from.**
+
+### Disposition — BLOCKED, and not on `entityMap`
+
+```text
+M4 representational half   DISSOLVES under M3 conformance. The `{all}` and
+                           `{value}` envelopes and the payload-shape handling
+                           are the same shape accident M3 measured.
+
+M4 ownership half          CANDIDATE FUNCTION: "a position may decline
+                           reconstruction when another authority owns its
+                           content, and the decision is a function of the MODE."
+                           Survives its uniform-rule null.
+
+                           BUT both declines cite the SAME competing authority —
+                           a LOADER — and loader ownership is PARKED with "no
+                           SignalTree ownership earned" (entity-loader cache).
+                           If the loader earns no ownership, there is no
+                           competing authority, and the decline has nothing to
+                           protect.
+```
+
+**Next frontier: entity-loader ownership.** It was parked pending `entityMap`;
+`entityMap` is now closed, and M4 cannot resolve until the loader question does.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

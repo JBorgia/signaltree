@@ -199,7 +199,17 @@ M3 snapshot/representation    ANSWERED — a realized value's state IS
                               representation": NOT EARNED. Derivation result, NOT
                               a landed change — conformance has real blast radius
                               (time-travel.ts:2030 reads `child.all`).
-M4 reconstruction             QUEUED
+M4 reconstruction             SPLIT. Representational half DISSOLVES under M3
+                              conformance — `asyncSource` proves the point on a
+                              gradient: it is CALLABLE and `src()` already
+                              returns the value its hook re-wraps as `{value:..}`,
+                              failing only `isSignal`. Hooks track DISTANCE FROM
+                              A SIGNAL, not declaration-kind semantics. Ownership
+                              half SURVIVES its uniform-rule null: "a position
+                              may decline reconstruction when another authority
+                              owns its content, mode-dependent" — but BLOCKED,
+                              because both declines cite a LOADER and loader
+                              ownership is parked.
 M5 decision observability     QUEUED
 collections FUNCTION          **SURVIVES** — dynamic membership + granular
                               observation over CANONICAL truth. First positive
@@ -272,9 +282,13 @@ retraction. The first branch fires: E derived the collection's form as a set of
 MEMBERS (`byId`, `ids`, `addOne`, `removeOne`, `changeId`), and members ride on a
 callable signal — `stored` does exactly that in this codebase today.
 
-**Next frontier: M4 — reconstruction.** M3's conformance result feeds it
-directly: if the envelope goes, the bare array becomes the only round-trip form,
-and `time-travel.ts:2030` reads `child.all` directly.
+**M4 is measured and SPLIT** (RFC 0016 § M4) — its representational half
+dissolves under M3, its ownership half survives but cannot resolve alone.
+
+**Next frontier: ENTITY-LOADER OWNERSHIP.** It was parked pending `entityMap`;
+`entityMap` is now closed, and M4's surviving half depends on it. Both hydrate
+declines protect a loader's authority — if the loader earns no ownership, there
+is no competing authority and the decline has nothing to protect.
 
 ## Deferred DX pressures (Table G) — capability, never spelling
 
