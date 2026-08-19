@@ -2814,6 +2814,74 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## RULE 0m — DX CAPABILITY IS EVIDENCE; DX SPELLING IS NOT ARCHITECTURE
+
+> During semantic derivation, preserve useful authoring capabilities as explicit
+> pressures and falsifiers — but do not freeze their syntax, and do not require
+> the semantic or runtime topology to mirror the authoring topology. Final DX is
+> derived only after the functional matrix is substantially closed, using
+> compiler and lowering freedom to reconcile ergonomics with the minimal semantic
+> model.
+
+And its corollary, which is the one that was nearly violated:
+
+> **A semantic deletion does not imply a DX prohibition.** If a capability can be
+> represented entirely at authoring/compilation time and lowered into surviving
+> semantics, its USER-FACING capability remains eligible even when the
+> corresponding RUNTIME concept does not survive.
+
+### The two failure directions, and both are live
+
+```text
+DX AS ARCHITECTURAL AUTHORITY          forbidden now
+  "tree._.users.reload() reads well"   -> invents a command topology
+  "features: [...] is a clean grammar" -> invents a feature ontology
+  ".with() is pleasant"                -> preserves a rejected chain
+
+DX AS PRESSURE / FALSIFIER             required now
+  "did this conclusion remove an authoring capability the semantic result
+   does not actually forbid?"
+```
+
+**The worked example is `derived`.** RFC 0015 proved that a runtime
+derived->derived semantic topology is unnecessary — projectors are pure functions
+of store truth, so any finite acyclic composition collapses by substitution. That
+is a statement about the RUNTIME GRAPH. It was one inference step from becoming
+*"the author may not compose named projections"*, which the semantics do not
+require: the dependency can expand transitively to canonical inputs during
+lowering, leaving the authoring capability intact.
+
+```text
+AUTHORING       derived B references derived A
+SEMANTICS       both are projections of canonical truth
+LOWERING        B's dependency expands transitively to canonical inputs
+```
+
+Authoring ontology and runtime ontology need not be isomorphic. Lowering is the
+bridge, and it is why the `LOWERING HYPOTHESIS` column matters beyond
+bookkeeping.
+
+### What this changes in practice
+
+Every closing matrix row now also answers:
+
+> **Did this conclusion accidentally remove a useful authoring capability that
+> the semantic result does not actually forbid?**
+
+Recorded as CAPABILITY, never as spelling. For `derived` that reads *"let authors
+compose named projections naturally"* — NOT `$.subtotal()`, `derived.subtotal`,
+`derive(subtotal)`, or any other candidate syntax, none of which is frozen.
+
+**The final DX pass is explicitly deferred**, and its question is not "what API
+survives?" but:
+
+> If SignalTree had never existed, given only the functions now proved necessary
+> and the compiler freedoms now earned, what is the best possible way to author
+> it?
+
+Running that per-feature during derivation would optimize locally and conflict
+globally. It runs once, over the closed matrix.
+
 ## RULE 0l — LEGACY MECHANISMS ARE EVIDENCE REPOSITORIES, NOT MIGRATION TARGETS
 
 > **A legacy mechanism may identify a problem worth solving. It may not
