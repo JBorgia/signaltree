@@ -38,7 +38,7 @@ FALSIFIER: <the exact measurement that would settle it, OR the exact frozen
   premises and inference step you are challenging>
 SCOPE: IN-ROW | OUT-OF-ROW
 SEVERITY: BLOCKS-CLOSE | CORRECTION | WORDING-ONLY
-NOT-ESTABLISHED: <explicit negative bound — what your finding does NOT show>
+WHAT THIS DOES NOT ESTABLISH: <explicit negative bound — what your finding does NOT show>
 ---
 
 ### Class definitions
