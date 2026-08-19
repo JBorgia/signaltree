@@ -1573,10 +1573,35 @@ names `MarkerProcessor`, `check` or `create`. **Whatever happens to the envelope
 the capability is unaffected** — which is exactly the separation Rule 0m exists
 to keep visible.
 
-## M1+M2-R1 — **STOP. Open declaration-kind registration IS a real public extension contract.**
+## M1+M2-R1 — a real public extension CONTRACT. **Not yet a surviving function.**
 
-This is the condition that makes the joint null much harder, and it is the first
-time in this audit that an extensibility claim has survived measurement.
+**CORRECTION TO MY OWN INFERENCE.** I wrote that open declaration-kind
+registration "survives the null". That is one step too far, and it let PUBLICNESS
+become the new legacy bonus — the same error class as every other in this audit,
+in a new disguise. What the evidence below establishes, precisely:
+
+```text
+HISTORICAL / PUBLIC USE CASE      PROVED
+  users can define custom inline declaration kinds outside core and have
+  SignalTree realize them into custom tree APIs
+
+SURVIVING FUNCTION                UNPROVEN
+  that SignalTree 15 must support an open set of third-party declaration kinds
+
+SURVIVING MECHANISM               UNPROVEN
+  that a global runtime registerMarkerProcessor() registry must exist
+```
+
+The demo advertises *"markers AND enhancers"* in one breath — and the enhancer
+half of that same sentence was already found to have no surviving function. Being
+taught and advertised identifies a capability worth examining; it cannot settle
+the architecture.
+
+**The matrix row is therefore the CAPABILITY, not the API:**
+
+> *A package outside core can introduce a new inline declaration form that
+> participates in SignalTree construction and contributes its realized state and
+> API, without requiring a core release.*
 
 ```text
 registerMarkerProcessor        PUBLIC, exported from @signaltree/core/authoring
@@ -1610,11 +1635,9 @@ that an external consumer depends on it today. That is still materially stronger
 evidence than anything the deleted mechanisms produced, and under the standing
 rule that TP need cannot be refuted by workspace evidence, it is enough to stop.
 
-**Consequence:** "keeps one third-party predicate off every node" is NOT solving
-a requirement we may not have. There IS an open-set requirement. Whether it
-justifies today's `MarkerProcessor` shape is a separate question — a generic
-plugin protocol earning existence does not mean the current one survives
-unchanged.
+**Consequence:** "keeps one third-party predicate off every node" is not
+obviously solving a phantom requirement — but the requirement it serves is still
+unproven as a SURVIVING one, so it cannot yet justify the mechanism either.
 
 ## M1+M2-R2 — the "hot path" phrasing OVERSTATES the workload
 
@@ -1665,6 +1688,69 @@ The remaining question is no longer *"does a generic registry survive?"* but:
 That is a much narrower question, and it is where M1+M2 resumes. Rule 0m is
 unaffected either way: the authoring capability is inline declaration beside
 ordinary state, and no user names `MarkerProcessor`.
+
+## M1+M2-R3 — the registry has **none of the properties of a runtime registry**
+
+The three things R1 conflated, separated and measured:
+
+```text
+OPEN SET                  third parties define kinds core does not know
+PRE-CONSTRUCTION          those kinds participate when a tree is compiled
+RUNTIME REGISTRY          a global mutable registerMarkerProcessor(check, create)
+```
+
+**Measured against the actual mechanism:**
+
+```text
+unregister / deregister    DOES NOT EXIST
+                           (the one lexical hit is `hasUnregisteredSymbolKeys`,
+                            an unrelated function — vocabulary collision again)
+per-tree registries        NONE — one global `MARKER_PROCESSORS: MarkerProcessor[]`
+ordering / priority        NONE
+duplicate registration     SILENT NO-OP — `if (alreadyRegistered) return`
+late registration          DEV-WARNED against, in two places:
+                             the registry warns when registering after a tree
+                             has been built
+                             signal-tree.ts:1050 tells users to register
+                             "BEFORE creating the tree"
+```
+
+**So the mechanism is an append-only, global, unordered, unremovable collection
+whose own diagnostics tell users to populate it before construction.** That is
+not a runtime plugin registry. It is a **module-initialization-time set of
+declaration kinds**, implemented as a mutable global array.
+
+Its only dynamism — "you may call this at any time" — is precisely the property
+its own warnings discourage using.
+
+### What this does to the three candidates
+
+```text
+OPEN SET                  CANDIDATE — the capability is real
+PRE-CONSTRUCTION BOUNDARY CANDIDATE — and it is what the code actually
+                          enforces, by warning
+RUNTIME REGISTRY          the mechanism exhibits NONE of the properties that
+                          would make runtime dynamism load-bearing. Its
+                          mutable-global form is earning nothing measurable.
+```
+
+That is the strongest available evidence that the registry is an **implementation
+form for a pre-construction extension boundary**, not the function itself.
+
+**Still not concluded:** whether the third-party declaration capability survives
+greenfield derivation at all. That question is upstream of everything here, and
+it is where M1+M2 resumes:
+
+> **Does the third-party custom-declaration capability itself survive, and if so
+> what is the minimum external authoring/compiler boundary that provides it?**
+
+If it survives, this is a legitimate EXTERNAL boundary — unlike a shim between
+15.0 and rejected 14.x internals — and its minimum form gets derived from zero.
+If it does not, the current public API remains valuable historical evidence with
+no architectural entitlement.
+
+**Nothing is frozen:** not a descriptor, symbol, `kind` field, plugin object,
+callback shape, registration syntax, or compiler protocol.
 
 ## Table G — DX PRESSURE LEDGER
 
