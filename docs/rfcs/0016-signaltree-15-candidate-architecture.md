@@ -2685,6 +2685,112 @@ the greenfield minimum must be derived from zero, and per the provenance split
 the identity machinery any candidate would rest on is 15-effort work that has not
 been through this process.
 
+## DERIVATION E — FORM: legacy's last look, and the surface classified
+
+The minimum was derived from zero BEFORE `entityMap` was opened, per Rule 0o:
+
+```text
+GREENFIELD MINIMUM for "dynamic membership + granular observation over canonical
+truth"
+
+  add / remove a member          membership
+  address one member by key      the granular position
+  enumerate members              so derived projections can be built over it
+```
+
+Then the incumbent was opened, to see what it names that the minimum missed. Its
+public surface is **31 members**.
+
+### Classified
+
+```text
+THE MINIMUM (5)
+  addOne · removeOne             membership
+  byId · byIdOrFail              granular position access
+  ids                            enumeration
+
+DERIVED PROJECTION over enumeration (6)
+  all · count · empty · asMap · find · where · has
+  -> ordinary derived, given `ids` and `byId`
+
+BULK / CONVENIENCE (13)
+  addMany · removeMany · updateMany · upsertMany · prependMany
+  setAll · clear · updateOne · upsertOne · replaceOne
+  removeWhere · updateWhere · prependOne
+  -> repeated single operations. ATOMICITY across them is the transaction
+     kernel's job, not the collection's.
+
+ORDERING (2)
+  prependOne · prependMany
+  -> implies the collection HAS an order. The zero-state assigned ordering to
+     derived sorting, which does NOT preserve insertion order as identity.
+     UNRESOLVED — this is something legacy names that the minimum did not.
+
+IDENTITY ACROSS REKEY (1)
+  changeId
+  -> the E-d hard case. Derived in the zero-state, omitted from the minimum.
+     UNRESOLVED.
+
+APPLICATION SELECTION STATE (4)  <- see below
+  activeId · activeEntity · setActiveId · clearActiveId
+
+OBSERVATION HOOKS (2)
+  intercept · tap                UNEXAMINED
+```
+
+### `activeId` / `activeEntity` — feature parity, and the source says so
+
+Evidence: `e-active-selection.spec.ts`, 2 rows.
+
+The docblock records its own provenance with unusual candour:
+
+> *"Added in 14.0.0 after a capability audit found **elf and Akita both ship
+> it** and every team otherwise hand-rolls `activeId: null` plus a derived
+> lookup. `activeEntity` resolves through `byId`, so it is O(1) and invalidates
+> only when THAT row changes — finer-grained than the filtered-stream versions
+> the other libraries offer."*
+
+**Feature parity is not a derived function**, and the docblock names its own
+alternative in the same sentence. The only architectural claim is granularity, so
+that is what was tested:
+
+```text
+built-in activeEntity            watcher does NOT recompute when another row changes
+selectedId position + byId()     watcher does NOT recompute — IDENTICAL
+```
+
+The granularity comes from `byId`, which is in the minimum and is public. The
+comparison in the docblock is against *filtered streams* — a different technique
+that neither candidate uses.
+
+```text
+activeId / activeEntity / setActiveId / clearActiveId
+  FUNCTION   "which member is selected" — APPLICATION WORKFLOW STATE
+  OWNER      the application, exactly as `status` was
+  SURVIVES   NO — reachable by an ordinary canonical position plus a derived
+             lookup, with identical granularity
+```
+
+Same category error as `status`: a workflow concern absorbed into a SignalTree
+primitive. **4 of 31 members.**
+
+### Where this leaves the form
+
+```text
+MINIMUM CONFIRMED     5 members
+REDUCIBLE             6 derived + 13 bulk/convenience  = 19 members
+NO FUNCTION           4 selection members
+LEGACY NAMES SOMETHING THE MINIMUM MISSED
+  ordering / insertion position   2 members   UNRESOLVED
+  identity across rekey           1 member    UNRESOLVED
+UNEXAMINED
+  intercept · tap                 2 members
+```
+
+The last two groups are the point of giving legacy the last look: **ordering and
+rekey identity are functions the zero-state under-derived**, and they are what
+the incumbent contributes to the derivation rather than merely instantiating.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
