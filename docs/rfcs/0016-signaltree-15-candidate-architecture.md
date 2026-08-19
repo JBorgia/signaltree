@@ -1716,9 +1716,20 @@ late registration          DEV-WARNED against, in two places:
 ```
 
 **So the mechanism is an append-only, global, unordered, unremovable collection
-whose own diagnostics tell users to populate it before construction.** That is
-not a runtime plugin registry. It is a **module-initialization-time set of
-declaration kinds**, implemented as a mutable global array.
+whose own diagnostics tell users to populate it before construction.**
+
+**Stated precisely — the array IS mutable at runtime.** What has no evidence is
+that runtime dynamism is a required FUNCTION:
+
+```text
+RUNTIME MUTABILITY               physically exists in 14.x
+RUNTIME DYNAMISM AS A FUNCTION   no evidence
+PRE-CONSTRUCTION DECLARATION SET accurately describes intended usage
+SURVIVAL OF THE CAPABILITY IN 15 still UNPROVEN
+```
+
+That distinction stops another implementation observation from becoming
+architecture.
 
 Its only dynamism — "you may call this at any time" — is precisely the property
 its own warnings discourage using.
@@ -1751,6 +1762,73 @@ no architectural entitlement.
 
 **Nothing is frozen:** not a descriptor, symbol, `kind` field, plugin object,
 callback shape, registration syntax, or compiler protocol.
+
+## M1+M2-E0 — the two concrete custom declarations **collapse to ordinary composition**
+
+Evidence: `declaration-extensibility-e0.spec.ts`, 3 executable rows.
+
+**Null:** SignalTree 15 has a CLOSED set of compiler-recognised declaration
+forms. **Falsifier:** produce a valuable third-party use case that cannot be
+correctly implemented with already-earned primitives without participating in
+compilation before exposure.
+
+Functions extracted from the two custom declarations the demo actually defines —
+`counter` and `selection` — never from "custom marker":
+
+| # | Function | Reproduced without any protocol? |
+|---|---|---|
+| E1 | inline authoring — a library construct appears beside ordinary tree state | **YES** — `signalTree({ counter: makeCounter(10, 5), plain: 1 })` |
+| E2 | type transformation — declaration type becomes a different realized type | **MOOT** — the author builds the REALIZED thing directly, so there is nothing to transform |
+| E3 | canonical writable state contribution | **YES** — reads and writes work through the tree |
+| E4 | derived / public surface contribution | **YES** — a `computed` member and four methods survive construction |
+| E5 | compiler integration — topology, ownership, notification services unavailable to user code | **NOT EXERCISED** by either example |
+| E6 | representation participation — special snapshot/reconstruction | **NOT EXERCISED**; the value appears in `tree()` by the ordinary path |
+| E7 | package encapsulation — an external package ships all of it | **YES** — `makeCounter` is an ordinary exported function |
+
+Nesting works too, with no path or position protocol involved.
+
+### The sharp finding: the protocol compensates for a SHAPE, not a semantic
+
+The tree already preserves any `isSignal` value verbatim
+(`signal-tree.ts:1054`: *"Existing signals - preserve"*). My probe builds on a
+real Angular `signal` and attaches methods and a `computed` — so `isSignal` stays
+true and the construct passes through intact.
+
+**The demo's `createCounter` returns `(() => valueSignal()) as CounterSignal` — a
+plain closure, NOT an Angular signal.** It fails `isSignal`, which is precisely
+why it needed a marker.
+
+> So the marker protocol's demonstrated job here is accepting an
+> ARBITRARY NON-SIGNAL CALLABLE SHAPE. It is not providing a semantic the author
+> could not otherwise obtain.
+
+### Where a survival case would have to come from
+
+E5 and E6 — and **neither demo example exercises either**. Nothing in `counter`
+or `selection` touches `PositionId`, `SubjectId`, the causal runtime, the
+notifier, commit authority or persistence consequence. They are ordinary signals
+with methods.
+
+**Not concluded.** This falsifies the strongest CONCRETE evidence for the
+capability; it does not prove no E5/E6 use case exists. A construct genuinely
+requiring pre-exposure topology allocation, ownership establishment or storage
+layout participation — unobtainable after `signalTree()` returns — would be real
+evidence for an external compiler boundary. None has been produced.
+
+And even if one were, it would establish only that boundary. Not `Marker`, not
+`MarkerProcessor`, not the four-hook bundle, not global registration.
+
+**Untested here:** whether a preserved signal participates correctly in undo,
+persistence and causal capture. That is E5/E6 territory and it is the next thing
+to measure, because it is where "preserved verbatim" might turn out to mean
+"second-class".
+
+### DX pressure (Rule 0m)
+
+Reusable third-party abstractions stay ergonomic under the closed-language null —
+`makeCounter()` is an ordinary function and the construct sits inline beside
+ordinary state. Whether such abstractions must be able to EXTEND THE DECLARATION
+GRAMMAR is a different and still unproven question.
 
 ## Table G — DX PRESSURE LEDGER
 
