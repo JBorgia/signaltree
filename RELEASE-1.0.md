@@ -226,9 +226,22 @@ do with the marker. `utils.ts`, `signal-tree.ts`, `materialize-markers.ts` and
 `serialization.ts` were PROSE ONLY, naming `status()` as an example in comments;
 the dynamic processor registry means there is no hard import.
 
-**Third vocabulary collision this session**, and the first one to inflate rather
-than deflate. Methodology Rule 2 cuts both ways: a name search overstates as
-easily as it understates, and a blast radius must be inspected, not counted.
+**Third vocabulary collision this session**, and the first to inflate rather than
+deflate. It extends Methodology Rule 2 into its general form:
+
+> **A lexical hit is neither evidence of presence nor evidence of dependency.**
+
+The same failure has now occurred in both directions:
+
+```text
+runId          expected vocabulary MISSED real behaviour   -> false negative
+getTurnStatus  shared vocabulary COUNTED unrelated code    -> false positive
+```
+
+So the standard for a deletion blast radius is: **enumerate lexical candidates ->
+inspect semantic dependency -> count only resolved dependencies.** The original
+17-file / 152-reference figure stays in this record precisely because its
+correction demonstrates that a raw grep total is not an architectural metric.
 
 ### The production cut, verified
 
@@ -267,16 +280,67 @@ boundary, and it is where the judgement per file lives.
 
 ### Sequence for the next attempt
 
+### MIGRATE FUNCTIONS, NOT MARKERS — the fixture rule
+
+**Defaulting the 24 specs to `stored()` would be the colocation error in test
+form.** `stored()` is clean of dead-marker references, which does not make it the
+correct replacement fixture. Rewire generic tests onto it and `stored()` becomes
+the accidental sponsor of generic marker infrastructure — so when its own
+derivation runs, tests will appear to demonstrate demand that exists only because
+we put it there.
+
 ```text
-1  migrate the 24 spec files fixture-by-fixture to a surviving marker
-   (`stored()` is the obvious candidate — it is CLEAN of the three dead markers)
-   verifying after each that the spec still tests what it claims
-2  decide per demo file: REMOVE where the subject IS status() (markers-demo's
-   status section, marker-zoo's status.ts entry), MIGRATE where status() is
-   incidental state (time-travel-demo's `job`)
-3  apply the production patch
-4  full gate + independent verification
-5  commit STATUS-DEL alone
+BAD
+  generic rehydration test uses status()
+    -> status deleted -> now uses stored()
+    -> `stored` looks necessary to generic rehydration
+
+BETTER
+  generic rehydration test uses an explicit TEST-ONLY hydratable marker
+    -> proves the generic mechanism independently of public feature ontology
+```
+
+For each spec, ask **what property `status()` was exercising**, then preserve it
+with the minimum fixture that expresses it:
+
+```text
+1  status-SPECIFIC behaviour        DELETE the assertion
+     ReadonlyStatusSignal, status predicates, status hydration values,
+     public LoadingState
+2  ordinary STATE behaviour         use ordinary store state
+     a time-travel or transaction test needing only something writable does not
+     need a marker at all
+3  generic MARKER behaviour         use a test-only minimal marker implementing
+     ONLY the hooks that test requires — labelled unmistakably as test
+     infrastructure, not architectural evidence
+4  another feature is the real SUBJECT   use that feature, because the test is
+     genuinely about it — never because it is convenient
+```
+
+Keep those fixtures local or narrowly scoped at first. Do NOT invent one grand
+`TestMarker` abstraction up front; consolidate only if the same capability
+recurs. Some of the generic marker machinery is itself still an unaudited
+evidence surface, and today's migration choice must not manufacture tomorrow's
+survival proof.
+
+### Sequence
+
+```text
+1  classify all 24 specs by the FUNCTION their status() fixture exercises
+2  delete status-specific coverage
+3  replace ordinary-state fixtures with ordinary state
+4  replace genuinely generic marker fixtures with the smallest test-only marker
+5  demos: REMOVE where status IS the subject (markers-demo section, marker-zoo
+   entry); for time-travel-demo's `job`, ask what time travel actually needs —
+   if merely a changing value, plain store truth is the cleaner replacement
+6  RE-EXECUTE the eight-file production deletion from HEAD, using the recorded
+   surface as a checklist — do NOT treat the scratchpad patch as authoritative
+7  typecheck · RAW VITEST full suite · lint · declaration closure · packed
+   consumer (public exports change)
+8  independent read-only residue check
+9  inspect every remaining lexical hit SEMANTICALLY
+10 commit STATUS-DEL alone, then REMEASURE the async contamination surface from
+   the new HEAD — subtraction is not linear
 ```
 
 **Do not apply the production patch first.** It breaks 24 specs and 3 demo files
