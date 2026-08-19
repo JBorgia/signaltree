@@ -2814,6 +2814,71 @@ signature, `import type`, one boundary cast; body untouched), to be migrated
 one at a time with per-enhancer characterization rather than assumed
 batching-shaped.
 
+## RULE 0n — MAJOR-VERSION CONTINUITY IS NON-SEMANTIC
+
+> **SignalTree 15 has no obligation to preserve SignalTree 14 APIs, extension
+> protocols, package boundaries, representations or compatibility paths. A public
+> legacy capability is evidence that a USER PROBLEM may exist; it is not evidence
+> that either the capability or its mechanism must survive. Users requiring the
+> old architecture may remain on the old major version.**
+
+And the harder corollary:
+
+> **There is no internal 14 -> 15 compatibility boundary.** An adapter whose only
+> purpose is to let rejected SignalTree 14 architecture participate in SignalTree
+> 15 is FORBIDDEN unless a separate EXTERNAL interoperability function
+> independently earns it.
+
+### The model
+
+```text
+SignalTree 14                          SignalTree 15
+  existing ecosystem                     greenfield architecture
+  existing extension APIs      !==       may deliberately be a different system
+  existing semantics
+```
+
+AngularJS versus Angular 2+. The old major stays the old world.
+
+### Why this rule was needed
+
+M1+M2-R1 found that `registerMarkerProcessor` is public, taught in the guides,
+exercised by the demo with two custom declaration kinds, and advertised as a
+product capability — and I inferred from that a "real open-set requirement" that
+made the null "much harder". **That was publicness acting as a survival bonus**,
+which is Rule 0l's failure mode wearing a new disguise. The same demo sentence
+advertises *"markers AND enhancers"*, and the enhancer half was already found to
+have no surviving function.
+
+What the evidence actually establishes:
+
+> **This was INTENTIONAL functionality, not accidental dead code.**
+
+That is genuinely useful — it means the IDEA deserves examination rather than
+silent deletion. It establishes **zero compatibility burden**.
+
+### The order this forces
+
+```text
+A  is the capability intrinsically valuable to SignalTree 15?
+B  if yes, what is the GREENFIELD MINIMUM?
+C  only afterward: how does the old mechanism map to it?
+```
+
+C may answer `DELETE` even when A answers `YES` — a greenfield extension model
+could be entirely different in shape, with **no adapter between them**.
+
+And it demotes every implementation question beneath A:
+
+```text
+tree-shaking of unused kinds     DO NOT DERIVE YET
+constant-time discrimination     DO NOT DERIVE YET
+predicate-scan cost              DO NOT DERIVE YET
+```
+
+Proving the current registry is an efficient implementation is worthless until
+the capability it implements has earned survival.
+
 ## RULE 0m — DX CAPABILITY IS EVIDENCE; DX SPELLING IS NOT ARCHITECTURE
 
 > During semantic derivation, preserve useful authoring capabilities as explicit
