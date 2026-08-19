@@ -752,13 +752,14 @@ artifact does not commission a replacement, and by the same logic an absent
 capability does not become a requirement just because the audit listed it as a
 candidate. Each would need its own use case and owner from zero.
 
-**2. Without cancellation OR stale-result exclusion, the family is unsound for
-real concurrent work.** With no generation counter, two overlapping `refresh()`
-calls can complete out of order and the EARLIER-STARTED, LATER-COMPLETING one
-overwrites the newer result. That is a defect in the old family, not a function to
-carry forward — and it means the family's apparent value is materially smaller
-than its surface suggests. An async abstraction whose central hazard is
-unaddressed has not earned the credit its API size implies.
+**2. `asyncSource`/`asyncQuery` are UNSAFE UNDER OVERLAPPING CONCURRENT
+EXECUTIONS unless some external mechanism serializes them.** With no generation
+counter, two overlapping `refresh()` calls can complete out of order and the
+EARLIER-STARTED, LATER-COMPLETING one overwrites the newer result. The bound
+matters: a caller that guarantees serialization is unaffected, so "unsound for
+real concurrent work" would be broader than the evidence. It is a defect in the
+measured model, not a function to carry forward — and it means the family's
+apparent value is smaller than its surface suggests.
 
 ### `status` is APPLICATION-DRIVEN, which contradicts the original draft
 
@@ -793,6 +794,130 @@ The honest possible outcome — and it must stay available — is that the entir
 async concept dissolves into store positions, derived projections and ordinary
 application operations, and **SignalTree 15 has no async feature at all.** That
 would not be a missing replacement. It would be a successful derivation.
+
+## DERIVATION S1 — `status`: **no SignalTree-owned function survives**
+
+Rule 0l. `status`, `StatusMarker`, `StatusSignal` and their methods are legacy
+evidence only. The old draft's claim that *"lifecycle belongs to execution"* is
+NOT used as evidence that such an execution exists.
+
+### The two questions that cannot be inferred from method names, measured
+
+**H — transition legality: ZERO.** Every setter is the same two lines:
+
+```ts
+setLoading()    { stateSignal.set(LoadingState.Loading);   errorSignal.set(null); }
+setLoaded()     { stateSignal.set(LoadingState.Loaded);    errorSignal.set(null); }
+setNotLoaded()  { stateSignal.set(LoadingState.NotLoaded); errorSignal.set(null); }
+setError(err)   { stateSignal.set(LoadingState.Error);     errorSignal.set(err);  }
+reset()         { stateSignal.set(LoadingState.NotLoaded); errorSignal.set(null); }
+```
+
+No validation. `Error -> Loaded` without an intervening `Loading` is accepted;
+duplicate `start()` is accepted; any state from any state is accepted. **This is
+not a state machine SignalTree owns — it is unconstrained assignment.**
+
+**I — automatic lifecycle observation: ZERO.** Nothing in core drives status from
+an execution. `asyncSource`, `asyncQuery`, `loader` and `entity-loader` contain no
+reference to any status setter or to `StatusMarker`. The only internal caller is
+`status.ts`'s own HYDRATE path replaying a previously persisted value — restoring
+a stored value, not observing an operation.
+
+So `status` supplies **no execution-lifecycle observation function whatsoever**,
+and the architectural prose asserting that ontology described something the
+implementation never had.
+
+### Three of the six setters are documented DX, not function
+
+`start()`, `setSuccess()` and `succeed()` are byte-identical aliases of
+`setLoading`/`setLoaded`, and the source says why:
+
+> *"AI coding agents trained on Promise-state vocabularies (success/start/fail)
+> frequently reach for these method names ... rather than fight the linguistic
+> gravity, we accept them."*
+
+That is a naming accommodation. It cannot earn a primitive.
+
+### The implementation's own comment refutes the operation reading
+
+From the hydrate path:
+
+> *"`Loaded` is a statement about DATA, not about an operation — if the data was
+> persisted alongside it, 'the data is loaded' is true on arrival."*
+
+The code already knows this describes data, not execution.
+
+### Function-by-function coverage
+
+| # | Function | Covered by | SignalTree-owned? |
+|---|---|---|---|
+| A | record a workflow state | an ordinary store position holding an enum | no |
+| B | read it | an ordinary accessor | no |
+| C | transition it | an ordinary write | no |
+| D | reset it | a write of the initial value | no |
+| E | convenience predicates (`loading`, `loaded`, `idle`, `hasError`, `settled`) | ordinary derived projections — exactly the frozen store-only contract | no |
+| F | persist / hydrate | whatever rules ordinary store positions independently receive | no |
+| G | causal participation | ordinary authored-state rules | no |
+| H | transition legality | **nothing — measured absent** | n/a |
+| I | lifecycle observation | **nothing — measured absent** | n/a |
+
+### The one candidate invariant, and it is INCONSISTENT
+
+Every non-error setter clears `errorSignal`. That coupling — "moving to a
+non-error state discards the previous error" — is the only rule in the whole
+surface that is not plain assignment.
+
+**It contradicts the module's own stated intent.** The hydrate comment says:
+
+> *"`Error` survives so a retry guard can report that the last attempt failed"*
+
+but `setLoading()` — which is exactly what a retry does — CLEARS the error. So the
+error survives a page reload and does not survive pressing retry. The retention
+policy differs between the hydration path and the transition path.
+
+That is a defect, and it is also evidence about ownership: an error-retention
+policy that the two paths disagree about is a DOMAIN decision that no single
+authority owns. An application wanting "keep the last error while retrying" — the
+behaviour the comment describes wanting — is not served by the current coupling.
+
+### Verdict
+
+```text
+OUTCOME A — every useful function is ordinary application state
+
+status SignalTree FUNCTION        DELETE
+StatusMarker / StatusSignal       legacy form, no survival earned here
+LoadingState enum                 an ordinary domain value; not a primitive
+workflow state itself             SURVIVES as ordinary store truth,
+                                  application/domain-owned meaning
+error-retention coupling          a domain policy, currently inconsistent;
+                                  no SignalTree owner found
+```
+
+Ownership shape, pinned so the draft's imagined execution runtime cannot be
+laundered back in:
+
+```text
+APPLICATION / DOMAIN   owns the meaning and the transitions
+        v
+STORE                  records canonical state
+        v
+DERIVED                optionally projects convenience predicates
+```
+
+No replacement `status` is designed. Its setters are not moved onto another
+SignalTree abstraction. No operation lifecycle is created to preserve an ontology
+the old system never had.
+
+### Why this matters beyond `status`
+
+This is the proof that Rule 0l generalises past the extension cluster. A
+437-line feature with fourteen public members, its own marker, its own realized
+signal type, its own contract file and its own reader allowlist reduces to **two
+store positions and some derived predicates** — and the two capabilities its API
+most implied (a state machine and lifecycle observation) are measurably absent.
+The method is not merely deleting enhancer machinery; it is exposing false
+ontology.
 
 ### Extend this treatment to the rest of the matrix
 
