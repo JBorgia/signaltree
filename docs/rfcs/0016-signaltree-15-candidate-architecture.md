@@ -1530,6 +1530,43 @@ position identity, causal state, or any other SignalTree authority.
 | A1-Q4 | stale exclusion | **`switchMap` does it on BOTH sides** |
 | A1-Q5 | `rerun` bypasses dedup | reproduced by merging a `Subject` after the dedup stage |
 | A1-Q6 | outside an Angular injection context | **input changes silently stop driving queries** |
+| A1-Q7 | `debounce` coalescing rapid input | reproduced by `debounceTime` — three rapid sets, one query |
+| A1-Q8 | **teardown owner** | **the binding OUTLIVES `tree.destroy()`** |
+| A1-Q9 | **equality domain** | `equal` compares INPUT VALUES; two distinct objects with equal fields are suppressed |
+
+### A1-Q8 — the best remaining counterexample, and it fails
+
+A binding whose lifetime were a tree POSITION or a `SubjectId` would be a real
+ownership claim: external code could not obtain that lifetime without duplicating
+SignalTree identity semantics. Measured, it is not one.
+
+```text
+async-query.ts:213   inject(DestroyRef, { optional: true })
+async-query.ts:271   takeUntilDestroyed(destroyRef)
+async-query.ts:290   effect(..., { manualCleanup: false })
+
+registerCleanup       never called
+tree reference        none held
+```
+
+The lifetime owner is the **Angular injection context's owner** — a component or
+service. Executably: after `tree.destroy()` with `tree.destroyed() === true`, a
+further `input.set()` still drives a query. The tree never owned the binding, so
+an external `effect()` obtains the identical lifetime by the identical mechanism,
+`inject(DestroyRef)`, duplicating nothing tree-owned.
+
+### A1-Q9 — the comparison domain
+
+`equal = Object.is` at :194, applied as `distinctUntilChanged(equal)` at :227. The
+domain is the INPUT VALUE. Two distinct object identities carrying equal fields
+are suppressed by a field comparator, and no tree concept is reachable from the
+comparator at all. Generic reactive equality, not semantic identity.
+
+### Pipeline order, corrected
+
+The measured order is `debounceTime -> filter -> distinctUntilChanged`, not
+filter-first as an earlier note in this file said. `rerun$` merges in AFTER dedup,
+which is why it bypasses both debounce and equality suppression.
 
 ### A1-Q4 corrects the family framing AGAIN
 
@@ -1560,7 +1597,14 @@ injection context.
 So the external composition duplicates nothing SignalTree-specific. It needs
 Angular — same as the marker.
 
-### Disposition
+### Disposition — Outcome A
+
+Every input-binding behaviour is reproducible with ordinary public state plus
+Angular/RxJS composition. Nothing on the ownership list appeared: no `PositionId`
+semantics, no `SubjectId` lifetime, no commit authority, no causal attribution,
+no tree-owned topology relationship, no publication ordering. What external code
+needs is: read the signal, observe changes, debounce, filter, compare, invoke a
+function.
 
 ```text
 INPUT -> ACQUISITION ORCHESTRATION

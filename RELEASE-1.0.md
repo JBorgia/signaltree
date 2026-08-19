@@ -152,6 +152,43 @@ There is no "architecture design" work item. There are independent derivations
 that gradually fill RFC 0016. Architecture is earned when those rows converge —
 and a repeated shape in CURRENT FORM is not convergence.
 
+## Test-executor operability — capture raw Vitest on the FIRST failure
+
+`nx test core` wraps Vitest and **discards its output on failure**: a failing run
+produces a ~28-line log with no failing test name, no assertion, no stack. That
+has now cost twice — once requiring an assertion to be deliberately inverted just
+to prove a suite was executing at all, and once losing the identity of a real
+failure permanently.
+
+> **On the next `core:test` failure, reproduce through raw Vitest BEFORE rerunning
+> anything.** Repetition destroys the failing state and converts a debuggable
+> defect into an irrecoverable anecdote.
+
+```bash
+cd packages/core && npx vitest run                      # full, with real output
+cd packages/core && npx vitest run <path-to-spec>       # one file
+```
+
+### Standing record — one unexplained suite failure
+
+```text
+one full-suite failure, immediately after adding a falsifier spec
+  failure identity UNRECOVERABLE through the nx wrapper
+
+afterwards
+  8/8 isolated passes · 4/4 full-suite passes · 1 clean baseline with the
+  spec stashed
+```
+
+**Supported conclusion:** there is one unexplained historical suite failure, and
+no causal attribution to that spec is supported. NOT "the spec caused it", and
+NOT "the suite is definitely healthy". Nx's flaky-task banner now persists from
+that single event.
+
+This is an infrastructure finding. It neither weakens nor strengthens any
+architectural claim, and it is recorded here rather than in RFC 0016 because the
+architecture RFC does not need executor-operability details.
+
 ## Required Validation
 
 ```bash

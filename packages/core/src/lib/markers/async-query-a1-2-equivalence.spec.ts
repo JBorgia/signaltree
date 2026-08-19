@@ -24,8 +24,8 @@ import { asyncQuery } from './async-query';
  * MEASURED PIPELINE (async-query.ts:230-291) — every stage is stock:
  *
  *   inputSignal -> effect() -> trigger$ (Subject)
- *     -> filter(config.filter)
  *     -> debounceTime(config.debounce)
+ *     -> filter(config.filter)
  *     -> distinctUntilChanged(config.equal)
  *     -> merge(rerun$)
  *     -> switchMap(query)          <- the stale-result exclusion
@@ -220,6 +220,116 @@ describe('A1-2 — what SignalTree fact must external input orchestration duplic
 
     expect(p.markerCalls()).toBe(markerFirst + 1);
     expect(p.plainCalls()).toBe(plainFirst + 1);
+  });
+
+  it('A1-Q7: debounce coalesces rapid input — debounceTime does the same', async () => {
+    let markerCalls = 0;
+    const tree = TestBed.runInInjectionContext(() => {
+      const t = signalTree({
+        search: asyncQuery<string, string[]>({
+          initialInput: '',
+          initialResult: [],
+          debounce: 20,
+          query: (i: string) => {
+            markerCalls++;
+            return Promise.resolve([`hit:${i}`]);
+          },
+        }),
+      });
+      void t.$.search();
+      return t;
+    });
+
+    tree.$.search.input.set('a');
+    TestBed.tick();
+    tree.$.search.input.set('ab');
+    TestBed.tick();
+    tree.$.search.input.set('abc');
+    TestBed.tick();
+    await new Promise((r) => setTimeout(r, 60));
+
+    // Only the settled value ran. `debounceTime` is the whole mechanism.
+    expect(markerCalls).toBe(1);
+    expect(tree.$.search.data()).toEqual(['hit:abc']);
+  });
+
+  it('A1-Q8 TEARDOWN OWNER: the binding outlives tree.destroy() — its lifetime is ANGULAR-owned', async () => {
+    // The best remaining ownership counterexample would be a binding whose
+    // lifetime is a TREE position or SubjectId, since external code could not
+    // obtain that without duplicating SignalTree identity semantics. Measured,
+    // it is not: async-query.ts takes `inject(DestroyRef, {optional:true})` and
+    // uses takeUntilDestroyed(destroyRef); it never touches registerCleanup and
+    // holds no tree reference.
+    let calls = 0;
+    const tree = TestBed.runInInjectionContext(() => {
+      const t = signalTree({
+        search: asyncQuery<string, string[]>({
+          initialInput: '',
+          initialResult: [],
+          query: (i: string) => {
+            calls++;
+            return Promise.resolve([`hit:${i}`]);
+          },
+        }),
+      });
+      void t.$.search();
+      return t;
+    });
+
+    tree.$.search.input.set('one');
+    TestBed.tick();
+    await drain();
+    const beforeDestroy = calls;
+    expect(beforeDestroy).toBeGreaterThan(0);
+
+    tree.destroy();
+    expect(tree.destroyed()).toBe(true);
+
+    // The tree is destroyed; the reactive binding is not, because the tree
+    // never owned it. An external effect() obtains the SAME lifetime by the
+    // SAME mechanism — inject(DestroyRef) — duplicating nothing tree-owned.
+    tree.$.search.input.set('two');
+    TestBed.tick();
+    await drain();
+    expect(calls).toBe(beforeDestroy + 1);
+  });
+
+  it('A1-Q9 EQUALITY DOMAIN: `equal` compares INPUT VALUES, not tree identities', async () => {
+    // async-query.ts:194 `equal = Object.is`, used at :227 as
+    // distinctUntilChanged(equal). The comparison domain is the input value.
+    const seen: string[] = [];
+    const tree = TestBed.runInInjectionContext(() => {
+      const t = signalTree({
+        search: asyncQuery<{ q: string }, string[]>({
+          initialInput: { q: '' },
+          initialResult: [],
+          // A value comparator over the input's own fields — no tree concept
+          // is reachable from here, which is the measurement.
+          equal: (a: { q: string }, b: { q: string }) => a.q === b.q,
+          query: (i: { q: string }) => {
+            seen.push(i.q);
+            return Promise.resolve([`hit:${i.q}`]);
+          },
+        }),
+      });
+      void t.$.search();
+      return t;
+    });
+
+    // Two DISTINCT object identities carrying the SAME value: suppressed.
+    tree.$.search.input.set({ q: 'abc' });
+    TestBed.tick();
+    await drain();
+    tree.$.search.input.set({ q: 'abc' });
+    TestBed.tick();
+    await drain();
+    expect(seen).toEqual(['abc']);
+
+    // A different value runs, proving the comparator is live rather than inert.
+    tree.$.search.input.set({ q: 'xyz' });
+    TestBed.tick();
+    await drain();
+    expect(seen).toEqual(['abc', 'xyz']);
   });
 
   it('A1-Q6: the orchestration DEPENDS on an Angular injection context', () => {
