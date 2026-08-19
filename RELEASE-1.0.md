@@ -280,6 +280,75 @@ boundary, and it is where the judgement per file lives.
 
 ### Sequence for the next attempt
 
+### STEP 1 COMPLETE — spec classification, and the count collapsed AGAIN
+
+Measured by SEMANTIC DEPENDENCY (imports the marker), not by lexical hit.
+
+**`time-travel.spec.ts` has ONE real marker usage, not 44.** Its other 44 hits are
+`entity.status()` — an ordinary string field on entity records holding `'idle'`,
+`'queued'`, `'busy'`. **Fourth vocabulary collision this session**, and it removes
+the single largest file from the migration.
+
+```text
+CLAIMED   24 spec files · 145 refs
+ACTUAL    20 spec files importing the marker + 3 typing specs
+          and the largest of them needs a ONE-LINE change
+```
+
+#### CLASS 1 — `status` IS the subject -> DELETE the coverage
+
+```text
+markers/status.spec.ts                    83   the whole file
+readonly.typing.spec.ts                        ReadonlyStatusSignal rows
+markers/marker-resolution.typing.spec.ts       StatusSignal resolution rows
+signal-tree-type-matrix.typing.spec.ts         StatusSignal matrix rows
+```
+
+Note the FORM-DEL lesson recurs: `readonly.typing.spec.ts` produced four
+`Expect<false>` failures when the type vanished, because deleting a type INVERTS
+its negative assertions. Those rows are not independent defects.
+
+#### CLASS 2 — ordinary STATE behaviour -> plain store state, no marker
+
+The test needs something writable that changes; a marker was incidental.
+
+```text
+time-travel.spec.ts:3306      1   `{ load: status<string>() }` — one line
+undo-redo.spec.ts             6
+greenfield-transactions.spec.ts 5
+transactions.spec.ts          4
+intercept-leaf-signals.spec.ts 1
+devtools.spec.ts              1
+```
+
+#### CLASS 3 — generic MARKER machinery -> test-only minimal marker
+
+These are the ones that matter, and the ones that must NOT default to `stored()`.
+Each tests a surviving mechanism, using `status()` only because it was a
+convenient marker to hand.
+
+```text
+rehydration.spec.ts          20   marker hydration
+planned-signal-tree.spec.ts  11   marker + capability planning
+marker-serialization.spec.ts  7   marker serialization
+marker-roundtrip.spec.ts      6   snapshot/restore roundtrip
+hydrate-decisions.spec.ts     6   hydrate decision reporting
+marker-materialization.spec.ts 4  materialization under nesting
+legacy-payload.spec.ts        3
+ssr-transfer.spec.ts          2   SSR transfer of marker state
+rehydrate-ownership.spec.ts   2
+persistence.spec.ts           2
+traversal-diagnostics.spec.ts 1
+lazy-markers.spec.ts          1   lazy materialization
+write-only-marker.spec.ts     -   imports only
+```
+
+Thirteen files, and the fixture they need is a marker with hydrate/snapshot hooks
+and nothing else — which is precisely the point. A test-only marker implementing
+ONLY those hooks proves the generic mechanism independently of any public
+feature's ontology, and cannot later be mistaken for evidence that a shipped
+marker was required.
+
 ### MIGRATE FUNCTIONS, NOT MARKERS — the fixture rule
 
 **Defaulting the 24 specs to `stored()` would be the colocation error in test
