@@ -2877,6 +2877,75 @@ as `getTurnStatus`, this time inside the instrument rather than the measurement.
 It failed loudly instead of quietly inflating a count, which is the argument for
 executable falsifiers over prose: the harness caught the analyst.
 
+## SUBJ-AUDIT — the subject-identity substrate, provenance-dated and audited
+
+Evidence: `e-subject-identity-audit.spec.ts`, 6 rows.
+
+E-REKEY made this load-bearing: identity-across-rekey survives its null, and it
+works by SUBJECT identity. So the substrate underneath it was dated.
+
+```text
+v14.1.1 tag              2026-08-11 09:14
+SubjectId                2026-08-11 22:29   feat(history): cut over public undo
+                                            to frontier authority
+subjectMetadataEnabled   2026-08-13         feat(history): scaffold causal kernel
+planRekey                2026-08-13         revised 2026-08-15 TWICE
+```
+
+**Entirely third-bucket.** 15-effort, unreviewed, days old, and `planRekey`
+churned three times in four days. Every one of those commits has an **empty
+body**, so there is no recorded rationale to read — in a repository whose own
+rules require commit messages to say *why*. The audit therefore had to be
+executable rather than archaeological.
+
+Note the origin: `SubjectId` entered through a **history** commit, not an entity
+one. Origin establishes ownership no better than colocation does, in either
+direction — and E-REKEY already measured the collection's use working in a tree
+with no history attached, so the collection's need is independent of where the
+mechanism came from.
+
+### Result — the substrate is SOUND
+
+Every edge the docblocks imply was run:
+
+```text
+KEY REUSE     changeId('tmp-1'->'server-99'), then a DIFFERENT member takes
+              'tmp-1'. The held reference still reports the ORIGINAL subject
+              (5), the new member reports its own (777). NO ALIASING — a freed
+              key does not resurrect as a wrong-row read.
+
+COLLISION     changeId onto an occupied key THROWS "Cannot change id to b:
+              already in use". Both members intact, neither merged, held
+              reference undisturbed.
+
+SELF          changeId('a','a') is a no-op. No throw, no churn.
+
+MISSING       changeId on an absent key THROWS "Entity with id zzz not found".
+              State unchanged.
+
+UNDO          undo across a snapshot taken through the split identity lands with
+              ids() and byId() in agreement, and all().length === ids().length.
+
+ROUND TRIP    rekey and rekey back HEALS the split — but only because the stale
+              id field happened to match the key it returned to. It reconciles
+              by COINCIDENCE, not by repair.
+```
+
+The one defect is the one the docblocks already name, and it is **confined**:
+after a rekey the member's own `id` field disagrees with its slot. That is an
+observable inconsistency in a member's self-description, not a corruption of the
+collection — every structural invariant holds across all six rows.
+
+```text
+SUBJECT-IDENTITY SUBSTRATE
+  PROVENANCE   third bucket, entirely post-v14.1.1, no rationale recorded
+  AUDIT        PASSES — no aliasing, safe collision/self/missing policies,
+               undo-consistent
+  DEFECT       split identity, confined to the member's own id field.
+               Load-bearing: it is the stated reason `setOne(entity)` cannot
+               exist. CARRIED as an open form question, not a blocker.
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
