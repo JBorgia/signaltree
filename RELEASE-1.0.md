@@ -152,6 +152,58 @@ There is no "architecture design" work item. There are independent derivations
 that gradually fill RFC 0016. Architecture is earned when those rows converge —
 and a repeated shape in CURRENT FORM is not convergence.
 
+## RULE 0j-2 DELETION-CONTAMINATION CHECK — **all three CONTAMINATE. Delete before the next derivations.**
+
+Frozen deletions: `status` (S1), `asyncSource` and `asyncQuery` (A1). The
+question Rule 0j-2 asks is not whether they can be deleted, but whether any
+REMAINING derivation's evidence surface can observe them.
+
+**Answer: yes, and it hits the next four queued derivations.**
+
+```text
+BLAST RADIUS
+  Status        17 files · 152 refs
+  AsyncSource    9 files ·  85 refs
+  AsyncQuery    10 files ·  85 refs
+
+CONTAMINATED EVIDENCE SURFACES, by queued derivation
+  lib/readonly.ts                  23 refs   <- the readonly/reader-allowlist row
+  internals/materialize-markers.ts 10 refs   <- marker materialization
+  enhancers/serialization.ts        5 refs   <- serialization row
+  markers/entity-map.ts             3 refs   <- the entityMap derivation
+  markers/entity-loader.ts          2 refs   <- the parked cache disposition
+  markers/stored.ts                 0 refs   <- stored() is CLEAN
+```
+
+`readonly.ts` is the clearest case: it imports `StatusSignal`,
+`AsyncSourceSignal` and `AsyncQuerySignal` and defines a reader allowlist for
+each. Deriving what `asReadonly` is FOR, while three of its allowlist rows exist
+to serve deleted concepts, would measure machinery whose only purpose is already
+gone. Same for marker materialization and the serialization snapshot surface.
+
+**`stored.ts` is clean (0 refs)**, which is a useful surprise: the hydration
+derivation is NOT blocked by these three, contrary to the expectation that
+`status`'s hydrate participation would contaminate it. `status` participates in
+hydration through the generic marker machinery, not through `stored` itself.
+
+### Required order
+
+```text
+1  STATUS-DEL / ASYNC-DEL   physical deletion, one marker per commit
+2  entityMap derivation
+3  close the parked entity-loader cache disposition
+4  inbound hydration / reconstruction derivation
+5  map onto stored()
+6  linked
+7  serialization / readonly / diagnostics
+```
+
+**This is unlike `.with()`**, whose physical cut remains BLOCKED: its surviving
+realization, planning and type-contribution functions still need a construction
+destination, and deleting it first would strand them. These three strand nothing
+— their functions were found to belong to the application, the Angular reactive
+layer, the store and `derived`, all of which already exist.
+
 ## Test-executor operability — capture raw Vitest on the FIRST failure
 
 `nx test core` wraps Vitest and **discards its output on failure**: a failing run
