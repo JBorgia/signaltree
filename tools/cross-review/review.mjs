@@ -71,14 +71,6 @@ const rfcHeading = opt('rfc');
 const sha256 = (content) => createHash('sha256').update(content).digest('hex');
 const canary = (prefix) => `${prefix}_${randomBytes(8).toString('hex')}`;
 
-const gitRev = (path) => {
-  try {
-    return execFileSync('git', ['log', '-1', '--format=%H', '--', path], {
-      encoding: 'utf8',
-    }).trim();
-  } catch { return ''; }
-};
-
 const gitShort = (path) => {
   try {
     return execFileSync('git', ['log', '-1', '--format=%h', '--', path], {
@@ -217,6 +209,17 @@ if (state.rounds >= 1 && !newEvidence && !isSelfTest) {
   process.exit(3);
 }
 
+/** Best-effort temp-file removal. A cleanup failure must never mask the real
+ *  error, but it must not be silent either — an undeleted packet on disk is a
+ *  copy of unreleased architecture. */
+const cleanup = (path) => {
+  try {
+    execFileSync('rm', ['-f', path]);
+  } catch (err) {
+    console.error(`warning: could not remove temp packet ${path}: ${err.message}`);
+  }
+};
+
 /* ---------------------------------------------------------------- send --- */
 const buildPacket = () => [
   `# CROSS-REVIEW PACKET — row ${row}, round ${state.rounds + 1}`,
@@ -235,9 +238,7 @@ writeFileSync(packetPath, packet);
 if (isSelfTest) {
   const dryRun = flag('dry-run');
   const contract = readFileSync(CONTRACT, 'utf8');
-  const ctxRev = gitRev('docs/architecture/SIGNALTREE-15-CONTEXT.md');
-  const ctxSha = sha256(contextContent || '');
-  const pktSha = sha256(packet);
+      const pktSha = sha256(packet);
   let provider = '';
   let modelUsed = '';
 
@@ -255,10 +256,10 @@ if (isSelfTest) {
         ],
         { encoding: 'utf8', maxBuffer: 1024 * 1024 * 16 }
       );
-      try { execFileSync('rm', ['-f', pktTmp]); } catch {}
+      cleanup(pktTmp);
       return out;
     } catch (e) {
-      try { execFileSync('rm', ['-f', pktTmp]); } catch {}
+      cleanup(pktTmp);
       throw e;
     }
   };
@@ -387,7 +388,6 @@ if (isSelfTest) {
   });
 
   // ---- output ----
-  const passCount = results.filter((r) => r.pass).length;
   const failCount = results.filter((r) => !r.pass).length;
   const allPass = failCount === 0;
 
@@ -418,9 +418,7 @@ if (flag('dry-run')) {
 }
 
 const contract = readFileSync(CONTRACT, 'utf8');
-const ctxRev = gitRev('docs/architecture/SIGNALTREE-15-CONTEXT.md');
 const ctxShort = gitShort('docs/architecture/SIGNALTREE-15-CONTEXT.md');
-const ctxSha = sha256(contextContent || '');
 const pktSha = sha256(packet);
 
 let critique;
