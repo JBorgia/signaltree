@@ -5,7 +5,6 @@ import { getTreeRealizationPort } from '../../lib/internals/causal-runtime/tree-
 import { entityMap } from '../../lib/markers/entity-map';
 import { form } from '../../lib/markers/form';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
-import { status } from '../../lib/markers/status';
 import { stored } from '../../lib/markers/stored';
 import { signalTree } from '../../lib/signal-tree';
 import { SignalTreeRollbackError } from '../../lib/types';
@@ -3302,30 +3301,10 @@ describe('time-travel enhancer', () => {
     expect(t.getHistory().at(-1)?.__ownerPaths).toEqual(['theme']);
   });
 
-  it('records history for status promise-vocabulary aliases', async () => {
-    const store = signalTree({ load: status<string>() }).with(timeTravel());
-    const t = (store as any).__timeTravel;
-    const initial = t.getHistory().length;
-
-    store.$.load.start();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    store.$.load.fail('boom');
-    await Promise.resolve();
-    await Promise.resolve();
-
-    const history = t.getHistory();
-    expect(history.length).toBeGreaterThan(initial + 1);
-    expect(history.at(-1)?.__ownerPaths).toEqual(['load']);
-
-    store.undo();
-    expect(store.$.load.hasError()).toBe(false);
-    expect(store.$.load.loading()).toBe(true);
-
-    store.undo();
-    expect(store.$.load.notLoaded()).toBe(true);
-  });
+  // DELETED WITH STATUS-DEL — "records history for status promise-vocabulary
+  // aliases". A LEGACY CONTRACT TEST: its subject was status's start()/fail()
+  // aliases, which S1 measured as a documented naming accommodation for AI
+  // agents rather than a function.
 
   it('routes public undo through turn frontiers for a single scalar write', async () => {
     const store = signalTree({ count: 0 }).with(timeTravel());

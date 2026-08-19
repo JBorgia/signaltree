@@ -32,9 +32,7 @@ import {
   entityMap,
   linked,
   signalTree,
-  status,
   stored,
-  type LoadingState,
 } from '../index';
 import { loader } from './markers/loader';
 import type {
@@ -73,7 +71,6 @@ const tree = signalTree({
   plants: entityMap<User, number>({
     load: loader(() => Promise.resolve([] as User[])),
   }),
-  load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
   reports: asyncSource<User[]>({
     initial: [],
@@ -100,7 +97,6 @@ type RO$ = RO['$'];
 type ROUsers = RO$['users'];
 type ROCached = RO$['cached'];
 type ROPlants = RO$['plants'];
-type ROStatus = RO$['load'];
 type ROStored = RO$['theme'];
 type ROSource = RO$['reports'];
 type ROQuery = RO$['search'];
@@ -186,17 +182,7 @@ export type _ReadonlyViewChecks = [
   // ---------------------------------------------------------------------------
   // (e) status / stored / async readers remain readable
   // ---------------------------------------------------------------------------
-  Expect<Equal<ROStatus['loading'], Signal<boolean>>>,
-  Expect<Equal<ROStatus['hasError'], Signal<boolean>>>,
-  Expect<Equal<ROStatus['idle'], Signal<boolean>>>,
-  Expect<Equal<ROStatus['settled'], Signal<boolean>>>,
   // Source WritableSignals demoted to plain Signal reads.
-  Expect<Equal<ROStatus['state'], Signal<LoadingState>>>,
-  Expect<Equal<ROStatus['error'], Signal<Error | null>>>,
-  Expect<NotOffered<ROStatus, 'setLoading'>>,
-  Expect<NotOffered<ROStatus, 'setError'>>,
-  Expect<NotOffered<ROStatus, 'reset'>>,
-  Expect<NotOffered<ROStatus, 'fail'>>,
 
   Expect<Equal<ReturnType<ROStored>, 'light' | 'dark'>>,
   Expect<Equal<ROStored['key'], string>>,

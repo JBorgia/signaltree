@@ -1022,14 +1022,14 @@ function createSignalStore<T>(
       continue;
     }
 
-    // All markers (built-in status/stored/form/asyncSource + user-registered)
+    // All markers (built-in stored/asyncSource + user-registered)
     // are caught here via the dynamic processor registry. Built-in markers
     // self-register when their factory runs — and the factory always runs
-    // inside the state literal (`signalTree({ x: status() })` evaluates
-    // `status()` before `signalTree()`), so the processor is registered before
+    // inside the state literal (`signalTree({ x: stored(...) })` evaluates
+    // `stored()` before `signalTree()`), so the processor is registered before
     // this check. Detecting them through the registry (instead of importing
-    // `isStatusMarker`/`isStoredMarker` directly) keeps `markers/status` and
-    // `markers/stored` out of the bundle when those markers are never used.
+    // `isStoredMarker` directly) keeps `markers/stored` out of the bundle when
+    // that marker is never used.
     if (isRegisteredMarker(value)) {
       store[key] = value;
       continue;

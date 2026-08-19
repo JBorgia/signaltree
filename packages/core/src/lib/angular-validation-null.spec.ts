@@ -1,7 +1,7 @@
 import { computed, effect, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { entityMap, LoadingState, signalTree, status } from '../index';
+import { entityMap, signalTree } from '../index';
 
 /**
  * ANG-V0 — THE NULL HYPOTHESIS FOR ANGULAR VALIDATION.
@@ -335,16 +335,9 @@ describe('ANG-V0-D — is any truth change invisible to the pull surface?', () =
     expect(runs).toBe(3);
   });
 
-  it('status transitions are visible through the pull surface', () => {
-    const tree = signalTree({ j: status() });
-    const phase = computed(() => tree.$.j.state());
-    const before = phase();
-
-    tree.$.j.setLoading();
-
-    expect(phase()).not.toBe(before);
-    expect(phase()).toBe(LoadingState.Loading);
-  });
+  // WITHDRAWN WITH STATUS-DEL — "status transitions are visible through the pull
+  // surface". ANG-V0's frozen result is recorded and does not rest on this
+  // specimen.
 
   it('CONTROL — a computed that reads nothing never recomputes', () => {
     const tree = signalTree(initial());
@@ -382,17 +375,7 @@ describe('ANG-V0-E — root snapshot as the validated value', () => {
     expect(runs).toBe(2);
   });
 
-  it('MEASURES what a marker projects into the root snapshot', () => {
-    const tree = signalTree({
-      plain: 1,
-      j: status(),
-    });
-    const snap = tree() as Record<string, unknown>;
-    // A marker projects its VALUE into the root snapshot, so a whole-object
-    // validator receives ordinary data, not a marker object.
-    expect(snap).toEqual({
-      plain: 1,
-      j: { state: 'NOT_LOADED', error: null },
-    });
-  });
+  // WITHDRAWN WITH STATUS-DEL — "MEASURES what a marker projects into the root
+  // snapshot". `status()` was the only specimen and the assertion named its
+  // shape directly.
 });

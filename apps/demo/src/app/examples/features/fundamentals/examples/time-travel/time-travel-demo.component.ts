@@ -8,7 +8,6 @@ import { FormsModule } from '@angular/forms';
 import {
   entityMap,
   signalTree,
-  status,
   timeTravel,
 } from '@signaltree/core';
 
@@ -78,7 +77,9 @@ export class TimeTravelDemoComponent {
   // would erase exactly the marker types this section exists to exercise.
   private markerTree = signalTree({
     people: entityMap<Person, number>({ selectId: (p) => p.id }),
-    job: status<Error>(),
+    // STATUS-DEL: was `status<Error>()`. The demo only needs a changing named
+    // value to show undo/redo, so ordinary store state is the minimum fixture.
+    job: 'NOT_LOADED' as 'NOT_LOADED' | 'LOADED' | 'ERROR',
     profile: { name: '', email: '' } as ProfileModel,
   }).with(timeTravel({ maxHistorySize: 50 }));
 
@@ -90,7 +91,7 @@ export class TimeTravelDemoComponent {
 
   people = () => this.markerTree.$.people.all();
   peopleCount = () => this.markerTree.$.people.count();
-  jobState = () => this.markerTree.$.job.state();
+  jobState = () => this.markerTree.$.job();
   profileValues = () => this.markerTree.$.profile();
 
   markerCanUndo = signal(false);
@@ -137,12 +138,12 @@ export class TimeTravelDemoComponent {
   }
 
   markJobLoaded() {
-    this.markerTree.$.job.setLoaded();
+    this.markerTree.$.job.set('LOADED');
     this.refreshMarkerState('job → LOADED');
   }
 
   markJobFailed() {
-    this.markerTree.$.job.setError(new Error('Request failed'));
+    this.markerTree.$.job.set('ERROR');
     this.refreshMarkerState('job → ERROR');
   }
 

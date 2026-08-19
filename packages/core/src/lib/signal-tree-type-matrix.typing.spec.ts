@@ -67,7 +67,7 @@
  */
 import type { Signal } from '@angular/core';
 
-import { asyncQuery, entityMap, signalTree, status, stored } from '../index';
+import { asyncQuery, entityMap, signalTree, stored } from '../index';
 import type {
   AccessibleNode,
   AsyncQuerySignal,
@@ -76,7 +76,6 @@ import type {
   Enhancer,
   NodeAccessor,
   SignalTree,
-  StatusSignal,
   StoredSignal,
   TreeNode,
 } from '../index';
@@ -298,24 +297,21 @@ built.$.user.set({ name: 'Bob', age: 1, address: { city: 'x' } });
 
 // B3 — markers resolve through the constructed value, including at depth.
 const builtMarkers = signalTree({
-  load: status<Error>(),
   theme: stored('theme', 'light' as 'light' | 'dark'),
   search: asyncQuery<string, User[]>({
     initialResult: [],
     query: () => Promise.resolve([]),
   }),
   plain: 0,
-  nested: { buried: status<Error>(), deep: 0 },
+  nested: { deep: 0 },
 });
 export type _BuiltMarkers = [
-  Expect<Equal<(typeof builtMarkers)['$']['load'], StatusSignal<Error>>>,
   Expect<Equal<(typeof builtMarkers)['$']['theme'], StoredSignal<'light' | 'dark'>>>,
   Expect<
     Equal<(typeof builtMarkers)['$']['search'], AsyncQuerySignal<string, User[]>>
   >,
   Expect<Equal<(typeof builtMarkers)['$']['plain'], CallableWritableSignal<number>>>,
   // a marker at depth still resolves — the "any depth" claim
-  Expect<Equal<(typeof builtMarkers)['$']['nested']['buried'], StatusSignal<Error>>>,
   Expect<Equal<(typeof builtMarkers)['$']['nested']['deep'], CallableWritableSignal<number>>>
 ];
 

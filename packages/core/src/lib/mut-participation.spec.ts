@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 
-import { entityMap, signalTree, status, timeTravel } from '../index';
+import { entityMap, signalTree, timeTravel } from '../index';
 import { getCausalWriteMode } from './causal-write-mode';
 import { withWriteContext } from './write-context';
 import { getPathNotifier, PathNotifier, resetPathNotifier } from './path-notifier';
@@ -64,7 +64,7 @@ async function probe(
 
 describe('MUT-1 — landed vs semantic vs causally authored', () => {
   const plain = () => {
-    const tree = signalTree({ a: { n: 1 }, rows: entityMap<{ id: string; v: number }>() , job: status() }).with(
+    const tree = signalTree({ a: { n: 1 }, rows: entityMap<{ id: string; v: number }>() }).with(
       timeTravel()
     );
     return { tree, read: () => tree.$.a() };
@@ -137,20 +137,9 @@ describe('MUT-1 — landed vs semantic vs causally authored', () => {
     expect(r.notified).toContain('rows.a');
   });
 
-  it('MARKER STATE TRANSITION — status()', async () => {
-    const r = await probe(
-      () => {
-        const tree = signalTree({ job: status() }).with(timeTravel());
-        return { tree, read: () => tree.$.job.state() };
-      },
-      (t) => {
-        (t as unknown as { $: { job: { setLoading(): void } } }).$.job.setLoading();
-      }
-    );
-    expect({ landed: r.landed, history: r.history, notified: r.notified }).toEqual({
-      landed: true, history: 1, notified: ['job.state'],
-    });
-  });
+  // WITHDRAWN WITH STATUS-DEL — "MARKER STATE TRANSITION — status()". MUT-1's
+  // frozen result is recorded in RELEASE-1.0.md and does not rest on this
+  // specimen; the ordinary-leaf, branch-call-form and deep-equal rows remain.
 
   it('PUBLICATION is independent — every landed change is pull-visible', async () => {
     const tree = signalTree({ a: { n: 1 } });

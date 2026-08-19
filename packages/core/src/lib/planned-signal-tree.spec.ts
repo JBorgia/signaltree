@@ -7,7 +7,6 @@ import {
   hasIntrinsicMutationEmitter,
 } from './internals/owned-mutation';
 import { entityMap } from './markers/entity-map';
-import { LoadingState, status } from './markers/status';
 import { stored } from './markers/stored';
 import { plannedSignalTree } from './signal-tree';
 
@@ -370,7 +369,14 @@ describe('plannedSignalTree prototype', () => {
     ]);
   });
 
-  it('represents one planned mixed-family pending transaction as four semantic effects on one canonical turn', async () => {
+  // STATUS-DEL: the `request: status()` write-kind was removed from these
+  // mixed-family fixtures. The counts below follow the SPECIMEN COUNT — plain
+  // canonical, structural entity, and stored-backed — not an architectural
+  // "three effects" contract. The test name is deliberately count-neutral so a
+  // fixture's cardinality cannot become apparent ontology; the surviving theorem
+  // is that one planned transaction carries heterogeneous semantic effects from
+  // independently supported write kinds and handles them coherently.
+  it('represents one planned mixed-family pending transaction coherently on one canonical turn', async () => {
     const storage = createMockStorage();
     storage.setItem('planned-mixed-preference', JSON.stringify({ __v: 1, data: 'compact' }));
 
@@ -381,7 +387,6 @@ describe('plannedSignalTree prototype', () => {
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
       }),
-      request: status(),
       preference: stored('planned-mixed-preference', 'compact', {
         storage,
         debounceMs: 0,
@@ -392,7 +397,6 @@ describe('plannedSignalTree prototype', () => {
       .build() as ISignalTree<{
       profile: { firstName: string };
       users: unknown;
-      request: unknown;
       preference: string;
     }> & {
       transaction(fn: () => void): { confirm(): void; rollback(): void };
@@ -415,13 +419,11 @@ describe('plannedSignalTree prototype', () => {
     tree.transaction(() => {
       tree.$.profile.firstName.set('Jane');
       tree.$.users.changeId('u1', 'u2');
-      tree.$.request.setLoading();
       tree.$.preference.set('spacious');
     });
 
     expect(tree.$.profile.firstName()).toBe('Jane');
     expect(tree.$.users.ids()).toEqual(['u2']);
-    expect(tree.$.request.state()).toBe(LoadingState.Loading);
     expect(tree.$.preference()).toBe('spacious');
     expect(JSON.parse(storage.getItem('planned-mixed-preference') as string).data).toBe('spacious');
     expect(tree.__transactions.getConfirmedTurnCount()).toBe(baselineConfirmed);
@@ -440,9 +442,6 @@ describe('plannedSignalTree prototype', () => {
     const plainEffect = pendingEffects.find(
       (effect) => effect.kind === 'set' && effect.path === 'profile.firstName'
     );
-    const statusEffect = pendingEffects.find(
-      (effect) => effect.kind === 'set' && effect.ownerPath === 'request'
-    );
     const storedEffect = pendingEffects.find(
       (effect) => effect.kind === 'set' && effect.path === 'preference'
     );
@@ -451,23 +450,16 @@ describe('plannedSignalTree prototype', () => {
     expect([...(pendingTurn.__ownerPaths ?? [])].sort()).toEqual([
       'preference',
       'profile.firstName',
-      'request',
       'users',
     ]);
-    expect(pendingEffects).toHaveLength(4);
-    expect(pendingKinds).toEqual(['rekey', 'set', 'set', 'set']);
-    expect(new Set(pendingPositions).size).toBe(4);
+    expect(pendingEffects).toHaveLength(3);
+    expect(pendingKinds).toEqual(['rekey', 'set', 'set']);
+    expect(new Set(pendingPositions).size).toBe(3);
     expect(plainEffect).toMatchObject({
       ownerPath: 'profile.firstName',
       path: 'profile.firstName',
       before: 'John',
       after: 'Jane',
-    });
-    expect(statusEffect).toMatchObject({
-      ownerPath: 'request',
-      path: 'request.state',
-      before: LoadingState.NotLoaded,
-      after: LoadingState.Loading,
     });
     expect(storedEffect).toMatchObject({
       ownerPath: 'preference',
@@ -504,7 +496,6 @@ describe('plannedSignalTree prototype', () => {
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
       }),
-      request: status(),
       preference: stored('planned-mixed-success-preference', 'compact', {
         storage,
         debounceMs: 0,
@@ -515,7 +506,6 @@ describe('plannedSignalTree prototype', () => {
       .build() as ISignalTree<{
       profile: { firstName: string };
       users: unknown;
-      request: unknown;
       preference: string;
     }> & {
       transaction(fn: () => void): { confirm(): void; rollback(): void };
@@ -533,13 +523,11 @@ describe('plannedSignalTree prototype', () => {
     const pending = tree.transaction(() => {
       tree.$.profile.firstName.set('Jane');
       tree.$.users.changeId('u1', 'u2');
-      tree.$.request.setLoading();
       tree.$.preference.set('spacious');
     });
 
     tree.$.profile.firstName.set('Janet');
     tree.$.users.byIdOrFail('u2').name.set('Jon');
-    tree.$.request.setLoaded();
     tree.$.preference.set('dense');
     await Promise.resolve();
     await Promise.resolve();
@@ -553,13 +541,11 @@ describe('plannedSignalTree prototype', () => {
     expect(tree.$.users.ids()).toEqual(['u1']);
     expect(survivingUser()).toBe('Jon');
     expect(survivingUser.__subjectIds?.[0]).toBe(baselineSubject);
-    expect(tree.$.request.state()).toBe(LoadingState.Loaded);
     expect(tree.$.preference()).toBe('dense');
     expect(JSON.parse(storage.getItem('planned-mixed-success-preference') as string).data).toBe('dense');
     expect([...(tree.__timeTravel.getTurns().at(-1)?.__ownerPaths ?? [])].sort()).toEqual([
       'preference',
       'profile.firstName',
-      'request',
       'users',
     ]);
   });
@@ -575,7 +561,6 @@ describe('plannedSignalTree prototype', () => {
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
       }),
-      request: status(),
       preference: stored('planned-mixed-reject-preference', 'compact', {
         storage,
         debounceMs: 0,
@@ -586,7 +571,6 @@ describe('plannedSignalTree prototype', () => {
       .build() as ISignalTree<{
       profile: { firstName: string };
       users: unknown;
-      request: unknown;
       preference: string;
     }> & {
       transaction(fn: () => void): { confirm(): void; rollback(): void };
@@ -604,14 +588,12 @@ describe('plannedSignalTree prototype', () => {
     const pending = tree.transaction(() => {
       tree.$.profile.firstName.set('Jane');
       tree.$.users.changeId('u1', 'u2');
-      tree.$.request.setLoading();
       tree.$.preference.set('spacious');
     });
 
     tree.$.profile.firstName.set('Janet');
     tree.$.users.byIdOrFail('u2').name.set('Jon');
     tree.$.users.changeId('u2', 'u3');
-    tree.$.request.setLoaded();
     tree.$.preference.set('dense');
     await Promise.resolve();
     await Promise.resolve();
@@ -629,13 +611,11 @@ describe('plannedSignalTree prototype', () => {
     expect(tree.$.users.ids()).toEqual(['u3']);
     expect(survivingUser()).toBe('Jon');
     expect(survivingUser.__subjectIds?.[0]).toBe(baselineSubject);
-    expect(tree.$.request.state()).toBe(LoadingState.Loaded);
     expect(tree.$.preference()).toBe('dense');
     expect(JSON.parse(storage.getItem('planned-mixed-reject-preference') as string).data).toBe('dense');
     expect([...(tree.__timeTravel.getTurns().at(-1)?.__ownerPaths ?? [])].sort()).toEqual([
       'preference',
       'profile.firstName',
-      'request',
       'users',
     ]);
   });

@@ -3,7 +3,6 @@ import { Signal, WritableSignal } from '@angular/core';
 import { AsyncQueryMarker, AsyncQuerySignal } from './markers/async-query';
 import { AsyncSourceMarker, AsyncSourceSignal } from './markers/async-source';
 import type { EntityLoaderSurface } from './markers/entity-loader';
-import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
 
 /**
@@ -303,7 +302,7 @@ type ApplyComputedSlices<TMarker, TBase> = TMarker extends {
 // enhancer or helper used a different generic parameter name. Relax the
 // index signature to permit dynamic string indexing while still preserving
 // the mapped keys for better editor DX.
-// Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal,
+// Default TreeNode maps known keys to either EntitySignal, StoredSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends LoadingEntityMapMarker<
@@ -314,8 +313,6 @@ export type TreeNode<T> = {
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
-    : T[K] extends StatusMarker<infer Err>
-    ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
     : T[K] extends AsyncSourceMarker<infer V>
@@ -1290,8 +1287,6 @@ export type DeepEntityAwareTreeNode<T> = {
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
-    : T[K] extends StatusMarker<infer Err>
-    ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
     : T[K] extends AsyncSourceMarker<infer V>
@@ -1319,8 +1314,6 @@ export type EntityAwareTreeNode<T> = {
     ? ApplyComputedSlices<T[K], LoadingEntitySignal<LE, LK, LP>>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? ApplyComputedSlices<T[K], EntitySignal<E, Key>>
-    : T[K] extends StatusMarker<infer Err>
-    ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
     : T[K] extends AsyncSourceMarker<infer V>

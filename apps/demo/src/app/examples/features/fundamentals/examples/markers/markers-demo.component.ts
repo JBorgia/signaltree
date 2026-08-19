@@ -3,9 +3,7 @@ import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   entityMap,
-  LoadingState,
   signalTree,
-  status,
   stored,
 } from '@signaltree/core';
 
@@ -24,7 +22,6 @@ interface MarkersState {
   // Status marker for async operations
   users: {
     entities: ReturnType<typeof entityMap<User, number>>;
-    status: ReturnType<typeof status<Error>>;
   };
 
   // Stored markers for persistence
@@ -42,22 +39,17 @@ interface MarkersState {
   styleUrl: './markers-demo.component.scss',
 })
 export class MarkersDemoComponent {
-  // LoadingState enum for template
-  LoadingState = LoadingState;
-
   store = signalTree<MarkersState>({
     users: {
       entities: entityMap<User, number>({ selectId: (u) => u.id }),
-      status: status<Error>(),
     },
     theme: stored<'light' | 'dark'>('demo-theme', 'light'),
     fontSize: stored('demo-fontSize', 14),
     lastViewedUserId: stored<number | null>('demo-lastViewedUserId', null),
   }).derived(($) => ({
-    // Derived state combining status and entities
-    isReady: computed(
-      () => $.users.status.loaded() && $.users.entities.all().length > 0
-    ),
+    // STATUS-DEL: was `$.users.status.loaded() && …`. Readiness now derives from
+    // the entity collection alone.
+    isReady: computed(() => $.users.entities.all().length > 0),
     selectedUser: computed(() => {
       const id = $.lastViewedUserId();
       return id != null ? $.users.entities.byId(id)?.() ?? null : null;
@@ -72,7 +64,6 @@ export class MarkersDemoComponent {
 
   // Simulate async loading
   async loadUsers() {
-    this.store.$.users.status.setLoading();
 
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -81,7 +72,6 @@ export class MarkersDemoComponent {
     const shouldFail = Math.random() < 0.2; // 20% chance of failure
 
     if (shouldFail) {
-      this.store.$.users.status.setError(new Error('Network error'));
       return;
     }
 
@@ -94,12 +84,10 @@ export class MarkersDemoComponent {
     ];
 
     this.store.$.users.entities.setAll(mockUsers);
-    this.store.$.users.status.setLoaded();
   }
 
   resetUsers() {
     this.store.$.users.entities.clear();
-    this.store.$.users.status.reset();
   }
 
   selectUser(userId: number) {
@@ -126,11 +114,6 @@ export class MarkersDemoComponent {
   }
 
   // ── st-example: live-state snapshots ───────────────────────────────────────
-  readonly statusSnapshot = computed(() => ({
-    state: this.store.$.users.status.state(),
-    isReady: this.store.$.isReady(),
-    userCount: this.store.$.users.entities.all().length,
-  }));
 
   readonly storageSnapshot = computed(() => ({
     'demo-theme': this.store.$.theme(),
@@ -139,25 +122,6 @@ export class MarkersDemoComponent {
   }));
 
   // Code examples for display
-  statusExample = `// status() marker - async operation state
-const tree = signalTree({
-  users: {
-    entities: entityMap<User>(),
-    status: status(),  // Async state tracking
-  },
-});
-
-// Derived boolean signals (lazy-created)
-tree.$.users.status.notLoaded();  // true initially
-tree.$.users.status.loading();    // false
-tree.$.users.status.loaded();     // false
-tree.$.users.status.hasError();      // false
-
-// Helper methods
-tree.$.users.status.setLoading();   // Start loading
-tree.$.users.status.setLoaded();    // Mark complete
-tree.$.users.status.setError(err);  // Set error
-tree.$.users.status.reset();        // Back to NotLoaded`;
 
   storedExample = `// stored() marker - localStorage persistence
 const tree = signalTree({
@@ -191,14 +155,12 @@ flushAllStoredSignals();`;
 const tree = signalTree({
   users: {
     entities: entityMap<User>(),
-    status: status(),
   },
   lastViewedUserId: stored('lastViewed', null),
 })
 // No .with(entities()) needed in v7+ (deprecated in v6, removed in v7)
 .derived(($) => ({
-  isReady: computed(() => 
-    $.users.status.loaded() && 
+  isReady: computed(() =>
     $.users.entities.all().length > 0
   ),
   selectedUser: computed(() => {
@@ -210,9 +172,6 @@ const tree = signalTree({
 }));`;
 
   // ── st-example: source tabs (wrap the example strings above) ────────────────
-  readonly statusCodeFiles: CodeFile[] = [
-    { label: 'status()', language: 'typescript', source: this.statusExample },
-  ];
   readonly storedCodeFiles: CodeFile[] = [
     { label: 'stored()', language: 'typescript', source: this.storedExample },
   ];

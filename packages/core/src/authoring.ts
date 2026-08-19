@@ -92,7 +92,6 @@ export type {
 export {
   ENTITY_READERS,
   ENTITY_LOADER_READERS,
-  STATUS_READERS,
   STORED_READERS,
   ASYNC_SOURCE_READERS,
   ASYNC_QUERY_READERS,
@@ -104,7 +103,6 @@ export { ASYNC_QUERY_MARKER } from './lib/markers/async-query.contract';
 
 // Marker type guards — you ask "is this a marker?" when writing a processor.
 export { isStoredMarker } from './lib/markers/stored.contract';
-export { isStatusMarker } from './lib/markers/status.contract';
 export { isDerivedMarker } from './lib/markers/derived';
 export { isAsyncSourceMarker } from './lib/markers/async-source.contract';
 export { isAsyncQueryMarker } from './lib/markers/async-query.contract';

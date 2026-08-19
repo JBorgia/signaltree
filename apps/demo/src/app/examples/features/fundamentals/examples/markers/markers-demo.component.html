@@ -2,96 +2,9 @@
   <div class="demo-header">
     <h1>Markers Demo</h1>
     <p class="subtitle">
-      <code>status()</code> and <code>stored()</code> markers provide
-      async state tracking and localStorage persistence.
+      <code>stored()</code> markers provide localStorage persistence.
     </p>
   </div>
-
-  <!-- Status Marker Section -->
-  <st-example
-    heading="status() Marker — Async Operation State"
-    intro="Track loading states for async operations with automatic derived signals and helper methods."
-    [state]="statusSnapshot()"
-    stateLabel="Current State"
-    [code]="statusCodeFiles"
-  >
-    <div class="demo-card">
-      <div class="card-header">
-        <h3>User Loading Demo</h3>
-        <div class="status-indicators">
-          <span
-            class="status-badge"
-            [class.active]="store.$.users.status.notLoaded()"
-          >
-            NotLoaded
-          </span>
-          <span
-            class="status-badge"
-            [class.active]="store.$.users.status.loading()"
-          >
-            Loading
-          </span>
-          <span
-            class="status-badge"
-            [class.active]="store.$.users.status.loaded()"
-          >
-            Loaded
-          </span>
-          <span
-            class="status-badge error"
-            [class.active]="store.$.users.status.hasError()"
-          >
-            Error
-          </span>
-        </div>
-      </div>
-
-      <div class="card-content">
-        <div class="button-group">
-          <button
-            class="btn primary"
-            (click)="loadUsers()"
-            [disabled]="store.$.users.status.loading()"
-          >
-            @if (store.$.users.status.loading()) {
-            <span class="spinner"></span> Loading... } @else { Load Users }
-          </button>
-          <button
-            class="btn secondary"
-            (click)="resetUsers()"
-            [disabled]="store.$.users.status.notLoaded()"
-          >
-            Reset
-          </button>
-        </div>
-
-        @if (store.$.users.status.hasError()) {
-        <div class="error-message">
-          <strong>Error:</strong>
-          {{ store.$.users.status.error()?.message }}
-          <button class="btn small" (click)="loadUsers()">Retry</button>
-        </div>
-        } @if (store.$.users.status.loaded()) {
-        <div class="users-list">
-          <h4>Users ({{ store.$.users.entities.all().length }})</h4>
-          <ul>
-            @for (user of store.$.users.entities.all(); track user.id) {
-            <li
-              tabindex="0"
-              [class.selected]="store.$.lastViewedUserId() === user.id"
-              (click)="selectUser(user.id)"
-              (keydown.enter)="selectUser(user.id)"
-            >
-              <span class="user-name">{{ user.name }}</span>
-              <span class="user-email">{{ user.email }}</span>
-            </li>
-            }
-          </ul>
-        </div>
-        }
-      </div>
-    </div>
-  </st-example>
 
   <!-- Stored Marker Section -->
   <st-example
@@ -172,19 +85,6 @@
   <section class="demo-section">
     <h2>Performance Optimizations</h2>
     <div class="performance-grid">
-      <div class="perf-card">
-        <h3>status()</h3>
-        <ul>
-          <li>
-            <strong>Lazy Computed:</strong> Derived signals (loading, etc.)
-            only created on first access
-          </li>
-          <li>
-            <strong>Performance Budget:</strong> 100 markers initialize in
-            &lt;50ms
-          </li>
-        </ul>
-      </div>
       <div class="perf-card">
         <h3>stored()</h3>
         <ul>

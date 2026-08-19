@@ -8,7 +8,6 @@ import {
   entityMap,
   loader,
   signalTree,
-  status,
   stored,
 } from '@signaltree/core';
 import { delay, of } from 'rxjs';
@@ -62,7 +61,6 @@ const ALL_PLANTS: Plant[] = [
  * compose features at the store root.
  *
  * Depth map:
- *   depth 1: orgStatus (status marker)
  *   depth 2: directory.users (asyncSource), settings.theme (stored),
  *   depth 3: organization.teams.list (entityMap), organization.teams.search (asyncQuery)
  *   depth 4: organization.teams.catalog.plants (entityMap in its cache-aware,
@@ -77,26 +75,6 @@ const ALL_PLANTS: Plant[] = [
   styleUrl: './marker-zoo.component.scss',
 })
 export class MarkerZooComponent {
-  readonly statusCode: CodeFile[] = [
-    {
-      label: 'status.ts',
-      language: 'typescript',
-      source: `// Read predicates (v10.3 canonical — bare names)
-store.$.orgStatus.loading();      // Signal<boolean>
-store.$.orgStatus.loaded();
-store.$.orgStatus.hasError();
-
-// Write methods (canonical):
-store.$.orgStatus.setLoading();
-store.$.orgStatus.setLoaded();
-
-// v10.2 Promise-vocabulary aliases (equivalent):
-store.$.orgStatus.start();        // === setLoading
-store.$.orgStatus.setSuccess();   // === setLoaded
-store.$.orgStatus.fail(err);      // === setError`,
-    },
-  ];
-
   readonly entityMapCode: CodeFile[] = [
     {
       label: 'entityMap.ts',
@@ -132,28 +110,7 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
     },
   ];
 
-  readonly idleSettledCode: CodeFile[] = [
-    {
-      label: 'idle-settled.ts',
-      language: 'typescript',
-      source: `// idle(): "should I (re)fetch?" — true for BOTH NotLoaded and Error
-// settled(): "operation is done, stop the spinner" — true for Loaded and Error
-store.$.demoStatus.setError(new Error('demo failure'));
-store.$.demoStatus.notLoaded(); // false — WRONG retry guard, never retries after an error
-store.$.demoStatus.idle();      // true  — RIGHT retry guard, covers NotLoaded + Error
-store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it ended`,
-    },
-  ];
-
   readonly store = signalTree({
-    // depth 1 — status marker for org-wide sync
-    orgStatus: status(),
-
-    // Standalone status() node for the idle()/settled() interactive panel
-    // below. Deliberately separate from orgStatus so poking its state with
-    // buttons never disturbs the depth/composition story above.
-    demoStatus: status<Error>(),
-
     // depth 2 — asyncSource for an org-wide user directory
     directory: {
       users: asyncSource<User[]>({
@@ -206,12 +163,8 @@ store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it
   });
 
   loadDirectory(): void {
-    this.store.$.orgStatus.setLoading();
     this.store.$.directory.users.refresh();
-    // Mirror the asyncSource's loaded state into the depth-1 status marker
-    // (orgStatus represents "are we hydrated") — illustrates how markers
     // compose: each does one thing, you wire them together explicitly.
-    setTimeout(() => this.store.$.orgStatus.setLoaded(), 650);
   }
 
   loadTeams(): void {
@@ -226,21 +179,9 @@ store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it
     this.store.$.settings.theme.update((t) => (t === 'light' ? 'dark' : 'light'));
   }
 
-  setDemoNotLoaded(): void {
-    this.store.$.demoStatus.setNotLoaded();
-  }
 
-  setDemoLoading(): void {
-    this.store.$.demoStatus.setLoading();
-  }
 
-  setDemoLoaded(): void {
-    this.store.$.demoStatus.setLoaded();
-  }
 
-  setDemoError(): void {
-    this.store.$.demoStatus.setError(new Error('demo failure'));
-  }
 
   resetAll(): void {
     this.store.$.directory.users.reset();
@@ -248,7 +189,5 @@ store.$.demoStatus.settled();   // true  — the fetch is done, whichever way it
     this.store.$.organization.teams.search.reset();
     this.store.$.organization.teams.catalog.plants.clear();
     this.store.$.organization.teams.catalog.plants.invalidate();
-    this.store.$.orgStatus.reset();
-    this.store.$.demoStatus.reset();
   }
 }

@@ -26,7 +26,6 @@ import {
   invalidateTag,
   serialization,
   signalTree,
-  status,
 } from '../index';
 import { getPathNotifier, resetPathNotifier } from './path-notifier';
 import { loader } from './markers/loader';
@@ -60,7 +59,6 @@ describe('walker conformance — core subsystems on a deep callable-branch tree'
         teams: {
           alpha: {
             members: entityMap<Member, number>(),
-            loadState: status(),
           },
         },
       },
@@ -71,8 +69,6 @@ describe('walker conformance — core subsystems on a deep callable-branch tree'
       { id: 1, name: 'Ada' },
     ]);
 
-    tree.$.org.teams.alpha.loadState.setLoading();
-    expect(tree.$.org.teams.alpha.loadState.loading()).toBe(true);
   });
 
   it('batching setter interception wraps leaves five branches deep', () => {

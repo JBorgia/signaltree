@@ -7,7 +7,6 @@
  *
  * Available markers:
  * - entityMap<T, K>() - Normalized entity collections with CRUD
- * - status() - Async operation state (loading, error, helpers)
  * - stored(key, default) - Auto-sync to localStorage
  *
  * Note: derived() function was removed in v6.3.1 - use computed() directly
@@ -20,17 +19,6 @@ export {
   type DerivedType,
 } from './derived';
 
-// Status marker - async operation state (v7)
-export {
-  status,
-  isStatusMarker,
-  createStatusSignal,
-  LoadingState,
-  STATUS_MARKER,
-  type StatusMarker,
-  type StatusSignal,
-  type StatusConfig,
-} from './status';
 
 // Stored marker - localStorage persistence (v7)
 export {

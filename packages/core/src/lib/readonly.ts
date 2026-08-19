@@ -4,7 +4,6 @@ import type { SignalTreeBuilder } from './internals/builder-types';
 import type { AsyncQuerySignal } from './markers/async-query';
 import type { AsyncSourceSignal } from './markers/async-source';
 import type { EntityLoaderSurface } from './markers/entity-loader';
-import type { StatusSignal } from './markers/status';
 import type { StoredSignal } from './markers/stored';
 import type {
   CallableWritableSignal,
@@ -68,22 +67,6 @@ export const ENTITY_LOADER_READERS = [
   'error',
   'lastLoadedAt',
   'params',
-] as const;
-
-/**
- * Readers on {@link StatusSignal}. The `state`/`error` source signals are
- * `WritableSignal`s on the full surface; the readonly view demotes them to
- * plain `Signal`s. `setLoading`/`setError`/`reset`/`start`/`fail`/… are absent.
- */
-export const STATUS_READERS = [
-  'state',
-  'error',
-  'notLoaded',
-  'loading',
-  'loaded',
-  'hasError',
-  'idle',
-  'settled',
 ] as const;
 
 
@@ -198,12 +181,6 @@ export type ReadonlyLoadingEntitySignal<
   P = void
 > = ReadonlyEntitySignal<E, K> & ReadonlyEntityLoaderSurface<P>;
 
-/** Read-only view of {@link StatusSignal}: `state`/`error` demoted to `Signal`, predicates kept. */
-export type ReadonlyStatusSignal<E = Error> = PickReaders<
-  StatusSignal<E>,
-  (typeof STATUS_READERS)[number]
->;
-
 /** Read-only view of {@link StoredSignal}: callable read + storage metadata. */
 export type ReadonlyStoredSignal<V> = {
   (): V;
@@ -267,8 +244,6 @@ type ReadonlyViewOf<T> = T extends EntitySignal<
       ReadonlyExtras<T, EntitySignal<E, K> & EntityLoaderSurface<P>>
   : T extends EntitySignal<infer E, infer K extends string | number>
   ? ReadonlyEntitySignal<E, K> & ReadonlyExtras<T, EntitySignal<E, K>>
-  : T extends StatusSignal<infer Err>
-  ? ReadonlyStatusSignal<Err> & ReadonlyExtras<T, StatusSignal<Err>>
   : T extends StoredSignal<infer V>
   ? ReadonlyStoredSignal<V> & ReadonlyExtras<T, StoredSignal<V>>
   : T extends AsyncQuerySignal<infer In, infer Out>

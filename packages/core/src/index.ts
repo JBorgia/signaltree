@@ -44,7 +44,6 @@ export {
   type ReadonlyEntitySignal,
   type ReadonlyEntityLoaderSurface,
   type ReadonlyLoadingEntitySignal,
-  type ReadonlyStatusSignal,
   type ReadonlyStoredSignal,
   type ReadonlyAsyncSourceSignal,
   type ReadonlyAsyncQuerySignal,
@@ -170,14 +169,6 @@ export {
   type DerivedType,
 } from './lib/markers/derived';
 
-// Status marker (v7) - async operation state
-export {
-  status,
-  LoadingState,
-  type StatusMarker,
-  type StatusSignal,
-  type StatusConfig,
-} from './lib/markers/status';
 
 // Stored marker (v7) - localStorage persistence
 export {
@@ -391,7 +382,6 @@ export { devTools } from './enhancers/devtools/devtools';
  *
  * **Markers (things Angular doesn't have):**
  * - `entityMap<T, K>()` - Normalized collections
- * - `status()` - Async operation state
  * - `stored(key, default)` - localStorage persistence
  *
  * **Enhancers (one function each):**
