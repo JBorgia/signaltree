@@ -280,6 +280,86 @@ boundary, and it is where the judgement per file lives.
 
 ### Sequence for the next attempt
 
+### FIXTURE RULE, STRENGTHENED — capability-minimal per falsifier
+
+> **Test fixtures are capability-minimal PER FALSIFIER, not merely
+> public-feature-neutral.**
+
+"A marker with hydrate/snapshot hooks and nothing else" is still too broad. One
+shared test marker carrying marker + hydrate + snapshot + capabilities + lazy
+behaviour would replace *"status accidentally sponsors generic machinery"* with
+*"TestMarker accidentally asserts all generic machinery belongs together"* — the
+test equivalent of inventing an architecture envelope before the functions earn
+one.
+
+```text
+needs materialization      -> local materializable marker
+needs snapshot             -> local snapshot marker
+needs hydrate + snapshot   -> local roundtrip marker
+needs write-only behaviour -> local write-only marker
+```
+
+Consolidate two fixtures only AFTER measurement proves they require the same
+semantic contract.
+
+### AND: "generic machinery" is NOT automatically SURVIVING machinery
+
+This is the larger correction. I described the Class 3 specs as exercising
+"surviving mechanisms". **That is not proven for every row.** Several are
+themselves in or adjacent to the unaudited matrix — marker hydration,
+materialization, serialization, legacy payload, hydrate decisions, SSR transfer,
+lazy markers, and `plannedSignalTree`, whose separate public constructor has
+already been found to have no earned survival.
+
+So each Class 3 spec needs TWO questions, not one:
+
+```text
+1  what function is status() a fixture FOR?
+2  has THAT FUNCTION independently earned survival?
+
+  FROZEN / SURVIVING   preserve coverage with the minimum local fixture
+  UNPROVEN             do NOT migrate merely to make STATUS-DEL green
+  REJECTED             delete the test with the rejected function
+```
+
+Otherwise STATUS-DEL manufactures future evidence not through `stored()`, but by
+**preserving generic infrastructure whose own survival has not been earned.**
+
+Where coverage must be kept while its architecture is still open, the fixture
+comment must say so in as many words:
+
+> *This fixture preserves current implementation coverage. It is not survival
+> evidence.*
+
+### TEST-EVIDENCE TAXONOMY — worth keeping beyond STATUS-DEL
+
+```text
+ARCHITECTURAL FALSIFIER   proves or refutes an architectural claim
+REGRESSION COVERAGE       protects current behaviour; confers NO survival
+LEGACY CONTRACT TEST      protects an already-rejected mechanism -> delete with it
+TEST INFRASTRUCTURE       enables another test; confers NO ontology
+```
+
+A surprisingly large part of STATUS-DEL is really about **not misreading
+regression coverage as architectural evidence.**
+
+### ORDERING CORRECTION — Class 1 deletions go WITH the production cut
+
+My step order was wrong. Deleting `status.spec.ts` before `status.ts` would leave
+a live feature untested for the duration. The correct order:
+
+```text
+1  CLASS 2 fixture conversion      safe now — plain state works today,
+                                   suite stays green
+2  CLASS 3 survival table, then    safe now — same reason
+   migration of FROZEN rows only
+3  PRODUCTION CUT + CLASS 1        one atomic commit: the feature and the tests
+   deletions together              whose subject it is disappear at once
+```
+
+All fixture migration happens while everything still works; the deletion is then
+a single reviewable step rather than a red-tree scramble.
+
 ### STEP 1 COMPLETE — spec classification, and the count collapsed AGAIN
 
 Measured by SEMANTIC DEPENDENCY (imports the marker), not by lexical hit.
