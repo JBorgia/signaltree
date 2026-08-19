@@ -188,13 +188,18 @@ entity-loader cache           no SignalTree ownership earned; PARKED pending
 M3 snapshot/representation    OPEN — CURRENT FRONTIER
 M4 reconstruction             QUEUED
 M5 decision observability     QUEUED
-entityMap / collections       OPEN — zero-state done. Candidate surviving
-                              functions are GRANULAR WRITE and GRANULAR
-                              OBSERVATION; everything else an array in ordinary
-                              canonical state already does. Public collection API
-                              is INHERITED (2025-12); the SubjectId/identity
-                              machinery is 15-EFFORT (post-2026-08-11) and is
-                              what the frozen identity invariant rests on.
+entityMap / collections       OPEN — null corrected by measurement. Granular
+                              write/observation FALL to an ordinary record; an
+                              array gives dynamic membership but not
+                              granularity; a record gives granularity but its
+                              membership is FIXED AT CONSTRUCTION (the accessor
+                              merges — no add, no remove). The surviving function
+                              is the CONJUNCTION: dynamic membership WITH
+                              granular observation, which no ordinary canonical
+                              shape provides. Whether SignalTree must own it, and
+                              in what form, is next. Public collection API is
+                              INHERITED (2025-12); the SubjectId/identity
+                              machinery is 15-EFFORT (post-2026-08-11).
 stored                        OPEN — split inbound/outbound before reading it
 linked                        OPEN — derived placement refuted; owner unproven
 readonly / serialization /    OPEN

@@ -2533,6 +2533,86 @@ an established need. It is evidence that this effort concluded it was one.
 3  ONLY THEN open entityMap, to see whether it names a use case missed above
 ```
 
+## DERIVATION E — THE NULL CORRECTS ITSELF. The surviving function is **dynamic membership WITH granular reactivity**.
+
+Evidence: `e-granularity.spec.ts`, 7 executable rows.
+
+### The zero-state's answer was wrong, and the measurement says why
+
+The zero-state concluded that E-e (granular write) and E-f (granular
+observation) were the only candidates, because an array cannot provide them.
+**Both fall to an ordinary record keyed by id** — and measuring that revealed the
+function the zero-state had mis-assigned.
+
+```text
+ARRAY in ordinary state
+  granular observation   NO  — a watcher of row `a` recomputes when `b` changes,
+                              because a write replaces the whole reference
+  dynamic membership     YES — set() adds and removes freely
+
+RECORD keyed by id, in ordinary state
+  granular observation   YES — each nested position is its own signal; a watcher
+                              of `a` does NOT recompute when `b` changes
+  granular write         YES — `a`'s identity is preserved, not merely its value
+  dynamic membership     NO  — and not merely awkward: INEXPRESSIBLE
+```
+
+**The membership finding is the sharp one.** A nested accessor is not a settable
+signal — it is a callable that MERGES — so:
+
+```text
+tree.$.rows.set                       undefined
+tree.$.rows({ b: {...} })             `b` is NOT added
+                                      `a` is NOT removed
+```
+
+The tree materialises `rows` with the keys present at construction, and a merge
+write reaches only those positions. **A record's membership is fixed at
+construction.**
+
+### The 2x2
+
+```text
+                       dynamic membership    granular observation
+  array                       YES                    NO
+  record                      NO                     YES
+  entityMap                   YES                    YES
+```
+
+**`entityMap` occupies a cell neither ordinary shape reaches**, and the two
+ordinary shapes fail on opposite axes. That is a structural gap, not a
+convenience.
+
+### Restated function
+
+> **E-c + E-f jointly: add and remove members at runtime, while observing one
+> member without observing all.**
+
+Not "collections". Not "entityMap". The two axes are individually available and
+jointly unavailable, and it is the CONJUNCTION that no ordinary canonical shape
+provides.
+
+### What this does NOT yet establish
+
+```text
+that SignalTree must own it   — an application could keep a record of
+                                independently created signals outside the tree,
+                                as the E5 fork did for a counter. Whether such
+                                values are canonical truth is the same question
+                                that fork already answered NO for.
+that entityMap's FORM survives — its API surface, selectId, the marker
+                                declaration, `all()`, sorting, predicates and
+                                bulk operations are untested here
+that identity-across-rekey survives — `changeId` preserves a row across a key
+                                change and a record has no mechanism at all, but
+                                whether that function is required is unmeasured
+```
+
+The conjunction is a real gap in ordinary canonical state. **Whether SignalTree
+should close it, and in what form, is the next step** — and per the provenance
+split, the identity machinery it would rest on is 15-effort work that has not
+been through this process.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
