@@ -276,7 +276,24 @@ subject-identity substrate    AUDITED — SOUND. Entirely third-bucket
                               the member's own `id` field disagrees with its
                               slot. Load-bearing — it is the stated reason
                               `setOne(entity)` cannot exist. OPEN form question.
-stored                        OPEN — split inbound/outbound before reading it
+stored                        NOT EARNED, both halves. INBOUND: reading the
+                              store in the state literal reaches it completely,
+                              and {version, migrate} is a spelling for a branch
+                              the read path already expresses. OUTBOUND: the
+                              ordinary effect null is STRICTLY BETTER — it is
+                              already durable after set(), while the debounced
+                              incumbent leaves the store EMPTY until flush(), and
+                              `debounceMs: 0` is exactly the null. So flush(),
+                              the page-hide drain and flushAllStoredSignals()
+                              repair a hazard the DEBOUNCE introduced. Coalescing
+                              is the one thing the null misses and is PERFORMANCE
+                              -> form pressure. Verdict is about ownership in a
+                              greenfield architecture, NOT about the shipped
+                              13.3.0 work, which is a real fix to a real bug. It
+                              also disposes of the stored() traversal-invisibility
+                              defect rather than requiring a fix. NOTE: stored's
+                              `{__v, data}` envelope IS load-bearing (migrate
+                              dispatches on __v) — do not over-generalise M3.
 linked                        NOT EARNED. A 4-line pass-through to Angular's
                               `linkedSignal`; "derived-but-writable" is ANGULAR'S
                               function. The null holds at runtime on both call
@@ -379,6 +396,26 @@ file**, or it is unverified: vitest does not typecheck.
 Do not point `tsc` at `packages/core/tsconfig.spec.json` and read the result as
 debt — nothing runs that config, and it reports 853 errors across 85 files. That
 mistake was made here once already.
+
+## Self-inflicted necessity — a NAMED cross-cutting finding
+
+**A mechanism creates the problem that justifies its own machinery.** Three
+instances, distinct from published-surface drift:
+
+```text
+M3 envelope   `{all:[...]}` exists so a bare array can be told apart from the
+              snapshot shape — an ambiguity that exists only because it does
+stored        the debounce creates a non-durable window; flush() + page-hide
+              drain + flushAllStoredSignals() close it. debounceMs: 0 has no
+              window and needs none of them
+entityMap     the snapshot hook exists because the walk must guess which member
+              is state — a guess that exists only because the accessor is not a
+              signal
+```
+
+In each case the machinery is *correct*, and what it corrects was introduced one
+layer down. **Never ask "is this machinery right?" — ask "what made it
+necessary?"** If the answer is another SignalTree choice, both can leave together.
 
 ## Do not reopen without a deterministic counterexample
 

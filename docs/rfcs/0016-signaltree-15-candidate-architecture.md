@@ -3522,6 +3522,118 @@ Same error class as measuring `loader.ts` instead of `entity-loader.ts`:
 **measure the thing that actually runs.** Third instance of it in this effort,
 and the second time the false alarm was mine.
 
+## DERIVATION — `stored`, SPLIT INBOUND / OUTBOUND. Neither half is earned.
+
+Evidence: `stored-null.spec.ts`, 7 rows.
+
+Stated from zero, before opening the incumbent:
+
+```text
+OUTBOUND   a position's current value must survive the death of this process
+INBOUND    at construction, a position must take the value it held in a
+           PREVIOUS process rather than its literal default
+```
+
+Genuinely separable — a telemetry value is written and never read back, a seeded
+config is read and never written — so each got its own null.
+
+### INBOUND — the null reaches it completely
+
+```text
+NULL        signalTree({ theme: read('theme', 'light') })      -> 'dark'
+INCUMBENT   signalTree({ theme: stored('theme', 'light') })    -> 'dark'
+MIGRATION   a v1 bare string read into a v2 object shape, as an ordinary branch
+            in the read function                               -> works
+```
+
+`{ version, migrate }` is a spelling for a branch the read path can already
+express. **INBOUND: NOT EARNED.**
+
+### OUTBOUND — the null is STRICTLY BETTER, and the machinery is self-inflicted
+
+```text
+NULL       effect(() => store.setItem(k, JSON.stringify(tree.$.theme())))
+           after set('dark'): ALREADY DURABLE. Process death loses nothing.
+
+INCUMBENT  stored(..., { debounceMs: 100 }); set('dark')
+           signal says 'dark', STORE IS EMPTY.
+           Process death here LOSES THE WRITE.
+           Durable only after an explicit flush().
+
+INCUMBENT  stored(..., { debounceMs: 0 }); set('dark')
+           durable inside set()'s own stack — IDENTICAL to the null.
+```
+
+So `flush()`, the page-hide drain and `flushAllStoredSignals()` exist to repair a
+hazard **the debounce introduced**. With no debounce there is nothing to drain.
+The 13.3.0 durability work is correct *as a fix*, and it is fixing a
+self-inflicted problem.
+
+### What the null does NOT reach
+
+```text
+COALESCING   20 sets -> measurably fewer store writes
+```
+
+Real, and the naive effect null does not do it. It is a **performance property**,
+which under the standing rule is a FORM question, not a function.
+
+```text
+stored
+  OUTBOUND FUNCTION   "survive process death" — delivered by an ordinary effect
+                      over an ordinary key/value store, MORE reliably than the
+                      debounced incumbent
+  INBOUND FUNCTION    "take a previous process's value" — delivered by reading
+                      the store in the state literal
+  CONTRIBUTION        write coalescing (performance) + the repair machinery that
+                      coalescing necessitates
+  SURVIVES            NO on both halves. Coalescing is recorded as FORM pressure.
+```
+
+This is a verdict about **ownership in a greenfield architecture**, not about the
+quality of the shipped work: 13.3.0 durability is a real fix to a real bug. The
+derivation says the function is not SignalTree's to own, not that the code was
+wrong.
+
+Note also the pre-existing defect this touches: `stored`'s traversal invisibility
+(nested markers leak raw markers into `tree()`, and an explicit `storage:` option
+leaks into snapshots). A verdict of NOT EARNED disposes of that defect rather
+than requiring it to be fixed.
+
+### The envelope, for once, is LOAD-BEARING
+
+`stored` writes `{"__v":1,"data":"dark"}`. Unlike M3's `{all}` and `{value}`,
+this envelope carries information the bare value cannot: `__v` is what `migrate`
+dispatches on. Recorded so the M3 envelope finding is not over-generalised — the
+objection there was to envelopes that wrap a single value and add nothing.
+
+## CROSS-CUTTING FINDING (second) — SELF-INFLICTED NECESSITY
+
+A second shape now has three instances, and it is distinct from published-surface
+drift:
+
+**A mechanism creates the problem that justifies its own machinery.**
+
+```text
+1  M3   the `{ all: [...] }` envelope exists so a bare array can be told apart
+        from the snapshot shape — an ambiguity that exists ONLY because the
+        envelope does. A conforming accessor publishes the array and there is
+        nothing to disambiguate.
+
+2  stored   the debounce creates a window where a set() is not durable, and
+        flush() + the page-hide drain + flushAllStoredSignals() exist to close
+        it. `debounceMs: 0` has no window and needs none of them.
+
+3  entityMap   the snapshot hook exists because the walk meets an object and
+        must guess which member is state — a guess that exists ONLY because the
+        accessor is not a signal.
+```
+
+In each case the machinery is *correct*, and in each case the thing it corrects
+was introduced one layer down. **The derivation question is never "is this
+machinery right?" but "what made it necessary?"** — because if the answer is
+another SignalTree choice, both can leave together.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
