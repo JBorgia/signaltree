@@ -2946,6 +2946,99 @@ SUBJECT-IDENTITY SUBSTRATE
                exist. CARRIED as an open form question, not a blocker.
 ```
 
+## DERIVATION E — `tap` and `intercept`, the last two members
+
+Evidence: `e-hooks.spec.ts`, 5 rows. Provenance: both introduced 2025-12-10
+(`feat: add new Map-based entity types`) — **inherited legacy, first bucket**.
+Consumers: the demo app only; nothing in `packages/` outside tests.
+
+### `tap` — push observation over a complete pull surface
+
+```text
+MEASURE   tap reports change identity: ['add:a:1', 'upd:a:{"n":2}', 'rem:a']
+NULL      the same three events recovered by diffing all() across writes
+```
+
+ANG-V0-D already established the collection's CRUD is fully visible through its
+own read surface. The only thing push adds is **change identity delivered
+directly** rather than recovered by diff — O(delta) against O(width).
+
+That is a performance property of a mechanism, not a function the pull surface
+fails to deliver. Under the standing rule that performance is a form question,
+`tap` does not earn a function of its own.
+
+```text
+tap
+  FUNCTION   "observe what changed" — ALREADY DELIVERED by the pull surface
+  SURVIVES   NO as a distinct function. The O(delta)/O(width) gap is real and
+             is recorded as a FORM pressure, not a derivation.
+```
+
+### `intercept` — a write-path authority, and the async form FAILS OPEN
+
+`intercept` is different in kind from `tap`: it can **block or transform a
+mutation before it lands**, which is genuinely not reachable from a pull surface
+— a pull observer only ever sees what landed.
+
+So the question is not reachability but **ownership**: is a write-path guard a
+collection function? Blocking and transforming writes is validation and
+authorization — the same category as `status` (workflow) and `activeId`
+(selection). The application can check before it calls `addOne`. The one
+justification that would survive — a third party holding the collection and
+needing to be policed — is **already dead**: M1/M2 closed third-party extension
+NOT EARNED.
+
+And the mechanism carries a defect that argues against carrying it forward at
+all:
+
+```text
+MEASURED   sync interceptor:  ctx.block('negative') -> throws, ids() stays []
+MEASURED   async interceptor: addOne does NOT throw, ids() === ['bad'],
+                              byId('bad').n() === -1,
+                              and the handler DID call ctx.block()
+```
+
+`InterceptHandlers.onAdd` is declared `=> void | Promise<void>`. **The public
+type invites the async form**, and every call site iterates handlers in a plain
+synchronous loop with no `await`. An async validator or authorization check
+therefore commits the write and then rejects it into nothing.
+
+A guard that silently fails open is worse than no guard, because it is relied
+upon. This is the shape an async permission check would naturally take.
+
+Also vestigial: `InterceptContext` exposes `blocked` and `blockReason` as if a
+handler could consult or set them. `block()` throws out of the loop, so
+`ctx.blocked` is observably always `false`.
+
+```text
+intercept
+  FUNCTION   write-path guard — NOT a collection function. Same category error
+             as status and activeId; the third-party justification is closed.
+  DEFECT     async handlers fail open, invited by the published type
+  DISPOSITION  DELETE candidate. Not carried forward as a form question — the
+             function is not earned, so the form question does not arise.
+```
+
+### Derivation E — CLOSED
+
+```text
+31 public members accounted for
+
+  5   THE MINIMUM                    addOne removeOne byId byIdOrFail ids
+  7   DERIVED PROJECTION             all count empty asMap find where has
+ 13   BULK / CONVENIENCE             atomicity belongs to the transaction kernel
+  1   REKEY IDENTITY  changeId       SURVIVES — split-identity form question open
+  2   ORDERING        prepend*       membership ops; intrinsic order weaker than
+                                     an ordinary array of keys
+  4   SELECTION       activeId*      NO FUNCTION — feature parity
+  2   HOOKS           tap intercept  NO FUNCTION — one already delivered by the
+                                     pull surface, one a category error with a
+                                     fail-open defect
+```
+
+The FUNCTION survives — E is still the audit's first positive verdict. Of the
+form, **five members are the minimum and one more is earned**.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
