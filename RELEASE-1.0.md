@@ -280,6 +280,73 @@ boundary, and it is where the judgement per file lives.
 
 ### Sequence for the next attempt
 
+### CLASSIFICATION CORRECTED — **Class 2 is EMPTY.** Nearly all of STATUS-DEL is Class 3
+
+The two-question check overturned my own classification on every ambiguous row,
+and then on every row I had assigned to Class 2. Test NAMES were decisive:
+
+```text
+transactions.spec
+  "rolls back pending status source-signal writes WITHOUT STATUS-SPECIFIC LOGIC"
+  -> the test exists to prove the GENERIC rollback path works. status is the
+     marker instance, not the subject.
+
+intercept-leaf-signals.spec
+  "reports owner paths for BUILT-IN MARKERS at their owning positions"
+  -> generic marker owner-path machinery.
+
+greenfield-transactions.spec
+  "captures HETEROGENEOUS real writes on one draft"
+  -> status supplies one of the heterogeneous write kinds: a marker source
+     signal.
+
+undo-redo.spec
+  "an in-process undo keeps LOADING" — about restore-vs-rehydrate differing for
+  in-flight state, i.e. the marker's HYDRATE semantics
+  "undoes direct status source-signal writes AS ONE OWNED TURN"
+  -> generic marker-ownership machinery.
+
+devtools.spec
+  "sends updates when MARKER MUTATORS emit owner-only notifications"
+  -> generic marker mutator machinery. I had called this Class 2.
+
+time-travel.spec:3305
+  "records history for status PROMISE-VOCABULARY ALIASES"
+  -> the subject IS status's `start()`/`fail()` aliases, which S1 already
+     identified as documented DX for AI agents. CLASS 1, delete with the feature.
+```
+
+**Revised classification:**
+
+```text
+CLASS 1   status-specific coverage           delete WITH the production cut
+CLASS 2   ordinary writable state            EMPTY
+CLASS 3   generic marker machinery           essentially everything else
+```
+
+#### Why this matters more than a re-labelling
+
+`status()` was not chosen by those tests because it was convenient writable
+state. It was chosen because it is **a marker with source signals, hydrate hooks
+and mutators** — precisely the surface generic marker machinery needs to be
+exercised against. The tests are already doing the right thing; they just picked
+a public feature as the specimen.
+
+So nearly ALL of STATUS-DEL falls into the one category where a careless fixture
+choice manufactures future evidence. The strengthened rule is not a refinement
+here — it is the whole job.
+
+And the survival question now bites hard, because the machinery these specs
+exercise is **marker machinery itself**: source-signal ownership, owner-path
+reporting, hydrate/restore/rehydrate distinction, mutator notification,
+heterogeneous write capture. Whether the MARKER CONCEPT survives 15.0 is not
+settled anywhere in this RFC. Migrating thirteen-plus specs onto a hand-built
+test marker would quietly assert that it does.
+
+**Consequence:** the Class 3 survival table is not optional bookkeeping before
+the edits. It is the gate. Several rows may resolve to *"do not migrate; this
+coverage belongs to a derivation that has not run."*
+
 ### FIXTURE RULE, STRENGTHENED — capability-minimal per falsifier
 
 > **Test fixtures are capability-minimal PER FALSIFIER, not merely
