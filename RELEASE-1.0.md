@@ -204,6 +204,84 @@ destination, and deleting it first would strand them. These three strand nothing
 — their functions were found to belong to the application, the Angular reactive
 layer, the store and `derived`, all of which already exist.
 
+## STATUS-DEL — ATTEMPTED, PRODUCTION CUT COMPLETE, **NOT COMMITTED**
+
+The production surface was removed cleanly and the working tree was then RESTORED
+to HEAD. The cut survives as a patch:
+`scratchpad/STATUS-DEL-production.patch` (1374 lines, 8 files, 1223 deletions).
+Stopped rather than half-finished, because the remaining work is an order of
+magnitude larger than the production surface suggested and needs judgement per
+file.
+
+### The blast radius was INFLATED, by a vocabulary collision
+
+```text
+CLAIMED   Status  17 files · 152 refs
+ACTUAL     8 production files with a real marker dependency
+```
+
+`enhancers/time-travel/time-travel.ts` accounted for 7 of the 17 files with
+`getTurnStatus` / `assertTurnStatusConsistency` — CAUSAL TURN status, nothing to
+do with the marker. `utils.ts`, `signal-tree.ts`, `materialize-markers.ts` and
+`serialization.ts` were PROSE ONLY, naming `status()` as an example in comments;
+the dynamic processor registry means there is no hard import.
+
+**Third vocabulary collision this session**, and the first one to inflate rather
+than deflate. Methodology Rule 2 cuts both ways: a name search overstates as
+easily as it understates, and a blast radius must be inspected, not counted.
+
+### The production cut, verified
+
+```text
+DELETED    markers/status.ts · markers/status.contract.ts · markers/status.spec.ts
+EDITED     types.ts (import + 3 TreeNode branches)
+           readonly.ts (import, STATUS_READERS, ReadonlyStatusSignal, dispatch)
+           markers/index.ts · index.ts · authoring.ts (exports)
+           LoadingState — status-only, removed with it
+```
+
+### What stopped it — and it is a real finding
+
+**`status()` HAS CONSUMERS.** S1 never measured them; only `asyncSource` and
+`asyncQuery` consumption was measured (both zero). Measured now:
+
+```text
+demo consumers          3 files genuinely construct status() markers
+                        markers-demo · time-travel-demo · marker-zoo
+                        (most other demo hits are store fields or component
+                        signals named `status` — the collision again)
+
+core spec references    24 files · 145 refs
+```
+
+**The spec references are the real problem, and deleting them would destroy
+surviving coverage.** Most use `status()` as a convenient MARKER FIXTURE to
+exercise generic machinery that survives — rehydration, marker materialization,
+serialization traversal, walker conformance, SSR transfer, causal capture. Those
+tests are not about `status`; they are about mechanisms with other users. They
+must be MIGRATED to another marker, not removed, or the deletion silently takes
+generic coverage with it.
+
+That is the "PRESERVE generic infrastructure that still has surviving users"
+boundary, and it is where the judgement per file lives.
+
+### Sequence for the next attempt
+
+```text
+1  migrate the 24 spec files fixture-by-fixture to a surviving marker
+   (`stored()` is the obvious candidate — it is CLEAN of the three dead markers)
+   verifying after each that the spec still tests what it claims
+2  decide per demo file: REMOVE where the subject IS status() (markers-demo's
+   status section, marker-zoo's status.ts entry), MIGRATE where status() is
+   incidental state (time-travel-demo's `job`)
+3  apply the production patch
+4  full gate + independent verification
+5  commit STATUS-DEL alone
+```
+
+**Do not apply the production patch first.** It breaks 24 specs and 3 demo files
+simultaneously, which converts a reviewable migration into a red-tree scramble.
+
 ## Test-executor operability — capture raw Vitest on the FIRST failure
 
 `nx test core` wraps Vitest and **discards its output on failure**: a failing run
