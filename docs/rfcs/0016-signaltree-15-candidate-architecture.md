@@ -3297,6 +3297,88 @@ failure shape the entityMap hydrate docblock already calls the worst version of
 this — *"a partial hydrate is harder to notice than a failed one"* — except this
 one applies nothing at all while still returning normally.
 
+## M5 — DELETES. The reported vocabulary is a single point, and half of it is dead.
+
+Evidence: `m5-decision-observability.spec.ts`, 2 rows.
+
+M5's queued statement predicted this: *"Last, because there may be no decision
+worth reporting once M4 decomposes."*
+
+### Measured, not grepped
+
+Methodology Rule 2 forbids reading a lexical absence as evidence, so every
+reconstruction path reachable from the public surface was exercised with a
+listener attached — `rehydrate` with a loader, `transfer` on the same position,
+`rehydrate` with no loader, `merge` via a root call, and `restore` via
+time-travel undo.
+
+```text
+DECLARED   decision  'declined' | 'normalised'
+           reason    'loader-owns-source' | 'no-request-survives-boundary'
+
+EMITTED    decision  { 'declined' }
+           reason    { 'loader-owns-source' }
+           mode      { 'rehydrate' }
+```
+
+A single point. Two call sites produce it — `entity-map.ts:352` and
+`async-source.ts:160` — and **M4 established that both predicates can never fire**
+once `asyncSource` and `loader()` take their dispositions.
+
+### Half the vocabulary is STATUS-DEL residue
+
+`'normalised'` and `'no-request-survives-boundary'` describe one behaviour:
+normalising `LOADING` to `NotLoaded` across a process boundary. That behaviour
+belonged to `status`, which STATUS-DEL physically removed. The event docblock
+still reads *"Which marker decided, e.g. `entityMap`, `status`."*
+
+The types outlived the mechanism — the same defect class as
+`InterceptContext.blocked`: a published vocabulary describing something that
+cannot happen. Third instance in this pass, which makes it a pattern worth
+naming.
+
+### Consumers
+
+```text
+packages/**   NONE outside tests
+apps/demo     whats-new-14 page — a live demonstration of the capability
+```
+
+### Disposition
+
+```text
+M5   DELETE. No surviving decision to report.
+
+     onHydrateDecision / reportHydrateDecision / HydrateDecisionEvent /
+     HydrateDecision / HydrateReason        DELETE candidates
+
+     The underlying INSIGHT is kept as evidence, not as a mechanism: a silent
+     refusal is a real DX failure, and the docblock's account of it stands —
+     "a developer whose payload was silently declined had no way to see it."
+     If a future derivation reintroduces a position that declines
+     reconstruction, that DX pressure comes with it. It does not earn a
+     reporting bus in advance of a decision to report.
+```
+
+### The M-cluster resolves NON-UNIFORMLY, exactly as permitted
+
+The queued statement allowed it explicitly: *"Nothing requires one verdict across
+three entry points."*
+
+```text
+M3  ANSWERED — uniform rule (state is what the accessor returns); hook DELETES
+M4  ANSWERED — uniform rule (mode + owns-a-live-source); hook DELETES, and on
+               the far side of the loader/asyncSource dispositions the predicate
+               has no surviving trigger
+M5  DELETES  — nothing left to report
+MarkerProcessor  still DELETES
+```
+
+Three entry points, three different routes, one direction. The cluster's shared
+finding is that **every hook in it was absorbing something expressible
+uniformly** — M3 a shape accident, M4 a two-input predicate, M5 the reporting of
+a decision that no longer occurs.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

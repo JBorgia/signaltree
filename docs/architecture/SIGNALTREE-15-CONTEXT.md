@@ -222,7 +222,21 @@ entity-loader ownership       CLOSED — Outcome A already found no SignalTree
                               the park lifts and the verdict stands. A3
                               (tree-scoped registry-free addressing of policy
                               holders) remains the one un-run remainder.
-M5 decision observability     QUEUED
+M5 decision observability     DELETES. Measured, not grepped: every
+                              reconstruction path exercised with a listener
+                              attached (rehydrate+loader, transfer, rehydrate
+                              without loader, merge, restore/undo) emits a SINGLE
+                              POINT — decision 'declined', reason
+                              'loader-owns-source', mode 'rehydrate'. Its two
+                              call sites are exactly the predicates M4 showed can
+                              never fire. Half the declared vocabulary
+                              ('normalised', 'no-request-survives-boundary') is
+                              STATUS-DEL residue describing a mechanism that no
+                              longer exists. onHydrateDecision and friends:
+                              DELETE candidates. The DX insight — a silent
+                              refusal is a real failure — is kept as EVIDENCE and
+                              does not earn a reporting bus ahead of a decision
+                              to report.
 collections FUNCTION          **SURVIVES** — dynamic membership + granular
                               observation over CANONICAL truth. First positive
                               result in the audit. Each ordinary alternative
