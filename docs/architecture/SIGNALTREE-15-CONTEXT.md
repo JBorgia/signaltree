@@ -120,6 +120,22 @@ rows as inherited evidence — the conclusions stand (both delete-direction) but
 **a 15-effort artifact must never be cited as evidence that a practice is
 established.**
 
+Per-row provenance for the OPEN rows, measured as churn since `v14.1.1`:
+
+```text
+entity-map.ts        13+/5-      of  471   ~97% inherited
+entity-signal.ts     1872+/353-  of 2970   ~63% POST-RELEASE  <- the real
+                                            implementation behind entityMap
+stored.ts            211+/120-   of 1003   ~21% churn
+linked.ts            unchanged   of   82   pure legacy — 0o applies cleanly
+readonly.ts          0+/75-                 deletions only (STATUS-DEL)
+serialization.ts     83+/16-     of 1352
+materialize-markers  98+/18-     of  725
+```
+
+**The `entityMap` row is majority 15-effort work**, which `entity-map.ts`'s
+13-line churn conceals. Audit it in three buckets from the start.
+
 Standing measurement discipline, each earned by a real failure in this audit:
 
 ```text
