@@ -189,8 +189,10 @@ const findings = critique
   .map((b) => b.trim())
   .filter((b) => b.startsWith('FINDING:'));
 
-const field = (block, name) =>
-  (block.match(new RegExp(`^${name}:\\s*(.+)$`, 'm')) || [, ''])[1].trim();
+const field = (block, name) => {
+  const m = block.match(new RegExp(`^${name}:\\s*(.+)$`, 'm'));
+  return m ? m[1].trim() : '';
+};
 
 const triaged = findings.map((b) => ({
   finding: field(b, 'FINDING'),
