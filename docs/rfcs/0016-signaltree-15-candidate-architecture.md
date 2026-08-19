@@ -2284,6 +2284,76 @@ protocol the way `stored` does, rather than being described by a hook. That is
 M3's remaining question, and it is downstream of the `entityMap` derivation
 proper, which has not run.
 
+## M3 — THE HOOK ABSORBS A SHAPE MISMATCH. Reading B is confirmed executably.
+
+Evidence: `m3-uniform-rule.spec.ts`, 3 rows.
+
+The uniform walk decides by three guards — `DERIVED_STAMP`, `isSignal`,
+`isNodeAccessor`. So the null reduces to: **is a declaration kind's state
+reachable through them?**
+
+```text
+stored      isSignal(node)        TRUE
+            -> its state IS its read. No hook, no convention, no synthetic key.
+            -> tree() gives { theme: 'light' }
+
+entityMap   isSignal(node)        FALSE
+            isNodeAccessor(node)  FALSE
+            -> NEITHER uniform guard reaches it
+            -> its enumerable surface is mostly METHODS
+```
+
+**So the hook does not exist because collections have special representation
+semantics. It exists because the realized accessor satisfies neither shape guard
+the walk uses.** That is Reading B, confirmed by measurement rather than
+inference.
+
+### The codebase already contains the precedent — and the remedy
+
+`stored.ts:850` records that `stored` USED to have exactly this defect:
+
+> *"It used to be `(() => sig())` with methods bolted on — a plain callable that
+> satisfied neither `isSignal` nor `isNodeAccessor`. Every traversal in the
+> library branches on exactly those two guards, so a stored leaf fell through all
+> of them: omitted from `tree()`/`unwrap()`, skipped by a merge write through its
+> parent, and REPLACED with a raw value by `applyState`… **Conforming to the
+> protocol that already exists fixes every one of those at once**, with no
+> changes outside this file."*
+
+Same defect. Same two guards. And the remedy chosen was **conformance, not a
+hook** — which is why `stored` needs no `snapshot` today.
+
+`entityMap` is the same shape with the other remedy applied.
+
+### What this establishes, and what it does not
+
+```text
+ESTABLISHED
+  the snapshot hook's demonstrated job is absorbing a SHAPE mismatch
+  the only surviving implementer fails both uniform guards
+  the other surviving kind needed no hook once it conformed
+  in-repo precedent exists for fixing this class by conformance
+
+NOT ESTABLISHED
+  that entityMap SHOULD conform — its accessor shape may be justified by
+  functions this row has not examined (structural writes, key addressing,
+  subject lifetime). That is the entityMap derivation's question, not M3's.
+```
+
+**M3's mechanism question is answered; its disposition waits on `entityMap`.**
+If the accessor conforms, the hook has no remaining implementer among survivors
+and deletes. If the accessor's shape is independently earned, then a
+representation function survives — but it would be *"a realized value must be
+able to declare its state when its shape hides it"*, which is a narrower and
+differently-owned thing than *"declaration kinds own their representation"*.
+
+### Rule 0m check
+
+No DX capability is at stake either way. `tree()` returning
+`{ rows: { all: [...] } }` versus `{ rows: [...] }` is a representation detail
+the author never writes. **The synthetic `all` key is not a DX pressure to
+preserve** — it is an artifact, and no measured use case depends on it.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

@@ -173,10 +173,18 @@ share one memoised representation, devtools adds a transform it owns, and
 and appears in the representation as a plain value with no hook. So the hook can
 no longer be defended by divergent consumer needs.
 
-The admissible evidence base is **one** implementation, `entityMap`, whose hook
-introduces a synthetic `all` key with no counterpart in the declaration. Open
-question: can a collection's state be identified by a uniform rule — i.e. can the
-accessor conform the way `stored` does? Downstream of the entityMap derivation.
+**Mechanism question ANSWERED.** The walk decides by three guards —
+`DERIVED_STAMP`, `isSignal`, `isNodeAccessor`. `stored` conforms (`isSignal` is
+true) and needs no hook. `entityMap` satisfies NEITHER guard, so the hook is
+absorbing a SHAPE mismatch, not expressing representation semantics. The codebase
+contains the precedent: `stored` had the identical defect and was fixed by
+conformance, not by a hook.
+
+**Disposition waits on `entityMap`.** If its accessor conforms, the hook has no
+surviving implementer and deletes. If the shape is independently earned, what
+survives is *"a realized value must be able to declare its state when its shape
+hides it"* — narrower and differently owned than *"declaration kinds own their
+representation"*.
 
 ## Deferred DX pressures (Table G) — capability, never spelling
 
