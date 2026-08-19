@@ -199,17 +199,29 @@ M3 snapshot/representation    ANSWERED — a realized value's state IS
                               representation": NOT EARNED. Derivation result, NOT
                               a landed change — conformance has real blast radius
                               (time-travel.ts:2030 reads `child.all`).
-M4 reconstruction             SPLIT. Representational half DISSOLVES under M3
-                              conformance — `asyncSource` proves the point on a
-                              gradient: it is CALLABLE and `src()` already
-                              returns the value its hook re-wraps as `{value:..}`,
-                              failing only `isSignal`. Hooks track DISTANCE FROM
-                              A SIGNAL, not declaration-kind semantics. Ownership
-                              half SURVIVES its uniform-rule null: "a position
-                              may decline reconstruction when another authority
-                              owns its content, mode-dependent" — but BLOCKED,
-                              because both declines cite a LOADER and loader
-                              ownership is parked.
+M4 reconstruction             ANSWERED — YES, by a uniform rule. The
+                              representational half dissolves under M3
+                              conformance (asyncSource proves it on a gradient:
+                              CALLABLE, src() already returns the value its hook
+                              re-wraps, failing only isSignal — hooks track
+                              DISTANCE FROM A SIGNAL). The ownership half is
+                              itself uniform: both predicates reduce to
+                              `mode === 'rehydrate' && owns-a-live-source`. The
+                              PROPERTY decides, not the kind — a loaderless
+                              collection accepts, the same kind with a loader
+                              declines — and the MODE decides, not the data:
+                              identical bytes apply under `transfer`. And both
+                              triggers are DELETE candidates (asyncSource frozen;
+                              entityMap's `load` comes from loader(), Outcome A),
+                              so the predicate can never fire. hydrate hook:
+                              DELETE candidate. Mode-dependence is REAL and is
+                              evidence to CARRY, not a hook to keep.
+entity-loader ownership       CLOSED — Outcome A already found no SignalTree
+                              cache/freshness function, parked only pending
+                              entityMap. entityMap now SURVIVES independently, so
+                              the park lifts and the verdict stands. A3
+                              (tree-scoped registry-free addressing of policy
+                              holders) remains the one un-run remainder.
 M5 decision observability     QUEUED
 collections FUNCTION          **SURVIVES** — dynamic membership + granular
                               observation over CANONICAL truth. First positive

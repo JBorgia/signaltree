@@ -3222,6 +3222,81 @@ M4 ownership half          CANDIDATE FUNCTION: "a position may decline
 **Next frontier: entity-loader ownership.** It was parked pending `entityMap`;
 `entityMap` is now closed, and M4 cannot resolve until the loader question does.
 
+## M4 — CLOSED. The decline is a UNIFORM RULE, and both its triggers are DELETE candidates.
+
+Evidence: `m4-decline-uniformity.spec.ts`, 4 rows.
+
+M4's ownership half survived a uniform-rule null of the shape *"set the position
+to the payload"*. But the two implementers' predicates are, in full:
+
+```text
+asyncSource   mode === 'rehydrate'
+entityMap     mode === 'rehydrate' && typeof node.load === 'function'
+```
+
+One rule over one declared property — *"this position owns a live source"* —
+which `asyncSource` satisfies by construction and `entityMap` satisfies per
+instance. Measured:
+
+```text
+loaderless collection, rehydrate   payload APPLIES      -> ids ['stored']
+same kind + a loader, rehydrate    payload DECLINED     -> ids ['live']
+same position, transfer            payload APPLIES      -> ids ['ssr']
+empty / full / malformed payloads  declined IDENTICALLY -> the predicate never
+                                                          inspects `value`
+```
+
+**The property decides, not the declaration kind** — the same kind does both
+things depending on one declared bit. And the mode decides, not the data — the
+identical bytes are authoritative under `transfer` and stale under `rehydrate`,
+which is exactly RFC 0014's 54.3KB regression.
+
+So the decline needs **no per-kind hook**: it is a uniform rule over
+`(mode, owns-a-live-source)`. That is M3's result reached from the other
+direction — the publish side and the reconstruct side both dissolve into uniform
+rules, and the hook in each case was absorbing something expressible uniformly.
+
+### And the rule has no surviving trigger
+
+```text
+asyncSource            frozen DELETE
+entityMap's `load`     supplied by loader(), which OUTCOME A found earns no
+                       SignalTree ownership ("SignalTree-owned cache/freshness
+                       FUNCTION: NOT FOUND")
+```
+
+On the far side of both dispositions, `typeof node.load === 'function'` is never
+true and no declaration kind owns a live source. **The predicate can never
+fire.**
+
+```text
+M4   ANSWERED — YES, a realized value is reconstructible by a uniform rule.
+
+     hydrate hook            DELETE candidate — no earned implementer, and on
+                             the far side of the loader and asyncSource
+                             dispositions, no surviving trigger either
+     mode-dependence         REAL and CORRECTLY DERIVED. `HydrateMode` is "a
+                             property of the CALL SITE, not of the data", and
+                             rehydrate/transfer want opposite answers. This is
+                             evidence to CARRY, not a hook to keep.
+     decline-on-ownership    a real function with NO surviving instance in 15's
+                             candidate set. If a live-source-owning position is
+                             ever derived (Outcome B), the rule is uniform and
+                             still needs no per-kind hook.
+```
+
+### Incidental measurement — a malformed payload is silently ignored
+
+`serialize()` emits `{ data, metadata }`. A hand-written bare state object
+(`{ rows: {...} }`, no envelope) applies **nothing** and reports **nothing** — no
+throw, no dev warning. Found by writing the test wrongly; the first run failed
+because the payload was ignored, not because the decline fired.
+
+Not a derivation result, and not chased here. Recorded because it is the same
+failure shape the entityMap hydrate docblock already calls the worst version of
+this — *"a partial hydrate is harder to notice than a failed one"* — except this
+one applies nothing at all while still returning normally.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
