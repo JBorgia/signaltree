@@ -1504,9 +1504,13 @@ export function createStoredSignal<T>(
 it straight into `createEntitySignal`. So **notifier integration is not intrinsic
 to "realization"**; it is one kind's requirement wearing a shared parameter.
 
-That single asymmetry refutes reading `create` as one function. A genuine
-single-purpose hook would not have a parameter that one of its two surviving
-implementations declares unused by convention.
+**Stated at the strength the evidence supports:** per-kind non-use of a shared
+input is EVIDENCE of an envelope, not proof on its own — an interface may
+legitimately pass a superset context. What makes it decisive is the COMBINATION
+below: `stored` ignores notification entirely while `entityMap` independently
+varies notification, capability-gated PositionId allocation, public-surface
+augmentation and feature attachment. Those are semantically different behaviours
+behind one callback.
 
 ### What `create` does, measured from `entity-map.ts:259-300`
 
@@ -1568,6 +1572,99 @@ Nothing measured here touches the authoring capability. `stored('key', v)` and
 names `MarkerProcessor`, `check` or `create`. **Whatever happens to the envelope,
 the capability is unaffected** — which is exactly the separation Rule 0m exists
 to keep visible.
+
+## M1+M2-R1 — **STOP. Open declaration-kind registration IS a real public extension contract.**
+
+This is the condition that makes the joint null much harder, and it is the first
+time in this audit that an extensibility claim has survived measurement.
+
+```text
+registerMarkerProcessor        PUBLIC, exported from @signaltree/core/authoring
+                               (deliberately narrowed OUT of the root in v7)
+
+internal callers               use a DIFFERENT function —
+                               registerBuiltinMarkerProcessor — so the public one
+                               exists FOR third parties, not as core's own path
+
+taught                         docs/guides/custom-markers-enhancers.md:117
+                               teaches it as the extension contract
+
+exercised                      custom-extensions-demo registers TWO custom
+                               declaration kinds — isCounterMarker,
+                               isSelectionMarker — with their own processors
+
+advertised                     nav + home components: "Build your own markers and
+                               enhancers — registerMarkerProcessor() and .with()
+                               chains"
+```
+
+**Contrast with everything else this audit has deleted.** `.with()` had zero
+genuine post-exposure use; `asyncSource`/`asyncQuery` had zero consumers; the
+substrate-capability protocol was structurally unusable because its value type was
+private. Here the contract is public, documented, demonstrated with two
+independent custom kinds, and advertised as a product capability.
+
+**Honest bound.** The demo is first-party code demonstrating a third-party
+pattern, so this proves the contract is OFFERED, TAUGHT and EXERCISABLE — not
+that an external consumer depends on it today. That is still materially stronger
+evidence than anything the deleted mechanisms produced, and under the standing
+rule that TP need cannot be refuted by workspace evidence, it is enough to stop.
+
+**Consequence:** "keeps one third-party predicate off every node" is NOT solving
+a requirement we may not have. There IS an open-set requirement. Whether it
+justifies today's `MarkerProcessor` shape is a separate question — a generic
+plugin protocol earning existence does not mean the current one survives
+unchanged.
+
+## M1+M2-R2 — the "hot path" phrasing OVERSTATES the workload
+
+Measured where recognition actually executes:
+
+```text
+LINEAR PREDICATE SCAN  (MARKER_PROCESSORS iteration, isRegisteredMarker)
+  signal-tree.ts:1033   the construction walk over the state literal
+  lazy-tree.ts:120      lazy materialization
+  signal-tree.ts:464    a DEV-ONLY warning — ngDevMode-guarded, sampled to
+                        ENTITY_ARRAY_SAMPLE elements, and memoised per key
+
+  NOT on writes · NOT on every tree() · NOT on snapshots
+
+O(1) STAMP LOOKUP  (PROCESSOR_STAMP)
+  utils.ts:632          snapshot/unwrap — this one DOES run per tree() snapshot
+  serialization.ts      hydrate paths
+```
+
+So the two mechanisms sit on different paths. The linear scan the stamp exists to
+avoid is **construction-time and lazy-materialization-time**, executed once per
+declaration node per tree — an O(n) walk that already has to happen. The stamp
+itself is on the snapshot path.
+
+**Another instance of the stale-comment lesson, in a subtler form:** the docblock
+accurately describes a real optimization while its phrase "hot path" overstates
+the architectural weight of the code path it optimizes. A per-node predicate scan
+during a construction walk is a performance detail; the same phrase would carry
+very different weight if it ran per mutation. Do not accept a comment's
+characterization of WORKLOAD as a measurement of it.
+
+### Where this leaves M1+M2 — OPEN, and harder than the last measurement suggested
+
+```text
+open declaration-kind registration   REAL public contract — survives the null
+constant-time recognition           function real; current form UNPROVEN
+tree-shaking of unused kinds        function real; current form UNPROVEN
+create() as one function            REFUTED — it is an envelope
+"hot path" justification            OVERSTATED — construction-time, not runtime
+```
+
+The remaining question is no longer *"does a generic registry survive?"* but:
+
+> **Given a real open-set extension requirement, is today's `MarkerProcessor` —
+> four bundled hooks, a shared `create` envelope, a linear predicate array and a
+> stamp — the minimum form that serves it?**
+
+That is a much narrower question, and it is where M1+M2 resumes. Rule 0m is
+unaffected either way: the authoring capability is inline declaration beside
+ordinary state, and no user names `MarkerProcessor`.
 
 ## Table G — DX PRESSURE LEDGER
 
