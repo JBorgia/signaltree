@@ -118,3 +118,4 @@ scripts/benchmarks/dist-core
 
 # Release notes staged for manual paste (gh CLI lacks write access)
 RELEASE-NOTES-*.md
+.cross-review/
