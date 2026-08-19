@@ -1925,35 +1925,96 @@ This is strictly stronger than the second-class finding: even though PATH A
 fails, PATH A's failure does not rescue the compiler-extension case, because
 PATH B never needed it.
 
-### Disposition
+### Disposition — and there is NO "smaller form" left to derive
+
+**If the function did not survive, there is no form question.** Asking *"what is
+the minimum `MarkerProcessor`?"* or *"what is the minimum registration
+mechanism?"* would be deriving a shape for something that failed its null.
 
 ```text
-third-party declaration compiler extensibility   NOT EARNED
-registerMarkerProcessor                          legacy mechanism, no entitlement
-MarkerProcessor                                  legacy mechanism, no entitlement
-open predicate registry                          moot
-tree-shaking / stamp / predicate-scan            MOOT — optimizations of
-                                                 machinery with no earned function
+M1  third-party / open recognition        CLOSED — NOT EARNED
+M2  generic third-party realization       CLOSED — NOT EARNED
+
+registerMarkerProcessor                   legacy mechanism, no entitlement
+MarkerProcessor                           no current survival basis
+open predicate registry                   moot
+tree-shaking / stamp / predicate-scan     MOOT — optimizations of machinery
+                                          whose function did not survive
 ```
+
+**What MAY still survive is a different question entirely:** machinery needed by
+SIGNALTREE-OWNED declaration forms. That is **DEFERRED**, and deliberately:
+
+> Given only declaration forms that independently survive as SignalTree-owned
+> concepts, what is the minimum construction machinery needed to recognise and
+> lower them?
+
+It cannot be answered now, because it depends on the `entityMap` and `stored`
+derivations — and **if `entityMap` fails its own null and `stored` decomposes
+into other mechanisms, there may be zero special declaration forms left.**
+Building their common compiler abstraction now, merely because two legacy
+survivors are still physically present, would be the colocation error one more
+time. That shared abstraction may only emerge if later rows independently force
+it.
 
 Rule 0n governs the disposition: 14.x's public contract is historical evidence
 and users needing it may remain on the old major.
 
-### Rule 0m check — the capability is NOT prohibited
+### Rule 0m check — stated precisely, because "survives intact" is too strong
 
-The authoring capability survives intact under the closed-language null: a
-package ships `makeCounterApi()`, the user writes ordinary state and composes the
-API around it. What does NOT survive is the ability to extend the DECLARATION
-GRAMMAR — and no measured use case required that.
+Path B reproduces the SEMANTIC capability and the PACKAGE ABSTRACTION. It does
+NOT reproduce the historical authoring experience:
 
-### A defect surfaced in passing, and it is not this derivation's to fix
+```text
+14.x    signalTree({ counter: counter(...) })
+        tree.$.counter.increment()
 
-**"Existing signals — preserve" admits values that escape the causal kernel.**
-An author placing a prebuilt Angular signal in the state literal gets something
-that reads and writes through `tree.$` but is invisible to undo. That is a live
-hole in current behaviour, independent of markers. Recorded here; it belongs to
-whatever derivation owns the declaration-admission rule, and it must not be
-repaired as a side effect of this row.
+Path B  const tree = signalTree({ counter: 10 })
+        const counter = makeCounterApi(tree.$.counter)
+        counter.increment()
+```
+
+*"A third-party abstraction can be declared inline and appear naturally in the
+tree's typed API"* is NOT reproduced. **And that is acceptable** — Rule 0m does
+not require preserving it now; it requires not converting a semantic result into
+a DX prohibition.
+
+```text
+SEMANTIC REQUIREMENT
+  third-party compiler extensibility        NOT EARNED
+
+DX CAPABILITY
+  reusable typed third-party abstraction    PRESERVED
+
+DX PRESSURE
+  library abstractions feeling naturally colocated with tree state and
+  tree API                                  DEFERRED to the final DX pass
+
+SPECIFIC HISTORICAL SPELLING
+  inline declaration -> augmented tree.$    NO ENTITLEMENT
+```
+
+The final DX pass may yet find a way to offer something resembling
+`tree.$.counter.increment()` WITHOUT letting packages extend the declaration
+grammar — or may conclude the composed form is the better architecture. Neither
+is decided here, which is exactly what Table G exists to hold.
+
+### A DECLARATION-ADMISSION QUESTION surfaced, and it is not a "defect" yet
+
+```text
+CURRENT BEHAVIOUR      arbitrary existing Angular signals are preserved
+                       (signal-tree.ts:1054)
+MEASURED CONSEQUENCE   such state may escape canonical/causal machinery —
+                       readable and writable through tree.$, invisible to undo
+DISPOSITION            UNPROVEN. Derive when the declaration-admission and
+                       publication boundary is audited.
+```
+
+**Deliberately NOT called an architectural defect.** It is defective relative to
+current expectations, but greenfield may simply decide that **prebuilt Angular
+signals are not admissible canonical declarations at all** — which would DELETE
+the problem rather than repair it. Calling it a defect now would presuppose that
+admitting them is correct and only their treatment is wrong.
 
 ## Table G — DX PRESSURE LEDGER
 
