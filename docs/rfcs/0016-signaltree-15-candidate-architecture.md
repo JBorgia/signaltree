@@ -1482,6 +1482,93 @@ noted separately where they differ.
 row.** It is a parameter of M4, and whether it is a generic distinction or an
 artifact of deleted features is one of the questions M4 must answer.
 
+## DERIVATION M1+M2 — `create` MEASURABLY BUNDLES, and per-kind variation proves it
+
+Measured across `entityMap` and `stored` — the two declaration kinds with no
+deletion disposition. `asyncSource`/`asyncQuery` are excluded per Rule 0j-2.
+
+### The decisive evidence is a PARAMETER THAT IS DELIBERATELY UNUSED
+
+```ts
+// stored.ts:525
+export function createStoredSignal<T>(
+  marker: StoredMarker<T>,
+  _notifier?: unknown,        // <- underscore-prefixed, typed `unknown`
+  path?: string,
+  context?: { … },
+  parentPositionId?: number
+)
+```
+
+`stored` does not use the notifier **at all** — 0 references. `entityMap` passes
+it straight into `createEntitySignal`. So **notifier integration is not intrinsic
+to "realization"**; it is one kind's requirement wearing a shared parameter.
+
+That single asymmetry refutes reading `create` as one function. A genuine
+single-purpose hook would not have a parameter that one of its two surviving
+implementations declares unused by convention.
+
+### What `create` does, measured from `entity-map.ts:259-300`
+
+```text
+1  read the declaration's config          marker.__entityMapConfig
+2  query construction capabilities        context.hasCapability('position-topology')
+                                          context.hasCapability('mutation-capture')
+3  create the realized runtime value      createEntitySignal(...)
+4  integrate the write notifier           passed through — entityMap YES, stored NO
+5  associate owner/position identity      context.allocatePositionId(parentPositionId)
+                                          CAPABILITY-GATED: falls back to () => undefined
+6  contribute PUBLIC SURFACE              computed slices attached to the signal
+7  attach a declaration-specific feature  loader().attach(...)
+```
+
+Seven behaviours behind one hook, and **(4), (5), (6) and (7) all vary by kind or
+by capability.** Position allocation is not even unconditional within one kind —
+it is gated on `position-topology`, degrading to `() => undefined`.
+
+### Consequences for the derivation
+
+```text
+M2 "pre-exposure realization"   NOT one function — an implementation envelope,
+                                the same shape `Enhancer` had
+
+candidate separable functions   declaration-config consumption
+                                construction-capability query
+                                runtime realization
+                                write-notification integration      per-kind
+                                owner/position association          capability-gated
+                                public-surface contribution         per-kind
+                                declaration-specific feature wiring per-kind
+```
+
+None of those is yet assigned an owner. What is established is only that the hook
+is not atomic, so no ownership may be assigned to `create` as a whole.
+
+### What this suggests about the joint M1+M2 null — NOT yet an answer
+
+The null asks whether surviving declaration kinds can be compiler-recognised and
+lowered directly without a generic runtime `MarkerProcessor`. The measurement is
+consistent with that — the shared hook carries a parameter one kind ignores, a
+position allocator that degrades to a no-op, and per-kind surface and feature
+wiring — which is what an over-general envelope looks like rather than a
+load-bearing abstraction.
+
+**But consistency is not proof.** The registry also buys two things the docblock
+names explicitly and this derivation has not yet weighed: **lazy
+self-registration keeps an unused marker's machinery out of the bundle**, and
+**the O(1) stamp keeps one third-party predicate off every node's hot path**.
+Both are implementation-strategy claims rather than semantic ones, and both must
+be answered before the envelope is called unnecessary. A greenfield compiler that
+recognises kinds directly may achieve both more cheaply — or may not.
+
+### DX pressure (Rule 0m)
+
+Nothing measured here touches the authoring capability. `stored('key', v)` and
+`entityMap({...})` are inline declarations beside ordinary state; the user never
+names `MarkerProcessor`, `check` or `create`. **Whatever happens to the envelope,
+the capability is unaffected** — which is exactly the separation Rule 0m exists
+to keep visible.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
