@@ -1373,19 +1373,110 @@ serialization hook         not separate — it IS `snapshot`, already in the
 
 Five presumed rows placed elsewhere or dissolved before the derivation begins.
 
-### The measured function inventory
+### FIVE AUDIT ENTRY POINTS — not yet five functions
 
-| # | Function | Contract member | Notes |
-|---|---|---|---|
-| M1 | declaration recognition | `check` | does construction need to distinguish special declaration values from ordinary canonical ones? |
-| M2 | pre-exposure realization | `create` | receives notifier, path, context, parent position |
-| M3 | snapshot projection | `snapshot?` | truth -> payload; optional, and only `stored()` omits it |
-| M4 | reconstruction | `hydrate?` | payload -> live node, carrying `HydrateMode` |
-| M5 | reconstruction decision reporting | `onHydrateDecision` | `HydrateDecision = 'declined' \| 'normalised'`; lives in the same module |
+> **The measured protocol exposes four hooks plus one adjacent reporting
+> mechanism. These are FIVE AUDIT ENTRY POINTS, not five architectural
+> functions.** Each must be decomposed by OBSERVED BEHAVIOUR before ownership is
+> assigned.
 
-Each gets the full treatment — use case, owner, need, coverage, gap, greenfield
-minimum, lowering hypothesis, **and DX pressure** — and none may be bundled
-because today's protocol bundles them.
+**Two symmetric risks, and I only guarded against one.** Presumed functions can
+collapse because the code never implements them — that guard worked, five rows
+dissolved. But **one protocol member can BUNDLE several independently meaningful
+functions**, which is exactly what `Enhancer` did with authoring, realization and
+type contribution. Reading four hooks as four functions would let protocol shape
+manufacture an architecture just as surely as the presumed fourteen would have.
+
+| Entry point | Hook | Behaviours to measure before assigning ownership |
+|---|---|---|
+| M1 | `check` | declaration recognition · discrimination from ordinary values · kind dispatch |
+| M2 | `create` | runtime realization · backing-state creation · public-surface creation · owner/PositionId association · notifier integration · construction-context consumption |
+| M3 | `snapshot` | tree-snapshot projection · marker-specific omission/transformation · the representation its several consumers require |
+| M4 | `hydrate` | payload application · acceptance/refusal · normalization · restore-vs-rehydrate · **authority decision** · live-state mutation · diagnostic reason production |
+| M5 | `onHydrateDecision` | observability of refusal/normalization · audience · machine-readable consumer need |
+
+**`create` is the clearest suspect.** Its signature —
+`create(marker, notifier, path, ctx, parentPositionId)` — already names four
+distinct concerns in its parameters alone. It is an implementation envelope until
+measurement says otherwise.
+
+**And `hydrate` is the second.** The `owns()` warning cuts both ways: the absence
+of an `owns()` HOOK does not prove the absence of an ownership FUNCTION. The
+docblock says ownership is decided INSIDE `hydrate`, so `hydrate` is bundling at
+least payload application and an authority decision. This is where the inventory
+may legitimately EXPAND — into measured functions, not presumed protocol nouns.
+
+### Corrections to my own phrasing
+
+**M3 / serialization.** *"The serialization hook is not separate — it IS
+`snapshot`"* is mechanically true of the current protocol and is NOT a semantic
+conclusion. The accurate statement:
+
+> There is no separate marker-level serialization hook; current serialization
+> REUSES `snapshot`.
+
+The same hook may today service `tree()`, temporal capture, serialization, SSR
+transfer, persistence payloads and reconstruction input — consumers with
+potentially different ownership and representation requirements. That distinction
+matters when serialization gets its own derivation.
+
+**M5 / colocation.** I placed `onHydrateDecision` in the marker inventory because
+it lives in the same module. **That is the colocation error I rejected five times
+this session, applied to my own row.** Corrected:
+
+```text
+M5  reconstruction-decision observability
+    CURRENT IMPLEMENTATION   adjacent to marker hydration
+    OWNER                    UNPROVEN
+```
+
+The real question is who needs to know that reconstruction declined or normalised
+something, and why — which may be reconstruction diagnostics, developer
+diagnostics, persistence diagnostics, adapter reporting, or no independently
+necessary function at all.
+
+### Order — M1+M2 first, jointly
+
+Not mechanically M1 through M5. `check` and `create` are the only MANDATORY
+members and therefore the best candidates for a real compiler/declaration
+substrate. The joint null:
+
+> **Can surviving declaration kinds be compiler-recognised and lowered DIRECTLY
+> into their realized state and API, without preserving a generic runtime
+> `MarkerProcessor` abstraction?**
+
+If yes:
+
+```text
+check + create   ->  a compiler implementation protocol
+generic runtime Marker ontology  ->  DELETE
+declaration-specific lowering    ->  may survive
+```
+
+M3/M4/M5 then run as a separate **representation / reconstruction cluster**,
+with their current membership in `MarkerProcessor` given no weight in deciding
+their future owner. They may migrate out of declaration realization entirely —
+which would be the result that dissolves the generic `Marker` concept rather
+than merely shrinking it.
+
+### DX pressure for M1/M2, recorded now (Rule 0m)
+
+> **Can users declare rich state constructs inline with ordinary state, without
+> knowing a Marker protocol exists?**
+
+That capability is worth preserving. It does NOT require `Marker`,
+`MarkerProcessor`, `MARKER_META`, `check` or `create` to be user-visible — or to
+survive internally as a common abstraction. The greenfield target is allowed to
+be `declaration grammar -> compiler recognises kinds -> kind-specific lowering ->
+ordinary compiled topology`, with no generic marker runtime anywhere.
+
+### Rule 0j-2 constraint on this derivation
+
+`asyncSource` and `asyncQuery` are frozen DELETE and still physically present.
+**Their `create`/`snapshot`/`hydrate` implementations must not drive this
+derivation.** Behaviour is measured primarily across `entityMap` and `stored`,
+the declaration kinds with no deletion disposition; the pending-deletion ones are
+noted separately where they differ.
 
 **The restore-vs-rehydrate distinction is deliberately NOT listed as its own
 row.** It is a parameter of M4, and whether it is a generic distinction or an
