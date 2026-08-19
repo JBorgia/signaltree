@@ -280,6 +280,122 @@ boundary, and it is where the judgement per file lives.
 
 ### Sequence for the next attempt
 
+### CLASS 3 GATE TABLE
+
+**The withdrawal is PER TEST CASE, not per file.** Most of these files carry
+`entityMap` cases beside their `status` case — `marker-roundtrip` has both
+*"entityMap: entities survive"* and *"status: Loaded survives"*; `ssr-transfer`
+carries an entityMap collection; `hydrate-decisions` covers a loader-backed
+entityMap. Those cases are untouched. Only the status specimen withdraws.
+
+| Spec | Function actually under test | Function status | Evidence role | STATUS-DEL action |
+|---|---|---|---|---|
+| `rehydration` | generic marker reconstruction | **UNPROVEN** | regression | withdraw status cases; defer replacement |
+| `marker-roundtrip` | snapshot → reconstruction | **UNPROVEN** | regression | withdraw the `status:` case; entityMap case stands |
+| `marker-materialization` | registered marker realization | **UNPROVEN** | regression | withdraw status cases |
+| `hydrate-decisions` | hydrate decision reporting | **UNPROVEN** | regression | withdraw status cases; asyncSource cases go with ASYNC-DEL |
+| `marker-serialization` | marker external representation | **UNPROVEN** | regression | withdraw status cases |
+| `ssr-transfer` | transfer representation | **UNPROVEN** (RFC 0014 exists, not derived here) | regression | withdraw status case; entityMap case stands |
+| `lazy-markers` | lazy realization | **UNPROVEN** | regression | withdraw status case |
+| `traversal-diagnostics` | traversal over markers | **UNPROVEN** | regression | withdraw status case |
+| `rehydrate-ownership` | ownership across rehydrate | **UNPROVEN** | regression | withdraw status case |
+| `legacy-payload` | legacy payload handling | **UNPROVEN** | regression | withdraw status cases |
+| `intercept-leaf-signals` | owner paths for built-in markers | **UNPROVEN** | regression | withdraw status case |
+| `devtools` | marker mutator notification | **UNPROVEN** | regression | withdraw status case |
+| `transactions` | marker source-signal rollback via the generic causal path | kernel **FROZEN**; marker participation **UNPROVEN** | mixed | withdraw the marker case — frozen transaction coverage lives elsewhere |
+| `greenfield-transactions` | heterogeneous write capture through the frozen kernel | kernel **FROZEN**; marker as one write-kind **UNPROVEN** | mixed | withdraw the marker write-kind; keep the kernel assertions |
+| `undo-redo` | marker source-signal owned turns; restore-vs-rehydrate | **UNPROVEN** | regression | withdraw both status cases |
+| `persistence` | save/load of a tree | persistence **FROZEN** | regression | status is fixture furniture — use plain state or drop from the fixture |
+| `planned-signal-tree` | pre-exposure planning | function **SURVIVED**; public constructor **REJECTED** | mixed | keep only assertions belonging to the earned planning function |
+| `write-only-marker` | — | — | test infrastructure | remove the unused import |
+| `time-travel:3305` | status promise-vocabulary aliases | **REJECTED** | legacy contract | **DELETE with the feature** (Class 1) |
+
+**Every UNPROVEN row is regression coverage.** Not one of them is an
+architectural falsifier for a frozen claim, so by the premise above none has a
+survival entitlement, and none may force a fixture into existence.
+
+`planned-signal-tree` and the two transaction specs are the only mixed rows —
+each protects something genuinely earned alongside its marker specimen, so the
+earned assertions stay and only the specimen withdraws.
+
+#### Recorded obligation
+
+```text
+COVERAGE WITHDRAWN WITH STATUS-DEL
+
+reason        the test required a REJECTED public feature as its only specimen
+subject       generic marker machinery — UNPROVEN, neither deleted nor
+              preserved architecturally by this action
+obligation    the generic-marker functional derivation must independently decide
+              whether replacement coverage is warranted, and in what form
+production    UNCHANGED — no generic mechanism is deleted by withdrawing a test
+```
+
+### THE CYCLE WAS FALSE — Rule 0l applies to TESTS
+
+I framed this as *"STATUS-DEL is blocked on the marker derivation."* **Wrong.**
+The status-dependent REGRESSION TESTS are blocked on it; STATUS-DEL is not.
+
+The missing premise:
+
+> **Current regression coverage is non-semantic unless the function it protects
+> has independently earned survival.**
+
+And Rule 0l, extended to tests:
+
+> **A legacy test may identify a function worth examining; it may not force
+> preservation of the fixture, mechanism, or ontology it happened to use.**
+
+An UNPROVEN mechanism does not gain the right to keep a REJECTED feature alive
+merely because its regression tests chose that feature as their specimen. The
+inverse order would be worse than untidy — it would run the marker derivation
+while the dead `status` mechanism still participates in the machinery under
+measurement, which is exactly what Rule 0j-2 exists to prevent.
+
+```text
+WRONG A   replace status with stored()      manufactures stored ownership
+WRONG B   build a TestMarker                manufactures marker ontology
+WRONG C   keep status until the derivation  contaminates the derivation
+CLEAN     withdraw the status-dependent case, leave generic PRODUCTION
+          machinery untouched, derive the generic function against a
+          status-free surface, then restore only earned coverage
+```
+
+That is subtraction-only applied to tests. Withdrawing this coverage is not
+"silently losing tests" — it is **deliberately withdrawing evidence whose fixture
+is no longer admissible**, with the obligation recorded.
+
+### PRECISION — withdrawing tests authorizes NO production deletion
+
+```text
+DELETE      status implementation · public surface · status-specific typing
+            status-specific tests
+WITHDRAW    generic tests whose ONLY fixture was status, where the function
+            under test is UNPROVEN
+LEAVE       marker registry · hydrate hooks · materialization · owner-path
+            support — every generic production mechanism, UNCHANGED
+```
+
+Removing a test does not derive its subject. The generic machinery is deleted
+only if its own function fails its own derivation.
+
+### REVISED QUEUE
+
+```text
+1  Class 3 table: function / status / evidence role / action
+2  STATUS-DEL — feature, Class 1, and the withdrawals; production machinery
+   untouched
+3  full gates + independent residue verification
+4  DERIVE GENERIC MARKER FUNCTIONS IMMEDIATELY, against a status-free surface
+5  per surviving function: add a capability-minimal falsifier
+6  per rejected function: delete the corresponding generic machinery
+7  remeasure the asyncSource / asyncQuery surfaces from the new HEAD
+8  entityMap · hydration · serialization · readonly
+```
+
+Step 4 is deliberately immediate: the withdrawals create a documented coverage
+gap, and the derivation that resolves it should not queue behind anything else.
+
 ### CLASSIFICATION CORRECTED — **Class 2 is EMPTY.** Nearly all of STATUS-DEL is Class 3
 
 The two-question check overturned my own classification on every ambiguous row,
