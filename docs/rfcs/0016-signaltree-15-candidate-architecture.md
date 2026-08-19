@@ -2791,6 +2791,92 @@ The last two groups are the point of giving legacy the last look: **ordering and
 rekey identity are functions the zero-state under-derived**, and they are what
 the incumbent contributes to the derivation rather than merely instantiating.
 
+## DERIVATION E — the two rows legacy CONTRIBUTED, resolved
+
+Evidence: `e-ordering-rekey.spec.ts`, 6 rows.
+
+Giving the incumbent the last look surfaced two functions the zero-state did not
+derive. Each was run against its own null. **They resolve in opposite
+directions**, which is the argument for doing the last look at all.
+
+### E-ORD — ordering: the intrinsic order is STRICTLY WEAKER than the null
+
+```text
+MEASURED   the collection has an intrinsic order; prependOne puts 'z' first,
+           and both ids() and all() report ['z','a','b']
+MEASURED   the surface contains NO move / moveOne / reorder / sort / swap /
+           insertAt. The only route to a different order is setAll — DESTROY
+           AND REBUILD MEMBERSHIP.
+NULL       an ordinary `order: string[]` position plus byId: same order, same
+           granularity, AND it can rearrange without touching membership in one
+           canonical write.
+```
+
+An order that is *data* (drag-to-reorder, server relevance) is exactly the case
+derived sorting cannot express — so the zero-state under-derived, and legacy was
+right to name it. But the incumbent's answer is worse than the ordinary one: an
+intrinsic order with no reorder operation is not an ordering facility, it is an
+artifact of insertion.
+
+```text
+ORDERING
+  FUNCTION   REAL — an order that is data, not a function of content
+  OWNER      NOT the collection. An ordinary canonical array of keys, ordered
+             by the application, granular through byId.
+  prependOne / prependMany   membership operations that incidentally address a
+             position. No ordering function of their own.
+```
+
+### E-REKEY — `changeId`: the function SURVIVES, and the form carries a defect
+
+```text
+MEASURED   held = byId('tmp-1'); changeId('tmp-1','server-99')
+           -> byId('tmp-1') undefined, byId('server-99').n() === 5
+           -> held.n() === 5            THE HELD REFERENCE FOLLOWS
+NULL       removeOne + addOne
+           -> byId('server-99').n() === 5
+           -> held.n() === undefined    THE HELD REFERENCE IS ORPHANED
+```
+
+The null **fails**, so the function is real: a member's key changes while the
+member stays the same member, and everything already bound to it must follow.
+This is the first function the incumbent contributed that the zero-state missed
+AND that survives its own null.
+
+It follows by SUBJECT identity, not by key — which is the 15-effort `SubjectId`
+machinery, still in the third provenance bucket and still owed a hostile audit.
+
+**The cost, measured, not argued:**
+
+```text
+after changeId('tmp-1','server-99'):
+  rows.ids()                  ['server-99']     the collection's key
+  rows.byId('server-99')().id 'tmp-1'           the member's own identity
+```
+
+SPLIT IDENTITY. Two separate docblocks name it, and it is load-bearing: it is
+the stated reason `setOne(entity)` cannot exist, because deriving the key via
+`selectId(entity)` would be *a silent wrong-slot write*. The public surface was
+shaped around a defect rather than the defect being fixed.
+
+```text
+REKEY IDENTITY
+  FUNCTION   REAL — survives its null
+  FORM       the current form publishes a split identity and shapes the write
+             surface around it. CARRIED FORWARD as an open form question:
+             a member whose key is derived by selectId must not be able to
+             disagree with the slot it occupies.
+```
+
+### Methodology note — Rule 2, committed inside a falsifier
+
+The first run of E-ORD asserted no reorder operation exists using
+`/move|reorder|sort|swap|insertAt/i`. It failed on `removeOne` / `removeMany` /
+`removeWhere` — **"remove" contains "mov"**. The same substring-collision class
+as `getTurnStatus`, this time inside the instrument rather than the measurement.
+It failed loudly instead of quietly inflating a count, which is the argument for
+executable falsifiers over prose: the harness caught the analyst.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
