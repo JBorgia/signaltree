@@ -572,14 +572,40 @@ regression coverage as architectural evidence.**
 My step order was wrong. Deleting `status.spec.ts` before `status.ts` would leave
 a live feature untested for the duration. The correct order:
 
+**DECIDED: TWO COMMITS.** The "one atomic commit" rule was too coarse. The
+atomic unit is the LIVE FEATURE plus the tests whose SUBJECT is that feature —
+the withdrawn Class 3 regression cases are not part of it.
+
 ```text
-1  CLASS 2 fixture conversion      safe now — plain state works today,
-                                   suite stays green
-2  CLASS 3 survival table, then    safe now — same reason
-   migration of FROZEN rows only
-3  PRODUCTION CUT + CLASS 1        one atomic commit: the feature and the tests
-   deletions together              whose subject it is disappear at once
+COMMIT 1 — EVIDENCE WITHDRAWAL
+  withdraw   status-dependent cases whose subject is UNPROVEN generic machinery
+  trim       mixed rows, only where the frozen theorem is independently covered
+  migrate    genuinely incidental fixture furniture (persistence)
+  UNTOUCHED  status.ts · contract · exports · StatusSignal · LoadingState ·
+             status.spec.ts · status-specific typing rows · status-focused demos
+
+  -> run the suite. This proves removing inadmissible regression evidence did
+     not weaken independently earned coverage — something a single commit cannot
+     show.
+
+COMMIT 2 — STATUS-DEL
+  delete     implementation · contract · exports · types · readonly
+             specialization · LoadingState · Class 1 tests · status-specific
+             typing rows · status-focused demos
+  UNTOUCHED  generic marker production machinery
 ```
+
+This does not reintroduce the atomicity problem. The bad split would be *delete
+tests, then delete implementation*, leaving a live feature without its own
+contract coverage. Here the status-SPECIFIC coverage stays with the feature until
+Commit 2; Commit 1 removes only cases already classified as UNPROVEN-subject,
+rejected-fixture, regression-role.
+
+**HARD CONDITION: no architectural derivation between the two commits.** The
+intermediate HEAD still contains the dead status production mechanism, so it is
+NOT a valid evidence surface for the marker, entityMap, hydration, serialization
+or readonly derivations. Rule 0j-2 governs the gap between the commits exactly as
+it governs the gap before them.
 
 All fixture migration happens while everything still works; the deletion is then
 a single reviewable step rather than a red-tree scramble.
