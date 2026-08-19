@@ -2088,6 +2088,114 @@ MarkerProcessor still deletes
 
 is a permissible outcome. Nothing requires one verdict across three entry points.
 
+## DERIVATION M3 — opening measurement: **the admissible evidence base is n=1**
+
+Rule 0o applied: the function is stated before the hook is opened, and legacy
+gets last look.
+
+### ZERO-STATE
+
+```text
+Assume SignalTree 14 never existed.
+
+SURVIVING ARCHITECTURE   canonical store truth · read-only derived projections ·
+                         causal authority · persistence as a post-commit
+                         consequence under a tree-scoped durability gate
+
+FUNCTION                 produce an external DATA representation of tree state
+
+WHAT REQUIRES IT         reading the whole tree as plain data; handing a payload
+                         to a durable consequence; transferring state across a
+                         process boundary; recording a history entry
+
+WHAT BREAKS WITHOUT IT   all four — the tree would be readable only
+                         position-by-position through its accessors
+
+CAN SURVIVORS SOLVE IT   a uniform walk over realized canonical truth produces
+                         it, PROVIDED every realized value's state is
+                         identifiable
+```
+
+That proviso is the whole of M3. **The question is not "does a snapshot hook
+survive" but "is a realized value's state identifiable by a uniform rule?"**
+
+### Consumers, by control flow — six, through ONE producer
+
+```text
+tree()                       the public whole-tree read
+snapshotState()              internal capture
+serialization enhancer       delegates to public unwrap (serialization.ts:471)
+devtools                     devtools-impl.ts:1250
+time-travel                  history entries
+stored                       durable payload
+```
+
+All six route through `unwrap()`/`buildFromStore` in `lib/utils.ts`. **Per the
+standing caution, one producer serving six consumers does NOT establish that one
+representation satisfies one architectural function** — their requirements are
+not yet separated, and that separation is M3's work, not its premise.
+
+### A GENERAL state-vs-behaviour rule already exists
+
+`buildFromStore` decides inclusion in this order:
+
+```text
+1  DERIVED_STAMP present            -> SKIP.   general rule: "recomputable, so
+                                     not state; freezing it yields a value that
+                                     was true once"
+2  snapshotMarkerNode(value)        -> USE IT. the kind-specific hook
+3  plain function, not accessor,
+   not signal                       -> SKIP + ST2008 warning
+4  isNodeAccessor                   -> recurse
+```
+
+So **step 1 is already a general, kind-blind rule for excluding non-state.** The
+kind-specific hook at step 2 is not the only mechanism in play, and its existence
+is not explained by "snapshots must omit behaviour" — that is step 1's job.
+
+### The admissible evidence base is ONE implementation
+
+Contamination guard (`asyncSource`/`asyncQuery` are frozen DELETE and cannot
+sponsor this row):
+
+```text
+ADMISSIBLE
+  entityMap   snapshot: (node) => ({ all: node.all() })
+  stored      OMITS the hook — "my node is already a plain signal, the normal
+              walk handles me"
+
+INADMISSIBLE (frozen DELETE, recorded only so the count is honest)
+  asyncSource  snapshot: (node) => ({ value: node() })
+  asyncQuery   snapshot: (node) => ({ value: node() })
+```
+
+**Among survivors, exactly one declaration kind implements the hook, and its
+entire body is three tokens.** That is the whole evidence base for a
+declaration-specific representation function.
+
+### The sharp question M3 must answer
+
+`entityMap` says its state is `node.all()`. The deleted markers said theirs was
+`node()`. `stored` says the ordinary walk already handles it.
+
+```text
+READING A   genuine per-kind representation — different kinds legitimately have
+            different "which read is my state" answers, and no uniform rule can
+            know them
+
+READING B   the realized values have INCONSISTENT CONVENTIONS about which read
+            returns state, and the hook is absorbing that inconsistency
+```
+
+Reading B is live because the ST2008 branch exists at all: its comment records
+that an unbranded callable marker's value *"vanishes from the snapshot and from
+everything built on one"* — a failure caused by realized shape, not by
+representation semantics.
+
+**Not concluded.** Distinguishing A from B requires separating the six consumers'
+requirements first, per the standing caution. That is the next step, and it must
+not be short-circuited by the fact that one hook currently serves all of them.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
