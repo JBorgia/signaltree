@@ -1779,13 +1779,48 @@ Functions extracted from the two custom declarations the demo actually defines �
 |---|---|---|
 | E1 | inline authoring — a library construct appears beside ordinary tree state | **YES** — `signalTree({ counter: makeCounter(10, 5), plain: 1 })` |
 | E2 | type transformation — declaration type becomes a different realized type | **MOOT** — the author builds the REALIZED thing directly, so there is nothing to transform |
-| E3 | canonical writable state contribution | **YES** — reads and writes work through the tree |
+| E3 | writable state exposed through the tree | **YES** — reads and writes work |
+| E3b | **canonical SignalTree truth** | **UNPROVEN** — accessibility is weaker than canonicality |
 | E4 | derived / public surface contribution | **YES** — a `computed` member and four methods survive construction |
 | E5 | compiler integration — topology, ownership, notification services unavailable to user code | **NOT EXERCISED** by either example |
 | E6 | representation participation — special snapshot/reconstruction | **NOT EXERCISED**; the value appears in `tree()` by the ordinary path |
 | E7 | package encapsulation — an external package ships all of it | **YES** — `makeCounter` is an ordinary exported function |
 
 Nesting works too, with no path or position protocol involved.
+
+### TWO CORRECTIONS to this row
+
+**E3 was overstated.** The probe reproduced *writable state exposed through the
+tree*, not *canonical SignalTree truth*. Canonicality is the stronger claim: if
+the internal Angular signal has no kernel slot, no PositionId/SubjectId where
+required, bypasses physical commit, escapes causal attribution, is not restored
+by undo, or persists differently, then it is not equivalent to ordinary canonical
+state — even though `tree.$.counter.increment()` works and `tree()` reads `3`.
+
+**And E0 answers one question using another as an assumption.** The probe imports
+`signal`/`computed` from `@angular/core` and relies on SignalTree's
+"Existing signals — preserve" rule. That rule is **itself UNPROVEN greenfield
+machinery**:
+
+```text
+A  does third-party declaration extensibility need a marker protocol?
+B  does SignalTree 15 want arbitrary prebuilt ANGULAR signals accepted as
+   declarations / canonical state?
+```
+
+E0 answers A while assuming B. The architecture direction has been *neutral
+kernel -> framework realization*, not *author-supplied Angular signal treated as
+a canonical declaration*. So `isSignal` preservation must not become the new
+accidental spelling merely because it defeated the old marker example — that
+would be a legacy mechanism manufacturing the replacement.
+
+**Result stated at its actual strength:**
+
+> Under the CURRENT "preserve existing Angular signals" behaviour, the two
+> demonstrated custom-marker examples require no marker protocol.
+
+NOT yet: *under the greenfield architecture, independently earned primitives
+reproduce them.*
 
 ### The sharp finding: the protocol compensates for a SHAPE, not a semantic
 
@@ -1798,9 +1833,10 @@ true and the construct passes through intact.
 plain closure, NOT an Angular signal.** It fails `isSignal`, which is precisely
 why it needed a marker.
 
-> So the marker protocol's demonstrated job here is accepting an
-> ARBITRARY NON-SIGNAL CALLABLE SHAPE. It is not providing a semantic the author
-> could not otherwise obtain.
+> **For the two concrete custom-marker examples, no demonstrated semantic
+> requires the marker protocol.** Their user-facing behaviour is reproducible
+> under the current preserved-signal path, and the protocol's demonstrated
+> differentiator is acceptance/transformation of a NON-SIGNAL DECLARATION SHAPE.
 
 ### Where a survival case would have to come from
 
@@ -1818,10 +1854,28 @@ evidence for an external compiler boundary. None has been produced.
 And even if one were, it would establish only that boundary. Not `Marker`, not
 `MarkerProcessor`, not the four-hook bundle, not global registration.
 
-**Untested here:** whether a preserved signal participates correctly in undo,
-persistence and causal capture. That is E5/E6 territory and it is the next thing
-to measure, because it is where "preserved verbatim" might turn out to mean
-"second-class".
+**The next test is an EQUIVALENCE FORK, not a single question.** Asking only
+"are preserved signals second-class?" would be too weak, because a second-class
+result does NOT rescue compiler extensibility:
+
+```text
+PATH A   preserved external signal
+         -> causal ownership · rollback · undo · commit participation
+
+PATH B   ORDINARY CANONICAL STATE + library API composed around the accessor
+         const tree = signalTree({ counter: 10 })
+         const counter = makeCounterApi(tree.$.counter)
+         -> the same properties
+```
+
+**If B satisfies everything even when A fails, third-party compiler
+extensibility still has no survival evidence.** That is the real E5 falsifier,
+and it is strictly stronger than discovering today's shortcut is second-class.
+
+Persistence failure in path A would likewise prove only that a preserved Angular
+signal is not canonical truth — persistence is already derived as a consequence
+OF committed canonical truth, so it cannot own something that never became
+canonical.
 
 ### DX pressure (Rule 0m)
 
@@ -1829,6 +1883,77 @@ Reusable third-party abstractions stay ergonomic under the closed-language null 
 `makeCounter()` is an ordinary function and the construct sits inline beside
 ordinary state. Whether such abstractions must be able to EXTEND THE DECLARATION
 GRAMMAR is a different and still unproven question.
+
+## M1+M2-E5 — THE FORK RESOLVES. **Third-party compiler extensibility has no survival evidence.**
+
+Evidence: `declaration-extensibility-e5-fork.spec.ts`, 5 executable rows.
+
+Both candidate paths run against the same kernel properties, because asking only
+*"are preserved signals second-class?"* would have been too weak to settle
+anything.
+
+```text
+PATH A   a prebuilt Angular signal preserved by the tree
+PATH B   ORDINARY canonical state, library API composed AROUND the accessor
+```
+
+| Property | PATH A — preserved signal | PATH B — canonical + composed API |
+|---|---|---|
+| captured by undo | **NO** — value stays 11 after `tree.undo()` | **YES** — restored to 10 |
+| derived composition | yes | **YES** — `computed` over the accessor |
+| transaction rollback through the generic kernel | not tested; moot | **YES** |
+| ordinary canonical truth in the snapshot | reachable, not canonical | **YES** |
+
+### Two results, and the second is the one that closes the question
+
+**1. A preserved Angular signal is NOT canonical truth.** Measured, not inferred:
+its write never becomes authored history, so `undo()` cannot restore it. This
+confirms E3b — accessibility is weaker than canonicality — and upgrades it from
+UNPROVEN to **measured FALSE**. The "Existing signals — preserve" path produces a
+value that is reachable through the facade while escaping the causal kernel.
+
+**2. PATH B satisfies everything PATH A fails.** A library can put its value in
+ORDINARY CANONICAL STATE and compose its API around the tree's own accessor —
+gaining undo, transaction rollback, snapshot participation and derived
+composition, none of which require extending the declaration language.
+
+> **Therefore third-party compiler extensibility has NO survival evidence.** The
+> demonstrated capability — a package shipping a reusable typed abstraction that
+> sits beside ordinary state — is obtainable with already-earned primitives.
+
+This is strictly stronger than the second-class finding: even though PATH A
+fails, PATH A's failure does not rescue the compiler-extension case, because
+PATH B never needed it.
+
+### Disposition
+
+```text
+third-party declaration compiler extensibility   NOT EARNED
+registerMarkerProcessor                          legacy mechanism, no entitlement
+MarkerProcessor                                  legacy mechanism, no entitlement
+open predicate registry                          moot
+tree-shaking / stamp / predicate-scan            MOOT — optimizations of
+                                                 machinery with no earned function
+```
+
+Rule 0n governs the disposition: 14.x's public contract is historical evidence
+and users needing it may remain on the old major.
+
+### Rule 0m check — the capability is NOT prohibited
+
+The authoring capability survives intact under the closed-language null: a
+package ships `makeCounterApi()`, the user writes ordinary state and composes the
+API around it. What does NOT survive is the ability to extend the DECLARATION
+GRAMMAR — and no measured use case required that.
+
+### A defect surfaced in passing, and it is not this derivation's to fix
+
+**"Existing signals — preserve" admits values that escape the causal kernel.**
+An author placing a prebuilt Angular signal in the state literal gets something
+that reads and writes through `tree.$` but is invisible to undo. That is a live
+hole in current behaviour, independent of markers. Recorded here; it belongs to
+whatever derivation owns the declaration-admission rule, and it must not be
+repaired as a side effect of this row.
 
 ## Table G — DX PRESSURE LEDGER
 
