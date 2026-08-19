@@ -2016,6 +2016,78 @@ signals are not admissible canonical declarations at all** — which would DELET
 the problem rather than repair it. Calling it a defect now would presuppose that
 admitting them is correct and only their treatment is wrong.
 
+## DERIVATION M3/M4/M5 — REPRESENTATION / RECONSTRUCTION (queued)
+
+**Precondition.** M1/M2 third-party declaration extension is CLOSED — NOT
+EARNED. **`MarkerProcessor` membership confers ZERO ownership.** Do not derive a
+generic marker abstraction from the fact that `entityMap` and `stored` currently
+share hooks.
+
+**Contamination guard.** `asyncSource`/`asyncQuery` remain frozen DELETE and
+cannot sponsor any row here; `status` is already gone. Evidence comes from
+independently unresolved or surviving functions — primarily `entityMap`, `stored`
+and the generic consumers — never from mechanisms already sentenced.
+
+**Order: M3, then M4, then M5.** Not bundled, and specifically not M4+M5 merely
+because reporting currently originates during hydration.
+
+### M3 — SNAPSHOT / REPRESENTATION
+
+```text
+NULL      no declaration-specific snapshot hook is required
+QUESTION  what valuable function becomes impossible if snapshots are produced
+          entirely from realized canonical truth?
+MEASURE   every current consumer of snapshotMarkerNode / processor.snapshot,
+          resolved by CONTROL FLOW: tree() · temporal capture · serialization ·
+          persistence · SSR/transfer · anything else
+CRITICAL  one hook serving several consumers does NOT prove one representation
+          satisfies one architectural function. Separate consumer requirements
+          BEFORE assigning ownership.
+```
+
+M3 first because it can establish an early boundary — *realized canonical truth
+-> representation* versus *declaration kind -> special representation*. If the
+former wins, the generic-marker case is weakened before reconstruction is
+touched.
+
+### M4 — RECONSTRUCTION
+
+```text
+NULL       no generic declaration-specific hydrate hook is required
+DECOMPOSE  payload application · acceptance/refusal · normalization ·
+           authority decision · restore-vs-rehydrate · live canonical mutation ·
+           diagnostic reason production
+QUESTION   which independently survive, and who owns each?
+DO NOT     presume HydrateMode survives · presume restore-vs-rehydrate survives ·
+PRESUME    presume declaration kinds own reconstruction · read one hook as one
+           function
+```
+
+The most hostile of the three: `hydrate` is already known to bundle authority,
+transformation, refusal, mode semantics and mutation.
+
+### M5 — DECISION OBSERVABILITY
+
+```text
+NULL      reconstruction refusal/normalization requires no generic reporting
+          mechanism
+QUESTION  who actually CONSUMES the decision, and what next action depends on it?
+OWNERS    reconstruction · diagnostics · persistence · adapter · dev tooling ·
+          nobody
+GUARD     `onHydrateDecision` living beside marker hydration carries ZERO weight
+```
+
+Last, because **there may be no decision worth reporting once M4 decomposes.**
+
+### The cluster need not resolve uniformly
+
+```text
+M3 survives somewhere · M4 partly survives elsewhere · M5 deletes ·
+MarkerProcessor still deletes
+```
+
+is a permissible outcome. Nothing requires one verdict across three entry points.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
