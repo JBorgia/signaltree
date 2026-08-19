@@ -1348,6 +1348,87 @@ legacy abstraction at its word can manufacture a requirement.** Both failures
 produce confident, wrong dispositions; both are cheap to avoid by checking line
 count and call graph before believing a scan.
 
+## HEAD RECONCILIATION — F1-F8 read in full, and what each falsifier earns
+
+Recorded after two false-absence errors made a summary-based derivation
+untrustworthy. **HEAD plus executable evidence wins over anything asserted in
+conversation.** T2 stays CLOSED; this adds precision, and corrects nothing.
+
+| F# | Property under test | Observed | Proves | Does NOT prove |
+|---|---|---|---|---|
+| F1 | same map key, NEW semantic subject (`removeOne('w1')` then add a different `w1`) | `loaded()` true, `lastLoadedAt()` unchanged, `load()` does not refetch | the substitution is INVISIBLE to the cache — identity/lifetime are not consulted | that it *should* react; no desired behaviour is asserted |
+| F2 | `clear()` the whole collection | still `loaded()`, no refetch | entity lifetime does not participate in freshness | that emptiness ought to invalidate |
+| F1b | a locally added entity | still fresh, no refetch | freshness is a fact about the LAST FETCH, not about contents | anything about merge policy |
+| F3 | one external resource behind two collections in one tree | `calls === 2`; invalidating `left` leaves `right` fresh | freshness is per LOADER INSTANCE, not per resource — the ownership test failing | that sharing would be better |
+| F3b | `tags` + `invalidateTag` across two trees | returns 1; treeA stale, treeB fresh | tags address COLLECTIONS and the authority is TREE-SCOPED | that entities carry tags — none do |
+| F4 | earlier-started, later-completing load (scope `west` then `east`) | the obsolete completion cannot land; `params()` is `east` | **stale LANDING is protected**, on the Promise path, by the `runId`/`myRun` guard | that same-scope overlap is protected; the test crosses scopes |
+| F5 | `invalidate()` during flight | **DEFECT** — `settleSuccess()` does `invalidated.set(false)`, so the invalidation is erased; no refetch for 30 min, pre-change value marked fresh | invalidation does not survive a concurrent completion | anything about acquisition execution as such |
+| F6 | `refresh()` during flight | **DEFECT** — `calls` stays 1 | `refresh()` breaks its OWN documented contract, "force a reload, ignoring `staleTime`/scope-match" — it does not bypass in-flight dedup | that dedup itself is wrong |
+| F7 | `swr: true` then `invalidate()` | `loaded()` true, `loading()` false | `swr` collapses `loaded()` into HAS-EVER-LOADED — the staleness flag becomes unreadable | that stale-while-revalidate is implemented at all |
+| F8 | landing over a locally added entity | `setAll(rows)` discards it; `ids()` is `['w1']` | landing has NO merge policy, so it cannot be said to respect entity identity or lifetime — **it discards both** | that a merge policy is wanted |
+
+### The Tier-2 theorem, stated precisely
+
+F5/F6/F7 falsify the **cache/invalidation ORCHESTRATION**, not "the acquisition
+mechanism" in the broad sense. Which contract each breaks:
+
+```text
+F4  cross-scope stale-LANDING exclusion            HOLDS
+F5  invalidation durability across a completion     BROKEN  (cache policy)
+F6  refresh()'s own documented force-reload         BROKEN  (cache policy)
+F7  the swr option's implied contract               BROKEN  (cache policy)
+```
+
+So: **stale data cannot LAND, but stale data can be MARKED FRESH.** Those are
+different functions, and only the second is broken. Nothing here is an
+acquisition-execution contract, and the old combined `loader` concept must not be
+allowed to re-bundle them.
+
+**F8 strengthens Outcome A beyond what the reading-based pass claimed.** Landing
+does not merely use the ordinary public API — it DISCARDS entity identity, since
+`setAll` drops a locally known row the server did not return. A mechanism that
+throws entity identity away is not an entity-semantic mechanism.
+
+### METHODOLOGY RULE 2 — earned by the `runId` mistake
+
+> **An absence claim cannot be established by an incomplete vocabulary search.
+> Search for the BEHAVIOUR, not for the names you expect its implementation to
+> use.**
+
+A grep for `generation|requestId|inFlight` missed `runId`/`myRun` and produced a
+confident false absence that was committed as a finding. A grep is DISCOVERY
+evidence. A defensible absence claim needs one of:
+
+```text
+control-flow inspection of every settlement path
+an executable overlapping-run falsifier
+a structural proof that no state can distinguish runs
+```
+
+Any of the three would have caught `runId` immediately. This sits beside the
+facade rule: one manufactures absence from the wrong FILE, the other from the
+wrong VOCABULARY.
+
+## NEW EVIDENCE for A1's input-binding question — no disposition
+
+`async-query.ts:284-288` binds input to acquisition with **Angular `effect()`
+plus an RxJS `trigger$` Subject**, the effect calling `untracked(() =>
+trigger$.next(v))`.
+
+```text
+ESTABLISHES     the current mechanism is reactive orchestration built from
+                Angular + RxJS primitives
+DOES NOT        establish that the OWNER is application/framework
+ESTABLISH
+```
+
+The null still to run, unchanged: *if SignalTree does not own input->acquisition
+orchestration, what SignalTree semantic fact would external Angular/RxJS
+composition have to duplicate?* If the answer is nothing, this measurement
+becomes strong corroboration that the orchestration was colocated inside
+SignalTree rather than owned by it — the fourth instance of the colocation
+warning.
+
 ## DERIVATION A1 — bare acquisition: **SUSPENDED, not closed**
 
 Rule 0l. Suspended because the discovery pass measured a re-export: the family
