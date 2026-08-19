@@ -731,24 +731,68 @@ manual lifecycle state machine  status: start(), setLoading(), setLoaded(),
                                 hasError, settled
 ```
 
-### What the family DOES NOT PROVIDE — and this is the finding
+### CORRECTION — this section was measured against the wrong files
+
+The original scan covered `async-source.ts`, `async-query.ts`, `status.ts` and
+`loader.ts`. **`loader.ts` is a 102-line tree-shaking re-export**; the machinery
+lives in `entity-loader.ts` (720 lines) behind `attachLoader`, and `loader()`
+exists to make an `entityMap` cache-aware. So the absence claims below were made
+against a file that contains almost nothing.
+
+**Re-measured, the family is TWO TIERS with very different capability:**
 
 ```text
-cancellation                    ABSENT from all four
-stale-result exclusion          ABSENT — no generation/request counter exists
-                                in either asyncSource or asyncQuery
-invalidation                    ABSENT
-deduplication / in-flight coalescing  ABSENT
-cache policy / TTL              ABSENT
-retry                           ABSENT as a mechanism; the only occurrence is
+TIER 1 — asyncSource / asyncQuery        bare acquisition
+  cancellation                  ABSENT
+  cache policy / TTL            ABSENT
+  invalidation                  ABSENT
+  tags                          ABSENT
+  generation / request counter  ABSENT
+  stale-result exclusion        PATH-DEPENDENT (see below)
+
+TIER 2 — entity-loader, reached via loader() on entityMap
+  staleTime                     PRESENT   (8 references)
+  stale-while-revalidate        PRESENT   (5)
+  tag-based invalidation        PRESENT   (tags 10, invalidat* 20)
+  deduplication                 1 mention — unverified
+  cancellation / abort          ABSENT
+  generation / in-flight guard  ABSENT
+
+BOTH TIERS
+  retry                         ABSENT as a mechanism; the only occurrences are
                                 the WORD in two status.ts comments
 ```
 
+So cache policy and invalidation DO exist in SignalTree — attached to
+`entityMap`, which Rule 0k already rates the strongest survival candidate. That
+is a materially different starting point for the acquisition audit than "the
+family provides nothing", and the earlier claim is withdrawn.
+
+### Stale-result exclusion is PATH-DEPENDENT, which is worse than absent
+
+`asyncSource`'s `runLoad()` begins with `currentSub?.unsubscribe()`:
+
+```text
+Observable loader   previous subscription is unsubscribed before the new load
+                    -> the older stream cannot land. PROTECTED.
+
+Promise loader      a promise cannot be unsubscribed. The previous promise's
+                    `.then` still runs and still calls `dataSignal.set(value)`,
+                    guarded only by `if (destroyed) return` — which is teardown,
+                    not staleness. UNPROTECTED: an older completion overwrites
+                    a newer result.
+```
+
+`AsyncSourceLoader<T> = () => Observable<T> | Promise<T>` accepts both. **So the
+same API is safe or unsafe depending on which the caller happens to return**, with
+nothing in the type or the docs marking the difference. A uniform absence would at
+least be uniform.
+
 **Two consequences, and the second is the important one.**
 
-**1. These six cannot be "preserved".** Proposing them is ADDING capability, which
-is a much higher bar than carrying a function forward — Rule 0j-1 says a rejected
-artifact does not commission a replacement, and by the same logic an absent
+**1. Genuinely absent capabilities cannot be "preserved".** Cancellation and a
+generation/in-flight guard are absent from BOTH tiers. Proposing them is ADDING
+capability, a much higher bar than carrying a function forward: an absent
 capability does not become a requirement just because the audit listed it as a
 candidate. Each would need its own use case and owner from zero.
 
@@ -875,10 +919,22 @@ but `setLoading()` — which is exactly what a retry does — CLEARS the error. 
 error survives a page reload and does not survive pressing retry. The retention
 policy differs between the hydration path and the transition path.
 
-That is a defect, and it is also evidence about ownership: an error-retention
-policy that the two paths disagree about is a DOMAIN decision that no single
-authority owns. An application wanting "keep the last error while retrying" — the
-behaviour the comment describes wanting — is not served by the current coupling.
+That is a defect, and it is evidence about ownership — but stated precisely:
+
+```text
+MEASURED       current status error-retention behaviour is inconsistent
+NOT EARNED     a SignalTree-owned generic error-retention invariant
+BEST OWNER     application/domain, ABSENT an independently derived
+               acquisition authority
+```
+
+The contradiction proves SignalTree has not established a coherent owner or
+invariant here. It does NOT prove every possible error-retention policy must be
+domain-owned: a future independently derived acquisition function could
+legitimately own *"retain the last failure while the next attempt is pending"*.
+Recorded this way so A1 cannot appear to reopen S1 if acquisition turns out to
+have real execution state. An application wanting the behaviour the comment
+describes is simply not served by the current coupling.
 
 ### Verdict
 
