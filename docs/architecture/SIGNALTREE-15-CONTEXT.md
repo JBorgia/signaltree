@@ -188,7 +188,13 @@ entity-loader cache           no SignalTree ownership earned; PARKED pending
 M3 snapshot/representation    OPEN — CURRENT FRONTIER
 M4 reconstruction             QUEUED
 M5 decision observability     QUEUED
-entityMap                     OPEN — legacy gets LAST look
+entityMap / collections       OPEN — zero-state done. Candidate surviving
+                              functions are GRANULAR WRITE and GRANULAR
+                              OBSERVATION; everything else an array in ordinary
+                              canonical state already does. Public collection API
+                              is INHERITED (2025-12); the SubjectId/identity
+                              machinery is 15-EFFORT (post-2026-08-11) and is
+                              what the frozen identity invariant rests on.
 stored                        OPEN — split inbound/outbound before reading it
 linked                        OPEN — derived placement refuted; owner unproven
 readonly / serialization /    OPEN

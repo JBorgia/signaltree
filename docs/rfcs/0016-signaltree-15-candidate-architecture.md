@@ -2441,6 +2441,98 @@ declaration-lowering question resumes.
 > new work built for a design the derivation has since changed — and the second
 > deserves more scrutiny than legacy, not less.
 
+## DERIVATION E — COLLECTIONS: zero-state, before `entityMap` is opened
+
+Rule 0o: legacy gets LAST look. The functions are stated without naming the
+mechanism, and the evidence is dated before it is weighted.
+
+### ZERO-STATE
+
+```text
+Assume SignalTree 14 never existed.
+
+SURVIVING ARCHITECTURE   canonical store truth · read-only derived projections ·
+                         causal authority · PositionId != SubjectId != SlotIndex
+                         (FROZEN) · persistence as post-commit consequence
+
+FUNCTION UNDER           hold many like-shaped values as canonical truth
+CONSIDERATION
+```
+
+Decomposed without legacy nouns:
+
+```text
+E-a  hold many like-shaped values as canonical truth
+E-b  address one of them
+E-c  establish membership — add, remove
+E-d  identify one ACROSS TIME: is this "the same thing" after an update?
+E-e  write to one without rewriting all
+E-f  OBSERVE one without observing all
+E-g  order them
+E-h  index or query them
+E-i  attribute a structural change causally
+```
+
+**What the surviving architecture already answers.** (E-a) is ordinary canonical
+truth — the store already holds arrays and records. (E-i) is the frozen causal
+authority. And **(E-d) is already FROZEN**: `SubjectId` is defined as structural
+and entity lifetime, so SignalTree has a frozen concept of identity-across-time
+independent of any collection mechanism.
+
+**What ordinary state can already do.** With a plain array in canonical state:
+(E-b) address by finding in application code; (E-c) membership by setting the
+array; (E-g) ordering by sorting; (E-h) indexing by a derived projection.
+
+**What it cannot.** Writing one element replaces the array reference, so
+(E-e) rewrites everything and (E-f) is impossible — every observer of the
+collection recomputes when any element changes.
+
+> **The candidate surviving functions are therefore E-e and E-f: granular write
+> and granular observation.** They are the two an array in ordinary canonical
+> state structurally cannot provide, and they are what (E-d)'s frozen identity
+> exists to make addressable across time.
+
+That is the null to attack — **not** "does `entityMap` survive".
+
+### PROVENANCE — the row splits along the release boundary
+
+Measured against `v14.1.1` (2026-08-11). `entity-signal.ts` is the real
+implementation; the marker file `entity-map.ts` is a thin declaration front
+(13+/5- of 471 lines) and conceals this.
+
+```text
+entity-signal.ts   1872+ / 353-  of 2970 lines   ~63% POST-RELEASE
+
+INHERITED (Rule 0o applies — evidence only)
+  addOne             2025-12-10
+  byIdOrFail         2025-12-10     the public collection API: shipped,
+  changeId           2026-08-06     exercised, a real user surface
+
+15-EFFORT (third bucket — unreviewed, MOST scrutiny)
+  SubjectId wiring       2026-08-11  (release day — effectively the boundary)
+  subjectMetadataEnabled 2026-08-13  post-release
+```
+
+**The split maps exactly onto the zero-state.** The COLLECTION functions
+(addressing, membership) are inherited and shipped. The IDENTITY-ACROSS-TIME
+machinery is this effort's own work — and it is what the frozen
+`PositionId != SubjectId != SlotIndex` invariant rests on.
+
+So `SubjectId` being frozen is a statement about **decisions made during this
+effort**, not inherited practice. That is legitimate — GATE A froze it — but it
+means the identity machinery cannot be cited as evidence that entity identity is
+an established need. It is evidence that this effort concluded it was one.
+
+### How this row runs
+
+```text
+1  attack E-e / E-f: can granular write and granular observation be obtained
+   without a collection primitive? (the real null)
+2  audit the 15-effort identity machinery in the third bucket — built for a
+   design that must itself be re-derived, not assumed
+3  ONLY THEN open entityMap, to see whether it names a use case missed above
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
