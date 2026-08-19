@@ -2613,6 +2613,78 @@ should close it, and in what form, is the next step** — and per the provenance
 split, the identity machinery it would rest on is 15-effort work that has not
 been through this process.
 
+## DERIVATION E — **FUNCTION SURVIVES.** The first positive result in this audit.
+
+Evidence: `e-membership-reachability.spec.ts`, 6 rows, on top of
+`e-granularity.spec.ts`.
+
+### No tree write path can add a member to a granular shape
+
+Every write path the tree offers was exhausted:
+
+```text
+nested accessor merge     tree.$.rows({ b: … })          `b` NOT added
+root callable merge       tree({ rows: { b: … } })       `b` NOT added
+updater form              tree(current => ({ … }))       `b` NOT added
+TOP-LEVEL record          not a nesting-depth artifact   `b` NOT added
+existing positions        still fully granular           unaffected
+```
+
+A record's membership is fixed at construction, and **no API reopens it.**
+
+### The completing check — canonicality
+
+The E5 fork established that an application CAN hold independently created
+signals, and that their writes **escape authored history**. So the conjunction
+only names a real gap if it is delivered over CANONICAL truth. Measured:
+
+```text
+entityMap: addOne -> updateOne -> undo()   the write IS restored
+```
+
+Canonical. Contrast PATH A of the E5 fork, where a preserved external signal's
+write was NOT captured by undo.
+
+### The three-way result
+
+```text
+                          dynamic     granular      canonical
+                          membership  observation   truth
+  ordinary array             YES          NO          YES
+  ordinary record            NO           YES         YES
+  app-held signals           YES          YES         NO   (E5 PATH A)
+  entityMap                  YES          YES         YES
+```
+
+**Each ordinary alternative misses exactly one axis, and they miss different
+ones.** No two-out-of-three shape reaches the corner.
+
+### Disposition
+
+```text
+FUNCTION      dynamic membership + granular observation, over canonical truth
+              SURVIVES — unreachable by any ordinary shape or write path
+OWNER         SignalTree. The canonical axis is what excludes an application
+              from providing it: the E5 fork already measured that app-held
+              signals are not canonical truth.
+FORM          UNPROVEN. Nothing about entityMap's API, `selectId`, the marker
+              declaration, `all()`, sorting, predicates, bulk operations or
+              identity-across-rekey is established by this row.
+```
+
+**This is the first FUNCTION SURVIVES verdict in the audit.** Every prior row
+resolved to DELETE or NOT EARNED — post-exposure composition, feature-to-feature
+dependency, generic declaration identity, third-party compiler extensibility,
+status, acquisition, input orchestration, request cache ownership. The
+subtractive run was not a foregone conclusion; this row shows the method returns
+a positive when the evidence supports one.
+
+**And the form question is now genuinely open rather than presumed.** Per Rule
+0o, a surviving function does not entitle its incumbent mechanism to anything —
+the greenfield minimum must be derived from zero, and per the provenance split
+the identity machinery any candidate would rest on is 15-effort work that has not
+been through this process.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

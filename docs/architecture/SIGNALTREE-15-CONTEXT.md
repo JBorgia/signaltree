@@ -188,6 +188,17 @@ entity-loader cache           no SignalTree ownership earned; PARKED pending
 M3 snapshot/representation    OPEN — CURRENT FRONTIER
 M4 reconstruction             QUEUED
 M5 decision observability     QUEUED
+collections FUNCTION          **SURVIVES** — dynamic membership + granular
+                              observation over CANONICAL truth. First positive
+                              result in the audit. Each ordinary alternative
+                              misses exactly one axis: an array lacks
+                              granularity, a record lacks membership (fixed at
+                              construction; no write path reopens it), app-held
+                              signals lack canonicality (E5 PATH A). FORM
+                              UNPROVEN — entityMap's API, selectId, all(),
+                              sorting, bulk ops and rekey identity are all
+                              untested; derive the minimum from zero.
+
 entityMap / collections       OPEN — null corrected by measurement. Granular
                               write/observation FALL to an ordinary record; an
                               array gives dynamic membership but not
