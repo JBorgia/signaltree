@@ -166,9 +166,17 @@ final authoring grammar       DEFERRED to one system-wide DX pass
 
 **M3 — snapshot / representation.** The question is *not* "does a snapshot hook
 survive" but **"is a realized value's state identifiable by a uniform rule?"**
-Six consumers route through one producer; their requirements are unseparated, and
-separating them is M3's work, not its premise. The admissible evidence base is
-**one** implementation (`entityMap`), three tokens long.
+
+Consumer separation is DONE: there are not six requirements. Four entry points
+share one memoised representation, devtools adds a transform it owns, and
+`stored` is not a consumer at all — it conforms to the ordinary signal protocol
+and appears in the representation as a plain value with no hook. So the hook can
+no longer be defended by divergent consumer needs.
+
+The admissible evidence base is **one** implementation, `entityMap`, whose hook
+introduces a synthetic `all` key with no counterpart in the declaration. Open
+question: can a collection's state be identified by a uniform rule — i.e. can the
+accessor conform the way `stored` does? Downstream of the entityMap derivation.
 
 ## Deferred DX pressures (Table G) — capability, never spelling
 

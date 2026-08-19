@@ -2196,6 +2196,94 @@ representation semantics.
 requirements first, per the standing caution. That is the next step, and it must
 not be short-circuited by the fact that one hook currently serves all of them.
 
+## M3 — CONSUMER SEPARATION: **there are not six consumers. There is one representation.**
+
+Evidence: `m3-representation.spec.ts`, plus control-flow inspection of each
+call site.
+
+### The six collapse
+
+```text
+tree()            the memoised public read
+snapshotState()   ROUTES THROUGH THE SAME MEMO — its docblock says so explicitly:
+                  every consumer "was rebuilding the entire tree on every call
+                  while tree() next door returned a memoised result"
+serialization     `toJSON = () => tree()`. PURE DELEGATION, and its comment notes
+                  "there is one materialiser again"
+time-travel       `snapshotState(this.tree.$)` — same producer
+devtools          same producer, then applies its OWN second transform
+                  (`buildSerializedState`) before JSON comparison
+stored            NOT A CONSUMER — see below
+```
+
+**So the standing caution resolves in an unexpected direction.** I flagged that
+one hook serving six consumers does not prove one representation satisfies one
+function. Measured, there are not six requirements to separate: four entry points
+share one memoised representation, devtools adds a transform it owns, and the
+sixth was miscounted.
+
+That does not vindicate the hook — it narrows its justification. **The hook can no
+longer be defended by "different consumers need different things."** It must be
+defended by the single consumer requirement needing per-kind knowledge.
+
+### `stored` is not a consumer, and its own docblock is stale
+
+`stored.ts:331` warns that *"`tree()` / `unwrap()` skip stored values"*. **That is
+stale.** `stored.ts:850` records the fix — conforming to the signal/accessor
+protocol that traversal already branches on. Measured:
+
+```text
+signalTree({ theme: stored('k','light',{storage}), plain: 1 })
+tree()  ->  { theme: 'light', plain: 1 }
+```
+
+`stored` supplies **no snapshot hook and needs none.** It is indistinguishable
+from ordinary state in the representation, because it conforms to the uniform
+protocol rather than extending it. **That is one surviving declaration kind
+demonstrating the null.**
+
+### `entityMap` introduces a SYNTHETIC key
+
+```text
+signalTree({ rows: entityMap({ selectId }), plain: 1 })
+tree()  ->  { rows: { all: [ {...} ] }, plain: 1 }
+```
+
+The author wrote `entityMap({ selectId })`. The representation says
+`{ all: [...] }`. **The `all` key exists nowhere in the declaration** — it is
+invented by the hook's return value.
+
+```text
+ordinary state   plain: 1
+stored           theme: 'light'          the value itself
+entityMap        rows: { all: [...] }    a WRAPPER around the value
+```
+
+And a collection's obvious plain-data representation is the array.
+
+### Two readings of the n=1 evidence
+
+```text
+A  a collection genuinely has named sub-structure worth representing, which no
+   uniform rule could know
+
+B  `{ all: node.all() }` follows the HOOK'S RETURN CONVENTION rather than a
+   semantic need — the deleted markers returned `{ value: node() }`, so the
+   contract is "return an object whose keys become the snapshot shape", and
+   `all` was simply the natural key to pick
+```
+
+**Reading B is now the stronger of the two**, on three grounds: `stored`
+demonstrates a declaration kind needing no hook at all; the synthetic key has no
+declaration counterpart; and the wrapper shape matches the deleted markers'
+convention rather than anything about collections.
+
+**Not concluded.** What would settle it is whether a uniform rule can identify a
+collection's state — i.e. whether the entityMap accessor can conform to the
+protocol the way `stored` does, rather than being described by a hook. That is
+M3's remaining question, and it is downstream of the `entityMap` derivation
+proper, which has not run.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
