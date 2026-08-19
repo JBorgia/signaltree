@@ -1429,6 +1429,74 @@ becomes strong corroboration that the orchestration was colocated inside
 SignalTree rather than owned by it — the fourth instance of the colocation
 warning.
 
+## DERIVATION A1-1 — external acquisition ownership: **NOT EARNED**
+
+Evidence: `async-source-a1-equivalence.spec.ts`, six executable falsifiers.
+
+**Null:** assume SignalTree never invokes user-supplied async acquisition
+functions; applications perform external work and commit results through
+ordinary public tree writes. What independently required SignalTree semantic
+function becomes impossible?
+
+**Method.** Methodology Rule 2 says an ABSENCE claim cannot rest on an
+incomplete vocabulary search. The symmetric discipline applies to a POSITIVE
+equivalence claim: it must not rest on one toy rewrite. So each behaviour is
+exercised against the real marker and against `plainAcquire` — a signal triple
+plus an async function, which is what a service would write — under the SAME
+assertions.
+
+| # | Behaviour | Result |
+|---|---|---|
+| A1-C1 | eager initial acquisition | reproduced exactly |
+| A1-C2 | `lazy` | reproduced by NOT CALLING. `lazy` names the absence of an eager call; it is not a capability |
+| A1-C3 | overlapping refresh, Promise source | **the marker lets the obsolete completion WIN**; `plainAcquire` guards it in four lines |
+| A1-C4 | failure recording | reproduced exactly |
+| A1-C5 | `reset` | reproduced exactly |
+| A1-C6 | landed value vs authored write | indistinguishable — same value, same unwrap participation |
+
+**A1-C3 is the row that matters.** The ordinary application version is not merely
+equivalent, it is STRICTLY BETTER: a four-line generation guard gives it
+stale-completion exclusion that the marker's Promise path does not have. A
+function whose ordinary replacement is more correct than the abstraction has not
+established ownership.
+
+### Consumption
+
+```text
+asyncSource   0 consumers outside core
+asyncQuery    0 consumers outside core
+```
+
+Not in the demo, not in any first-party package. Evidence, not a verdict — the
+equivalence falsifiers are what carry the argument.
+
+### Disposition
+
+```text
+EXTERNAL ACQUISITION EXECUTION
+
+USE CASE            real
+OWNER               application / service / integration layer
+SIGNALTREE FUNCTION not earned — nothing SignalTree uniquely owns was required
+                    to reproduce any measured behaviour
+```
+
+Nothing SignalTree-owned appeared on the list of things the external version had
+to duplicate: no tree semantic identity, no causal attribution, no atomic commit
+authority, no validation or refusal, no tree-owned lifetime, no publication
+guarantee. What the marker supplies over `plainAcquire` is colocation and fewer
+lines — DX, which cannot earn a primitive.
+
+**No `asyncSource` replacement is designed.** A1-2, input-binding ownership,
+remains OPEN and is not answered by this row.
+
+**The concurrency defect stays out of the ownership argument.** A1-C3 proves the
+current abstraction has no uniform concurrency semantics across the loader types
+it accepts. It does not argue for or against SignalTree owning acquisition — same
+treatment as the Tier-2 defects. If acquisition ever survives under SignalTree
+ownership, it becomes a greenfield correctness requirement; if it does not, it
+belongs to whatever execution owner survives.
+
 ## DERIVATION A1 — bare acquisition: **SUSPENDED, not closed**
 
 Rule 0l. Suspended because the discovery pass measured a re-export: the family
