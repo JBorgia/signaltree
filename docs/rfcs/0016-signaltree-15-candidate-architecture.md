@@ -704,6 +704,96 @@ those five have no surviving extension-cluster function, and the fifth
 field. Preserving the envelope because one member has an internal analogue would
 reconstruct the conflation the audit just took apart.
 
+## Amendment 3 — ASYNC / LOAD / STATUS: discovery pass
+
+**Status: CANDIDATE. This is a discovery pass, not a disposition.** Rule 0l
+applies: `asyncSource`, `asyncQuery`, `loader` and `status` are evidence sources.
+Nothing here asks whether they survive.
+
+Measured from the authored contracts and the realized reader surfaces.
+
+### What the family actually PROVIDES
+
+```text
+acquisition                     load, query
+input binding                   input, initialInput            (asyncQuery only)
+input shaping                   debounce, filter, equal        (asyncQuery only)
+result placement                data, results
+pending representation          loading
+failure representation          error
+reacquisition                   refresh(), rerun()
+reset                           reset()
+laziness                        lazy
+hydration/snapshot participation hydrate, snapshot
+manual lifecycle state machine  status: start(), setLoading(), setLoaded(),
+                                setNotLoaded(), setSuccess(), succeed(),
+                                idle, loading, loaded, notLoaded, error,
+                                hasError, settled
+```
+
+### What the family DOES NOT PROVIDE — and this is the finding
+
+```text
+cancellation                    ABSENT from all four
+stale-result exclusion          ABSENT — no generation/request counter exists
+                                in either asyncSource or asyncQuery
+invalidation                    ABSENT
+deduplication / in-flight coalescing  ABSENT
+cache policy / TTL              ABSENT
+retry                           ABSENT as a mechanism; the only occurrence is
+                                the WORD in two status.ts comments
+```
+
+**Two consequences, and the second is the important one.**
+
+**1. These six cannot be "preserved".** Proposing them is ADDING capability, which
+is a much higher bar than carrying a function forward — Rule 0j-1 says a rejected
+artifact does not commission a replacement, and by the same logic an absent
+capability does not become a requirement just because the audit listed it as a
+candidate. Each would need its own use case and owner from zero.
+
+**2. Without cancellation OR stale-result exclusion, the family is unsound for
+real concurrent work.** With no generation counter, two overlapping `refresh()`
+calls can complete out of order and the EARLIER-STARTED, LATER-COMPLETING one
+overwrites the newer result. That is a defect in the old family, not a function to
+carry forward — and it means the family's apparent value is materially smaller
+than its surface suggests. An async abstraction whose central hazard is
+unaddressed has not earned the credit its API size implies.
+
+### `status` is APPLICATION-DRIVEN, which contradicts the original draft
+
+`status` exposes `start()`, `setLoading()`, `setLoaded()`, `setNotLoaded()`,
+`setSuccess()`, `succeed()`. **The application writes it.** It is not derived from
+an operation and it observes nothing.
+
+That directly contradicts the SignalTree-15 draft's assertion that *"lifecycle
+belongs to execution, not resources"*. Whether or not that assertion is a good
+idea, it describes something the current system has never had: there is no
+execution to own a lifecycle here, only an enum-shaped state position with
+convenience setters. So `status` is evidence for *"applications want to record
+where they are in a workflow"* — a claim about ordinary state — and evidence for
+nothing about operation lifecycles.
+
+### `asyncSource` vs `asyncQuery` overlap
+
+Their surfaces are nearly identical — `data`, `error`, `loading`, `reset()`,
+acquisition, plus one reacquisition verb each (`refresh()` / `rerun()`). The whole
+of `asyncQuery`'s difference is INPUT: `input`, `initialInput`, `debounce`,
+`filter`, `equal`. That is a candidate for two names over one function plus an
+input-binding concern, but it is not derived here and must not be assumed.
+
+### What the next pass must do
+
+For each function above, in this order: use case, owner, whether the
+already-derived architecture (store / derived / application service / causal
+kernel / tree lifetime / external adapter) already supplies it, then NULL, then
+greenfield minimum only if a real gap remains.
+
+The honest possible outcome — and it must stay available — is that the entire old
+async concept dissolves into store positions, derived projections and ordinary
+application operations, and **SignalTree 15 has no async feature at all.** That
+would not be a missing replacement. It would be a successful derivation.
+
 ### Extend this treatment to the rest of the matrix
 
 Tables A-D's remaining rows must be converted the same way as they come up. Do
