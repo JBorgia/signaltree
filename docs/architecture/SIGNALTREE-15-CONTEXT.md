@@ -329,6 +329,27 @@ commands / `_`                             N/A — no function earned
 **Frozen spellings: none.** Not `features:`/`extensions:`/`using:`, not
 `tree._.x()`, not any `derived` access form.
 
+## Published-surface drift — a NAMED cross-cutting finding
+
+Three independent derivations turned up the same shape: **a published type
+describes behaviour that cannot happen.**
+
+```text
+InterceptContext.blocked / blockReason        observably always false
+InterceptHandlers => void | Promise<void>     async guard FAILS OPEN
+HydrateDecision 'normalised' + its reason     never emitted; STATUS-DEL residue
+```
+
+The first two are inherited legacy drift; the third is drift **this effort
+created**, by deleting `status` and leaving its vocabulary. So: deletion is not
+complete when the mechanism is gone, only when the vocabulary that described it
+is gone too.
+
+All three were invisible to reading and obvious to a test. Any surface carried
+into 15 needs an executable check that every declared member is reachable and
+every declared signature does what it says — three of three probed surfaces had
+drifted.
+
 ## Do not reopen without a deterministic counterexample
 
 ```text

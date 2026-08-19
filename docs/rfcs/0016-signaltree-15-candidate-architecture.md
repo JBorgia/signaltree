@@ -3379,6 +3379,64 @@ finding is that **every hook in it was absorbing something expressible
 uniformly** — M3 a shape accident, M4 a two-input predicate, M5 the reporting of
 a decision that no longer occurs.
 
+## CROSS-CUTTING FINDING — PUBLISHED-SURFACE DRIFT
+
+Three independent derivations in this pass each turned up the same defect shape,
+so it is named here rather than left scattered across three entries.
+
+**A published type describes behaviour that cannot happen.**
+
+```text
+1  InterceptContext.blocked / blockReason
+   Exposed as if a handler could consult or set them. `block()` throws out of
+   the loop, so `ctx.blocked` is observably ALWAYS false.
+   Evidence: e-hooks.spec.ts
+
+2  InterceptHandlers.onAdd/onUpdate/onRemove  =>  void | Promise<void>
+   The type INVITES an async handler. Every call site iterates handlers in a
+   plain synchronous loop with no await, so an async guard FAILS OPEN: the write
+   commits and `ctx.block()` lands nowhere.
+   Evidence: e-hooks.spec.ts
+
+3  HydrateDecision 'normalised' / HydrateReason 'no-request-survives-boundary'
+   Never emitted from any path. They described `status`'s LOADING -> NotLoaded
+   normalisation, and STATUS-DEL physically removed the mechanism while leaving
+   the vocabulary. The event docblock still says "e.g. `entityMap`, `status`".
+   Evidence: m5-decision-observability.spec.ts
+```
+
+### Why this is a finding and not tidying
+
+Each one is a place where **a consumer would reasonably rely on something that
+does not happen**, and the type is what invites the reliance. (2) is the severe
+case — it is the shape an async permission check naturally takes, and it fails
+silently in the permissive direction.
+
+They also differ in origin, which rules out a single sloppy commit:
+
+```text
+1 and 2   INHERITED LEGACY (2025-12)  — drift that accumulated
+3         15-EFFORT RESIDUE           — drift this effort CREATED, by deleting a
+                                        mechanism and leaving its vocabulary
+```
+
+(3) is the one to take personally: STATUS-DEL was executed in this pass, in two
+deliberate commits, and it still left published types behind.
+
+### Consequence for the gate
+
+Deletion is not complete when the mechanism is gone; it is complete when the
+**vocabulary that described it** is gone too. And any surface carried into 15
+must be checked for type/behaviour agreement, because three of three probed
+surfaces had drifted.
+
+```text
+GATE ADDITION (candidate)
+  For every surviving public type: is every declared member REACHABLE, and does
+  every declared signature do what it says? Executable, not by inspection —
+  all three of these were invisible to reading and obvious to a test.
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
