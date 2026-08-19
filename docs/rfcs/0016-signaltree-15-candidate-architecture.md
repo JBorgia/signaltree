@@ -1072,146 +1072,19 @@ entity lifetime        cache state and entity lifetime never interact, so
                        there is no current behaviour to credit or fault.
 ```
 
-### Verdict
+### Two passes ran this, and only one of them executed anything
 
-```text
-OUTCOME A — ordinary cache policy, colocated with an entity map
+The measurements above were taken by reading the implementation. A second pass
+then ran them as tests — `entity-loader-a2-falsifiers.spec.ts`, 10 measurements
+against HEAD. They agree on the verdict and on entity-blindness, which is
+corroboration rather than repetition. They disagreed on concurrency, and the
+executable pass won; that correction is recorded above.
 
-SignalTree-owned cache/freshness FUNCTION    NOT FOUND
-staleTime / SWR / tags / dedup               real, useful, and ORDINARY
-loader() as a bundle                         no survival earned here
-entityMap structural identity                untouched by this derivation
-```
-
-**The colocation was the illusion.** `loader()` reads as entity-aware caching
-because it is spelled inside `entityMap(...)`; it is a per-request cache that
-happens to write through the entity map's public API. Rule 0k rates `entityMap`
-the strongest survival candidate, and this derivation deliberately does not let
-that rating extend to an adjacent mechanism — proximity is not ownership.
-
-### What this does NOT establish
-
-It does not prove entity-aware cache semantics could never be valuable
-(Outcome B). It proves the CURRENT one is not entity-aware. If a future
-derivation independently establishes that cache validity must follow semantic
-subject lifetime — surviving deletion, recreation and rekeying, with stale work
-rejected against that lifetime — that would be a genuinely different and much
-more interesting function, and it would be derived from zero rather than
-recovered from here.
-
-**Concurrency remains unresolved for this tier too.** Single-flight dedup
-prevents two concurrent loads of the SAME scope, but there is still no generation
-guard: with SWR, a revalidation started before an invalidation can still land
-after a newer load completes. Cache policy surviving would not have rescued the
-acquisition mechanism's concurrency contract.
-
-### Extend this treatment to the rest of the matrix
-
-Tables A-D's remaining rows must be converted the same way as they come up. Do
-**not** ask "does `asyncSource()` survive?" Ask what applications were getting:
-represent pending/value/error, trigger acquisition, invalidate, retry, connect a
-result to tree state, track request identity — then ask which of those are
-SignalTree-owned, which the store/derived/command architecture already provides,
-and what is left that ordinary application code cannot express well. The old
-concept may evaporate entirely, or one function may survive and produce a small
-new primitive.
-
-`stored()` is the sharpest case, because its two halves already have DIFFERENT
-frozen authorities. Do not ask what a new `stored()` looks like. Ask separately
-how committed truth produces durable consequences, how external durable state
-enters construction, whether a position needs a declarative durability policy,
-and whether hydration belongs to that same declaration. Only if those converge
-independently should a combined concept reappear.
-
-And `derived` is the worked example: its function was never "preserve
-`.derived()`", it was "represent read-only projections of canonical state". The
-object-literal form survived because it fit the independently derived function —
-not because the old system had derived state.
-
-## DERIVATION A1 — bare acquisition: **SUSPENDED, not closed**
-
-Rule 0l. Suspended because the discovery pass measured a re-export: the family
-is TWO TIERS with materially different capability, and an audit that treats it
-as homogeneous produces a manufactured absence result. Tier 1's facts stand as
-measured; the disposition does not follow from them yet.
-
-```text
-TIER 1 — BARE ACQUISITION
-
-result landing
-  ordinary signal writes only
-
-causal semantics
-  none measured
-
-atomic landing
-  none measured
-
-subject identity
-  none measured
-
-persistence consequence
-  none measured
-
-concurrency protection
-  Observable path: previous subscription prevents stale landing
-  Promise path: no stale-result exclusion
-
-acquisition ownership
-  OPEN
-
-input-binding ownership
-  OPEN
-```
-
-**Hard boundary, and it is the point of suspending rather than continuing:**
-Tier 2 is a SEPARATE EVIDENCE SOURCE, not "the more capable async
-implementation". Nothing measured in `entity-loader.ts` may be credited back to
-`asyncSource` / `asyncQuery` unless those concepts independently provide it. A
-run-id guard in the loader is not evidence that acquisition-as-such is
-adequately implemented anywhere else, and A2's findings below carry no
-disposition for Tier 1.
-
-## DERIVATION A2 — entity-bound cache / freshness ownership: **OUTCOME A. No entity coupling exists.**
-
-Rule 0l. `loader()`, `attachLoader`, `EntityLoadOptions`, `EntityLoaderSurface`
-and `invalidateTag` are legacy evidence only. This derivation does NOT ask
-whether `loader()` survives; it asks a narrower question first, because the
-answer bounds everything else:
-
-> **Does cache freshness/invalidation require SignalTree-owned entity identity
-> or structural semantics, or can an application cache reproduce all measured
-> behaviour while treating `entityMap` only as the destination for canonical
-> results?**
-
-### The governing null
-
-> Assume `entityMap` survives as structural canonical state, but SignalTree
-> provides no loading, freshness, SWR, tag invalidation or cache machinery. An
-> application-owned cache/service may acquire data and write entities into the
-> map. What independently required function becomes impossible without
-> duplicating SignalTree-owned entity semantics?
-
-### The measurement that decides it, and it is one line long
-
-`entity-loader.ts` is 720 lines. It touches the collection through **exactly two
-members**:
-
-```text
-entity.all()          :423   serialize for write-through persistence
-entity.setAll(rows)   :434, :476, :542   seed, land, clear
-```
-
-It never reads a key, an id, `selectId`, `SubjectId`, `PositionId` or
-`SlotIndex`. Grepped for each: the only `key` occurrences in the file are the
-app-supplied `persist.key` string, storage-key construction, and
-`Object.keys()` in the tree walk. **The cache is entity-blind.** Its coupling to
-`entityMap` is packaging — an options bag on the same surface — not semantics.
-
-The hypothesis that motivated running A2 before A1 ("cache validity tied to
-structural/entity identity may require SignalTree semantics") is therefore
-REFUTED by measurement, not weakened. It was the right hypothesis to test and it
-did not survive.
+One precision the reading pass got slightly wrong in the other direction: the
+IN-MEMORY cache is **single-scope**, not per-scope keyed (`:111-112`; multi-scope
+LRU is explicitly deferred, RFC 0003 §5). Switching scope replaces the one entry.
+Only PERSISTENCE is keyed per scope (`key::stableStringify(params)`, `:343`). So
+"cache" overstates it: what exists in memory is a LAST-FETCH RECORD.
 
 ### The falsifiers, measured
 
@@ -1375,13 +1248,37 @@ consumes nothing but `all()` and `setAll()`. What the colocated version buys is 
 nicer API, automatic refetch, and less application code — explicitly the list
 that does NOT earn a primitive.
 
+### Verdict
+
+```text
+OUTCOME A — ordinary cache policy, colocated with an entity map
+
+SignalTree-owned cache/freshness FUNCTION    NOT FOUND
+staleTime / SWR / tags / dedup               real, useful, and ORDINARY
+loader() as a bundle                         no survival earned here
+entityMap structural identity                untouched by this derivation
+lifetime coupling                            injector lifetime only; entity
+                                             death and rekeying are inert
+persist / hydration                          DEFERRED to the stored()/hydration
+                                             authority; freshness is NOT durable
+tree-scoped tag addressing                   the one candidate remainder ->
+                                             A3, NULL NOT RUN
+```
+
+**The colocation was the illusion.** `loader()` reads as entity-aware caching
+because it is spelled inside `entityMap(...)`; it is a per-request cache that
+happens to write through the entity map's public API. Rule 0k rates `entityMap`
+the strongest survival candidate, and this derivation deliberately does not let
+that rating extend to an adjacent mechanism — proximity is not ownership.
+
+### What this does NOT establish
+
 **One candidate remainder, and it is not entity-bound.** `invalidateTag` walks
-`tree.$` to find tagged collections with no global registry, so nothing leaks on
-teardown (:680-686). An application registry of handles would have to solve that
-itself. That is STRUCTURAL REACHABILITY — which SignalTree does own — and it
-touches the frozen `durability authority is TREE-SCOPED` shape. It is therefore
-the one thing here that might be a real function, and it must earn its own
-derivation:
+`tree.$` to find tagged collections with NO global registry, so nothing leaks on
+teardown (`:680-686`). An application registry of handles would have to solve
+that itself. That is STRUCTURAL REACHABILITY — which SignalTree does own — and it
+touches the frozen `durability authority is TREE-SCOPED` shape. It is the one
+thing here that might be a real function, and it must earn its own derivation:
 
 ```text
 A3 — TREE-SCOPED, REGISTRY-FREE ADDRESSING OF POLICY HOLDERS
@@ -1393,46 +1290,52 @@ A3 — TREE-SCOPED, REGISTRY-FREE ADDRESSING OF POLICY HOLDERS
 Note what A3 is not: it addresses cache-policy holders, not entities, and it
 would survive with `entityMap` regardless of whether any loader does.
 
-### Verdict
+It does not prove entity-aware cache semantics could never be valuable
+(Outcome B). It proves the CURRENT one is not entity-aware. If a future
+derivation independently establishes that cache validity must follow semantic
+subject lifetime — surviving deletion, recreation and rekeying, with stale work
+rejected against that lifetime — that would be a genuinely different and much
+more interesting function, and it would be derived from zero rather than
+recovered from here.
 
-```text
-OUTCOME A on the question asked — entity/structural semantics own NONE of it
+**CORRECTED — a generation guard IS present.** This pass claimed there was none
+and that an older revalidation could still land after a newer load. Measured
+(F4), that is wrong: `runId`/`myRun` gates every settle callback
+(`entity-loader.ts:450, :475, :488, :508`), on the Promise path as well as the
+Observable one, so an earlier-started, later-completing load cannot land. Tier 2
+is materially better protected here than Tier 1, where the Promise path has no
+exclusion at all.
 
-entity-bound cache coupling      DOES NOT EXIST (the cache is entity-blind)
-freshness (staleTime)            ordinary application cache policy
-stale-while-revalidate           one boolean in one computed; earns nothing
-invalidation                     reacquisition intent; no authority over truth
-tags-as-entity-property          DOES NOT EXIST; tags index collections
-acquisition                      application/service owned
-landing                          ordinary canonical entity writes (setAll)
-lifetime coupling                injector lifetime only; entity death is inert
-persist / hydration              DEFERRED to the stored()/hydration authority
-tree-scoped tag addressing       the one candidate function -> A3, NULL NOT RUN
-loader() as a bundle             NULL NOT RUN — A2 does not dispose of it
-```
+The real concurrency holes are elsewhere, and both ship today (F5, F6): an
+invalidation issued while a fetch is in flight is DESTROYED by that fetch's
+completion, and `refresh()` returns the pre-change in-flight request instead of
+forcing a reload. So the guard protects against obsolete data LANDING and does
+nothing about obsolete data being MARKED FRESH. The conclusion the earlier
+wording reached still holds, for different reasons: cache policy surviving would
+not have rescued the acquisition mechanism.
 
-Outcome B was kept available and is NOT what the measurements produced: the
-narrow function that might survive is structural addressing, not entity-aware
-freshness. Outcome C is unreached — nothing indicates acquisition must
-participate in entity identity, since acquisition cannot currently observe
-entity identity at all.
+### Extend this treatment to the rest of the matrix
 
-### What would change the answer
+Tables A-D's remaining rows must be converted the same way as they come up. Do
+**not** ask "does `asyncSource()` survive?" Ask what applications were getting:
+represent pending/value/error, trigger acquisition, invalidate, retry, connect a
+result to tree state, track request identity — then ask which of those are
+SignalTree-owned, which the store/derived/command architecture already provides,
+and what is left that ordinary application code cannot express well. The old
+concept may evaporate entirely, or one function may survive and produce a small
+new primitive.
 
-- A measured path where freshness or invalidation reads entity identity,
-  `SubjectId`, or structural position. None exists at HEAD.
-- A use case where one entity's freshness must differ from its collection's —
-  the single-scope, whole-array design cannot express it, so it would be new
-  capability, not preservation.
-- A2 said nothing about whether `entityMap` should offer a colocated cache API
-  for ergonomics. That is a packaging question (T4), decided after the kernel.
+`stored()` is the sharpest case, because its two halves already have DIFFERENT
+frozen authorities. Do not ask what a new `stored()` looks like. Ask separately
+how committed truth produces durable consequences, how external durable state
+enters construction, whether a position needs a declarative durability policy,
+and whether hydration belongs to that same declaration. Only if those converge
+independently should a combined concept reappear.
 
-### Scope limit
-
-A2 disposes of the ENTITY-COUPLING claim and the four cache functions above. It
-does not dispose of `loader()`, of `persist`, of acquisition, or of Tier 1 — each
-of which keeps its own NULL. And it does not license moving `staleTime`/`swr`
-onto any other SignalTree abstraction; nothing here earned a home.
+And `derived` is the worked example: its function was never "preserve
+`.derived()`", it was "represent read-only projections of canonical state". The
+object-literal form survived because it fit the independently derived function —
+not because the old system had derived state.
 
 ### Methodological warning worth keeping in the RFC
 
@@ -1444,6 +1347,50 @@ the implementation can manufacture an absence result just as easily as taking a
 legacy abstraction at its word can manufacture a requirement.** Both failures
 produce confident, wrong dispositions; both are cheap to avoid by checking line
 count and call graph before believing a scan.
+
+## DERIVATION A1 — bare acquisition: **SUSPENDED, not closed**
+
+Rule 0l. Suspended because the discovery pass measured a re-export: the family
+is TWO TIERS with materially different capability, and an audit that treats it
+as homogeneous produces a manufactured absence result. Tier 1's facts stand as
+measured; the disposition does not follow from them yet.
+
+```text
+TIER 1 — BARE ACQUISITION
+
+result landing
+  ordinary signal writes only
+
+causal semantics
+  none measured
+
+atomic landing
+  none measured
+
+subject identity
+  none measured
+
+persistence consequence
+  none measured
+
+concurrency protection
+  Observable path: previous subscription prevents stale landing
+  Promise path: no stale-result exclusion
+
+acquisition ownership
+  OPEN
+
+input-binding ownership
+  OPEN
+```
+
+**Hard boundary, and it is the point of suspending rather than continuing:**
+Tier 2 is a SEPARATE EVIDENCE SOURCE, not "the more capable async
+implementation". Nothing measured in `entity-loader.ts` may be credited back to
+`asyncSource` / `asyncQuery` unless those concepts independently provide it. A
+run-id guard in the loader is not evidence that acquisition-as-such is
+adequately implemented anywhere else, and A2's findings below carry no
+disposition for Tier 1.
 
 ## Frozen baseline this matrix may not re-derive
 
@@ -1507,7 +1454,7 @@ current implementation is the exact reflex MUT-0 exists to block.
 | 13 | `serialization` | T2 | — | — | — | enhancer |
 | 14 | `compared()` | T2 | — | — | — | marker; own NULL: *what does SignalTree itself need to know about equality?* |
 | 15 | `status()` | T2 | none survives (S1) | application/domain (S1) | — | marker; **S1: FUNCTION DELETE** — application-written setters, no lifecycle observed |
-| 16 | `loader()` | T2 | — (bundle NULL not run) | **not entity semantics (A2)** | — | marker; own NULL: *what acquisition capability is lost?* — A2: the cache is ENTITY-BLIND (only `all()`/`setAll()`); run-id guard + dedup PRESENT; invalidation is reacquisition intent; two mid-flight defects |
+| 16 | `loader()` | T2 | — (bundle NULL not run) | **not entity semantics (T2)** | — | marker; own NULL: *what acquisition capability is lost?* — T2: the cache is ENTITY-BLIND (only `all()`/`setAll()`); run-id guard + dedup PRESENT; invalidation is reacquisition intent; two mid-flight defects |
 | 17 | `asyncSource()` | T2 | — | — | — | marker |
 | 18 | `asyncQuery()` | T2 | — | — | — | marker; NULL must include the input→result relationship |
 | 19 | `batching()` | T1 | — | — | — | enhancer |
@@ -1529,7 +1476,7 @@ current implementation is the exact reflex MUT-0 exists to block.
 | 35 | `security` | — | — | — | TP | `core/security`; emits **no** external imports |
 | 36 | audit tracker | — | — | — | — | `createAuditTracker` / `createAuditCallback` |
 | 37 | `edit-session` | — | — | — | TP | `core/edit-session` |
-| 38 | `invalidateTag` / tags | — | CANDIDATE: address policy holders reachable from a tree by tag (**A3, NULL NOT RUN**) | — | — | tag authority; A2: tags index COLLECTIONS not entities; registry-free `tree.$` walk is the one candidate remainder |
+| 38 | `invalidateTag` / tags | — | CANDIDATE: address policy holders reachable from a tree by tag (**A3, NULL NOT RUN**) | — | — | tag authority; T2: tags index COLLECTIONS not entities; registry-free `tree.$` walk is the one candidate remainder |
 | 39 | `isDev` / dev-only gating | — | — | — | — | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION |
 | 40 | `defineStore` | — | Angular DI integration | Angular (realization) | TP | injectable wrapper; `expose: 'readonly'` |
 | 41 | `plannedSignalTree` | — | — | — | — | MUT-0 order item 9 |
@@ -1560,7 +1507,7 @@ current implementation is the exact reflex MUT-0 exists to block.
 | 13 | `serialization` | — | — | **NOT RUN** | — | NULL NOT RUN |
 | 14 | `compared()` | — | — | **NOT RUN** | — | NULL NOT RUN |
 | 15 | `status()` | — | — | RUN (S1) | **FUNCTION DELETE**; workflow state survives as ordinary store truth | DERIVED |
-| 16 | `loader()` | entity coupling: none measured | — | RUN for cache/freshness ownership (A2); bundle **NOT RUN** | A2 OUTCOME A: cache/freshness/invalidation/tags are application cache policy | DERIVED (partial — `loader()` itself undisposed) |
+| 16 | `loader()` | entity coupling: none measured | — | RUN for cache/freshness ownership (T2); bundle **NOT RUN** | T2 OUTCOME A: cache/freshness/invalidation/tags are application cache policy | DERIVED (partial — `loader()` itself undisposed) |
 | 17 | `asyncSource()` | — | — | **NOT RUN** | — | NULL NOT RUN |
 | 18 | `asyncQuery()` | — | — | **NOT RUN** | — | NULL NOT RUN |
 | 19 | `batching()` | observational atomicity | FROZEN | blocked on MUT | — | T1 |
@@ -1731,7 +1678,7 @@ in the API cleanup queue starts before the packed gate is green.
 
 ## Findings surfaced while building this matrix
 
-Two, both incidental to the RFC and both real:
+Four, all incidental to the RFC and all real:
 
 1. **`ENTITY_LOADER_READERS` is an orphan.** It is exported from
    `@signaltree/core/authoring` and referenced only by `lib/readonly.ts`. No
@@ -1743,3 +1690,13 @@ Two, both incidental to the RFC and both real:
    FORM-DEL and SCHEMA-DEL. Any `--check` run against it compares HEAD to an
    architecture that no longer exists. Re-baseline before it is used to defend
    the export freeze.
+3. **An invalidation issued mid-flight is destroyed by the completing load.**
+   `settleSuccess` does `invalidated.set(false)` (`entity-loader.ts:482`), so a
+   change event arriving while a pre-change request is open is silently
+   swallowed: the pre-change value lands and reads FRESH for the whole
+   `staleTime` window. This hits the exact seam `invalidateTag` is documented for
+   (an SSE/SignalR "plants changed" event). Measured as T2/F5. Ships today.
+4. **`refresh()` does not ignore in-flight dedup.** It is documented as "force a
+   reload, ignoring `staleTime`/scope-match", but an equal-params request already
+   in flight is returned as-is (`:592`), so a refresh triggered by a change event
+   resolves with pre-change data. Measured as T2/F6. Ships today.
