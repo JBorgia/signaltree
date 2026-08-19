@@ -3039,6 +3039,100 @@ intercept
 The FUNCTION survives — E is still the audit's first positive verdict. Of the
 form, **five members are the minimum and one more is earned**.
 
+## M3 — RESOLVED. The snapshot hook has NO EARNED IMPLEMENTER.
+
+Evidence: `m3-conformance.spec.ts`, 5 rows.
+
+M3 asked whether a realized value's state is identifiable by a **uniform rule**.
+Consumer separation had already removed the "divergent consumers" defence, and
+the mechanism question had already established that the walk decides by three
+guards, that `stored` conforms via `isSignal` and needs no hook, and that
+`entityMap` satisfies neither guard. What remained was whether `entityMap`'s
+shape is **forced by what a collection is** or is **an implementation choice**.
+
+### Measured
+
+```text
+plain leaf     isSignal  true      typeof function
+stored         isSignal  true      typeof function   + set/update/clear/reload/flush
+entityMap      isSignal  FALSE     typeof OBJECT     — not even callable
+
+tree()  ->  { rows: { all: [ {id:'a',n:1} ] },   <- an ENVELOPE
+              theme: 'light',                     <- the value
+              plain: 1 }                          <- the value
+```
+
+Representation is **not uniform**, and the collection is the only position that
+publishes a wrapper instead of its value.
+
+### The hook's stated cause is a shape accident
+
+The source records it plainly:
+
+> *"`ids`, `count`, `empty` and `map` are all derived from `all` — and `map` is a
+> JS `Map`, which JSON cannot represent, so it used to serialise as `{}`: a
+> snapshot claiming the collection was EMPTY while holding 10,000 entities."*
+
+Confirmed by measurement — `JSON.parse(JSON.stringify(asMap()))` is `{}`.
+
+But that failure is only reachable **because the walk meets an object and must
+guess which of its members is the state**. A signal has nothing to guess about:
+its state is what it returns. And the value the hook selects, `node.all()`, is
+exactly what a callable accessor would have returned on its own.
+
+### The precedent is in this codebase
+
+`stored` is a callable signal that ALSO carries its own surface — `set`,
+`update`, `clear`, `reload`, `flush` — and it needs no hook, appearing in the
+representation as its plain value. So "an accessor with methods" is not the
+obstacle; the collection simply declines to be callable.
+
+`stored` had the identical defect and was fixed by **conformance, not a hook**.
+
+### The envelope creates the ambiguity it resolves
+
+Both payload shapes are accepted, because *"an entityMap SNAPSHOT always emits
+`{ all: [...] }`, so a bare array can never be mistaken for the snapshot shape."*
+Measured: `tree({rows: [...]})` and `tree({rows: {all: [...]}})` both apply.
+
+The disambiguation is only necessary because a second canonical shape exists. A
+conforming accessor publishes the array, and there is nothing to disambiguate.
+
+### Disposition
+
+```text
+M3   ANSWERED — YES, a realized value's state IS identifiable by a uniform rule:
+     IT IS WHAT THE ACCESSOR RETURNS.
+
+     The hook exists only where a declaration kind DECLINES TO CONFORM. Its one
+     implementer's non-conformance is not forced by the collection function —
+     E derived that function's form as byId / ids / addOne / removeOne /
+     changeId, all of which are members, and `stored` proves members ride on a
+     callable signal in this codebase today.
+
+     snapshot hook                DELETE candidate — no earned implementer
+     `{ all: [...] }` envelope    DELETE candidate — publishes the array
+     "declaration kinds own        NOT EARNED
+       their representation"
+```
+
+**Note this is a derivation result, not a landed change.** Making the collection
+accessor conform is a separate piece of work with its own blast radius —
+`time-travel.ts:2030` reads `child.all` directly, and the hydrate path's
+bare-array acceptance would become the only form.
+
+### CORRECTION — a recorded reading refuted by its own measurement
+
+`SIGNALTREE-15-CONTEXT.md` recorded, explicitly labelled as *"a reading of E's
+result, not a measured disposition"*, that E's closure would fire M3's **second**
+branch — that the collection's earned form requires a shape neither guard
+accepts, so what survives is *"a realized value must be able to declare its state
+when its shape hides it."*
+
+The measurement fires the **first** branch instead. The earned form is a set of
+members, and members ride on a callable signal. The label is why this cost a
+paragraph rather than a retraction.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

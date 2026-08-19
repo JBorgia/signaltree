@@ -185,7 +185,20 @@ M1/M2 third-party extension   CLOSED — NOT EARNED
   registry perf questions       MOOT
 entity-loader cache           no SignalTree ownership earned; PARKED pending
                               entityMap
-M3 snapshot/representation    OPEN — CURRENT FRONTIER
+M3 snapshot/representation    ANSWERED — a realized value's state IS
+                              identifiable by a uniform rule: IT IS WHAT THE
+                              ACCESSOR RETURNS. The hook exists only where a
+                              declaration kind declines to conform, and its one
+                              implementer's non-conformance is a shape accident,
+                              not a property of collections: entityMap's accessor
+                              is a bare non-callable OBJECT while every other
+                              position is a signal, and `stored` proves in this
+                              codebase that methods ride on a callable signal.
+                              snapshot hook + `{all:[...]}` envelope: DELETE
+                              candidates. "Declaration kinds own their
+                              representation": NOT EARNED. Derivation result, NOT
+                              a landed change — conformance has real blast radius
+                              (time-travel.ts:2030 reads `child.all`).
 M4 reconstruction             QUEUED
 M5 decision observability     QUEUED
 collections FUNCTION          **SURVIVES** — dynamic membership + granular
@@ -236,7 +249,7 @@ final authoring grammar       DEFERRED to one system-wide DX pass
 
 ## Current frontier
 
-**M3 — snapshot / representation.** The question is *not* "does a snapshot hook
+**M3 — snapshot / representation. ANSWERED.** The question is *not* "does a snapshot hook
 survive" but **"is a realized value's state identifiable by a uniform rule?"**
 
 Consumer separation is DONE: there are not six requirements. Four entry points
@@ -252,17 +265,16 @@ absorbing a SHAPE mismatch, not expressing representation semantics. The codebas
 contains the precedent: `stored` had the identical defect and was fixed by
 conformance, not by a hook.
 
-**`entityMap` no longer blocks it.** Derivation E is CLOSED: the collection
-function survives, and its earned form requires per-member addressability
-(`byId`) plus enumeration (`ids`) — a shape that is neither a plain signal nor a
-plain node accessor. So the branch that fires is the second one, and the question
-to derive next is whether what survives is:
+**RESOLVED — see RFC 0016 § M3.** The reading recorded here previously (that
+E's closure would fire the second branch) was **refuted by its own measurement**.
+It was labelled unmeasured, which is why it cost a correction rather than a
+retraction. The first branch fires: E derived the collection's form as a set of
+MEMBERS (`byId`, `ids`, `addOne`, `removeOne`, `changeId`), and members ride on a
+callable signal — `stored` does exactly that in this codebase today.
 
-> *"a realized value must be able to declare its state when its shape hides it"*
-
-which is narrower, and differently owned, than *"declaration kinds own their
-representation."* That is the next derivation — it has NOT yet been run, and the
-branch above is a reading of E's result, not a measured disposition.
+**Next frontier: M4 — reconstruction.** M3's conformance result feeds it
+directly: if the envelope goes, the bare array becomes the only round-trip form,
+and `time-travel.ts:2030` reads `child.all` directly.
 
 ## Deferred DX pressures (Table G) — capability, never spelling
 
