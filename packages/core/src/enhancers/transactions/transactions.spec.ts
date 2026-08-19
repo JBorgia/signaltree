@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { getTreeRealizationPort } from '../../lib/internals/causal-runtime/tree-realization-adapter';
 import { getOwnedPositionIds } from '../../lib/internals/owned-mutation';
 import { entityMap } from '../../lib/markers/entity-map';
-import { LoadingState, status } from '../../lib/markers/status';
 import { stored } from '../../lib/markers/stored';
 import { signalTree } from '../../lib/signal-tree';
 import { SignalTreeRollbackError } from '../../lib/types';
@@ -90,25 +89,12 @@ describe('transactions enhancer', () => {
     expect(store()).toEqual({ inside: '', outside: 'later' });
   });
 
-  it('rolls back pending status source-signal writes without status-specific logic', async () => {
-    const { resetPathNotifier } = await import('../../lib/path-notifier');
-    resetPathNotifier();
-
-    const store = signalTree({ job: status() }).with(transactions());
-
-    const pending = store.transaction(() => {
-      store.$.job.state.set(LoadingState.Error);
-      store.$.job.error.set(new Error('boom'));
-    });
-
-    expect(store.$.job.state()).toBe(LoadingState.Error);
-    expect(store.$.job.error()?.message).toBe('boom');
-
-    pending.rollback();
-
-    expect(store.$.job.state()).toBe(LoadingState.NotLoaded);
-    expect(store.$.job.error()).toBe(null);
-  });
+  // WITHDRAWN WITH STATUS-DEL — "rolls back pending status source-signal writes
+  // without status-specific logic". The frozen property is that rollback works
+  // without feature-specific logic, and it retains five independent specimens
+  // here, including the `stored()` case immediately below which existed on its
+  // own merits. Marker PARTICIPATION in the causal path is UNPROVEN, so the
+  // specimen is withdrawn rather than migrated.
 
   it('rolls back pending stored writes and restores persisted state', async () => {
     const { resetPathNotifier } = await import('../../lib/path-notifier');

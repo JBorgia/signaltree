@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { signal } from '@angular/core';
 
 import { entityMap } from '../markers/entity-map';
-import { status } from '../markers/status';
 import { stored } from '../markers/stored';
 import { signalTree } from '../signal-tree';
 import { interceptLeafSignals } from './intercept-leaf-signals';
@@ -101,7 +100,6 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
       rows: entityMap<{ id: number; name: string }, number>({
         selectId: (row) => row.id,
       }),
-      load: status(),
       theme: stored('intercept-owner-theme', 'light', {
         storage: {
           getItem: (key: string) => storage.get(key) ?? null,
@@ -126,7 +124,6 @@ describe('interceptLeafSignals — UpdateMetadata passthrough (PR1)', () => {
     const restore = interceptLeafSignals(tree.$, onWrite);
 
     tree.$.rows.addOne({ id: 1, name: 'A' });
-    tree.$.load.setLoading();
     tree.$.theme.set('dark');
 
     expect(list.map((entry) => entry.ownerPath)).toEqual(['rows']);

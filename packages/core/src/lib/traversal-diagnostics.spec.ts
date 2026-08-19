@@ -1,6 +1,5 @@
 import { signalTree } from './signal-tree';
 import { stored } from './markers/stored';
-import { status } from './markers/status';
 
 function createMockStorage(): Storage {
   const store = new Map<string, string>();
@@ -21,7 +20,6 @@ describe('W2: builder call path finalizes', () => {
     const mockStorage = createMockStorage();
     const tree = signalTree({
       theme: stored('w2-theme', 'light', { storage: mockStorage }),
-      load: status(),
       plain: 1,
     });
 

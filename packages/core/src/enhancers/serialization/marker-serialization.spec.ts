@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { entityMap } from '../../lib/types';
 import { form } from '../../lib/markers/form';
-import { LoadingState, status } from '../../lib/markers/status';
 import { signalTree } from '../../lib/signal-tree';
 import { serialization } from './serialization';
 
@@ -34,13 +33,8 @@ describe('serialization round-trips every marker', () => {
     } };
   };
 
-  it('status()', () => {
-    const { a, restore } = roundTrip(() => ({ j: status<string>() }));
-    a.$.j.setError('boom');
-    const b = restore();
-    expect(b.$.j.state()).toBe(LoadingState.Error);
-    expect(b.$.j.error()).toBe('boom');
-  });
+  // WITHDRAWN WITH STATUS-DEL — the status() serialization cases. Their subject
+  // is marker external representation, UNPROVEN.
 
   it('entityMap()', () => {
     const { a, restore } = roundTrip(() => ({
@@ -55,17 +49,6 @@ describe('serialization round-trips every marker', () => {
     expect(b.$.r.byId(2)?.()).toEqual({ id: 2, v: 'b' });
   });
 
-  it('normalises LOADING — deserialize crosses a process boundary', () => {
-    // The one place `rehydrate` differs from `restore`. A fetch in flight when
-    // the payload was written is not in flight in a new process, and believing
-    // it deadlocks every guard: loading() true blocks "don't fetch while
-    // loading", idle() false blocks an idle-gated fetch.
-    const { a, restore } = roundTrip(() => ({ j: status() }));
-    a.$.j.setLoading();
-    const b = restore();
-    expect(b.$.j.state()).toBe(LoadingState.NotLoaded);
-    expect(b.$.j.idle()).toBe(true);
-  });
 });
 
 describe('special types still survive — one materialiser, same result', () => {

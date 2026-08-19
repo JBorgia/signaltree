@@ -2,7 +2,6 @@ import { TransferState, makeStateKey } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import { entityMap } from './types';
-import { status } from './markers/status';
 import { asyncSource } from './markers/async-source';
 import { signalTree } from './signal-tree';
 import { serialization } from '../enhancers/serialization/serialization';
@@ -23,7 +22,6 @@ const makeTree = () =>
   signalTree({
     user: { name: '', role: '' },
     rows: entityMap<Row, number>({ selectId: (r) => r.id }),
-    load: status(),
     counter: 0,
   }).with(serialization());
 
@@ -56,21 +54,9 @@ describe('C3 — server → TransferState → client', () => {
     expect(client.$.rows.all().map((r) => r.name)).toEqual(['a', 'b']);
   });
 
-  it('normalises an in-flight status — the rehydrate contract', () => {
-    // The server may finish rendering mid-fetch. A LOADING status that crosses
-    // a process boundary is a lie: nothing is in flight in the new process, and
-    // believing it deadlocks every fetch guard. `rehydrate` must normalise it,
-    // where `restore` (undo, same process) would keep it.
-    const server = makeTree();
-    server.$.load.setLoading();
-    const json = server.serialize();
-
-    const client = makeTree();
-    client.deserialize(json);
-
-    expect(client.$.load.loading()).toBe(false);
-    expect(client.$.load.state()).not.toBe('LOADING');
-  });
+  // WITHDRAWN WITH STATUS-DEL — "normalises an in-flight status". The subject is
+  // generic marker rehydrate NORMALISATION, which is UNPROVEN. The plain-state
+  // and entityMap transfer cases in this file are untouched.
 
   it('the payload is a plain JSON string TransferState can hold', () => {
     const server = makeTree();
@@ -150,7 +136,6 @@ describe('C3 gap — asyncSource ships its payload and then drops it', () => {
 describe('RFC 0014 — deserialize({ transfer: true })', () => {
   const make = () => ({
     feed: asyncSource<string[]>(() => Promise.resolve([])),
-    load: status(),
     n: 0,
   });
 
@@ -170,18 +155,7 @@ describe('RFC 0014 — deserialize({ transfer: true })', () => {
     ]);
   });
 
-  it('still normalises an in-flight status — freshness is not the question', () => {
-    // The argument that makes `transfer` accept DATA does not extend to a
-    // REQUEST: a fetch in flight on the server is not in flight here, however
-    // recent the payload.
-    const server = signalTree(make()).with(serialization());
-    server.$.load.setLoading();
-
-    const client = signalTree(make()).with(serialization());
-    client.deserialize(server.serialize(), { transfer: true });
-
-    expect(client.$.load.loading()).toBe(false);
-  });
+  // WITHDRAWN WITH STATUS-DEL — same subject, freshness variant.
 
   it('leaves the storage path alone — no flag, no change in behaviour', () => {
     const server = signalTree(make()).with(serialization());

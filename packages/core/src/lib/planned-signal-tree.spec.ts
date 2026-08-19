@@ -130,38 +130,11 @@ describe('plannedSignalTree prototype', () => {
     expect(hasIntrinsicMutationEmitter(leaf)).toBe(false);
   });
 
-  it('keeps status marker source leaves non-authoring without mutation-capture', () => {
-    const tree = plannedSignalTree({ load: status() }).build();
 
-    expect(getOwnedPositionIds(tree.$.load.state)).toBeUndefined();
-    expect(getOwnedOwnerPath(tree.$.load.state)).toBeUndefined();
-    expect(hasIntrinsicMutationEmitter(tree.$.load.state)).toBe(false);
-    expect(getOwnedPositionIds(tree.$.load.error)).toBeUndefined();
-    expect(getOwnedOwnerPath(tree.$.load.error)).toBeUndefined();
-    expect(hasIntrinsicMutationEmitter(tree.$.load.error)).toBe(false);
-    expect(getOwnedPositionIds(tree.$.load)).toBeUndefined();
-    expect(getOwnedOwnerPath(tree.$.load)).toBeUndefined();
-    expect(hasIntrinsicMutationEmitter(tree.$.load)).toBe(false);
-    expect(tree.$.load.state()).toBe(LoadingState.NotLoaded);
-  });
 
-  it('specializes status marker source leaves through the shared causal substrate', () => {
-    const tree = plannedSignalTree({ load: status() })
-      .with(transactions())
-      .build();
-
-    expect(getOwnedPositionIds(tree.$.load.state)?.length).toBe(1);
-    expect(getOwnedOwnerPath(tree.$.load.state)).toBe('load');
-    expect(hasIntrinsicMutationEmitter(tree.$.load.state)).toBe(true);
-    expect(getOwnedPositionIds(tree.$.load.error)?.length).toBe(1);
-    expect(getOwnedOwnerPath(tree.$.load.error)).toBe('load');
-    expect(hasIntrinsicMutationEmitter(tree.$.load.error)).toBe(true);
-    expect(getOwnedPositionIds(tree.$.load)?.length).toBe(1);
-    expect(getOwnedOwnerPath(tree.$.load)).toBe('load');
-    expect(hasIntrinsicMutationEmitter(tree.$.load)).toBe(true);
-    expect(getOwnedSubjectIds(tree.$.load.state)).toBeUndefined();
-  });
-
+  // WITHDRAWN WITH STATUS-DEL — two status leaf-specialization cases. The EARNED
+  // pre-exposure planning function keeps independent specimens: the stored() and
+  // entityMap cases below, plus the capability-union and build-plan assertions.
   it('keeps stored() persistent without mutation-capture', () => {
     const storage = createMockStorage();
     const tree = plannedSignalTree({

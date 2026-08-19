@@ -4,7 +4,6 @@ import { entityMap } from './types';
 import { asyncSource } from './markers/async-source';
 import { hydrateMarkerNode } from './internals/materialize-markers';
 import { loader } from './markers/loader';
-import { LoadingState, status } from './markers/status';
 import { signalTree } from './signal-tree';
 
 /**
@@ -71,11 +70,10 @@ describe('rehydrate: markers with no source accept the payload', () => {
     expect(tree.$.r.count()).toBe(2);
   });
 
-  it('a manually-driven status restores LOADED', () => {
-    const tree = signalTree({ j: status() });
-    hydrateMarkerNode(tree.$.j, { state: 'LOADED', error: null }, 'rehydrate');
-    expect(tree.$.j.state()).toBe(LoadingState.Loaded);
-  });
+  // WITHDRAWN WITH STATUS-DEL — "a manually-driven status restores LOADED". The
+  // subject is generic marker rehydration via hydrateMarkerNode, which is
+  // UNPROVEN. The loader-backed entityMap case below covers rehydrate ownership
+  // with an independent specimen.
 });
 
 describe('restore always writes — undo is not competing with a loader', () => {

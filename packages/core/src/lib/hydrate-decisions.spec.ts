@@ -9,7 +9,6 @@ import {
 } from './internals/materialize-markers';
 import { loader } from './markers/loader';
 import { signalTree } from './signal-tree';
-import { status } from './markers/status';
 
 /**
  * §5.5 — `hydrate` now makes real decisions, so it has to be possible to SEE
@@ -43,6 +42,9 @@ const collect = () => {
 
 afterEach(() => vi.restoreAllMocks());
 
+// WITHDRAWN WITH STATUS-DEL — two status cases on hydrate-decision reporting.
+// The asyncSource cases are deliberately LEFT for ASYNC-DEL: cleaning them here
+// would blur the commit boundary and weaken that residue measurement.
 describe('a declined rehydrate is observable', () => {
   it('a loader-backed entityMap reports why it refused', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
@@ -91,22 +93,6 @@ describe('a declined rehydrate is observable', () => {
   });
 });
 
-describe('a normalised rehydrate is observable', () => {
-  it('status reports the LOADING → NotLoaded adjustment', () => {
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const tree = signalTree({ j: status() });
-
-    const { events, off } = collect();
-    hydrateMarkerNode(tree.$.j, { state: 'LOADING', error: null }, 'rehydrate');
-    off();
-
-    expect(events).toHaveLength(1);
-    expect(events[0].marker).toBe('status');
-    expect(events[0].decision).toBe('normalised');
-    expect(events[0].reason).toBe('no-request-survives-boundary');
-    expect(events[0].detail).toContain('process boundary');
-  });
-});
 
 describe('what is NOT reported — silence has to stay meaningful', () => {
   it('an accepted payload reports nothing', () => {
@@ -140,17 +126,6 @@ describe('what is NOT reported — silence has to stay meaningful', () => {
     expect(tree.$.r.count()).toBe(2);
   });
 
-  it('status keeps LOADING on restore, and says nothing', () => {
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const tree = signalTree({ j: status() });
-
-    const { events, off } = collect();
-    hydrateMarkerNode(tree.$.j, { state: 'LOADING', error: null }, 'restore');
-    off();
-
-    expect(events).toEqual([]);
-    expect(tree.$.j.loading()).toBe(true);
-  });
 });
 
 describe('the seam itself', () => {
@@ -167,53 +142,8 @@ describe('the seam itself', () => {
     expect(events).toEqual([]);
   });
 
-  it('reports to the dev console when nobody is listening', () => {
-    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const tree = signalTree({ j: status() });
-
-    hydrateMarkerNode(tree.$.j, { state: 'LOADING', error: null }, 'rehydrate');
-
-    // A developer with no devtools panel still has to be able to see it.
-    expect(
-      info.mock.calls.filter((c) => String(c[0]).includes('normalised'))
-    ).toHaveLength(1);
-  });
 });
 
-describe('reason ships, detail folds', () => {
-  it('a listener receives a stable machine-readable reason', () => {
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const tree = signalTree({ j: status() });
-
-    const { events, off } = collect();
-    hydrateMarkerNode(tree.$.j, { state: 'LOADING', error: null }, 'rehydrate');
-    off();
-
-    // The union is the contract a production listener codes against — the
-    // prose is not, and must never be parsed.
-    const reason: 'loader-owns-source' | 'no-request-survives-boundary' =
-      events[0].reason;
-    expect(reason).toBe('no-request-survives-boundary');
-  });
-
-  it('LISTENERS ARE NOT DEV-ONLY — a public API that no-ops in prod is the bug we just deleted', () => {
-    // The reports are guarded such that `detail` folds under
-    // `ngDevMode: false`, but the notification itself must not. An earlier
-    // revision guarded the whole call site to save 0.19KB, which turned
-    // `onHydrateDecision` into an API that silently did nothing in production —
-    // exactly what `tree.$.count(5)` was removed for. This test is the guard
-    // against re-making that trade.
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const tree = signalTree({ j: status() });
-
-    const { events, off } = collect();
-    hydrateMarkerNode(tree.$.j, { state: 'LOADING', error: null }, 'rehydrate');
-    off();
-
-    expect(events).toHaveLength(1);
-    expect(events[0].reason).toBeDefined();
-  });
-});
 
 /**
  * RFC 0014 — the same two markers under `transfer`.

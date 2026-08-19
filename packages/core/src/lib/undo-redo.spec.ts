@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { entityMap } from './types';
 import { form } from './markers/form';
-import { LoadingState, status } from './markers/status';
 import { signalTree } from './signal-tree';
 import { timeTravel } from '../enhancers/time-travel/time-travel';
 
@@ -102,36 +101,10 @@ describe('tree(partial) writes markers — the same path undo uses', () => {
   });
 });
 
-describe('undo/redo deliberately does NOT restore in-flight state', () => {
-
-  it('an in-process undo keeps LOADING — the request may still be running', async () => {
-    // This is the one place `restore` and `rehydrate` genuinely differ. Undo is
-    // in-process: a fetch started before the undo is still going, so reporting
-    // NotLoaded would be the lie. Cross-process rehydrate normalises it instead.
-    const tree = signalTree({ j: status(), n: 0 }).with(timeTravel());
-    tree.$.j.setLoading();
-    tree.$.n.set(1);
-    await flush();
-    tree.$.n.set(2);
-    await flush();
-
-    tree.undo();
-    expect(tree.$.j.state()).toBe(LoadingState.Loading);
-  });
-
-  it('undoes direct status source-signal writes as one owned turn', async () => {
-    const tree = signalTree({ j: status() }).with(timeTravel());
-
-    tree.$.j.state.set(LoadingState.Error);
-    tree.$.j.error.set(new Error('boom'));
-    await flush();
-
-    expect(tree.$.j.state()).toBe(LoadingState.Error);
-    expect(tree.$.j.error()?.message).toBe('boom');
-
-    tree.undo();
-
-    expect(tree.$.j.state()).toBe(LoadingState.NotLoaded);
-    expect(tree.$.j.error()).toBe(null);
-  });
-});
+// WITHDRAWN WITH STATUS-DEL — the whole "undo/redo deliberately does NOT restore
+// in-flight state" suite. Both of its cases used `status()` as their only
+// specimen: one for the marker's HYDRATE semantics (restore and rehydrate
+// differing for in-flight state), one for generic marker source-signal ownership
+// as a single owned turn. Both subjects are UNPROVEN generic marker machinery, so
+// the coverage is withdrawn rather than migrated. Production machinery unchanged;
+// the generic-marker derivation decides whether replacement coverage is earned.

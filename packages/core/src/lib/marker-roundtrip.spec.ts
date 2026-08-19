@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { entityMap } from './types';
 import { form } from './markers/form';
-import { LoadingState, status } from './markers/status';
 import { signalTree } from './signal-tree';
 import { applyState } from './utils';
 
@@ -38,28 +37,9 @@ describe('markers round-trip through snapshot → hydrate', () => {
     expect(fresh.$.rows.byId(2)?.()).toEqual({ id: 2 });
   });
 
-  it('status: Loaded survives — dropping it would refetch data we hold', () => {
-    const src = signalTree({ j: status() });
-    src.$.j.setLoaded();
-    expect(src.$.j.loaded()).toBe(true);
+  // WITHDRAWN WITH STATUS-DEL — "status: Loaded survives" and "status: Error
+  // survives". Both assert status-specific hydrate VALUES on the generic
+  // snapshot->reconstruction path, which is UNPROVEN. The entityMap case above
+  // keeps the roundtrip property with an independent specimen.
 
-    const fresh = signalTree({ j: status() });
-    applyState(fresh.$, src());
-
-    expect(fresh.$.j.state()).toBe(LoadingState.Loaded);
-    expect(fresh.$.j.loaded()).toBe(true);
-  });
-
-  it('status: Error survives, so a retry guard can report the last failure', () => {
-    const src = signalTree({ j: status<string>() });
-    src.$.j.setError('timeout');
-    expect(src.$.j.hasError()).toBe(true);
-
-    const fresh = signalTree({ j: status<string>() });
-    applyState(fresh.$, src());
-
-    expect(fresh.$.j.state()).toBe(LoadingState.Error);
-    expect(fresh.$.j.error()).toBe('timeout');
-    expect(fresh.$.j.idle()).toBe(true); // errored is retryable
-  });
 });

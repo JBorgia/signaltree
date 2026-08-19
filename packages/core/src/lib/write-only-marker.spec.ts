@@ -5,7 +5,6 @@ import { entityMap } from './types';
 import { form } from './markers/form';
 import { registerMarkerProcessor } from './internals/materialize-markers';
 import { signalTree } from './signal-tree';
-import { status } from './markers/status';
 import { stored } from './markers/stored';
 
 /**

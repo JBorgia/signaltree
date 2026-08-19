@@ -4,7 +4,6 @@ import { entityMap } from '../../lib/types';
 import { form } from '../../lib/markers/form';
 import { persistence } from './serialization';
 import { signalTree } from '../../lib/signal-tree';
-import { status } from '../../lib/markers/status';
 import { createStorageAdapter } from './storage-adapters';
 
 /**
@@ -177,25 +176,11 @@ describe('persistence(): autoSave', () => {
   });
 });
 
-describe('persistence(): the 14.0.0 payload actually round-trips markers', () => {
-
-  it('a LOADING status is normalised on load — nothing is in flight after a reload', async () => {
-    const { adapter } = memoryStorage();
-    const cfg = { key: 'inflight', storage: adapter, autoSave: false, autoLoad: false };
-
-    const a = signalTree({ job: status<Error>() }).with(persistence(cfg));
-    a.$.job.setLoading();
-    await a.save();
-
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const b = signalTree({ job: status<Error>() }).with(persistence(cfg));
-    await b.load();
-
-    // `load()` crosses a process boundary in the case it exists for, so a
-    // restored LOADING would strand a spinner nothing will resolve.
-    expect(b.$.job.loading()).toBe(false);
-  });
-});
+// WITHDRAWN WITH STATUS-DEL — the whole "persistence(): the 14.0.0 payload
+// actually round-trips markers" suite. Its only case was "a LOADING status is
+// normalised on load", whose subject is status hydrate-normalisation rather than
+// persistence. The frozen persistence property keeps five independent cases:
+// save, load, clear, empty-store and autoLoad.
 
 describe('persistence(): configuration is validated', () => {
   it('throws when no storage adapter is available', () => {

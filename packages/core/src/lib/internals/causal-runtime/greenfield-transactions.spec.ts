@@ -6,7 +6,6 @@ import { signalTree } from '../../signal-tree';
 import type { ISignalTree, StructuralHistoryEffect, UpdateMetadata } from '../../types';
 import { withWriteContext } from '../../write-context';
 import { entityMap } from '../../markers/entity-map';
-import { LoadingState, status } from '../../markers/status';
 import { stored } from '../../markers/stored';
 import { getOwnedPositionIds } from '../owned-mutation';
 import { createPositionRegistry } from '../position-registry';
@@ -1131,12 +1130,16 @@ describe('greenfield transactions', () => {
       JSON.stringify({ __v: 1, data: 'compact' })
     );
 
+    // STATUS-DEL: the `request: status()` write-kind was trimmed from this
+    // heterogeneous fixture. Three genuinely distinct kinds remain — plain nested
+    // state, entityMap structural, and the `stored` marker — so the frozen
+    // heterogeneous-write falsifier still has specimens. Marker participation as
+    // a write-kind is UNPROVEN and was withdrawn rather than migrated.
     const tree = signalTree({
       profile: { firstName: 'John' },
       users: entityMap<{ id: string; name: string }, string>({
         selectId: (user) => user.id,
       }),
-      request: status(),
       preference: stored('greenfield-live-preference', 'compact', {
         storage,
         debounceMs: 0,
@@ -1150,10 +1153,6 @@ describe('greenfield transactions', () => {
         byIdOrFail(id: string): {
           name: (() => string | undefined) & { __subjectIds?: number[] };
         };
-      };
-      request: {
-        state(): LoadingState;
-        setLoading(): void;
       };
       preference: {
         (): string;
@@ -1196,14 +1195,12 @@ describe('greenfield transactions', () => {
     liveHarness.write(() => {
       tree.$.profile.firstName.set('Jane');
       tree.$.users.changeId('u1', 'u2');
-      tree.$.request.setLoading();
       tree.$.preference.set('spacious');
     });
     liveHarness.flush();
 
     expect(tree.$.profile.firstName()).toBe('Jane');
     expect(tree.$.users.ids()).toEqual(['u2']);
-    expect(tree.$.request.state()).toBe(LoadingState.Loading);
     expect(tree.$.preference()).toBe('spacious');
     expect(
       JSON.parse(storage.getItem('greenfield-live-preference') as string).data
@@ -1212,7 +1209,6 @@ describe('greenfield transactions', () => {
 
     const profileOwner = getOwnedPositionIds(tree.$.profile.firstName)?.[0] as PositionId;
     const usersOwner = getOwnedPositionIds(tree.$.users)?.[0] as PositionId;
-    const requestOwner = getOwnedPositionIds(tree.$.request)?.[0] as PositionId;
     const preferenceOwner = getOwnedPositionIds(tree.$.preference)?.[0] as PositionId;
 
     expect(liveDraft.seal()).toEqual({
@@ -1234,14 +1230,9 @@ describe('greenfield transactions', () => {
           },
           subjectPositions: [usersOwner],
         },
-        {
-          owner: requestOwner,
-          before: LoadingState.NotLoaded,
-          after: LoadingState.Loading,
-        },
         { owner: preferenceOwner, before: 'compact', after: 'spacious' },
       ],
-      participants: [profileOwner, usersOwner, requestOwner, preferenceOwner],
+      participants: [profileOwner, usersOwner, preferenceOwner],
       state: 'pending',
     });
 
@@ -1249,7 +1240,6 @@ describe('greenfield transactions', () => {
 
     expect(tree.$.profile.firstName()).toBe('John');
     expect(tree.$.users.ids()).toEqual(['u1']);
-    expect(tree.$.request.state()).toBe(LoadingState.NotLoaded);
     expect(tree.$.preference()).toBe('compact');
     expect(
       JSON.parse(storage.getItem('greenfield-live-preference') as string).data

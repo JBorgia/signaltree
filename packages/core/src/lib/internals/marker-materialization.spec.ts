@@ -1,6 +1,5 @@
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../markers/entity-map';
-import { status } from '../markers/status';
 import { stored } from '../markers/stored';
 
 interface User {
@@ -29,13 +28,9 @@ function mockStorage(): Storage {
  * its marker carries a Storage handle.
  */
 describe('W4: no marker leaks its raw form from a nested position', () => {
-  it('status() nested under a parent', () => {
-    const tree = signalTree({ outer: { load: status(), n: 1 } });
-    void tree.$;
-    const json = JSON.stringify(tree());
-    expect(json).not.toContain('initialState');
-    expect(typeof tree.$.outer.load.setLoading).toBe('function');
-  });
+  // WITHDRAWN WITH STATUS-DEL — "status() nested under a parent". The subject is
+  // registered-marker realization under nesting, UNPROVEN. The entityMap(),
+  // stored() and three-levels-deep cases keep independent specimens.
 
   it('entityMap() nested under a parent', () => {
     const tree = signalTree({ outer: { users: entityMap<User>(), n: 1 } });
@@ -53,25 +48,22 @@ describe('W4: no marker leaks its raw form from a nested position', () => {
     expect(JSON.stringify(tree())).not.toContain('defaultValue');
   });
 
+  // STATUS-DEL: the status specimen was trimmed; entityMap keeps the
+  // deep-nesting property with an independent marker.
   it('markers nested THREE levels deep', () => {
     const tree = signalTree({
-      a: { b: { c: { load: status(), users: entityMap<User>() } } },
+      a: { b: { c: { users: entityMap<User>() } } },
     });
     void tree.$;
     const json = JSON.stringify(tree());
     expect(json).not.toContain('initialState');
     expect(json).not.toContain('__isEntityMap');
-    expect(typeof tree.$.a.b.c.load.setLoaded).toBe('function');
+    expect(typeof tree.$.a.b.c.users.addOne).toBe('function');
   });
 
-  it('the accessor and its backing store agree after materialization', () => {
-    const tree = signalTree({ outer: { load: status() } });
-    void tree.$;
-    // Reading through the accessor's call path (which uses the closed-over
-    // store) must see the materialized marker, not the raw one.
-    const viaCall = (tree.$.outer as unknown as () => unknown)();
-    expect(JSON.stringify(viaCall)).not.toContain('initialState');
-  });
+  // WITHDRAWN WITH STATUS-DEL — "the accessor and its backing store agree after
+  // materialization". `status()` was the only specimen and the subject is
+  // generic marker materialization, UNPROVEN.
 
   it('the internal store back-reference never reaches a snapshot', () => {
     const tree = signalTree({ outer: { n: 1 } });
