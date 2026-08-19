@@ -545,13 +545,31 @@ transactions()          getOrCreateInternalTransactionRuntime() returns the
                         -> outcome A: canonicalize. Nothing fails.
 
 stored()                MEASURED IN REAL CODE: 12 occurrences in one demo
-                        component, 10 in another. Multiple durable consequences
-                        per tree is not merely legitimate, it is the NORMAL case.
-                        -> plural, by a wide margin.
+                        component, 10 in another.
+                        -> multiple PERSISTENCE-DECLARED POSITIONS per tree are
+                           normal. See the scope limit below; this row proves
+                           less than it first appears.
 ```
 
-**That pair alone refutes a generic rule.** "One declaration of each kind" is
-false for durable consequences; "duplicates are always fine" is not obviously
+**SCOPE LIMIT on the `stored()` row, because it is easy to over-read.**
+
+```text
+MEASURED
+  multiple persistence-declared POSITIONS per tree are normal
+
+NOT PROVED BY THIS MEASUREMENT
+  multiple independently governed durability CONSEQUENCE instances or targets
+  future `stored()` ownership
+  future persistence authoring cardinality
+```
+
+`stored()` is already semantically suspect — its outbound durability and inbound
+hydration have DIFFERENT frozen authorities — so it must not do architectural
+work here beyond what it measured. What it establishes is narrow and sufficient:
+a per-kind uniqueness rule would reject code that is currently normal.
+
+**That pair refutes a generic rule.** "One declaration of each kind" is false for
+persistence-declared positions; "duplicates are always fine" is not obviously
 true for a singular authority. There is no single rule to be had.
 
 #### Cardinality per function, with its semantic basis
@@ -560,7 +578,7 @@ true for a singular authority. There is no single rule to be had.
 |---|---|---|---|
 | transaction authority | idempotent / canonicalizing | already a per-tree singleton; no config to conflict | no |
 | temporal history policy | 0..1 (candidate) | two configured histories over ONE causal lineage would compete | no — the OWNER is singular |
-| durable consequence | 0..N | **MEASURED plural** | no — distinguished by external target |
+| persistence-declared position | 0..N | **MEASURED plural** | no — distinguished by its position |
 | call interception | 0..N, compositional | three built-ins intercept today and coexist | no |
 | cleanup registration | 0..N, additive | `registerCleanup` is a list | no |
 | substrate requirement | set, idempotent | union; repetition is meaningless | no |
@@ -599,11 +617,24 @@ audit keeps deleting. A grammar that makes the invalid combination
 UNREPRESENTABLE is preferable to one that detects it — and structural
 impossibility is not available inside a homogeneous array.
 
-Recorded as an open consequence, not a proposal: **do not assume all surviving
-optional authoring inputs belong in a common collection.** The `features: []`
-candidate must survive this too, and the step-7 criteria now have a seventh
-question to answer — whether one property can honestly hold things with
-different cardinalities.
+**Stated precisely, because "refuted" would overstate it:**
+
+```text
+flat `features: []` as the final grammar      UNPROVEN / CHALLENGED
+a generic duplicate rule over that array      REFUTED / NOT EARNED
+```
+
+A compiler COULD accept a flat collection and enforce differing cardinalities
+structurally or at the type level; that has not been shown impossible. The
+discovery is not "arrays cannot work". It is stronger and more methodological:
+
+> **We have no evidence that these independently derived functions belong to one
+> common authoring category at all.**
+
+Recorded as an open consequence, not a proposal: do not assume all surviving
+optional authoring inputs share a collection. The `features: []` candidate must
+survive this too, and the step-7 criteria gain a question — whether one property
+can honestly hold things with different cardinalities.
 
 #### `name` is explicitly out of scope here
 
@@ -612,17 +643,66 @@ DIFFERENT function with a different owner, and it gets audited when diagnostics
 does. *"We need a useful diagnostic label"* must never become *"therefore
 declaration identity exists"*.
 
-### Table F — legacy dispositions (a ledger, not an agenda)
+### EXTENSION-SYSTEM FUNCTIONAL EXTRACTION — **CLOSED**
 
-| Legacy symbol | What it happened to provide | Disposition |
+```text
+DELETED FUNCTIONS
+  post-exposure composition                      no surviving use case
+  feature -> feature realization dependency      zero measured
+
+NOT EARNED
+  author-supplied substrate requirement protocol
+  generic declaration identity / duplicate rule
+
+SURVIVING FUNCTIONS, with owners
+  preconstruction substrate knowledge   compiler / construction
+  runtime realization                   construction / runtime realization
+  final callable interception           finalization
+  teardown registration                 tree lifetime          [LANDED]
+  public type contribution              type compiler
+  contribution collision, both halves   compiler
+  substrate authority                   kernel
+```
+
+#### The principle Derivation 3 actually produced
+
+> **Multiplicity and exclusivity belong to the semantic authority or function,
+> never to a generic declaration-identity system.**
+
+`transactions` is the worked example: its per-tree runtime already canonicalizes,
+so a duplicate MENTION does not create a duplicate AUTHORITY, and no duplicate
+guard is involved. Do not promote the `timeTravel` singleton READING to frozen
+architecture without a bounded proof if it ever becomes load-bearing.
+
+### Table F — legacy dispositions
+
+Mechanical. **No further NULLs are run against these nouns** — they are mapped
+onto answers derived independently of them.
+
+The wording matters: several rows say *"no survival earned from the extension
+function audit"* rather than `DELETE`. Their extension-system justification is
+dead, but an unrelated function could theoretically save part of one later — a
+diagnostic label being the obvious candidate. Writing an unconditional deletion
+would make a future diagnostics audit look like it was reopening a freeze.
+
+| Legacy mechanism | Basis | Disposition |
 |---|---|---|
-| `.with()` | sequential accumulation; late-application syntax | **DELETE** (function extracted, no surviving use) |
-| `Enhancer` | authoring + realization + type contribution, conflated in one callable | functions extracted; form UNPROVEN — do NOT run an "Enhancer null" |
-| `plannedSignalTree` | preconstruction capability planning | function relocates to ordinary compilation; public form UNPROVEN |
-| `bind()` | binding to an already-constructed host | reference evidence only |
-| `requires` / `provides` | an attempt at ordering + dependency validation | reference evidence only — evidence that someone anticipated a dependency problem, not evidence of the right solution |
-| `name` | enhancer identity | reference evidence only |
-| `capabilities` | substrate requirement declaration | the one legacy field whose FUNCTION is measured and exercised |
+| `.with()` | its function — post-exposure composition — is DELETE | **DELETE**, no compatibility adapter (Rule 0l) |
+| `Enhancer<TAdded>` | bundled authoring + type contribution + realization; each now has a separate owner | **DELETE / REDESIGN** as a callable abstraction; no adapter |
+| `plannedSignalTree()` | its function — complete planning before construction — survives under the compiler | **DELETE / REDESIGN** as a separate constructor |
+| `capabilities` (public field) | requirements measured intrinsic; no author protocol earned | public field **DELETE candidate**; the internal compiler knowledge survives |
+| `requires` | the realization-dependency function is DELETE | **DELETE** |
+| `provides` | no dependency protocol remains for it to serve | **no survival earned from the extension function audit** |
+| `name` | generic duplicate identity not earned | **no identity survival earned**; diagnostics naming unexamined |
+| `bind()` | connecting a callable to an already-built host disappeared with the construction model | **no survival earned here**; internal realization may need something, derived separately |
+| `ENHANCER_META` | a bundle whose members now have different owners | **decompose mechanically**; do not preserve the bundle because one member survives |
+
+**`ENHANCER_META` is the row most at risk of a lazy answer.** It currently
+carries `name`, `provides`, `requires`, `capabilities` and `description`. Four of
+those five have no surviving extension-cluster function, and the fifth
+(`capabilities`) survives as internal knowledge rather than as an author-supplied
+field. Preserving the envelope because one member has an internal analogue would
+reconstruct the conflation the audit just took apart.
 
 ### Extend this treatment to the rest of the matrix
 
