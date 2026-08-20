@@ -3733,6 +3733,148 @@ E's form summary said *five members are the minimum and one more is earned*. Wit
 positive result is now confined to the FUNCTION (dynamic membership + granular
 observation over canonical truth), not to any member beyond the minimum.
 
+## DERIVATION — SERIALIZATION, FROM ZERO. Not earned, and it CLEARS the M-cluster cut.
+
+Evidence: `serialization-zero-state.spec.ts`, 12 rows. The 1352-line serializer
+was opened LAST, per Rule 0o, specifically so it could not re-legitimise the
+M3/M4 hooks by virtue of currently calling them.
+
+### The functions, stated before the incumbent was opened
+
+```text
+F1 EXTERNALIZE   produce a value carrying canonical truth that survives leaving
+                 this process
+F2 INTERNALIZE   take such a value and make a tree hold that truth again
+F3 IDENTIFY      the external value must say enough about itself that
+                 internalizing it is correct
+F4 BOUNDARY      whether to BELIEVE the payload depends on where it came from
+F5 TRANSPORT     the external form must not assume one transport
+F6 REFUSAL       only if independently required
+```
+
+### F1 — `tree()` alone does NOT satisfy it, and that is the useful finding
+
+The snapshot's node objects are frozen (dev only), so `snap.user.name = x`
+throws. But the freeze is **per node and does not reach leaf values**: an array
+leaf is handed out by reference, unfrozen, and `snap.user.pets` **is** the live
+array.
+
+This is not a new defect. It is documented at `utils.ts:462-486` and pinned by
+`snapshot-aliasing.spec.ts` (5 rows), and deliberately not fixed on measurement:
+copying leaf values costs **+54µs against 1.0µs on a 50k array**, and
+`Object.freeze` stops `Array.push` while `Date.setFullYear`, `Map.set` and
+`Set.add` ignore it entirely — *"half a guarantee reads as a whole one."*
+
+So `tree()` is read-only **by contract**, aliasing live truth. An external
+representation that aliases internal truth has not actually left the process.
+
+**The null already closes it: a codec COPIES.** Measured — mutating
+`JSON.parse(JSON.stringify(tree()))` leaves the tree untouched. The copy IS the
+boundary, and it is work the transport was going to do anyway.
+
+### F2 / F3 — the write path reconstructs, and `nodeMap` is redundant
+
+```text
+fresh({ user: {...}, rows: [...], n: 7 })   no metadata, no nodeMap
+  -> branches restored, leaves restored, collection restored
+```
+
+`metadata.nodeMap` records *"where the target tree contains branch nodes (objects
+with set/update) or root-as-signal markers"* and `deserialize` consumes it at
+`:630-651`. But **the target tree was built from its own literal and already
+knows which paths are branches.** It is not carrying information the destination
+lacks.
+
+Version identification is ordinary application data — `{ v: 2, data: tree() }`,
+with the branch on `v` in application code, exactly as the `stored` derivation
+found for `{ version, migrate }`. An unknown key in a payload is simply dropped
+by the write path.
+
+### F5 — transport neutrality comes free from the snapshot being a plain value
+
+```text
+JSON             Date -> string, Set -> {}, Map -> {}, undefined key -> GONE
+structuredClone  Date, Set and Map all survive intact
+```
+
+The limit is the **transport**, not the tree. Choosing a codec that can carry
+these over a JSON-only wire is an application concern with a well-served
+ecosystem.
+
+### What the null genuinely surfaces as a requirement
+
+**Cycles are reachable.** A plain object in the literal becomes a branch, but an
+array leaf holds arbitrary values, so `items.set([cyclic])` succeeds and
+`JSON.stringify(tree())` then throws. `handleCircular` / `metadata.circularRefs`
+protect something real — but a cycle-safe codec is precisely what a codec is for.
+This is a constraint on the codec choice, not a SignalTree function.
+
+### S-2 — derived is already excluded, by construction
+
+```text
+signalTree({a,b}).derived($ => ({ sum }))    ->  tree() keys are ['a','b']
+```
+
+`sum` is absent. Externalizing a computed would be a category error — it is not
+canonical truth, and restoring it would install a stale value that should have
+been recomputed. **No exclusion mechanism is needed; the snapshot never contained
+it.**
+
+### THE M3 GENERALIZATION TEST — PASSES
+
+This is what serialization was sequenced first to decide.
+
+```text
+stored position      tree() === { theme: 'light' }      the plain VALUE, no
+                     round-trips and restores            envelope, as M3 predicts
+
+collection           tree().rows === { all: [...] }      the ENVELOPE
+                     restores through JSON               ✓
+                     A BARE ARRAY restores IDENTICALLY   ✓
+```
+
+`fresh({ rows: [{id:'a',n:1},{id:'b',n:2}], n: 1 })` reconstructs `ids()`,
+`byId('b').n()` and the sibling leaf. **The envelope carries no reconstruction
+information the bare value lacks** — measured across a process boundary, against
+JSON, with versioning and a sibling plain position present.
+
+M3 said *"a realized value's state is what the accessor returns."* That was a
+local theorem about a walk. It now holds where it meets JSON representation,
+reconstruction, versioning and the SSR/storage distinction. **It is a system
+theorem.**
+
+### Verdict
+
+```text
+serialization as a SignalTree-owned enhancer   NOT EARNED for its core function
+
+  F1  needs a COPY -> the codec's job; `tree()` + codec is the null
+  F2  `tree(payload)` — already the write path
+  F3  ordinary application data; nodeMap is REDUNDANT
+  F4  resolved by M4 (mode is a call-site property)
+  F5  free — the snapshot is a plain JS value
+  F6  not independently required here
+
+  save / load / clear     persistence — `stored`'s territory, already NOT EARNED
+  replacer / reviver      pass-throughs to JSON
+  preserveTypes           a codec, and the ecosystem ships several
+  handleCircular          a real hazard, still a codec's job
+  maxDepth                a guard, not a function
+```
+
+**M3 AND M4 ARE NOW CLEARED FOR PHYSICAL SUBTRACTION.** Serialization does not
+independently require declaration-specific representation, which was the one
+dependency that could have reversed the cut.
+
+### Scope stated honestly
+
+This derived the **surface** (11 methods, 7 config options, the metadata shape)
+and measured the mechanisms that could plausibly be functions the null lacks:
+`nodeMap`, circularity, type preservation, derived exclusion, and the round trip
+itself. It did **not** read all 1352 lines. If a function hides in the
+unexamined remainder it will surface at the subtraction, and the subtraction is
+where a missed consumer becomes a failing test rather than a silent gap.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

@@ -314,8 +314,29 @@ linked                        NOT EARNED. A 4-line pass-through to Angular's
                               explicit type arguments recovers it exactly, so the
                               contribution is an ANNOTATION SAVED, not a behaviour
                               gained. Rule 0m -> DX pressure, not a derivation.
-readonly / serialization /    OPEN
-  diagnostics
+serialization                 NOT EARNED for its core function, and it CLEARS
+                              the M-cluster cut. F1 is not satisfied by `tree()`
+                              alone — the snapshot's freeze is per-node and does
+                              not reach leaf values, so an array leaf aliases
+                              live state (documented utils.ts:462-486, pinned by
+                              snapshot-aliasing.spec.ts, deliberately unfixed on
+                              measurement: +54us vs 1.0us on 50k, and freeze
+                              cannot stop Date.setFullYear/Map.set/Set.add). A
+                              codec's COPY is the boundary. F2 is `tree(payload)`.
+                              F3 is ordinary app data and `nodeMap` is REDUNDANT
+                              (the target tree knows its own shape). F5 is free —
+                              the snapshot is a plain JS value; the limit is the
+                              transport. Derived is already absent from the
+                              snapshot, so no exclusion mechanism is needed.
+                              Cycles ARE reachable via an array leaf — a real
+                              constraint on codec choice, not a SignalTree
+                              function.
+  ** M3 IS NOW A SYSTEM THEOREM ** the collection's `{all:[...]}` envelope and a
+                              BARE ARRAY reconstruct identically across a JSON
+                              process boundary, with versioning and a sibling
+                              plain position present. The envelope carries no
+                              reconstruction information the bare value lacks.
+readonly / diagnostics        OPEN — after the cut, per the agreed sequence
 final authoring grammar       DEFERRED to one system-wide DX pass
 ```
 
