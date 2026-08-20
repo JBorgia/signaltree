@@ -637,9 +637,24 @@ required capability satisfying ALL THREE:
 3  the thing it references CANNOT be reconstructed as a pure function of the
    restored canonical value
 
-(1)+(2) alone = a DERIVED-LAYER defect (the handle should have been key-addressed
-and memoized). Only (3) establishes the candidate.
+4  preserving that continuity is a SIGNALTREE/KERNEL responsibility — NOT
+   application, adapter, or consumer-owned state
+
+(1)+(2) alone       = a DERIVED-LAYER defect (the handle should have been
+                      key-addressed and memoized)
+(1)+(2)+(3) alone   = information exists somewhere; OWNER UNPROVEN
+ALL FOUR            = membership-lifetime identity survives
 ```
+
+FROZEN: Gate 1 changes only on a DETERMINISTIC FAILURE, demonstrated not argued.
+"NO EXPERIMENT" IS ITSELF A SUCCESSFUL ARCHITECTURAL RESULT — a row ending in
+NULL CONSTRUCTION FORBIDDEN has produced evidence.
+A's F1 is PREMISE-RELATIVE: "no additional observable obligation beyond canonical
+restoration has been NAMED" — NOT "all observability is state".
+B's architecture is an EQUIVALENCE WITNESS, not a destination: it earns no
+snapshot history, no tree diffing, no representation.
+ORDERING: an explicit canonical KEY SEQUENCE can represent required enumeration
+order; no intrinsic subject-order mechanism is thereby earned.
 
 **Every prior row reached (1) and (2) at most. None tested (3).** That is the
 retroactive explanation for the whole E2-S / E2-S0 / E2-S00 error run.

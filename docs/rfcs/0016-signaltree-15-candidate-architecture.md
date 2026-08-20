@@ -5702,6 +5702,92 @@ outcome: one experiment stopped before construction, one contradiction found in
          that had survived six rounds of self-review
 ```
 
+### GATE 1 — FOUR WORDING CORRECTIONS before anything builds on it
+
+**1. A's F1 is premise-relative, not a general theorem.** *"Anything observable is
+a value at a position"* is too broad for the constitution — temporal events,
+authorship, ordering, lifecycle can all be observable without reducing to a
+current value pair. What survives is narrower:
+
+```text
+Given the CURRENTLY EARNED revert contract, no additional observable obligation
+beyond canonical restoration has been NAMED.
+```
+
+*"All observability is state"* does not enter the constitution.
+
+**2. B's architecture is an EQUIVALENCE WITNESS, not a destination.** The
+coarse-pair + leaf-diff design shows the candidate function is not necessary under
+these premises. It does **not** earn snapshot history, tree diffing, its
+performance profile, or any particular representation.
+
+**3. B8 IS FOUR PARTS, NOT THREE.** Three parts prove that *some* information
+exists outside canonical truth — which could then be converted accidentally into a
+SignalTree-owned identity function. The ownership audit has to come before
+representation, again:
+
+```text
+B8+ — exhibit a capability where ALL FOUR hold:
+
+  1  a consumer must retain a per-member reference across remove -> revert
+  2  it cannot reacquire by surviving address/key
+  3  it cannot reconstruct the required referent from restored canonical truth
+  4  preserving that continuity is a SIGNALTREE/KERNEL responsibility — not
+     application, adapter, or consumer-owned state
+
+All four are required before membership-lifetime identity survives.
+(1)+(2) alone = a derived-layer defect. (1)+(2)+(3) alone = information exists
+somewhere, owner unproven.
+```
+
+**4. The ordering convergence must not re-earn intrinsic ordering.** Clean
+statement:
+
+```text
+Where deterministic enumeration order is required, an explicit canonical KEY
+SEQUENCE can represent it. No intrinsic subject-order mechanism is thereby earned.
+```
+
+### E2-S2 — EVIDENTIARY RECLASSIFICATION, applied
+
+```text
+ARCHITECTURAL FALSIFIER    WITHDRAWN
+WHY                        relies on out-of-order / arbitrary restoration that the
+                           confirmed-undo contract does not grant. Its "null"
+                           row performs `rows.set([...])` — an arbitrary write,
+                           not a revert.
+REMAINS AS                 implementation characterization / model test
+DOES NOT ESTABLISH         any identity requirement for confirmed LIFO reversal
+```
+
+Applied in the spec file itself, not merely noted here — otherwise the corpse
+stays searchable and contaminates the next row.
+
+### Premise-relativity of the continuity convergence
+
+*"Reference continuity is addressing stability, not information"* is held
+**premise-relative**. The next row is precisely where it can be falsified: if
+something associated with a membership lifetime cannot be recovered from canonical
+truth or address AND the kernel must preserve it, continuity begins carrying
+semantic information.
+
+### GATE 1 IS FROZEN
+
+One successful use is not grounds for tuning it. It changes only on a
+**deterministic failure** — a case where the gate admits an inadmissible
+experiment, or blocks an admissible one, demonstrated rather than argued.
+
+### The result that was missing from this process
+
+```text
+"NO EXPERIMENT" IS ITSELF A SUCCESSFUL ARCHITECTURAL RESULT.
+```
+
+A row that ends in NULL CONSTRUCTION FORBIDDEN has produced evidence: that the
+contract was never earned. Before Gate 1 there was no way for the process to
+return that outcome, so every row terminated in a measurement — which is why
+unearned contracts kept becoming experiments.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

@@ -5,19 +5,33 @@ import { timeTravel } from '../enhancers/time-travel/time-travel';
 import { entityMap, signalTree } from '../index';
 
 /**
- * E2-S — does STRUCTURAL confirmed reversal require representation beyond
- * canonical before/after truth?
+ * ⚠️ ARCHITECTURAL FALSIFIER STATUS: **WITHDRAWN**.
  *
- * Enumerated, not grepped: `StructuralEffect = 'add' | 'remove' | 'rekey'`, plus
- * `structuralContext` ("durable canonical history... required to realize this
- * existence transition after the original mutation context is gone") and
- * `subjectPositions` (positions supplying payload to realize add/remove "without
- * becoming independent value participants"). Rekey failing to earn disposes of
- * none of the others.
+ * Retained as IMPLEMENTATION CHARACTERIZATION / hypothetical model test only.
  *
- * Membership goes first because DYNAMIC MEMBERSHIP ALREADY SURVIVED
- * independently, so confirmed reversal of membership has a real function whether
- * or not rekey does.
+ * WHY IT WAS WITHDRAWN. The E2-S2 key-reuse rows were treated as a falsifier for
+ * confirmed reversal. They are not. Two independent premise reviewers established
+ * that the collision case requires OUT-OF-ORDER or ARBITRARY restoration, which
+ * the earned revert contract never granted — it grants only return to a
+ * configuration previously held, i.e. strict reverse order. Under that order the
+ * intervening add reverts first and no collision arises. Importing selective
+ * revert and then attributing the outcome to the record is circular.
+ *
+ * Concretely, the row below labelled "the subject-free null" performs
+ * `rows.set([...])` — an ARBITRARY WRITE, not a revert. So the contrast it draws
+ * was never between two reversal mechanisms.
+ *
+ * WHAT THESE ROWS STILL SHOW
+ *   the current implementation distinguishes two histories with identical
+ *   key/value state, and a key-cached value-only model does not
+ *
+ * WHAT THEY DO NOT ESTABLISH
+ *   any identity requirement for confirmed LIFO reversal
+ *   that reference continuity is a kernel responsibility
+ *   anything about SignalTree 15
+ *
+ * The live question moved to the four-part falsifier recorded in RFC 0016
+ * (B8 + ownership). Nothing in this file satisfies it.
  */
 type Row = { id: string; n: number };
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
