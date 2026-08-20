@@ -6628,6 +6628,25 @@ holding it up. **Ask what the requirement rests on, not what happened first.**
 
 ### CORROBORATION — NO for the verdict; weakly YES for the gap's location
 
+> **⚠️ CORRECTED. "Both read the same stipulated text" is FALSE**, and false at the
+> one clause this row's disposition turns on. The packets diverged at P3: A was
+> issued _"at boundaries **a user would recognize** as discrete steps"_, B the
+> agentless _"at **recognizable** step boundaries"_. Verbatim texts and the
+> divergence are recorded under
+> [P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED](#p1-p6--the-frozen-premises-were-never-recorded-transcribed-here).
+>
+> **What the correction does NOT do:** it does not restore corroboration for the
+> verdict. The common-cause argument below was used to DENY corroboration, and the
+> denial stands on other grounds — both reviewers were pointed at the same target,
+> and neither held a defender charter.
+>
+> **What it does do, and the direction is against the record's own conclusion:** the
+> paragraph below credits B with reaching the wall by an independent route. But B
+> was never shown the observer-bearing phrase, so B's failure to raise a perceiving
+> entity is **not** independent arrival at the same wall — it is silence about a
+> clause absent from its packet. The "weakly YES for the gap's location" claim is
+> therefore **weaker than recorded**, not stronger.
+
 Both read the **same stipulated text** and noticed the same silence. Agreement on an
 absence in a shared input is common-cause — verification that the text says what it
 says. Most agreed items are direct premise readings of that kind. And A's apparent
@@ -6657,6 +6676,17 @@ Each satisfied only if some **independently motivated** row happens to grant it:
 decidable.**
 
 ### STRONGEST ALTERNATIVE — assembled from pieces both supplied, neither joined
+
+> **⚠️ PROVENANCE CORRECTED — this alternative rests on ONE reviewer's premise
+> text, not on a shared one.** The phrase it turns on, _a user would recognize_,
+> appeared **only in A's packet.** B's P3 was agentless. So this is not "assembled
+> from pieces both supplied": the observer-bearing half came from A's text alone,
+> and B could not have supplied or contested it.
+>
+> The argument is **not withdrawn** — it is a legitimate reading of A's P3, and its
+> conclusion (that the undecidability relocates to P3's observational content) is
+> now visibly the same question as _which P3 wording is frozen_. But it may not be
+> cited as bilateral, and its strength is that of a single-text reading.
 
 > **P3 already contains the observer, and the candidate is not a new function but
 > the forward-path statement of an obligation P3 imposes.**
