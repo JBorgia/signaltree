@@ -323,19 +323,33 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               measurement: +54us vs 1.0us on 50k, and freeze
                               cannot stop Date.setFullYear/Map.set/Set.add). A
                               codec's COPY is the boundary. F2 is `tree(payload)`.
-                              F3 is ordinary app data and `nodeMap` is REDUNDANT
-                              (the target tree knows its own shape). F5 is free —
+                              F3 is ordinary app data and `nodeMap` shows no requirement
+                              for reconstruction into an ALREADY-COMPILED target
+                              topology (the tree knows its own shape). F5 is free —
                               the snapshot is a plain JS value; the limit is the
                               transport. Derived is already absent from the
                               snapshot, so no exclusion mechanism is needed.
                               Cycles ARE reachable via an array leaf — a real
                               constraint on codec choice, not a SignalTree
                               function.
-  ** M3 IS NOW A SYSTEM THEOREM ** the collection's `{all:[...]}` envelope and a
-                              BARE ARRAY reconstruct identically across a JSON
-                              process boundary, with versioning and a sibling
-                              plain position present. The envelope carries no
-                              reconstruction information the bare value lacks.
+  M3 STRENGTHENED, NOT PROVEN the envelope and a bare array reconstruct
+                              identically across a JSON boundary, so crossing a
+                              process boundary adds NO representation
+                              requirement. But the bare array is accepted by
+                              entityMap's OWN hydrate hook (entity-map.ts:386-388,
+                              `Array.isArray(value) ? value : value.all`) — the
+                              mechanism M4 would delete. It proves the envelope
+                              carries nothing the CURRENT hydrate needs; it does
+                              NOT prove a collection with no specialization can
+                              reconstruct by the uniform rule. The mechanism under
+                              sentence cannot be its own equivalence proof — same
+                              error class as the changeId reversal.
+  M3/M4 PHYSICAL DELETION     **BLOCKED** on the conforming-collection prototype.
+                              Remaining theorem: can the earned collection
+                              semantics be realized through a uniform accessor
+                              read/write contract with NO snapshot/hydrate
+                              specialization? The prototype must NOT be built on
+                              entityMap underneath.
 readonly / diagnostics        OPEN — after the cut, per the agreed sequence
 final authoring grammar       DEFERRED to one system-wide DX pass
 ```

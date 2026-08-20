@@ -3790,24 +3790,39 @@ with the branch on `v` in application code, exactly as the `stored` derivation
 found for `{ version, migrate }`. An unknown key in a payload is simply dropped
 by the write path.
 
-### F5 — transport neutrality comes free from the snapshot being a plain value
+### F5 — the canonical read representation is CODEC-AGNOSTIC (not "free")
 
 ```text
 JSON             Date -> string, Set -> {}, Map -> {}, undefined key -> GONE
 structuredClone  Date, Set and Map all survive intact
 ```
 
-The limit is the **transport**, not the tree. Choosing a codec that can carry
-these over a JSON-only wire is an application concern with a well-served
-ecosystem.
+The limit is the **transport**, not the tree — but "the snapshot is a plain JS
+value so F5 is free" was too loose, and this table is why. `tree()` can carry
+`Date`, `Map`, `Set`, cycles and shared mutable references, and JSON silently
+destroys four of those.
+
+Stated precisely: **the canonical read representation commits to no encoding**,
+so transport-specific encoding need not be SignalTree-owned. That is a stronger
+claim than transport neutrality and it is the one the measurement supports.
 
 ### What the null genuinely surfaces as a requirement
 
-**Cycles are reachable.** A plain object in the literal becomes a branch, but an
-array leaf holds arbitrary values, so `items.set([cyclic])` succeeds and
-`JSON.stringify(tree())` then throws. `handleCircular` / `metadata.circularRefs`
-protect something real — but a cycle-safe codec is precisely what a codec is for.
-This is a constraint on the codec choice, not a SignalTree function.
+**Cycles are reachable — scoped.** A plain object in the literal becomes a
+branch, but an array leaf holds arbitrary values, so `items.set([cyclic])`
+succeeds and `JSON.stringify(tree())` then throws.
+
+```text
+CURRENTLY REACHABLE      cyclic canonical leaf values
+IF STILL ADMISSIBLE      a JSON-oriented codec needs a cycle policy
+OWNER                    the external-representation boundary, not necessarily
+                         SignalTree
+```
+
+Value admission is itself unresolved (cf. the preserved-Angular-signal admission
+question), so greenfield may require canonical values to satisfy an
+inert/serializable constraint. **Current permissiveness must not manufacture a
+permanent codec requirement.**
 
 ### S-2 — derived is already excluded, by construction
 
@@ -3820,7 +3835,7 @@ canonical truth, and restoring it would install a stale value that should have
 been recomputed. **No exclusion mechanism is needed; the snapshot never contained
 it.**
 
-### THE M3 GENERALIZATION TEST — PASSES
+### THE M3 GENERALIZATION TEST — STRENGTHENED, NOT PROVEN (see CONTAMINATION)
 
 This is what serialization was sequenced first to decide.
 
@@ -3838,10 +3853,40 @@ collection           tree().rows === { all: [...] }      the ENVELOPE
 information the bare value lacks** — measured across a process boundary, against
 JSON, with versioning and a sibling plain position present.
 
-M3 said *"a realized value's state is what the accessor returns."* That was a
-local theorem about a walk. It now holds where it meets JSON representation,
-reconstruction, versioning and the SSR/storage distinction. **It is a system
-theorem.**
+#### ⚠️ CONTAMINATION — this row does not finish the proof
+
+The bare array is accepted by **`entityMap`'s own hydrate hook**:
+
+```ts
+const all = Array.isArray(value) ? value : (value as { all?: unknown }).all;
+// entity-map.ts:386-388
+```
+
+That hook is the mechanism M4 proposes to delete. So the row proves:
+
+```text
+✓  the `{all:[...]}` envelope carries no information the CURRENT entityMap
+   hydrate implementation needs
+✗  a collection with NO snapshot/hydrate specialization can publish and
+   reconstruct through the uniform accessor rule
+```
+
+Those are different theorems and the second is the one the deletion requires.
+**The mechanism under sentence cannot serve as its own equivalence proof** — the
+same error as measuring `changeId` on the branch that had silently reversed it,
+two derivations earlier.
+
+The same contamination applies to F2's collection clause. Branches and ordinary
+leaves establish F2 cleanly; the collection reconstructing "with no metadata"
+establishes only that `nodeMap` is unnecessary for the *current* special-cased
+path. That is enough to attack `nodeMap`. It is not enough to delete the special
+reconstruction path.
+
+M3 said *"a realized value's state is what the accessor returns."* Serialization
+**strengthens** it: crossing a process boundary introduces no ADDITIONAL
+representation requirement, against JSON, with versioning and a sibling plain
+position present. It does not elevate it to a system theorem, because the
+uncontaminated experiment has not been run.
 
 ### Verdict
 
@@ -3862,18 +3907,56 @@ serialization as a SignalTree-owned enhancer   NOT EARNED for its core function
   maxDepth                a guard, not a function
 ```
 
-**M3 AND M4 ARE NOW CLEARED FOR PHYSICAL SUBTRACTION.** Serialization does not
-independently require declaration-specific representation, which was the one
-dependency that could have reversed the cut.
+```text
+SERIALIZATION RESULT
+
+serialization enhancer core function   NOT EARNED — provisionally strong
+{all:[...]} representation envelope    no independent SERIALIZATION information
+                                       found
+nodeMap                                no requirement found for reconstruction
+                                       into an ALREADY-COMPILED target topology
+                                       (leaves room for dynamic unknown-topology
+                                       construction, which has no survival
+                                       evidence anyway)
+M3 representation theorem              STRENGTHENED — external serialization
+                                       does not require the envelope
+M3/M4 PHYSICAL DELETION                **BLOCKED** on the conforming-collection
+                                       prototype
+```
+
+**The remaining theorem, stated exactly:**
+
+> Can the earned collection semantics be realized through a uniform accessor
+> read/write contract with **no snapshot/hydrate specialization**?
+
+Serialization did the work it was sequenced to do — it establishes that nothing
+about crossing a process boundary introduces an additional representation
+requirement. It did not finish the proof.
 
 ### Scope stated honestly
 
 This derived the **surface** (11 methods, 7 config options, the metadata shape)
 and measured the mechanisms that could plausibly be functions the null lacks:
 `nodeMap`, circularity, type preservation, derived exclusion, and the round trip
-itself. It did **not** read all 1352 lines. If a function hides in the
-unexamined remainder it will surface at the subtraction, and the subtraction is
-where a missed consumer becomes a failing test rather than a silent gap.
+itself. It did **not** read all 1352 lines.
+
+**RETRACTED:** an earlier revision said a hidden function "will surface at the
+subtraction as a failing test rather than a silent gap." That is exactly the
+absence inference Methodology Rule 2 forbids — a function with no adequate
+regression test disappears silently, and subtraction is a falsifier, not
+exhaustive discovery.
+
+```text
+The remaining implementation is NOT ENTITLED to survival, and subtraction CAN
+expose missed dependencies. Failure to expose one is NOT proof that none existed.
+```
+
+Before deleting a 1352-line subsystem, a cheap semantic last-look is owed — not
+a deep read, an enumeration: public methods, public options, external consumers,
+distinct outbound dependencies, distinct reconstruction paths, and which metadata
+fields are actually CONSUMED rather than merely emitted. Most of that is covered
+above; the consumed-metadata enumeration is not, and deletion does not complete
+the discovery proof.
 
 ## Table G — DX PRESSURE LEDGER
 

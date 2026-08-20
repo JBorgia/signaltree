@@ -175,9 +175,14 @@ describe('S-3 — values JSON cannot carry', () => {
     expect(cloned.seen instanceof Set).toBe(true);
     expect(cloned.lookup.get('k')).toBe(1);
 
-    // So F5 (transport neutrality) is satisfied by the snapshot being a PLAIN
-    // JS VALUE. Choosing a codec that can carry Date/Map/Set over a JSON-only
-    // transport is an application concern with a well-served ecosystem.
+    // F5, stated precisely. NOT "the snapshot is a plain JS value so transport
+    // neutrality is free" — it demonstrably is not free, since `tree()` can
+    // carry Date, Map, Set, cycles and shared mutable references, and the row
+    // above shows JSON silently destroys four of those.
+    //
+    // What is actually established: the canonical READ REPRESENTATION is
+    // CODEC-AGNOSTIC. It commits to no encoding, so transport-specific encoding
+    // need not be SignalTree-owned.
   });
 });
 
@@ -222,7 +227,7 @@ describe('S-4 — M3 tested against a boundary', () => {
     expect(fresh.$.n()).toBe(1);
   });
 
-  it('AND a BARE ARRAY restores identically — so the envelope earns nothing here', () => {
+  it('a BARE ARRAY restores identically — but see the CONTAMINATION note below', () => {
     const fresh = signalTree({
       rows: entityMap<Row, string>({ selectId: (r) => r.id }),
       n: 0,
@@ -235,9 +240,30 @@ describe('S-4 — M3 tested against a boundary', () => {
     expect(fresh.$.rows.byId('b')?.n()).toBe(2);
     expect(fresh.$.n()).toBe(1);
 
-    // Both forms reconstruct. The envelope is not carrying reconstruction
-    // information the bare value lacks — which is what M3 claimed and what a
-    // process boundary was the place to check.
+    // ⚠️ CONTAMINATION — WHAT THIS ROW DOES AND DOES NOT PROVE.
+    //
+    // The bare array is accepted by `entityMap`'s OWN hydrate hook:
+    //
+    //     const all = Array.isArray(value) ? value : (value as {all?}).all;
+    //     (entity-map.ts:386-388)
+    //
+    // That hook is the mechanism M4 proposes to DELETE. So this row proves:
+    //
+    //   ✓  the `{all:[...]}` envelope carries no information the CURRENT
+    //      entityMap hydrate implementation needs
+    //
+    // and NOT:
+    //
+    //   ✗  a collection with NO snapshot/hydrate specialization can publish and
+    //      reconstruct through the uniform accessor rule
+    //
+    // Those are different theorems, and the second is the one the deletion
+    // requires. The mechanism under sentence cannot serve as its own equivalence
+    // proof — the same error as measuring `changeId` on the branch that had
+    // silently reversed it.
+    //
+    // The theorem this row CANNOT reach is carried by the conforming-collection
+    // prototype, which must not be built on entityMap underneath.
   });
 });
 
@@ -315,9 +341,16 @@ describe('S-6 — what the serializer adds', () => {
     cyclic.self = cyclic;
     tree.$.items.set([cyclic]);
 
-    // Reachable — so a cycle-safe codec is a genuine requirement for anything
-    // externalizing arbitrary leaf values. It is also exactly what a codec is
-    // for: JSON.stringify throws.
+    // Reachable — but scoped carefully. This establishes only that CURRENT
+    // canonical admission permits a cyclic object inside an array leaf. Value
+    // admission is itself unresolved in the matrix (cf. the preserved-Angular-
+    // signal admission question), so greenfield may yet require canonical values
+    // to satisfy an inert/serializable constraint.
+    //
+    //   IF cyclic leaf values remain admissible -> a JSON-oriented codec needs a
+    //   cycle policy, owned at the external-representation boundary.
+    //
+    // Current permissiveness must not manufacture a permanent codec requirement.
     expect(() => JSON.stringify(tree())).toThrow(/circular|cyclic/i);
     expect(tree.$.items()[0].label).toBe('b');
   });
