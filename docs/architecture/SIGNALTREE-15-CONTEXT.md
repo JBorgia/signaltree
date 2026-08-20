@@ -841,98 +841,55 @@ A row SUCCEEDS when it reaches the correct epistemic disposition.
 "UNPROVEN / no experiment permitted" is a valid successful closure.
 ```
 
-## E4-G — GROUP CONCEALMENT / CONCLUSION: four sub-claims NOT ESTABLISHED
-
-**RENAMED from "E4".** The row that ran is narrower than E4/U5b and does NOT close
-it. A first synthesis renamed a four-subclaim closure as the whole row; corrected.
+## UNDO-E4-G — closed per GATE 2's scope limit
 
 ```text
-C1 pre-conclusion visibility governance   NOT ESTABLISHED
-C2 conclude never-visible                 NOT ESTABLISHED
-C3 conclude by un-observing               NOT ESTABLISHED
-C4 runtime nested-group semantics         NOT ESTABLISHED
-NULL                                      FORBIDDEN
-EARNED  no grouping semantic above P5 established BY THIS ROW
+C1 pre-conclusion visibility   NOT ESTABLISHED    C3 conclude by un-observing  NOT EST
+C2 conclude never-visible      NOT ESTABLISHED    C4 runtime nesting           NOT EST
+NULL FORBIDDEN
 ```
 
-**STILL OPEN — E4/U5b as a whole:** transaction atomicity · refusal/failure
-semantics · persistence-consequence behaviour · realization/history interaction ·
-turn authorship · pending rollback · any other independently defined U5b contract.
-
-### DERIVED — the narrow theorem ONLY
+Gate 2 ruled a closure may state ONLY: the four verdicts, two premise-reading
+notes, and the unmet falsifier. Two earlier syntheses exceeded that.
 
 ```text
-Confirmed LIFO history cannot BE THE SOLE MECHANISM for withdrawing asynchronously
-resolving speculative work that may resolve out of order.
-REPRESENTATION   UNPROVEN
+PREMISE-READING NOTES
+  P4 grants exclusion from the REVERTIBLE RECORD only, NOT invisibility
+  P6 vs async-speculation-out-of-order — TENSION FLAGGED OPEN, not derived
+
+FALSIFIER (i) consumer reachable only via the canonical read path (ii) speculative
+value required AT the canonical address (iii) async decision — all three at once.
+SPECIFIED, NEVER EXERCISED.
+
+LADDER  rung 1 is ABSENT — NO measurement exists in this row. Rung 2 at best, on
+        borrowed footing. ZERO rungs advanced. The result is a FAILURE TO REACH
+        rung 3.
 ```
 
-NOT "P6 forces the excluded-position design". A separate pending-operation
-authority indexed by operation, or another representation that never enters
-confirmed history, would also satisfy it.
+**CONVERGENCE IS NOT CORROBORATION.** A and B had the SAME frozen premises, so
+their agreement is premise-correlated, not independent empirical support. Opposite
+JOBS is not opposite INFORMATION.
 
-### The incumbent: COMPATIBLE, not equivalent
+**ALTERNATIVE INTERPRETATION, possibly right:** the row failed the PREMISE SET, not
+the candidate. Every rebuttal depends on the composer being able to restructure the
+writers, which no premise grants — so the candidate is UNDER-DETERMINED rather than
+unearned. Entitled next move is a RE-RUN REQUEST: fix the observation model, fix
+whether writers are independently authored, resolve the P6 tension, then re-run with
+a named workflow meeting all three falsifier conditions plus an overlay-cost
+measurement.
 
-Measured — a speculative write is visible immediately and adds no confirmed
-history entry. That satisfies the measured property. **Semantic/representational
-equivalence to the absence architecture is NOT established**, and the claim that
-the shipped system "already does this / that's the derived design" is WITHDRAWN.
+**FORBIDDEN on this row:** "refuted/impossible" · "observation model settled" · "no
+workflow needs C1" · "grouping is ONLY reversal granularity" · "P4 handles
+cancellation" · "nesting adds nothing" · "the falsifier was tested" ·
+"dispensable therefore remove" · "P6 is wrong".
 
-### NOT EARNED — everything the absence architect needed to build its world
+**UNDO-E4 (transaction semantics at U5b) REMAINS OPEN** — atomicity, refusal,
+persistence consequences, authorship and pending rollback were never in the
+question.
 
-```text
-pending-address representation   overlay representation
-P4 as the required realization   turn-coalesced notification
-atomic multi-position commit     runtime nesting
-intrinsic concealment
-```
-
-**`turn-coalesced notification` did NOT survive** — an earlier synthesis recorded it
-as a surviving container obligation. It is a DEFERRED CANDIDATE, and its OWNERSHIP
-is open: "when observers are notified" is plausibly publication/realization
-behaviour, so the kernel may owe only an ATOMIC TURN BOUNDARY while an adapter owns
-scheduling.
-
-### C4 wording corrected
-
-"Nesting is vacuous" was broader than the evidence. Runtime nested-group semantics
-are not established, but a composition pressure remains — library A groups, library
-B groups, a caller composing them wants one outer step. Recorded under Rule 0m as
-DX/composability pressure, NOT vacuity.
-
-### NOT retained as evidence
-
-The "least common ancestor is a position, write it once" argument is withdrawn: a
-common ancestor may hold unrelated sibling state, and replacing it changes mutation
-granularity. The sufficient argument needs no mechanism — *no workflow has
-established that intermediates must be published through canonical state rather
-than computed privately and committed at the end.*
-
-### FALSIFIER — three parts; any two already solved
-
-```text
-i   consumer/validator reachable ONLY through the canonical read path
-ii  speculative value required AT the confirmed address
-iii the decision ASYNCHRONOUS
-```
-
-Both reviewers reached the same missing premise from opposite jobs:
-**read-path authority, not observability.**
-
-### METHODOLOGY — GATE 2 IS NOT OPTIONAL
-
-```text
-GATE 1 (premise attack)         ran twice, worked both times
-GATE 2 (interpretation attack)  NEVER RAN
-```
-
-The reviewers returned *coherent but unearned*. The synthesis then promoted parts
-of a hypothetical into "derived"/"surviving" and renamed a partial closure as a
-whole row. **Both are exactly what Gate 2 catches, and it was skipped by the agent
-that had written it into the methodology two commits earlier.**
-
-A row's conclusion may NOT be committed until an interpretation reviewer has seen
-the pre-registration and the RAW reviewer output, without the author's synthesis.
+**Gate 2 paid for itself on first use**, catching the absent rung 1, the
+convergence overclaim, the P6 mis-labelling, and the falsifier readable as tested —
+two of which had already survived an external review of the corrected write-up.
 
 ## Frozen invariants — do not re-derive
 
