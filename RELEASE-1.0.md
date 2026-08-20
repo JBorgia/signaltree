@@ -782,6 +782,92 @@ This is an infrastructure finding. It neither weakens nor strengthens any
 architectural claim, and it is recorded here rather than in RFC 0016 because the
 architecture RFC does not need executor-operability details.
 
+## RELEASE-PROCESS DEFECTS — found while sizing the 14.x interceptor patch
+
+Discovered by asking a narrow question (is 14.1.2 published?) and checking the
+registry rather than git. **git tags are not the record of what shipped.**
+
+### The ledger
+
+```text
+npm @signaltree/core
+  versions   ... 14.0.0-rc.1, 14.1.1, 14.1.2          latest = 14.1.2
+  time       also lists 14.0.0 and 14.1.0 — ABSENT from `versions`,
+             so both were published and then UNPUBLISHED
+  14.1.2     published 2026-08-17T21:39Z
+
+git
+  tags       only v14.0.0-rc.1 and v14.1.1 exist. NO v14.1.2.
+  main       9 commits past v14.1.1, ALL dated 2026-08-11, all docs.
+             packages/*/package.json still read 14.1.1 — the 14.1.2 bump was
+             NEVER COMMITTED anywhere, on any branch.
+```
+
+### What 14.1.2 actually is
+
+Reconstructed from the published tarball:
+
+```text
+contains dist/lib/markers/status.js        -> pre-STATUS-DEL
+contains ST2031 in entity-signal.js        -> BEFORE b47598a1 (2026-08-13)
+package.json "license": "Apache-2.0"       -> AFTER e1617fb1 (2026-08-11 11:40)
+README says Apache-2.0                     -> same
+```
+
+`e1617fb1` — *"license: relicense from BUSL-1.1 to Apache-2.0"* — exists **only on
+`history/gate1-frontier-cutover`**. It is not on `main`.
+
+So **14.1.2 was published from the 15 development branch**, from a working-tree
+state roughly 2026-08-11 to 08-13, six days before the publish, with an
+uncommitted version bump. Not from `main`, not from a release branch, not from
+any tagged commit.
+
+### The blocking issue: the repo and the registry disagree on the LICENSE
+
+```text
+v14.1.1 tag      BUSL-1.1   (README + root LICENSE)
+main             BUSL-1.1   (README + root LICENSE)
+this branch      Apache-2.0 (root LICENSE)
+published 14.1.2 Apache-2.0 (package.json "license", README)
+                 and NO LICENSE FILE IN THE TARBALL AT ALL
+```
+
+Tarball root contains only: `dist`, `llms-full.txt`, `llms.txt`, `package.json`,
+`README.md`, `skills`, `src`.
+
+A consumer reading GitHub sees BUSL-1.1 — commercial use permitted, converts to
+MIT on 2028-09-05. A consumer reading npm sees Apache-2.0 with an explicit patent
+grant. **These are materially different grants**, and the Apache-2.0 relicense
+lives only on an unmerged development branch.
+
+**This blocks the 14.1.3 publish, not the fix.** Cutting 14.1.3 from `main` would
+ship BUSL-1.1 to consumers who currently hold Apache-2.0 — a license regression,
+and not a decision an implementer should make silently. The code change is
+identical on either base.
+
+### Required decisions (owner: repository owner)
+
+```text
+1  Which license is authoritative for the 14.x line?
+2  If Apache-2.0: merge/cherry-pick e1617fb1 to main BEFORE cutting 14.1.3, so
+   the mainline matches the registry.
+3  Ship a LICENSE file in the package `files` list. A package declaring
+   Apache-2.0 with no LICENSE text is a compliance gap regardless of which
+   license wins.
+4  Retro-tag 14.1.2? Its exact source state is not identifiable from any commit
+   (uncommitted bump, mixed working tree). A tag would be a guess — recommend
+   NOT fabricating one, and instead recording this ledger as the provenance.
+```
+
+### Process fixes to carry into 1.0
+
+```text
+- publish ONLY from a tagged commit on main or a release branch
+- commit the version bump; fail the publish if git is dirty or untagged
+- include LICENSE in `files`
+- verify the published tarball after publish (npm pack + diff against the tag)
+```
+
 ## Required Validation
 
 ```bash
