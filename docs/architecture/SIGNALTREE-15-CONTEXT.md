@@ -682,6 +682,71 @@ becomes true the moment a member carries identity or lifetime that is not a
 canonical value. That is the next row, worded to B8's three parts — never to the
 incumbent's fields.
 
+## GATE 1 — CONTINUATION ROW CLOSED, no experiment, no replacement question
+
+```text
+ROW       pre-obtained member-observation continuity across remove -> reversal
+SURVIVAL  NOT ESTABLISHED
+BLOCKER   no independently surviving workflow becomes impossible under
+          address-resolved present / absent / restored observation
+NULL      FORBIDDEN
+NEXT      NOTHING for this function. Close the row.
+```
+
+The premises reach *"the restored member is observable again"* and stop. Nothing
+reaches *"the observation obtained beforehand must still designate it."*
+
+**No product decision is owed.** Asking whether SignalTree *wants* the missing
+premise converts NOT ESTABLISHED into *would we like this?* — resurrection by
+another route. A later independently-earned capability reopens it from zero.
+
+### DO NOT INFER — antagonistic review overreached in three places
+
+Negative architecture is as manufacturable as positive architecture.
+
+```text
+"parts 3 and 4 are mutually exclusive"      OVERREACH — reads P1 as "owns
+  canonical values AND MAY OWN NOTHING ELSE". Kernel REALIZATION METADATA (turn
+  ids, revisions, slots, retained history) is not canonical application truth.
+  CORRECTED: part 3 does not ESTABLISH part 4; an independent OWNERSHIP argument
+  is required, and none exists in P1-P6.
+
+"a partial observer contradicts P2"          OVERREACH — P2 makes absence
+  representable in canonical STATE; it does not require every observation API to
+  be total. `valid | suspended | invalidated` is coherent, merely UNEARNED.
+
+"value-binding creates two authorities"      OVERREACH — it could behave
+  value -> unavailable -> value. Unearned, not impossible.
+
+ALSO NOT INFERRED: all observation is canonical state · the kernel can never own
+non-canonical metadata · identity can never survive
+```
+
+### P6, phrased safely
+
+```text
+Confirmed reversal currently grants LIFO undo/redo.
+Selective or arbitrary earlier-turn reversal is NOT GRANTED.
+RULE: a row may not REQUIRE selective/out-of-order reversal unless that function
+independently earns itself.
+```
+
+Enough to invalidate E2-S2 without freezing "LIFO forever" as a prohibition.
+
+### B8+ is retired
+
+The four-part criterion was a useful probe and had become representation-shaped.
+The upstream result is what stands: **no independently surviving workflow
+requiring pre-obtained continuity has been NAMED.** No B9 — proving an absence
+harder is not learning something.
+
+### Closure principle
+
+```text
+A row SUCCEEDS when it reaches the correct epistemic disposition.
+"UNPROVEN / no experiment permitted" is a valid successful closure.
+```
+
 ## Frozen invariants — do not re-derive
 
 ```text

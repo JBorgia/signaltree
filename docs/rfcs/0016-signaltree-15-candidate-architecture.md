@@ -5788,6 +5788,147 @@ contract was never earned. Before Gate 1 there was no way for the process to
 return that outcome, so every row terminated in a measurement — which is why
 unearned contracts kept becoming experiments.
 
+## GATE 1 — SECOND APPLICATION. Continuation row CLOSED, no experiment.
+
+```text
+ROW      pre-obtained member-observation continuity across remove -> confirmed
+         reversal
+
+A (function killer)     FUNCTION SURVIVAL NOT ESTABLISHED
+B (absence architect)   A COHERENT ABSENCE ARCHITECTURE EXISTS
+
+SURVIVAL          NOT ESTABLISHED
+BLOCKER           no independently surviving workflow becomes impossible under
+                  address-resolved present / absent / restored observation
+OPPOSITE CONTRACT COHERENT
+NULL              FORBIDDEN
+```
+
+### The durable result, and it is small
+
+A's F1 is the clean one: the premises carry you all the way to *"the restored
+member is observable again"* and stop. Nothing carries you to *"the observation
+obtained before the removal must still designate it."* That gap is the missing
+function.
+
+B exhibited the coherent absence: observe key k, get the value while present,
+absence while removed, the restored value after reversal. No continuity object
+required.
+
+And A's F6 caught contamination in my own wording — *"that member"* presupposes
+cross-gap sameness, while *"the surviving key"* simultaneously hands the opposing
+architecture enough address information to reacquire. The criterion conceded the
+point it was testing.
+
+**That is sufficient to close the row. It sentences the CANDIDATE, not every
+conceivable future identity function.**
+
+### DO NOT INFER — the reviewers overreached in three places
+
+Antagonistic review can manufacture negative architecture exactly as self-review
+manufactured positive architecture. Refuting implementations nobody has justified
+is the same error with the sign flipped.
+
+```text
+NOT ESTABLISHED, and NOT to be recorded as theorems:
+
+"parts 3 and 4 are mutually exclusive"
+  -> OVERREACH. It reads P1 as "SignalTree owns canonical values AND MAY OWN
+     NOTHING ELSE". Those are not equivalent. Kernel REALIZATION METADATA is not
+     canonical application truth — turn ids, revisions, physical slots, retained
+     history are all categories a kernel could legitimately own without their
+     being canonical user values.
+  CORRECTED: part 3 does not ESTABLISH part 4. If required information is absent
+     from canonical truth, an INDEPENDENT OWNERSHIP ARGUMENT is required before
+     assigning custody to SignalTree. No such argument exists in P1-P6.
+
+"a partial observer contradicts P2"
+  -> OVERREACH. P2 makes absence representable in CANONICAL STATE; it does not
+     require every observation API to be total. `valid | suspended | invalidated`
+     is coherent. It simply has no EARNED REASON to exist, which is all the gate
+     needs.
+
+"value-bound observation creates two authorities"
+  -> OVERREACH. It assumes a value-bound observation must keep returning the
+     removed value. It could behave value -> unavailable -> value with no dual
+     authority. Again: unearned, not impossible.
+
+ALSO NOT INFERRED
+  all observation is canonical state
+  the kernel can never own non-canonical metadata
+  identity can never survive
+```
+
+### P6, phrased safely
+
+```text
+Confirmed reversal currently grants LIFO undo / redo.
+Selective or arbitrary earlier-turn reversal is NOT GRANTED.
+
+USABLE RULE: a row may not REQUIRE selective or out-of-order reversal unless that
+function independently earns itself.
+```
+
+That is enough to invalidate E2-S2 without freezing "LIFO forever" as a permanent
+prohibition.
+
+### E2-S2 — architectural weight WITHDRAWN
+
+Its supposed null performed an **arbitrary write** (`rows.set([...])`) rather than
+the granted reversal operation. A collision requiring a state transition that
+cannot arise under granted LIFO reversal means the row was never testing the
+claimed mechanism. Retained as characterization; carries no architectural weight.
+
+### B8+ HAS REACHED THE END OF ITS USEFULNESS
+
+The four-part criterion was a useful adversarial probe and is now becoming
+representation-shaped — *"cannot reconstruct referent"*, *"non-canonical
+information"*, *"container custody"*. The upstream result is the one that matters
+and it is simpler:
+
+```text
+No independently surviving workflow requiring pre-obtained continuity has been
+NAMED.
+```
+
+Stop there. **No B9.** Proving the absence harder is not the same as learning
+something.
+
+### One argument worth keeping, because it cuts the other way
+
+B's F5, on an operation begun before the removal and completing after the
+reversal: a surviving handle *"resolves silently and conceals that the
+configuration moved under the operation"* — the "undo got undone" defect. Absence
+surfaces the conflict; continuity hides it.
+
+Recorded as an observation about that scenario. **Not** as a theorem that
+continuity is always harmful.
+
+### NEXT — nothing for this function
+
+```text
+NOT ESTABLISHED -> NOTHING -> close the row.
+```
+
+**No product decision is owed.** Asking "does SignalTree want to claim the missing
+premise?" converts NOT ESTABLISHED into *would we LIKE this?*, which is
+resurrection by another route. If persistence, transactions, an adapter, or a
+demonstrated consumer later produces a capability that genuinely requires
+cross-removal continuity, **that function reopens the question from zero.**
+
+The row ends without an experiment AND without a replacement question. That is
+subtraction discipline operating before implementation instead of after it.
+
+### A principle worth preserving, restated
+
+```text
+A row SUCCEEDS when it reaches the correct epistemic disposition.
+"UNPROVEN / no experiment permitted" is a valid successful closure.
+```
+
+Not "no experiment is a result" — that invites the reading that running something
+is the default requirement.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
