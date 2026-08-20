@@ -5352,6 +5352,129 @@ Both caught by measurement, both would have silently corrupted the result:
 Third and fourth time a null has had a subtle flaw. Every one was found by running
 it rather than reading it.
 
+## E2-S0 DOWNGRADED again — a LAYER LEAK, plus three overclaims. E2-S00 runs framework-neutral.
+
+### The layer leak — the most important correction
+
+E2-S0 built its candidate semantics out of `signal` and `computed`, then reported
+two findings about Angular construction lifetimes **inside the architectural
+record**. That is a boundary violation, not a kernel result.
+
+```text
+KERNEL                                FRAMEWORK REALIZATION
+  membership                            Angular Signal
+  address / key                          computed()
+  incarnation, IF required               dependency tracking
+  read semantics                         template observation
+  invalidation semantics
+```
+
+The rule already on the books is *neutralize dependency, don't genericize
+Angular.* The subtler version of the mistake was using Angular to **prove the
+null**, so Angular behaviour became semantic evidence.
+
+**Demoted to test-infrastructure evidence, carrying no architectural weight:**
+
+```text
+- a generation check that short-circuits before reading a tracked signal drops the
+  dependency
+- returning a `computed` from a function called inside another computed did not
+  propagate invalidation IN THAT CONSTRUCTION
+```
+
+The second is explicitly **not** generalized: Angular plainly permits a computed
+to depend on a computed. What failed was one ephemeral construction and its
+lifetime. `e2s0-identity-function.spec.ts` is relabelled ANGULAR REALIZATION
+EVIDENCE; the semantic derivation moved to
+`e2s00-member-access.kernel.spec.ts`, which imports no framework at all.
+
+### Three overclaims corrected
+
+**1. "Identity beyond values is REQUIRED" -> CONDITIONAL.** Q1's "wrong-row read"
+presupposes that `lookup(k)` means *"the member that occupied k when I acquired
+this."* Under a keyed-address reading, `held -> 999` is exactly correct. The
+antecedent was never derived.
+
+```text
+IF a captured handle must stay bound to the incarnation it came from,
+THEN key+value are insufficient after key reuse, and a generation/incarnation
+     token is ONE sufficient answer.
+```
+
+**2. "Per-key generation is the MINIMUM" -> sufficient-in-model, not minimal.**
+Rivals: a global monotonic incarnation token, an opaque occupant token, slot plus
+incarnation. A global token may be *smaller* — the per-key map retains an entry for
+every key ever seen, **which is itself lifetime pressure**, so
+*"reclamation coordination is not earned"* was premature too.
+
+**3. Q3 restated negatively.** Not *"nothing requires revival"* but *"no capability
+requiring revival was found in the exercised consumer shapes."* And *"a captured
+handle carries its own key"* is itself an API design choice — a handle need not
+expose its key, and there need not be a handle object at all.
+
+## E2-S00 — MEMBER ACCESS, derived framework-neutral
+
+Evidence: `e2s00-member-access.kernel.spec.ts`, 8 rows, **zero framework
+imports**. A plain holder; no reactivity, no signals, no dependency graph.
+
+```text
+ADDRESS      lookup(k) resolves the CURRENT OCCUPANT of k. Reuse retargets.
+REFERENCE    an acquired handle stays bound to ONE incarnation.
+EPHEMERAL    resolve now; no retained-reference contract at all.
+
+ONLY QUESTION: what becomes IMPOSSIBLE under ADDRESS or EPHEMERAL?
+```
+
+```text
+keyed observation      expressible — including retarget-on-reuse, which is
+                       CORRECT under ADDRESS, not aliasing
+selection              expressible — a dangling key is resolved like any
+                       foreign key
+callback by key         expressible — resolves at invocation
+deferred completion    expressible, and this is the ONLY shape where
+                       retargeting is observable
+```
+
+### The deferred completion, and why it does not earn identity
+
+```text
+save('tmp-1') starts · key retired · a DIFFERENT member takes 'tmp-1'
+completion lands -> { id:'tmp-1', n:999, saved:true }      wrong DOMAIN outcome
+```
+
+But staleness is **detectable with no identity mechanism at all**: canonical
+members are immutable, so a re-added member is a different object and a reference
+compare distinguishes them.
+
+```text
+captured = at('tmp-1') · save(k, captured) · reuse intervenes
+  -> 'STALE', and the new occupant is untouched
+CONTROL, nothing intervenes -> 'APPLIED'
+```
+
+Retained membership identity would make that *more convenient*. It does not make
+it **possible**.
+
+### Result
+
+```text
+no exercised shape becomes IMPOSSIBLE under ADDRESS semantics
+
+NOT EXERCISED, therefore NOT CLEARED
+  transaction / undo interaction
+  persistence
+  a consumer holding a reference it CANNOT re-resolve because it never had the key
+
+-> E2-S0's antecedent remains UNPROVEN, and with it the requirement for identity
+   beyond values.
+```
+
+**Architectural note.** If a stable membership reference ever earns itself, it need
+not be the lookup. Address-based observation and identity-bearing reference are
+**separable APIs**, and keeping them separate stops a lookup from carrying a
+subject-lifetime ontology it never needed — which is the north-star position that
+address and identity are different questions.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

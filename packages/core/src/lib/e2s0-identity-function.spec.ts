@@ -4,25 +4,23 @@ import { describe, expect, it } from 'vitest';
 import { signalTree } from '../index';
 
 /**
- * E2-S0 — DOES A MEMBER HAVE A SEMANTIC LIFETIME DISTINCT FROM ITS KEY/VALUE?
+ * ⚠️ ANGULAR REALIZATION EVIDENCE — NOT KERNEL SEMANTICS.
  *
- * E2-S measured that the incumbent distinguishes subject generations. It did NOT
- * establish that SignalTree 15 must. This derives the function, from zero, before
- * any representation is considered.
+ * This file was written as a kernel derivation and it CROSSED THE LAYER
+ * BOUNDARY: it builds candidate semantics out of `signal` and `computed`, so
+ * Angular behaviour ended up inside architectural evidence. Two of its findings
+ * are about Angular construction lifetimes and say nothing about what a member
+ * lookup MEANS.
  *
- * THREE contracts, not two — and E2-S's null silently implemented the third:
+ * The semantic derivation lives in `e2s00-member-access.kernel.spec.ts`, which
+ * imports no framework at all. This file is retained for what it legitimately
+ * shows: that ONE Angular consumer pattern can reacquire without handle revival,
+ * and that a generation-bound handle is realizable in Angular. Both are
+ * REALIZATION / DX evidence.
  *
- *   A   handles are MEMBERSHIP-LIFETIME references
- *       revive on undo; never alias
- *   B   handles OBSERVE CURRENT KEYED MEMBERSHIP, with INVALIDATION
- *       removal permanently invalidates; undo requires reacquisition
- *   B'  handles observe current keyed membership, NO invalidation
- *       silently re-point to whatever occupies the key
- *
- * The questions, in order:
- *   1. is B' harmful?                       (if not, no identity is needed at all)
- *   2. is B constructible from VALUES alone? (if not, B needs identity too)
- *   3. what does A give over B?              (this decides lifetime vs generation)
+ * Its conclusions were downgraded — see RFC 0016. In particular "identity beyond
+ * values is REQUIRED" is CONDITIONAL on an antecedent that is unproven, and
+ * "per-key generation is the MINIMUM" is sufficient-in-model, not minimal.
  */
 type Row = { id: string; n: number };
 
@@ -79,13 +77,15 @@ function collectionB(leaf: { (): Row[]; set(v: Row[]): void }) {
     /**
      * A handle is bound to (key, generation) at acquisition time.
      *
-     * `read` is a PLAIN FUNCTION, not a `computed`. A second draft returned a
-     * computed and it broke dependency propagation: `byId()` is called during an
-     * outer computed's evaluation, so the inner computed was recreated on every
-     * pass and the outer projection stopped invalidating — measured, a derived
-     * projection stayed `undefined` after a restore while a freshly acquired
-     * handle read the row correctly. Callers memoise at their own level if they
-     * want to; the handle must not nest a computed inside its caller's.
+     * `read` is a PLAIN FUNCTION, not a `computed`.
+     *
+     * ANGULAR REALIZATION NOTE, deliberately not generalized: the particular
+     * construction used in a second draft — creating a fresh `computed` inside
+     * an outer computed's evaluation, per pass — did not propagate invalidation
+     * in this test. That is a fact about THAT ephemeral construction and its
+     * lifetime, NOT a claim that Angular disallows a computed depending on a
+     * computed, which it plainly permits. It is test-infrastructure evidence and
+     * carries no architectural weight.
      */
     byId(id: string) {
       const boundGeneration = generation.get(id);

@@ -542,9 +542,44 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                              capability.
                              NOT EARNED: subject-lifetime identity, reclamation
                              coordination, revival-on-undo, SubjectId as carrier.
-                             NOT established: that revival is worthless — it may be
-                             better DX, and a consumer that CANNOT know its key
-                             would need it; none demonstrated.
+                             NOT established: that revival is worthless.
+  E2-S0 DOWNGRADED — LAYER LEAK. It built candidate semantics from signal/computed
+                             and let TWO ANGULAR construction findings into the
+                             architectural record. Demoted to test-infrastructure
+                             evidence; the computed-in-computed one is explicitly
+                             NOT generalized (Angular permits a computed depending
+                             on a computed — one ephemeral construction failed).
+                             Rule: neutralize dependency, don't genericize Angular
+                             — and don't use Angular to PROVE the null.
+                             THREE overclaims corrected: (1) "identity beyond
+                             values is REQUIRED" -> CONDITIONAL; "wrong-row read"
+                             presupposes lookup means "the member that occupied k
+                             when I acquired this", and under ADDRESS semantics the
+                             retarget is CORRECT. (2) "per-key generation is the
+                             MINIMUM" -> sufficient-in-model only; a global
+                             monotonic incarnation token is a rival and may be
+                             smaller, since the per-key map retains an entry for
+                             every key ever seen — which is itself lifetime
+                             pressure, so "reclamation not earned" was premature.
+                             (3) Q3 -> "no capability requiring revival was found in
+                             the EXERCISED shapes"; and "a handle carries its key"
+                             is itself a design choice.
+  E2-S00 DONE (KERNEL)       e2s00-member-access.kernel.spec.ts, 8 rows, ZERO
+                             framework imports. No exercised shape is IMPOSSIBLE
+                             under ADDRESS: keyed observation, selection, callback-
+                             by-key all expressible, and retarget-on-reuse is
+                             correct rather than aliasing. The deferred completion
+                             is the only shape where retargeting is observable, and
+                             staleness is DETECTABLE with no identity mechanism —
+                             canonical members are immutable, so a reference
+                             compare against the captured member returns STALE.
+                             NOT CLEARED: transaction/undo, persistence, and a
+                             consumer that cannot re-resolve because it never had
+                             the key. So the antecedent is UNPROVEN.
+                             ARCHITECTURE: address-based observation and identity-
+                             bearing reference are SEPARABLE APIs — if a stable
+                             membership reference ever earns itself it need not be
+                             the lookup.
                              NOTE an attribution error caught by measurement: an
                              earlier draft claimed the revival was "merely
                              resolve-on-read" and would also happen on re-add. It
