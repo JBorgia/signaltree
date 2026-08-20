@@ -868,6 +868,157 @@ identical on either base.
 - verify the published tarball after publish (npm pack + diff against the tag)
 ```
 
+## MANDATORY GATE — NULL PRE-REGISTRATION
+
+**The rule this whole gate exists to enforce:**
+
+> **A null must falsify an INDEPENDENTLY EARNED contract. It may not define that
+> contract by the distinctions it chooses to preserve.**
+
+### Why this exists
+
+Every significant error in the frontier/collections derivations had one shape: the
+obvious incumbent *mechanism* was removed, and one of its semantic *assumptions*
+stayed embedded in the null. The null then came back green — because it was built
+to answer a question whose answer it already partly encoded.
+
+```text
+P3          assumed undo must produce A             -> invented contract
+tap         sampled after every mutation            -> null got STRONGER
+                                                       observation than any real
+                                                       consumer
+stored      used TestBed.tick()                     -> null got WEAKER durability
+                                                       timing than the incumbent
+rekey       remove+add                              -> null answered a weaker
+                                                       identity question
+E2          `current === after`                     -> value equality silently
+                                                       substituted for authorship
+E2-S        "held reference must revive"            -> incumbent handle semantics
+                                                       silently became requirement
+E2-S0       retargeting called "wrong-row"          -> reference semantics silently
+                                                       became requirement
+E2-S00      object-reference compare                -> identity reappeared INSIDE
+                                                       the identity-free null
+computed    framework realization                   -> leaked into kernel evidence
+```
+
+Executable falsifiers reliably catch *"the implementation doesn't do what we
+thought."* They cannot catch *"we never established that it should do what the test
+asserts."* Only an adversarial pass on the **premise** catches that, and it was
+happening one phase too late — after the conclusion was already committed and
+available for the next row to inherit.
+
+### The gate — complete BEFORE any null is implemented
+
+```text
+FUNCTION
+  Stated without incumbent nouns.
+
+INDEPENDENT CONTRACT
+  What must be POSSIBLE? Not what currently happens.
+
+OPPOSITE CONTRACT            <-- the most important field
+  The strongest plausible ALTERNATIVE contract, stated fairly.
+  Why is it invalid?
+  If there is no answer, STOP. The function is not yet derived.
+
+HIDDEN DISTINCTIONS
+  Does the claim depend on any of:
+    value vs identity            history vs current state
+    address vs identity          author vs value
+    lifetime vs key              timing
+    observation frequency        framework behaviour
+    mutable vs immutable representation
+
+NULL PERMISSIONS
+  What information may the null use?
+
+FORBIDDEN INFORMATION
+  What would smuggle the incumbent back in?
+
+FAILURE CONDITION
+  What exact result kills the null?
+
+SURVIVAL CONDITION
+  What exact result earns the FUNCTION — not merely reproduces current behaviour?
+```
+
+**Worked example of the field that matters.** For E2-S00:
+
+```text
+PROPOSED   a retained lookup must not retarget after key reuse
+OPPOSITE   a lookup IS an address, and therefore SHOULD retarget
+WHY IS THE OPPOSITE IMPOSSIBLE?   ... no answer available
+```
+
+That question, asked before implementation, would have stopped the row.
+
+### The standing hostile matrix
+
+For anything touching state, identity or history, every one of these must be
+either exercised or explicitly recorded as not-cleared:
+
+```text
+SAME VALUE / DIFFERENT CAUSE          ABA
+DIFFERENT VALUE / SAME IDENTITY       ordinary update
+SAME KEY / DIFFERENT MEMBERSHIP       remove + reuse
+DIFFERENT KEY / SAME MEMBERSHIP       only if rekey independently survives
+SAME FINAL STATE / DIFFERENT HISTORY  add/remove, round-trip mutation
+NESTED PATH                            siblings preserved
+ASYNC INTERLEAVING                     begins, state changes, resumes
+FRAMEWORK-FREE                         no framework realization in a semantic test
+INCUMBENT-FREE                         no entityMap / SubjectId / effect vocabulary
+```
+
+### Evidence vocabulary — FIVE steps, and no finding may skip more than one
+
+```text
+1  MEASURED CURRENT BEHAVIOUR
+2  A MODEL CAN REPRODUCE THE BEHAVIOUR
+3  THE FUNCTION IS REQUIRED
+4  A REPRESENTATION PROPERTY IS REQUIRED
+5  A PARTICULAR CARRIER SURVIVES
+```
+
+*"A held reference revives after undo"* earns **step 1 only**. Reaching step 3
+needs its own derivation; step 4 another; step 5 another. Two or three of these
+transitions were repeatedly skipped in one move.
+
+### Three kinds of neutrality — three separate guards
+
+```text
+framework-neutral   =/=   legacy-neutral   =/=   assumption-neutral
+```
+
+A framework-free test can still import unearned assumptions — that members are
+immutable, that key reuse matters, that deferred work should detect replacement,
+that a lookup is address-based. Each needs its own attack.
+
+### Pace — claim latency LONGER, experiment latency SHORTER
+
+```text
+experiment freely
+attack the premise aggressively
+commit an ARCHITECTURAL CONCLUSION only after a hostile pass on the premise
+```
+
+Measurements and specs may be committed as they land. **Conclusions may not**,
+because a conclusion one level too strong survives long enough for the next
+derivation to inherit it, and the corrective commit arrives after the damage. That
+is the actual cost of a high commit rate here: not the commits, the vocabulary
+they publish.
+
+### Structural note on reviewer independence
+
+One agent deriving the requirement, designing the null, implementing it, debugging
+it, interpreting it and writing the verdict is structurally prone to confirmation
+bias regardless of discipline. Once the words *"wrong-row read"* or *"restore the
+original subject"* are written, the classification has already been made before
+the contract was established. **The premise attack must come from outside the
+agent that authored the null.** Where that is unavailable, the pre-registration
+above is the substitute — and its OPPOSITE CONTRACT field is the part that does
+the work.
+
 ## Required Validation
 
 ```bash
