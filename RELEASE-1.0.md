@@ -1105,6 +1105,103 @@ can only make the omission visible. An empty OPPOSITE CONTRACT field is therefor
 a stop condition, not a note.
 
 
+## DELEGATION POLICY — independence is the point, not headcount
+
+The old rule was *"only use subagents when explicitly requested."* Replaced:
+
+> **Use subagents whenever epistemic independence materially improves the
+> decision. Keep writes and final architectural authority centralized.**
+
+Antagonistic review is **automatic at row boundaries**. It is not something to ask
+permission for each time.
+
+### Differentiated packets — the load-bearing part
+
+Five agents that all see *"I think SubjectId is necessary because key reuse causes
+wrong-row aliasing"* are not five reviews. They are one frame, five times. What
+buys independence is giving them **deliberately different information and
+incentives**:
+
+```text
+AGENT A — FUNCTION KILLER
+  gets   frozen premises + candidate function ONLY
+  job    show this function should not exist
+  default disposition: NOTHING SURVIVES
+
+AGENT B — ABSENCE ARCHITECT
+  gets   the same material
+  job    give the strongest coherent architecture in which the function is ABSENT
+
+AGENT C — NULL BREAKER
+  gets   the earned contract + the proposed null ONLY
+  job    find where the null is weaker than, stronger than, or different from the
+         contract — or smuggles information in
+         (timing · identity · observation frequency · framework · incumbent leaks)
+
+AGENT D — INTERPRETATION REVIEWER
+  gets   pre-registration + raw command output ONLY. NOT the author's conclusion.
+  job    state the MAXIMUM conclusion the evidence supports
+```
+
+**Contextual independence is achieved by withholding, not by adding.** A packet
+carrying the author's rationale inherits the author's premise and the gate is
+wasted.
+
+### Competing hypotheses in parallel, then arbitration
+
+For an uncertain row, fork the positions instead of inventing one and then trying
+to disprove yourself:
+
+```text
+H0  NOTHING is needed
+H1  keyed address semantics suffice
+H2  stable incarnation identity is required
+H3  the function belongs OUTSIDE SignalTree
+```
+
+One agent argues each from the same frozen premises. The primary agent
+**arbitrates**. That is a healthier role separation than deriver-and-self-critic,
+which is what produced this session's error run.
+
+### Where NOT to delegate
+
+Not for a grep, a test run, a mechanical refactor, a lint failure, or an obvious
+measurement — that produces prose without epistemic value. Delegate when the
+question contains:
+
+```text
+must exist · owns · identity · semantic · minimum · equivalent
+replace · delete · survives · architecture
+```
+
+Those are exactly the decisions where a framing error is expensive.
+
+### Reviewers may review each other, bounded
+
+For the highest-cost closures:
+
+```text
+Deriver -> Antagonist finding -> Deriver response -> a SECOND antagonist sees BOTH
+```
+
+**Only new evidence extends the loop.** Restating a position does not.
+
+### Subagents do not write architecture
+
+They return bounded findings and nothing else:
+
+```text
+CLAIM
+CLASS                      MEASURABLE · DERIVABLE · POLICY · FROZEN · OUT-OF-ROW
+WHY
+FALSIFIER
+SEVERITY
+WHAT THIS DOES NOT ESTABLISH
+```
+
+The primary agent owns synthesis and commits. Otherwise competing architectural
+truths accumulate in the repo and the ledger stops being a single record.
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
