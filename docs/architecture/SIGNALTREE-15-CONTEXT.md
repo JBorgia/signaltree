@@ -524,6 +524,27 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                              Then: minimum identity property, THEN carrier —
                              candidates include SubjectId, per-key generation
                              counter, opaque membership token, slot+incarnation.
+  E2-S0 DONE                 THREE contracts, not two — E2-S's null was the third.
+                             Q1: the identity-free contract (B') is HARMFUL — a
+                             handle to tmp-1@111 reads 999 after key reuse. Not
+                             stale, WRONG, silently. Q2: contract B is NOT
+                             identity-free either — remove then identical re-add
+                             gives byte-identical values, so no value-only rule can
+                             invalidate. So IDENTITY BEYOND VALUES IS REQUIRED —
+                             the first thing here earned as a FUNCTION rather than
+                             observed. Its MINIMUM is a PER-KEY GENERATION: a Map, a
+                             counter and one revision signal, no SubjectId, no
+                             reclamation, no effect log. Q3: NOTHING requires
+                             revival over reacquisition — an ordinary Angular
+                             projection re-derives from its key automatically after
+                             a restore, and a captured handle carries its key so it
+                             can always reacquire. B costs a reacquisition, not a
+                             capability.
+                             NOT EARNED: subject-lifetime identity, reclamation
+                             coordination, revival-on-undo, SubjectId as carrier.
+                             NOT established: that revival is worthless — it may be
+                             better DX, and a consumer that CANNOT know its key
+                             would need it; none demonstrated.
                              NOTE an attribution error caught by measurement: an
                              earlier draft claimed the revival was "merely
                              resolve-on-read" and would also happen on re-add. It

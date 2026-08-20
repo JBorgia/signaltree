@@ -5250,6 +5250,108 @@ If A independently wins, E2-S becomes excellent supporting evidence. If B
 suffices, the revival behaviour is incumbent semantics and the
 `SubjectId`/reclamation structure may still disappear.
 
+## E2-S0 — IDENTITY IS REQUIRED. Subject LIFETIME is not. A per-key generation suffices.
+
+Evidence: `e2s0-identity-function.spec.ts`, 5 rows. The function derived from zero
+before any representation was considered.
+
+**Three contracts, not two** — and E2-S's null silently implemented the third:
+
+```text
+A    handles are MEMBERSHIP-LIFETIME references — revive on undo, never alias
+B    handles OBSERVE CURRENT KEYED MEMBERSHIP, WITH invalidation — removal
+     permanently invalidates, undo requires reacquisition
+B'   the same WITHOUT invalidation — handles silently re-point to whatever
+     occupies the key
+```
+
+### Q1 — B′ is HARMFUL
+
+```text
+hold byId('tmp-1') @ 111 · remove · a different member takes 'tmp-1' @ 999
+held reads 999
+```
+
+Not stale — **wrong**. Another member's data, no error, no signal. And key reuse is
+not hypothetical: `80f41e94`'s own docblock worries about *"a future addOne of the
+retired id"*, and optimistic temp-id creation produces exactly this cycle.
+
+### Q2 — B is NOT identity-free either, and the minimum is a GENERATION
+
+```text
+remove 'a' then re-add {id:'a', n:1}
+JSON of the two occupancies is IDENTICAL
+-> no value-only rule can decide a handle from the first must not read the second
+```
+
+**So some identity beyond key+value IS REQUIRED.** This is the first thing in this
+derivation earned as a *function* rather than observed as behaviour.
+
+Its minimum, built in ordinary code — a `Map`, a counter, and one revision signal:
+
+```text
+add / remove bump the key's generation
+a handle binds (key, generation) at acquisition
+read = generation matches ? find(key) : undefined
+
+hold @111 · remove -> undefined · reuse @999 -> STILL undefined · fresh handle -> 999
+```
+
+No `SubjectId`, no reclamation coordinator, no effect log.
+
+### Q3 — nothing requires REVIVAL over reacquisition
+
+```text
+ordinary Angular shape: a parent derives from a key it holds, children get VALUES
+  add a,b · derive selected from selectedId · remove 'a' -> undefined
+  restore the membership snapshot          -> selected reads 1 AUTOMATICALLY
+```
+
+The derived projection reacquires by itself, because it re-derives from the key on
+every read. And the only consumer revival serves — one that *captured* a handle —
+carries its own key and can always reacquire:
+
+```text
+captured.read() after restore   -> undefined (by design under B)
+byId(captured.key).read()       -> 1
+```
+
+**Contract B costs a reacquisition. It does not cost a capability.**
+
+### Result
+
+```text
+IDENTITY BEYOND VALUES                       REQUIRED — earned as a function
+MINIMUM PROPERTY                             a per-key GENERATION
+SUBJECT-LIFETIME IDENTITY                    NOT EARNED
+RECLAMATION COORDINATION                     NOT EARNED
+REVIVAL-ON-UNDO                              NOT EARNED — no capability found
+`SubjectId` AS THE CARRIER                   NOT EARNED — a counter suffices
+```
+
+**Not established:** that revival is worthless. It may be better DX, and a consumer
+that *cannot* know its key would need it — no such consumer has been demonstrated.
+
+### Two null-construction findings, both Angular idiom
+
+Both caught by measurement, both would have silently corrupted the result:
+
+```text
+1  A generation check that SHORT-CIRCUITS before reading the tracked signal drops
+   the dependency. The projection returned `undefined` without reading rows, so it
+   never re-evaluated after a restore — while a freshly acquired handle read the
+   row correctly.
+
+2  Returning a `computed` from a function called INSIDE another computed breaks
+   propagation. `byId()` runs during the outer evaluation, so the inner computed
+   was recreated every pass and the outer projection stopped invalidating. Fixed
+   by making the handle's `read` a PLAIN FUNCTION and letting callers memoise at
+   their own level.
+```
+
+Third and fourth time a null has had a subtle flaw. Every one was found by running
+it rather than reading it.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
