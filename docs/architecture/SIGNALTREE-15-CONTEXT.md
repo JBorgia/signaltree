@@ -580,6 +580,32 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                              bearing reference are SEPARABLE APIs — if a stable
                              membership reference ever earns itself it need not be
                              the lookup.
+  E2-S00-D                   The address null had a HIDDEN IDENTITY MECHANISM:
+                             `c.at(k) !== captured` is JS OBJECT IDENTITY. So it
+                             showed "address + retained object-ref identity", not
+                             "address + values". And since patch is immutable, an
+                             ordinary update replaces the object too — so the guard
+                             reports STALE for BOTH same-member-evolution and
+                             different-member-key-reuse. INDISTINGUISHABLE.
+                             Contract A is not merely conservative: measured over
+                             three edits it returns STALE/STALE/STALE, so a save on
+                             a row the user keeps editing NEVER LANDS.
+                             WITHDRAWN: "retained identity would make that more
+                             convenient, not possible." If Contract B is required
+                             (follow the same membership across value evolution,
+                             reject key reuse) then identity IS required and
+                             address+value+object-ref cannot supply it.
+                             NOT decided: which contract is required. Two escapes
+                             keep identity unearned, both APPLICATION choices —
+                             never-reused keys (uuid rather than recycled), or a
+                             domain-level version/server id.
+  NEUTRALITY IS THREE GUARDS framework-neutral =/= legacy-neutral =/=
+                             assumption-neutral. WITHDRAWN: "framework-neutral was
+                             the first null that couldn't encode incumbent
+                             semantics." The neutral spec still imports unearned
+                             assumptions: members are IMMUTABLE, key reuse MATTERS,
+                             deferred work SHOULD detect replacement, a lookup can
+                             sensibly be ADDRESS-based.
                              NOTE an attribution error caught by measurement: an
                              earlier draft claimed the revival was "merely
                              resolve-on-read" and would also happen on re-add. It

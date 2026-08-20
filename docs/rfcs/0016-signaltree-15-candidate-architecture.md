@@ -5475,6 +5475,118 @@ not be the lookup. Address-based observation and identity-bearing reference are
 subject-lifetime ontology it never needed — which is the north-star position that
 address and identity are different questions.
 
+## E2-S00-D — the address null had a HIDDEN IDENTITY MECHANISM. Overclaim withdrawn.
+
+Evidence: `e2s00-member-access.kernel.spec.ts`, now 12 rows, still **zero
+framework imports**.
+
+### The hidden mechanism
+
+```ts
+const captured = c.at('tmp-1');
+if (c.at(k) !== captured) return 'STALE';   // <- JAVASCRIPT OBJECT IDENTITY
+```
+
+So E2-S00 did not show *"address + values suffice."* It showed *"address +
+retained object-reference identity suffices for that particular sequence."*
+
+### And the guard cannot make the distinction it needs
+
+`patch` is immutable, so an ordinary update replaces the object too:
+
+```text
+SAME member, new value      k {n:111} -> patch {n:112}, membership untouched
+                            guard -> STALE
+DIFFERENT member, key reused k {n:111} -> remove -> add {n:999}
+                            guard -> STALE
+
+INDISTINGUISHABLE
+```
+
+### Contract A is not merely conservative — it is BROKEN for an ordinary workflow
+
+Measured over three edits, each re-invalidating the in-flight attempt:
+
+```text
+verdicts = ['STALE', 'STALE', 'STALE']
+```
+
+A save on a row the user keeps editing **never lands**, though nothing was ever
+removed or reused.
+
+### WITHDRAWN
+
+```text
+"Retained identity would make that MORE CONVENIENT, not POSSIBLE."
+```
+
+If the required function is Contract B, address + value + object-reference
+comparison **cannot** supply it.
+
+```text
+CONTRACT A   invalidated by ANY intervening value change
+             object-reference or version observation suffices
+             COST: save-while-editing never completes
+
+CONTRACT B   follows the same membership across ordinary value evolution, but
+             REJECTS a key reused by a different member
+             COST: requires distinguishing evolution from replacement — a
+             membership-INCARNATION property, i.e. IDENTITY
+```
+
+**Which contract is required is not decided here.** Two escape routes would keep
+identity unearned, and both are application choices rather than measurements:
+
+```text
+- keys that are NEVER REUSED (uuid temp ids rather than recycled ones) make the
+  replacement case unreachable, and ADDRESS is then safe
+- a domain-level version or server id lets the APPLICATION distinguish evolution
+  from replacement in its own data
+```
+
+## THREE KINDS OF NEUTRALITY — they are not the same guard
+
+Another overclaim, withdrawn: *"the framework-neutral version is the first one
+that couldn't encode incumbent semantics, because it had no incumbent primitives
+to borrow from."* Framework neutrality prevents **Angular** contamination. It does
+not prevent incumbent or unexamined assumptions.
+
+```text
+framework-neutral   =/=   legacy-neutral   =/=   assumption-neutral
+```
+
+The "neutral" spec still imports assumptions, none of them yet earned:
+
+```text
+canonical members are IMMUTABLE
+key reuse MATTERS
+deferred work SHOULD detect replacement
+a lookup can sensibly be ADDRESS-based
+```
+
+Each needs its own guard. Framework neutrality was necessary and is not
+sufficient.
+
+### Checkpoint
+
+```text
+ADDRESS / EPHEMERAL semantics
+  keyed lookup                                   works
+  selection                                      works
+  callback-by-key                                works
+deferred work across reuse
+  ADDRESS blindly retargets                      MEASURED
+  object-ref guard prevents that case            MEASURED
+  guard distinguishes evolution from reuse       REFUTED
+contract A's cost (save-while-editing fails)     MEASURED
+stable membership-reference function             STILL UNPROVEN
+identity requirement                             STILL CONDITIONAL
+Angular dependency findings                      REALIZATION ONLY
+```
+
+Nothing here reopens `SubjectId` or the effect log. Nothing here closes identity
+either.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

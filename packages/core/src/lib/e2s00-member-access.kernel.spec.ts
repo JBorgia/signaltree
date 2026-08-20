@@ -222,3 +222,105 @@ describe('E2-S00 kernel — result', () => {
     expect(true).toBe(true);
   });
 });
+
+// ============================================================================
+// E2-S00-D — THE HIDDEN IDENTITY MECHANISM IN THE ADDRESS NULL
+//
+// The staleness guard above is `c.at(k) !== captured`. That is JAVASCRIPT OBJECT
+// IDENTITY, so the null did not show "address + values suffice". It showed
+// "address + retained object-reference identity suffices for THAT sequence".
+//
+// And because `patch` is immutable, an ordinary update to the SAME member also
+// replaces the object. So the guard cannot distinguish the two cases it would
+// need to.
+// ============================================================================
+describe('E2-S00-D — same membership, new value', () => {
+  it('THE OBJECT-REF GUARD FIRES on an ordinary update — no removal, no reuse', async () => {
+    const c = addressCollection([{ id: 'k', n: 111 }]);
+
+    const captured = c.at('k');
+    const save = async (key: string, expected: Row | undefined) => {
+      await Promise.resolve();
+      return c.at(key) !== expected ? 'STALE' : 'APPLIED';
+    };
+    const inFlight = save('k', captured);
+
+    // The member is never removed and the key is never reused. Only its value
+    // evolves — the ordinary case of a user editing a row mid-save.
+    c.patch('k', { n: 112 });
+    expect(c.ids()).toEqual(['k']); // membership untouched throughout
+
+    expect(await inFlight).toBe('STALE');
+  });
+
+  it('SO THE GUARD CANNOT DISTINGUISH the two cases', async () => {
+    const evolve = addressCollection([{ id: 'k', n: 111 }]);
+    const capturedEvolve = evolve.at('k');
+    evolve.patch('k', { n: 112 }); // SAME member, new value
+    const evolveVerdict = evolve.at('k') !== capturedEvolve ? 'STALE' : 'APPLIED';
+
+    const reuse = addressCollection([{ id: 'k', n: 111 }]);
+    const capturedReuse = reuse.at('k');
+    reuse.remove('k');
+    reuse.add({ id: 'k', n: 999 }); // DIFFERENT member, key reused
+    const reuseVerdict = reuse.at('k') !== capturedReuse ? 'STALE' : 'APPLIED';
+
+    // Indistinguishable. Both report STALE.
+    expect(evolveVerdict).toBe('STALE');
+    expect(reuseVerdict).toBe('STALE');
+    expect(evolveVerdict).toBe(reuseVerdict);
+  });
+
+  it('AND CONTRACT A IS NOT MERELY CONSERVATIVE — it breaks save-while-editing', async () => {
+    // If async work is invalidated by ANY intervening value change, then a save
+    // on a row the user keeps editing can never complete. Measured as a loop:
+    // every edit re-invalidates the in-flight attempt.
+    const c = addressCollection([{ id: 'k', n: 0 }]);
+    const attempt = async (expected: Row | undefined) => {
+      await Promise.resolve();
+      return c.at('k') !== expected ? 'STALE' : 'APPLIED';
+    };
+
+    const verdicts: string[] = [];
+    for (let edit = 1; edit <= 3; edit++) {
+      const captured = c.at('k');
+      const inFlight = attempt(captured);
+      c.patch('k', { n: edit }); // the user types again
+      verdicts.push(await inFlight);
+    }
+
+    expect(verdicts).toEqual(['STALE', 'STALE', 'STALE']);
+    // The save never lands, though nothing was ever removed or reused.
+  });
+});
+
+// ============================================================================
+// E2-S00-D — THE FUNCTION QUESTION, stated and NOT decided here
+// ============================================================================
+describe('E2-S00-D — the two contracts', () => {
+  it('states them, and what each costs', () => {
+    // CONTRACT A   async work is invalidated by ANY intervening value change.
+    //              Object-reference or version observation suffices.
+    //              COST, measured above: save-while-editing never completes.
+    //
+    // CONTRACT B   async work FOLLOWS the same membership across ordinary value
+    //              evolution, but must REJECT a key reused by a different member.
+    //              COST: requires distinguishing evolution from replacement,
+    //              which object-reference comparison cannot do. That is a
+    //              membership-incarnation property — an IDENTITY property.
+    //
+    // SO: IF B is the independently required function, identity is required and
+    // address+value+object-ref cannot supply it. That is a REAL narrowing — the
+    // earlier claim "retained identity would make it more convenient, not
+    // possible" is WITHDRAWN.
+    //
+    // WHICH contract is required is NOT decided here, and two escape routes exist
+    // that would keep identity unearned:
+    //   - keys that are never reused (uuid temp ids rather than recycled ones)
+    //     make the replacement case unreachable, and ADDRESS is then safe
+    //   - a domain-level version or server id lets the APPLICATION distinguish
+    //     evolution from replacement in its own data
+    // Both are application choices, so neither is settled by measurement here.
+    expect(true).toBe(true);
+  });
+});
