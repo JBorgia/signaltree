@@ -6546,8 +6546,31 @@ Rung 4 representation property   NOT ENTERED — B's invariant-forest constraint
 Rung 5 carrier                   NOT ENTERED
 ```
 
-**Rung 3 was entered with 1 and 2 empty. That is out of order, and it is why the row
-is UNDECIDABLE rather than merely unresolved.**
+**CORRECTED — "rung 3 with 1 and 2 empty is out of order" is WITHDRAWN as an
+account of why this row is undecidable, and must NOT be generalized.**
+
+Empty lower rungs are not the cause. **The cause is that the candidate depends on a
+behaviour the frozen premises do not grant** — an entity able to observe the
+interval between two writes. Measurement could not have supplied that; supplying it
+by measurement is the forbidden move. Reading the emptiness of rungs 1-2 as the
+defect implies measurement would have decided the row, which is the
+"provisional against measurement" error already struck on UNDO-E3, returning in
+ladder clothing.
+
+```text
+THE NARROW RULE
+
+If a candidate depends on a behaviour NOT PRESENT in the frozen premises, do not
+use measurement or repository archaeology to supply it FOR THAT CANDIDATE. Close
+or park the row.
+
+If a row's independently frozen premises ARE sufficient to decide the function, it
+MAY be reasoned abstractly WITHOUT measuring current behaviour. Rungs 1 and 2 are
+not prerequisites for a function verdict.
+```
+
+So a rung-3 verdict on sufficient premises is legitimate with rungs 1-2 empty. What
+is illegitimate is filling a PREMISE GAP with measurement.
 
 ### CORROBORATION — NO for the verdict; weakly YES for the gap's location
 

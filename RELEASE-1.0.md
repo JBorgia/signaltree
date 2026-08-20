@@ -1062,6 +1062,29 @@ FORBIDDEN       adding the property to the contract merely because the matrix
 Otherwise the testing framework manufactures semantics — solving the old problem
 by requiring every candidate to satisfy nine properties it never promised.
 
+### EMPTY LOWER RUNGS ARE NOT A DEFECT
+
+```text
+If a candidate depends on a behaviour NOT PRESENT in the frozen premises, do not
+use measurement or repository archaeology to supply it FOR THAT CANDIDATE.
+Close or park the row.
+
+If a row's independently frozen premises ARE sufficient to decide the function, it
+MAY be reasoned abstractly WITHOUT measuring current behaviour.
+Rungs 1 and 2 are NOT prerequisites for a function verdict.
+```
+
+A rung-3 verdict reached on sufficient premises is legitimate with rungs 1 and 2
+empty. What is illegitimate is **filling a premise gap with measurement.**
+
+Recorded because an interpretation reviewer once explained a row's undecidability as
+*"rung 3 entered with 1 and 2 empty — that is out of order"*, and the author adopted
+it and generalized it to four unopened rows. That framing implies measurement would
+have decided the row, which is the same "provisional against measurement" error
+already struck elsewhere, returning in ladder clothing. **The ladder describes what
+evidence supports what claim. It does not require a row to produce evidence it does
+not need.**
+
 ## EVIDENCE LADDER — and a single experiment advances it by ONE STEP ONLY
 
 ```text

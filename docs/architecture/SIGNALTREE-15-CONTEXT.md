@@ -326,6 +326,29 @@ FORBIDDEN       adding the property to the contract merely because the matrix
 Otherwise the testing framework manufactures semantics — solving the old problem
 by requiring every candidate to satisfy nine properties it never promised.
 
+### EMPTY LOWER RUNGS ARE NOT A DEFECT
+
+```text
+If a candidate depends on a behaviour NOT PRESENT in the frozen premises, do not
+use measurement or repository archaeology to supply it FOR THAT CANDIDATE.
+Close or park the row.
+
+If a row's independently frozen premises ARE sufficient to decide the function, it
+MAY be reasoned abstractly WITHOUT measuring current behaviour.
+Rungs 1 and 2 are NOT prerequisites for a function verdict.
+```
+
+A rung-3 verdict reached on sufficient premises is legitimate with rungs 1 and 2
+empty. What is illegitimate is **filling a premise gap with measurement.**
+
+Recorded because an interpretation reviewer once explained a row's undecidability as
+*"rung 3 entered with 1 and 2 empty — that is out of order"*, and the author adopted
+it and generalized it to four unopened rows. That framing implies measurement would
+have decided the row, which is the same "provisional against measurement" error
+already struck elsewhere, returning in ladder clothing. **The ladder describes what
+evidence supports what claim. It does not require a row to produce evidence it does
+not need.**
+
 ## EVIDENCE LADDER — and a single experiment advances it by ONE STEP ONLY
 
 ```text
@@ -1123,7 +1146,20 @@ premise B needs. Neither was asked; neither answered.
 ```text
 1 measured NOT ENTERED · 2 model-vs-MEASURED NOT ENTERED (B's construction LOOKS
 like rung 2 and is not) · 3 function required ENTERED NOT PASSED · 4,5 NOT ENTERED
-Rung 3 entered with 1-2 empty is why the row is UNDECIDABLE, not merely unresolved.
+CORRECTED: "rung 3 with 1-2 empty is out of order" is WITHDRAWN as the account of
+why this row is undecidable, and must NOT be generalized. The cause is that the
+candidate depends on a behaviour the premises DO NOT GRANT — measurement could not
+have supplied it, and supplying it that way is the forbidden move.
+```
+
+```text
+THE NARROW RULE
+  candidate depends on a behaviour ABSENT from the frozen premises
+    -> do NOT use measurement or archaeology to supply it. Close or park.
+  premises SUFFICIENT to decide the function
+    -> abstract reasoning is legitimate. Rungs 1-2 are NOT prerequisites for a
+       function verdict.
+Illegitimate is filling a PREMISE GAP with measurement — not an empty rung.
 ```
 
 ### BRANCH A STRUCK — A's case collapses to ONE leg
