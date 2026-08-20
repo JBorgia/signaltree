@@ -5587,6 +5587,121 @@ Angular dependency findings                      REALIZATION ONLY
 Nothing here reopens `SubjectId` or the effect log. Nothing here closes identity
 either.
 
+## GATE 1 — FIRST APPLICATION. NULL CONSTRUCTION FORBIDDEN.
+
+Two independent premise reviewers, differentiated packets, no repository access,
+no author rationale, no loaded vocabulary. The row was worded one level above the
+incumbent's field:
+
+> *"At the moment a previously recorded operation is reverted, the system requires
+> information that cannot be reconstructed from the canonical values recorded
+> before and after that operation."* — CANDIDATE, UNPROVEN
+
+```text
+REVIEWER A  (function killer)     VERDICT: FUNCTION SURVIVAL NOT ESTABLISHED
+REVIEWER B  (absence architect)   VERDICT: A COHERENT ABSENCE ARCHITECTURE EXISTS
+```
+
+**Gate disposition: NULL CONSTRUCTION FORBIDDEN for this row as worded.**
+
+### A's blockers
+
+```text
+F1  no third category exists. Anything observable through the read channel is a
+    value at a position, so it is already in the before/after pair; anything not
+    observable is outside what revert owes. The candidate needs something INSIDE
+    the revert obligation but OUTSIDE the state representation. The premises
+    admit no such thing.                                        BLOCKS-CLOSE
+
+F2  the candidate contradicts the revert success criterion itself — restoring the
+    before-values of all touched positions reaches the target configuration BY
+    DEFINITION. Self-defeating, not merely unproven.             BLOCKS-CLOSE
+
+F3  truth value flips on the undefined granularity of "operation". If it means
+    the group, false. If it means a single write, trivially true and establishes
+    only that the record has SHAPE. The interesting claim survives neither.
+                                                                 BLOCKS-CLOSE
+
+F4  the reconstruction budget was set at one operation's value pair, when a
+    revert legitimately has the whole record, the exclusion policy, the group
+    structure and current state.                                 MAJOR / FROZEN
+```
+
+And the disqualifier: **nothing was named that becomes impossible.** A's phrasing
+is worth keeping — *"a survival claim that cannot name its own casualty has not
+earned a row."*
+
+### B's absence architecture, and the two contracts it costs
+
+B built a working world without the function: a paired-projection journal
+recording `(beforeRoot, afterRoot)` projected onto the tracked region, with
+revert applying the **structural diff** of the two projections to current state.
+
+```text
+recorded unit is COARSE (the whole group's root pair)
+applied unit is MINIMAL (the leaf-granularity diff)
+```
+
+That plank is what makes nested writes safe without clobbering untouched
+siblings — and it is free under immutability.
+
+It is closed only if two things are canonical VALUES rather than derived state:
+
+```text
+B7  (i) enumeration order, as an explicit key sequence
+    (ii) member identity, as the key itself
+    Both are state-container contracts, cheap to state, testable.
+```
+
+### THE CONVERGENCE — and the falsifier that was owed for six rounds
+
+Independently, with no shared context, both reviewers landed on the same two
+things:
+
+```text
+A F7 / B B3   the key-collision case requires OUT-OF-ORDER revert, which the
+              premises never granted. Under strict reverse order the intervening
+              add reverts first and no collision arises. Importing selective
+              revert and then blaming the record is circular.
+
+A F8 / B B8   reference continuity is a contract about ADDRESSING STABILITY, not
+              information. Addresses are a static function of keys.
+```
+
+**B8 states the three-part falsifier the identity question has needed all along:**
+
+```text
+Exhibit ONE required capability satisfying ALL THREE:
+  1  a consumer legitimately holds a per-member reference across a
+     remove -> revert boundary
+  2  the reference CANNOT be re-obtained by key after the revert
+  3  the thing it references CANNOT be reconstructed as a pure function of the
+     restored canonical value
+
+Satisfying only (1) and (2) shows a DERIVED-LAYER defect — the handle should have
+been key-addressed and memoized — and does NOT establish the candidate.
+Satisfying (3) as well establishes it.
+```
+
+That criterion retroactively explains the whole preceding error run: **every prior
+row reached (1) and (2) at most, and none ever tested (3).**
+
+### Scope of the refutation, stated as B stated it
+
+The candidate is not refuted in general. It is refuted **relative to these
+premises**, and becomes true the moment a member carries identity or lifetime that
+is not a canonical value. That is the row to run next — worded to B8's three
+parts, not to the incumbent's fields.
+
+### Cost
+
+```text
+two reviewers · ~45k subagent tokens · ~5 minutes wall clock
+outcome: one experiment stopped before construction, one contradiction found in
+         already-committed work, and a precise falsifier supplied for a question
+         that had survived six rounds of self-review
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

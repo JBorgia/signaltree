@@ -617,6 +617,56 @@ boundary**. An adversarial-review harness already existed in this repo
 unused while increasingly elaborate self-checklists were written instead. **That
 should have been surfaced far earlier rather than simulated.**
 
+## GATE 1 RESULT — the identity row is BLOCKED, and the falsifier is now precise
+
+Two independent premise reviewers, differentiated packets, no repo access.
+
+```text
+A (function killer)     FUNCTION SURVIVAL NOT ESTABLISHED   3x BLOCKS-CLOSE
+B (absence architect)   A COHERENT ABSENCE ARCHITECTURE EXISTS
+DISPOSITION             NULL CONSTRUCTION FORBIDDEN for the row as worded
+```
+
+**The falsifier the identity question has needed all along** (B8). Exhibit ONE
+required capability satisfying ALL THREE:
+
+```text
+1  a consumer legitimately holds a per-member reference across a
+   remove -> revert boundary
+2  the reference CANNOT be re-obtained by key after the revert
+3  the thing it references CANNOT be reconstructed as a pure function of the
+   restored canonical value
+
+(1)+(2) alone = a DERIVED-LAYER defect (the handle should have been key-addressed
+and memoized). Only (3) establishes the candidate.
+```
+
+**Every prior row reached (1) and (2) at most. None tested (3).** That is the
+retroactive explanation for the whole E2-S / E2-S0 / E2-S00 error run.
+
+Two independent convergences with no shared context:
+
+```text
+key collision requires OUT-OF-ORDER revert, which the premises never granted.
+  Under strict reverse order the intervening add reverts first and no collision
+  arises. Importing selective revert then blaming the record is CIRCULAR.
+  -> this invalidates the E2-S2 contrast: its aliasing row performed an ARBITRARY
+     WRITE (`rows.set([...])`), not a revert.
+
+reference continuity is ADDRESSING STABILITY, not information. Addresses are a
+  static function of keys.
+```
+
+Also converged with the earlier `E-ORD` measurement: B's absence architecture is
+closed only if enumeration order is an explicit canonical KEY SEQUENCE — which is
+the "ordinary array of keys" null already measured as strictly stronger than the
+incumbent's intrinsic order.
+
+**Scope:** the candidate is refuted RELATIVE TO THESE PREMISES, not in general. It
+becomes true the moment a member carries identity or lifetime that is not a
+canonical value. That is the next row, worded to B8's three parts — never to the
+incumbent's fields.
+
 ## Frozen invariants — do not re-derive
 
 ```text
