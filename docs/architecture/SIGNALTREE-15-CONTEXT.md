@@ -747,77 +747,98 @@ A row SUCCEEDS when it reaches the correct epistemic disposition.
 "UNPROVEN / no experiment permitted" is a valid successful closure.
 ```
 
-## E4 — GROUPING BEYOND REVERSAL: NOT ESTABLISHED (all four sub-claims)
+## E4-G — GROUP CONCEALMENT / CONCLUSION: four sub-claims NOT ESTABLISHED
+
+**RENAMED from "E4".** The row that ran is narrower than E4/U5b and does NOT close
+it. A first synthesis renamed a four-subclaim closure as the whole row; corrected.
 
 ```text
-C1 observability governed before conclusion   NOT ESTABLISHED
-C2 conclude so writes never become observable NOT ESTABLISHED
-C3 conclude so writes cease to be observable  NOT ESTABLISHED
-C4 groups nest                                NOT ESTABLISHED
-NULL                                          FORBIDDEN
+C1 pre-conclusion visibility governance   NOT ESTABLISHED
+C2 conclude never-visible                 NOT ESTABLISHED
+C3 conclude by un-observing               NOT ESTABLISHED
+C4 runtime nested-group semantics         NOT ESTABLISHED
+NULL                                      FORBIDDEN
+EARNED  no grouping semantic above P5 established BY THIS ROW
 ```
 
-C1 rests on an observation model no premise grants — nothing says a write
-publishes on completion or that a read may land between two writes of a group —
-and compute-then-write-once answers every case named. C2 collapses into C1 plus a
-record-content residue (a reverted group is RE-ADVANCEABLE, so a cancelled one
-lingers as redoable). C3 cannot mean "as if it never happened", because escaped
-consequences are unretractable, and stripped of that it IS ordinary reversion. C4
-is permission-shaped, and under reversal-only semantics nested groups are
-observationally indistinguishable from a flattened group.
+**STILL OPEN — E4/U5b as a whole:** transaction atomicity · refusal/failure
+semantics · persistence-consequence behaviour · realization/history interaction ·
+turn authorship · pending rollback · any other independently defined U5b contract.
 
-**Concealment is the wrong instrument for irreversible effects.** Under the
-candidate the effect simply fires at conclusion instead of mid-group, and the
-decline still arrives after — concealment narrows a race window, it does not close
-one. Gating by ADDRESS (effects subscribe to confirmed positions only) has no
-window at all, and a misrouted subscription becomes a static auditable error.
-
-### DERIVED CONSTRAINT — P6 forces the shape
+### DERIVED — the narrow theorem ONLY
 
 ```text
-LIFO is incompatible with asynchronous speculation resolved OUT OF ORDER: a
-recorded speculative step superseded by a later step is unreachable, and
-concealment cannot help because the group already concluded.
-=> asynchronous speculation must live OUTSIDE the revertible record in ANY
-   architecture consistent with P6.
+Confirmed LIFO history cannot BE THE SOLE MECHANISM for withdrawing asynchronously
+resolving speculative work that may resolve out of order.
+REPRESENTATION   UNPROVEN
 ```
 
-**The shipped system already does this** — measured earlier: a speculative write is
-immediately visible and adds no entry to the record. The incumbent is closer to
-the derived design than to the candidate.
+NOT "P6 forces the excluded-position design". A separate pending-operation
+authority indexed by operation, or another representation that never enters
+confirmed history, would also satisfy it.
 
-### SURVIVES (underived — has not been through its own row)
+### The incumbent: COMPATIBLE, not equivalent
+
+Measured — a speculative write is visible immediately and adds no confirmed
+history entry. That satisfies the measured property. **Semantic/representational
+equivalence to the absence architecture is NOT established**, and the claim that
+the shipped system "already does this / that's the derived design" is WITHDRAWN.
+
+### NOT EARNED — everything the absence architect needed to build its world
 
 ```text
-TURN-COALESCED NOTIFICATION   observers outside the writing turn notified ONCE per
-                              turn at its boundary. No hiding, no un-happening, no
-                              nesting — a delivery-scheduling property.
-maybe ATOMIC MULTI-POSITION COMMIT — REMOVES the intermediate rather than hiding it
+pending-address representation   overlay representation
+P4 as the required realization   turn-coalesced notification
+atomic multi-position commit     runtime nesting
+intrinsic concealment
 ```
 
-### FALSIFIER — three parts; any two are already solved
+**`turn-coalesced notification` did NOT survive** — an earlier synthesis recorded it
+as a surviving container obligation. It is a DEFERRED CANDIDATE, and its OWNERSHIP
+is open: "when observers are notified" is plausibly publication/realization
+behaviour, so the kernel may owe only an ATOMIC TURN BOUNDARY while an adapter owns
+scheduling.
+
+### C4 wording corrected
+
+"Nesting is vacuous" was broader than the evidence. Runtime nested-group semantics
+are not established, but a composition pressure remains — library A groups, library
+B groups, a caller composing them wants one outer step. Recorded under Rule 0m as
+DX/composability pressure, NOT vacuity.
+
+### NOT retained as evidence
+
+The "least common ancestor is a position, write it once" argument is withdrawn: a
+common ancestor may hold unrelated sibling state, and replacing it changes mutation
+granularity. The sufficient argument needs no mechanism — *no workflow has
+established that intermediates must be published through canonical state rather
+than computed privately and committed at the end.*
+
+### FALSIFIER — three parts; any two already solved
 
 ```text
-i    a consumer/validator reachable ONLY through the canonical read path, not a value
-ii   the speculative value required AT the confirmed address
-iii  the decision ASYNCHRONOUS
-
-i+ii no iii -> atomic commit    ii+iii no i -> candidate-value validation
-i+iii no ii -> excluded-position overlay
+i   consumer/validator reachable ONLY through the canonical read path
+ii  speculative value required AT the confirmed address
+iii the decision ASYNCHRONOUS
 ```
 
 Both reviewers reached the same missing premise from opposite jobs:
-**read-path authority, not observability**, is where this could earn its place.
+**read-path authority, not observability.**
 
-### Honest exposure
+### METHODOLOGY — GATE 2 IS NOT OPTIONAL
 
 ```text
-INNER-ONLY ABORT   the one thing absence cannot imitate. UNMEASURED how often
-                   it is required.
-PERFORMANCE        overlay derivation vs concealed bookkeeping. Both nonzero,
-                   NEITHER measured. A perf loss argues for a primitive, not that
-                   the architecture is incoherent.
+GATE 1 (premise attack)         ran twice, worked both times
+GATE 2 (interpretation attack)  NEVER RAN
 ```
+
+The reviewers returned *coherent but unearned*. The synthesis then promoted parts
+of a hypothetical into "derived"/"surviving" and renamed a partial closure as a
+whole row. **Both are exactly what Gate 2 catches, and it was skipped by the agent
+that had written it into the methodology two commits earlier.**
+
+A row's conclusion may NOT be committed until an interpretation reviewer has seen
+the pre-registration and the RAW reviewer output, without the author's synthesis.
 
 ## Frozen invariants — do not re-derive
 
