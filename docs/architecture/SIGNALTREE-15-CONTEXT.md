@@ -371,6 +371,28 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               unmeasurable here because of a 15-branch UNDO
                               REGRESSION (below). So the remaining blocker is the
                               regression, not the theorem.
+  FRONTIER UNDO ENGINE        DERIVED (option 3 — derive before touching). Its
+                              RETENTION justification is REFUTED on measurement.
+                              bench-retention-arms, 10k x 50, 3 runs each:
+                                arm      snapshot(main)   frontier(branch)
+                                scalar   0.112-0.127      0.189-0.191   1.6x worse
+                                sameRow  3.951-3.960      3.959-3.961   PARITY
+                                allRows  23.045-23.046    88.344-88.352 3.83x worse
+                              sameRow is decisive: ONE row of 10,000 updated 50x
+                              should retain the DELTA under effect-level
+                              recording; it retains the whole N-pointer array at
+                              ~8.3 bytes/pointer, identical to snapshots. So the
+                              engine pays snapshot cost narrow and 3.83x wide,
+                              REFUSES non-scalar leaf undo, and costs ~5,000 lines
+                              against an 885-line predecessor that satisfies U1-U5
+                              and handles arrays/Date/Map/Set.
+                              UNMEASURED and still able to earn it: E2 precision,
+                              E3 scoped undo, E4 explicit transaction grouping
+                              (6be8d3e2). No claim the engine is worthless — only
+                              that its stated motivation is not delivered.
+                              NEXT: derive E2/E3/E4 vs the snapshot null. If none
+                              earns, disposition is REVERT, not repair — and the
+                              regression disappears rather than needing a fix.
   UNDO REGRESSION (15)        `isSupportedEffect` (time-travel.ts:1680-1694, from
                               06785300 — the SubjectId commit) refuses any
                               NON-SCALAR leaf effect: arrays, Date, Map, Set,

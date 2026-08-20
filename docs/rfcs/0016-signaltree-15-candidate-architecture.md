@@ -4248,6 +4248,118 @@ remove+add instead of "does any workflow break." The methodology's own rule
 covers it and was not applied: *state the contract precisely, then build the null
 to that contract, not to a convenient approximation of it.*
 
+## DERIVATION — THE FRONTIER UNDO ENGINE. Its retention justification is REFUTED on measurement.
+
+Run under option 3: derive the engine before touching it, rather than patch
+third-bucket code that may not survive its own derivation.
+
+### The function, from zero
+
+```text
+U1  return canonical truth to a state it previously held
+U2  the states returned to must be ones a user recognises as STEPS
+U3  advance again after returning (redo)
+U4  exclude some state from history
+U5  group multiple writes into one logical step
+```
+
+### The null is not hypothetical — it SHIPS
+
+```text
+                        main / 14.x              this branch (frontier)
+time-travel.ts          885 lines                3,068 lines
+causal-runtime/         ABSENT                   ~2,834 prod + ~6,456 spec
+mechanism               stack of whole-state     effect-level causal recording
+                        snapshots; restoreState  (turn store, reversal planner,
+                        (entry.state)            realization adapter, subject
+                                                 reclamation)
+non-scalar leaf undo    WORKS                    THROWS
+provenance              shipped                  d8824b91, 2026-08-13, third
+                                                 bucket, empty-bodied commits
+```
+
+The null satisfies U1–U5 today, in 885 lines, and handles arrays, `Date`, `Map`
+and `Set` correctly. So effect-level recording must earn its ~5,000 additional
+lines against a WORKING predecessor.
+
+### What it was supposed to buy: bounded retention. MEASURED — it does not.
+
+`tools/bench-retention-arms.mjs`, 10k rows × 50 writes, `--expose-gc`, baseline
+taken after seeding. **Three runs each, both engines built with
+`nx build core --skip-nx-cache`.**
+
+```text
+arm        snapshot (main)          frontier (branch)        ratio
+scalar     0.112  0.127  0.112      0.189  0.189  0.191      ~1.6x WORSE
+sameRow    3.951  3.960  3.951      3.959  3.959  3.961      PARITY
+allRows    23.045 23.046 23.046     88.344 88.352 88.351     3.83x WORSE
+```
+
+Variance is ±0.01 MB. These are not noise.
+
+**`sameRow` is the decisive arm.** It updates ONE row of a 10,000-row collection,
+fifty times. Effect-level recording exists precisely so that retention tracks the
+DELTA rather than the width — one changed row per entry, not ten thousand
+pointers. It is **identical to snapshots**, at the bench's documented ~8.3
+bytes-per-pointer, which is the signature of retaining the whole N-pointer array
+per entry.
+
+So the engine pays the snapshot cost on the narrow path and **3.8× the snapshot
+cost** on the wide one.
+
+### Combined with the correctness regression
+
+```text
+retention, narrow write   parity with the 885-line null
+retention, wide write     3.83x worse
+retention, scalar only    1.6x worse
+non-scalar leaf undo      REFUSED (arrays, Date, Map, Set) — the null handles all
+cost                      ~5,000 additional lines of production code
+```
+
+On every axis measured, the frontier engine is equal to or worse than the engine
+it replaced.
+
+### What this does NOT establish — stated plainly
+
+Three possible justifications remain **UNMEASURED**, and the engine could still
+earn on any of them:
+
+```text
+E2  PRECISION          undo only what a turn touched, leaving concurrent state
+                       alone. Snapshots restore wholesale.
+E3  SCOPED UNDO        undo one position's history independently of the tree's.
+E4  TRANSACTION GROUP  6be8d3e2 "add explicit transaction grouping" — U5 at a
+                       granularity snapshots may not reach.
+```
+
+Also unmeasured: whether a *conforming* collection (plain array leaf) changes the
+retention picture for either engine, and whether the engine is **incomplete
+mid-cutover** rather than wrong — the `isSupportedEffect` throw reads like a guard
+on unfinished work, and the commits that would say so have empty bodies.
+
+**No claim is made that the engine is worthless.** The claim is narrower and it is
+measured: *the retention justification that motivated it is not delivered, and the
+implementation currently regresses correctness against its predecessor.*
+
+### Consequence for the sequence
+
+This is why option 3 was the right call. Had the regression been "fixed" first,
+the fix would have been ~5,000 lines of third-bucket code repaired to reach parity
+with an 885-line predecessor on the axis that motivated replacing it.
+
+```text
+NEXT   derive E2 / E3 / E4 against the snapshot null. If none earns, the
+       disposition is REVERT to the snapshot engine, not repair the frontier one —
+       and the non-scalar regression disappears with it rather than needing a fix.
+       If one DOES earn, the fix is justified and its shape follows from which.
+
+BLOCKED MEANWHILE
+       the conforming-collection prototype's CANONICALITY row
+       Derivation E's canonicality column
+       the M-cluster physical cut
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
