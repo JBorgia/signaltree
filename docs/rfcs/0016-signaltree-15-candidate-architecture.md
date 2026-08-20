@@ -4546,6 +4546,76 @@ E3      SCOPED UNDO — but FIRST ask whether scoped undo survives its own null 
         becomes impossible or semantically wrong? If none, derive no machinery.
 ```
 
+## PRE-E2 — IS CONFIRMED-UNDO STORAGE SEPARABLE FROM CAUSAL-TURN REASONING?
+
+Measured by coupling, before any redesign. The whole causal kernel has **exactly
+two production consumers** outside itself, and their dependence is sharply
+asymmetric.
+
+```text
+consumer            causal-runtime modules touched
+transactions.ts     6   applied-history · causal-types · pending-rollback
+                        realization-context · tree-realization-adapter · turn-store
+time-travel.ts      2   causal-types · tree-realization-adapter
+```
+
+The specific imports:
+
+```text
+transactions   AppliedHistory, CausalEffect, PositionId, rollbackPendingTurnAt,
+               createRealizationContextSource, createTreeRealizationAdapter,
+               defineTreeRealizationDescriptors, defineTreeRealizationPort,
+               getTreeRealizationDescriptors, getTreeRealizationPort,
+               rememberTreeRealizationDescriptor
+
+time-travel    getTreeRealizationPort, rememberTreeRealizationDescriptor,
+               ReversalEffect (type)
+```
+
+### Result — the fracture line is ALREADY VISIBLE in the import graph
+
+**`turn-store` — the module that retains turns — is consumed by `transactions`
+ONLY. `time-travel` never touches it.** Time-travel's entire dependence on the
+causal kernel is the realization *port* (a way to apply effects to the tree) plus
+one type.
+
+So the causal kernel's real client is the **transaction** system, not the undo
+system. Undo currently rides on the realization port; it does not consume turn
+identity, applied history, pending rollback or realization context.
+
+```text
+EVIDENCE FOR SEPARABILITY   strong. Separating them would not require inventing a
+                            boundary — it would require ENFORCING one that the
+                            import graph already almost describes. The weaker
+                            consumer needs a narrow interface today.
+
+NOT ESTABLISHED             that they MUST be separate, or that undo's use of the
+                            realization port is removable. Coupling measures how
+                            it IS wired, not what is necessary — the same rule
+                            that says colocation never establishes ownership
+                            applies symmetrically here.
+```
+
+### What this changes about the fork
+
+The disposition space the corrections opened is not speculative — it maps onto
+module boundaries that exist:
+
+```text
+LIKELY SEPARABLE, serving TRANSACTIONS   turn-store, applied-history,
+                                         pending-rollback, realization-context
+SHARED MECHANISM                         tree-realization-adapter (the port both
+                                         use to apply effects)
+UNDO-SPECIFIC                            reversal-planner, and the
+                                         isSupportedEffect gate inside
+                                         time-travel
+```
+
+If E2 shows a snapshot-derived mechanism satisfies precision, the deletion target
+is **reversal-planner plus time-travel's effect-reversal path**, not the causal
+kernel — and the non-scalar regression goes with it rather than needing a repair,
+exactly as the corrected framing predicted.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
