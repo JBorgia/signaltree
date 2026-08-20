@@ -588,6 +588,23 @@ UNDERDETERMINED IS A TERMINAL STATE, NOT A WORK ORDER
   function forces a decision between two representations.
 ```
 
+### GATE 2 IS NOT EXEMPT FROM THE RULES IT ENFORCES
+
+```text
+Gate 2 may produce REOPENING CONDITIONS.
+Gate 2 may NOT create follow-up work whose ONLY purpose is to make a CLOSED
+CANDIDATE DECIDABLE.
+```
+
+Observed once, on its second application: the reviewer correctly detected that the
+premises did not decide a candidate, and then wrote *"two obligations follow"* —
+including a cheap check to run and a question to settle. Both existed only to make
+the closed candidate decidable. That is the transition the underdetermined-is-
+terminal rule forbids, committed by the gate that enforces it.
+
+**A reviewer's strongest alternative interpretation is EVIDENCE ABOUT THE ROW, not
+a work order.**
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
@@ -944,81 +961,72 @@ tested — two of which had already survived an external review of the corrected
 write-up. That justifies keeping it given the low downside; it does NOT establish a
 general error-reduction rate from one trial.
 
-## UNDO-E3 — PARTIAL REVERSAL: NOT GRANTED ON BURDEN GROUNDS
+## UNDO-E3 — PARTIAL / SELECTIVE REVERSAL: NOT GRANTED
 
 ```text
-A NOT ESTABLISHED · B COHERENT ABSENCE EXISTS · GATE 2 not granted on BURDEN
-NULL FORBIDDEN
+SURVIVAL     NOT GRANTED     WHY  no independently required workflow demonstrated
+NOT REFUTED  may be useful under contracts not currently earned
+NULL         FORBIDDEN       NEXT nothing for UNDO-E3
+MEASUREMENT  NONE REQUIRED for this closure
 ```
 
-**A burden verdict, NOT a refutation.** Nothing shows partial reversal is
-incoherent, unnecessary in general, or unimplementable. The candidate is also not
-an instance of P3 — P3 grants return to a configuration PREVIOUSLY HELD, while
-partial reversal SYNTHESIZES one never held.
+**The absence witness is CONDITIONAL and INCOMPLETE.** Forward correction requires
+knowing the target value, and no historical-value access contract is granted.
+**P3 does NOT imply readable historical values** — it requires the ability to
+REALIZE a previous configuration, which an implementation could satisfy with
+inverse operations, compressed deltas, opaque restore tokens, persistent structural
+nodes, or checkpoint-plus-replay, none of which exposes arbitrary historical
+position values. A boundary read is a NEW INFORMATION SURFACE. That WEAKENS the
+witness; it does NOT strengthen partial reversal.
 
-### THE CONDITION NOBODY PRICED
-
-State-completeness (whole-step reversal + forward writes reaches everything) holds
-only if the application can OBTAIN the target value: it already holds it, or the
-container exposes prior recorded values (SCAFFOLDING, not a premise), or it accepts
-a transient revert→observe→advance excursion that briefly exposes the reverted
-configuration to readers — which the killer conceded is NOT a record-shape
-difference. **Unpriced.**
-
-### LADDER
+### PARKED REOPENING CONDITIONS — conditions, NOT queues
 
 ```text
-Rung 1 measured behaviour   NOT ENTERED     Rung 3 function required  ENTERED as a
-Rung 2 model vs MEASURED    NOT ENTERED            question, closed NEGATIVELY
-       (model-vs-premise is not rung 2)     Rungs 4-5                 NOT ENTERED
+MULTI-CONTRIBUTOR   if independent derivation later establishes multi-author
+                    confirmed history requiring one author's contribution to be
+                    withdrawn while another survives -> reopen.
+                    NO provenance row is owed now.
+REVERSAL-OWNED      if an independently derived function establishes a property
+PROPERTY            unreachable by ordinary writes, that must participate in
+                    reversal, AND must sometimes reverse independently of its step
+                    -> reopen FROM ZERO. NO repo search owed now.
 ```
 
-A negative rung-3 close is legitimate with 1-2 empty ONLY because nothing is
-advanced. **The refusal is PROVISIONAL AGAINST MEASUREMENT, not against argument.**
-
-### SCAFFOLDING WEIGHT
+### THREE CLAIMS WITHDRAWN — from the interpretation review itself
 
 ```text
-VALUE-AT-BOUNDARY  LOAD-BEARING and the only one — a CONDITION on the conclusion,
-                   not a requirement. Highest promotion risk.
-LAST-WRITER        ZERO — provenance in disguise, the thing the premises don't grant
-REVERT-NOTICE      LOW — convenience, not requirement
-author tag         ZERO, HIGHEST CONTAMINATION RISK — thin end of the
-                   multi-contributor premise both reviewers REFUSED to supply
-record redaction   ZERO here — the gap is real but SYMMETRIC, different row
+"one non-writable restorable position makes the candidate NECESSARY"
+  It does not. That is characterization of the incumbent. Five things are needed:
+  the property independently required; reversible; inside a coarse step; a workflow
+  requiring it reversed while another contribution from that step survives; and
+  whole-step-plus-forward unable to serve it. And if the property is kernel-private
+  and deliberately unwritable, that may argue AGAINST exposing partial reversal.
+  SEARCHING THE IMPLEMENTATION FOR ONE IS FORBIDDEN — that lets the incumbent
+  manufacture the requirement.
+
+"convergent independent invention is evidence the NEED is real"
+  Contradicts the same review's finding that A/B agreement is not independent
+  corroboration. MAXIMUM SUPPORTED: evidence that the forward-write equivalence has
+  an UNPROVEN VALUE-RECOVERY PRECONDITION.
+
+"the refusal is provisional against measurement"
+  Measurement of WHAT? Repo measurement yields incumbent behaviour and cannot
+  advance FUNCTION REQUIRED. Correct: NOT GRANTED UNDER CURRENTLY EARNED CONTRACTS,
+  reopening only on NEW INDEPENDENT SEMANTIC EVIDENCE. A measurement may SUPPORT a
+  later derivation; it cannot SUBSTITUTE for one.
 ```
 
-### CORROBORATION: NO
+### META — Gate 2 is not exempt from the rules it enforces
 
-Shared premises and instructions; nothing withheld between reviewers, and
-independence comes from withholding. Their shared point is **a restatement of P1**.
-Severity aggregation is UNSAFE — several findings are one observation twice with
-divergent labels.
-
-**AND THEY CONFLICT, recorded not flattened:** A's strongest finding is that the
-candidate is UNFALSIFIABLE; B produced three concrete falsifiers. Unresolved. A's
-claim is defensible only as "unfalsifiable AS WORDED".
-
-Weakly corroborated: both located the same single vulnerability (the granularity
-dial conflict, both POLICY) and the same missing premise — convergence about WHERE
-the question sits, not that the candidate is unnecessary.
-
-### TWO OBLIGATIONS
+It detected underdetermination correctly, then converted its own strongest
+alternative into "two obligations" including a "cheap check" to run — the exact
+transition forbidden one commit earlier.
 
 ```text
-1  RECORD THE MULTI-CONTRIBUTOR QUESTION explicitly, or a bounded "not
-   established" will silently harden into "refuted".
-2  RUN OR EXPLICITLY ACCEPT the falsifier: a position RESTORABLE via reversal but
-   NOT WRITABLE by the application. ONE SUCH POSITION MAKES THE CANDIDATE
-   NECESSARY. Cheap rung-1 check, never run, verdict provisional against it.
+NEW HARD RULE
+Gate 2 may produce REOPENING CONDITIONS. It may NOT create follow-up work whose
+only purpose is to make a CLOSED CANDIDATE DECIDABLE.
 ```
-
-### STRONGEST ALTERNATIVE — may be right
-
-The row compared partial reversal against **forward writes PLUS an unpriced
-value-recovery path**. Both reviewers, from opposite assignments, independently
-invented a mechanism at the same spot. **Convergent independent invention at one
-point is evidence the NEED is real** — it bears only on which carrier serves it.
 
 ## Frozen invariants — do not re-derive
 

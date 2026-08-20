@@ -1324,6 +1324,23 @@ UNDERDETERMINED IS A TERMINAL STATE, NOT A WORK ORDER
   function forces a decision between two representations.
 ```
 
+### GATE 2 IS NOT EXEMPT FROM THE RULES IT ENFORCES
+
+```text
+Gate 2 may produce REOPENING CONDITIONS.
+Gate 2 may NOT create follow-up work whose ONLY purpose is to make a CLOSED
+CANDIDATE DECIDABLE.
+```
+
+Observed once, on its second application: the reviewer correctly detected that the
+premises did not decide a candidate, and then wrote *"two obligations follow"* —
+including a cheap check to run and a question to settle. Both existed only to make
+the closed candidate decidable. That is the transition the underdetermined-is-
+terminal rule forbids, committed by the gate that enforces it.
+
+**A reviewer's strongest alternative interpretation is EVIDENCE ABOUT THE ROW, not
+a work order.**
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no

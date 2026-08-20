@@ -6163,178 +6163,135 @@ SERIES 3 — DERIVATION E, collections
 must carry its series prefix, or name the row in words. Bare letters-plus-digits
 are forbidden.
 
-## UNDO-E3 — PARTIAL REVERSAL: NOT GRANTED ON BURDEN GROUNDS. Bounded by Gate 2.
+## UNDO-E3 — PARTIAL / SELECTIVE REVERSAL
 
 ```text
-ROW        "reversing LESS than the whole confirmed step, while some other
-            contribution survives"
-A (killer)          FUNCTION SURVIVAL NOT ESTABLISHED
-B (absence)         A COHERENT ABSENCE ARCHITECTURE EXISTS
-GATE 2              NOT GRANTED ON BURDEN GROUNDS — and that is the whole of it
-NULL                FORBIDDEN
+SURVIVAL      NOT GRANTED
+WHY           no independently required workflow has been demonstrated that
+              becomes impossible under whole-step LIFO reversal plus ordinary
+              forward correction
+NOT REFUTED   partial reversal may be useful under contracts not currently earned
+NULL          FORBIDDEN
+NEXT          NOTHING for UNDO-E3
+MEASUREMENT   NONE REQUIRED for this closure
 ```
 
-**This is a BURDEN verdict, not a refutation.** Nothing here shows partial reversal
-is incoherent, unnecessary in general, or unimplementable.
+### The absence witness is CONDITIONAL and INCOMPLETE
 
-### What was established, narrowly
+Forward correction requires knowing the target value, and **no historical-value
+access contract is granted.**
+
+**P3 does NOT imply readable historical values.** The absence architect claimed a
+boundary-read accessor is *"not a new mechanism — P3 cannot be satisfied without
+retaining prior configurations, so the data already exists."* That does not follow.
+P3 requires the ability to REALIZE a previous configuration. An implementation
+could satisfy it with:
 
 ```text
-1  no workflow was NAMED that becomes impossible under whole-step LIFO only
-2  the candidate is NOT AN INSTANCE OF P3 — P3 grants return to a configuration
-   PREVIOUSLY HELD; partial reversal SYNTHESIZES one never held, so it inherits no
-   justification from the granted premise
-3  as worded it is not testable on these premises: no selection unit, no overlap
-   rule, no effect on subsequent order or re-advance, no statement of whether the
-   partial reversal is itself revertible
-4  state-completeness holds CONDITIONALLY  <-- see below
-5  the strongest motivator is UNDECIDED, not refuted
+inverse operations · compressed deltas · opaque restore tokens
+persistent structural nodes · checkpoint plus replay information
 ```
 
-### THE CONDITION NOBODY PRICED
-
-Whole-step reversal plus forward writes reaches every configuration partial
-reversal would — **provided the application can obtain the target value.** Three
-routes, and none is a granted premise:
+none of which exposes arbitrary historical position values to callers. So a
+boundary read is a **NEW INFORMATION SURFACE**, not an accessor over something P3
+makes semantically available.
 
 ```text
-a  the application already holds it
-b  the container exposes prior recorded values   <- B's SCAFFOLDING, not a premise
-c  a transient revert -> observe -> advance excursion, which A conceded "briefly
-   exposes the reverted configuration to readers" and explicitly called NOT a
-   record-shape difference
+CONSEQUENCE  the forward-write absence witness is INCOMPLETE unless target-value
+             acquisition is independently solved.
+             This WEAKENS the witness. It does NOT strengthen partial reversal.
 ```
 
-**Nobody priced that condition.** The central result is conditional on an unopened
-question.
-
-### LADDER — rungs 1 and 2 NOT ENTERED
+### PARKED REOPENING CONDITIONS — conditions, not queues
 
 ```text
-Rung 1  measured current behaviour     NOT ENTERED — no measurement anywhere
-Rung 2  model vs MEASURED behaviour    NOT ENTERED — B's model was compared against
-                                       the PREMISES. Model-vs-premise is not rung 2.
-Rung 3  the function is required       ENTERED AS A QUESTION, closed NEGATIVELY
-Rungs 4-5                              NOT ENTERED
+MULTI-CONTRIBUTOR CASE
+  If independent derivation later establishes multi-author confirmed history with
+  a requirement to withdraw one author's contribution while another survives,
+  reopen UNDO-E3.
+  NOT A ROW OWED NOW. No provenance row is owed merely because partial reversal
+  would become interesting if provenance existed.
+
+REVERSAL-OWNED PROPERTY NOT REACHABLE BY ORDINARY WRITES
+  If an independently derived function later establishes a property that
+    - cannot be reconstructed or written through ordinary canonical writes, AND
+    - must participate in confirmed reversal, AND
+    - must sometimes be reversed independently of the rest of its step,
+  then reopen partial reversal FROM ZERO.
+  NOT A REPO SEARCH OWED NOW.
 ```
 
-A negative rung-3 close is legitimate with rungs 1-2 empty **only because nothing
-is being advanced** — declining to grant needs no evidence. The same reasoning
-could not support a POSITIVE rung-3 claim. Consequence:
+### WITHDRAWN — two claims from the interpretation review itself
+
+**1. "One non-writable restorable position makes the candidate NECESSARY."** It
+does not. Finding opaque kernel bookkeeping `X` in the record establishes only:
 
 ```text
-THE REFUSAL IS PROVISIONAL AGAINST MEASUREMENT, NOT AGAINST ARGUMENT.
+CURRENT IMPLEMENTATION  reversal can restore information unavailable to
+                        application writes
 ```
 
-### SCAFFOLDING WEIGHT — B labelled five; four carry nothing
+To reach a required function you would need all five of:
 
 ```text
-VALUE-AT-BOUNDARY   LOAD-BEARING, and the only one. It is a CONDITION on the
-                    conclusion, NOT an established requirement. Highest promotion
-                    risk: it must not be read as "so we need a boundary-read
-                    accessor."
-LAST-WRITER         ZERO weight. No surviving claim uses it, and it is PROVENANCE
-                    IN DISGUISE — the thing A said the premises do not grant.
-REVERT-NOTICE       LOW. Attaches to a real P4 obligation, but nothing establishes
-                    it must be a container facility. Convenience, not requirement.
-author tag          ZERO weight, HIGHEST CONTAMINATION RISK — the thin end of the
-                    multi-contributor premise both reviewers refused to supply.
-                    Adding it "because it's cheap" would make an undecided question
-                    read as answered.
-record redaction    ZERO weight here. The underlying gap is real but SYMMETRIC — it
-                    defeats the candidate equally. Different row.
+1  X is independently required
+2  X must be reversible
+3  X participates in a coarse confirmed step
+4  a legitimate workflow requires reversing X or a subset while PRESERVING another
+   contribution from that same step
+5  whole-step LIFO plus forward correction cannot satisfy that workflow
 ```
 
-### CORROBORATION — NO
+Without all five it is characterization of the incumbent. **And if `X` is
+kernel-private and deliberately unwritable, that may argue AGAINST exposing partial
+reversal of it.**
+
+Searching the implementation hoping to find such a property is **forbidden** — that
+is letting the incumbent manufacture the requirement again.
+
+**2. "Convergent independent invention is evidence the NEED is real."** Withdrawn —
+it contradicts the same review's own finding that A/B agreement is not independent
+corroboration, since they shared premises and instructions. Both cannot carry
+weight.
 
 ```text
-A and B agreement is NOT independent corroboration of the negative verdict.
+MAXIMUM SUPPORTED STATEMENT
+  evidence that the proposed forward-write equivalence has an UNPROVEN
+  VALUE-RECOVERY PRECONDITION
 ```
 
-Shared premises, shared decisive question, shared instructions — nothing was
-withheld between them, and independence on this protocol comes from withholding.
-Their shared point that value-replacement leaves selective undo without canonical
-meaning is **a restatement of P1**, not two observations of the world; both named
-the same single escape (intent-bearing writes), which is the signature of a shared
-premise rather than two converging lines.
+A workflow might already know the intended correction; it might be computed from
+domain state; or selective correction may never independently arise.
 
-**Severity aggregation is unsafe here.** Several apparently distinct findings are
-one observation twice, with divergent labels: overlap semantics (A FROZEN /
-BLOCKS-CLOSE, B DERIVABLE / MAJOR); P4-already-obliges (A POLICY / MAJOR, B FROZEN
-/ MINOR); state-completeness (both BLOCKS-CLOSE).
-
-**AND THEY CONFLICT — recorded, not flattened:**
+**3. "The refusal is provisional against measurement."** Withdrawn. Measurement of
+*what*? Measuring the current repository yields incumbent behaviour, which cannot
+by itself advance `FUNCTION REQUIRED`. Correct form:
 
 ```text
-A's strongest finding is that the candidate is UNFALSIFIABLE (BLOCKS-CLOSE).
-B produced THREE CONCRETE FALSIFIERS on adjacent claims.
-UNRESOLVED. The defensible form of A's claim is "unfalsifiable AS WORDED", not in
-principle.
+NOT GRANTED UNDER CURRENTLY EARNED CONTRACTS.
+Reopens only if NEW INDEPENDENT SEMANTIC EVIDENCE establishes the function.
+An implementation measurement may SUPPORT such a derivation later; it cannot
+SUBSTITUTE for one.
 ```
 
-What *is* weakly corroborated: both independently located the **same single
-vulnerability** — the granularity dial conflict, both classed POLICY — and the
-**same missing premise**. That is convergence about *where the open question sits*,
-not about the candidate being unnecessary.
+Otherwise the process starts believing enough repo archaeology can overturn a
+zero-state survival failure.
 
-### TWO OBLIGATIONS — bounded, neither reopens this row
+### META — GATE 2 NEEDS THE SAME SUBTRACTION DISCIPLINE
 
-```text
-1  RECORD THE MULTI-CONTRIBUTOR QUESTION EXPLICITLY.
-   Either a later row supplies the contributor/provenance premise and re-poses the
-   decisive question, or a decision is recorded that multi-contributor histories
-   are OUT OF SCOPE. If left unrecorded, a bounded "not established" will silently
-   harden into "refuted", which the evidence does not support.
-
-2  RUN OR EXPLICITLY ACCEPT B's FALSIFIER.
-   Exhibit-or-rule-out a position RESTORABLE via the container's reversal path but
-   NOT WRITABLE by the application — a container-internal, opaque, or
-   non-reconstructible identity held only inside the record.
-   B: ONE SUCH POSITION MAKES THE CANDIDATE NECESSARY.
-   It is a cheap rung-1 check. It was never run. The negative verdict is
-   PROVISIONAL against it.
-```
-
-### THE STRONGEST ALTERNATIVE INTERPRETATION — recorded because it may be right
-
-> The row never compared partial reversal against forward writes. It compared
-> partial reversal against **forward writes plus an unpriced value-recovery path.**
-
-Under P1-P6 as frozen, a prior recorded value is reachable only through the
-reversal path. And both reviewers, from opposite assignments, **independently
-invented a mechanism at the same spot** — B named a boundary read, A named the
-transient excursion.
+The interpretation reviewer correctly detected underdetermination, then converted
+its own strongest alternative into *"two obligations follow"* — including a
+*"cheap check"* to run. That is precisely the transition forbidden one commit
+earlier: **a falsifier produced by a closed row is a reopening condition, never a
+queue.**
 
 ```text
-Convergent independent invention at one point is evidence THE NEED IS REAL.
-It bears only on WHICH CARRIER serves it.
-```
+NEW HARD RULE
 
-On that reading the finding is *"the candidate is not the uniquely necessary way to
-discharge a need both reviewers reached for a mechanism to meet"* — not *"there is
-no need."*
+Gate 2 may produce REOPENING CONDITIONS. It may NOT create follow-up work whose
+only purpose is to make a CLOSED CANDIDATE DECIDABLE.
 
-### FORBIDDEN on this row
-
-```text
-"partial reversal is refuted / unnecessary / incoherent"
-"forward writes are EQUIVALENT to partial reversal"     (state only; A did NOT
-                                                         establish equality of
-                                                         observation history)
-"the forward-write route is free or just as convenient"
-"whole-step LIFO reversal is SUFFICIENT"                (B: state-completeness is
-                                                         not sufficiency)
-"multi-contributor undo is impossible"
-"P4 already provides the candidate's function"
-"P5 grouping destroys constituents, so sub-step selection is meaningless"
-"novel unconfirmed configurations are unacceptable"
-"the candidate is unfalsifiable"                        (only AS WORDED; conflicts
-                                                         with B, unresolved)
-"redaction / the leaked-value gap counts against the candidate"  (symmetric)
-"the step-atomic history model is validated or is the design"
-"the granularity conflict is settled"
-"twenty findings is a large converging body"            (double-counted)
-"the row is closed permanently"
+A gate is not exempt from the rules it enforces.
 ```
 
 ## Table G — DX PRESSURE LEDGER
