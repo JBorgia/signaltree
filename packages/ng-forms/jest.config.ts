@@ -3,6 +3,7 @@ export default {
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/packages/ng-forms',
+  maxWorkers: 2,
   // Without these, `nx test ng-forms --coverage` printed NOTHING — jest needs to
   // be told what to instrument and how to report. Every other package reported a
   // number; this one reported silence, and a number nobody can see is a number

@@ -3,6 +3,7 @@ module.exports = {
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/apps/demo',
+  maxWorkers: 2,
   testPathIgnorePatterns: ['demo-e2e'],
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
