@@ -440,10 +440,35 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               information must be stored as the confirmed undo
                               payload. NOT "confirmed undo can use snapshots".
                               reversal-planner NOT upgraded to delete candidate.
-                              OWED: E2-C — run frozen P3 through the REAL
-                              transactions/pending/confirm/rollbackPendingTurnAt
-                              path, with a NESTED-PATH variant. E4 does not start
-                              before E2-C is green.
+                              E2-C DONE. The modelled P3 contract is NOT FROZEN
+                              anywhere — it was a proposed semantic, and building a
+                              null to it repeated the assumed-contract failure.
+                              REAL behaviour: a pending write is visible in truth
+                              but adds NO history entry; confirm() historicises;
+                              rollback of a superseded pending turn changes neither
+                              truth nor history; confirmed undo -> 'B'; redo ->
+                              'C'; the nested variant preserves the untouched
+                              sibling. So 'B' is exactly what the "naive" snapshot
+                              null gave — the two representations are
+                              INDISTINGUISHABLE and P3 DISTINGUISHES NOTHING.
+                              ABA on the real kernel also reverts to 'A',
+                              destroying a live pending turn's contribution, so the
+                              effect log does NOT carry authorship either.
+                              ReversalEffect consumes owner/before/after/path/
+                              ownerPath (all snapshot-derivable; the docblock says
+                              path is "not semantic identity") plus subjectId and
+                              structural, which are not. WHO decides T1 stops
+                              contributing? NOBODY — measured; the decision is not
+                              made anywhere.
+                              STILL NOT UPGRADED: precision-eliminates-effect-
+                              retention NOT PROVED; reversal-planner UNPROVEN.
+                              What narrowed: the remaining justification reduces to
+                              TWO fields — subjectId (necessity already WITHDRAWN
+                              via E-REKEY) and structural (reduces to the same
+                              rekey question). NOT licensed: "snapshots are
+                              sufficient" — this is EQUIVALENCE on two scenarios
+                              whose contract is unspecified, not correctness.
+                              E4 stays blocked until rekey resolves `structural`.
                               (superseded) E2 first pass claimed write-set
                               precision IS snapshot-derivable
                               (P1 reverts the touched position and leaves

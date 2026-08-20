@@ -4856,6 +4856,107 @@ E2-C   run the frozen P3 through the REAL path — transactions, pending turn,
 Only when E2-C is green does `PRECISION JUSTIFICATION -> REMOVED` become
 writable. **E4 does not start before that.**
 
+## E2-C — THE REAL CAUSAL PATH. Characterization first, and the model's contract was NOT frozen.
+
+Evidence: `e2c-real-causal-path.spec.ts`, 5 rows. Driven through the real
+`transaction()` / `confirm()` / `rollback()` / `undo()` / `redo()` path.
+
+### First: the contract E2 modelled does not exist
+
+E2 asserted that after `T1 pending A->B`, `T2 confirmed B->C`, `rollback T1`,
+confirmed undo *must* land on `A`. **Nothing in this repository freezes that.** It
+was a proposed semantic, and building a null to it repeated the exact failure the
+audit keeps catching — a null built to an assumed contract.
+
+### Characterized public behaviour
+
+```text
+transactions() publishes ONLY `transaction()`. getConfirmedTurnCount /
+getPendingTurnIds and friends are on the INTERNAL runtime, not the public tree.
+timeTravel() publishes `transaction()` on its own.
+
+pending write            visible in canonical truth IMMEDIATELY, adds NO history
+                         entry
+confirm()                historicises — one entry appears
+rollback() of a pending
+turn already superseded  truth UNCHANGED ('C'), history NOT rewritten
+confirmed undo           -> 'B'
+redo                     -> 'C'
+nested variant           -> name 'B', and the untouched sibling `age` SURVIVES
+```
+
+### The E2-decisive observation
+
+**`B` is exactly what E2's "naive" snapshot null produced, and exactly what E2
+labelled WRONG.** The effect-log representation and the snapshot-derived
+representation are **indistinguishable** on this scenario. No causal decision
+about T1's death is consumed: history is not rewritten, and the recorded baseline
+is reversed as-is.
+
+So **P3 distinguishes nothing.** The row E2 called "the row that decides E2"
+decides neither representation, because both produce the same value and no
+contract says which is right.
+
+### And ABA — the real kernel does not distinguish authorship either
+
+```text
+T1 CONFIRMED A->B                     hist +1
+later PENDING turn: B -> C -> B       hist UNCHANGED (production-valid
+                                      out-of-history work, per row 1)
+current truth 'B', authored by the PENDING turn
+undo                                  -> 'A'
+```
+
+The pending turn's surviving contribution is **destroyed** — the same outcome as
+E2-B's ABA falsifier against the snapshot null. So the information E2-B showed
+snapshots lack is **not being used by the real system either**.
+
+Whether landing on `A` is a defect is a separate question these rows deliberately
+do not answer. They record.
+
+### What confirmed reversal actually consumes
+
+`ReversalEffect` (`causal-types.ts:37-51`):
+
+```text
+owner: PositionId       position identity      -> snapshot-derivable (write-set diff)
+before / after          values                 -> snapshot-derivable
+path / ownerPath        addresses; the docblock says explicitly "not semantic
+                        identity"              -> snapshot-derivable
+subjectId?              semantic identity      -> NOT derivable
+structural?             add / remove / rekey    -> PARTIALLY derivable: a diff sees
+                                                  a key appear or disappear, but
+                                                  not a rekey as an identity MOVE
+```
+
+```text
+WHO DECIDES that T1 stops contributing to T2's baseline?   NOBODY — measured.
+WHERE IS THAT FACT STORED?                                 NOWHERE. The decision
+                                                           is not made.
+```
+
+### Disposition — deliberately NOT upgraded
+
+```text
+precision eliminates effect-retained history   STILL NOT PROVED
+reversal-planner / effect-reversal             STILL UNPROVEN
+
+WHAT NARROWED
+  the remaining justification for effect-level retention reduces to exactly TWO
+  fields: `subjectId`, whose necessity is ALREADY WITHDRAWN (E-REKEY), and
+  `structural`, which reduces to the same rekey question.
+
+WHAT IS NOT LICENSED
+  "snapshots are sufficient." The measurement shows EQUIVALENCE on two hostile
+  scenarios, not CORRECTNESS — and since the contract on both is unspecified,
+  equivalence is all that is available. Two mechanisms agreeing does not make
+  either right.
+```
+
+**E4 remains blocked** until the rekey question resolves `structural`, because
+that is now the only field carrying a candidate function a value diff cannot
+reproduce.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
