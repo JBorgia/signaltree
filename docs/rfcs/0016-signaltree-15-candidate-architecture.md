@@ -4957,6 +4957,112 @@ WHAT IS NOT LICENSED
 that is now the only field carrying a candidate function a value diff cannot
 reproduce.
 
+## CORRECTIONS — the invented P3 theorem, the `structural` overclaim, and E4's block
+
+### 1. REMOVE the invented P3 theorem from the record
+
+This was never a SignalTree invariant. It was proposed in review, adopted by me as
+a contract, and used as an architectural falsifier. **Struck.**
+
+```text
+STRUCK — NOT A FROZEN THEOREM
+  A · T1 pending A->B · T2 confirmed B->C · rollback T1 leaves C
+  undo T2 => A · redo => C
+```
+
+Replaced by what is actually established:
+
+```text
+MEASURED CURRENT BEHAVIOUR (e2c-real-causal-path.spec.ts)
+
+  A
+  T1 pending    A -> B        visible in truth, NO history entry
+  T2 confirmed  B -> C        confirm() historicises
+  rollback superseded T1      canonical truth remains C
+                              confirmed history baseline remains B
+  undo T2                     C -> B
+  redo T2                     B -> C
+
+SEMANTIC REQUIREMENT FOR 'A' INSTEAD OF 'B'      UNPROVEN
+
+If pending surviving truth SHOULD survive confirmed undo, that is a NEW semantic
+requirement that must earn itself — not something the implementation owes today.
+```
+
+The same applies to ABA: it proves value equality cannot establish authorship. It
+does **not** prove confirmed undo is required to preserve pending authorship.
+
+### 2. `structural` does NOT reduce to the rekey question — WITHDRAWN
+
+E2-C claimed the remaining justification reduces to `subjectId` (withdrawn) and
+`structural` (*"reduces to the same rekey question"*). **The second half is
+withdrawn.** It repeats the error of letting one row sentence a whole mechanism.
+
+Enumerated, not grepped:
+
+```text
+StructuralEffect = 'add' | 'remove' | 'rekey'
+```
+
+plus two fields the earlier pass did not account for:
+
+```text
+structuralContext?: StructuralHistoryEffect
+  "Producer-authored structural information required to realize this existence
+   transition AFTER THE ORIGINAL MUTATION CONTEXT IS GONE. This is durable
+   canonical history... planners derive [current subject state] separately."
+
+subjectPositions?: readonly PositionId[]
+  "positions [that] may supply payload needed to physically realize add/remove
+   WITHOUT BECOMING INDEPENDENT VALUE PARTICIPANTS in the turn."
+```
+
+**Coverage-versus-participant is a distinction a value diff cannot express**, and
+it is independent of rekey. Candidate structural semantics therefore include
+membership add/remove, subject creation and reclamation, key reuse, and collection
+structural lifetime — none disposed of by rekey failing.
+
+**And E-REKEY did not kill `SubjectId` globally.** It killed one proposed
+justification for it. Subject-lifetime identity is a separate question that has
+not been derived.
+
+### 3. E4 is UNBLOCKED
+
+E4 was blocked because E2 might have been secretly rediscovering a core causal
+responsibility of the effect log. **E2-C answered that**: the P3 baseline
+transformation does not exist in the contract or the implementation, ABA authorship
+preservation is not established semantics, and confirmed reversal consumes its
+recorded baseline as-is. So there is no unknown giant semantic responsibility for
+E4 to wait behind, and serializing an independently derived transaction row behind
+an unrelated representation field is poor methodology.
+
+```text
+TWO INDEPENDENT OPEN ROWS — neither blocks the other
+
+E2-S  does STRUCTURAL confirmed reversal require representation beyond canonical
+      before/after truth?
+E4    does explicit transaction semantics independently require causal/effect
+      machinery?
+
+FINAL DISPOSITION waits on BOTH.
+```
+
+### The conclusion actually earned, restated
+
+```text
+SCALAR REVERSAL
+  the effect log has demonstrated NO semantic advantage over retained canonical
+  before/after truth.
+
+NOT       "snapshots are sufficient"
+NOT       "effects can be deleted"
+
+STILL CANDIDATE DISTINGUISHERS
+  structural subject / membership semantics   -> E2-S
+  transaction semantics                       -> E4
+  scoped undo, only if it independently survives -> E3
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

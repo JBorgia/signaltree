@@ -468,7 +468,28 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               rekey question). NOT licensed: "snapshots are
                               sufficient" — this is EQUIVALENCE on two scenarios
                               whose contract is unspecified, not correctness.
-                              E4 stays blocked until rekey resolves `structural`.
+                              CORRECTED: `structural` does NOT reduce to rekey —
+                              that half is WITHDRAWN (it let one row sentence a
+                              whole mechanism). Enumerated: StructuralEffect =
+                              'add'|'remove'|'rekey', PLUS structuralContext
+                              ("durable canonical history... required to realize
+                              this existence transition after the original
+                              mutation context is gone") and subjectPositions
+                              (positions supplying payload to realize add/remove
+                              "without becoming independent value participants").
+                              COVERAGE-vs-PARTICIPANT is a distinction a value diff
+                              cannot express, independent of rekey. E-REKEY killed
+                              ONE justification for SubjectId, NOT subject-lifetime
+                              identity.
+                              The invented P3 theorem (undo T2 => A) is STRUCK from
+                              the frozen set — measured behaviour is C->B, and a
+                              requirement for 'A' is UNPROVEN. If pending surviving
+                              truth SHOULD survive confirmed undo that is a NEW
+                              requirement which must earn itself.
+                              E4 is UNBLOCKED. E2-S (does structural reversal need
+                              more than canonical before/after?) and E4 are
+                              INDEPENDENT open rows; neither blocks the other;
+                              final disposition waits on both.
                               (superseded) E2 first pass claimed write-set
                               precision IS snapshot-derivable
                               (P1 reverts the touched position and leaves
