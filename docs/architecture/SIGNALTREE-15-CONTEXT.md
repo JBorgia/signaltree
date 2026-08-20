@@ -269,12 +269,17 @@ collections FORM              **DERIVED — E CLOSED.** All 31 public members
                               FUNCTION — the docblock records them as elf/Akita
                               feature parity and names its own alternative, and a
                               plain position + byId gives IDENTICAL granularity.
-                              tap: no function — the pull surface already
-                              delivers it (O(width) diff vs O(delta) push is FORM
-                              pressure). intercept: no function — a write-path
-                              guard is the same category error as status, and its
-                              async form FAILS OPEN (public type invites
-                              `Promise<void>`; call sites never await).
+                              tap: DELETION WITHDRAWN. Event identity is NOT
+                              reducible to resulting state — add-then-remove and
+                              1->2->1 both leave the final state unchanged while
+                              tap sees both events, and a `computed` diff is
+                              pull-based so it cannot guarantee a read between
+                              mutations. The function EXISTS; its OWNER is
+                              undecided, and the kernel-scope null (undo already
+                              records per-turn effects at tree scope) is UNRUN.
+                              intercept: no function — a write-path guard is the
+                              same category error as status, and its async form
+                              FAILS OPEN. That deletion STANDS.
 subject-identity substrate    AUDITED — SOUND. Entirely third-bucket
                               (post-2026-08-11, empty commit bodies, planRekey
                               revised 3x in 4 days). No aliasing on key reuse;
@@ -283,7 +288,19 @@ subject-identity substrate    AUDITED — SOUND. Entirely third-bucket
                               the member's own `id` field disagrees with its
                               slot. Load-bearing — it is the stated reason
                               `setOne(entity)` cannot exist. OPEN form question.
-stored                        NOT EARNED, both halves. INBOUND: reading the
+stored                        NOT EARNED, both halves — on CORRECTED reasoning.
+                              The claim "the null is strictly better" is
+                              WITHDRAWN: the old outbound null wrote from an
+                              effect() needing a tick, so it proved "durable after
+                              a tick", a weaker contract than the incumbent was
+                              judged against. Re-run against a genuinely
+                              synchronous write, the null satisfies the contract
+                              and so does `debounceMs: 0`, while the default
+                              debounce does not. The incumbent DOES reach a third
+                              point the naive nulls miss — 20 sets to ONE write,
+                              durable on demand via flush(). An app can write that
+                              too (timer plus drain), so DX not function, but the
+                              trade was misdescribed. INBOUND: reading the
                               store in the state literal reaches it completely,
                               and {version, migrate} is a spelling for a branch
                               the read path already expresses. OUTBOUND: the

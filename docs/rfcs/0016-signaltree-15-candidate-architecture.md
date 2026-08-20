@@ -4105,6 +4105,149 @@ DERIVATION E              REOPENED on the granularity row. The conjunction needs
 NEW GATE ITEM             the 15-branch non-scalar-leaf undo regression.
 ```
 
+## THREE CORRECTED CLOSURE FALSIFIERS — two verdicts REVERSE
+
+All three earlier verdicts proved a DIFFERENCE and were recorded as if they had
+proved a REQUIREMENT (or its absence). Re-run against proper nulls, two reverse
+and one is sharpened.
+
+---
+
+### 1. `stored` OUTBOUND — "the null is strictly better" is WITHDRAWN
+
+Evidence: `stored-outbound-corrected.spec.ts`, 5 rows.
+
+**The old null was invalid.** It wrote to storage from an `effect()`, which needs
+`TestBed.tick()` to flush — so it established *"durable after a tick"*, a weaker
+contract than the one the incumbent was judged against. Comparing a debounced
+mechanism to an async null and calling the null "strictly better" was not a fair
+measurement.
+
+The corrected null is a genuinely synchronous consequence — the write path that
+changes the value also writes the store, same stack, no scheduler:
+
+```text
+CONTRACT   after the call RETURNS, the store already holds the new value
+
+corrected synchronous null      SATISFIES     store has '"dark"' on the next line
+incumbent, default debounce     FAILS         signal 'dark', store NULL
+incumbent, debounceMs: 0        SATISFIES     durable in set()'s own stack
+```
+
+**But the incumbent reaches a point the null does not.** Measured:
+
+```text
+synchronous null    20 sets -> 20 writes, always durable
+debounce only       20 sets -> coalesced, NO durability point
+incumbent + flush() 20 sets -> ONE write, durable on demand
+```
+
+Coalescing **with an explicit durability point** is a third option, and it is the
+incumbent's actual contribution. The earlier pass missed it by comparing against
+an async null.
+
+```text
+stored OUTBOUND
+  FUNCTION ("survive process death")    still NOT EARNED — reachable
+                                        synchronously in ordinary code
+  WITHDRAWN CLAIM                       "the null is strictly better". False.
+  REAL TRADE                            durability-per-write vs coalescing;
+                                        reaching BOTH needs pending-write
+                                        machinery, which an application can also
+                                        write (a timer plus a drain). DX, not
+                                        function — but the trade is real and was
+                                        misdescribed.
+```
+
+---
+
+### 2. `tap` — VERDICT REVERSED. Event identity is NOT reducible to state.
+
+Evidence: `tap-rekey-necessity.spec.ts`, 3 rows.
+
+E-TAP concluded the pull surface already delivers it, recovered by diff. **The
+diff null only worked because it observed between every mutation.**
+
+```text
+add 'a' then remove 'a'        final state IDENTICAL to doing nothing
+                              tap saw ['add:a','rem:a']
+update n 1->2 then 2->1        start === end
+                              tap saw ['a:{"n":2}','a:{"n":1}']
+
+diff sampled BETWEEN each      both events recovered
+diff sampled only at the END   { added: [], removed: [] } — INVISIBLE
+```
+
+A `computed` is pull-based: it samples when READ, not when written. No consumer
+can guarantee a read between every mutation.
+
+```text
+tap
+  PREVIOUS VERDICT   "no function — already delivered by the pull surface"
+  CORRECTED          WITHDRAWN. Mutation-event identity is NOT reducible to
+                     resulting state.
+  REMAINING QUESTION OWNERSHIP, not existence. Is "observe every mutation event"
+                     a COLLECTION function, or the transaction/history kernel's?
+                     Undo already records per-turn effects — the same information
+                     at tree scope. That is the null that should have been run,
+                     and it has NOT been run.
+```
+
+---
+
+### 3. `changeId` — the gap is now PRECISE, and necessity is still unproven
+
+Evidence: `tap-rekey-necessity.spec.ts`, 2 rows.
+
+The null shipped 14.x recommends (ST2031): *"hold the id and call `byId(id())` at
+the point of use rather than holding the node across a rekey."*
+
+```text
+holder keeps the ID      changeId + selectedId.set(newKey)   -> WORKS, n === 5
+holder keeps only NODE   node.().id === 'tmp-1'  (STALE)
+                         byId('tmp-1') === undefined
+                         -> CANNOT recover the new key
+```
+
+So the re-read null requires the holder to learn the new key from somewhere else.
+**The collection does not tell it, and the member misreports itself** — the split
+identity both designs carry. That is the ordinary Angular input shape: a component
+handed a node, with no id and no collection reference.
+
+```text
+changeId
+  ESTABLISHED     a node-only holder cannot recover after a rekey
+  NOT ESTABLISHED that follow-the-subject is the answer. Cheaper repairs exist
+                  and neither is derived:
+                    (a) fix the split identity so the member reports its real key
+                    (b) notify holders of the rekey
+  NECESSITY       still UNPROVEN. The gap is now stated precisely instead of
+                  asserted.
+```
+
+---
+
+### Net effect on the matrix
+
+```text
+E's form, previously   "five minimum members established, changeId withdrawn,
+                        tap and intercept deleted"
+
+now                    tap's deletion is WITHDRAWN — its function exists, its
+                        OWNER is undecided, and the kernel-scope null is unrun
+                       changeId's gap is precise but necessity unproven
+                       intercept's deletion STANDS (category error + fail-open;
+                        untouched by these corrections)
+                       stored still NOT EARNED, on corrected reasoning
+```
+
+**Pattern across all three:** every one of these verdicts came from a null that
+was easier to satisfy than the contract it was being compared against —
+`effect()` instead of a synchronous write, a diff that samples at every step,
+remove+add instead of "does any workflow break." The methodology's own rule
+covers it and was not applied: *state the contract precisely, then build the null
+to that contract, not to a convenient approximation of it.*
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
