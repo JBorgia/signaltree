@@ -8422,6 +8422,105 @@ marker hydration uses process-global metadata
 an interaction of two otherwise-correct mechanisms
 ```
 
+### CORRECTION — the "both conditions are required" narrowing is WRONG
+
+Evidence: `undo-nonscalar-leaf.spec.ts`, 7 rows, plus the same file run with
+inverted expectations on `main`.
+
+The record above concludes:
+
+> **Both conditions are required**: a `form()` marker write AND a concurrent
+> write to an unrelated `timeTravel()` tree. Two plain trees do not contaminate
+> each other, so this is not generic time-travel scoping.
+
+**Neither condition is required.** The same guard refuses undo with **one tree,
+no marker, and no second tree at all**. The only requirement is that a leaf's
+value is not scalar:
+
+```text
+ONE plain tree, no marker, .with(timeTravel())
+
+  n: 0            number   undo OK
+  s: ''           string   undo OK
+  rows: []        array    THROWS  Unsupported scoped undo effect at rows
+  when: Date      Date     THROWS  ... at when
+  lookup: Map     Map      THROWS  ... at lookup
+  seen: Set       Set      THROWS  ... at seen
+```
+
+The path is `applyTurnEffects` (**:1673**), not
+`applyTurnEffectsThroughRealizationPort` (:2175). The gate is
+`isSupportedEffect`, :1680-1694:
+
+```ts
+case 'set':
+  return (isScalarValue(before) && isScalarValue(after))
+      || (subject === undefined && ownerPath !== path);
+
+// isScalarValue: null | undefined | string | number | boolean | bigint
+```
+
+An array is not scalar and a top-level leaf is its own owner, so both clauses
+fail. The earlier narrowing tested "two plain trees" — presumably with scalar
+leaves — and so never varied the one variable that actually matters.
+
+### SEVERITY — a scalar sibling is COLLATERAL
+
+`applyTurnEffects` validates the **whole effect list before applying any of it**,
+so one non-scalar leaf in a turn refuses the entire undo:
+
+```text
+tree = { n: 0, rows: [] }
+  n.set(1)              tick
+  n.set(2); rows.set([9])  tick
+  undo()  ->  THROWS, and n is STRANDED AT 2
+```
+
+So this is not "arrays cannot be undone." It is **one array write anywhere in a
+turn breaks undo for everything in that turn.**
+
+### IT IS A REGRESSION, not a never-worked
+
+The identical seven scenarios pass on `main` with inverted expectations — array
+undoes to `[1]`, the Date to 2021, the Map to `a:1`, the Set to `['a']`, and the
+stranded scalar recovers to `1`.
+
+```text
+INTRODUCED BY   06785300  2026-08-11 22:29
+                "feat(history): cut over public undo to frontier authority"
+                EMPTY COMMIT BODY. Same third-bucket commit as SubjectId.
+```
+
+### Relationship to the form-marker case above
+
+The form-marker + second-tree scenario may still be a distinct defect — it throws
+from a different path (:2175). But it is no longer evidence for
+*"the marker's write is what makes the difference"*, because the guard fires with
+no marker present. The cheaper explanation now available: both are the same
+incomplete cutover, and the form-marker experiment simply produced a non-scalar
+effect by another route.
+
+**ROOT CAUSE — still not asserted.** What is established is the trigger, not the
+intent. `isSupportedEffect` throwing rather than falling back reads like a
+deliberate guard on an unfinished implementation — fail loudly rather than
+corrupt — which is defensible engineering that shipped its incompleteness into
+the branch. Whether non-scalar support was deferred knowingly is unrecorded,
+because the commit body is empty.
+
+### Consequence for the derivation
+
+```text
+BLOCKS   the conforming-collection prototype's CANONICALITY row, which is the
+         last property standing between the M-cluster and physical subtraction.
+CONTAMINATES  Derivation E's canonicality column. On this branch entityMap passes
+         because it emits SUBJECT-BEARING effects, which isSupportedEffect
+         admits, while an ordinary array does not. That column was measuring the
+         undo engine's admission rule, not the shapes.
+GATE     must be fixed, or consciously accepted with its blast radius recorded,
+         before the M cut.
+```
+
+
 ```
 14.x   DEFECT. `tree.undo()` throws on a tree whose own writes were valid,
        because of activity in a DIFFERENT tree. Nothing in the public contract
