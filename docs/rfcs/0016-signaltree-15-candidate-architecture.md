@@ -5063,6 +5063,93 @@ STILL CANDIDATE DISTINGUISHERS
   scoped undo, only if it independently survives -> E3
 ```
 
+## E2-S — STRUCTURAL. The first capability canonical values CANNOT reproduce.
+
+Evidence: `e2s-structural-null.spec.ts`, 5 rows. Membership went first because
+dynamic membership already survived independently, so confirmed reversal of
+membership has a real function whether or not rekey does.
+
+### Membership add/remove — both mechanisms manage it
+
+```text
+add 'c' -> undo -> ['a','b'] -> redo -> ['a','b','c']      REAL SYSTEM: works
+```
+
+No divergence here.
+
+### Subject revival vs key reuse — WHERE THEY DIVERGE
+
+```text
+REAL SYSTEM
+  add 'a' · hold byId('a') · remove 'a'        held -> undefined
+  UNDO the removal                             held -> 1     REVIVED
+
+  add 'a' · hold byId('a') · remove 'a'        held -> undefined
+  ordinary RE-ADD {id:'a', n:1}                held -> undefined   STILL DEAD
+  (a fresh byId('a') finds the new member at 1)
+```
+
+**Same key. Same value. Opposite identity outcome.** The system distinguishes *"the
+original member came back"* from *"a new member took the key"* — and that
+distinction is **invisible in the values**.
+
+```text
+KEY REUSE ACROSS UNDO
+  add {k,111} · remove k · add {k,999} · hold byId('k') -> 999
+  undo (the reuse-add)   -> []
+  undo (the removal)     -> [{k,111}]
+  held reference to the SECOND subject   -> undefined      NO ALIASING
+
+SUBJECT-FREE NULL (ordinary array leaf, byId as a memoised computed)
+  same sequence, then restore the original value — the best a value-only
+  representation can do
+  held reference to the SECOND subject   -> 111            ALIASED
+```
+
+The null reports the *first* subject's data through a reference held to the
+*second*, because a value-keyed lookup cannot tell them apart.
+
+### Result
+
+```text
+FIRST MEASURED CAPABILITY that canonical before/after truth CANNOT reproduce,
+and it is INDEPENDENT OF REKEY:
+
+  distinguishing "this key is occupied again" from "this same member is back"
+  requires identity that does not live in the values.
+```
+
+```text
+WHAT THIS EARNS      subject-lifetime identity has a POSITIVE, INDEPENDENT
+                     justification. E-REKEY withdrew its only previous one;
+                     this supplies a different one.
+WHAT IT DOES NOT     it does NOT establish that the current EFFECT LOG is the
+                     right carrier for that identity — only that SOME identity
+                     beyond values is required. Identity could travel alongside a
+                     snapshot representation.
+                     It does NOT revive rekey, whose necessity remains withdrawn.
+```
+
+### An attribution error, recorded
+
+An earlier draft of the revival row asserted the restoration was "merely
+resolve-on-read" and would happen for an ordinary re-add too — reasoning from the
+`entity-signal.ts` docblock about resolving the per-entity signal on every read.
+**Measured: it does not.** The held reference lives after UNDO and stays dead after
+RE-ADD. The claim was written as a test rather than as prose, which is why the
+measurement caught it instead of the record carrying it forward.
+
+### Where the derivation now stands
+
+```text
+SCALAR REVERSAL          effect log earns nothing over retained canonical truth
+STRUCTURAL REVERSAL      identity beyond values IS required — measured
+NEXT QUESTION            must that identity be carried BY the effect log, or can
+                         it accompany a snapshot representation?
+STILL INDEPENDENT        E4 (transaction semantics), E3 (scoped undo, only if it
+                         survives its own null)
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

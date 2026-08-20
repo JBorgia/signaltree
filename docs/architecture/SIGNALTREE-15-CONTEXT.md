@@ -486,10 +486,27 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               requirement for 'A' is UNPROVEN. If pending surviving
                               truth SHOULD survive confirmed undo that is a NEW
                               requirement which must earn itself.
-                              E4 is UNBLOCKED. E2-S (does structural reversal need
-                              more than canonical before/after?) and E4 are
-                              INDEPENDENT open rows; neither blocks the other;
-                              final disposition waits on both.
+                              E4 is UNBLOCKED. E2-S and E4 are INDEPENDENT rows.
+  E2-S DONE — POSITIVE       The FIRST measured capability canonical before/after
+                             truth cannot reproduce, INDEPENDENT of rekey. Same key,
+                             same value, opposite identity outcome: UNDO of a remove
+                             REVIVES the original subject (held ref -> 1) while an
+                             ordinary RE-ADD leaves it DEAD. And key reuse across
+                             undo does NOT alias in the real system, whereas the
+                             subject-free null (array leaf + memoised byId) DOES —
+                             a reference held to the second subject reports the
+                             first subject's 111.
+                             EARNS: subject-lifetime identity now has a POSITIVE,
+                             INDEPENDENT justification; E-REKEY withdrew its only
+                             previous one, this supplies a different one.
+                             DOES NOT earn: that the EFFECT LOG is the right carrier
+                             — only that SOME identity beyond values is required,
+                             which could accompany a snapshot representation. Does
+                             NOT revive rekey.
+                             NOTE an attribution error caught by measurement: an
+                             earlier draft claimed the revival was "merely
+                             resolve-on-read" and would also happen on re-add. It
+                             does not.
                               (superseded) E2 first pass claimed write-set
                               precision IS snapshot-derivable
                               (P1 reverts the touched position and leaves
