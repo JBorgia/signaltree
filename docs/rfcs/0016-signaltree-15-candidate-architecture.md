@@ -4572,7 +4572,31 @@ time-travel    getTreeRealizationPort, rememberTreeRealizationDescriptor,
                ReversalEffect (type)
 ```
 
-### Result — the fracture line is ALREADY VISIBLE in the import graph
+### Result — a LOW-COUPLING BOUNDARY is visible. Ownership is NOT established.
+
+> **CORRECTION.** An earlier revision concluded *"the causal kernel's real client
+> is the transaction system, not the undo system."* **Withdrawn.** That assigns
+> semantic ownership from DIRECT-IMPORT evidence, and `direct import ≠ semantic
+> dependency` — the same vocabulary rule that governs lexical hits. A module can
+> depend on facts whose authority originates elsewhere without importing their
+> source. The topology could plausibly be:
+>
+> ```text
+> turn-store -> transactions establishes/maintains causal history
+>            -> realization descriptors / port
+>            -> time-travel consumes the resulting consequences
+> ```
+>
+> in which case time-travel would still not import `turn-store` while confirmed
+> undo depended on facts it owns. **That control flow has not been inspected.**
+>
+> ```text
+> DIRECT STRUCTURAL COUPLING   strongly asymmetric — MEASURED
+> SEPARATION FEASIBILITY       STRONG EVIDENCE
+> SEMANTIC INDEPENDENCE        UNPROVEN
+> OWNERSHIP                    UNPROVEN
+> ```
+
 
 **`turn-store` — the module that retains turns — is consumed by `transactions`
 ONLY. `time-travel` never touches it.** Time-travel's entire dependence on the
@@ -4611,10 +4635,23 @@ UNDO-SPECIFIC                            reversal-planner, and the
                                          time-travel
 ```
 
-If E2 shows a snapshot-derived mechanism satisfies precision, the deletion target
-is **reversal-planner plus time-travel's effect-reversal path**, not the causal
-kernel — and the non-scalar regression goes with it rather than needing a repair,
-exactly as the corrected framing predicted.
+**CORRECTED conditional.** E2 can only remove *precision* as a justification. It
+cannot establish that `reversal-planner` has no other surviving role under E4
+transaction semantics, E3 scoped undo, confirmed redo, pending rollback, or
+subject/rekey semantics.
+
+```text
+IF E2 SUCCEEDS
+  precision ceases to justify effect-retained confirmed history and the current
+  confirmed reversal path
+
+  reversal-planner / effect-reversal machinery become DELETE CANDIDATES
+
+  FINAL disposition still waits on E4 and E3 failing to give them another
+  function
+```
+
+That keeps E2 from sentencing code E4 might independently earn.
 
 ## Table G — DX PRESSURE LEDGER
 
