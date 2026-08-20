@@ -85,15 +85,43 @@ describe('E-ORD — ordering', () => {
 });
 
 // ============================================================================
-// E-REKEY — is identity-across-rekey a real function, and what does it cost?
+// E-REKEY — WITHDRAWN CONCLUSION. These rows measure CURRENT BRANCH behaviour,
+// which REVERSES a shipped, documented decision. They do not establish that
+// identity-across-rekey is a required function.
+//
+// The original framing of this block was "the null fails, so the function is
+// real". That was invalid twice over:
+//
+//   1. It proved `changeId` BEHAVES DIFFERENTLY from remove+add. It never showed
+//      any workflow REQUIRES a held reference to survive a key change rather
+//      than re-reading `byId(newId)`.
+//
+//   2. Worse, the behaviour it measured is 15-effort work that is NOT what
+//      ships. Published 14.1.2 does the OPPOSITE, deliberately:
+//
+//        [ST2031] "reading a node held from byId(from) after changeId(from,to)
+//        — it resolves undefined and always will. changeId drops the old
+//        per-entity signal on purpose: aliasing it would share one signal with
+//        a future addOne({ id: from }), which is a worse failure than this one."
+//
+//      Added 2026-08-10 by 80f41e94, whose message calls it "CORRECT BEHAVIOUR".
+//      Removed 2026-08-13 by b47598a1 ("atomically realize entity rekeys with
+//      scalar state") — EMPTY COMMIT BODY, no recorded rationale.
+//
+// So a derivation verdict was built on an unexplained reversal of a decision the
+// repository had explicitly called correct. The provenance rule exists to catch
+// exactly this; it was applied to the MACHINERY (SubjectId) and never to the
+// BEHAVIOUR.
+//
+// OPEN, and now two separate questions:
+//   Q1  Which behaviour is correct — drop-and-warn, or follow-the-subject?
+//   Q2  Is identity-across-rekey REQUIRED at all? Unproven in either direction.
 // ============================================================================
-describe('E-REKEY — changeId', () => {
-  it('MEASURE — a held granular reference SURVIVES the rekey', () => {
+describe('E-REKEY — current-branch behaviour, conclusion WITHDRAWN', () => {
+  it('MEASURED (this branch) — a held granular reference survives the rekey', () => {
     const tree = signalTree({ rows: entityMap<Row, string>({ selectId: (r) => r.id }) });
     tree.$.rows.addOne({ id: 'tmp-1', n: 5 });
 
-    // A component holds the row's field signal — the capability the library
-    // claims its competitors lack.
     const held = tree.$.rows.byId('tmp-1');
     expect(held?.n()).toBe(5);
 
@@ -101,11 +129,11 @@ describe('E-REKEY — changeId', () => {
 
     expect(tree.$.rows.byId('tmp-1')).toBeUndefined();
     expect(tree.$.rows.byId('server-99')?.n()).toBe(5);
-    // THE FUNCTION: the held reference follows the subject, not the old key.
+    // On PUBLISHED 14.1.2 this is `undefined`, by design, with ST2031 warned.
     expect(held?.n()).toBe(5);
   });
 
-  it('NULL — remove + add BREAKS the held reference (so the function is real)', () => {
+  it('MEASURED — remove + add orphans the held reference (a DIFFERENCE, not a requirement)', () => {
     const tree = signalTree({ rows: entityMap<Row, string>({ selectId: (r) => r.id }) });
     tree.$.rows.addOne({ id: 'tmp-1', n: 5 });
     const held = tree.$.rows.byId('tmp-1');
@@ -115,22 +143,44 @@ describe('E-REKEY — changeId', () => {
     tree.$.rows.addOne({ id: 'server-99', n: 5 });
 
     expect(tree.$.rows.byId('server-99')?.n()).toBe(5);
-    // The held reference is orphaned — this is what changeId exists to prevent.
     expect(held?.n()).toBeUndefined();
+
+    // What this shows: the two paths differ. What it does NOT show: that any
+    // application needs the held reference to follow. Re-reading byId(newId) is
+    // available and is what shipped 14.1.x REQUIRES.
   });
 
-  it('COST — the docblock hazard, measured: entity.id disagrees with the storage key', () => {
+  it('THE REVERSED HAZARD — the old design\'s stated reason, measured against the new one', () => {
+    // 80f41e94: "aliasing it would share one signal with a future addOne of the
+    // retired id, a worse failure". That is the hazard the drop-and-warn design
+    // existed to prevent. The new design appears to avoid it by SUBJECT identity
+    // rather than key identity — measured here, because if it did NOT, the
+    // reversal would be a straight regression.
+    const tree = signalTree({ rows: entityMap<Row, string>({ selectId: (r) => r.id }) });
+    tree.$.rows.addOne({ id: 'tmp-1', n: 5 });
+    const held = tree.$.rows.byId('tmp-1');
+
+    tree.$.rows.changeId('tmp-1', 'server-99');
+    tree.$.rows.addOne({ id: 'tmp-1', n: 777 }); // the retired id, reused
+
+    expect(held?.n()).toBe(5); // NOT aliased to the new member
+    expect(tree.$.rows.byId('tmp-1')?.n()).toBe(777);
+
+    // So the reversal is not obviously wrong — it may have solved the hazard
+    // that justified the old behaviour. That is a reason to DERIVE it properly,
+    // not a reason to assume it.
+  });
+
+  it('COST — the split identity, which BOTH designs carry', () => {
     const tree = signalTree({ rows: entityMap<Row, string>({ selectId: (r) => r.id }) });
     tree.$.rows.addOne({ id: 'tmp-1', n: 5 });
 
     tree.$.rows.changeId('tmp-1', 'server-99');
 
     const row = tree.$.rows.byId('server-99')?.();
-    // SPLIT IDENTITY: the collection says 'server-99', the member says 'tmp-1'.
-    // Two docblocks name this, and it is why `setOne(entity)` cannot exist —
-    // deriving the key via selectId() would write to the WRONG SLOT.
     expect(tree.$.rows.ids()).toEqual(['server-99']);
     expect(row?.id).toBe('tmp-1');
-    expect(row?.id).not.toBe('server-99');
+    // 80f41e94 names this too, as the reason `setOne(entity)` cannot exist: it
+    // would derive the key via selectId and write to the wrong slot.
   });
 });

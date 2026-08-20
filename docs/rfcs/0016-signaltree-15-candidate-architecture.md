@@ -3634,6 +3634,105 @@ was introduced one layer down. **The derivation question is never "is this
 machinery right?" but "what made it necessary?"** — because if the answer is
 another SignalTree choice, both can leave together.
 
+## WITHDRAWAL — E-REKEY's positive verdict. It rested on an unrecorded reversal of shipped behaviour.
+
+E-REKEY was recorded as *"the first function the incumbent contributed that the
+zero-state missed AND that survives its own null."* **That verdict is withdrawn.**
+It was invalid twice over, and the second reason is the serious one.
+
+### 1. It proved a difference, not a requirement
+
+The measurement was: a held reference survives `changeId`, and remove+add orphans
+it. That shows the two paths **behave differently**. It never showed any workflow
+*requires* the held reference to follow rather than re-reading `byId(newId)`.
+
+### 2. The behaviour measured is NOT what ships — and reverses a documented decision
+
+Published **14.1.2** (2026-08-17, the current latest) does the OPPOSITE, on
+purpose. From the shipped `dist/lib/entity-signal.js`:
+
+> **[ST2031]** *"reading a node held from `byId(from)` after `changeId(from, to)`
+> — it resolves undefined **and always will**. changeId drops the old per-entity
+> signal **on purpose**: aliasing it would share one signal with a future
+> `addOne({ id: from })`, which is a worse failure than this one. Re-read with
+> `byId(to)`, or hold the id and call `byId(id())` at the point of use rather
+> than holding the node across a rekey."*
+
+Provenance of the two decisions:
+
+```text
+80f41e94   2026-08-10   feat(core)!: replaceOne + node-callable replaces, and
+                        ST2031 for held nodes
+                        -> "changeId drops the old per-entity signal ON PURPOSE
+                            (aliasing it would share one signal with a future
+                            addOne of the retired id, A WORSE FAILURE).
+                            CORRECT BEHAVIOUR that was impossible to debug from
+                            the call site."
+                        Full rationale recorded. SHIPPED in 14.1.1 and 14.1.2.
+
+b47598a1   2026-08-13   feat(core): atomically realize entity rekeys with scalar
+                        state
+                        -> ST2031 removed. Held references now follow.
+                        EMPTY COMMIT BODY. No recorded rationale.
+```
+
+So a derivation verdict was built on top of an **unexplained reversal of a
+decision this repository had explicitly called correct**, three days after it
+shipped.
+
+### How the provenance rule failed here
+
+The three-bucket classification was applied to the **machinery** — `SubjectId`,
+`planRekey`, `subjectMetadataEnabled` were all correctly dated to the third
+bucket and audited. It was never applied to the **behaviour** the machinery
+produces. Dating the mechanism is not dating the semantics.
+
+```text
+NEW RULE (candidate)
+  Provenance applies to OBSERVED BEHAVIOUR, not only to code. Before treating a
+  measured behaviour as evidence of a function, check what the RELEASED artifact
+  does. `npm pack` the current published version and read it — git tags are not
+  the record of what shipped (14.1.2 has no tag), and HEAD is not the record of
+  what users have.
+```
+
+### What the evidence still supports
+
+The reversal is **not obviously wrong**. `80f41e94`'s stated hazard was that
+aliasing a retired key would share one signal with a future `addOne` of that key.
+Measured on this branch (`e-ordering-rekey.spec.ts`, THE REVERSED HAZARD row):
+after `changeId('tmp-1' -> 'server-99')` and a fresh `addOne({id:'tmp-1', n:777})`,
+the held reference still reports `5` and the new member reports `777`. **No
+aliasing.** The new design appears to have dissolved the hazard by keying on
+subject identity rather than on the key.
+
+That is a reason to derive it properly. It is not a reason to assume it.
+
+### The question, restated as two
+
+```text
+Q1  WHICH BEHAVIOUR IS CORRECT?
+    drop-and-warn (shipped 14.1.x, rationale recorded) vs follow-the-subject
+    (this branch, no rationale recorded). A shipped contract says "always will
+    resolve undefined"; the branch makes it resolve. That is a behaviour change
+    users can observe, currently unannounced.
+
+Q2  IS IDENTITY-ACROSS-REKEY REQUIRED AT ALL?
+    UNPROVEN IN EITHER DIRECTION. The null that matters is not "remove+add" but
+    "does any required workflow break if the holder must re-read byId(newId)?"
+    NOT RUN.
+```
+
+Both go to cross-review, Q1 first, with the ST2031 text and both implementations
+attached.
+
+### Consequence for Derivation E
+
+E's form summary said *five members are the minimum and one more is earned*. With
+`changeId` withdrawn, **only the five minimum members are established**, and E's
+positive result is now confined to the FUNCTION (dynamic membership + granular
+observation over canonical truth), not to any member beyond the minimum.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
