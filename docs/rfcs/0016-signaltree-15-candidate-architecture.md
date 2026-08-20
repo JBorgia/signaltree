@@ -6294,6 +6294,124 @@ only purpose is to make a CLOSED CANDIDATE DECIDABLE.
 A gate is not exempt from the rules it enforces.
 ```
 
+## UNDO-E4 / U5b — PREREGISTERED AS A FAMILY. Only U5b-A is opened.
+
+The previous failure came partly from bundling several functions under one row
+name. These five can survive or die **independently**, so they are preregistered
+separately and opened one at a time. **U5b-A is opened now; B through E remain
+UNOPENED until A reaches a disposition.** That keeps the family from
+cross-contaminating itself.
+
+```text
+GRANTED   P1-P6 only, plus any other independently frozen premise CITED PER ROW.
+FORBIDDEN in every packet — incumbent vocabulary:
+  prepare · commit · publish · effect · transaction · turn · pending rollback
+  causal attribution · speculation
+  (unless a term is independently frozen AND genuinely necessary to state a
+   premise, in which case cite the freeze)
+```
+
+### U5b-A — ONE COHERENT CANONICAL TRANSITION   [OPENED]
+
+```text
+CANDIDATE   several related writes must become one externally coherent canonical
+            transition
+DECISIVE    what independently valuable workflow becomes impossible if applications
+            instead compute a final candidate value and perform ordinary writes
+            under the already-granted grouping semantics?
+OPPOSITE    there is no distinct atomicity function. Callers construct valid
+            resulting state BEFORE mutation; P5 governs only confirmed reversal
+            granularity.
+```
+
+### U5b-B — REFUSAL / FAILURE   [UNOPENED]
+
+```text
+CANDIDATE   an attempted multi-write transition may fail such that none of its
+            canonical consequences occur
+DECISIVE    what requires failure to be container-governed rather than validation
+            occurring before canonical mutation?
+```
+
+### U5b-C — CONSEQUENCE COORDINATION   [UNOPENED]
+
+```text
+CANDIDATE   consequences outside canonical state must be coordinated with the
+            success or refusal of the canonical transition
+DECISIVE    what independently requires SignalTree to own that coordination rather
+            than an already-earned consequence owner or adapter?
+```
+
+### U5b-D — SHARED ATTRIBUTION   [UNOPENED]
+
+```text
+CANDIDATE   several writes must retain a shared semantic fact beyond merely
+            reverting as one confirmed step
+DECISIVE    what becomes impossible if the only surviving fact is the grouped
+            canonical transition?
+```
+
+Stated deliberately without a name for the fact. **Only if the answer is yes should
+vocabulary for it emerge.**
+
+### U5b-E — UNCONFIRMED TRANSITION WITHDRAWAL   [UNOPENED]
+
+```text
+CANDIDATE   an unconfirmed transition requires container-owned semantics for later
+            acceptance or withdrawal
+DECISIVE    what independently valuable workflow cannot be expressed using
+            currently earned canonical state plus whatever speculative semantics
+            have ALREADY independently survived?
+```
+
+## TWO ORDERING FIXES
+
+### The null comes after BOTH gates
+
+```text
+OLD   Gate 1 kills it            -> close
+      Gate 1 finds a contract    -> preregister a null
+
+NEW   Gate 1 kills it            -> Gate 2 BOUNDS the interpretation -> close
+      Gate 1 finds a contract    -> Gate 2 CONFIRMS that inference   -> only then
+                                    preregister a null
+```
+
+Gate 1 can establish that a candidate deserves testing. **Gate 2 must first verify
+that the survival interpretation has not itself jumped a premise.** A row does not
+need an experiment; reaching the correct disposition is the success criterion.
+
+### GATE 2 HARD LIMIT — goes in the packet, not just the methodology
+
+```text
+YOU MAY
+  bound the supported conclusion · identify overclaims · record conflicts
+  state PARKED REOPENING CONDITIONS
+
+YOU MAY NOT
+  create a follow-up experiment
+  request repository archaeology
+  propose that a missing premise be established
+  turn an absence witness into a benchmark target
+  create work whose purpose is to make THIS candidate decidable
+
+A strongest alternative interpretation is EVIDENCE ABOUT THE ROW, not a work order.
+```
+
+## THE INVARIANT ALL OF THIS SERVES
+
+Adding another mechanism at each newly discovered boundary leak is not the answer —
+each one is compliant with its own letter and leaks where it does not reach. The
+useful invariant is single:
+
+> **Every stage is subordinate to the same burden rules. No reviewer, gate,
+> experiment, absence witness, or synthesis has authority to manufacture the
+> premise needed by the next stage.**
+
+That covers premise attack, null construction, interpretation review, and closure
+with one rule instead of four, and it is what the observed failures actually
+violated.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

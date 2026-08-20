@@ -1341,6 +1341,30 @@ terminal rule forbids, committed by the gate that enforces it.
 **A reviewer's strongest alternative interpretation is EVIDENCE ABOUT THE ROW, not
 a work order.**
 
+### THE NULL COMES AFTER BOTH GATES
+
+```text
+Gate 1 kills it           -> Gate 2 BOUNDS the interpretation -> close
+Gate 1 finds a contract   -> Gate 2 CONFIRMS that inference   -> only THEN
+                             preregister a null
+```
+
+Gate 1 can establish that a candidate deserves testing. Gate 2 must first verify
+the survival interpretation has not itself jumped a premise. **A row does not need
+an experiment — reaching the correct disposition is the success criterion.**
+
+### THE SINGLE INVARIANT ALL GATES SERVE
+
+Adding a new mechanism at each newly discovered boundary leak does not converge:
+each is compliant with its own letter and leaks where it does not reach.
+
+> **Every stage is subordinate to the same burden rules. No reviewer, gate,
+> experiment, absence witness, or synthesis has authority to manufacture the
+> premise needed by the next stage.**
+
+That covers premise attack, null construction, interpretation review and closure
+with one rule instead of four, and it is what every observed failure violated.
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
