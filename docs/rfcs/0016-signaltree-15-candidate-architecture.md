@@ -6359,13 +6359,53 @@ DECISIVE    what requires failure to be container-governed rather than validatio
 recorded rather than silently repaired, is at
 [U5b-B — REFUSAL / FAILURE: PREREGISTRATION PACKET](#u5b-b--refusal--failure-preregistration-packet).
 
-### U5b-C — CONSEQUENCE COORDINATION [UNOPENED]
+### U5b-C — CONSEQUENCE COORDINATION [UNOPENED — and NOT OPENABLE AS WORDED]
 
 ```text
 CANDIDATE   consequences outside canonical state must be coordinated with the
             success or refusal of the canonical transition
 DECISIVE    what independently requires SignalTree to own that coordination rather
             than an already-earned consequence owner or adapter?
+```
+
+**RECORDED DEFECT — not repaired, because repairing it is a semantic choice.** The
+candidate's wording rests on **two antecedents supplied by sibling rows, both of
+which failed to establish them**:
+
+```text
+"the canonical transition"   U5b-A's candidate. TERMINAL — UNDERDETERMINED.
+"refusal"                    U5b-B's candidate. FUNCTION NOT ESTABLISHED.
+```
+
+So C as worded asks what must be coordinated with the success or refusal of a thing
+that is not established to exist, and a refusal that is not established to be a
+container notion. Opening it as written forces one of two forbidden moves:
+
+```text
+INHERIT A's and B's dispositions as priors for C
+  -> forbidden. A sibling's verdict is EVIDENCE ABOUT THAT SIBLING. Struck for A
+     into B; struck again here for B into C. The rule is symmetric.
+REWORD the candidate to remove the borrowed antecedents
+  -> a semantic choice about what C is even asking, RESERVED to the human author.
+     Rewording a frozen preregistration to make it answerable IS the contamination.
+```
+
+**This is a finding about C's instrument, NOT a verdict on C's function.** C may
+survive, die, or be underdetermined on its own evidence once it has wording that does
+not borrow. Nothing here is a work order, and no measurement or archaeology may be
+used to supply either antecedent.
+
+```text
+D and E, checked for the same defect while the check was cheap:
+  U5b-D  "several writes must retain a shared semantic fact beyond merely reverting
+         as one confirmed step" — rests on P5 grouping, which IS granted. NO
+         BORROWED ANTECEDENT FOUND. Structurally the cleanest unopened row.
+  U5b-E  "an unconfirmed transition requires container-owned semantics for later
+         acceptance or withdrawal" — uses "transition" again, and defers to
+         "whatever speculative semantics have ALREADY independently survived",
+         which is currently NOTHING. Same borrowing hazard as C, less acute.
+
+NOT A PRIORITY RULING. Which row opens next, and in what order, is the author's.
 ```
 
 ### U5b-D — SHARED ATTRIBUTION [UNOPENED]
