@@ -415,6 +415,23 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               retained log, reversal planner and current realizer
                               delete — which would unblock collection canonicality
                               WITHOUT repairing applyTurnEffects.
+                              E2 DONE: write-set precision IS snapshot-derivable
+                              (P1 reverts the touched position and leaves
+                              unrelated later truth; P2 correctly no-ops once a
+                              successor owns the position). SEMANTIC precision
+                              under speculation is NOT reachable by diffing
+                              adjacent roots — P3 (T1 pending A->B, T2 confirmed
+                              B->C, rollback T1, undo T2) lands on B, not A. The
+                              missing ingredient is NOT a storage representation
+                              but a DECISION: rollback must stop a dead turn's
+                              contribution being anyone's baseline. ~10 lines of
+                              history rewriting make the snapshot null pass P3 and
+                              redo. So precision no longer justifies effect-
+                              retained history; reversal-planner becomes a DELETE
+                              CANDIDATE pending E4/E3. CAVEAT: P3 is a MODEL of the
+                              speculation contract, not the shipped
+                              transactions/rollbackPendingTurnAt path — re-run
+                              against the real mechanism before acting.
                               ORDER: PRE-E2 (is undo storage separable from causal
                               reasoning?) -> E2 precision -> E4 at U5b -> E3, and
                               E3 only after asking whether scoped undo survives its

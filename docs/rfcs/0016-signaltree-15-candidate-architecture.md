@@ -4653,6 +4653,90 @@ IF E2 SUCCEEDS
 
 That keeps E2 from sentencing code E4 might independently earn.
 
+## E2 — PRECISION. Write-set precision is snapshot-derivable. Semantic precision needs a causal DECISION, not an effect log.
+
+Evidence: `e2-precision-null.spec.ts`, 5 rows. The null is built from zero and is
+**not** `restoreState(entry.state)` — it retains full roots and computes a
+targeted delta by diffing them.
+
+```ts
+writeSet(before, after)   paths where two retained roots differ; `before === after`
+                          short-circuits, so structural sharing keeps it cheap
+undoTurn(turn, current)   for each touched path, revert ONLY IF current truth
+                          still holds what the turn put there — otherwise a later
+                          turn owns that position
+```
+
+### The ladder
+
+```text
+P1  unrelated later truth
+    a=0 b=0 · T1: a->1 · later b->1 · undo T1
+    -> a === 0, b === 1                                   PASS
+
+P2  same position, later confirmed work
+    x=A · T1: A->B · T2: B->C · undo T1
+    -> patches === [] and x stays 'C'                     PASS (and it DEFINES
+       the contract: T1 no longer owns the position, so write-set precision
+       declines to touch it — produced by the rule, not special-cased)
+
+P3  speculative predecessor
+    x=A · T1 pending A->B · T2 confirmed B->C · rollback T1 · undo T2
+    REQUIRED: x === 'A'
+
+    naive adjacent-root diff        -> x === 'B'          FAIL
+    with rollback REWRITING history -> x === 'A'          PASS
+                                       redo returns 'C'   PASS
+```
+
+**P3 is the decisive row and the naive null fails it.** `T2.before` encodes `B`,
+a state contributed by a turn that no longer survives, so "diff adjacent retained
+roots" is itself a convenient approximation — the same error class as the nulls
+corrected earlier, in a new form.
+
+### What the missing ingredient actually is
+
+It is **not** a different storage representation. It is a *decision*: when T1 is
+rolled back, its contribution must stop being anyone's baseline. Implemented as
+~10 lines that rewrite successors' retained `before` for the paths T1 touched,
+the snapshot null passes P3 and redo.
+
+```text
+causal layer        decides WHAT historical meaning survives
+history repr.       stores enough truth to realise that decision
+physical layer      applies the resulting canonical values
+```
+
+So the layers separate cleanly, and **effect-level RETAINED STORAGE is not what
+P3 requires — history REWRITING on rollback is.** Causal reasoning can operate on
+a snapshot representation.
+
+### Disposition
+
+```text
+PRECISION as a justification for effect-retained confirmed history   REMOVED
+
+reversal-planner / effect-reversal machinery   DELETE CANDIDATES, no longer
+                                              justified by precision
+FINAL disposition                             still waits on E4 (U5b transaction
+                                              semantics) and E3 failing to give
+                                              them another function
+```
+
+### Scope, stated plainly
+
+**The P3 scenario is a MODEL of the speculation/rollback contract, not an
+exercise of the shipped mechanism.** It was constructed directly rather than
+driven through `transactions` / `rollbackPendingTurnAt`, so the real pending-turn
+semantics may differ from what was modelled — and if they do, P3 must be re-run
+against them before the disposition is acted on. What is established is that *a*
+snapshot-derived mechanism can satisfy the contract as stated, which is what E2
+was asked.
+
+Also unbenchmarked: the `writeSet` diff's cost at width. It short-circuits on
+shared references, so the expectation is O(changed), but that is an expectation,
+not a measurement.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
