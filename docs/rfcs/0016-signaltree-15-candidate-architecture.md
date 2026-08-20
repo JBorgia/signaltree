@@ -6964,6 +6964,121 @@ NOT AUTHORIZED BY THIS SECTION: any of the above. The packet is the instrument.
 Opening the row is a separate decision.
 ```
 
+## P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED. Transcribed here.
+
+**This section is TRANSCRIPTION, not authorship.** Every packet in this derivation
+says `GRANTED P1-P6 only`, and until now **P1-P6 had no verbatim statement anywhere
+in this repository or its history.** The text existed only inside the reviewer
+prompts of a single session. A premise set that lives only in an ephemeral
+transcript is not frozen — it is remembered, and it drifted. See the divergence
+below, which is not hypothetical.
+
+The wording below is quoted **exactly as issued**. Where variants were issued, all
+variants are given. **No variant is promoted to canonical here** — choosing between
+them is a semantic act with authority over every row in the family, and it is
+recorded below as a decision this ledger does not have the standing to make.
+
+### AS ISSUED to Reviewer A (function killer), U5b-A / "grouping row"
+
+```text
+P1. A state container holds canonical application state as addressable positions.
+    Reads observe positions; writes replace values at positions immutably.
+P2. A collection of members with dynamic keyed membership is required: members
+    addressable by key, key set enumerable, a key's absence is itself a
+    representable value.
+P3. An operation may be REVERTED: canonical state returns to a configuration it
+    previously held, at boundaries a user would recognize as discrete steps, and
+    can be advanced again afterwards.
+P4. Some positions may be excluded from the revertible record.
+P5. Several writes may be GROUPED so that they revert as one step. This is already
+    granted. The candidate must exceed it.
+P6. Reversion currently grants last-in-first-out stepping. Selective or arbitrary
+    earlier-step reversion is NOT GRANTED, and a row may not require it unless that
+    function independently earns itself.
+```
+
+### AS ISSUED to Reviewer B (absence architect), the SAME row
+
+```text
+P3. An operation may be REVERTED: canonical state returns to a configuration it
+    previously held, at recognizable step boundaries, and can be advanced again.
+P5. Several writes may be GROUPED so that they revert as one step. THIS IS ALREADY
+    GRANTED — your architecture has it.
+P6. Reversion grants last-in-first-out stepping. Selective or arbitrary earlier-step
+    reversion is NOT granted.
+```
+
+P1, P2 and P4 were issued identically. P5 and P6 differ only in role framing and in
+a restatement of the same grant — **not material.**
+
+### THE MATERIAL DIVERGENCE IS P3, AND IT IS THE WORST POSSIBLE CLAUSE
+
+```text
+A RECEIVED   "at boundaries A USER WOULD RECOGNIZE as discrete steps"
+B RECEIVED   "at RECOGNIZABLE step boundaries"
+```
+
+The second is **agentless.** The phrase carrying a perceiving entity — _a user
+would_ — is absent from B's packet. And U5b-A's terminal disposition relocates its
+undecidability to precisely this clause: _"what is P3's observational content?"_
+
+**Two entries in the U5b-A record are therefore false as written**, and are
+corrected in that section:
+
+```text
+1  "Both read the SAME stipulated text"
+     False at the decisive clause.
+
+2  the STRONGEST ALTERNATIVE, built on "neither 'configuration' nor 'a user would
+   recognize' is per-position"
+     Built on wording ONLY A RECEIVED. B's silence about a perceiving entity is
+     not evidence — B was never shown the phrase.
+```
+
+### An earlier variant, showing the drift is not a one-off
+
+The continuation-row packets issued **five** premises, and P2 lacked the
+absence-as-value clause that later packets carry:
+
+```text
+P2. A collection of members with dynamic keyed membership survives as a required
+    capability: members can be added and removed after construction, each member
+    is addressable by a key, and the set of keys can be enumerated.
+P5. Several writes may be grouped so they revert as one step.
+    [no P6 was issued at all]
+```
+
+So across this derivation the granted premise set **changed in count and in content
+between rows**, with no freeze commit and no drift record. Rows closed against
+`P1-P6` were closed against different premise sets.
+
+### THE RULE THIS INSTALLS
+
+```text
+A packet MUST QUOTE the frozen premises from this section verbatim.
+PARAPHRASING THEM INTO A PACKET IS FORBIDDEN — that is the channel the P3
+divergence travelled through, and paraphrase is how "frozen" quietly became
+"restated from memory, per reviewer, per row".
+
+Any change to premise TEXT is a FREEZE EVENT: it is committed here, dated, with
+the rows already closed against the previous text listed.
+```
+
+### RESERVED — not a defect this ledger may repair
+
+```text
+P3's wording is UNRESOLVED and the resolution is RESERVED TO THE HUMAN AUTHOR.
+
+Picking a variant decides whether the premise set contains a perceiving entity.
+That single choice bears on U5b-A's terminal disposition, on the observational
+content question its closure names, and on every future row in the family. An
+implementer choosing it — in either direction — would be supplying by fiat the
+premise the whole method exists to stop being supplied.
+
+NOT A WORK ORDER. Nothing may be pursued, measured, or benchmarked in order to
+settle it. It is recorded as reserved, and rows that do not depend on it proceed.
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
