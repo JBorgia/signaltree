@@ -4737,6 +4737,125 @@ Also unbenchmarked: the `writeSet` diff's cost at width. It short-circuits on
 shared references, so the expectation is O(changed), but that is an expectation,
 not a measurement.
 
+## E2 — DOWNGRADED. Its null is falsified twice, and the earned theorem is narrower.
+
+Evidence: `e2b-authorship.spec.ts`, 3 rows. Two independent holes in E2's own
+null, both reproduced against the algorithm unchanged.
+
+### HOLE 1 — ABA. `undoTurn` mistakes value equality for causal authorship.
+
+```ts
+if (get(current, p) === get(turn.after, p)) revert(p)   // "T1 still owns this"
+```
+
+That implication is false, and it negates the exact distinction this architecture
+exists to preserve: **value equality is not causal authorship.**
+
+```text
+x = A · T1 authors 'B' · later work: B -> C -> B   (outside the stack)
+
+current 'B' === T1.after 'B'
+  -> the rule emits 1 patch and reverts x to 'A'      MEASURED
+  -> surviving later truth DESTROYED
+
+CORRECT: T1 lost the position the moment later work wrote 'C'. Authorship did
+not return with the value. `undo T1` must be a NO-OP and x must remain 'B'.
+```
+
+The snapshot null **cannot** reach that conclusion, because the information it
+needs — *who wrote the current value* — is not in the values.
+
+### HOLE 2 — the P3 repair clobbers siblings on a nested path
+
+```text
+{ profile: { name: 'n1', age: 30 } } · T1 name->'n2' · T2 name->'n3' · rollback T1
+
+patch('profile.name','n1') === { profile: { name: 'n1' } }
+{ ...before, ...patch }  replaces the WHOLE `profile` branch
+
+MEASURED  t2.before.profile.age === undefined
+          Object.keys(t2.before.profile) === ['name']
+```
+
+The scalar P3 could not surface it. So *"~10 lines solve it"* was a **proof
+sketch**, not an equivalence implementation.
+
+### E2-A — the contract boundary, settled by the public surface
+
+```text
+undo · redo · canUndo · canRedo · getHistory · resetHistory · jumpTo(index)
+· getCurrentIndex
+```
+
+**No selective per-turn reversal exists**, and `jumpTo` is cursor navigation, not
+"reverse turn N while later turns survive." So P2's premise belongs to **E3**, and
+letting it define E2's contract would have earned E2 by assuming the next row's
+function. **P2 is removed from E2.**
+
+P1 and P3 stay, because both are LIFO: P1 undoes the top of the stack while a
+position changed *outside* the stack must survive; P3 undoes the newest confirmed
+turn. ABA also arises under LIFO, for the same reason as P1 — so the hole stands
+independently of the boundary.
+
+### `history rewriting` is NOT EARNED — it conflates two things
+
+The P3 repair mutated `T2.before` from `B` to `A`. But **`B` did exist.** T1
+produced it and T2 genuinely executed from it.
+
+```text
+FACTUAL HISTORY              what T2 actually observed        B -> C
+EFFECTIVE REVERSAL BASELINE  what remains once dead causal
+                             contributions are removed        A -> C
+```
+
+Those are different concepts and must not be forced into one representation. The
+sharpened layering:
+
+```text
+causal layer            decides which contributions survive
+history / evidence      preserves what actually occurred
+reversal representation derives the effective before/after for undo
+physical layer          applies the result
+```
+
+They may ultimately be one structure. That is **not granted**.
+
+### Corrected checkpoint
+
+```text
+snapshot-derived changed-path identification        PROVED-IN-MODEL
+naive adjacent-root reversal                        REFUTED (P3)
+causal decision independent of storage repr.        STRONGLY SUPPORTED
+snapshot-derived reversal representation            FEASIBLE — one scalar model
+value equality as an ownership test                 REFUTED (ABA)
+"write-set precision is snapshot-derivable"         WITHDRAWN
+history rewriting                                   NOT EARNED
+precision eliminates effect-retained history        NOT PROVED
+reversal-planner / effect-reversal                  still UNPROVEN — NOT
+                                                    upgraded to DELETE CANDIDATE
+```
+
+**The theorem actually earned, stated narrowly:**
+
+> Semantic precision requires causal information, and the P3 example provides no
+> evidence that the causal information must itself be stored as the confirmed
+> undo payload.
+
+That is meaningful. It is not *"confirmed undo can therefore use snapshots."*
+
+### OWED before E4
+
+```text
+E2-C   run the frozen P3 through the REAL path — transactions, pending turn,
+       confirmation, rollbackPendingTurnAt, confirmed undo — then ask whether a
+       reversal representation can consume the REAL causal decision without
+       retaining the current effect log. Include a NESTED-PATH variant so no
+       baseline correction can pass by clobbering siblings.
+```
+
+Only when E2-C is green does `PRECISION JUSTIFICATION -> REMOVED` become
+writable. **E4 does not start before that.**
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

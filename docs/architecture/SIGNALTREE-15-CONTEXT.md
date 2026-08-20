@@ -415,7 +415,37 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               retained log, reversal planner and current realizer
                               delete — which would unblock collection canonicality
                               WITHOUT repairing applyTurnEffects.
-                              E2 DONE: write-set precision IS snapshot-derivable
+                              E2 DOWNGRADED — its null is falsified TWICE.
+                              (a) ABA: `current === turn.after` infers authorship
+                              from VALUE EQUALITY. With later out-of-stack work
+                              B->C->B, the rule reverts to A and DESTROYS surviving
+                              truth; correct answer is a no-op leaving B. The
+                              snapshot null cannot reach it — who wrote the current
+                              value is not in the values.
+                              (b) the P3 repair spreads patch() over the retained
+                              root, so a nested path replaces its parent branch and
+                              siblings vanish (profile.age -> undefined).
+                              E2-A settled: the public surface has NO selective
+                              per-turn reversal (undo/redo/canUndo/canRedo/
+                              getHistory/resetHistory/jumpTo/getCurrentIndex), so
+                              P2 is E3's question and is REMOVED from E2. P1 and P3
+                              stay — both LIFO.
+                              HISTORY REWRITING is NOT EARNED: B DID exist, so
+                              factual history (T2 observed B->C) must be
+                              distinguished from effective reversal baseline
+                              (A->C). Layering sharpens to causal / evidence /
+                              reversal-representation / physical.
+                              EARNED THEOREM, narrow: semantic precision needs
+                              causal information, and P3 gives NO evidence that
+                              information must be stored as the confirmed undo
+                              payload. NOT "confirmed undo can use snapshots".
+                              reversal-planner NOT upgraded to delete candidate.
+                              OWED: E2-C — run frozen P3 through the REAL
+                              transactions/pending/confirm/rollbackPendingTurnAt
+                              path, with a NESTED-PATH variant. E4 does not start
+                              before E2-C is green.
+                              (superseded) E2 first pass claimed write-set
+                              precision IS snapshot-derivable
                               (P1 reverts the touched position and leaves
                               unrelated later truth; P2 correctly no-ops once a
                               successor owns the position). SEMANTIC precision

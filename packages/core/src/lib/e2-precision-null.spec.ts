@@ -107,31 +107,23 @@ describe('E2 / P1 — unrelated later truth', () => {
 });
 
 // ============================================================================
-// P2 — same position, later confirmed work. This DEFINES the contract rather
-// than letting the implementation answer it by accident.
+// P2 — DEFERRED TO E3. Its premise is not part of the confirmed-undo contract.
+//
+// P2 asked what `undo T1` does once T2 has overwritten the same position. But
+// the public surface is `undo` / `redo` / `canUndo` / `canRedo` / `getHistory` /
+// `resetHistory` / `jumpTo(index)` / `getCurrentIndex()` — there is NO selective
+// per-turn reversal, and `jumpTo` is cursor navigation, not "reverse turn N while
+// later turns survive."
+//
+// So "reverse an arbitrary earlier confirmed turn while later confirmed turns
+// survive" is E3's question (scoped/selective undo), whose survival is
+// deliberately deferred. Letting P2 define E2's contract would have earned E2 by
+// assuming the function of the next row.
+//
+// P1 and P3 remain in scope because both are LIFO: P1 undoes the top of the
+// stack while a position changed OUTSIDE the stack must survive, and P3 undoes
+// the newest confirmed turn.
 // ============================================================================
-describe('E2 / P2 — later confirmed work on the SAME position', () => {
-  it('undoing T1 is a NO-OP once T2 has overwritten the position', () => {
-    const tree = signalTree({ x: 'A' });
-    const history: Turn[] = [];
-
-    let before = tree() as Root;
-    tree.$.x.set('B');
-    history.push({ id: 'T1', before, after: tree() as Root });
-
-    before = tree() as Root;
-    tree.$.x.set('C');
-    history.push({ id: 'T2', before, after: tree() as Root });
-
-    const patches = undoTurn(history[0], tree() as Root);
-
-    // T1 put 'B' there; current truth is 'C'. T1 no longer owns the position, so
-    // write-set precision declines to touch it. That is a DEFENSIBLE semantic and
-    // the rule produces it without special-casing.
-    expect(patches).toEqual([]);
-    expect(tree.$.x()).toBe('C');
-  });
-});
 
 // ============================================================================
 // P3 — SPECULATIVE PREDECESSOR. The row that decides E2.
