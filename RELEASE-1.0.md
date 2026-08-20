@@ -1292,6 +1292,38 @@ not theorems. See the DO NOT INFER precedent.
 
 The checklist is not a substitute for Gate 2. It is what makes Gate 2's job small.
 
+### TWO RULES THIS ROW EARNED
+
+```text
+NO BORROWED RUNGS
+  If rung 1 (measured behaviour) is NOT ENTERED, rung 2 (alternative model
+  comparison) is NOT ENTERED either — an analytical equivalence witness cannot
+  occupy a rung defined by comparison against measurement.
+  An analytical witness is PRESENT but OUTSIDE the ladder.
+  "Rung N at best, on borrowed footing" is FORBIDDEN phrasing: it is an escape
+  hatch around the no-skipping rule.
+
+UNDERDETERMINED IS A TERMINAL STATE, NOT A WORK ORDER
+  When the premises do not decide a candidate:
+    -> CLOSE the row
+    -> record a PARKED REOPENING CONDITION
+    -> STOP
+
+  FORBIDDEN: going on to establish the missing premises so the candidate becomes
+  testable. Each missing premise is itself a CANDIDATE FACT, and some are
+  candidate FUNCTIONS. Adopting one because it makes another row testable is
+  replacement-after-deletion in a new form.
+
+  MISSING FACTS ARE NOT AUTOMATICALLY MISSING REQUIREMENTS. Premise silence may
+  be correct, because the function may not independently arise.
+
+  A falsifier produced by a closed row is a REOPENING CONDITION, never a queue.
+
+  AND: do not benchmark a mechanism with no architectural standing. Measuring it
+  lends it gravity through sunk effort. A cost becomes owed only when a SURVIVING
+  function forces a decision between two representations.
+```
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no

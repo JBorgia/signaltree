@@ -5979,20 +5979,22 @@ iii  the accept/decline decision ASYNCHRONOUS
 All three at once. It was never instantiated.
 ```
 
-### LADDER POSITION — rung 1 is ABSENT
+### LADDER POSITION — NO RUNG ENTERED
 
 ```text
-NO MEASUREMENT OF ANY KIND EXISTS IN THIS ROW.
+Rung 1  MEASURED CURRENT BEHAVIOUR        NOT ENTERED
+Rung 2  ALTERNATIVE MODEL COMPARISON      NOT ENTERED
+Rungs 3-5                                 UNTOUCHED
 
-Both reviewers marked their own MEASURABLE items unmeasured. The alternative model
-was argued analytically, not against a measured baseline.
-
-  rung reached      2 at best, on borrowed footing
-  rungs advanced    ZERO on the candidate
-  the result        a FAILURE TO REACH rung 3 (function required)
+ANALYTICAL ABSENCE WITNESS   PRESENT — but OUTSIDE the evidence ladder entirely
+CANDIDATE ADVANCEMENT        ZERO
 ```
 
-Writing this up as "rung 2 cleared" would skip rung 1. Rungs 3-5 are untouched.
+**"Rung 2 at best, on borrowed footing" is WITHDRAWN.** If rung 1 is absent then
+rung 2 has not been reached: an analytical equivalence witness cannot occupy the
+"alternative model reproduces MEASURED behaviour" rung when there is no measured
+behaviour to reproduce. Allowing a borrowed rung would make it an escape hatch
+around the no-skipping rule installed one commit earlier.
 
 ### CONVERGENCE IS NOT CORROBORATION
 
@@ -6020,18 +6022,50 @@ requirement is real: torn observation is the candidate's strongest foothold, and
 generates *"no observer sees a partial group"*.
 
 ```text
-ON THIS READING the candidate is UNDER-DETERMINED, not unearned. What is genuinely
-unproven is the MECHANISM form of C1, plus the C2/C3/C4 additions.
-
-THE ENTITLED NEXT MOVE — a RE-RUN REQUEST, not a survival claim:
-  1  fix the observation model (may a read land between two writes of a group?)
-  2  fix whether writers are independently authored and container-only
-  3  resolve the P6 / async-speculation tension
-  4  re-run with a NAMED concrete workflow satisfying all three falsifier
-     conditions, plus a measurement of overlay-derivation cost
-
-Until then, no part of C1-C4 may be written as established.
+C1   NOT ESTABLISHED · NOT REFUTED · UNDERDETERMINED BY CURRENT PREMISES
 ```
+
+**MISSING FACTS ARE NOT AUTOMATICALLY MISSING REQUIREMENTS.** It may be exactly
+correct for the premises to remain silent, because C1's function does not
+independently arise.
+
+So the phrase *"the row failed the premise set"* is WITHDRAWN — it reads as though
+the frozen premises are deficient and need expanding. Nothing has shown that. The
+accurate statement is **the current premises do not determine the candidate.**
+
+And *"the entitled next move is a re-run request"* is WITHDRAWN as too permissive.
+Going and fixing the missing premises so C1 becomes testable would MANUFACTURE
+them. Each is itself a candidate fact, and two are potentially major architectural
+functions in their own right:
+
+```text
+"reads may interleave with a multi-write operation"
+    -> may be true, false, framework-owned, or irrelevant
+"the container must support independently authored writers that cannot be
+ restructured"
+    -> a candidate FUNCTION. It cannot be adopted because adopting it makes C1
+       testable.
+```
+
+**CORRECT TRANSITION — close, with a condition, not a queue:**
+
+```text
+UNDO-E4-G   UNDERDETERMINED under current premises  ->  CLOSE THE ROW
+
+PARKED REOPENING CONDITION
+  If an independently derived workflow later establishes any of
+    - interleaved observation
+    - container-only independently authored writers
+    - the three-part captive-read-path conjunction
+  then C1 reopens FROM ZERO.
+
+The three-part falsifier is a REOPENING CONDITION, not a work queue.
+```
+
+**And the overlay benchmark is NOT OWED.** Measuring the cost of an architecture
+that has earned no standing would give the absence witness architectural gravity
+purely through sunk effort. It becomes owed only if a later surviving function
+produces an actual decision between two representations.
 
 ### OVERCLAIMS EXPLICITLY FORBIDDEN on this row
 
@@ -6075,9 +6109,13 @@ GATE 2  first run — and it caught, from raw output alone:
 ```
 
 Two of those had already survived an external review of the corrected write-up.
-**A gate reading raw evidence without the synthesis sees things a reader of the
-synthesis cannot.** That is the argument for Gate 2, and it is now measured rather
-than asserted.
+A gate reading raw evidence without the synthesis saw things a reader of the
+synthesis did not.
+
+**Stated at the right strength: Gate 2 DEMONSTRATED VALUE ON ITS FIRST
+APPLICATION.** One successful comparison justifies keeping it, given the low
+downside. It does NOT establish a general measured error-reduction rate — that
+would be a claim from a single trial.
 
 ## ROW NAMING KEY — three distinct E-series collide. Always qualify.
 

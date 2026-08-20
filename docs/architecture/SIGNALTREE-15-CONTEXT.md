@@ -556,6 +556,38 @@ not theorems. See the DO NOT INFER precedent.
 
 The checklist is not a substitute for Gate 2. It is what makes Gate 2's job small.
 
+### TWO RULES THIS ROW EARNED
+
+```text
+NO BORROWED RUNGS
+  If rung 1 (measured behaviour) is NOT ENTERED, rung 2 (alternative model
+  comparison) is NOT ENTERED either — an analytical equivalence witness cannot
+  occupy a rung defined by comparison against measurement.
+  An analytical witness is PRESENT but OUTSIDE the ladder.
+  "Rung N at best, on borrowed footing" is FORBIDDEN phrasing: it is an escape
+  hatch around the no-skipping rule.
+
+UNDERDETERMINED IS A TERMINAL STATE, NOT A WORK ORDER
+  When the premises do not decide a candidate:
+    -> CLOSE the row
+    -> record a PARKED REOPENING CONDITION
+    -> STOP
+
+  FORBIDDEN: going on to establish the missing premises so the candidate becomes
+  testable. Each missing premise is itself a CANDIDATE FACT, and some are
+  candidate FUNCTIONS. Adopting one because it makes another row testable is
+  replacement-after-deletion in a new form.
+
+  MISSING FACTS ARE NOT AUTOMATICALLY MISSING REQUIREMENTS. Premise silence may
+  be correct, because the function may not independently arise.
+
+  A falsifier produced by a closed row is a REOPENING CONDITION, never a queue.
+
+  AND: do not benchmark a mechanism with no architectural standing. Measuring it
+  lends it gravity through sunk effort. A cost becomes owed only when a SURVIVING
+  function forces a decision between two representations.
+```
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
@@ -861,22 +893,41 @@ FALSIFIER (i) consumer reachable only via the canonical read path (ii) speculati
 value required AT the canonical address (iii) async decision — all three at once.
 SPECIFIED, NEVER EXERCISED.
 
-LADDER  rung 1 is ABSENT — NO measurement exists in this row. Rung 2 at best, on
-        borrowed footing. ZERO rungs advanced. The result is a FAILURE TO REACH
-        rung 3.
+LADDER  Rung 1 MEASURED BEHAVIOUR      NOT ENTERED
+        Rung 2 MODEL COMPARISON        NOT ENTERED   (no measured behaviour to
+                                                      compare against)
+        analytical absence witness     PRESENT, but OUTSIDE the ladder
+        candidate advancement          ZERO
+        "rung 2 on borrowed footing" WITHDRAWN — it would be an escape hatch
+        around the no-skipping rule.
 ```
 
 **CONVERGENCE IS NOT CORROBORATION.** A and B had the SAME frozen premises, so
 their agreement is premise-correlated, not independent empirical support. Opposite
 JOBS is not opposite INFORMATION.
 
-**ALTERNATIVE INTERPRETATION, possibly right:** the row failed the PREMISE SET, not
-the candidate. Every rebuttal depends on the composer being able to restructure the
-writers, which no premise grants — so the candidate is UNDER-DETERMINED rather than
-unearned. Entitled next move is a RE-RUN REQUEST: fix the observation model, fix
-whether writers are independently authored, resolve the P6 tension, then re-run with
-a named workflow meeting all three falsifier conditions plus an overlay-cost
-measurement.
+**C1 is NOT ESTABLISHED, NOT REFUTED, UNDERDETERMINED BY CURRENT PREMISES.** Every
+rebuttal depends on the composer being able to restructure the writers, which no
+premise grants.
+
+**MISSING FACTS ARE NOT AUTOMATICALLY MISSING REQUIREMENTS.** "The row failed the
+premise set" is WITHDRAWN — it implies the premises are deficient; nothing shows
+that, and silence may be correct because the function does not independently arise.
+
+"The entitled next move is a re-run request" is WITHDRAWN as too permissive.
+Fixing the missing premises to make C1 testable would MANUFACTURE them — and
+"reads may interleave" and "the container must support independently authored
+writers" are candidate FACTS, the second potentially a major function.
+
+```text
+CORRECT TRANSITION   close the row, with a PARKED REOPENING CONDITION:
+  if an independently derived workflow later establishes interleaved observation,
+  container-only independently authored writers, or the three-part
+  captive-read-path conjunction, C1 reopens FROM ZERO.
+The falsifier is a REOPENING CONDITION, not a work queue.
+OVERLAY BENCHMARK    NOT OWED — measuring an architecture with no standing gives
+                     the witness gravity through sunk effort.
+```
 
 **FORBIDDEN on this row:** "refuted/impossible" · "observation model settled" · "no
 workflow needs C1" · "grouping is ONLY reversal granularity" · "P4 handles
@@ -887,9 +938,11 @@ cancellation" · "nesting adds nothing" · "the falsifier was tested" ·
 persistence consequences, authorship and pending rollback were never in the
 question.
 
-**Gate 2 paid for itself on first use**, catching the absent rung 1, the
-convergence overclaim, the P6 mis-labelling, and the falsifier readable as tested —
-two of which had already survived an external review of the corrected write-up.
+**Gate 2 DEMONSTRATED VALUE ON ITS FIRST APPLICATION**, catching the absent rung 1,
+the convergence overclaim, the P6 mis-labelling, and the falsifier readable as
+tested — two of which had already survived an external review of the corrected
+write-up. That justifies keeping it given the low downside; it does NOT establish a
+general error-reduction rate from one trial.
 
 ## Frozen invariants — do not re-derive
 
