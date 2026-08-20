@@ -868,82 +868,92 @@ identical on either base.
 - verify the published tarball after publish (npm pack + diff against the tag)
 ```
 
-## MANDATORY GATE — NULL PRE-REGISTRATION
-
-**The rule this whole gate exists to enforce:**
+## RULE 0p — NULL ADMISSIBILITY (same level as the zero-legacy rule)
 
 > **A null must falsify an INDEPENDENTLY EARNED contract. It may not define that
 > contract by the distinctions it chooses to preserve.**
 
+This is not test guidance. It determines whether an experiment is
+**architecturally admissible at all**. An inadmissible experiment produces
+evidence that cannot be used, however green it runs.
+
+### The ordering this rule imposes
+
+```text
+candidate function
+      v
+independent contract
+      v
+OPPOSITE contract
+      v
+PREMISE ATTACK
+      v
+ONLY THEN null construction
+      v
+measurement
+      v
+PREMISE ATTACK on the interpretation
+      v
+architectural conclusion
+```
+
+The audit stops being *"build a null and see whether it works"* and becomes
+*"first prove there is something legitimate for a null to falsify."* That is the
+guard whose absence explains nearly every error below.
+
 ### Why this exists
 
 Every significant error in the frontier/collections derivations had one shape: the
-obvious incumbent *mechanism* was removed, and one of its semantic *assumptions*
-stayed embedded in the null. The null then came back green — because it was built
-to answer a question whose answer it already partly encoded.
+incumbent *mechanism* was removed while one of its semantic *assumptions* stayed
+embedded in the null. The null came back green because it was built to answer a
+question whose answer it already partly encoded.
 
 ```text
-P3          assumed undo must produce A             -> invented contract
-tap         sampled after every mutation            -> null got STRONGER
-                                                       observation than any real
-                                                       consumer
-stored      used TestBed.tick()                     -> null got WEAKER durability
-                                                       timing than the incumbent
-rekey       remove+add                              -> null answered a weaker
-                                                       identity question
-E2          `current === after`                     -> value equality silently
-                                                       substituted for authorship
-E2-S        "held reference must revive"            -> incumbent handle semantics
-                                                       silently became requirement
-E2-S0       retargeting called "wrong-row"          -> reference semantics silently
-                                                       became requirement
-E2-S00      object-reference compare                -> identity reappeared INSIDE
-                                                       the identity-free null
-computed    framework realization                   -> leaked into kernel evidence
+P3          assumed undo must produce A            -> invented contract
+tap         sampled after every mutation           -> STRONGER observation than any
+                                                      real consumer
+stored      used TestBed.tick()                    -> WEAKER durability timing than
+                                                      the incumbent it judged
+rekey       remove+add                             -> answered a weaker identity
+                                                      question
+E2          `current === after`                    -> value equality substituted
+                                                      for authorship
+E2-S        "held reference must revive"           -> incumbent handle semantics
+                                                      became the requirement
+E2-S0       retargeting called "wrong-row"         -> reference semantics became
+                                                      the requirement
+E2-S00      object-reference compare               -> identity reappeared INSIDE
+                                                      the identity-free null
+computed    framework realization                  -> leaked into kernel evidence
 ```
 
 Executable falsifiers reliably catch *"the implementation doesn't do what we
-thought."* They cannot catch *"we never established that it should do what the test
-asserts."* Only an adversarial pass on the **premise** catches that, and it was
-happening one phase too late — after the conclusion was already committed and
-available for the next row to inherit.
+thought."* They cannot catch *"we never established it should do what the test
+asserts."*
 
-### The gate — complete BEFORE any null is implemented
+## PRE-REGISTRATION — complete BEFORE any null is implemented
 
 ```text
-FUNCTION
-  Stated without incumbent nouns.
-
-INDEPENDENT CONTRACT
-  What must be POSSIBLE? Not what currently happens.
-
-OPPOSITE CONTRACT            <-- the most important field
-  The strongest plausible ALTERNATIVE contract, stated fairly.
-  Why is it invalid?
-  If there is no answer, STOP. The function is not yet derived.
-
-HIDDEN DISTINCTIONS
-  Does the claim depend on any of:
-    value vs identity            history vs current state
-    address vs identity          author vs value
-    lifetime vs key              timing
-    observation frequency        framework behaviour
-    mutable vs immutable representation
-
-NULL PERMISSIONS
-  What information may the null use?
-
-FORBIDDEN INFORMATION
-  What would smuggle the incumbent back in?
-
-FAILURE CONDITION
-  What exact result kills the null?
-
-SURVIVAL CONDITION
-  What exact result earns the FUNCTION — not merely reproduces current behaviour?
+FUNCTION                 stated without incumbent nouns
+INDEPENDENT CONTRACT     what must be POSSIBLE — not what currently happens
+OPPOSITE CONTRACT        <-- LOAD-BEARING
+                         the strongest plausible alternative, stated FAIRLY,
+                         and why it is invalid.
+                         NO ANSWER => STOP. Nothing legitimate to falsify.
+HIDDEN DISTINCTIONS      does the claim depend on any of:
+                           value vs identity        history vs current state
+                           address vs identity      author vs value
+                           lifetime vs key          timing
+                           observation frequency    framework behaviour
+                           mutable vs immutable representation
+NULL PERMISSIONS         what information may the null use?
+FORBIDDEN INFORMATION    what would smuggle the incumbent back in?
+FAILURE CONDITION        what exact result kills the null?
+SURVIVAL CONDITION       what exact result earns the FUNCTION — not merely
+                         reproduces current behaviour?
 ```
 
-**Worked example of the field that matters.** For E2-S00:
+**Worked example.** For E2-S00:
 
 ```text
 PROPOSED   a retained lookup must not retarget after key reuse
@@ -951,12 +961,81 @@ OPPOSITE   a lookup IS an address, and therefore SHOULD retarget
 WHY IS THE OPPOSITE IMPOSSIBLE?   ... no answer available
 ```
 
-That question, asked before implementation, would have stopped the row.
+No answer, so there was nothing to falsify. Implementation should never have
+started.
 
-### The standing hostile matrix
+## NEUTRAL LANGUAGE — mandatory until the contract earns itself
 
-For anything touching state, identity or history, every one of these must be
-either exercised or explicitly recorded as not-cleared:
+Much of the contamination entered through **names, not code**. Each of these
+labelled a result before the contract had earned the classification.
+
+```text
+FORBIDDEN before the function survives
+  wrong · correct · original subject · alias · owner · stale
+  should preserve · must survive · destroyed · surviving contribution
+
+PREFER
+  the current occupant changed
+  a previously acquired observation now returns X
+  value before / value after
+  the key was reused
+  the implementation distinguishes A from B
+```
+
+After the contract survives, semantic language becomes legitimate.
+
+## COMMIT DISCIPLINE
+
+```text
+MEASUREMENTS      may commit freely
+INTERPRETATIONS   may NOT commit until the premise attack closes
+VOCABULARY        measurement commits must use OBSERVATION-ONLY language
+```
+
+Without the third clause, *"measurements commit freely"* recreates the exact
+contamination channel that `wrong-row read` travelled through. A conclusion one
+level too strong survives long enough for the next derivation to inherit it, and
+the corrective commit arrives after the damage. The cost of a high commit rate is
+not the commits — it is the vocabulary they publish.
+
+## COMMAND VERDICT GATE
+
+```text
+If a required gate returns NON-ZERO:
+
+  architectural conclusion commit = FORBIDDEN
+
+until exactly one is true:
+
+  1  the defect is reproduced and fixed
+  2  the failure is classified as a test/infrastructure fault, WITH EVIDENCE
+  3  a rerun succeeds AND the original failure is explicitly recorded as
+     UNRESOLVED / NON-REPRODUCIBLE
+
+A later green result does NOT turn an earlier red verdict green.
+```
+
+### COMMAND VERDICT GATE — first recorded application (against this session)
+
+```text
+COMMAND   npx vitest run --root packages/core
+RESULT    exit=1
+ACTION    an architectural conclusion was committed anyway  (74261e62)
+RERUN     exit=0 — 174 files passed | 2 skipped, 1776 tests passed
+```
+
+```text
+DISPOSITION 3
+  the original failure is recorded as UNRESOLVED / NON-REPRODUCIBLE
+```
+
+The failure was **unresolved at the decision boundary**. It is NOT recorded as
+"transient therefore harmless": no defect was reproduced, no evidence classified it
+as an infrastructure fault, and the later green run does not retroactively make the
+earlier decision valid. This is the violation that motivated the gate, kept as its
+first entry.
+
+## THE HOSTILE MATRIX IS A CHALLENGE MATRIX, NOT A CONTRACT GENERATOR
 
 ```text
 SAME VALUE / DIFFERENT CAUSE          ABA
@@ -970,54 +1049,212 @@ FRAMEWORK-FREE                         no framework realization in a semantic te
 INCUMBENT-FREE                         no entityMap / SubjectId / effect vocabulary
 ```
 
-### Evidence vocabulary — FIVE steps, and no finding may skip more than one
+Per case, exactly one disposition:
+
+```text
+APPLICABLE      execute it
+NOT APPLICABLE  state which independently earned contract makes it irrelevant
+NOT CLEARED     leave open
+FORBIDDEN       adding the property to the contract merely because the matrix
+                contains it
+```
+
+Otherwise the testing framework manufactures semantics — solving the old problem
+by requiring every candidate to satisfy nine properties it never promised.
+
+## EVIDENCE LADDER — and a single experiment advances it by ONE STEP ONLY
 
 ```text
 1  MEASURED CURRENT BEHAVIOUR
-2  A MODEL CAN REPRODUCE THE BEHAVIOUR
+        v   requires observation only
+2  AN ALTERNATIVE MODEL REPRODUCES / DIFFERS
+        v   requires a PREMISE ATTACK
 3  THE FUNCTION IS REQUIRED
+        v   requires a representation-null comparison
 4  A REPRESENTATION PROPERTY IS REQUIRED
+        v   requires competing realizations
 5  A PARTICULAR CARRIER SURVIVES
 ```
 
-*"A held reference revives after undo"* earns **step 1 only**. Reaching step 3
-needs its own derivation; step 4 another; step 5 another. Two or three of these
-transitions were repeatedly skipped in one move.
+*"A held reference revives after undo"* earns **step 1**. Nothing more. The
+one-step limit is stronger than "no finding skips more than one step", because a
+sufficiently seductive test will otherwise produce
+`measurement -> therefore the function survives -> therefore SubjectId` inside a
+single interpretation.
 
-### Three kinds of neutrality — three separate guards
-
-```text
-framework-neutral   =/=   legacy-neutral   =/=   assumption-neutral
-```
-
-A framework-free test can still import unearned assumptions — that members are
-immutable, that key reuse matters, that deferred work should detect replacement,
-that a lookup is address-based. Each needs its own attack.
-
-### Pace — claim latency LONGER, experiment latency SHORTER
+## THREE PASSES, FORMALLY SEPARATED
 
 ```text
-experiment freely
-attack the premise aggressively
-commit an ARCHITECTURAL CONCLUSION only after a hostile pass on the premise
+AUTHOR PASS          pre-register · implement · measure · state a NARROW finding
+PREMISE ATTACK       attack the FUNCTION and the OPPOSITE CONTRACT, before any
+                     architectural conclusion.
+                     FORBIDDEN from discussing how to implement the candidate.
+                     Its only question: WHY DOES THIS FUNCTION NEED TO EXIST?
+REPRESENTATION ATTACK   only after the function survives
 ```
 
-Measurements and specs may be committed as they land. **Conclusions may not**,
-because a conclusion one level too strong survives long enough for the next
-derivation to inherit it, and the corrective commit arrives after the damage. That
-is the actual cost of a high commit rate here: not the commits, the vocabulary
-they publish.
+The premise attack's implementation ban is what preserves Rule 0j's subtraction
+discipline: a reviewer who starts designing the mechanism has already granted it.
 
-### Structural note on reviewer independence
+**Structural limit, recorded plainly.** One agent deriving the requirement,
+designing the null, implementing it, debugging it, interpreting it and writing the
+verdict is prone to confirmation bias whatever the discipline. Once the words
+*"wrong-row read"* are written, the classification precedes the contract. **A
+checklist cannot make an author independent of their own framing** — the controller
+can only make the omission visible. An empty OPPOSITE CONTRACT field is therefore
+a stop condition, not a note.
 
-One agent deriving the requirement, designing the null, implementing it, debugging
-it, interpreting it and writing the verdict is structurally prone to confirmation
-bias regardless of discipline. Once the words *"wrong-row read"* or *"restore the
-original subject"* are written, the classification has already been made before
-the contract was established. **The premise attack must come from outside the
-agent that authored the null.** Where that is unavailable, the pre-registration
-above is the substitute — and its OPPOSITE CONTRACT field is the part that does
-the work.
+
+## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
+
+> **No architectural null may run without an independent PREMISE ATTACK, and no
+> architectural conclusion may land without an independent INTERPRETATION ATTACK.**
+
+This is part of the evidence standard, not process overhead. The standing
+"no subagents unless asked" restriction is **lifted for read-only antagonistic
+architectural review** and for nothing else.
+
+```text
+candidate row
+      v
+PREMISE REVIEWER  (Reviewer A — FUNCTION KILLER)
+      v
+BLOCKER? -- yes --> resolve / mark UNPROVEN / abandon the row
+      v no
+null pre-registration
+      v
+experiment
+      v
+RAW ARTIFACT  (command · exit status · output)
+      v
+RESULT REVIEWER  (Reviewer B — NULL BREAKER)
+      v
+BLOCKER? -- yes --> resolve BEFORE any conclusion
+      v no
+architectural conclusion
+```
+
+### GATE 1 — premise review. The reviewer MAY REJECT THE FUNCTION ITSELF.
+
+Handing over "the function statement and the proposed contract" already smuggles
+the first premise in. The packet carries frozen premises plus a clearly marked
+*candidate*:
+
+```text
+ZERO STATE
+  known surviving invariants: ...
+
+CANDIDATE FUNCTION — UNPROVEN
+  ...
+
+PROPOSED CONTRACT — UNPROVEN
+  ...
+
+Attack in order:
+  1  Why must this FUNCTION exist at all?
+  2  What becomes impossible if it does not?
+  3  Can surviving primitives already provide the capability?
+  4  State the strongest coherent OPPOSITE CONTRACT.
+  5  What assumption is embedded in the proposed wording?
+  6  What information would a null be FORBIDDEN to use?
+  7  Is there actually an earned contract available to falsify?
+
+If function survival is not established:
+  STOP — NULL CONSTRUCTION FORBIDDEN.
+```
+
+### GATE 2 — interpretation review. Raw evidence only, never the conclusion.
+
+```text
+RAW MEASUREMENT      command · exit status · output/artifact
+PREREGISTERED CLAIM  ...
+
+Ask:
+  1  What was actually measured?
+  2  Did the null use information FORBIDDEN by pre-registration?
+  3  Did framework / current-implementation / legacy semantics leak in?
+  4  Does the result advance: current behaviour · model equivalence ·
+     function survival · representation necessity · current-representation
+     survival?
+  5  Is the proposed conclusion more than ONE evidence step beyond the result?
+  6  State the strongest ALTERNATIVE interpretation.
+```
+
+### The reviewer gets LESS context, not more
+
+Contextual independence is achievable even within one model family — by
+withholding. **Excluded from a premise packet:**
+
+```text
+the expected outcome            the author's rationale
+the proposed replacement design v14 mechanisms
+current representation details, unless genuinely necessary
+loaded vocabulary — "wrong", "alias", "restore original", "stale", "owner"
+```
+
+Only frozen architecture and the candidate question go in. A premise packet
+contaminated with the author's reasoning inherits the author's premise, which
+defeats the gate.
+
+### Two roles, deliberately different failure modes
+
+```text
+REVIEWER A — FUNCTION KILLER
+  Default disposition: NOTHING SURVIVES.
+  Job: show the candidate function is unnecessary.
+
+REVIEWER B — NULL BREAKER
+  Assume the function survived.
+  Job: show the null is weaker than, or different from, the contract — or that it
+  smuggles information in.
+```
+
+Merging these into "review this" makes it easy for both to be missed. **Neither
+reviewer proposes the replacement architecture** — that is Rule 0j: kill first,
+derive later. A reviewer who starts designing the mechanism has already granted it.
+
+### A BLOCKER CANNOT BE DISMISSED BY DISAGREEMENT
+
+A `BLOCKS-CLOSE` finding closes only through the existing classification, never by
+the author explaining why they disagree:
+
+```text
+MEASURABLE     one experiment settles it
+DERIVABLE      attack the premise / the inference
+POLICY         explicit arbitration
+FROZEN         a deterministic falsifier is required
+OUT-OF-ROW     PARK
+```
+
+### Row wording must not arrive pre-shaped
+
+*"Does `structural` need more than canonical truth?"* is already
+representation-shaped — it names the incumbent's field. Start one level up:
+
+```text
+What independently surviving function, if any, requires information that cannot
+be reconstructed from canonical truth at confirmed-reversal time?
+```
+
+Then let the reviewer attack whether even *that* function exists. Only after
+survival: *what information property is required?* Only then: *what representation
+carries it?* This keeps `structural`, `SubjectId`, effects, snapshots and
+generation tokens out of the question until they are earned.
+
+### Why the misses happened — recorded, because it is the finding
+
+This session ran with:
+
+```text
+one reasoner + executable tests + RETROSPECTIVE external review
+```
+
+Executable tests caught implementation flaws well. External review caught premise
+flaws well. What was missing was putting the second mechanism **before the commit
+boundary**. An adversarial-review harness already existed in this repo
+(`tools/cross-review/`, and the read-only `release-reviewer` subagent) and went
+unused while increasingly elaborate self-checklists were written instead. **That
+should have been surfaced far earlier rather than simulated.**
 
 ## Required Validation
 
