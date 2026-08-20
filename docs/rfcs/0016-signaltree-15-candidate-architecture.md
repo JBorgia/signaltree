@@ -4352,6 +4352,12 @@ This is why option 3 was the right call. Had the regression been "fixed" first,
 the fix would have been ~5,000 lines of third-bucket code repaired to reach parity
 with an 885-line predecessor on the axis that motivated replacing it.
 
+> ⚠️ **THE BLOCK BELOW IS SUPERSEDED — read C1 in the corrections section that
+> follows.** "REVERT to the snapshot engine" was WITHDRAWN as a Rule 0l violation:
+> legacy gets no automatic restoration rights. The corrected disposition is DELETE
+> what earns nothing, then DERIVE the minimum from zero. Retained verbatim as the
+> record of what was claimed.
+
 ```text
 NEXT   derive E2 / E3 / E4 against the snapshot null. If none earns, the
        disposition is REVERT to the snapshot engine, not repair the frontier one —
