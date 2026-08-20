@@ -5150,6 +5150,106 @@ STILL INDEPENDENT        E4 (transaction semantics), E3 (scoped undo, only if it
                          survives its own null)
 ```
 
+## E2-S — DOWNGRADED. The experiment embedded the contract it was testing.
+
+E2-S concluded *"subject-lifetime identity has a POSITIVE, INDEPENDENT
+justification."* **Withdrawn.** That jumps from
+
+```text
+CURRENT BEHAVIOUR distinguishes subject generations
+```
+
+to
+
+```text
+SignalTree 15 NEEDS subject-lifetime identity
+```
+
+which is the survival jump this audit exists to prevent. Worse, the falsifier
+*assumed* the contract:
+
+```ts
+const held = rows.byId('a');
+remove('a');
+undo();
+held must refer to the restored ORIGINAL subject   // <- WHY MUST IT?
+```
+
+Nothing established that a handle obtained before removal must survive removal at
+all. Same class as the invented P3 theorem: the contract was written into the test.
+
+**And the subject-free null bakes in its own handle contract** — cache by key, so
+the same `computed` survives and key reuse aliases. Refuting it refutes *that*
+null for *current entityMap reference semantics*. It does not show canonical
+before/after truth is insufficient for an independently required function, because
+retained member-reference identity has not been shown to be one.
+
+**Rule 0n applies to six-day-old code.** Current-frontier continuity is exactly as
+non-semantic as v14 continuity. Observing `SubjectId` behaviour does not earn
+`SubjectId`.
+
+### Corrected record
+
+```text
+CURRENT SUBJECT-GENERATION DISTINCTION          MEASURED
+VALUE-ONLY KEY-CACHED NULL                      REFUTED for reproducing it
+SUBJECT-LIFETIME IDENTITY AS A V15 REQUIREMENT  UNPROVEN
+```
+
+### Also retracted: coverage-versus-participant
+
+The corrections entry said *"coverage-versus-participant is a distinction a value
+diff cannot express."* Representationally true; **semantically unproven.** The
+`subjectPositions` docblock describes how the incumbent causal model works. Before
+it carries survival weight:
+
+```text
+What breaks if every piece of state needed for reconstruction is simply part of
+the retained reversal representation?
+Why must SignalTree distinguish a causal PARTICIPANT from a reconstruction
+PAYLOAD PROVIDER?
+```
+
+There may be a good answer about authorship and undo eligibility. The docblock
+cannot supply it.
+
+### The order that must come first
+
+Not *"does identity live in the effect log or beside snapshots"* — that already
+assumes identity survived.
+
+```text
+FUNCTION       must a member have a semantic lifetime distinct from its key/value?
+     |
+   if YES
+     v
+MINIMUM        what identity PROPERTY is required?
+     |
+     v
+CARRIER        what representation should hold it?
+```
+
+Candidate carriers, none earned by observation: `SubjectId`, a per-key generation
+counter, an opaque membership token, a handle-bound lifetime token, compiled slot
+plus incarnation.
+
+### E2-S0 — the derivation that must run
+
+```text
+CONTRACT A   handles are MEMBERSHIP-LIFETIME references
+             old handle can revive on undo; key reuse must never alias
+
+CONTRACT B   handles are OBSERVATIONS OF CURRENT KEYED MEMBERSHIP
+             removal permanently invalidates; undo requires reacquisition
+
+QUESTION     what user or kernel capability exists under A that becomes
+             IMPOSSIBLE under B?
+```
+
+If A independently wins, E2-S becomes excellent supporting evidence. If B
+suffices, the revival behaviour is incumbent semantics and the
+`SubjectId`/reclamation structure may still disappear.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

@@ -496,13 +496,34 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                              subject-free null (array leaf + memoised byId) DOES —
                              a reference held to the second subject reports the
                              first subject's 111.
-                             EARNS: subject-lifetime identity now has a POSITIVE,
-                             INDEPENDENT justification; E-REKEY withdrew its only
-                             previous one, this supplies a different one.
-                             DOES NOT earn: that the EFFECT LOG is the right carrier
-                             — only that SOME identity beyond values is required,
-                             which could accompany a snapshot representation. Does
-                             NOT revive rekey.
+                             DOWNGRADED — the experiment EMBEDDED its contract.
+                             "held must refer to the restored original subject" was
+                             an ASSUMPTION, never established; nothing says a handle
+                             obtained before removal must survive removal at all.
+                             Same class as the invented P3 theorem. The subject-free
+                             null also bakes in a key-cached handle contract, so
+                             refuting it refutes THAT null for CURRENT entityMap
+                             reference semantics — not canonical truth's sufficiency
+                             for an independently required function.
+                             Rule 0n applies to SIX-DAY-OLD code: observing
+                             SubjectId behaviour does not earn SubjectId.
+                             CORRECTED: current subject-generation distinction
+                             MEASURED; value-only key-cached null REFUTED for
+                             reproducing it; subject-lifetime identity as a V15
+                             REQUIREMENT **UNPROVEN**.
+                             ALSO RETRACTED: "coverage-vs-participant is a
+                             distinction a value diff cannot express" — true
+                             representationally, semantically UNPROVEN.
+                             NEXT IS NOT "effect log vs identity beside snapshots"
+                             (that assumes identity survived). It is E2-S0:
+                             Contract A (handles are membership-lifetime refs;
+                             revive on undo; never alias) vs Contract B (handles
+                             observe current keyed membership; removal permanently
+                             invalidates; undo requires reacquisition). What
+                             capability exists under A that is IMPOSSIBLE under B?
+                             Then: minimum identity property, THEN carrier —
+                             candidates include SubjectId, per-key generation
+                             counter, opaque membership token, slot+incarnation.
                              NOTE an attribution error caught by measurement: an
                              earlier draft claimed the revival was "merely
                              resolve-on-read" and would also happen on re-add. It
