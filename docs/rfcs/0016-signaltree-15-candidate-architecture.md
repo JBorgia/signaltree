@@ -6304,7 +6304,7 @@ A gate is not exempt from the rules it enforces.
 >
 > ```text
 > U5b-A   TERMINAL — UNDERDETERMINED. Not rejected. NULL FORBIDDEN.
-> U5b-B   PREREGISTRATION PACKET DRAFTED. Gate 1 NOT opened.
+> U5b-B   CLOSED — FUNCTION NOT ESTABLISHED. Both gates run. NULL FORBIDDEN.
 > U5b-C   UNOPENED       U5b-D  UNOPENED       U5b-E  UNOPENED
 > ```
 
@@ -6346,7 +6346,7 @@ value exists for the write being performed. The absence argument is burden-based
 P1-P6 do not yet establish a forward-path observation/interleaving model under
 which mid-sequence incoherence is an earned SignalTree-owned concern.
 
-### U5b-B — REFUSAL / FAILURE [packet drafted — Gate 1 NOT opened]
+### U5b-B — REFUSAL / FAILURE [CLOSED — see the disposition record]
 
 ```text
 CANDIDATE   an attempted multi-write transition may fail such that none of its
@@ -6730,8 +6730,12 @@ _"what is P3's observational content?"_
 
 ## U5b-B — REFUSAL / FAILURE: PREREGISTRATION PACKET
 
-**STATUS: PACKET ONLY. Gate 1 is NOT open. No reviewer has seen this. No null may
-be constructed, and no disposition exists.** This section is the instrument, written
+**STATUS: THE ROW IS NOW CLOSED — FUNCTION NOT ESTABLISHED.** This section is
+retained as the AS-DRAFTED INSTRUMENT, for audit of what the reviewers were and were
+not given. The disposition is at
+[U5b-B — REFUSAL / FAILURE: FUNCTION NOT ESTABLISHED](#u5b-b--refusal--failure-function-not-established-both-gates-run).
+Gate 1 was opened against this packet with the P3 divergence disclosed to both
+reviewers rather than silently resolved. This section is the instrument, written
 before the row is opened, because U5b-A established that a defective instrument
 contaminates every result downstream of it and cannot be repaired retroactively.
 
@@ -6992,6 +6996,245 @@ Recorded so the next step is unambiguous and **nothing here reads as authorizati
 
 NOT AUTHORIZED BY THIS SECTION: any of the above. The packet is the instrument.
 Opening the row is a separate decision.
+```
+
+## U5b-B — REFUSAL / FAILURE: FUNCTION NOT ESTABLISHED. Both gates run.
+
+```text
+GATE 1  Reviewer A (function killer)     FUNCTION SURVIVAL — NOT ESTABLISHED
+        Reviewer B (absence architect)   A COHERENT ABSENCE ARCHITECTURE EXISTS,
+                                         under the WEAKER restatement only
+GATE 2  DISPOSITION                      FUNCTION NOT ESTABLISHED
+NULL    FORBIDDEN
+NEXT    NOTHING for this function
+MEASUREMENT  NONE PERFORMED on this row, at any rung
+```
+
+**Not "refuted".** Gate 2's qualification is part of the disposition: this is the
+null standing undisturbed, not a refutation. The opposite position was carried on
+equal footing and **remains equally unproven** — neither reviewer established it,
+and A explicitly declined to.
+
+### MAXIMUM SUPPORTED CONCLUSION — Gate 2's wording, one sentence
+
+> Under P1-P6 as frozen, no reviewer — under either charter, either P3 wording, or
+> either candidate wording — produced a workflow that becomes impossible absent the
+> candidate function, and the one candidate-shaped residue offered depends on
+> multi-writer, caller-mortality and cross-lifetime-durability conditions that
+> P1-P6 do not grant; the function is therefore **not established, which is not the
+> same as shown unnecessary.**
+
+### THE INDEPENDENCE CLAIM SURVIVED — and the row did not close on it
+
+The packet's falsifiable construction claim was that the row concerns state **at
+rest**, so it needs no entity observing the interval between two writes. Both
+reviewers **affirmed it**, and neither used such an entity. So U5b-B did **not**
+close by inheriting U5b-A's blocker. That route did not fire.
+
+It cost something anyway, and both reviewers said so from opposite charters:
+
+```text
+A   the claim is TRUE but "fatal to the row rather than helpful to it" — a
+    configuration left by writes 1..k of an intended 1..n is IDENTICAL, under every
+    read the premises grant, to one a caller deliberately produced by performing
+    exactly writes 1..k. "Did not run to completion" is not a value at a position,
+    and P2 absence does not supply it either, since absence is a value a COMPLETED
+    write can produce.
+B   the claim is true but its STATED GROUND is false — "a terminal state is
+    reachable by an ordinary read" conflates reaching a configuration with knowing
+    it is terminal. B repaired the ground: termination is known at the issuing
+    site, which is a fact held at rest, not an observation between writes.
+```
+
+### WHAT WAS ACTUALLY ESTABLISHED — five items, all weaker than they look
+
+```text
+E1  neither reviewer PRODUCED a workflow that becomes impossible under P1-P6.
+    An absence of production, NOT a demonstration of non-existence.
+E2  the frozen candidate CANNOT STATE ITSELF in the vocabulary P1-P6 supply.
+    A: "attempted", "fail" and "its canonical consequences" all reach outside it.
+    B: "the container has no name for a sequence."
+    Reached from opposite charters. This is the strongest positive result — and it
+    is a result about the WORDING AND THE PREMISE SET, not about the function.
+E3  the construction claim survives (above). The closing-finding did not fire.
+E4  P3/P5/P6 are UNDERDETERMINED about step individuation when a group does not
+    close. A reaches it as a two-horned dilemma, B as the "LIFO-top question".
+    Unprompted, bilateral, and OUT-OF-ROW.
+E5  all of the above is CONDITIONAL on an antecedent the packet declined to
+    assert — that a sequence can terminate partway.
+    A: "the candidate's antecedent is supplied by the candidate."
+    B: "if it cannot, the row is empty and everything is conditional."
+```
+
+### THE A/B CONFLICT — adjudicated as a DOUBLE MISMATCH, not a conflict
+
+A said nothing can be named; B named _"safely consuming state written by a party you
+cannot modify, after that party stopped partway."_ Gate 2 found this is not a
+contradiction:
+
+```text
+SCOPE     A quantified over P1-P6. B quantified over P1-P6 PLUS an imported world.
+QUESTION  A answered "what workflow becomes impossible?". B answered "what class
+          does my own construction fail to cover?" AN UNCOVERED CLASS IS NOT A
+          CAPABILITY LOSS.
+AGREEMENT On the operative point they AGREE: B says covering it requires
+          container-side standing knowledge that a sequence is owed, surviving the
+          caller, and that this "would have to be granted outright" — which is A's
+          position in substance.
+```
+
+**B's _"the row is not empty"_ is the strongest overclaim in the raw material** and
+is rejected. It is two steps out — uncovered class → workflow → independently
+valuable workflow — and each step needs an ungranted condition.
+
+### B'S DECISIVE CLASS RESTS ON FIVE UNGRANTED CONDITIONS
+
+Gate 2 enumerated what U1/U2 requires against what P1-P6 grant:
+
+```text
+C1  a caller/writer as a persisting entity with identity   NOT GRANTED
+C2  more than one writer to the same container             NOT GRANTED
+C3  a writer the reader CANNOT MODIFY                      NOT GRANTED
+C4  caller mortality / abnormal termination                NOT GRANTED
+C5  state persisting beyond the writing party              NOT GRANTED
+C6  a sequence CAN stop partway                            EXPLICITLY NOT ASSERTED
+C7  telling residue from intent has independent value      EXPLICITLY WITHHELD
+```
+
+And the classes do not multiply the evidence: **U1, U2, U2b and U3 cluster entirely
+in one ungranted region** — multi-writer, mortal, durable callers. They are one
+region named four ways, not four findings.
+
+This is the narrow rule applying exactly as written: **a candidate depending on
+behaviour absent from the frozen premises is closed or parked, and measurement may
+not supply it.** The conditions are parked below, as conditions.
+
+### PRE-REGISTRATION VIOLATIONS FOUND BY GATE 2 — recorded, both directions
+
+```text
+B  imported a whole world P1-P6 do not contain: caller identity, multiple writers,
+   an unmodifiable writer, caller mortality, state outliving its writer.
+   "Every noun in that clause except 'state' is ungranted."
+B  used the value judgement the packet explicitly WITHHELD — "SAFELY consuming",
+   "RESIDUE vs intent", false positives as "the TOLERABLE direction".
+   A had flagged this exact trap; B walked into it.
+B  foreign-discipline import, substantial: F1-F5 is a crash-failure taxonomy;
+   "lost update" is an isolation anomaly; "conditional write" is compare-and-swap;
+   "write acknowledgement" is replication. These terms ARRIVE WITH ENTAILMENTS, and
+   those entailments are exactly the ungranted conditions U1/U2 needed. The
+   discipline import IS the mechanism by which B's decisive class got its premises.
+A  imported a burden default the packet did not grant — "a tie resolves against
+   adding". Equal footing does not contain a tiebreak. Does not change the outcome
+   (the candidate failed on its own account) but A's reasoning exceeded its licence
+   in that line.
+NEITHER  no implementation or framework leakage. Clean on that axis.
+```
+
+### LADDER — rung 3 attempted, NOT cleared. Rungs 1-2 empty BY CONSTRUCTION.
+
+```text
+1  measured current behaviour        NOT ENTERED — no measurement on this row
+2  alternative model reproduces      NOT ENTERED
+3  THE FUNCTION IS REQUIRED          ENTERED, NOT PASSED
+4  representation property required   UNREACHABLE
+5  a particular carrier survives      UNREACHABLE
+```
+
+Per the narrow rule, empty rungs 1-2 are **not a defect** here and did not cause the
+outcome. A rung-3 attempt on sufficient premises is legitimate. What Gate 2 adds is
+sharper: the attempt was made on a premise set that **per E2 cannot express the
+candidate at all.**
+
+### STRONGEST ALTERNATIVE — the instrument is the finding, not the candidate
+
+> **If a candidate is unstatable in its own premise set, "not established" is not a
+> verdict about the function — it is a verdict that P1-P6 lacks the vocabulary to
+> pose the question.**
+
+On this reading the row was never testable; its closure carries no information about
+whether such a function is needed under any richer premise set; and the apparent
+convergence is convergence on the premise set's expressive limits rather than on the
+candidate's merits. It explains E2, explains why the P3 ambiguity changed no verdict,
+explains why B had to import a foreign world to make the row non-empty, and explains
+why neither reviewer could construct a falsifiable contract.
+
+**Evidence about the row. NOT a work order, and not a licence to widen P1-P6.**
+
+### CORROBORATION — NO, and the instrument design is why
+
+```text
+THE KILL WAS PRE-DISCLOSED. The packet handed both reviewers the "names a remedy,
+  not a function" defect BEFORE they reasoned. Both headline rejections restate a
+  finding the instrument supplied. B: "the recorded defect is exactly right."
+  Agreement on a pre-disclosed conclusion is shared input, not corroboration.
+BOTH CHARTERS POINTED THE SAME WAY. "Function killer" and "absence architect" both
+  succeed by defeating the candidate. THERE WAS NO DEFENDER CHARTER. Two adversaries
+  of one target agreeing is redundancy. Independence requires OPPOSED INCENTIVES,
+  and these were not opposed.
+THE VARIED FACTOR COLLAPSED. P3 wording was the nominal between-reviewer variant,
+  but BOTH reviewers reported under BOTH wordings, so it discriminated nothing.
+  Role was the only live factor — see above.
+```
+
+What the agreement licenses, weakly, and only this far:
+
+```text
+1  the construction claim's survival — NOT pre-disclosed as true, affirmed from
+   opposite charters, neither used an interval-observing entity
+2  failure of the WEAKER restatement — not pre-disclosed, and reached by
+   INCOMPATIBLE routes (A: unfalsifiable and empty; B: answered and therefore
+   closed). Convergence on outcome via disjoint reasoning is the strongest
+   corroborated element here.
+3  step-individuation underdetermination — unprompted, bilateral, out-of-row
+```
+
+### FORBIDDEN on this row
+
+```text
+"the candidate is refuted / unnecessary"        NOT ESTABLISHED =/= refuted
+"the container owes no semantics"               the opposite position is EQUALLY
+                                                 UNPROVEN; A declined to establish it
+"B named a workflow, so the row is not empty"   two steps out, on ungranted premises
+"partial consequences are undesirable"          WITHHELD by the packet; B assumed it
+"A and B agreeing corroborates the verdict"     pre-disclosed kill, same-direction
+                                                 charters, collapsed variant
+"P1-P6 should be widened"                       the strongest alternative is evidence,
+                                                 not a licence
+"U1/U2/U2b/U3 are four findings"                one ungranted region, named four ways
+```
+
+### PARKED REOPENING CONDITIONS — conditions, NOT tasks
+
+Each satisfied only if some **independently motivated** row happens to grant it:
+
+```text
+- multiple writers PLUS caller mortality PLUS state outliving its writer
+  (C2 + C4 + C5) are granted for their own reasons. Then B's residue class becomes
+  nameable and a candidate of this shape is reachable again.
+- P3/P5/P6 step individuation is settled elsewhere, determining whether a
+  non-closing group leaves a recorded step. A's dilemma then collapses to one horn.
+  A CONSEQUENCE TO NOTICE, NOT A REASON TO SETTLE IT.
+- a grant appears that a write sequence may terminate partway (C6). Shared with
+  U5b-A, and still not pursuable from either row.
+```
+
+**None may be pursued, established, or benchmarked to make this candidate decidable.**
+
+### INSTRUMENT DEFECT FOUND BY GATE 2 — affects every Gate 1 run so far
+
+```text
+Gate 1 has NEVER had a defender charter. Reviewer A (function killer) and Reviewer B
+(absence architect) BOTH succeed by defeating the candidate. Every "survival not
+established" this method has produced was reached by two same-direction adversaries.
+
+This does NOT invalidate the closures. A candidate that cannot name its own casualty
+fails regardless of who is asking. What it invalidates is any reading of A/B
+agreement as INDEPENDENT CORROBORATION — and that reading has now been struck four
+times, each time as if it were a fresh error, when the cause is structural.
+
+WHETHER TO ADD A DEFENDER CHARTER IS RESERVED. It changes what "survival" MEANS in
+this method, which is a semantic choice about the standard of evidence, not a repair.
+NOT A WORK ORDER.
 ```
 
 ## P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED. Transcribed here.

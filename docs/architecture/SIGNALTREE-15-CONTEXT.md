@@ -23,7 +23,7 @@ NON-AUTHORITATIVE  superseded conclusions · legacy public API · earlier model
 
 **Conversation transcripts are the most dangerous input.** This derivation has
 made and then withdrawn several confident intermediate conclusions. A transcript
-presents *"open extension registration survives the null"* with the same
+presents _"open extension registration survives the null"_ with the same
 prominence as the correction that withdrew it three exchanges later. Consult
 transcripts for provenance; never for current truth.
 
@@ -43,9 +43,9 @@ transcripts for provenance; never for current truth.
 **A lower layer may challenge a higher one only by supplying NEW deterministic
 evidence — never by contradiction alone.**
 
-Note the careful shape of (1) versus (2). A *new* executable counterexample can
+Note the careful shape of (1) versus (2). A _new_ executable counterexample can
 legitimately reopen something frozen; that is the stated reopen condition. A
-*passing legacy test* is not a counterexample — it demonstrates that current code
+_passing legacy test_ is not a counterexample — it demonstrates that current code
 does what current code does, which is layer 7 wearing a green check.
 
 ## North star
@@ -64,8 +64,8 @@ If the function fails, there is NO replacement, form, or "smaller version"
 question.
 ```
 
-The burden is **prove it is necessary** — never *prove the old form is
-unnecessary*. The second lets legacy survive by default and has drifted in
+The burden is **prove it is necessary** — never _prove the old form is
+unnecessary_. The second lets legacy survive by default and has drifted in
 before.
 
 ## Methodology rules (RELEASE-1.0.md carries them in full)
@@ -181,14 +181,14 @@ PREMISE ATTACK on the interpretation
 architectural conclusion
 ```
 
-The audit stops being *"build a null and see whether it works"* and becomes
-*"first prove there is something legitimate for a null to falsify."* That is the
+The audit stops being _"build a null and see whether it works"_ and becomes
+_"first prove there is something legitimate for a null to falsify."_ That is the
 guard whose absence explains nearly every error below.
 
 ### Why this exists
 
 Every significant error in the frontier/collections derivations had one shape: the
-incumbent *mechanism* was removed while one of its semantic *assumptions* stayed
+incumbent _mechanism_ was removed while one of its semantic _assumptions_ stayed
 embedded in the null. The null came back green because it was built to answer a
 question whose answer it already partly encoded.
 
@@ -211,9 +211,9 @@ E2-S00      object-reference compare               -> identity reappeared INSIDE
 computed    framework realization                  -> leaked into kernel evidence
 ```
 
-Executable falsifiers reliably catch *"the implementation doesn't do what we
-thought."* They cannot catch *"we never established it should do what the test
-asserts."*
+Executable falsifiers reliably catch _"the implementation doesn't do what we
+thought."_ They cannot catch _"we never established it should do what the test
+asserts."_
 
 ## PRE-REGISTRATION — complete BEFORE any null is implemented
 
@@ -276,7 +276,7 @@ INTERPRETATIONS   may NOT commit until the premise attack closes
 VOCABULARY        measurement commits must use OBSERVATION-ONLY language
 ```
 
-Without the third clause, *"measurements commit freely"* recreates the exact
+Without the third clause, _"measurements commit freely"_ recreates the exact
 contamination channel that `wrong-row read` travelled through. A conclusion one
 level too strong survives long enough for the next derivation to inherit it, and
 the corrective commit arrives after the damage. The cost of a high commit rate is
@@ -342,7 +342,7 @@ A rung-3 verdict reached on sufficient premises is legitimate with rungs 1 and 2
 empty. What is illegitimate is **filling a premise gap with measurement.**
 
 Recorded because an interpretation reviewer once explained a row's undecidability as
-*"rung 3 entered with 1 and 2 empty — that is out of order"*, and the author adopted
+_"rung 3 entered with 1 and 2 empty — that is out of order"_, and the author adopted
 it and generalized it to four unopened rows. That framing implies measurement would
 have decided the row, which is the same "provisional against measurement" error
 already struck elsewhere, returning in ladder clothing. **The ladder describes what
@@ -363,7 +363,7 @@ not need.**
 5  A PARTICULAR CARRIER SURVIVES
 ```
 
-*"A held reference revives after undo"* earns **step 1**. Nothing more. The
+_"A held reference revives after undo"_ earns **step 1**. Nothing more. The
 one-step limit is stronger than "no finding skips more than one step", because a
 sufficiently seductive test will otherwise produce
 `measurement -> therefore the function survives -> therefore SubjectId` inside a
@@ -386,15 +386,14 @@ discipline: a reviewer who starts designing the mechanism has already granted it
 **Structural limit, recorded plainly.** One agent deriving the requirement,
 designing the null, implementing it, debugging it, interpreting it and writing the
 verdict is prone to confirmation bias whatever the discipline. Once the words
-*"wrong-row read"* are written, the classification precedes the contract. **A
+_"wrong-row read"_ are written, the classification precedes the contract. **A
 checklist cannot make an author independent of their own framing** — the controller
 can only make the omission visible. An empty OPPOSITE CONTRACT field is therefore
 a stop condition, not a note.
 
-
 ## DELEGATION POLICY — independence is the point, not headcount
 
-The old rule was *"only use subagents when explicitly requested."* Replaced:
+The old rule was _"only use subagents when explicitly requested."_ Replaced:
 
 > **Use subagents whenever epistemic independence materially improves the
 > decision. Keep writes and final architectural authority centralized.**
@@ -404,8 +403,8 @@ permission for each time.
 
 ### Differentiated packets — the load-bearing part
 
-Five agents that all see *"I think SubjectId is necessary because key reuse causes
-wrong-row aliasing"* are not five reviews. They are one frame, five times. What
+Five agents that all see _"I think SubjectId is necessary because key reuse causes
+wrong-row aliasing"_ are not five reviews. They are one frame, five times. What
 buys independence is giving them **deliberately different information and
 incentives**:
 
@@ -543,7 +542,7 @@ A closure may never be broader than its packet. Widening is a NEW row.
 
 Reviewer B's job is to exhibit a coherent world without the candidate. Nothing said
 what weight the components of that world carry. So `turn-coalesced notification`,
-invented because B needed *something* in that slot, was recorded as a "surviving
+invented because B needed _something_ in that slot, was recorded as a "surviving
 container obligation."
 
 ```text
@@ -620,7 +619,7 @@ CANDIDATE DECIDABLE.
 ```
 
 Observed once, on its second application: the reviewer correctly detected that the
-premises did not decide a candidate, and then wrote *"two obligations follow"* —
+premises did not decide a candidate, and then wrote _"two obligations follow"_ —
 including a cheap check to run and a question to settle. Both existed only to make
 the closed candidate decidable. That is the transition the underdetermined-is-
 terminal rule forbids, committed by the gate that enforces it.
@@ -659,8 +658,8 @@ A pre-registered OPPOSITE CONTRACT may not contain a clause that DECIDES a
 question the row might need to decide.
 ```
 
-Observed on U5b-A. The opposite contract was written as *"the grouping premise
-governs only confirmed reversal granularity"* — which handed the null the answer to
+Observed on U5b-A. The opposite contract was written as _"the grouping premise
+governs only confirmed reversal granularity"_ — which handed the null the answer to
 precisely the question a reviewer then identified as undecided by the premises. Any
 closure leaning on the null's wording was leaning on a stipulation, and the phrase
 had to be recorded as **the author's wording, not a finding.**
@@ -713,7 +712,7 @@ material. Gate 2 gates the SYNTHESIS, not the measurement.
 
 Handing over "the function statement and the proposed contract" already smuggles
 the first premise in. The packet carries frozen premises plus a clearly marked
-*candidate*:
+_candidate_:
 
 ```text
 ZERO STATE
@@ -803,7 +802,7 @@ OUT-OF-ROW     PARK
 
 ### Row wording must not arrive pre-shaped
 
-*"Does `structural` need more than canonical truth?"* is already
+_"Does `structural` need more than canonical truth?"_ is already
 representation-shaped — it names the incumbent's field. Start one level up:
 
 ```text
@@ -811,9 +810,9 @@ What independently surviving function, if any, requires information that cannot
 be reconstructed from canonical truth at confirmed-reversal time?
 ```
 
-Then let the reviewer attack whether even *that* function exists. Only after
-survival: *what information property is required?* Only then: *what representation
-carries it?* This keeps `structural`, `SubjectId`, effects, snapshots and
+Then let the reviewer attack whether even _that_ function exists. Only after
+survival: _what information property is required?_ Only then: _what representation
+carries it?_ This keeps `structural`, `SubjectId`, effects, snapshots and
 generation tokens out of the question until they are earned.
 
 ### Why the misses happened — recorded, because it is the finding
@@ -907,11 +906,11 @@ NULL      FORBIDDEN
 NEXT      NOTHING for this function. Close the row.
 ```
 
-The premises reach *"the restored member is observable again"* and stop. Nothing
-reaches *"the observation obtained beforehand must still designate it."*
+The premises reach _"the restored member is observable again"_ and stop. Nothing
+reaches _"the observation obtained beforehand must still designate it."_
 
-**No product decision is owed.** Asking whether SignalTree *wants* the missing
-premise converts NOT ESTABLISHED into *would we like this?* — resurrection by
+**No product decision is owed.** Asking whether SignalTree _wants_ the missing
+premise converts NOT ESTABLISHED into _would we like this?_ — resurrection by
 another route. A later independently-earned capability reopens it from zero.
 
 ### DO NOT INFER — antagonistic review overreached in three places
@@ -1233,11 +1232,73 @@ is P3's observational content?"
 ```text
 U5b-A  ONE COHERENT CANONICAL TRANSITION   TERMINAL — UNDERDETERMINED
                                            NOT rejected. NULL FORBIDDEN.
-U5b-B  REFUSAL / FAILURE                   PACKET DRAFTED. GATE 1 NOT OPEN.
-                                           No reviewer, no null, no disposition.
+U5b-B  REFUSAL / FAILURE                   CLOSED — FUNCTION NOT ESTABLISHED.
+                                           Both gates run. NULL FORBIDDEN.
+                                           NOT refuted: the null stands undisturbed
+                                           and the opposite position is EQUALLY
+                                           UNPROVEN.
 U5b-C  CONSEQUENCE COORDINATION            UNOPENED
 U5b-D  SHARED ATTRIBUTION                  UNOPENED
 U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL    UNOPENED
+```
+
+### U5b-B — what closed it, and what it did NOT close on
+
+```text
+DID NOT close by inheriting U5b-A's blocker. The independence claim (state AT REST,
+  no entity observing between two writes) was AFFIRMED by both reviewers.
+CLOSED because no workflow was produced that becomes impossible under P1-P6, and
+  the one candidate-shaped residue offered (a reader with no prior relationship to
+  the writer) rests on FIVE UNGRANTED CONDITIONS: writer identity, multiple writers,
+  an unmodifiable writer, caller mortality, state outliving its writer.
+STRONGEST POSITIVE RESULT, and it is about the INSTRUMENT: the frozen candidate
+  CANNOT STATE ITSELF in the vocabulary P1-P6 supply. Reached from both charters.
+STRONGEST ALTERNATIVE: "not established" may be a verdict that P1-P6 lacks the
+  vocabulary to POSE the question, not a verdict about the function.
+  EVIDENCE ABOUT THE ROW — not a licence to widen P1-P6.
+```
+
+## TWO ITEMS RESERVED TO THE HUMAN AUTHOR — an implementer may not settle either
+
+```text
+1  WHICH P3 WORDING IS FROZEN
+     "at boundaries a user would recognize as discrete steps"   (issued to A)
+     "at recognizable step boundaries"                          (issued to B)
+   Deciding this decides whether the premise set contains a PERCEIVING ENTITY. It
+   bears on U5b-A's terminal disposition and on every future row in the family.
+   Choosing it either way supplies by fiat the premise this method exists to stop
+   being supplied.
+
+2  WHETHER GATE 1 GETS A DEFENDER CHARTER
+   Gate 1 has never had one. FUNCTION KILLER and ABSENCE ARCHITECT both succeed by
+   defeating the candidate, so every "not established" so far was reached by two
+   SAME-DIRECTION adversaries. This does not invalidate the closures — a candidate
+   that cannot name its own casualty fails regardless of who asks — but it does
+   invalidate any reading of A/B agreement as INDEPENDENT CORROBORATION. That
+   reading has now been struck four times as if it were a fresh error each time,
+   when the cause is structural.
+   Adding a defender changes what SURVIVAL MEANS. That is a semantic choice about
+   the standard of evidence, not a repair.
+```
+
+**NEITHER IS A WORK ORDER.** Rows that do not depend on them proceed. Nothing may be
+measured, benchmarked or archaeologically dug to settle either one.
+
+### PREMISES: QUOTE, NEVER PARAPHRASE
+
+```text
+P1-P6 had NO verbatim statement in this repository until 2026-08-20. The text lived
+only in one session's reviewer prompts, and it DRIFTED — P3 diverged between two
+reviewers on the same row, and an earlier row was reviewed against five premises
+with a weaker P2 and no P6 at all.
+
+Rows closed against "P1-P6" were closed against DIFFERENT premise sets.
+
+The verbatim text is now in RFC 0016. A packet MUST QUOTE it. Paraphrasing premises
+into a packet is FORBIDDEN — that is the channel the P3 divergence travelled, and
+paraphrase is how "frozen" became "restated from memory, per reviewer, per row".
+Any change to premise TEXT is a FREEZE EVENT: committed, dated, and listing the rows
+already closed against the previous text.
 ```
 
 The family's original preregistration block in RFC 0016 still shows A as `[OPENED]`
@@ -1852,7 +1913,7 @@ final authoring grammar       DEFERRED to one system-wide DX pass
 
 ## Current frontier
 
-**M3 — snapshot / representation. ANSWERED.** The question is *not* "does a snapshot hook
+**M3 — snapshot / representation. ANSWERED.** The question is _not_ "does a snapshot hook
 survive" but **"is a realized value's state identifiable by a uniform rule?"**
 
 Consumer separation is DONE: there are not six requirements. Four entry points
@@ -1951,7 +2012,7 @@ entityMap     the snapshot hook exists because the walk must guess which member
               signal
 ```
 
-In each case the machinery is *correct*, and what it corrects was introduced one
+In each case the machinery is _correct_, and what it corrects was introduced one
 layer down. **Never ask "is this machinery right?" — ask "what made it
 necessary?"** If the answer is another SignalTree choice, both can leave together.
 
@@ -1982,5 +2043,5 @@ the RFC 0015 derived projection contract
 any disposition recorded as frozen in RELEASE-1.0.md
 ```
 
-*"Should we preserve X because 14.x had it?"* is not a valid question and is
+_"Should we preserve X because 14.x had it?"_ is not a valid question and is
 answered mechanically by Rule 0n/0o.
