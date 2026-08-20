@@ -5935,6 +5935,159 @@ A row SUCCEEDS when it reaches the correct epistemic disposition.
 Not "no experiment is a result" — that invites the reading that running something
 is the default requirement.
 
+## E4 / GATE 1 — grouping beyond reversal: C1-C4 all NOT ESTABLISHED.
+
+```text
+ROW   does a group of writes require semantics BEYOND reverting as one step?
+      C1 container governs observability before conclusion
+      C2 conclude such that writes never become observable
+      C3 conclude such that writes cease to be observable
+      C4 groups nest, with defined inner/outer interaction
+
+A (function killer)     C1 NOT EST · C2 NOT EST · C3 NOT EST · C4 NOT EST
+B (absence architect)   A COHERENT ABSENCE ARCHITECTURE EXISTS
+NULL                    FORBIDDEN for the row as worded
+```
+
+### Why each fell
+
+```text
+C1  its necessity rests on an OBSERVATION MODEL no premise grants. P1 gives
+    reads-observe / writes-replace; it does NOT grant that a write publishes on
+    completion, nor that a read may land between two writes of a group. If reads
+    cannot land mid-group there is no interval to govern.
+    And every case reached for is answered by COMPUTE-THEN-WRITE-ONCE: a group
+    with one write has no interior. Neither reviewer could name a workflow whose
+    later writes must read earlier writes back THROUGH canonical positions.
+
+C2  collapses into C1 plus a RECORD-CONTENT complaint. "Never observable" and
+    "written then reverted as one step" terminate at the same configuration. The
+    only residue: a reverted group is RE-ADVANCEABLE, so a cancelled group would
+    linger as redoable — which is about what the record contains, not about
+    observability.
+
+C3  strictly weaker than its wording. Once writes were observable, consequences
+    escaped — rendering, derived values, writes to excluded positions, effects
+    outside the container. Ceasing to be observable retracts none of that, so C3
+    cannot mean "as if it never happened", and stripped of that it IS ordinary
+    reversion.
+
+C4  PERMISSION-SHAPED — "groups MAY nest" asserts no requirement. And under
+    reversal-only semantics nested groups are OBSERVATIONALLY INDISTINGUISHABLE
+    from a flattened group, so flattening is correct. Nesting is not a lost
+    capability but a vacuous one: it only becomes meaningful once concealment
+    exists, which is why the candidate bundled them.
+```
+
+### The strongest argument, and it cuts against the candidate
+
+On an irreversible external effect fired by observing state, with the sequence
+later declined — the case aimed at B as its hardest:
+
+> Under the candidate the group conceals, the effect does not fire, the group
+> concludes, **the effect fires on the concluded state**, and the decline arrives
+> afterwards. The unsafe read still happened; it was merely deferred.
+> **Concealment narrows a race window; it does not close one.**
+
+The alternative gates by **address rather than by time**: effect subscriptions read
+confirmed positions only, and speculation lives at a different address. An effect
+cannot fire on unconfirmed data because it is not subscribed to unconfirmed data —
+no timing, no window, no race. A misrouted subscription becomes a static, auditable
+error at a named address instead of a timing-dependent one.
+
+So the finding is not "concealment is unnecessary here." It is stronger:
+**concealment is the wrong instrument, and adopting it invites the belief that
+effects are safe when they are not.**
+
+### A DERIVED CONSTRAINT, not a preference
+
+Independent of the candidate:
+
+```text
+P6 (LIFO only) is incompatible with asynchronous speculation resolved OUT OF
+ORDER. If a speculative step is recorded and a later step lands before the
+decline arrives, LIFO cannot reach it — and concealment does not help, because
+the group has already concluded.
+
+=> asynchronous speculation must be kept OUT of the revertible record in ANY
+   architecture consistent with P6.
+```
+
+P6 does not merely permit the excluded-position design; **it forces its shape.**
+
+### What the shipped system already does
+
+Worth recording against the earlier characterization: the measured behaviour is
+that a speculative write is **immediately visible and adds no entry to the
+revertible record**. That is the absence architecture's design — speculation at
+positions outside the record, resolved by forward writes — not the candidate's.
+The incumbent is already closer to what fell out of the derivation than to what the
+candidate proposed.
+
+### What SURVIVES — one container obligation, strictly weaker
+
+```text
+TURN-COALESCED NOTIFICATION   observers outside the writing turn are notified
+                              ONCE per turn, at its boundary, with the turn's
+                              resulting configuration.
+                              Grants NO hiding, NO un-happening, NO nesting. It is
+                              a delivery-scheduling property over real writes.
+
+possibly, IF measurement demands it:
+ATOMIC MULTI-POSITION COMMIT  one write, N addresses, one notification. This
+                              REMOVES the intermediate rather than hiding it.
+```
+
+### Honest exposure — the one thing absence cannot imitate
+
+```text
+INNER-ONLY ABORT   an inner sequence failing while the outer continues. Under
+                   absence, an inner failure must be repaired forward or fail the
+                   whole region. Weight depends on how often inner-only abort is
+                   required — UNMEASURED.
+
+PERFORMANCE        overlay derivation cost vs concealed-scope bookkeeping cost.
+                   Both nonzero, NEITHER MEASURED. A performance loss would be a
+                   reason to add a primitive, not evidence the architecture is
+                   incoherent.
+```
+
+### THE FALSIFIER — three parts, and any two are already solved
+
+```text
+Exhibit ALL THREE simultaneously:
+  i    a validator or consumer reachable ONLY through the container's canonical
+       read path, not through a value
+  ii   the speculative value required AT the confirmed address
+  iii  the accept/decline decision ASYNCHRONOUS
+
+i+ii  without iii   -> solved by a single atomic commit
+ii+iii without i    -> solved by candidate-value validation
+i+iii without ii    -> solved by the excluded-position overlay
+```
+
+Both reviewers reached the same missing premise from opposite jobs — A named it as
+*"independently-authored writers that cannot be restructured into
+compute-then-write"*, B as a *"captive consumer whose read path cannot be
+redirected"*. **Read-path authority, not observability, is where the candidate
+could earn its place.**
+
+### Row disposition
+
+```text
+C1 · C2 · C3 · C4                     NOT ESTABLISHED
+NULL                                  FORBIDDEN
+SURVIVING CONTAINER OBLIGATION        turn-coalesced notification (UNDERIVED —
+                                      it has not been through its own row)
+DERIVED CONSTRAINT                    async speculation outside the revertible
+                                      record; P6 forces it
+OPEN, MEASURABLE                      overlay vs bookkeeping cost
+OPEN, UNMEASURED                      how often inner-only abort is required
+```
+
+No product decision is owed. If a captive-consumer requirement is later
+demonstrated, it reopens this from zero.
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

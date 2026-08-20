@@ -747,6 +747,78 @@ A row SUCCEEDS when it reaches the correct epistemic disposition.
 "UNPROVEN / no experiment permitted" is a valid successful closure.
 ```
 
+## E4 — GROUPING BEYOND REVERSAL: NOT ESTABLISHED (all four sub-claims)
+
+```text
+C1 observability governed before conclusion   NOT ESTABLISHED
+C2 conclude so writes never become observable NOT ESTABLISHED
+C3 conclude so writes cease to be observable  NOT ESTABLISHED
+C4 groups nest                                NOT ESTABLISHED
+NULL                                          FORBIDDEN
+```
+
+C1 rests on an observation model no premise grants — nothing says a write
+publishes on completion or that a read may land between two writes of a group —
+and compute-then-write-once answers every case named. C2 collapses into C1 plus a
+record-content residue (a reverted group is RE-ADVANCEABLE, so a cancelled one
+lingers as redoable). C3 cannot mean "as if it never happened", because escaped
+consequences are unretractable, and stripped of that it IS ordinary reversion. C4
+is permission-shaped, and under reversal-only semantics nested groups are
+observationally indistinguishable from a flattened group.
+
+**Concealment is the wrong instrument for irreversible effects.** Under the
+candidate the effect simply fires at conclusion instead of mid-group, and the
+decline still arrives after — concealment narrows a race window, it does not close
+one. Gating by ADDRESS (effects subscribe to confirmed positions only) has no
+window at all, and a misrouted subscription becomes a static auditable error.
+
+### DERIVED CONSTRAINT — P6 forces the shape
+
+```text
+LIFO is incompatible with asynchronous speculation resolved OUT OF ORDER: a
+recorded speculative step superseded by a later step is unreachable, and
+concealment cannot help because the group already concluded.
+=> asynchronous speculation must live OUTSIDE the revertible record in ANY
+   architecture consistent with P6.
+```
+
+**The shipped system already does this** — measured earlier: a speculative write is
+immediately visible and adds no entry to the record. The incumbent is closer to
+the derived design than to the candidate.
+
+### SURVIVES (underived — has not been through its own row)
+
+```text
+TURN-COALESCED NOTIFICATION   observers outside the writing turn notified ONCE per
+                              turn at its boundary. No hiding, no un-happening, no
+                              nesting — a delivery-scheduling property.
+maybe ATOMIC MULTI-POSITION COMMIT — REMOVES the intermediate rather than hiding it
+```
+
+### FALSIFIER — three parts; any two are already solved
+
+```text
+i    a consumer/validator reachable ONLY through the canonical read path, not a value
+ii   the speculative value required AT the confirmed address
+iii  the decision ASYNCHRONOUS
+
+i+ii no iii -> atomic commit    ii+iii no i -> candidate-value validation
+i+iii no ii -> excluded-position overlay
+```
+
+Both reviewers reached the same missing premise from opposite jobs:
+**read-path authority, not observability**, is where this could earn its place.
+
+### Honest exposure
+
+```text
+INNER-ONLY ABORT   the one thing absence cannot imitate. UNMEASURED how often
+                   it is required.
+PERFORMANCE        overlay derivation vs concealed bookkeeping. Both nonzero,
+                   NEITHER measured. A perf loss argues for a primitive, not that
+                   the architecture is incoherent.
+```
+
 ## Frozen invariants — do not re-derive
 
 ```text
