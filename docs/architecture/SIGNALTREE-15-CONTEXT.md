@@ -390,9 +390,39 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               E3 scoped undo, E4 explicit transaction grouping
                               (6be8d3e2). No claim the engine is worthless — only
                               that its stated motivation is not delivered.
-                              NEXT: derive E2/E3/E4 vs the snapshot null. If none
-                              earns, disposition is REVERT, not repair — and the
-                              regression disappears rather than needing a fix.
+                              CORRECTED FRAMING (5 corrections, RFC 0016):
+                              (1) REVERT is NOT a permitted disposition — that is
+                              Rule 0l. If none earns: DELETE the realization, then
+                              DERIVE the minimum from zero. The 885-line engine is
+                              an equivalence WITNESS, not a destination.
+                              (2) The RETAINER IS NOT ATTRIBUTED. A width-dependent
+                              signature was measured, not a mechanism; the 23-vs-88
+                              gap actually favours MULTIPLE retained
+                              representations over one inefficient one. Heap-
+                              retainer attribution is OWED.
+                              (3) U5 splits: U5a history-step grouping (14.x
+                              plausibly satisfies) vs U5b explicit transaction
+                              semantics (not established, different contract).
+                              The null was built to U5a and scored against U5b.
+                              (4) Motivation cannot be reconstructed from
+                              empty-bodied commits — "candidate advantage not
+                              delivered", not "justification refuted".
+                              (5) NEW FRACTURE LINE: causal/turn semantics may be
+                              SEPARABLE from confirmed-undo storage. They have been
+                              treated as one thing because COLOCATED. Turn
+                              identity, authorship, speculation/confirmation and
+                              atomic grouping may survive while the effect-level
+                              retained log, reversal planner and current realizer
+                              delete — which would unblock collection canonicality
+                              WITHOUT repairing applyTurnEffects.
+                              ORDER: PRE-E2 (is undo storage separable from causal
+                              reasoning?) -> E2 precision -> E4 at U5b -> E3, and
+                              E3 only after asking whether scoped undo survives its
+                              own null. E2's null is NOT restoreState(entry.state):
+                              snapshot STORAGE is not snapshot RESTORATION — a
+                              snapshot history can retain full roots while undo
+                              computes a targeted delta by diffing adjacent roots
+                              under structural sharing.
   UNDO REGRESSION (15)        `isSupportedEffect` (time-travel.ts:1680-1694, from
                               06785300 — the SubjectId commit) refuses any
                               NON-SCALAR leaf effect: arrays, Date, Map, Set,

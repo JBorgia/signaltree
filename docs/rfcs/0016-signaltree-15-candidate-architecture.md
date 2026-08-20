@@ -4248,7 +4248,11 @@ remove+add instead of "does any workflow break." The methodology's own rule
 covers it and was not applied: *state the contract precisely, then build the null
 to that contract, not to a convenient approximation of it.*
 
-## DERIVATION — THE FRONTIER UNDO ENGINE. Its retention justification is REFUTED on measurement.
+## DERIVATION — THE FRONTIER UNDO ENGINE. Its candidate retention advantage is NOT DELIVERED.
+
+> **Read the FIVE CORRECTIONS section that follows before using any conclusion
+> here.** The measurement stands; four of the conclusions drawn from it were
+> withdrawn or narrowed.
 
 Run under option 3: derive the engine before touching it, rather than patch
 third-bucket code that may not survive its own derivation.
@@ -4358,6 +4362,188 @@ BLOCKED MEANWHILE
        the conforming-collection prototype's CANONICALITY row
        Derivation E's canonicality column
        the M-cluster physical cut
+```
+
+## FRONTIER DERIVATION — FIVE CORRECTIONS before anything builds on it
+
+The measurement stands. Four of the five conclusions drawn from it did not.
+
+---
+
+### C1. "REVERT to the snapshot engine" is WITHDRAWN — it violates Rule 0l
+
+The write-up said:
+
+```text
+If E2/E3/E4 do not earn:  REVERT to the snapshot engine
+```
+
+That grants legacy **automatic restoration rights**, which is precisely what
+Rule 0l forbids: *legacy mechanisms are evidence repositories, not migration
+targets.* The rule was in front of me and I wrote the violation anyway. It also
+lets 14.x win by default merely because the 15 mechanism failed — the v14-gravity
+failure mode this audit exists to police.
+
+**Corrected branch:**
+
+```text
+E2 / E4 / E3 all fail
+       ↓
+the frontier effect/causal REALIZATION has no independently earned function
+       ↓
+DELETE that architecture
+       ↓
+DERIVE the minimum undo realization FROM ZERO against the frozen contract
+```
+
+The 885-line snapshot engine's standing:
+
+```text
+PROVED       a much smaller implementation satisfies important portions of the
+             contract, including non-scalar leaves
+NOT PROVED   that its architecture is the right SignalTree 15 architecture
+```
+
+The greenfield minimum may land on snapshots, on snapshots plus a small
+step/grouping layer, on immutable-root references with selective exclusion, or on
+a hybrid. **"Revert" is not a permitted disposition; "delete, then derive" is.**
+
+---
+
+### C2. The retainer is NOT attributed — the claim is narrowed
+
+Withdrawn: *"it retains the whole N-pointer array per entry."*
+
+What was measured is a **signature**: at 10k × 50 same-row writes the frontier
+system retains ~3.96 MB, consistent with the snapshot system's N-pointer slope at
+the bench's documented ~8.3 bytes/pointer. That identifies the *shape* of the
+retention, not the object graph that owns it.
+
+Asserting the mechanism from the signature is the error `RELEASE-1.0.md` already
+polices in the form-marker case — *"the stack frame says WHERE THE REFUSAL IS
+RAISED, not where the contamination originated."* Same class, committed two
+sections later.
+
+Live candidates, none excluded:
+
+```text
+A  the turn/effect store retains whole collection projections
+B  time-travel still retains a parallel snapshot representation ALONGSIDE
+   retained causal effects
+C  structural-history metadata retains the projection
+D  materialised entity projections / descriptors retain it
+E  several of these compose to the same slope
+```
+
+The `allRows` result — 23 MB against 88 MB — actively *favours* B or E over "the
+effect representation is merely inefficient": 3.83× looks like **more than one
+retained representation**, not one inefficient one.
+
+```text
+SAFE WORDING
+  The frontier system exhibits a width-dependent retention signature
+  indistinguishable from whole-state snapshots on the narrow case. The owning
+  retainer is NOT YET ATTRIBUTED.
+
+OWED
+  retention attribution — heap-retainer inspection for one retained entity array,
+  or component ablation. Does NOT block E2/E4/E3, but DOES block any causal claim
+  about which subsystem is responsible.
+```
+
+---
+
+### C3. U5 was one property doing two jobs — split it
+
+The write-up asserted both *"the 14.x null satisfies U1–U5"* and *"E4:
+transaction grouping — U5 at a granularity snapshots may not reach."* Those cannot
+both stand.
+
+```text
+U5a  HISTORY-STEP GROUPING
+     several writes appear as ONE undo step
+     -> 14.x plausibly satisfies this
+
+U5b  EXPLICIT TRANSACTION SEMANTICS
+     boundaries interact correctly with nested writes, refusal, rollback, causal
+     attribution, persistence consequences, and possibly
+     speculation/confirmation
+     -> NOT established for 14.x, and NOT the same contract
+```
+
+The null was built to U5a and scored against U5b. That is the failure named one
+commit earlier — *build the null to the contract, not to a convenient
+approximation of it* — repeated immediately.
+
+---
+
+### C4. "Its retention justification is REFUTED" → narrowed
+
+Empty commit bodies mean the engine's original motivation **cannot be
+reconstructed**. Inferring it from a benchmark is the same absence inference the
+audit keeps catching.
+
+```text
+WITHDRAWN   "its retention justification is refuted"
+CORRECTED   "the candidate retention advantage that could justify effect-level
+             recording is NOT DELIVERED by the current implementation"
+```
+
+Retention may never have been the motivation. Precision, speculation/confirmation,
+rollback semantics, structural identity, compensation and persistence
+consequences are all candidate motivations — which is exactly why E2/E4/E3 matter.
+
+---
+
+### C5. NEW — separate CAUSAL SEMANTICS from UNDO STORAGE. This may be the fracture line.
+
+Not previously considered, and it reframes the whole fork. The causal kernel and
+the undo storage representation have been treated as one thing **because they are
+colocated** — the colocation error, applied to the largest subsystem in the
+codebase.
+
+```text
+NULL TO RUN BEFORE E2
+
+  Does the representation used to RETAIN CONFIRMED UNDO HISTORY need to be the
+  same representation used to REASON ABOUT CAUSAL TURNS?
+
+  PRIOR: UNPROVEN.
+```
+
+If it does not, the disposition space is far richer than survive-or-revert:
+
+```text
+MAY SURVIVE                          MAY DELETE
+  turn identity                        effect-level retained undo log
+  authorship / attribution             reversal planner
+  speculation / confirmation           the current realizer
+  atomic transaction grouping
+  persistence-consequence attribution  DERIVE SEPARATELY
+                                         confirmed-undo representation
+```
+
+That outcome would remove thousands of lines **while keeping the genuinely novel
+15 semantics** — and it would not require repairing the non-scalar
+`applyTurnEffects` path at all, because that path would be deleted rather than
+fixed. Collection canonicality gets unblocked without fixing the wrong subsystem.
+
+---
+
+### Revised order and framing
+
+```text
+PRE-E2  is confirmed-undo storage separable from causal-turn reasoning?
+E2      PRECISION — and the null is NOT `restoreState(entry.state)`.
+        Snapshot STORAGE is not snapshot RESTORATION: a snapshot history may
+        retain full roots while undo computes a TARGETED delta by diffing
+        adjacent roots under structural sharing. The real question is whether a
+        snapshot-DERIVED mechanism satisfies precision without the causal effect
+        ontology.
+E4      TRANSACTION SEMANTICS at U5b, not U5a
+E3      SCOPED UNDO — but FIRST ask whether scoped undo survives its own null at
+        all: if SignalTree supported only whole-turn undo, what valuable workflow
+        becomes impossible or semantically wrong? If none, derive no machinery.
 ```
 
 ## Table G — DX PRESSURE LEDGER
