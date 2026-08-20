@@ -6305,7 +6305,10 @@ A gate is not exempt from the rules it enforces.
 > ```text
 > U5b-A   TERMINAL — UNDERDETERMINED. Not rejected. NULL FORBIDDEN.
 > U5b-B   CLOSED — FUNCTION NOT ESTABLISHED. Both gates run. NULL FORBIDDEN.
-> U5b-C   UNOPENED       U5b-D  UNOPENED       U5b-E  UNOPENED
+> U5b-C   UNOPENED — and NOT OPENABLE AS WORDED (borrowed antecedents)
+> U5b-D   TERMINAL — UNDERDETERMINED, not decidable as posed. NULL FORBIDDEN.
+>         Both gates run, three seats. See the U5b-D disposition record.
+> U5b-E   UNOPENED
 > ```
 
 The previous failure came partly from bundling several functions under one row
@@ -7596,6 +7599,421 @@ Siblings, not parents. They grant this row nothing.
 
 MAY BE CITED — only as what it is
   "the U5b-A closure records X", never "X is established".
+```
+
+## U5b-D — SHARED ATTRIBUTION: UNDERDETERMINED. Not decidable as posed. Terminal.
+
+```text
+A (killer)       FUNCTION SURVIVAL NOT ESTABLISHED
+B (absence)      A COHERENT ABSENCE EXISTS, CONDITIONAL on eight ungranted
+                 conditions — and B reports it may have RELOCATED the candidate
+                 into caller-space rather than eliminated it
+D (defender)     NO ADMISSIBLE DEFENCE FOUND
+GATE 2 / interp  UNDERDETERMINED
+GATE 2 / charter NO ADMISSIBLE DEFENCE FOUND, but the row is NOT DECIDABLE AS
+                 POSED and the defender's headline concealed that
+
+DISPOSITION      UNDERDETERMINED. TERMINAL. Not "rejected", not "refuted".
+NULL             FORBIDDEN
+MEASUREMENT      NONE, at any rung. Every claim on this row is analytic over a
+                 frozen text.
+DEFENDER         SEATED. First row in this derivation with three Gate 1 seats.
+```
+
+### THE HEADLINE FINDING — the defender could not have failed informatively
+
+**This is the most important thing the row produced, it is about the METHOD rather
+than the candidate, and it lands on the author's own packet.**
+
+The packet praised its own decision to leave the shared fact **unnamed** as _"the
+strongest thing about this row's wording."_ Gate 2 established that the same choice
+**guaranteed the defender's null result in advance**:
+
+```text
+Seat A: "with the fact unnamed the candidate quantifies over arbitrary content,
+which has no failing case."
+
+Gate 2 drew the symmetric half that no Gate 1 seat drew:
+  an unnameable existential has NO SUCCEEDING CASE EITHER.
+
+So D's failure to name a casualty is the GUARANTEED OUTPUT OF THE CHARTER DESIGN,
+not evidence about the candidate.
+```
+
+```text
+CONSEQUENCE, and it is binding
+
+The charter's "DEFENDER FINDS NOTHING -> THE CLOSURE STRENGTHENS" branch
+MUST NOT FIRE on this row. The defender was not in a position to fail
+informatively, so its null carries near-zero weight as corroboration.
+```
+
+Both things about the unnamed fact are true at once and the record carries the
+tension rather than resolving it: leaving it unnamed **prevented** the row from
+being decided by vocabulary, and it **also** made a defence unstateable. A row that
+forbids every name for the thing it is testing has bought neutrality at the price of
+decidability.
+
+### WHICH DISPOSITION BRANCH FIRED — both readings argued, then chosen
+
+All three seats independently located the row's decision on the same unmade grant:
+**whether the record is readable by a caller, separately from reading positions.**
+A's condition R, B's C1, D's C3.
+
+```text
+COMMON-CAUSE READING
+  All three read identical premise text. P1 says "Reads observe positions" and no
+  premise mentions reading the record. Noticing that is one property of the premise
+  set restated three times. Under the standing rule — struck four times in this
+  ledger — agreement traceable to shared text is worth NOTHING as corroboration.
+
+SAME-MISSING-GRANT READING
+  The three arrivals are not concordant; they are MUTUALLY CONTRADICTORY IN WHAT
+  THEY DEMAND OF THE SAME SWITCH.
+      A's condition R   the CANDIDATE requires the record READABLE
+      B's C1            the ABSENCE requires the record NOT READABLE
+      D's C3            recorded as the reopener, against its own interest
+  Common cause looks like three seats asserting the SAME reading of a premise. Two
+  seats asserting OPPOSITE required settings of one unmade grant is the signature of
+  a bivalent pivot.
+```
+
+```text
+CHOSEN: the SAME MISSING GRANT branch. UNDERDETERMINED.
+
+STRENGTH IS BOUNDED TO EXACTLY ONE THING — the LOCATION of the gap. It corroborates
+NO claim about whether the function is required. And the missing grant is TERMINAL:
+it may not be reissued as a task.
+```
+
+### THE PIVOT IS DISSOLVING, NOT DECIDING — and this forecloses the usual bad move
+
+Seat B: _"if a readable record holding per-step positions and values were granted,
+then several writes would already retain something beyond reverting as one step,
+with no new function at all."_
+
+```text
+RECORD READABLE     the candidate's content is satisfied BY PREMISE.
+                    No function established.
+RECORD UNREADABLE   B's absence stands, conditional on C2-C8.
+                    No function established.
+
+UNDER EITHER SETTING, NO FUNCTION IS ESTABLISHED.
+```
+
+**So this row cannot be resolved in the candidate's favour by supplying the missing
+grant.** That forecloses the standing illicit move of reading UNDERDETERMINED as
+"pending a grant we should go get."
+
+```text
+QUALIFICATION, recorded against B. C1 arguably overreaches. A readable record whose
+contents include the step boundary would expose the fact "these writes revert as one
+step" — which is the P5 grant merely made OBSERVABLE. Whether making a granted fact
+observable constitutes retaining something BEYOND it is a definitional question the
+premises do not settle. The first horn is softer than B states. Recorded as B's
+CONSTRUCTION, not as established.
+```
+
+### PREMISE-WIDENING AUDIT — all three seats, and the pattern is the finding
+
+Gate 2 found the **same species of move in every seat**, disclosed in one and
+undisclosed in two.
+
+```text
+SEAT  WIDENING                                          DISCLOSED?  LOAD-BEARING FOR
+A     "P4 already grants exactly one way for anything    NO          A's BLOCKS-CLOSE 5
+      to survive reversion" — P4 says some positions
+      MAY be excluded; A converts a permission into a
+      uniqueness-and-exhaustiveness claim
+A     "there is no third case under the granted          NO          A's whole dichotomy
+      premises"
+B     "the container has exactly two places anything     NO          B's central claim
+      can sit — positions and the record. No third                   that "beyond" has
+      place." P1-P6 never state this                                 nowhere to live
+D     "steps are totally ordered", inferred from         YES         Rival B, which
+      P6's "last-in-first-out stepping"                              DEFEATED defences
+D     "the boundaries, in both directions, are the       YES         the re-advance
+      steps"                                                         sub-case
+```
+
+```text
+THE PATTERN: every closure in all three reports rests on an EXHAUSTIVENESS CLAIM
+that is an ARGUMENT FROM SILENCE in the frozen text. And there is direct internal
+evidence the frozen set is UNFINISHED rather than exhaustive — the P3/P4 tension,
+flagged independently by B and D, where reverting recorded positions while excluded
+positions stay put yields configurations canonical state never held.
+
+A premise set with a known unresolved internal tension cannot support closures
+derived from its silences.
+```
+
+Two consequences drawn, neither of which changes the disposition:
+
+```text
+1  D's Rival B — the construction that DEFEATED defences — rests on a disclosed
+   ungranted inference. So part of the defender's failure is MANUFACTURED BY AN
+   UNGRANTED GRANT, and D's null is weaker than D reported, in the CANDIDATE's
+   favour.
+2  B's credit, recorded: B's own C3 self-reports that "P6's LIFO presupposes a
+   single stack but does not say so" — correct handling of exactly the species of
+   gap B elsewhere committed silently.
+```
+
+### SEAT A's CENTRAL INFERENCE IS SCOPE-LIMITED, not general
+
+A: _"a fact with no expression in positions and values cannot make any workflow over
+canonical state impossible."_
+
+```text
+SOUND      P1 fixes the observable surface at positions. A fact with no positional
+           expression changes no read.
+UNSOUND 1  The decisive question asks for an INDEPENDENTLY VALUABLE WORKFLOW. A
+           silently substitutes "a workflow over canonical state" — which DEFINES
+           B's one failure class out of existence by fiat rather than answering it.
+           B withdrew that class on other grounds, so no casualty results, but A's
+           claim MUST NOT be recorded as a general result.
+UNSOUND 2  "Distinguishes no two STATES" is not "distinguishes no two WORKFLOWS."
+           Workflows can be history-sensitive at identical states. D closed the
+           obvious case (re-advance) — so A's inference is PATCHED FROM ANOTHER
+           SEAT, and that patch rests on D's disclosed ungranted inference.
+```
+
+A's indistinguishability claim is additionally **a rung-2 statement asserted from
+rung zero** — "an alternative model reproduces the behaviour", with no model built
+and nothing observed. Demoted to a conjecture about the frozen text.
+
+### SEAT B RELOCATED THE CANDIDATE — how far that damages the absence
+
+B, against its own interest: _"C2 works by having the caller retain, outside the
+container, exactly a shared fact about several writes that outlives their reverting
+as one step. My architecture does not show that fact is unnecessary. It shows the
+container is not where it lives."_
+
+```text
+The candidate reads "several WRITES must retain..." and writes live in the container
+(P1), so the container-scoped reading is the better textual fit. On that reading
+relocation is a GENUINE ABSENCE and B's architecture survives.
+
+THE DAMAGE IS A DOWNGRADE IN KIND, not a refutation:
+  FROM  "the shared fact is unnecessary"
+  TO    "the container is not shown to be its necessary carrier"
+
+C7 reaches the same place independently of C2: where two groups touch overlapping
+recorded positions with different repair rules, selecting the rule after a reversion
+requires knowing which group was reverted.
+
+FURTHER, not drawn by B: the caller-with-memory is machinery P1-P6 do not furnish,
+so the relocation is not a construction purely from the frozen text.
+
+"A PARTICULAR CARRIER SURVIVES" is the TOP RUNG. B's relocation admission is a
+refusal to climb it, correctly. The absence architecture is therefore NOT CITABLE as
+evidence about carriers in EITHER direction.
+```
+
+### THE REOPENING-CONDITION SET IS DISPUTED THREE WAYS — recorded as disputed
+
+The disposition is stable under all three readings. Only the **conditions** differ,
+and conditions are **not work orders**, so the dispute is recorded rather than
+resolved. Manufacturing a resolution here would be manufacturing decidability.
+
+The disputed object is the defender's strongest construction — **two groupings open
+at once whose writes fall among one another** — which D built, kept, and correctly
+identified as the only thing that resists Rival A. D dismissed it on two legs.
+
+```text
+LEG (i)   P5 grants ONE grouping; it is silent on two open at once with interleaved
+          writes. UNCONTESTED BY ANYONE. Sufficient on its own to defeat the
+          casualty, which is why the verdict holds regardless of the dispute below.
+
+LEG (ii)  D: "even granted, reverting one while the other stands is reversion of a
+          portion that is not the LIFO top, which P6 forbids."
+
+  READING 1 — D's own. P6 bars it.
+  READING 2 — the charter audit. LEG (ii) IS UNSOUND. P6 grants "last-in-first-out
+          STEPPING" and P5 makes a grouping "one STEP", so the unit of LIFO is the
+          step. Two groupings closing in sequence are two steps in sequence, and
+          reverting the later-closing one IS the top step. Leg (ii) requires reading
+          P6 as ordering WRITES, which contradicts P5. On this reading the casualty
+          reopens on C1 ALONE — one light silence in P5, not the heavy P6 grant —
+          and would then be an ADMISSIBLE DEFENCE, not a gap.
+  READING 3 — RAISED BY THE CONTROLLER, UNREVIEWED, and it cuts against reading 2.
+          P3 grants that "canonical state returns to a CONFIGURATION IT PREVIOUSLY
+          HELD". With writes interleaved w1(G1) w2(G2) w3(G1) w4(G2), reverting G1
+          alone yields {w2,w4 applied, w1,w3 not} — a configuration the container
+          NEVER HELD. So the bar may be P3, which NEITHER D NOR THE AUDITOR NAMED,
+          rather than P6. If so the casualty needs a relaxation of P3 as well as C1,
+          and reading 2's "reopens on C1 alone" is too generous.
+```
+
+```text
+DISPOSITION ON THE DISPUTE: UNRESOLVED, AND LEFT SO.
+  Reading 3 is the controller's, is UNREVIEWED, and is recorded at the same status
+  as the other two — not promoted because the controller wrote it. Resolving it
+  would settle what the reopening conditions are, and this row has no standing to
+  do that: reopening conditions are not pursued.
+
+STRUCK FROM THIS ROW REGARDLESS: D's C5, "a resolution of the P3/P4 tension." It
+names a DELIVERABLE SOMEONE MUST PRODUCE, not a premise that could be granted, and
+D itself said the tension "exists with or without the candidate". Out of row.
+Recorded instead as an observation against the premise set.
+```
+
+### WHAT IS ESTABLISHED, NARROWLY
+
+```text
+1  Three seats — one of them charged to succeed by finding a casualty — produced
+   ZERO admissible casualties under P1-P6. This is a fact about the seats' output,
+   NOT about the world, and per the headline finding its evidential weight is near
+   zero because the null was charter-guaranteed.
+2  A conditionally coherent absence exists, contingent on eight ungranted
+   conditions. Coherence-under-conditions is a CONSISTENCY RESULT over the premise
+   set, not a finding that the function is unnecessary.
+3  The candidate AS WORDED has no falsifiable contract. The fact is unnamed, so it
+   quantifies over arbitrary content: no failing case AND no succeeding case.
+4  The row's decision rests on a grant P1-P6 do not make, and supplying that grant
+   DISSOLVES the row rather than deciding it.
+```
+
+### WHAT IS NOT ESTABLISHED
+
+```text
+NOT   that the candidate is refuted
+NOT   that the OPPOSITE POSITION holds. A's indistinguishability claim is itself
+      conditional on the record being unreadable, so the opposite inherits the same
+      gap and remains EXACTLY AS UNPROVEN as it started
+NOT   that grouping is exhausted by reversal granularity
+NOT   that grouping is NOT exhausted by reversal granularity
+NOT   anything about a carrier, in either direction
+NOT   that the closure is corroborated by three seats agreeing
+```
+
+### THE STRONGEST ALTERNATIVE INTERPRETATION — may be right
+
+> The procedure could not have produced any other output, so the row produced **no
+> information about the candidate at all**. What it produced is a **diagnosis of the
+> premise set**: record readability unspecified, the P3/P4 tension unresolved, LIFO's
+> single-stack unspecified, one-versus-many open groupings unspecified. On this
+> reading the three verdicts are artefacts of an under-specified premise set being
+> interrogated by seats that each closed its silences by argument-from-silence.
+
+It converges on the same disposition by a different route, which is why the
+disposition is safe even though the reasoning under it is contested.
+
+## DEFENDER CHARTER — FIRST-OUTING AUDIT. Three repairs applied, two RESERVED.
+
+The charter was granted and used on the same day. An independent audit of **the seat
+as an instrument** — given the charter and the defender's report only, and
+deliberately NOT the killers' reports — returned:
+
+> _"It discharged its charge — narrowly. It produced the one artefact no killer
+> would have produced, but its centre of gravity was killer work, one leg of its
+> central dismissal is unsound on the frozen text, and its reopening-condition set is
+> wrong in the direction that makes closure look more durable than it is."_
+
+```text
+EVIDENCE THE SEAT DID NOT COLLAPSE INTO A THIRD KILLER — weighted decisive
+  it BUILT the alternating-groupings casualty, KEPT it, and correctly identified it
+    as the only construction resisting its own strongest rival. A killer does not
+    manufacture the one argument that survives its own best weapon and then flag it
+  it refused two free wins for the closure side: declined to claim the P3/P4
+    tension, and flagged two of its own inferences as unearned KNOWING they were
+    load-bearing FOR ITS ANTI-CANDIDATE REASONING
+  clean on the no-archaeology rule, under the exact temptation predicted for it
+
+EVIDENCE OF DRIFT TOWARD THE ROOM'S DISPOSITION
+  the seat produced ZERO instances of admissible output #2 — it never pushed against
+    a killer once
+  Rival A and Rival B are stated as UNIVERSALS, not as defeats of the specific
+    casualty in hand. That is killer inventory, now sitting in the record
+  its own self-audit contains the confession, offered as a virtue: "Where finer
+    resolution would have helped a defence, I closed it against the candidate
+    instead." A defender resolving a silence AGAINST what it defends is drift
+```
+
+### REPAIR 1 — APPLIED. Rule 1 is BIDIRECTIONAL, and a flagged inference quarantines the verdict
+
+```text
+An inference beyond the frozen wording is a BREACH REGARDLESS OF WHICH SIDE IT
+FAVOURS. The rule's rationale is directional; its text is not, and the text governs.
+The premise set is SHARED and the closure INHERITS it — a NOT-ESTABLISHED closure
+resting on a widened premise is exactly as unsound as an ESTABLISHED one. In a
+derivation struck four times for over-crediting closure, a widening that STRENGTHENS
+closure is the more dangerous species, not the safer one.
+
+Any inference flagged as load-bearing must be QUARANTINED: the verdict is restated
+without it, or the verdict is marked provisional.
+
+THE SELF-AUDIT SECTION IS NOW MANDATORY for every seat, not just the defender. It
+was unprompted here and was the single most valuable thing the seat produced.
+```
+
+Applied retroactively to this row: D's Rival B is quarantined, and D's verdict stands
+**on Rival A alone**.
+
+### REPAIR 2 — APPLIED. A rival may be constructed only as narrowly as the casualty in hand
+
+```text
+A rival construction may be built ONLY as narrow as needed to defeat the SPECIFIC
+casualty just stated, and must be WRITTEN AS the defeat of that casualty.
+Universally quantified rivals are killer output and are out of scope for the
+defender.
+
+This also closes a Rule 5 loophole the outing exposed: Rule 5 bars designing the
+CANDIDATE's mechanism, and the seat designed the RIVAL's mechanism in some detail
+instead. That aperture is where the killer work entered.
+```
+
+### REPAIR 3 — APPLIED. The headline verdict must carry any non-decidability finding
+
+```text
+The report contained TWO dispositions — "no admissible defence found" and "the row
+is not decidable as posed" — and only the first was in the headline. THE GATE READS
+HEADLINES.
+
+REQUIRED FORM: "NO ADMISSIBLE DEFENCE FOUND; ROW NOT DECIDABLE AS POSED ON <conditions>"
+
+Without this, a preserved non-decidability finding is consumed as clean corroborated
+closure — the exact misreading struck four times, arriving in a new costume through
+the seat built to prevent it.
+```
+
+### RESERVED TO THE HUMAN AUTHOR — two repairs an implementer may not make
+
+```text
+R1  THE CHARTER CONTAINS AN INTERNAL CONTRADICTION AS WRITTEN.
+
+    Admissible output #2 is "a demonstration that a rival construction THE KILLERS
+    RELY ON is unavailable under the frozen premises."
+
+    Burden rule 4 gives the defender THE SAME WITHHELD PACKET AS THE KILLERS — so
+    the defender never sees the killers' rivals and CANNOT ATTACK THEM. Output #2 is
+    UNREACHABLE. As written the charter permits a null verdict from a seat that never
+    touched the killers, which is the structural gap the seat exists to close.
+
+    PROPOSED, NOT APPLIED: a second pass. Pass 1 sealed and independent as now; pass
+    2 seeded with the killers' RIVAL CONSTRUCTIONS ONLY — not their verdicts, not
+    their rationale — with the defender permitted only to disqualify them.
+
+    WHY RESERVED: it changes what a defence IS and what withholding protects. That
+    is a semantic choice about the standard of evidence, on the same footing as the
+    decision to seat a defender at all.
+
+R2  THE DEFENDER HAS NO STATED DISPOSITION.
+
+    The killers have one ("nothing survives"). The defender was given none, so it
+    defaulted to the room's — and said so out loud.
+
+    PROPOSED, NOT APPLIED: "the candidate stands as required until a rival is shown
+    AVAILABLE from the frozen text. Silence in the premises is not a grant to the
+    rival either: where the premises are silent on a fact a casualty needs, the row
+    is NOT DECIDABLE and the silence is recorded as a condition. The defender may not
+    close a silence against the candidate."
+
+    WHY RESERVED: a disposition is precisely what makes a seat adversarial. Setting
+    the defender's is setting the burden of proof for every future row in scope.
+
+NEITHER IS A WORK ORDER. Rows may open under the charter as it stands, carrying this
+audit. The next defender outing inherits repairs 1-3 and the unrepaired R1/R2.
 ```
 
 ## P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED. Transcribed here.

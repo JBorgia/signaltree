@@ -1237,9 +1237,97 @@ U5b-B  REFUSAL / FAILURE                   CLOSED — FUNCTION NOT ESTABLISHED.
                                            NOT refuted: the null stands undisturbed
                                            and the opposite position is EQUALLY
                                            UNPROVEN.
-U5b-C  CONSEQUENCE COORDINATION            UNOPENED
-U5b-D  SHARED ATTRIBUTION                  UNOPENED
+U5b-C  CONSEQUENCE COORDINATION            UNOPENED — and NOT OPENABLE AS WORDED
+U5b-D  SHARED ATTRIBUTION                  TERMINAL — UNDERDETERMINED.
+                                           Not decidable as posed. NULL FORBIDDEN.
+                                           First row with three Gate 1 seats.
 U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL    UNOPENED
+```
+
+### U5b-D — read this before citing it, and before seating another defender
+
+```text
+DISPOSITION  UNDERDETERMINED, terminal. Not rejected, not refuted.
+SEATS        A: NOT ESTABLISHED · B: coherent absence, CONDITIONAL on 8 ungranted
+             conditions · D (defender): NO ADMISSIBLE DEFENCE FOUND
+MEASUREMENT  NONE at any rung. Every claim is analytic over a frozen text.
+```
+
+**THE HEADLINE FINDING IS ABOUT THE METHOD, NOT THE CANDIDATE.** The packet required
+the shared fact to remain UNNAMED and forbade every available name for it. Seat A
+noted such a claim has no failing case; Gate 2 drew the symmetric half — **it has no
+succeeding case either.** So the defender's null was **guaranteed by the charter
+design in advance**.
+
+```text
+THE "DEFENDER FINDS NOTHING -> CLOSURE STRENGTHENS" BRANCH DID NOT FIRE, AND MUST
+NOT BE CITED AS THOUGH IT DID. The defender was not in a position to fail
+informatively.
+```
+
+**Which branch did fire, and why it is not the corroboration error again.** All three
+seats located the decision on one unmade grant — whether the record is readable
+separately from positions. That is NOT common-cause agreement, because the seats
+demand **opposite settings** of the same switch: A's condition R needs the record
+READABLE for the candidate; B's C1 needs it UNREADABLE for the absence; D lists it as
+the reopener against its own interest. Opposite demands on one silence is a bivalent
+pivot, not concordance. **Strength is bounded to the LOCATION of the gap and
+corroborates nothing about whether the function is required.**
+
+**The pivot DISSOLVES the row rather than deciding it.** Record readable → the
+candidate's content is satisfied by premise, no function established. Record
+unreadable → the absence stands, no function established. **Neither setting
+establishes a function**, which forecloses reading UNDERDETERMINED as "pending a
+grant we should go get."
+
+```text
+ESTABLISHED, narrowly
+  the candidate AS WORDED has no falsifiable contract — unnamed fact, no failing
+    case and no succeeding case
+  a conditionally coherent absence exists (a CONSISTENCY result, not a finding that
+    the function is unnecessary)
+  the decision rests on a grant P1-P6 do not make
+
+NOT ESTABLISHED
+  that the candidate is refuted
+  that the OPPOSITE POSITION holds — A's indistinguishability claim is itself
+    conditional on the record being unreadable, so the opposite is exactly as
+    unproven as it started
+  anything about a carrier, in either direction — B's own relocation admission is a
+    refusal to climb the top rung, correctly
+```
+
+**Every seat closed a silence by argument-from-silence** — A's "no third case", B's
+"exactly two places", D's "steps are totally ordered". Two were undisclosed. And the
+frozen set has a known internal tension (P3/P4: reverting recorded positions while
+excluded positions stay put yields configurations never held). **A premise set with an
+unresolved internal tension cannot support closures derived from its silences.**
+
+### The defender charter — first outing, three repairs LIVE, two RESERVED
+
+```text
+LIVE, apply to every future seat
+  1  Rule "quote premises verbatim" is BIDIRECTIONAL. An inference beyond the frozen
+     wording is a breach whichever side it favours; the premise set is shared and
+     the closure inherits it. A flagged load-bearing inference QUARANTINES the
+     verdict — restate without it or mark it provisional.
+     SELF-AUDIT IS NOW MANDATORY FOR EVERY SEAT, not just the defender.
+  2  A rival may be built only as narrowly as the casualty in hand, and written as
+     the defeat of THAT casualty. Universal rivals are killer output.
+  3  A headline verdict MUST carry any non-decidability finding. The gate reads
+     headlines, and a buried "not decidable as posed" gets consumed as clean
+     closure — the four-times-struck error in a new costume.
+
+RESERVED TO THE AUTHOR — an implementer may not settle either
+  R1 THE CHARTER CONTRADICTS ITSELF. Admissible output #2 is "show a rival THE
+     KILLERS RELY ON is unavailable", but burden rule 4 withholds the killers'
+     reports, so it is UNREACHABLE. A defender can currently return a null having
+     never touched a killer — the exact gap the seat exists to close. Proposed: a
+     second pass seeded with the killers' RIVALS ONLY, no verdicts, no rationale.
+  R2 THE DEFENDER HAS NO STATED DISPOSITION. The killers have one; the defender
+     defaulted to the room's and said so ("where finer resolution would have helped
+     a defence, I closed it against the candidate instead"). Setting a disposition
+     sets the burden of proof for every row in scope.
 ```
 
 ### U5b-B — what closed it, and what it did NOT close on
