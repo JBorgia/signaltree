@@ -1365,6 +1365,30 @@ each is compliant with its own letter and leaks where it does not reach.
 That covers premise attack, null construction, interpretation review and closure
 with one rule instead of four, and it is what every observed failure violated.
 
+### THE OPPOSITE CONTRACT MUST NOT STIPULATE AN ANSWER
+
+```text
+A pre-registered OPPOSITE CONTRACT may not contain a clause that DECIDES a
+question the row might need to decide.
+```
+
+Observed on U5b-A. The opposite contract was written as *"the grouping premise
+governs only confirmed reversal granularity"* — which handed the null the answer to
+precisely the question a reviewer then identified as undecided by the premises. Any
+closure leaning on the null's wording was leaning on a stipulation, and the phrase
+had to be recorded as **the author's wording, not a finding.**
+
+```text
+BEFORE OPENING A ROW, check the opposite contract for:
+  clauses beginning "only" / "merely" / "nothing but"
+  any clause that ASSERTS the scope of a frozen premise rather than CITING it
+  any clause that would be a FINDING if a reviewer produced it
+```
+
+A stipulation inside the instrument is indistinguishable from a result once the row
+closes. This is a defect of the INSTRUMENT, and it is the author's, not a
+reviewer's.
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no

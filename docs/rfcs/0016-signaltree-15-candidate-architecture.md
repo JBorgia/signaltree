@@ -17,9 +17,9 @@ explicitly forbids: it assigned lowering targets — `loader → Operation`,
 `compared → Policy`, `resource → Position + Operation` — to concepts whose
 FUNCTION has never been derived.
 
-That is the Rule 0k error in a new mask. Rule 0k caught *"Angular has a
-primitive, therefore delete the feature."* This is *"a smaller abstraction
-exists, therefore demote the feature."* Same invalid inference, same direction of
+That is the Rule 0k error in a new mask. Rule 0k caught _"Angular has a
+primitive, therefore delete the feature."_ This is _"a smaller abstraction
+exists, therefore demote the feature."_ Same invalid inference, same direction of
 travel, and `form()` is what it cost last time.
 
 So the deliverable is the grid, not the algebra. **The `LOWERING HYPOTHESIS`
@@ -61,20 +61,20 @@ Everything else from the draft is a row in the grid below, not a conclusion.
 
 Recorded so the draft cannot be mined later as if it agreed with the freeze.
 
-| Draft claim | Status | Governing result |
-|---|---|---|
-| `linked()` sits under `derived:` | **CONTRADICTS** | RFC 0015: `linked()` as derived is REFUTED; function, owner and placement are all three UNPROVEN. Current `.derived()` placement is the conflation, not a precedent. |
-| persistence is an Operation with `trigger: AFTER_COMMIT` and a definition-time `source` | **CONTRADICTS, twice** | Frozen persistence invariants: the durability gate is TREE-SCOPED and SCOPE-BASED — *"commit-ness is NEVER inferred from where the JavaScript call happened"*; and invariant 7 — durable consequences *"resolve surviving truth at EXECUTION time, never a value captured when the write was authored."* |
-| Operation authority is a six-value enum (OBSERVE / REALIZE / CONSEQUENCE / INGRESS / AUTHOR / RECONCILE) | **OVERBUILT** | MUT-2C froze that a two-valued authored/realized classification is decisive in the measured capture path, is caller-supplied and unverified, and that **its owner is NOT PROVED**. Six values rest on an unowned two. |
-| `resource` / `loader` / `status` / `compared` / `serialization` lower to sugar or policy | **PREMATURE** | Rule 0k Tier 2: each gets its own NULL and its own verdict. None has been run. |
+| Draft claim                                                                                              | Status                 | Governing result                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `linked()` sits under `derived:`                                                                         | **CONTRADICTS**        | RFC 0015: `linked()` as derived is REFUTED; function, owner and placement are all three UNPROVEN. Current `.derived()` placement is the conflation, not a precedent.                                                                                                                                     |
+| persistence is an Operation with `trigger: AFTER_COMMIT` and a definition-time `source`                  | **CONTRADICTS, twice** | Frozen persistence invariants: the durability gate is TREE-SCOPED and SCOPE-BASED — _"commit-ness is NEVER inferred from where the JavaScript call happened"_; and invariant 7 — durable consequences _"resolve surviving truth at EXECUTION time, never a value captured when the write was authored."_ |
+| Operation authority is a six-value enum (OBSERVE / REALIZE / CONSEQUENCE / INGRESS / AUTHOR / RECONCILE) | **OVERBUILT**          | MUT-2C froze that a two-valued authored/realized classification is decisive in the measured capture path, is caller-supplied and unverified, and that **its owner is NOT PROVED**. Six values rest on an unowned two.                                                                                    |
+| `resource` / `loader` / `status` / `compared` / `serialization` lower to sugar or policy                 | **PREMATURE**          | Rule 0k Tier 2: each gets its own NULL and its own verdict. None has been run.                                                                                                                                                                                                                           |
 
 ### Two corrections in the other direction
 
 The review that produced this RFC also overstated twice. Both corrections stand.
 
 **1. Derived `PositionId` is UNPROVEN, not contradicted.** RFC 0015's
-`Identity — DELETE` answered a narrower question: whether *cross-derived
-composition* requires an identity relationship. It established that downstream
+`Identity — DELETE` answered a narrower question: whether _cross-derived
+composition_ requires an identity relationship. It established that downstream
 projections consume values rather than references. It did **not** establish that
 a derived projection cannot hold a stable semantic position identity, and
 "no causal identity / no persistence identity" is fully compatible with one. The
@@ -89,8 +89,8 @@ DERIVED persistence identity    NO   (frozen projection contract)
 **2. `asReadonly` and `_` are different axes, not competitors.** The claim that
 `_` would make `asReadonly` "the tree without `_`" does not hold, because the
 proposed `$` still permits canonical store writes (`tree.$.search.set('Ada')`).
-So `asReadonly` narrows *mutation capability on `$`*, while `_` would expose
-*intentional command invocation*, which is not a state write at all. `_` may
+So `asReadonly` narrows _mutation capability on `$`_, while `_` would expose
+_intentional command invocation_, which is not a state write at all. `_` may
 still fail its own survival audit; it does not fail it by redundancy with
 `asReadonly`.
 
@@ -154,8 +154,8 @@ extension descriptors, it can see them all before constructing, so the surviving
 function no longer needs a second public constructor. Function SURVIVES, public
 FORM becomes a strong REDESIGN candidate.
 
-**Consequence for ordering:** the default becomes *extensions are
-order-independent unless a surviving function proves otherwise*. Capability union
+**Consequence for ordering:** the default becomes _extensions are
+order-independent unless a surviving function proves otherwise_. Capability union
 is commutative — `[timeTravel(), transactions()]` and its reverse request the
 same substrate — so no procedural ordering is needed for the one axis that is
 actually exercised. A genuine ordering relationship would have to earn itself
@@ -222,32 +222,32 @@ NO declaration-site error, and the LAST one wins under probing — so declaratio
 order silently decides which survives.
 
 Fact 2 does not count against the declarative model. It counts against
-`type Final = A & B & C` as an *unchecked* lowering. And the declarative model is
+`type Final = A & B & C` as an _unchecked_ lowering. And the declarative model is
 strictly better positioned here than the chain: a compiler that sees the complete
 set before construction can detect the collision, which sequential `.with()`
 structurally cannot.
 
 ### Ledger rows
 
-| Concept | Direction |
-|---|---|
-| extension/plugin function | likely SURVIVES |
-| construction capability declaration (`capabilities`) | **SURVIVES — measured, exercised in production** |
-| generic "enhancer" runtime abstraction | UNPROVEN |
-| chained `.with()` as primary extension API | strong REDESIGN/DELETE candidate — its type-accumulation defense is REFUTED |
-| `plannedSignalTree()` function | SURVIVES |
-| `plannedSignalTree()` as a separate public constructor | strong REDESIGN candidate |
-| extension descriptors in the initial declaration | strong candidate |
-| `requires`/`provides` ordering graph | highly suspect; audit independently |
-| "enhancer" as the future NOUN (`(tree) => tree`) | suspect — inherently post-construction |
-| naive intersection of contributions | **REFUTED as a lowering** — silent last-wins shadowing |
-| inert extension declaration | **type-proved feasible** |
+| Concept                                                | Direction                                                                   |
+| ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| extension/plugin function                              | likely SURVIVES                                                             |
+| construction capability declaration (`capabilities`)   | **SURVIVES — measured, exercised in production**                            |
+| generic "enhancer" runtime abstraction                 | UNPROVEN                                                                    |
+| chained `.with()` as primary extension API             | strong REDESIGN/DELETE candidate — its type-accumulation defense is REFUTED |
+| `plannedSignalTree()` function                         | SURVIVES                                                                    |
+| `plannedSignalTree()` as a separate public constructor | strong REDESIGN candidate                                                   |
+| extension descriptors in the initial declaration       | strong candidate                                                            |
+| `requires`/`provides` ordering graph                   | highly suspect; audit independently                                         |
+| "enhancer" as the future NOUN (`(tree) => tree`)       | suspect — inherently post-construction                                      |
+| naive intersection of contributions                    | **REFUTED as a lowering** — silent last-wins shadowing                      |
+| inert extension declaration                            | **type-proved feasible**                                                    |
 
 ## Amendment 2 — the matrix becomes FUNCTION-FIRST
 
 **Status unchanged: CANDIDATE. Nothing here is frozen.**
 
-Tables A-D are organised by CONCEPT, and concept means *legacy symbol*. That was
+Tables A-D are organised by CONCEPT, and concept means _legacy symbol_. That was
 right while the question was "which of these survives". It is wrong now, because
 three separate times in the extension cluster a FUNCTION survived while its
 MECHANISM evaporated — and each time, auditing the noun would have preserved the
@@ -292,28 +292,27 @@ because `Enhancer` needed replacing.
 Columns: what the function is · whether the derived architecture already covers
 it · where the evidence came from. `LEGACY SOURCES` is citation only.
 
-| Function | Status | Coverage, and by what evidence | Legacy sources (evidence only) |
-|---|---|---|---|
-| select optional tree behaviour at authoring time | survives | PROVED-IN-MODEL (declarative init candidate) | `.with()` call sites, built-ins |
-| know required substrate capabilities before construction | **SURVIVES — measured** | PROVED-IN-MODEL | `plannedSignalTree`, `EnhancerMeta.capabilities` |
-| contribute public/type surface | **SURVIVES** | PROVED-IN-MODEL (SHAPE-T0, inert declarations) | `Enhancer<TAdded>`, `this & TAdded` |
-| bind runtime behaviour to the constructed tree/kernel | **SURVIVES** | PROVED-IN-MODEL (T1 CASE 1) | enhancer bodies |
-| alter final callable behaviour | **SURVIVES** | PROVED-IN-MODEL (T1 CASE 2) | batching / timeTravel / devTools replacement |
-| register teardown / lifetime behaviour | **SURVIVES** | **LANDED** — `registerCleanup` is already tree-owned and unrelated to `.with()` | `registerCleanup` |
-| reject conflicting public contributions | **SURVIVES** | PROVED-IN-MODEL, both halves (T0-G static, T1 CASE 3 runtime) | nothing — the old system had no such check |
-| **semantic duplicate / exclusivity rule** — *what combinations of declarations are actually invalid, independent of public-key collisions?* | **OPEN** | T1 CASE 6 refused via an explicit id; SUFFICIENT, never proved minimal | `name`, `.with()` duplicate guard |
-| **realization dependency satisfaction** — *does one realization genuinely require something established by another, and if so what fact must the compiler know?* | **OPEN** | T1 CASE 5 showed an internal order SUFFICES; the dependency itself may be an artifact of the prototype's publish/consume | `requires`, `provides`, `resolveEnhancerOrder` |
-| **substrate requirement determination** — *how does the compiler know which substrate capabilities are required before construction?* | **OPEN** | `TREE_CAPABILITY_DEPENDENCIES` already models capability-to-capability implication internally | `capabilities` |
-| invoke contributed capabilities after exposure | **SURVIVES** | **LANDED** — an ordinary runtime API, never composition | `realtime.connect()`, every enhancer method |
-| **compose new capabilities after exposure** | **DELETE — no surviving use found** | n/a | `.with()` |
-| replace public tree identity | **NOT A FUNCTION** | n/a — mechanism debt of post-construction application | the three replacing built-ins |
-| sequentially accumulate types | **NOT A FUNCTION** | n/a — declarative typing handles it | `this & TAdded` |
-| preserve an enhancer chain | **NOT A FUNCTION** | n/a — mechanism self-maintenance | the redefined `.with()` on replacements |
+| Function                                                                                                                                                         | Status                              | Coverage, and by what evidence                                                                                           | Legacy sources (evidence only)                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| select optional tree behaviour at authoring time                                                                                                                 | survives                            | PROVED-IN-MODEL (declarative init candidate)                                                                             | `.with()` call sites, built-ins                  |
+| know required substrate capabilities before construction                                                                                                         | **SURVIVES — measured**             | PROVED-IN-MODEL                                                                                                          | `plannedSignalTree`, `EnhancerMeta.capabilities` |
+| contribute public/type surface                                                                                                                                   | **SURVIVES**                        | PROVED-IN-MODEL (SHAPE-T0, inert declarations)                                                                           | `Enhancer<TAdded>`, `this & TAdded`              |
+| bind runtime behaviour to the constructed tree/kernel                                                                                                            | **SURVIVES**                        | PROVED-IN-MODEL (T1 CASE 1)                                                                                              | enhancer bodies                                  |
+| alter final callable behaviour                                                                                                                                   | **SURVIVES**                        | PROVED-IN-MODEL (T1 CASE 2)                                                                                              | batching / timeTravel / devTools replacement     |
+| register teardown / lifetime behaviour                                                                                                                           | **SURVIVES**                        | **LANDED** — `registerCleanup` is already tree-owned and unrelated to `.with()`                                          | `registerCleanup`                                |
+| reject conflicting public contributions                                                                                                                          | **SURVIVES**                        | PROVED-IN-MODEL, both halves (T0-G static, T1 CASE 3 runtime)                                                            | nothing — the old system had no such check       |
+| **semantic duplicate / exclusivity rule** — _what combinations of declarations are actually invalid, independent of public-key collisions?_                      | **OPEN**                            | T1 CASE 6 refused via an explicit id; SUFFICIENT, never proved minimal                                                   | `name`, `.with()` duplicate guard                |
+| **realization dependency satisfaction** — _does one realization genuinely require something established by another, and if so what fact must the compiler know?_ | **OPEN**                            | T1 CASE 5 showed an internal order SUFFICES; the dependency itself may be an artifact of the prototype's publish/consume | `requires`, `provides`, `resolveEnhancerOrder`   |
+| **substrate requirement determination** — _how does the compiler know which substrate capabilities are required before construction?_                            | **OPEN**                            | `TREE_CAPABILITY_DEPENDENCIES` already models capability-to-capability implication internally                            | `capabilities`                                   |
+| invoke contributed capabilities after exposure                                                                                                                   | **SURVIVES**                        | **LANDED** — an ordinary runtime API, never composition                                                                  | `realtime.connect()`, every enhancer method      |
+| **compose new capabilities after exposure**                                                                                                                      | **DELETE — no surviving use found** | n/a                                                                                                                      | `.with()`                                        |
+| replace public tree identity                                                                                                                                     | **NOT A FUNCTION**                  | n/a — mechanism debt of post-construction application                                                                    | the three replacing built-ins                    |
+| sequentially accumulate types                                                                                                                                    | **NOT A FUNCTION**                  | n/a — declarative typing handles it                                                                                      | `this & TAdded`                                  |
+| preserve an enhancer chain                                                                                                                                       | **NOT A FUNCTION**                  | n/a — mechanism self-maintenance                                                                                         | the redefined `.with()` on replacements          |
 
 Note what is absent from the left column: `Enhancer`, `bind()`, `requires`,
 `provides`, `plannedSignalTree`. **Those are not functions.** They are possible
 historical implementations of functions that are.
-
 
 **Two evidence statuses, deliberately not merged.** `LANDED` means the existing
 shipped architecture already supplies the function. `PROVED-IN-MODEL` means only
@@ -323,8 +322,8 @@ them would let a prototype's success read as production truth.
 
 **The three OPEN rows are named as questions on purpose.** Earlier drafts called
 them "duplicate identity", "realization ordering" and "substrate dependency
-representation" — each of which smuggles its answer into its name: *identity*
-presumes an id, *ordering* presumes an order, *representation* presumes the fact
+representation" — each of which smuggles its answer into its name: _identity_
+presumes an id, _ordering_ presumes an order, _representation_ presumes the fact
 already exists and only needs encoding. Rule 0l applies to our own phrasing.
 
 ### DERIVATION 1 — substrate requirement determination
@@ -363,7 +362,7 @@ C  STRUCTURALLY IMPOSSIBLE TODAY:
 ```
 
 The `timeTravel` row is the one that matters. It is the only case with the
-*opportunity* to be config-dependent, and it isn't — which is evidence for A
+_opportunity_ to be config-dependent, and it isn't — which is evidence for A
 rather than merely absence of evidence for B.
 
 #### Result
@@ -484,12 +483,12 @@ argument.
                     +-- timeTravel
 ```
 
-Two consumers of something with an independently established owner. *Causal
-history owns meaning* was already frozen; this is that invariant showing up as a
+Two consumers of something with an independently established owner. _Causal
+history owns meaning_ was already frozen; this is that invariant showing up as a
 dependency graph with no feature-to-feature edges in it.
 
 **`serialization` is the sharpest case.** Persistence observing committed truth
-could very easily have been modeled as *"persistence requires transactions"*,
+could very easily have been modeled as _"persistence requires transactions"_,
 because a transaction plainly affects when state settles. It is not. It consumes
 `commit-consequence` — the durability authority — directly. The frozen
 persistence semantics put the authority in the right place, and the absence of a
@@ -529,7 +528,7 @@ would apply and the FACT to communicate would be derived then — not called
 
 **Null:** assume no declaration id, no name-based duplicate rule, no generic
 duplicate detector, and no assumption that all optional authoring inputs belong
-in one collection. Which combinations are semantically invalid, and *why*?
+in one collection. Which combinations are semantically invalid, and _why_?
 
 Excluded up front, because they are already owned elsewhere: incompatible public
 contribution keys (contribution collision, T0-G/T1 CASE 3), repeated substrate
@@ -574,14 +573,14 @@ true for a singular authority. There is no single rule to be had.
 
 #### Cardinality per function, with its semantic basis
 
-| Function | Cardinality | Semantic basis | Generic id needed? |
-|---|---|---|---|
-| transaction authority | idempotent / canonicalizing | already a per-tree singleton; no config to conflict | no |
-| temporal history policy | 0..1 (candidate) | two configured histories over ONE causal lineage would compete | no — the OWNER is singular |
-| persistence-declared position | 0..N | **MEASURED plural** | no — distinguished by its position |
-| call interception | 0..N, compositional | three built-ins intercept today and coexist | no |
-| cleanup registration | 0..N, additive | `registerCleanup` is a list | no |
-| substrate requirement | set, idempotent | union; repetition is meaningless | no |
+| Function                      | Cardinality                 | Semantic basis                                                 | Generic id needed?                 |
+| ----------------------------- | --------------------------- | -------------------------------------------------------------- | ---------------------------------- |
+| transaction authority         | idempotent / canonicalizing | already a per-tree singleton; no config to conflict            | no                                 |
+| temporal history policy       | 0..1 (candidate)            | two configured histories over ONE causal lineage would compete | no — the OWNER is singular         |
+| persistence-declared position | 0..N                        | **MEASURED plural**                                            | no — distinguished by its position |
+| call interception             | 0..N, compositional         | three built-ins intercept today and coexist                    | no                                 |
+| cleanup registration          | 0..N, additive              | `registerCleanup` is a list                                    | no                                 |
+| substrate requirement         | set, idempotent             | union; repetition is meaningless                               | no                                 |
 
 **Every row answers "no" to a generic id.** Where instances must be
 distinguished — durable consequences — the distinguishing fact is SEMANTIC (the
@@ -596,8 +595,8 @@ per-function CARDINALITY         SURVIVES, and differs per function
 #### Exclusivity is a property of the AUTHORITY, not of the declaration
 
 The temporal-history row is the only singular candidate, and even there the rule
-is not *"reject a second `timeTravel` declaration"*. It is *"one history policy
-per causal lineage"* — a property of the owner. An authority that is singular
+is not _"reject a second `timeTravel` declaration"_. It is _"one history policy
+per causal lineage"_ — a property of the owner. An authority that is singular
 cannot be doubled regardless of how many declarations mention it, which is
 exactly how `transactions` already behaves without any duplicate guard.
 
@@ -640,8 +639,8 @@ can honestly hold things with different cardinalities.
 
 A human-readable label may later survive for diagnostics or devtools. That is a
 DIFFERENT function with a different owner, and it gets audited when diagnostics
-does. *"We need a useful diagnostic label"* must never become *"therefore
-declaration identity exists"*.
+does. _"We need a useful diagnostic label"_ must never become _"therefore
+declaration identity exists"_.
 
 ### EXTENSION-SYSTEM FUNCTIONAL EXTRACTION — **CLOSED**
 
@@ -679,23 +678,23 @@ architecture without a bounded proof if it ever becomes load-bearing.
 Mechanical. **No further NULLs are run against these nouns** — they are mapped
 onto answers derived independently of them.
 
-The wording matters: several rows say *"no survival earned from the extension
-function audit"* rather than `DELETE`. Their extension-system justification is
+The wording matters: several rows say _"no survival earned from the extension
+function audit"_ rather than `DELETE`. Their extension-system justification is
 dead, but an unrelated function could theoretically save part of one later — a
 diagnostic label being the obvious candidate. Writing an unconditional deletion
 would make a future diagnostics audit look like it was reopening a freeze.
 
-| Legacy mechanism | Basis | Disposition |
-|---|---|---|
-| `.with()` | its function — post-exposure composition — is DELETE | **DELETE**, no compatibility adapter (Rule 0l) |
-| `Enhancer<TAdded>` | bundled authoring + type contribution + realization; each now has a separate owner | **DELETE / REDESIGN** as a callable abstraction; no adapter |
-| `plannedSignalTree()` | its function — complete planning before construction — survives under the compiler | **DELETE / REDESIGN** as a separate constructor |
-| `capabilities` (public field) | requirements measured intrinsic; no author protocol earned | public field **DELETE candidate**; the internal compiler knowledge survives |
-| `requires` | the realization-dependency function is DELETE | **DELETE** |
-| `provides` | no dependency protocol remains for it to serve | **no survival earned from the extension function audit** |
-| `name` | generic duplicate identity not earned | **no identity survival earned**; diagnostics naming unexamined |
-| `bind()` | connecting a callable to an already-built host disappeared with the construction model | **no survival earned here**; internal realization may need something, derived separately |
-| `ENHANCER_META` | a bundle whose members now have different owners | **decompose mechanically**; do not preserve the bundle because one member survives |
+| Legacy mechanism              | Basis                                                                                  | Disposition                                                                              |
+| ----------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `.with()`                     | its function — post-exposure composition — is DELETE                                   | **DELETE**, no compatibility adapter (Rule 0l)                                           |
+| `Enhancer<TAdded>`            | bundled authoring + type contribution + realization; each now has a separate owner     | **DELETE / REDESIGN** as a callable abstraction; no adapter                              |
+| `plannedSignalTree()`         | its function — complete planning before construction — survives under the compiler     | **DELETE / REDESIGN** as a separate constructor                                          |
+| `capabilities` (public field) | requirements measured intrinsic; no author protocol earned                             | public field **DELETE candidate**; the internal compiler knowledge survives              |
+| `requires`                    | the realization-dependency function is DELETE                                          | **DELETE**                                                                               |
+| `provides`                    | no dependency protocol remains for it to serve                                         | **no survival earned from the extension function audit**                                 |
+| `name`                        | generic duplicate identity not earned                                                  | **no identity survival earned**; diagnostics naming unexamined                           |
+| `bind()`                      | connecting a callable to an already-built host disappeared with the construction model | **no survival earned here**; internal realization may need something, derived separately |
+| `ENHANCER_META`               | a bundle whose members now have different owners                                       | **decompose mechanically**; do not preserve the bundle because one member survives       |
 
 **`ENHANCER_META` is the row most at risk of a lazy answer.** It currently
 carries `name`, `provides`, `requires`, `capabilities` and `description`. Four of
@@ -836,12 +835,12 @@ apparent value is smaller than its surface suggests.
 `setSuccess()`, `succeed()`. **The application writes it.** It is not derived from
 an operation and it observes nothing.
 
-That directly contradicts the SignalTree-15 draft's assertion that *"lifecycle
-belongs to execution, not resources"*. Whether or not that assertion is a good
+That directly contradicts the SignalTree-15 draft's assertion that _"lifecycle
+belongs to execution, not resources"_. Whether or not that assertion is a good
 idea, it describes something the current system has never had: there is no
 execution to own a lifecycle here, only an enum-shaped state position with
-convenience setters. So `status` is evidence for *"applications want to record
-where they are in a workflow"* — a claim about ordinary state — and evidence for
+convenience setters. So `status` is evidence for _"applications want to record
+where they are in a workflow"_ — a claim about ordinary state — and evidence for
 nothing about operation lifecycles.
 
 ### `asyncSource` vs `asyncQuery` overlap
@@ -867,7 +866,7 @@ would not be a missing replacement. It would be a successful derivation.
 ## DERIVATION S1 — `status`: **no SignalTree-owned function survives**
 
 Rule 0l. `status`, `StatusMarker`, `StatusSignal` and their methods are legacy
-evidence only. The old draft's claim that *"lifecycle belongs to execution"* is
+evidence only. The old draft's claim that _"lifecycle belongs to execution"_ is
 NOT used as evidence that such an execution exists.
 
 ### The two questions that cannot be inferred from method names, measured
@@ -901,9 +900,9 @@ implementation never had.
 `start()`, `setSuccess()` and `succeed()` are byte-identical aliases of
 `setLoading`/`setLoaded`, and the source says why:
 
-> *"AI coding agents trained on Promise-state vocabularies (success/start/fail)
+> _"AI coding agents trained on Promise-state vocabularies (success/start/fail)
 > frequently reach for these method names ... rather than fight the linguistic
-> gravity, we accept them."*
+> gravity, we accept them."_
 
 That is a naming accommodation. It cannot earn a primitive.
 
@@ -911,24 +910,24 @@ That is a naming accommodation. It cannot earn a primitive.
 
 From the hydrate path:
 
-> *"`Loaded` is a statement about DATA, not about an operation — if the data was
-> persisted alongside it, 'the data is loaded' is true on arrival."*
+> _"`Loaded` is a statement about DATA, not about an operation — if the data was
+> persisted alongside it, 'the data is loaded' is true on arrival."_
 
 The code already knows this describes data, not execution.
 
 ### Function-by-function coverage
 
-| # | Function | Covered by | SignalTree-owned? |
-|---|---|---|---|
-| A | record a workflow state | an ordinary store position holding an enum | no |
-| B | read it | an ordinary accessor | no |
-| C | transition it | an ordinary write | no |
-| D | reset it | a write of the initial value | no |
-| E | convenience predicates (`loading`, `loaded`, `idle`, `hasError`, `settled`) | ordinary derived projections — exactly the frozen store-only contract | no |
-| F | persist / hydrate | whatever rules ordinary store positions independently receive | no |
-| G | causal participation | ordinary authored-state rules | no |
-| H | transition legality | **nothing — measured absent** | n/a |
-| I | lifecycle observation | **nothing — measured absent** | n/a |
+| #   | Function                                                                    | Covered by                                                            | SignalTree-owned? |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------- |
+| A   | record a workflow state                                                     | an ordinary store position holding an enum                            | no                |
+| B   | read it                                                                     | an ordinary accessor                                                  | no                |
+| C   | transition it                                                               | an ordinary write                                                     | no                |
+| D   | reset it                                                                    | a write of the initial value                                          | no                |
+| E   | convenience predicates (`loading`, `loaded`, `idle`, `hasError`, `settled`) | ordinary derived projections — exactly the frozen store-only contract | no                |
+| F   | persist / hydrate                                                           | whatever rules ordinary store positions independently receive         | no                |
+| G   | causal participation                                                        | ordinary authored-state rules                                         | no                |
+| H   | transition legality                                                         | **nothing — measured absent**                                         | n/a               |
+| I   | lifecycle observation                                                       | **nothing — measured absent**                                         | n/a               |
 
 ### The one candidate invariant, and it is INCONSISTENT
 
@@ -938,7 +937,7 @@ surface that is not plain assignment.
 
 **It contradicts the module's own stated intent.** The hydrate comment says:
 
-> *"`Error` survives so a retry guard can report that the last attempt failed"*
+> _"`Error` survives so a retry guard can report that the last attempt failed"_
 
 but `setLoading()` — which is exactly what a retry does — CLEARS the error. So the
 error survives a page reload and does not survive pressing retry. The retention
@@ -956,7 +955,7 @@ BEST OWNER     application/domain, ABSENT an independently derived
 The contradiction proves SignalTree has not established a coherent owner or
 invariant here. It does NOT prove every possible error-retention policy must be
 domain-owned: a future independently derived acquisition function could
-legitimately own *"retain the last failure while the next attempt is pending"*.
+legitimately own _"retain the last failure while the next attempt is pending"_.
 Recorded this way so A1 cannot appear to reopen S1 if acquisition turns out to
 have real execution state. An application wanting the behaviour the comment
 describes is simply not served by the current coupling.
@@ -1033,8 +1032,8 @@ deletion and recreation, because it never referenced entity identity in the firs
 place. Delete an entity and recreate it under the same key — scope freshness is
 untouched, because the two axes are orthogonal.
 
-So, against the falsifier *"what exact `entityMap` semantic fact would an external
-cache have to duplicate?"*:
+So, against the falsifier _"what exact `entityMap` semantic fact would an external
+cache have to duplicate?"_:
 
 ```text
 entity has a key                   not used by the cache
@@ -1333,24 +1332,24 @@ paired with Rule 0m's companion:
 
 ```ts
 interface MarkerProcessor {
-  check:     (value) => boolean;                    // declaration recognition
-  create:    (marker, notifier, path, ctx, parentPositionId) => unknown;
-  snapshot?: (node) => unknown;                     // OPTIONAL
-  hydrate?:  (node, value, mode: HydrateMode) => void;
+  check: (value) => boolean; // declaration recognition
+  create: (marker, notifier, path, ctx, parentPositionId) => unknown;
+  snapshot?: (node) => unknown; // OPTIONAL
+  hydrate?: (node, value, mode: HydrateMode) => void;
 }
 ```
 
 `snapshot` and `hydrate` are OPTIONAL, and the docblock records that omitting
-`snapshot` means *"my node is already a plain signal, the normal walk handles
-me"* — true of `stored()` **and nothing else today**.
+`snapshot` means _"my node is already a plain signal, the normal walk handles
+me"_ — true of `stored()` **and nothing else today**.
 
 ### THE CODEBASE ALREADY WARNS ABOUT THIS EXACT AUDIT
 
 Verbatim from the stamp docblock:
 
-> *"⚠️ There is NO `owns()` hook. Earlier revisions of this comment referred to
+> _"⚠️ There is NO `owns()` hook. Earlier revisions of this comment referred to
 > one as though it existed, and a research doc then repeated it as fact — the
-> exact stale-comment-becomes-canon failure this codebase keeps hitting."*
+> exact stale-comment-becomes-canon failure this codebase keeps hitting."_
 
 Ownership is decided INSIDE each marker's `hydrate`, which already receives the
 mode. That is a fifth function someone previously believed existed and does not.
@@ -1387,13 +1386,13 @@ functions**, which is exactly what `Enhancer` did with authoring, realization an
 type contribution. Reading four hooks as four functions would let protocol shape
 manufacture an architecture just as surely as the presumed fourteen would have.
 
-| Entry point | Hook | Behaviours to measure before assigning ownership |
-|---|---|---|
-| M1 | `check` | declaration recognition · discrimination from ordinary values · kind dispatch |
-| M2 | `create` | runtime realization · backing-state creation · public-surface creation · owner/PositionId association · notifier integration · construction-context consumption |
-| M3 | `snapshot` | tree-snapshot projection · marker-specific omission/transformation · the representation its several consumers require |
-| M4 | `hydrate` | payload application · acceptance/refusal · normalization · restore-vs-rehydrate · **authority decision** · live-state mutation · diagnostic reason production |
-| M5 | `onHydrateDecision` | observability of refusal/normalization · audience · machine-readable consumer need |
+| Entry point | Hook                | Behaviours to measure before assigning ownership                                                                                                                |
+| ----------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1          | `check`             | declaration recognition · discrimination from ordinary values · kind dispatch                                                                                   |
+| M2          | `create`            | runtime realization · backing-state creation · public-surface creation · owner/PositionId association · notifier integration · construction-context consumption |
+| M3          | `snapshot`          | tree-snapshot projection · marker-specific omission/transformation · the representation its several consumers require                                           |
+| M4          | `hydrate`           | payload application · acceptance/refusal · normalization · restore-vs-rehydrate · **authority decision** · live-state mutation · diagnostic reason production   |
+| M5          | `onHydrateDecision` | observability of refusal/normalization · audience · machine-readable consumer need                                                                              |
 
 **`create` is the clearest suspect.** Its signature —
 `create(marker, notifier, path, ctx, parentPositionId)` — already names four
@@ -1408,8 +1407,8 @@ may legitimately EXPAND — into measured functions, not presumed protocol nouns
 
 ### Corrections to my own phrasing
 
-**M3 / serialization.** *"The serialization hook is not separate — it IS
-`snapshot`"* is mechanically true of the current protocol and is NOT a semantic
+**M3 / serialization.** _"The serialization hook is not separate — it IS
+`snapshot`"_ is mechanically true of the current protocol and is NOT a semantic
 conclusion. The accurate statement:
 
 > There is no separate marker-level serialization hook; current serialization
@@ -1592,16 +1591,16 @@ SURVIVING MECHANISM               UNPROVEN
   that a global runtime registerMarkerProcessor() registry must exist
 ```
 
-The demo advertises *"markers AND enhancers"* in one breath — and the enhancer
+The demo advertises _"markers AND enhancers"_ in one breath — and the enhancer
 half of that same sentence was already found to have no surviving function. Being
 taught and advertised identifies a capability worth examining; it cannot settle
 the architecture.
 
 **The matrix row is therefore the CAPABILITY, not the API:**
 
-> *A package outside core can introduce a new inline declaration form that
+> _A package outside core can introduce a new inline declaration form that
 > participates in SignalTree construction and contributes its realized state and
-> API, without requiring a core release.*
+> API, without requiring a core release._
 
 ```text
 registerMarkerProcessor        PUBLIC, exported from @signaltree/core/authoring
@@ -1679,7 +1678,7 @@ create() as one function            REFUTED — it is an envelope
 "hot path" justification            OVERSTATED — construction-time, not runtime
 ```
 
-The remaining question is no longer *"does a generic registry survive?"* but:
+The remaining question is no longer _"does a generic registry survive?"_ but:
 
 > **Given a real open-set extension requirement, is today's `MarkerProcessor` —
 > four bundled hooks, a shared `create` envelope, a linear predicate array and a
@@ -1775,23 +1774,23 @@ compilation before exposure.
 Functions extracted from the two custom declarations the demo actually defines —
 `counter` and `selection` — never from "custom marker":
 
-| # | Function | Reproduced without any protocol? |
-|---|---|---|
-| E1 | inline authoring — a library construct appears beside ordinary tree state | **YES** — `signalTree({ counter: makeCounter(10, 5), plain: 1 })` |
-| E2 | type transformation — declaration type becomes a different realized type | **MOOT** — the author builds the REALIZED thing directly, so there is nothing to transform |
-| E3 | writable state exposed through the tree | **YES** — reads and writes work |
-| E3b | **canonical SignalTree truth** | **UNPROVEN** — accessibility is weaker than canonicality |
-| E4 | derived / public surface contribution | **YES** — a `computed` member and four methods survive construction |
-| E5 | compiler integration — topology, ownership, notification services unavailable to user code | **NOT EXERCISED** by either example |
-| E6 | representation participation — special snapshot/reconstruction | **NOT EXERCISED**; the value appears in `tree()` by the ordinary path |
-| E7 | package encapsulation — an external package ships all of it | **YES** — `makeCounter` is an ordinary exported function |
+| #   | Function                                                                                   | Reproduced without any protocol?                                                           |
+| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| E1  | inline authoring — a library construct appears beside ordinary tree state                  | **YES** — `signalTree({ counter: makeCounter(10, 5), plain: 1 })`                          |
+| E2  | type transformation — declaration type becomes a different realized type                   | **MOOT** — the author builds the REALIZED thing directly, so there is nothing to transform |
+| E3  | writable state exposed through the tree                                                    | **YES** — reads and writes work                                                            |
+| E3b | **canonical SignalTree truth**                                                             | **UNPROVEN** — accessibility is weaker than canonicality                                   |
+| E4  | derived / public surface contribution                                                      | **YES** — a `computed` member and four methods survive construction                        |
+| E5  | compiler integration — topology, ownership, notification services unavailable to user code | **NOT EXERCISED** by either example                                                        |
+| E6  | representation participation — special snapshot/reconstruction                             | **NOT EXERCISED**; the value appears in `tree()` by the ordinary path                      |
+| E7  | package encapsulation — an external package ships all of it                                | **YES** — `makeCounter` is an ordinary exported function                                   |
 
 Nesting works too, with no path or position protocol involved.
 
 ### TWO CORRECTIONS to this row
 
-**E3 was overstated.** The probe reproduced *writable state exposed through the
-tree*, not *canonical SignalTree truth*. Canonicality is the stronger claim: if
+**E3 was overstated.** The probe reproduced _writable state exposed through the
+tree_, not _canonical SignalTree truth_. Canonicality is the stronger claim: if
 the internal Angular signal has no kernel slot, no PositionId/SubjectId where
 required, bypasses physical commit, escapes causal attribution, is not restored
 by undo, or persists differently, then it is not equivalent to ordinary canonical
@@ -1808,9 +1807,9 @@ B  does SignalTree 15 want arbitrary prebuilt ANGULAR signals accepted as
    declarations / canonical state?
 ```
 
-E0 answers A while assuming B. The architecture direction has been *neutral
-kernel -> framework realization*, not *author-supplied Angular signal treated as
-a canonical declaration*. So `isSignal` preservation must not become the new
+E0 answers A while assuming B. The architecture direction has been _neutral
+kernel -> framework realization_, not _author-supplied Angular signal treated as
+a canonical declaration_. So `isSignal` preservation must not become the new
 accidental spelling merely because it defeated the old marker example — that
 would be a legacy mechanism manufacturing the replacement.
 
@@ -1819,13 +1818,13 @@ would be a legacy mechanism manufacturing the replacement.
 > Under the CURRENT "preserve existing Angular signals" behaviour, the two
 > demonstrated custom-marker examples require no marker protocol.
 
-NOT yet: *under the greenfield architecture, independently earned primitives
-reproduce them.*
+NOT yet: _under the greenfield architecture, independently earned primitives
+reproduce them._
 
 ### The sharp finding: the protocol compensates for a SHAPE, not a semantic
 
 The tree already preserves any `isSignal` value verbatim
-(`signal-tree.ts:1054`: *"Existing signals - preserve"*). My probe builds on a
+(`signal-tree.ts:1054`: _"Existing signals - preserve"_). My probe builds on a
 real Angular `signal` and attaches methods and a `computed` — so `isSignal` stays
 true and the construct passes through intact.
 
@@ -1889,7 +1888,7 @@ GRAMMAR is a different and still unproven question.
 Evidence: `declaration-extensibility-e5-fork.spec.ts`, 5 executable rows.
 
 Both candidate paths run against the same kernel properties, because asking only
-*"are preserved signals second-class?"* would have been too weak to settle
+_"are preserved signals second-class?"_ would have been too weak to settle
 anything.
 
 ```text
@@ -1897,12 +1896,12 @@ PATH A   a prebuilt Angular signal preserved by the tree
 PATH B   ORDINARY canonical state, library API composed AROUND the accessor
 ```
 
-| Property | PATH A — preserved signal | PATH B — canonical + composed API |
-|---|---|---|
-| captured by undo | **NO** — value stays 11 after `tree.undo()` | **YES** — restored to 10 |
-| derived composition | yes | **YES** — `computed` over the accessor |
-| transaction rollback through the generic kernel | not tested; moot | **YES** |
-| ordinary canonical truth in the snapshot | reachable, not canonical | **YES** |
+| Property                                        | PATH A — preserved signal                   | PATH B — canonical + composed API      |
+| ----------------------------------------------- | ------------------------------------------- | -------------------------------------- |
+| captured by undo                                | **NO** — value stays 11 after `tree.undo()` | **YES** — restored to 10               |
+| derived composition                             | yes                                         | **YES** — `computed` over the accessor |
+| transaction rollback through the generic kernel | not tested; moot                            | **YES**                                |
+| ordinary canonical truth in the snapshot        | reachable, not canonical                    | **YES**                                |
 
 ### Two results, and the second is the one that closes the question
 
@@ -1927,9 +1926,9 @@ PATH B never needed it.
 
 ### Disposition — and there is NO "smaller form" left to derive
 
-**If the function did not survive, there is no form question.** Asking *"what is
-the minimum `MarkerProcessor`?"* or *"what is the minimum registration
-mechanism?"* would be deriving a shape for something that failed its null.
+**If the function did not survive, there is no form question.** Asking _"what is
+the minimum `MarkerProcessor`?"_ or _"what is the minimum registration
+mechanism?"_ would be deriving a shape for something that failed its null.
 
 ```text
 M1  third-party / open recognition        CLOSED — NOT EARNED
@@ -1974,8 +1973,8 @@ Path B  const tree = signalTree({ counter: 10 })
         counter.increment()
 ```
 
-*"A third-party abstraction can be declared inline and appear naturally in the
-tree's typed API"* is NOT reproduced. **And that is acceptable** — Rule 0m does
+_"A third-party abstraction can be declared inline and appear naturally in the
+tree's typed API"_ is NOT reproduced. **And that is acceptable** — Rule 0m does
 not require preserving it now; it requires not converting a semantic result into
 a DX prohibition.
 
@@ -2045,8 +2044,8 @@ CRITICAL  one hook serving several consumers does NOT prove one representation
           BEFORE assigning ownership.
 ```
 
-M3 first because it can establish an early boundary — *realized canonical truth
--> representation* versus *declaration kind -> special representation*. If the
+M3 first because it can establish an early boundary — _realized canonical truth
+-> representation_ versus _declaration kind -> special representation_. If the
 former wins, the generic-marker case is weakened before reconstruction is
 touched.
 
@@ -2188,8 +2187,8 @@ READING B   the realized values have INCONSISTENT CONVENTIONS about which read
 ```
 
 Reading B is live because the ST2008 branch exists at all: its comment records
-that an unbranded callable marker's value *"vanishes from the snapshot and from
-everything built on one"* — a failure caused by realized shape, not by
+that an unbranded callable marker's value _"vanishes from the snapshot and from
+everything built on one"_ — a failure caused by realized shape, not by
 representation semantics.
 
 **Not concluded.** Distinguishing A from B requires separating the six consumers'
@@ -2228,7 +2227,7 @@ defended by the single consumer requirement needing per-kind knowledge.
 
 ### `stored` is not a consumer, and its own docblock is stale
 
-`stored.ts:331` warns that *"`tree()` / `unwrap()` skip stored values"*. **That is
+`stored.ts:331` warns that _"`tree()` / `unwrap()` skip stored values"_. **That is
 stale.** `stored.ts:850` records the fix — conforming to the signal/accessor
 protocol that traversal already branches on. Measured:
 
@@ -2312,13 +2311,13 @@ inference.
 
 `stored.ts:850` records that `stored` USED to have exactly this defect:
 
-> *"It used to be `(() => sig())` with methods bolted on — a plain callable that
+> _"It used to be `(() => sig())` with methods bolted on — a plain callable that
 > satisfied neither `isSignal` nor `isNodeAccessor`. Every traversal in the
 > library branches on exactly those two guards, so a stored leaf fell through all
 > of them: omitted from `tree()`/`unwrap()`, skipped by a merge write through its
 > parent, and REPLACED with a raw value by `applyState`… **Conforming to the
 > protocol that already exists fixes every one of those at once**, with no
-> changes outside this file."*
+> changes outside this file."_
 
 Same defect. Same two guards. And the remedy chosen was **conformance, not a
 hook** — which is why `stored` needs no `snapshot` today.
@@ -2343,9 +2342,9 @@ NOT ESTABLISHED
 **M3's mechanism question is answered; its disposition waits on `entityMap`.**
 If the accessor conforms, the hook has no remaining implementer among survivors
 and deletes. If the accessor's shape is independently earned, then a
-representation function survives — but it would be *"a realized value must be
-able to declare its state when its shape hides it"*, which is a narrower and
-differently-owned thing than *"declaration kinds own their representation"*.
+representation function survives — but it would be _"a realized value must be
+able to declare its state when its shape hides it"_, which is a narrower and
+differently-owned thing than _"declaration kinds own their representation"_.
 
 ### Rule 0m check
 
@@ -2413,8 +2412,8 @@ STATUS-DEL     leaned on transactions.spec rollback coverage as a frozen theorem
 
 ### Does this invalidate those conclusions? NO — but it changes their weight
 
-Both rows resolved in the DELETION direction: *no public substrate protocol
-earned*, *zero feature-to-feature dependency*. **15-effort provenance makes a
+Both rows resolved in the DELETION direction: _no public substrate protocol
+earned_, _zero feature-to-feature dependency_. **15-effort provenance makes a
 deletion finding EASIER to justify, not harder** — there is no shipped-ecosystem
 argument to answer, and Rule 0n does not even need invoking.
 
@@ -2744,11 +2743,11 @@ Evidence: `e-active-selection.spec.ts`, 2 rows.
 
 The docblock records its own provenance with unusual candour:
 
-> *"Added in 14.0.0 after a capability audit found **elf and Akita both ship
+> _"Added in 14.0.0 after a capability audit found **elf and Akita both ship
 > it** and every team otherwise hand-rolls `activeId: null` plus a derived
 > lookup. `activeEntity` resolves through `byId`, so it is O(1) and invalidates
 > only when THAT row changes — finer-grained than the filtered-stream versions
-> the other libraries offer."*
+> the other libraries offer."_
 
 **Feature parity is not a derived function**, and the docblock names its own
 alternative in the same sentence. The only architectural claim is granularity, so
@@ -2760,7 +2759,7 @@ selectedId position + byId()     watcher does NOT recompute — IDENTICAL
 ```
 
 The granularity comes from `byId`, which is in the minimum and is public. The
-comparison in the docblock is against *filtered streams* — a different technique
+comparison in the docblock is against _filtered streams_ — a different technique
 that neither candidate uses.
 
 ```text
@@ -2812,7 +2811,7 @@ NULL       an ordinary `order: string[]` position plus byId: same order, same
            canonical write.
 ```
 
-An order that is *data* (drag-to-reorder, server relevance) is exactly the case
+An order that is _data_ (drag-to-reorder, server relevance) is exactly the case
 derived sorting cannot express — so the zero-state under-derived, and legacy was
 right to name it. But the incumbent's answer is worse than the ordinary one: an
 intrinsic order with no reorder operation is not an ordering facility, it is an
@@ -2856,7 +2855,7 @@ after changeId('tmp-1','server-99'):
 
 SPLIT IDENTITY. Two separate docblocks name it, and it is load-bearing: it is
 the stated reason `setOne(entity)` cannot exist, because deriving the key via
-`selectId(entity)` would be *a silent wrong-slot write*. The public surface was
+`selectId(entity)` would be _a silent wrong-slot write_. The public surface was
 shaped around a defect rather than the defect being fixed.
 
 ```text
@@ -2895,7 +2894,7 @@ planRekey                2026-08-13         revised 2026-08-15 TWICE
 **Entirely third-bucket.** 15-effort, unreviewed, days old, and `planRekey`
 churned three times in four days. Every one of those commits has an **empty
 body**, so there is no recorded rationale to read — in a repository whose own
-rules require commit messages to say *why*. The audit therefore had to be
+rules require commit messages to say _why_. The audit therefore had to be
 executable rather than archaeological.
 
 Note the origin: `SubjectId` entered through a **history** commit, not an entity
@@ -3069,9 +3068,9 @@ publishes a wrapper instead of its value.
 
 The source records it plainly:
 
-> *"`ids`, `count`, `empty` and `map` are all derived from `all` — and `map` is a
+> _"`ids`, `count`, `empty` and `map` are all derived from `all` — and `map` is a
 > JS `Map`, which JSON cannot represent, so it used to serialise as `{}`: a
-> snapshot claiming the collection was EMPTY while holding 10,000 entities."*
+> snapshot claiming the collection was EMPTY while holding 10,000 entities."_
 
 Confirmed by measurement — `JSON.parse(JSON.stringify(asMap()))` is `{}`.
 
@@ -3091,8 +3090,8 @@ obstacle; the collection simply declines to be callable.
 
 ### The envelope creates the ambiguity it resolves
 
-Both payload shapes are accepted, because *"an entityMap SNAPSHOT always emits
-`{ all: [...] }`, so a bare array can never be mistaken for the snapshot shape."*
+Both payload shapes are accepted, because _"an entityMap SNAPSHOT always emits
+`{ all: [...] }`, so a bare array can never be mistaken for the snapshot shape."_
 Measured: `tree({rows: [...]})` and `tree({rows: {all: [...]}})` both apply.
 
 The disambiguation is only necessary because a second canonical shape exists. A
@@ -3123,11 +3122,11 @@ bare-array acceptance would become the only form.
 
 ### CORRECTION — a recorded reading refuted by its own measurement
 
-`SIGNALTREE-15-CONTEXT.md` recorded, explicitly labelled as *"a reading of E's
-result, not a measured disposition"*, that E's closure would fire M3's **second**
+`SIGNALTREE-15-CONTEXT.md` recorded, explicitly labelled as _"a reading of E's
+result, not a measured disposition"_, that E's closure would fire M3's **second**
 branch — that the collection's earned form requires a shape neither guard
-accepts, so what survives is *"a realized value must be able to declare its state
-when its shape hides it."*
+accepts, so what survives is _"a realized value must be able to declare its state
+when its shape hides it."_
 
 The measurement fires the **first** branch instead. The earned form is a set of
 members, and members ride on a callable signal. The label is why this cost a
@@ -3189,7 +3188,7 @@ entityMap     loader-backed    -> DECLINE:
 ```
 
 This is **not** representation, so M3's conformance result does not dissolve it.
-A uniform rule cannot express it: *"set the position to the payload"* has no way
+A uniform rule cannot express it: _"set the position to the payload"_ has no way
 to know another mechanism holds fresher truth.
 
 And it is **mode-dependent**. `HydrateMode` is `merge | restore | rehydrate |
@@ -3226,15 +3225,15 @@ M4 ownership half          CANDIDATE FUNCTION: "a position may decline
 
 Evidence: `m4-decline-uniformity.spec.ts`, 4 rows.
 
-M4's ownership half survived a uniform-rule null of the shape *"set the position
-to the payload"*. But the two implementers' predicates are, in full:
+M4's ownership half survived a uniform-rule null of the shape _"set the position
+to the payload"_. But the two implementers' predicates are, in full:
 
 ```text
 asyncSource   mode === 'rehydrate'
 entityMap     mode === 'rehydrate' && typeof node.load === 'function'
 ```
 
-One rule over one declared property — *"this position owns a live source"* —
+One rule over one declared property — _"this position owns a live source"_ —
 which `asyncSource` satisfies by construction and `entityMap` satisfies per
 instance. Measured:
 
@@ -3294,15 +3293,15 @@ because the payload was ignored, not because the decline fired.
 
 Not a derivation result, and not chased here. Recorded because it is the same
 failure shape the entityMap hydrate docblock already calls the worst version of
-this — *"a partial hydrate is harder to notice than a failed one"* — except this
+this — _"a partial hydrate is harder to notice than a failed one"_ — except this
 one applies nothing at all while still returning normally.
 
 ## M5 — DELETES. The reported vocabulary is a single point, and half of it is dead.
 
 Evidence: `m5-decision-observability.spec.ts`, 2 rows.
 
-M5's queued statement predicted this: *"Last, because there may be no decision
-worth reporting once M4 decomposes."*
+M5's queued statement predicted this: _"Last, because there may be no decision
+worth reporting once M4 decomposes."_
 
 ### Measured, not grepped
 
@@ -3330,7 +3329,7 @@ once `asyncSource` and `loader()` take their dispositions.
 `'normalised'` and `'no-request-survives-boundary'` describe one behaviour:
 normalising `LOADING` to `NotLoaded` across a process boundary. That behaviour
 belonged to `status`, which STATUS-DEL physically removed. The event docblock
-still reads *"Which marker decided, e.g. `entityMap`, `status`."*
+still reads _"Which marker decided, e.g. `entityMap`, `status`."_
 
 The types outlived the mechanism — the same defect class as
 `InterceptContext.blocked`: a published vocabulary describing something that
@@ -3362,8 +3361,8 @@ M5   DELETE. No surviving decision to report.
 
 ### The M-cluster resolves NON-UNIFORMLY, exactly as permitted
 
-The queued statement allowed it explicitly: *"Nothing requires one verdict across
-three entry points."*
+The queued statement allowed it explicitly: _"Nothing requires one verdict across
+three entry points."_
 
 ```text
 M3  ANSWERED — uniform rule (state is what the accessor returns); hook DELETES
@@ -3482,7 +3481,7 @@ turned out to contribute something the null missed.
 ### But the null is REACHABLE, which settles it
 
 ```ts
-linkedSignal<number, Boxed>({ source, computation, equal })   // compiles
+linkedSignal<number, Boxed>({ source, computation, equal }); // compiles
 ```
 
 Explicit type arguments recover the behaviour exactly. So the contribution is an
@@ -3566,7 +3565,7 @@ INCUMBENT  stored(..., { debounceMs: 0 }); set('dark')
 
 So `flush()`, the page-hide drain and `flushAllStoredSignals()` exist to repair a
 hazard **the debounce introduced**. With no debounce there is nothing to drain.
-The 13.3.0 durability work is correct *as a fix*, and it is fixing a
+The 13.3.0 durability work is correct _as a fix_, and it is fixing a
 self-inflicted problem.
 
 ### What the null does NOT reach
@@ -3629,34 +3628,34 @@ drift:
         accessor is not a signal.
 ```
 
-In each case the machinery is *correct*, and in each case the thing it corrects
+In each case the machinery is _correct_, and in each case the thing it corrects
 was introduced one layer down. **The derivation question is never "is this
 machinery right?" but "what made it necessary?"** — because if the answer is
 another SignalTree choice, both can leave together.
 
 ## WITHDRAWAL — E-REKEY's positive verdict. It rested on an unrecorded reversal of shipped behaviour.
 
-E-REKEY was recorded as *"the first function the incumbent contributed that the
-zero-state missed AND that survives its own null."* **That verdict is withdrawn.**
+E-REKEY was recorded as _"the first function the incumbent contributed that the
+zero-state missed AND that survives its own null."_ **That verdict is withdrawn.**
 It was invalid twice over, and the second reason is the serious one.
 
 ### 1. It proved a difference, not a requirement
 
 The measurement was: a held reference survives `changeId`, and remove+add orphans
 it. That shows the two paths **behave differently**. It never showed any workflow
-*requires* the held reference to follow rather than re-reading `byId(newId)`.
+_requires_ the held reference to follow rather than re-reading `byId(newId)`.
 
 ### 2. The behaviour measured is NOT what ships — and reverses a documented decision
 
 Published **14.1.2** (2026-08-17, the current latest) does the OPPOSITE, on
 purpose. From the shipped `dist/lib/entity-signal.js`:
 
-> **[ST2031]** *"reading a node held from `byId(from)` after `changeId(from, to)`
+> **[ST2031]** _"reading a node held from `byId(from)` after `changeId(from, to)`
 > — it resolves undefined **and always will**. changeId drops the old per-entity
 > signal **on purpose**: aliasing it would share one signal with a future
 > `addOne({ id: from })`, which is a worse failure than this one. Re-read with
 > `byId(to)`, or hold the id and call `byId(id())` at the point of use rather
-> than holding the node across a rekey."*
+> than holding the node across a rekey."_
 
 Provenance of the two decisions:
 
@@ -3728,7 +3727,7 @@ attached.
 
 ### Consequence for Derivation E
 
-E's form summary said *five members are the minimum and one more is earned*. With
+E's form summary said _five members are the minimum and one more is earned_. With
 `changeId` withdrawn, **only the five minimum members are established**, and E's
 positive result is now confined to the FUNCTION (dynamic membership + granular
 observation over canonical truth), not to any member beyond the minimum.
@@ -3763,7 +3762,7 @@ This is not a new defect. It is documented at `utils.ts:462-486` and pinned by
 `snapshot-aliasing.spec.ts` (5 rows), and deliberately not fixed on measurement:
 copying leaf values costs **+54µs against 1.0µs on a 50k array**, and
 `Object.freeze` stops `Array.push` while `Date.setFullYear`, `Map.set` and
-`Set.add` ignore it entirely — *"half a guarantee reads as a whole one."*
+`Set.add` ignore it entirely — _"half a guarantee reads as a whole one."_
 
 So `tree()` is read-only **by contract**, aliasing live truth. An external
 representation that aliases internal truth has not actually left the process.
@@ -3779,8 +3778,8 @@ fresh({ user: {...}, rows: [...], n: 7 })   no metadata, no nodeMap
   -> branches restored, leaves restored, collection restored
 ```
 
-`metadata.nodeMap` records *"where the target tree contains branch nodes (objects
-with set/update) or root-as-signal markers"* and `deserialize` consumes it at
+`metadata.nodeMap` records _"where the target tree contains branch nodes (objects
+with set/update) or root-as-signal markers"_ and `deserialize` consumes it at
 `:630-651`. But **the target tree was built from its own literal and already
 knows which paths are branches.** It is not carrying information the destination
 lacks.
@@ -3878,11 +3877,11 @@ two derivations earlier.
 
 The same contamination applies to F2's collection clause. Branches and ordinary
 leaves establish F2 cleanly; the collection reconstructing "with no metadata"
-establishes only that `nodeMap` is unnecessary for the *current* special-cased
+establishes only that `nodeMap` is unnecessary for the _current_ special-cased
 path. That is enough to attack `nodeMap`. It is not enough to delete the special
 reconstruction path.
 
-M3 said *"a realized value's state is what the accessor returns."* Serialization
+M3 said _"a realized value's state is what the accessor returns."_ Serialization
 **strengthens** it: crossing a process boundary introduces no ADDITIONAL
 representation requirement, against JSON, with versioning and a sibling plain
 position present. It does not elevate it to a system theorem, because the
@@ -3963,7 +3962,7 @@ the discovery proof.
 Evidence: `conforming-collection-prototype.spec.ts`, 7 rows. **Nothing in it
 touches `entityMap`, `loader`, or any marker** — that constraint is the point,
 since the contaminated serialization row proved only that the envelope carries
-nothing the *current hydrate hook* needs.
+nothing the _current hydrate hook_ needs.
 
 The collection is an ORDINARY ARRAY LEAF plus ordinary derived helpers:
 
@@ -4118,7 +4117,7 @@ and one is sharpened.
 Evidence: `stored-outbound-corrected.spec.ts`, 5 rows.
 
 **The old null was invalid.** It wrote to storage from an `effect()`, which needs
-`TestBed.tick()` to flush — so it established *"durable after a tick"*, a weaker
+`TestBed.tick()` to flush — so it established _"durable after a tick"_, a weaker
 contract than the one the incumbent was judged against. Comparing a debounced
 mechanism to an async null and calling the null "strictly better" was not a fair
 measurement.
@@ -4199,8 +4198,8 @@ tap
 
 Evidence: `tap-rekey-necessity.spec.ts`, 2 rows.
 
-The null shipped 14.x recommends (ST2031): *"hold the id and call `byId(id())` at
-the point of use rather than holding the node across a rekey."*
+The null shipped 14.x recommends (ST2031): _"hold the id and call `byId(id())` at
+the point of use rather than holding the node across a rekey."_
 
 ```text
 holder keeps the ID      changeId + selectedId.set(newKey)   -> WORKS, n === 5
@@ -4245,8 +4244,8 @@ now                    tap's deletion is WITHDRAWN — its function exists, its
 was easier to satisfy than the contract it was being compared against —
 `effect()` instead of a synchronous write, a diff that samples at every step,
 remove+add instead of "does any workflow break." The methodology's own rule
-covers it and was not applied: *state the contract precisely, then build the null
-to that contract, not to a convenient approximation of it.*
+covers it and was not applied: _state the contract precisely, then build the null
+to that contract, not to a convenient approximation of it._
 
 ## DERIVATION — THE FRONTIER UNDO ENGINE. Its candidate retention advantage is NOT DELIVERED.
 
@@ -4337,14 +4336,14 @@ E4  TRANSACTION GROUP  6be8d3e2 "add explicit transaction grouping" — U5 at a
                        granularity snapshots may not reach.
 ```
 
-Also unmeasured: whether a *conforming* collection (plain array leaf) changes the
+Also unmeasured: whether a _conforming_ collection (plain array leaf) changes the
 retention picture for either engine, and whether the engine is **incomplete
 mid-cutover** rather than wrong — the `isSupportedEffect` throw reads like a guard
 on unfinished work, and the commits that would say so have empty bodies.
 
 **No claim is made that the engine is worthless.** The claim is narrower and it is
-measured: *the retention justification that motivated it is not delivered, and the
-implementation currently regresses correctness against its predecessor.*
+measured: _the retention justification that motivated it is not delivered, and the
+implementation currently regresses correctness against its predecessor._
 
 ### Consequence for the sequence
 
@@ -4385,8 +4384,8 @@ If E2/E3/E4 do not earn:  REVERT to the snapshot engine
 ```
 
 That grants legacy **automatic restoration rights**, which is precisely what
-Rule 0l forbids: *legacy mechanisms are evidence repositories, not migration
-targets.* The rule was in front of me and I wrote the violation anyway. It also
+Rule 0l forbids: _legacy mechanisms are evidence repositories, not migration
+targets._ The rule was in front of me and I wrote the violation anyway. It also
 lets 14.x win by default merely because the 15 mechanism failed — the v14-gravity
 failure mode this audit exists to police.
 
@@ -4418,16 +4417,16 @@ a hybrid. **"Revert" is not a permitted disposition; "delete, then derive" is.**
 
 ### C2. The retainer is NOT attributed — the claim is narrowed
 
-Withdrawn: *"it retains the whole N-pointer array per entry."*
+Withdrawn: _"it retains the whole N-pointer array per entry."_
 
 What was measured is a **signature**: at 10k × 50 same-row writes the frontier
 system retains ~3.96 MB, consistent with the snapshot system's N-pointer slope at
-the bench's documented ~8.3 bytes/pointer. That identifies the *shape* of the
+the bench's documented ~8.3 bytes/pointer. That identifies the _shape_ of the
 retention, not the object graph that owns it.
 
 Asserting the mechanism from the signature is the error `RELEASE-1.0.md` already
-polices in the form-marker case — *"the stack frame says WHERE THE REFUSAL IS
-RAISED, not where the contamination originated."* Same class, committed two
+polices in the form-marker case — _"the stack frame says WHERE THE REFUSAL IS
+RAISED, not where the contamination originated."_ Same class, committed two
 sections later.
 
 Live candidates, none excluded:
@@ -4441,7 +4440,7 @@ D  materialised entity projections / descriptors retain it
 E  several of these compose to the same slope
 ```
 
-The `allRows` result — 23 MB against 88 MB — actively *favours* B or E over "the
+The `allRows` result — 23 MB against 88 MB — actively _favours_ B or E over "the
 effect representation is merely inefficient": 3.83× looks like **more than one
 retained representation**, not one inefficient one.
 
@@ -4461,8 +4460,8 @@ OWED
 
 ### C3. U5 was one property doing two jobs — split it
 
-The write-up asserted both *"the 14.x null satisfies U1–U5"* and *"E4:
-transaction grouping — U5 at a granularity snapshots may not reach."* Those cannot
+The write-up asserted both _"the 14.x null satisfies U1–U5"_ and _"E4:
+transaction grouping — U5 at a granularity snapshots may not reach."_ Those cannot
 both stand.
 
 ```text
@@ -4478,8 +4477,8 @@ U5b  EXPLICIT TRANSACTION SEMANTICS
 ```
 
 The null was built to U5a and scored against U5b. That is the failure named one
-commit earlier — *build the null to the contract, not to a convenient
-approximation of it* — repeated immediately.
+commit earlier — _build the null to the contract, not to a convenient
+approximation of it_ — repeated immediately.
 
 ---
 
@@ -4580,10 +4579,10 @@ time-travel    getTreeRealizationPort, rememberTreeRealizationDescriptor,
 
 ### Result — a LOW-COUPLING BOUNDARY is visible. Ownership is NOT established.
 
-> **CORRECTION.** An earlier revision concluded *"the causal kernel's real client
-> is the transaction system, not the undo system."* **Withdrawn.** That assigns
+> **CORRECTION.** An earlier revision concluded _"the causal kernel's real client
+> is the transaction system, not the undo system."_ **Withdrawn.** That assigns
 > semantic ownership from DIRECT-IMPORT evidence, and `direct import ≠ semantic
-> dependency` — the same vocabulary rule that governs lexical hits. A module can
+dependency` — the same vocabulary rule that governs lexical hits. A module can
 > depend on facts whose authority originates elsewhere without importing their
 > source. The topology could plausibly be:
 >
@@ -4603,10 +4602,9 @@ time-travel    getTreeRealizationPort, rememberTreeRealizationDescriptor,
 > OWNERSHIP                    UNPROVEN
 > ```
 
-
 **`turn-store` — the module that retains turns — is consumed by `transactions`
 ONLY. `time-travel` never touches it.** Time-travel's entire dependence on the
-causal kernel is the realization *port* (a way to apply effects to the tree) plus
+causal kernel is the realization _port_ (a way to apply effects to the tree) plus
 one type.
 
 So the causal kernel's real client is the **transaction** system, not the undo
@@ -4641,7 +4639,7 @@ UNDO-SPECIFIC                            reversal-planner, and the
                                          time-travel
 ```
 
-**CORRECTED conditional.** E2 can only remove *precision* as a justification. It
+**CORRECTED conditional.** E2 can only remove _precision_ as a justification. It
 cannot establish that `reversal-planner` has no other surviving role under E4
 transaction semantics, E3 scoped undo, confirmed redo, pending rollback, or
 subject/rekey semantics.
@@ -4702,7 +4700,7 @@ corrected earlier, in a new form.
 
 ### What the missing ingredient actually is
 
-It is **not** a different storage representation. It is a *decision*: when T1 is
+It is **not** a different storage representation. It is a _decision_: when T1 is
 rolled back, its contribution must stop being anyone's baseline. Implemented as
 ~10 lines that rewrite successors' retained `before` for the paths T1 touched,
 the snapshot null passes P3 and redo.
@@ -4735,7 +4733,7 @@ FINAL disposition                             still waits on E4 (U5b transaction
 exercise of the shipped mechanism.** It was constructed directly rather than
 driven through `transactions` / `rollbackPendingTurnAt`, so the real pending-turn
 semantics may differ from what was modelled — and if they do, P3 must be re-run
-against them before the disposition is acted on. What is established is that *a*
+against them before the disposition is acted on. What is established is that _a_
 snapshot-derived mechanism can satisfy the contract as stated, which is what E2
 was asked.
 
@@ -4751,7 +4749,7 @@ null, both reproduced against the algorithm unchanged.
 ### HOLE 1 — ABA. `undoTurn` mistakes value equality for causal authorship.
 
 ```ts
-if (get(current, p) === get(turn.after, p)) revert(p)   // "T1 still owns this"
+if (get(current, p) === get(turn.after, p)) revert(p); // "T1 still owns this"
 ```
 
 That implication is false, and it negates the exact distinction this architecture
@@ -4769,7 +4767,7 @@ not return with the value. `undo T1` must be a NO-OP and x must remain 'B'.
 ```
 
 The snapshot null **cannot** reach that conclusion, because the information it
-needs — *who wrote the current value* — is not in the values.
+needs — _who wrote the current value_ — is not in the values.
 
 ### HOLE 2 — the P3 repair clobbers siblings on a nested path
 
@@ -4783,7 +4781,7 @@ MEASURED  t2.before.profile.age === undefined
           Object.keys(t2.before.profile) === ['name']
 ```
 
-The scalar P3 could not surface it. So *"~10 lines solve it"* was a **proof
+The scalar P3 could not surface it. So _"~10 lines solve it"_ was a **proof
 sketch**, not an equivalence implementation.
 
 ### E2-A — the contract boundary, settled by the public surface
@@ -4799,7 +4797,7 @@ letting it define E2's contract would have earned E2 by assuming the next row's
 function. **P2 is removed from E2.**
 
 P1 and P3 stay, because both are LIFO: P1 undoes the top of the stack while a
-position changed *outside* the stack must survive; P3 undoes the newest confirmed
+position changed _outside_ the stack must survive; P3 undoes the newest confirmed
 turn. ABA also arises under LIFO, for the same reason as P1 — so the hole stands
 independently of the boundary.
 
@@ -4847,7 +4845,7 @@ reversal-planner / effect-reversal                  still UNPROVEN — NOT
 > evidence that the causal information must itself be stored as the confirmed
 > undo payload.
 
-That is meaningful. It is not *"confirmed undo can therefore use snapshots."*
+That is meaningful. It is not _"confirmed undo can therefore use snapshots."_
 
 ### OWED before E4
 
@@ -4870,7 +4868,7 @@ Evidence: `e2c-real-causal-path.spec.ts`, 5 rows. Driven through the real
 ### First: the contract E2 modelled does not exist
 
 E2 asserted that after `T1 pending A->B`, `T2 confirmed B->C`, `rollback T1`,
-confirmed undo *must* land on `A`. **Nothing in this repository freezes that.** It
+confirmed undo _must_ land on `A`. **Nothing in this repository freezes that.** It
 was a proposed semantic, and building a null to it repeated the exact failure the
 audit keeps catching — a null built to an assumed contract.
 
@@ -5001,7 +4999,7 @@ does **not** prove confirmed undo is required to preserve pending authorship.
 ### 2. `structural` does NOT reduce to the rekey question — WITHDRAWN
 
 E2-C claimed the remaining justification reduces to `subjectId` (withdrawn) and
-`structural` (*"reduces to the same rekey question"*). **The second half is
+`structural` (_"reduces to the same rekey question"_). **The second half is
 withdrawn.** It repeats the error of letting one row sentence a whole mechanism.
 
 Enumerated, not grepped:
@@ -5095,8 +5093,8 @@ REAL SYSTEM
   (a fresh byId('a') finds the new member at 1)
 ```
 
-**Same key. Same value. Opposite identity outcome.** The system distinguishes *"the
-original member came back"* from *"a new member took the key"* — and that
+**Same key. Same value. Opposite identity outcome.** The system distinguishes _"the
+original member came back"_ from _"a new member took the key"_ — and that
 distinction is **invisible in the values**.
 
 ```text
@@ -5112,8 +5110,8 @@ SUBJECT-FREE NULL (ordinary array leaf, byId as a memoised computed)
   held reference to the SECOND subject   -> 111            ALIASED
 ```
 
-The null reports the *first* subject's data through a reference held to the
-*second*, because a value-keyed lookup cannot tell them apart.
+The null reports the _first_ subject's data through a reference held to the
+_second_, because a value-keyed lookup cannot tell them apart.
 
 ### Result
 
@@ -5158,8 +5156,8 @@ STILL INDEPENDENT        E4 (transaction semantics), E3 (scoped undo, only if it
 
 ## E2-S — DOWNGRADED. The experiment embedded the contract it was testing.
 
-E2-S concluded *"subject-lifetime identity has a POSITIVE, INDEPENDENT
-justification."* **Withdrawn.** That jumps from
+E2-S concluded _"subject-lifetime identity has a POSITIVE, INDEPENDENT
+justification."_ **Withdrawn.** That jumps from
 
 ```text
 CURRENT BEHAVIOUR distinguishes subject generations
@@ -5172,7 +5170,7 @@ SignalTree 15 NEEDS subject-lifetime identity
 ```
 
 which is the survival jump this audit exists to prevent. Worse, the falsifier
-*assumed* the contract:
+_assumed_ the contract:
 
 ```ts
 const held = rows.byId('a');
@@ -5185,8 +5183,8 @@ Nothing established that a handle obtained before removal must survive removal a
 all. Same class as the invented P3 theorem: the contract was written into the test.
 
 **And the subject-free null bakes in its own handle contract** — cache by key, so
-the same `computed` survives and key reuse aliases. Refuting it refutes *that*
-null for *current entityMap reference semantics*. It does not show canonical
+the same `computed` survives and key reuse aliases. Refuting it refutes _that_
+null for _current entityMap reference semantics_. It does not show canonical
 before/after truth is insufficient for an independently required function, because
 retained member-reference identity has not been shown to be one.
 
@@ -5204,8 +5202,8 @@ SUBJECT-LIFETIME IDENTITY AS A V15 REQUIREMENT  UNPROVEN
 
 ### Also retracted: coverage-versus-participant
 
-The corrections entry said *"coverage-versus-participant is a distinction a value
-diff cannot express."* Representationally true; **semantically unproven.** The
+The corrections entry said _"coverage-versus-participant is a distinction a value
+diff cannot express."_ Representationally true; **semantically unproven.** The
 `subjectPositions` docblock describes how the incumbent causal model works. Before
 it carries survival weight:
 
@@ -5221,7 +5219,7 @@ cannot supply it.
 
 ### The order that must come first
 
-Not *"does identity live in the effect log or beside snapshots"* — that already
+Not _"does identity live in the effect log or beside snapshots"_ — that already
 assumes identity survived.
 
 ```text
@@ -5279,8 +5277,8 @@ held reads 999
 ```
 
 Not stale — **wrong**. Another member's data, no error, no signal. And key reuse is
-not hypothetical: `80f41e94`'s own docblock worries about *"a future addOne of the
-retired id"*, and optimistic temp-id creation produces exactly this cycle.
+not hypothetical: `80f41e94`'s own docblock worries about _"a future addOne of the
+retired id"_, and optimistic temp-id creation produces exactly this cycle.
 
 ### Q2 — B is NOT identity-free either, and the minimum is a GENERATION
 
@@ -5291,7 +5289,7 @@ JSON of the two occupancies is IDENTICAL
 ```
 
 **So some identity beyond key+value IS REQUIRED.** This is the first thing in this
-derivation earned as a *function* rather than observed as behaviour.
+derivation earned as a _function_ rather than observed as behaviour.
 
 Its minimum, built in ordinary code — a `Map`, a counter, and one revision signal:
 
@@ -5314,7 +5312,7 @@ ordinary Angular shape: a parent derives from a key it holds, children get VALUE
 ```
 
 The derived projection reacquires by itself, because it re-derives from the key on
-every read. And the only consumer revival serves — one that *captured* a handle —
+every read. And the only consumer revival serves — one that _captured_ a handle —
 carries its own key and can always reacquire:
 
 ```text
@@ -5336,7 +5334,7 @@ REVIVAL-ON-UNDO                              NOT EARNED — no capability found
 ```
 
 **Not established:** that revival is worthless. It may be better DX, and a consumer
-that *cannot* know its key would need it — no such consumer has been demonstrated.
+that _cannot_ know its key would need it — no such consumer has been demonstrated.
 
 ### Two null-construction findings, both Angular idiom
 
@@ -5375,8 +5373,8 @@ KERNEL                                FRAMEWORK REALIZATION
   invalidation semantics
 ```
 
-The rule already on the books is *neutralize dependency, don't genericize
-Angular.* The subtler version of the mistake was using Angular to **prove the
+The rule already on the books is _neutralize dependency, don't genericize
+Angular._ The subtler version of the mistake was using Angular to **prove the
 null**, so Angular behaviour became semantic evidence.
 
 **Demoted to test-infrastructure evidence, carrying no architectural weight:**
@@ -5397,8 +5395,8 @@ EVIDENCE; the semantic derivation moved to
 ### Three overclaims corrected
 
 **1. "Identity beyond values is REQUIRED" -> CONDITIONAL.** Q1's "wrong-row read"
-presupposes that `lookup(k)` means *"the member that occupied k when I acquired
-this."* Under a keyed-address reading, `held -> 999` is exactly correct. The
+presupposes that `lookup(k)` means _"the member that occupied k when I acquired
+this."_ Under a keyed-address reading, `held -> 999` is exactly correct. The
 antecedent was never derived.
 
 ```text
@@ -5409,13 +5407,13 @@ THEN key+value are insufficient after key reuse, and a generation/incarnation
 
 **2. "Per-key generation is the MINIMUM" -> sufficient-in-model, not minimal.**
 Rivals: a global monotonic incarnation token, an opaque occupant token, slot plus
-incarnation. A global token may be *smaller* — the per-key map retains an entry for
+incarnation. A global token may be _smaller_ — the per-key map retains an entry for
 every key ever seen, **which is itself lifetime pressure**, so
-*"reclamation coordination is not earned"* was premature too.
+_"reclamation coordination is not earned"_ was premature too.
 
-**3. Q3 restated negatively.** Not *"nothing requires revival"* but *"no capability
-requiring revival was found in the exercised consumer shapes."* And *"a captured
-handle carries its own key"* is itself an API design choice — a handle need not
+**3. Q3 restated negatively.** Not _"nothing requires revival"_ but _"no capability
+requiring revival was found in the exercised consumer shapes."_ And _"a captured
+handle carries its own key"_ is itself an API design choice — a handle need not
 expose its key, and there need not be a handle object at all.
 
 ## E2-S00 — MEMBER ACCESS, derived framework-neutral
@@ -5458,7 +5456,7 @@ captured = at('tmp-1') · save(k, captured) · reuse intervenes
 CONTROL, nothing intervenes -> 'APPLIED'
 ```
 
-Retained membership identity would make that *more convenient*. It does not make
+Retained membership identity would make that _more convenient_. It does not make
 it **possible**.
 
 ### Result
@@ -5490,11 +5488,11 @@ framework imports**.
 
 ```ts
 const captured = c.at('tmp-1');
-if (c.at(k) !== captured) return 'STALE';   // <- JAVASCRIPT OBJECT IDENTITY
+if (c.at(k) !== captured) return 'STALE'; // <- JAVASCRIPT OBJECT IDENTITY
 ```
 
-So E2-S00 did not show *"address + values suffice."* It showed *"address +
-retained object-reference identity suffices for that particular sequence."*
+So E2-S00 did not show _"address + values suffice."_ It showed _"address +
+retained object-reference identity suffices for that particular sequence."_
 
 ### And the guard cannot make the distinction it needs
 
@@ -5552,9 +5550,9 @@ identity unearned, and both are application choices rather than measurements:
 
 ## THREE KINDS OF NEUTRALITY — they are not the same guard
 
-Another overclaim, withdrawn: *"the framework-neutral version is the first one
+Another overclaim, withdrawn: _"the framework-neutral version is the first one
 that couldn't encode incumbent semantics, because it had no incumbent primitives
-to borrow from."* Framework neutrality prevents **Angular** contamination. It does
+to borrow from."_ Framework neutrality prevents **Angular** contamination. It does
 not prevent incumbent or unexamined assumptions.
 
 ```text
@@ -5599,9 +5597,9 @@ Two independent premise reviewers, differentiated packets, no repository access,
 no author rationale, no loaded vocabulary. The row was worded one level above the
 incumbent's field:
 
-> *"At the moment a previously recorded operation is reverted, the system requires
+> _"At the moment a previously recorded operation is reverted, the system requires
 > information that cannot be reconstructed from the canonical values recorded
-> before and after that operation."* — CANDIDATE, UNPROVEN
+> before and after that operation."_ — CANDIDATE, UNPROVEN
 
 ```text
 REVIEWER A  (function killer)     VERDICT: FUNCTION SURVIVAL NOT ESTABLISHED
@@ -5634,8 +5632,8 @@ F4  the reconstruction budget was set at one operation's value pair, when a
 ```
 
 And the disqualifier: **nothing was named that becomes impossible.** A's phrasing
-is worth keeping — *"a survival claim that cannot name its own casualty has not
-earned a row."*
+is worth keeping — _"a survival claim that cannot name its own casualty has not
+earned a row."_
 
 ### B's absence architecture, and the two contracts it costs
 
@@ -5710,8 +5708,8 @@ outcome: one experiment stopped before construction, one contradiction found in
 
 ### GATE 1 — FOUR WORDING CORRECTIONS before anything builds on it
 
-**1. A's F1 is premise-relative, not a general theorem.** *"Anything observable is
-a value at a position"* is too broad for the constitution — temporal events,
+**1. A's F1 is premise-relative, not a general theorem.** _"Anything observable is
+a value at a position"_ is too broad for the constitution — temporal events,
 authorship, ordering, lifecycle can all be observable without reducing to a
 current value pair. What survives is narrower:
 
@@ -5720,14 +5718,14 @@ Given the CURRENTLY EARNED revert contract, no additional observable obligation
 beyond canonical restoration has been NAMED.
 ```
 
-*"All observability is state"* does not enter the constitution.
+_"All observability is state"_ does not enter the constitution.
 
 **2. B's architecture is an EQUIVALENCE WITNESS, not a destination.** The
 coarse-pair + leaf-diff design shows the candidate function is not necessary under
 these premises. It does **not** earn snapshot history, tree diffing, its
 performance profile, or any particular representation.
 
-**3. B8 IS FOUR PARTS, NOT THREE.** Three parts prove that *some* information
+**3. B8 IS FOUR PARTS, NOT THREE.** Three parts prove that _some_ information
 exists outside canonical truth — which could then be converted accidentally into a
 SignalTree-owned identity function. The ownership audit has to come before
 representation, again:
@@ -5771,7 +5769,7 @@ stays searchable and contaminates the next row.
 
 ### Premise-relativity of the continuity convergence
 
-*"Reference continuity is addressing stability, not information"* is held
+_"Reference continuity is addressing stability, not information"_ is held
 **premise-relative**. The next row is precisely where it can be falsified: if
 something associated with a membership lifetime cannot be recovered from canonical
 truth or address AND the kernel must preserve it, continuity begins carrying
@@ -5812,17 +5810,17 @@ NULL              FORBIDDEN
 
 ### The durable result, and it is small
 
-A's F1 is the clean one: the premises carry you all the way to *"the restored
-member is observable again"* and stop. Nothing carries you to *"the observation
-obtained before the removal must still designate it."* That gap is the missing
+A's F1 is the clean one: the premises carry you all the way to _"the restored
+member is observable again"_ and stop. Nothing carries you to _"the observation
+obtained before the removal must still designate it."_ That gap is the missing
 function.
 
 B exhibited the coherent absence: observe key k, get the value while present,
 absence while removed, the restored value after reversal. No continuity object
 required.
 
-And A's F6 caught contamination in my own wording — *"that member"* presupposes
-cross-gap sameness, while *"the surviving key"* simultaneously hands the opposing
+And A's F6 caught contamination in my own wording — _"that member"_ presupposes
+cross-gap sameness, while _"the surviving key"_ simultaneously hands the opposing
 architecture enough address information to reacquire. The criterion conceded the
 point it was testing.
 
@@ -5888,8 +5886,8 @@ claimed mechanism. Retained as characterization; carries no architectural weight
 ### B8+ HAS REACHED THE END OF ITS USEFULNESS
 
 The four-part criterion was a useful adversarial probe and is now becoming
-representation-shaped — *"cannot reconstruct referent"*, *"non-canonical
-information"*, *"container custody"*. The upstream result is the one that matters
+representation-shaped — _"cannot reconstruct referent"_, _"non-canonical
+information"_, _"container custody"_. The upstream result is the one that matters
 and it is simpler:
 
 ```text
@@ -5903,8 +5901,8 @@ something.
 ### One argument worth keeping, because it cuts the other way
 
 B's F5, on an operation begun before the removal and completing after the
-reversal: a surviving handle *"resolves silently and conceals that the
-configuration moved under the operation"* — the "undo got undone" defect. Absence
+reversal: a surviving handle _"resolves silently and conceals that the
+configuration moved under the operation"_ — the "undo got undone" defect. Absence
 surfaces the conflict; continuity hides it.
 
 Recorded as an observation about that scenario. **Not** as a theorem that
@@ -5917,7 +5915,7 @@ NOT ESTABLISHED -> NOTHING -> close the row.
 ```
 
 **No product decision is owed.** Asking "does SignalTree want to claim the missing
-premise?" converts NOT ESTABLISHED into *would we LIKE this?*, which is
+premise?" converts NOT ESTABLISHED into _would we LIKE this?_, which is
 resurrection by another route. If persistence, transactions, an adapter, or a
 demonstrated consumer later produces a capability that genuinely requires
 cross-removal continuity, **that function reopens the question from zero.**
@@ -5998,15 +5996,15 @@ around the no-skipping rule installed one commit earlier.
 
 ### CONVERGENCE IS NOT CORROBORATION
 
-An earlier synthesis called the A/B agreement *"unusually strong evidence because
-opposite jobs independently expose the same missing premise."* **Withdrawn.**
+An earlier synthesis called the A/B agreement _"unusually strong evidence because
+opposite jobs independently expose the same missing premise."_ **Withdrawn.**
 
 ```text
 A and B were given the SAME FROZEN PREMISES. Their agreement is PREMISE-CORRELATED,
 not independent empirical corroboration.
 ```
 
-Opposite *jobs* is not opposite *information*. This is the second time the value of
+Opposite _jobs_ is not opposite _information_. This is the second time the value of
 withholding context was overstated by treating role-difference as independence.
 
 ### THE STRONGEST ALTERNATIVE INTERPRETATION — recorded because it may be right
@@ -6019,7 +6017,7 @@ to restructure the writers.** No frozen premise grants that. Both reviewers then
 land on the identical decisive configuration, and neither showed it impossible or
 excluded; it was simply never instantiated. Meanwhile both concede the underlying
 requirement is real: torn observation is the candidate's strongest foothold, and it
-generates *"no observer sees a partial group"*.
+generates _"no observer sees a partial group"_.
 
 ```text
 C1   NOT ESTABLISHED · NOT REFUTED · UNDERDETERMINED BY CURRENT PREMISES
@@ -6029,11 +6027,11 @@ C1   NOT ESTABLISHED · NOT REFUTED · UNDERDETERMINED BY CURRENT PREMISES
 correct for the premises to remain silent, because C1's function does not
 independently arise.
 
-So the phrase *"the row failed the premise set"* is WITHDRAWN — it reads as though
+So the phrase _"the row failed the premise set"_ is WITHDRAWN — it reads as though
 the frozen premises are deficient and need expanding. Nothing has shown that. The
 accurate statement is **the current premises do not determine the candidate.**
 
-And *"the entitled next move is a re-run request"* is WITHDRAWN as too permissive.
+And _"the entitled next move is a re-run request"_ is WITHDRAWN as too permissive.
 Going and fixing the missing premises so C1 becomes testable would MANUFACTURE
 them. Each is itself a candidate fact, and two are potentially major architectural
 functions in their own right:
@@ -6182,8 +6180,8 @@ Forward correction requires knowing the target value, and **no historical-value
 access contract is granted.**
 
 **P3 does NOT imply readable historical values.** The absence architect claimed a
-boundary-read accessor is *"not a new mechanism — P3 cannot be satisfied without
-retaining prior configurations, so the data already exists."* That does not follow.
+boundary-read accessor is _"not a new mechanism — P3 cannot be satisfied without
+retaining prior configurations, so the data already exists."_ That does not follow.
 P3 requires the ability to REALIZE a previous configuration. An implementation
 could satisfy it with:
 
@@ -6264,7 +6262,7 @@ A workflow might already know the intended correction; it might be computed from
 domain state; or selective correction may never independently arise.
 
 **3. "The refusal is provisional against measurement."** Withdrawn. Measurement of
-*what*? Measuring the current repository yields incumbent behaviour, which cannot
+_what_? Measuring the current repository yields incumbent behaviour, which cannot
 by itself advance `FUNCTION REQUIRED`. Correct form:
 
 ```text
@@ -6280,8 +6278,8 @@ zero-state survival failure.
 ### META — GATE 2 NEEDS THE SAME SUBTRACTION DISCIPLINE
 
 The interpretation reviewer correctly detected underdetermination, then converted
-its own strongest alternative into *"two obligations follow"* — including a
-*"cheap check"* to run. That is precisely the transition forbidden one commit
+its own strongest alternative into _"two obligations follow"_ — including a
+_"cheap check"_ to run. That is precisely the transition forbidden one commit
 earlier: **a falsifier produced by a closed row is a reopening condition, never a
 queue.**
 
@@ -6311,20 +6309,26 @@ FORBIDDEN in every packet — incumbent vocabulary:
    premise, in which case cite the freeze)
 ```
 
-### U5b-A — ONE COHERENT CANONICAL TRANSITION   [OPENED]
+### U5b-A — ONE COHERENT CANONICAL TRANSITION [OPENED]
 
 ```text
 CANDIDATE   several related writes must become one externally coherent canonical
             transition
 DECISIVE    what independently valuable workflow becomes impossible if applications
-            instead compute a final candidate value and perform ordinary writes
-            under the already-granted grouping semantics?
+            instead use the currently earned canonical write and grouping semantics?
 OPPOSITE    there is no distinct atomicity function. Callers construct valid
-            resulting state BEFORE mutation; P5 governs only confirmed reversal
-            granularity.
+            values before each individual write; P5 governs only confirmed reversal
+            granularity and does not itself relocate coherence to the forward path.
 ```
 
-### U5b-B — REFUSAL / FAILURE   [UNOPENED]
+Do **not** read the opposite as proving that callers can precompute every final
+multi-position result, choose arbitrary mutation granularity, or validate a whole
+candidate configuration before the container is touched. P1 grants only that a
+value exists for the write being performed. The absence argument is burden-based:
+P1-P6 do not yet establish a forward-path observation/interleaving model under
+which mid-sequence incoherence is an earned SignalTree-owned concern.
+
+### U5b-B — REFUSAL / FAILURE [UNOPENED]
 
 ```text
 CANDIDATE   an attempted multi-write transition may fail such that none of its
@@ -6333,7 +6337,7 @@ DECISIVE    what requires failure to be container-governed rather than validatio
             occurring before canonical mutation?
 ```
 
-### U5b-C — CONSEQUENCE COORDINATION   [UNOPENED]
+### U5b-C — CONSEQUENCE COORDINATION [UNOPENED]
 
 ```text
 CANDIDATE   consequences outside canonical state must be coordinated with the
@@ -6342,7 +6346,7 @@ DECISIVE    what independently requires SignalTree to own that coordination rath
             than an already-earned consequence owner or adapter?
 ```
 
-### U5b-D — SHARED ATTRIBUTION   [UNOPENED]
+### U5b-D — SHARED ATTRIBUTION [UNOPENED]
 
 ```text
 CANDIDATE   several writes must retain a shared semantic fact beyond merely
@@ -6354,7 +6358,7 @@ DECISIVE    what becomes impossible if the only surviving fact is the grouped
 Stated deliberately without a name for the fact. **Only if the answer is yes should
 vocabulary for it emerge.**
 
-### U5b-E — UNCONFIRMED TRANSITION WITHDRAWAL   [UNOPENED]
+### U5b-E — UNCONFIRMED TRANSITION WITHDRAWAL [UNOPENED]
 
 ```text
 CANDIDATE   an unconfirmed transition requires container-owned semantics for later
@@ -6412,6 +6416,211 @@ That covers premise attack, null construction, interpretation review, and closur
 with one rule instead of four, and it is what the observed failures actually
 violated.
 
+## U5b-A — ONE COHERENT CANONICAL TRANSITION: UNDERDETERMINED. Terminal.
+
+```text
+A (killer)    FUNCTION SURVIVAL NOT ESTABLISHED
+B (absence)   A COHERENT ABSENCE EXISTS — but conditional on three things it cannot
+              guarantee, and FAILS OUTRIGHT on one named class
+GATE 2        UNDERDETERMINED — NEITHER EARNED NOR REFUTED
+NULL          FORBIDDEN
+DISPOSITION   TERMINAL. Not "rejected". No author may report it as rejected.
+```
+
+### What is established, narrowly
+
+```text
+1  P5 does NOT grant forward-path atomicity. Both reviewers converge: grouping
+   supplies recovery of the RECORD, not prevention. Any argument that the
+   forward-path claim is already granted is dead.
+2  P4 grants NO CONCEALMENT — it excludes positions from the revertible record,
+   not from observation. The "stage in excluded positions" route is not
+   privacy-backed.
+3  The candidate's apparent force comes from a RELOCATION, not a derivation.
+   P3's "boundaries a user would recognize" is a granted coherence requirement on
+   the REVERSAL path; the wording transposes it to the forward path.
+4  A large fraction of multi-position coherence requirements are DECOMPOSITION
+   ARTIFACTS and dissolve under re-addressing and derivation with no transition
+   facility. The candidate's necessary domain is strictly smaller than its wording
+   suggests.
+5  The premises do NOT decide whether reversion is observationally atomic, nor
+   whether every composed writing unit is restructurable by its caller. Both are
+   ungranted facts, not open questions with a default.
+6  Whether every position pair has a common addressable ancestor is UNDETERMINED —
+   the premises grant neither a root nor a hierarchy.
+```
+
+### THE INSTRUMENT WAS DEFECTIVE — my error
+
+The pre-registered OPPOSITE CONTRACT stipulated that grouping _"governs only
+confirmed reversal granularity."_
+
+```text
+That HANDS THE NULL THE ANSWER to the exact question B's F7 says is undecided.
+Any closure leaning on the null's wording is leaning on a STIPULATION.
+```
+
+`"grouping is confined to reversal granularity"` is therefore **not a finding** — it
+is my packet's wording. This is a construction defect of the row's instrument and it
+bounds how much weight the null's survival can carry.
+
+### CONFLICT — mostly charter artifact, ONE genuine residuum
+
+**Reconcilable part.** A was asked whether the function is _required by the premise
+set_ and said no for all cases. B was asked to _build the absence_ and said a
+construction exists with a non-empty uncovered class. That class — opaque writer +
+illegal intermediate + unmediated observer — is characterised by exactly the grants
+A's own falsifier names as missing, and B lists _"all composed writing units are
+restructurable by their caller"_ as its own falsifier. So B's forced case is not a
+counterexample to A; it is **the sharpest available specification of the missing
+grant.** Compatible findings — and B's route is the more valuable one: A found the
+gap by inspection, B found it by hitting it while trying to build around it.
+
+**UNRESOLVED RESIDUUM — do not flatten.** B's F7 does _not_ depend on an external
+grant. P3's own wording — _"a configuration PREVIOUSLY HELD"_, _"boundaries a user
+would recognize"_ — may already entail a step-granular observer of whole
+configurations. And **A concedes the premise B needs**: A calls those boundaries
+_"a genuine, granted coherence requirement"_, objecting only to their relocation.
+Both touch the same load-bearing text from opposite sides and neither resolves it.
+
+```text
+UNRESOLVED   is P3's "boundaries a user would recognize" OBSERVATIONAL or merely
+             DESCRIPTIVE? Neither reviewer was asked; neither answered.
+             This is INTERNAL to the frozen premises, not a difference of
+             assignment.
+```
+
+### CLOSURE — F7 is correct, and a disposition is still available
+
+Both directions require deciding reversal observational atomicity:
+
+```text
+IF reversion IS observationally atomic  -> the container already possesses
+   coherent multi-position machinery, and the opposite contract's "there is no
+   distinct atomicity function" is FALSE AS WRITTEN. The candidate becomes a
+   SYMMETRY claim about an existing function, not a request for a new one.
+IF record-granular only  -> the opposite contract survives, at the stated price:
+   revert is OBSERVABLY TORN, and a half-reverted configuration corresponds to no
+   configuration ever held — straining P3's own words.
+```
+
+The available disposition avoids deciding it: **record UNDERDETERMINED and
+terminate.** Underdetermined is terminal, not deferred.
+
+### BRANCH A IS STRUCK — and A's case collapses to one leg
+
+A's Branch A ("the positions have a common ancestor, so write that one position")
+reproduces an argument this effort already withdrew. A had no way to know that, and
+correctly so — context was withheld. But the objection bites on **premise-internal**
+grounds, without needing concurrency:
+
+```text
+P1 writes REPLACE VALUES, so writing an ancestor replaces sibling values within it
+  -> the write's extent EXCEEDS the intended positions
+An ancestor-granular write is ONE RECORDED write spanning its siblings
+  -> reverting it reverts siblings that were never part of the operation
+And if any sibling under that ancestor is P4-EXCLUDED, an ancestor-granular write
+  CANNOT HONOUR THE EXCLUSION AT ALL
+```
+
+So the sibling-granularity objection is a **conflict with P3 and P4**, not a cost
+note.
+
+```text
+CONSEQUENCE  A's F2 collapses into F1 — "unavoidable multiplicity is a defect only
+             under the missing premise" is F1 restated.
+             A's verdict rests on ONE leg, not two.
+```
+
+### LADDER — only rung 3, entered OUT OF ORDER
+
+```text
+Rung 1 measured behaviour        NOT ENTERED
+Rung 2 model vs MEASURED         NOT ENTERED — B's construction was compared
+                                 against PREMISES. It LOOKS like rung 2 and is not;
+                                 this is the most likely misreading available.
+Rung 3 function required         ENTERED, NOT PASSED — the only rung entered
+Rung 4 representation property   NOT ENTERED — B's invariant-forest constraints are
+                                 costs of an alternative, conditional on rung 3
+                                 resolving the other way
+Rung 5 carrier                   NOT ENTERED
+```
+
+**Rung 3 was entered with 1 and 2 empty. That is out of order, and it is why the row
+is UNDECIDABLE rather than merely unresolved.**
+
+### CORROBORATION — NO for the verdict; weakly YES for the gap's location
+
+Both read the **same stipulated text** and noticed the same silence. Agreement on an
+absence in a shared input is common-cause — verification that the text says what it
+says. Most agreed items are direct premise readings of that kind. And A's apparent
+breadth shrinks: Branch A struck, F2 collapsed, so **A contributes one argument, not
+several.**
+
+What does corroborate, and only this far: B reached the same wall by a **different
+failure route** — unable to close two situations without introducing new observer
+and control surfaces, then reporting against its own interest that two of them
+together _"reconstitute the candidate."_ Independent-route arrival is moderate
+evidence the wall is load-bearing rather than an artifact of A's framing. It
+corroborates **where the gap is**, not that the candidate fails.
+
+### PARKED REOPENING CONDITIONS — conditions, NOT tasks
+
+Each satisfied only if some **independently motivated** row happens to grant it:
+
+```text
+- P3's "boundaries a user would recognize" is settled as OBSERVATIONAL
+- a grant appears that a read may occur between two writes by the same caller
+- a grant appears that a write sequence may terminate partway
+- a grant appears that composed writing units may be UNRESTRUCTURABLE by their
+  caller within a row's scope
+```
+
+**None may be pursued, established, or benchmarked in order to make this candidate
+decidable.**
+
+### STRONGEST ALTERNATIVE — assembled from pieces both supplied, neither joined
+
+> **P3 already contains the observer, and the candidate is not a new function but
+> the forward-path statement of an obligation P3 imposes.**
+
+Neither of P3's clauses is per-position: _configuration_ quantifies over whole-state
+snapshots, _a user would recognize_ over an entity that perceives them. If the
+premise set contains a step-granular whole-configuration observer, it contains it
+for reasons **wholly independent of this candidate** — granted for reversion, not
+imported to win the row. Then B's parity step lands: reverting a group as several
+ordinary writes exhibits a configuration **never held**, which P3 forbids on its
+face; to satisfy "previously held" on reversal, the forward path must only ever have
+held recognisable configurations. **The obligation propagates backward from P3 with
+no new grant.**
+
+It still does not close the row — it requires "a user would recognize" to be
+observational and "previously held" to constrain the forward path, and P1-P6 say
+neither. **It relocates the undecidability** from _"is there an observer?"_ to
+_"what is P3's observational content?"_
+
+### FORBIDDEN on this row
+
+```text
+"the candidate is refuted / unnecessary"
+"B established a class where the candidate is NECESSARY"   (conditional; B says so)
+"P5/P6 already cover it"                                   (refuted by both)
+"grouping is confined to reversal granularity"             (MY STIPULATION, not a
+                                                            finding)
+"reversion is observationally atomic" OR "observably torn" (premises decide neither)
+"co-location is the answer"                                (not established free)
+"the absence architecture is a design"                     (existence proof only)
+"scaffolding 2+3 give the behaviour without the candidate" (B: they ARE it,
+                                                            relabelled)
+"write-position injection is the repair"                   (weakest known; enforceable
+                                                            nowhere)
+"A's Branch A shows one write always suffices"             (STRUCK)
+"P4+P5 have a defect to fix"                               (latent today; only the
+                                                            candidate's language would
+                                                            make it a promise)
+"two reviewers agreeing corroborates the verdict"
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
@@ -6419,20 +6628,20 @@ the architectural matrix would be filled with concrete syntax within a week, and
 then defended. This records CAPABILITY only. See
 [Rule 0m](../../RELEASE-1.0.md).
 
-Its job is to catch one specific failure: converting *"the runtime does not need
-this machinery"* into *"the author may not express this"*. Those are different
+Its job is to catch one specific failure: converting _"the runtime does not need
+this machinery"_ into _"the author may not express this"_. Those are different
 claims, and lowering is what separates them.
 
-| Function | Semantic result | DX capability worth preserving | Semantics forbid it? | DX status |
-|---|---|---|---|---|
-| derived projections | canonical -> read-only projection; no runtime derived->derived graph | compose named projections naturally | **NO** — candidate lowering is transitive expansion to canonical inputs (HYPOTHESIS, not proved) | UNPROVEN |
-| optional behaviour selection | compile before exposure; no post-exposure composition | declare optional behaviour concisely in one place | **NO** — a declaration form is unconstrained by the absence of a chain | UNPROVEN |
-| external acquisition | application/service-owned | bind an acquired result into tree state easily | **NO** — ownership says who executes, not how authoring reads | DEFERRED |
-| input -> acquisition | Angular/application reactive layer | express "when this changes, fetch" without ceremony | **NO** | DEFERRED |
-| workflow state (`status`) | ordinary store truth + derived predicates | name a workflow state and read its predicates | **NO** — the predicates are ordinary projections | DEFERRED |
-| request cache policy | ordinary request cache, no SignalTree ownership | declare staleness/invalidation near the data | **NO** | DEFERRED |
-| commands (`_`) | function itself UNPROVEN | colocated, typed, intentional actions | **N/A** — no function to constrain yet | UNPROVEN |
-| entity collections | not yet derived | address entities by key with good inference | **UNDETERMINED** | UNPROVEN |
+| Function                     | Semantic result                                                      | DX capability worth preserving                      | Semantics forbid it?                                                                             | DX status |
+| ---------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------- |
+| derived projections          | canonical -> read-only projection; no runtime derived->derived graph | compose named projections naturally                 | **NO** — candidate lowering is transitive expansion to canonical inputs (HYPOTHESIS, not proved) | UNPROVEN  |
+| optional behaviour selection | compile before exposure; no post-exposure composition                | declare optional behaviour concisely in one place   | **NO** — a declaration form is unconstrained by the absence of a chain                           | UNPROVEN  |
+| external acquisition         | application/service-owned                                            | bind an acquired result into tree state easily      | **NO** — ownership says who executes, not how authoring reads                                    | DEFERRED  |
+| input -> acquisition         | Angular/application reactive layer                                   | express "when this changes, fetch" without ceremony | **NO**                                                                                           | DEFERRED  |
+| workflow state (`status`)    | ordinary store truth + derived predicates                            | name a workflow state and read its predicates       | **NO** — the predicates are ordinary projections                                                 | DEFERRED  |
+| request cache policy         | ordinary request cache, no SignalTree ownership                      | declare staleness/invalidation near the data        | **NO**                                                                                           | DEFERRED  |
+| commands (`_`)               | function itself UNPROVEN                                             | colocated, typed, intentional actions               | **N/A** — no function to constrain yet                                                           | UNPROVEN  |
+| entity collections           | not yet derived                                                      | address entities by key with good inference         | **UNDETERMINED**                                                                                 | UNPROVEN  |
 
 **Status vocabulary, because the distinction is load-bearing:**
 
@@ -6491,7 +6700,7 @@ tree._.users.reload()
 ```
 
 None of those is frozen, and recording one here would make it look like it were.
-The capability is *"let authors compose named projections naturally"*; the
+The capability is _"let authors compose named projections naturally"_; the
 spelling is a later, single, system-wide decision.
 
 ### Extend this treatment to the rest of the matrix
@@ -6534,18 +6743,18 @@ Recorded after two false-absence errors made a summary-based derivation
 untrustworthy. **HEAD plus executable evidence wins over anything asserted in
 conversation.** T2 stays CLOSED; this adds precision, and corrects nothing.
 
-| F# | Property under test | Observed | Proves | Does NOT prove |
-|---|---|---|---|---|
-| F1 | same map key, NEW semantic subject (`removeOne('w1')` then add a different `w1`) | `loaded()` true, `lastLoadedAt()` unchanged, `load()` does not refetch | the substitution is INVISIBLE to the cache — identity/lifetime are not consulted | that it *should* react; no desired behaviour is asserted |
-| F2 | `clear()` the whole collection | still `loaded()`, no refetch | entity lifetime does not participate in freshness | that emptiness ought to invalidate |
-| F1b | a locally added entity | still fresh, no refetch | freshness is a fact about the LAST FETCH, not about contents | anything about merge policy |
-| F3 | one external resource behind two collections in one tree | `calls === 2`; invalidating `left` leaves `right` fresh | freshness is per LOADER INSTANCE, not per resource — the ownership test failing | that sharing would be better |
-| F3b | `tags` + `invalidateTag` across two trees | returns 1; treeA stale, treeB fresh | tags address COLLECTIONS and the authority is TREE-SCOPED | that entities carry tags — none do |
-| F4 | earlier-started, later-completing load (scope `west` then `east`) | the obsolete completion cannot land; `params()` is `east` | **stale LANDING is protected**, on the Promise path, by the `runId`/`myRun` guard | that same-scope overlap is protected; the test crosses scopes |
-| F5 | `invalidate()` during flight | **DEFECT** — `settleSuccess()` does `invalidated.set(false)`, so the invalidation is erased; no refetch for 30 min, pre-change value marked fresh | invalidation does not survive a concurrent completion | anything about acquisition execution as such |
-| F6 | `refresh()` during flight | **DEFECT** — `calls` stays 1 | `refresh()` breaks its OWN documented contract, "force a reload, ignoring `staleTime`/scope-match" — it does not bypass in-flight dedup | that dedup itself is wrong |
-| F7 | `swr: true` then `invalidate()` | `loaded()` true, `loading()` false | `swr` collapses `loaded()` into HAS-EVER-LOADED — the staleness flag becomes unreadable | that stale-while-revalidate is implemented at all |
-| F8 | landing over a locally added entity | `setAll(rows)` discards it; `ids()` is `['w1']` | landing has NO merge policy, so it cannot be said to respect entity identity or lifetime — **it discards both** | that a merge policy is wanted |
+| F#  | Property under test                                                              | Observed                                                                                                                                          | Proves                                                                                                                                  | Does NOT prove                                                |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| F1  | same map key, NEW semantic subject (`removeOne('w1')` then add a different `w1`) | `loaded()` true, `lastLoadedAt()` unchanged, `load()` does not refetch                                                                            | the substitution is INVISIBLE to the cache — identity/lifetime are not consulted                                                        | that it _should_ react; no desired behaviour is asserted      |
+| F2  | `clear()` the whole collection                                                   | still `loaded()`, no refetch                                                                                                                      | entity lifetime does not participate in freshness                                                                                       | that emptiness ought to invalidate                            |
+| F1b | a locally added entity                                                           | still fresh, no refetch                                                                                                                           | freshness is a fact about the LAST FETCH, not about contents                                                                            | anything about merge policy                                   |
+| F3  | one external resource behind two collections in one tree                         | `calls === 2`; invalidating `left` leaves `right` fresh                                                                                           | freshness is per LOADER INSTANCE, not per resource — the ownership test failing                                                         | that sharing would be better                                  |
+| F3b | `tags` + `invalidateTag` across two trees                                        | returns 1; treeA stale, treeB fresh                                                                                                               | tags address COLLECTIONS and the authority is TREE-SCOPED                                                                               | that entities carry tags — none do                            |
+| F4  | earlier-started, later-completing load (scope `west` then `east`)                | the obsolete completion cannot land; `params()` is `east`                                                                                         | **stale LANDING is protected**, on the Promise path, by the `runId`/`myRun` guard                                                       | that same-scope overlap is protected; the test crosses scopes |
+| F5  | `invalidate()` during flight                                                     | **DEFECT** — `settleSuccess()` does `invalidated.set(false)`, so the invalidation is erased; no refetch for 30 min, pre-change value marked fresh | invalidation does not survive a concurrent completion                                                                                   | anything about acquisition execution as such                  |
+| F6  | `refresh()` during flight                                                        | **DEFECT** — `calls` stays 1                                                                                                                      | `refresh()` breaks its OWN documented contract, "force a reload, ignoring `staleTime`/scope-match" — it does not bypass in-flight dedup | that dedup itself is wrong                                    |
+| F7  | `swr: true` then `invalidate()`                                                  | `loaded()` true, `loading()` false                                                                                                                | `swr` collapses `loaded()` into HAS-EVER-LOADED — the staleness flag becomes unreadable                                                 | that stale-while-revalidate is implemented at all             |
+| F8  | landing over a locally added entity                                              | `setAll(rows)` discards it; `ids()` is `['w1']`                                                                                                   | landing has NO merge policy, so it cannot be said to respect entity identity or lifetime — **it discards both**                         | that a merge policy is wanted                                 |
 
 ### The Tier-2 theorem, stated precisely
 
@@ -6602,9 +6811,9 @@ DOES NOT        establish that the OWNER is application/framework
 ESTABLISH
 ```
 
-The null still to run, unchanged: *if SignalTree does not own input->acquisition
+The null still to run, unchanged: _if SignalTree does not own input->acquisition
 orchestration, what SignalTree semantic fact would external Angular/RxJS
-composition have to duplicate?* If the answer is nothing, this measurement
+composition have to duplicate?_ If the answer is nothing, this measurement
 becomes strong corroboration that the orchestration was colocated inside
 SignalTree rather than owned by it — the fourth instance of the colocation
 warning.
@@ -6625,14 +6834,14 @@ exercised against the real marker and against `plainAcquire` — a signal triple
 plus an async function, which is what a service would write — under the SAME
 assertions.
 
-| # | Behaviour | Result |
-|---|---|---|
-| A1-C1 | eager initial acquisition | reproduced exactly |
-| A1-C2 | `lazy` | reproduced by NOT CALLING. `lazy` names the absence of an eager call; it is not a capability |
-| A1-C3 | overlapping refresh, Promise source | **the marker lets the obsolete completion WIN**; `plainAcquire` guards it in four lines |
-| A1-C4 | failure recording | reproduced exactly |
-| A1-C5 | `reset` | reproduced exactly |
-| A1-C6 | landed value vs authored write | indistinguishable — same value, same unwrap participation |
+| #     | Behaviour                           | Result                                                                                       |
+| ----- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| A1-C1 | eager initial acquisition           | reproduced exactly                                                                           |
+| A1-C2 | `lazy`                              | reproduced by NOT CALLING. `lazy` names the absence of an eager call; it is not a capability |
+| A1-C3 | overlapping refresh, Promise source | **the marker lets the obsolete completion WIN**; `plainAcquire` guards it in four lines      |
+| A1-C4 | failure recording                   | reproduced exactly                                                                           |
+| A1-C5 | `reset`                             | reproduced exactly                                                                           |
+| A1-C6 | landed value vs authored write      | indistinguishable — same value, same unwrap participation                                    |
 
 **A1-C3 is the row that matters.** The ordinary application version is not merely
 equivalent, it is STRICTLY BETTER: a four-line generation guard gives it
@@ -6702,17 +6911,17 @@ inputSignal -> effect() -> trigger$ (Subject)
 Every stage is an Angular or RxJS primitive. Nothing in it reads tree topology,
 position identity, causal state, or any other SignalTree authority.
 
-| # | Behaviour | Result |
-|---|---|---|
-| A1-Q1 | input change drives acquisition | reproduced by `toObservable` + `switchMap` |
-| A1-Q2 | equal successive inputs suppressed | reproduced by `distinctUntilChanged` |
-| A1-Q3 | `filter` skips inputs | reproduced by an ordinary `filter` |
-| A1-Q4 | stale exclusion | **`switchMap` does it on BOTH sides** |
-| A1-Q5 | `rerun` bypasses dedup | reproduced by merging a `Subject` after the dedup stage |
-| A1-Q6 | outside an Angular injection context | **input changes silently stop driving queries** |
-| A1-Q7 | `debounce` coalescing rapid input | reproduced by `debounceTime` — three rapid sets, one query |
-| A1-Q8 | **teardown owner** | **the binding OUTLIVES `tree.destroy()`** |
-| A1-Q9 | **equality domain** | `equal` compares INPUT VALUES; two distinct objects with equal fields are suppressed |
+| #     | Behaviour                            | Result                                                                               |
+| ----- | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| A1-Q1 | input change drives acquisition      | reproduced by `toObservable` + `switchMap`                                           |
+| A1-Q2 | equal successive inputs suppressed   | reproduced by `distinctUntilChanged`                                                 |
+| A1-Q3 | `filter` skips inputs                | reproduced by an ordinary `filter`                                                   |
+| A1-Q4 | stale exclusion                      | **`switchMap` does it on BOTH sides**                                                |
+| A1-Q5 | `rerun` bypasses dedup               | reproduced by merging a `Subject` after the dedup stage                              |
+| A1-Q6 | outside an Angular injection context | **input changes silently stop driving queries**                                      |
+| A1-Q7 | `debounce` coalescing rapid input    | reproduced by `debounceTime` — three rapid sets, one query                           |
+| A1-Q8 | **teardown owner**                   | **the binding OUTLIVES `tree.destroy()`**                                            |
+| A1-Q9 | **equality domain**                  | `equal` compares INPUT VALUES; two distinct objects with equal fields are suppressed |
 
 ### A1-Q8 — the best remaining counterexample, and it fails
 
@@ -6811,12 +7020,12 @@ A1-1  external acquisition execution      owner: application / service
 A1-2  input -> acquisition orchestration  owner: Angular / application reactive
 ```
 
-| Legacy | What it happened to provide | Disposition |
-|---|---|---|
-| `asyncSource` | acquisition + pending/error state + refresh/reset/lazy | **DELETE** — every behaviour reproduced by `plainAcquire`, and A1-C3's plain version is strictly MORE correct |
-| `asyncQuery` | the same, plus input binding and shaping | **DELETE** — the pipeline is stock Angular/RxJS and requires Angular's context to work at all |
-| `status` | workflow state recording | **DELETE** (S1) — two store positions and derived predicates |
-| `loader` / entity-loader cache | request-scoped cache policy | **no SignalTree ownership earned** (T2/A2) — parked, not deleted, pending the `entityMap` derivation it is spelled inside |
+| Legacy                         | What it happened to provide                            | Disposition                                                                                                               |
+| ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `asyncSource`                  | acquisition + pending/error state + refresh/reset/lazy | **DELETE** — every behaviour reproduced by `plainAcquire`, and A1-C3's plain version is strictly MORE correct             |
+| `asyncQuery`                   | the same, plus input binding and shaping               | **DELETE** — the pipeline is stock Angular/RxJS and requires Angular's context to work at all                             |
+| `status`                       | workflow state recording                               | **DELETE** (S1) — two store positions and derived predicates                                                              |
+| `loader` / entity-loader cache | request-scoped cache policy                            | **no SignalTree ownership earned** (T2/A2) — parked, not deleted, pending the `entityMap` derivation it is spelled inside |
 
 **The surviving functions and their owners:**
 
@@ -6928,87 +7137,87 @@ current implementation is the exact reflex MUT-0 exists to block.
 `PUBLIC NEED` uses the three levels that must never be collapsed:
 **CI** core-internal · **FP** first-party package · **TP** third-party SDK.
 
-| # | Concept | Tier | Function | Owner | Public need | Current form (MEASURED at HEAD) |
-|---|---|---|---|---|---|---|
-| 1 | `signalTree()` construction | — | construct a tree from a declaration | — | TP | `signalTree(obj)`; callable tree; `.with()` chain |
-| 2 | store / canonical truth | — | hold authoritative state | SignalTree (FROZEN) | TP | nested signals over slot substrate |
-| 3 | `$` state facade | — | address state | SignalTree (FROZEN cutoff test 2: no root surface) | TP | `tree.$`, `tree.state` |
-| 4 | derived projection | T3 | — | — | TP | `derived:` block contract FROZEN; `.derived()` chain is a DELETE candidate |
-| 5 | `derivedFrom()` | T3 | PROVED — TS7006 at a module boundary is real | — | TP | exported helper; form unsettled |
-| 6 | `linked()` | T3 | — | — | — | wraps `linkedSignal`; writable; reads own prior value; lives in `.derived()` for facade access only |
-| 7 | `asReadonly()` | — | narrow mutation capability on `$` | — | TP | type-level narrowing; not an `as any` guard |
-| 8 | `entityMap` | T3 | — | — | TP | SubjectId frozen; Angular supplies no normalized identity |
-| 9 | `byKeys` | T3 | — | — | — | entity key selection |
-| 10 | `stored()` | T3 | — | persistence consequence (FROZEN) | TP | realization UNPROVEN |
-| 11 | `persistence()` enhancer | T3 | — | persistence consequence (FROZEN) | — | enhancer |
-| 12 | storage adapters | T3 | — | — | TP | `core/storage`; emits **no** external imports |
-| 13 | `serialization` | T2 | — | — | — | enhancer |
-| 14 | `compared()` | T2 | — | — | — | marker; own NULL: *what does SignalTree itself need to know about equality?* |
-| 15 | `status()` | T2 | none survives (S1) | application/domain (S1) | — | marker; **S1: FUNCTION DELETE** — application-written setters, no lifecycle observed |
-| 16 | `loader()` | T2 | — (bundle NULL not run) | **not entity semantics (T2)** | — | marker; own NULL: *what acquisition capability is lost?* — T2: the cache is ENTITY-BLIND (only `all()`/`setAll()`); run-id guard + dedup PRESENT; invalidation is reacquisition intent; two mid-flight defects |
-| 17 | `asyncSource()` | T2 | — | — | — | marker |
-| 18 | `asyncQuery()` | T2 | — | — | — | marker; NULL must include the input→result relationship |
-| 19 | `batching()` | T1 | — | — | — | enhancer |
-| 20 | `transactions()` | T1 | — | — | — | enhancer; tree-local gate FROZEN |
-| 21 | `timeTravel()` / history | T1 | — | — | — | enhancer; separate from causal runtime (MEASURED, not a disposition) |
-| 22 | `trackHistory` | T1 | — | — | — | survives in `lib/form-history/` after FORM-DEL; **retained mechanically, not an audited survivor** |
-| 23 | undo / redo / rollback | T1 | — | — | — | cross-tree contamination defect found during F7, OPEN |
-| 24 | merge / branch | T1 | — | — | — | deferred product question; preconditions MEASURED and DO NOT HOLD |
-| 25 | `devTools()` | T1 | — | — | — | MUT-0 hypothesis: diagnostic projection |
-| 26 | enhancer protocol | T1 | — | — | TP? | `.with()` canonical; `composeEnhancers` DELETED; `SignalTreeBase` DELETED; `bind()` needs consumer proof; `requires` has no coherent semantic owner |
-| 27 | marker processor protocol | T1 | — | — | TP? | `registerMarkerProcessor`, marker symbols, reader allowlists |
-| 28 | write context | T1 | — | — | — | `getActiveWriteContext` / `withWriteContext`; `causalMode` field decisive at the capture gate (FROZEN) |
-| 29 | `PathNotifier` | T1 | — | — | — | **candidate substrate only.** Ordinary leaf writes produce ZERO events through it |
-| 30 | `interceptLeafSignals` | T1 | — | — | — | does not wrap a leaf's `.set` at all |
-| 31 | error authority | — | — | — | TP | `onTreeError`, `SignalTreeRollbackError`; branded factories were RFC 0004 plan-of-record |
-| 32 | hydration | T1 | — | — | — | `onHydrateDecision`, `HydrateMode`; ingress, distinct from persist |
-| 33 | SSR state transfer | — | — | — | — | RFC 0014; distinct ingress |
-| 34 | lazy / incremental materialization | — | — | — | — | `core/lazy`, threshold-driven; unassigned to any layer |
-| 35 | `security` | — | — | — | TP | `core/security`; emits **no** external imports |
-| 36 | audit tracker | — | — | — | — | `createAuditTracker` / `createAuditCallback` |
-| 37 | `edit-session` | — | — | — | TP | `core/edit-session` |
-| 38 | `invalidateTag` / tags | — | CANDIDATE: address policy holders reachable from a tree by tag (**A3, NULL NOT RUN**) | — | — | tag authority; T2: tags index COLLECTIONS not entities; registry-free `tree.$` walk is the one candidate remainder |
-| 39 | `isDev` / dev-only gating | — | — | — | — | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION |
-| 40 | `defineStore` | — | Angular DI integration | Angular (realization) | TP | injectable wrapper; `expose: 'readonly'` |
-| 41 | `plannedSignalTree` | — | — | — | — | MUT-0 order item 9 |
-| 42 | `toWritableSignal` | — | — | — | TP | one of only 3 symbols exposing Angular in a public TYPE |
-| 43 | `_` command facade | — | **CANDIDATE** (see sharpened NULL above) | — | — | **DOES NOT EXIST.** No `_`, no Command, no Operation, no `OperationId` anywhere in any package |
-| 44 | `@signaltree/events` | T4 | — | — | — | root emits `zod` only — the neutrality shape the others should reach |
-| 45 | `@signaltree/guardrails` | T4 | — | — | — | no Angular anywhere |
-| 46 | `@signaltree/ng-forms` | T4 | — | — | — | Angular adapter?; `/audit` is a pure re-export |
-| 47 | `@signaltree/realtime` | T4 | — | — | — | reset to R0 OWNERSHIP; emits `@angular/core` |
-| 48 | `@signaltree/shared` | T4 | — | — | — | version drift flagged |
-| 49 | `@signaltree/authoring` | — | make the descriptor/realization split physical | — | TP | **DOES NOT EXIST.** Phase 2, IN PROGRESS |
+| #   | Concept                            | Tier | Function                                                                              | Owner                                              | Public need | Current form (MEASURED at HEAD)                                                                                                                                                                                |
+| --- | ---------------------------------- | ---- | ------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `signalTree()` construction        | —    | construct a tree from a declaration                                                   | —                                                  | TP          | `signalTree(obj)`; callable tree; `.with()` chain                                                                                                                                                              |
+| 2   | store / canonical truth            | —    | hold authoritative state                                                              | SignalTree (FROZEN)                                | TP          | nested signals over slot substrate                                                                                                                                                                             |
+| 3   | `$` state facade                   | —    | address state                                                                         | SignalTree (FROZEN cutoff test 2: no root surface) | TP          | `tree.$`, `tree.state`                                                                                                                                                                                         |
+| 4   | derived projection                 | T3   | —                                                                                     | —                                                  | TP          | `derived:` block contract FROZEN; `.derived()` chain is a DELETE candidate                                                                                                                                     |
+| 5   | `derivedFrom()`                    | T3   | PROVED — TS7006 at a module boundary is real                                          | —                                                  | TP          | exported helper; form unsettled                                                                                                                                                                                |
+| 6   | `linked()`                         | T3   | —                                                                                     | —                                                  | —           | wraps `linkedSignal`; writable; reads own prior value; lives in `.derived()` for facade access only                                                                                                            |
+| 7   | `asReadonly()`                     | —    | narrow mutation capability on `$`                                                     | —                                                  | TP          | type-level narrowing; not an `as any` guard                                                                                                                                                                    |
+| 8   | `entityMap`                        | T3   | —                                                                                     | —                                                  | TP          | SubjectId frozen; Angular supplies no normalized identity                                                                                                                                                      |
+| 9   | `byKeys`                           | T3   | —                                                                                     | —                                                  | —           | entity key selection                                                                                                                                                                                           |
+| 10  | `stored()`                         | T3   | —                                                                                     | persistence consequence (FROZEN)                   | TP          | realization UNPROVEN                                                                                                                                                                                           |
+| 11  | `persistence()` enhancer           | T3   | —                                                                                     | persistence consequence (FROZEN)                   | —           | enhancer                                                                                                                                                                                                       |
+| 12  | storage adapters                   | T3   | —                                                                                     | —                                                  | TP          | `core/storage`; emits **no** external imports                                                                                                                                                                  |
+| 13  | `serialization`                    | T2   | —                                                                                     | —                                                  | —           | enhancer                                                                                                                                                                                                       |
+| 14  | `compared()`                       | T2   | —                                                                                     | —                                                  | —           | marker; own NULL: _what does SignalTree itself need to know about equality?_                                                                                                                                   |
+| 15  | `status()`                         | T2   | none survives (S1)                                                                    | application/domain (S1)                            | —           | marker; **S1: FUNCTION DELETE** — application-written setters, no lifecycle observed                                                                                                                           |
+| 16  | `loader()`                         | T2   | — (bundle NULL not run)                                                               | **not entity semantics (T2)**                      | —           | marker; own NULL: _what acquisition capability is lost?_ — T2: the cache is ENTITY-BLIND (only `all()`/`setAll()`); run-id guard + dedup PRESENT; invalidation is reacquisition intent; two mid-flight defects |
+| 17  | `asyncSource()`                    | T2   | —                                                                                     | —                                                  | —           | marker                                                                                                                                                                                                         |
+| 18  | `asyncQuery()`                     | T2   | —                                                                                     | —                                                  | —           | marker; NULL must include the input→result relationship                                                                                                                                                        |
+| 19  | `batching()`                       | T1   | —                                                                                     | —                                                  | —           | enhancer                                                                                                                                                                                                       |
+| 20  | `transactions()`                   | T1   | —                                                                                     | —                                                  | —           | enhancer; tree-local gate FROZEN                                                                                                                                                                               |
+| 21  | `timeTravel()` / history           | T1   | —                                                                                     | —                                                  | —           | enhancer; separate from causal runtime (MEASURED, not a disposition)                                                                                                                                           |
+| 22  | `trackHistory`                     | T1   | —                                                                                     | —                                                  | —           | survives in `lib/form-history/` after FORM-DEL; **retained mechanically, not an audited survivor**                                                                                                             |
+| 23  | undo / redo / rollback             | T1   | —                                                                                     | —                                                  | —           | cross-tree contamination defect found during F7, OPEN                                                                                                                                                          |
+| 24  | merge / branch                     | T1   | —                                                                                     | —                                                  | —           | deferred product question; preconditions MEASURED and DO NOT HOLD                                                                                                                                              |
+| 25  | `devTools()`                       | T1   | —                                                                                     | —                                                  | —           | MUT-0 hypothesis: diagnostic projection                                                                                                                                                                        |
+| 26  | enhancer protocol                  | T1   | —                                                                                     | —                                                  | TP?         | `.with()` canonical; `composeEnhancers` DELETED; `SignalTreeBase` DELETED; `bind()` needs consumer proof; `requires` has no coherent semantic owner                                                            |
+| 27  | marker processor protocol          | T1   | —                                                                                     | —                                                  | TP?         | `registerMarkerProcessor`, marker symbols, reader allowlists                                                                                                                                                   |
+| 28  | write context                      | T1   | —                                                                                     | —                                                  | —           | `getActiveWriteContext` / `withWriteContext`; `causalMode` field decisive at the capture gate (FROZEN)                                                                                                         |
+| 29  | `PathNotifier`                     | T1   | —                                                                                     | —                                                  | —           | **candidate substrate only.** Ordinary leaf writes produce ZERO events through it                                                                                                                              |
+| 30  | `interceptLeafSignals`             | T1   | —                                                                                     | —                                                  | —           | does not wrap a leaf's `.set` at all                                                                                                                                                                           |
+| 31  | error authority                    | —    | —                                                                                     | —                                                  | TP          | `onTreeError`, `SignalTreeRollbackError`; branded factories were RFC 0004 plan-of-record                                                                                                                       |
+| 32  | hydration                          | T1   | —                                                                                     | —                                                  | —           | `onHydrateDecision`, `HydrateMode`; ingress, distinct from persist                                                                                                                                             |
+| 33  | SSR state transfer                 | —    | —                                                                                     | —                                                  | —           | RFC 0014; distinct ingress                                                                                                                                                                                     |
+| 34  | lazy / incremental materialization | —    | —                                                                                     | —                                                  | —           | `core/lazy`, threshold-driven; unassigned to any layer                                                                                                                                                         |
+| 35  | `security`                         | —    | —                                                                                     | —                                                  | TP          | `core/security`; emits **no** external imports                                                                                                                                                                 |
+| 36  | audit tracker                      | —    | —                                                                                     | —                                                  | —           | `createAuditTracker` / `createAuditCallback`                                                                                                                                                                   |
+| 37  | `edit-session`                     | —    | —                                                                                     | —                                                  | TP          | `core/edit-session`                                                                                                                                                                                            |
+| 38  | `invalidateTag` / tags             | —    | CANDIDATE: address policy holders reachable from a tree by tag (**A3, NULL NOT RUN**) | —                                                  | —           | tag authority; T2: tags index COLLECTIONS not entities; registry-free `tree.$` walk is the one candidate remainder                                                                                             |
+| 39  | `isDev` / dev-only gating          | —    | —                                                                                     | —                                                  | —           | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION                                                                                                                                            |
+| 40  | `defineStore`                      | —    | Angular DI integration                                                                | Angular (realization)                              | TP          | injectable wrapper; `expose: 'readonly'`                                                                                                                                                                       |
+| 41  | `plannedSignalTree`                | —    | —                                                                                     | —                                                  | —           | MUT-0 order item 9                                                                                                                                                                                             |
+| 42  | `toWritableSignal`                 | —    | —                                                                                     | —                                                  | TP          | one of only 3 symbols exposing Angular in a public TYPE                                                                                                                                                        |
+| 43  | `_` command facade                 | —    | **CANDIDATE** (see sharpened NULL above)                                              | —                                                  | —           | **DOES NOT EXIST.** No `_`, no Command, no Operation, no `OperationId` anywhere in any package                                                                                                                 |
+| 44  | `@signaltree/events`               | T4   | —                                                                                     | —                                                  | —           | root emits `zod` only — the neutrality shape the others should reach                                                                                                                                           |
+| 45  | `@signaltree/guardrails`           | T4   | —                                                                                     | —                                                  | —           | no Angular anywhere                                                                                                                                                                                            |
+| 46  | `@signaltree/ng-forms`             | T4   | —                                                                                     | —                                                  | —           | Angular adapter?; `/audit` is a pure re-export                                                                                                                                                                 |
+| 47  | `@signaltree/realtime`             | T4   | —                                                                                     | —                                                  | —           | reset to R0 OWNERSHIP; emits `@angular/core`                                                                                                                                                                   |
+| 48  | `@signaltree/shared`               | T4   | —                                                                                     | —                                                  | —           | version drift flagged                                                                                                                                                                                          |
+| 49  | `@signaltree/authoring`            | —    | make the descriptor/realization split physical                                        | —                                                  | TP          | **DOES NOT EXIST.** Phase 2, IN PROGRESS                                                                                                                                                                       |
 
 ---
 
 ## Table B — Constraints, falsifiers, disposition
 
-| # | Concept | Governing constraints it must satisfy | Constraint status | NULL / falsifier | Disposition | Evidence status |
-|---|---|---|---|---|---|---|
-| 1 | `signalTree()` construction | old grammar must fail at compile/import time | FROZEN (cutoff test 4) | — | KEEP | MEASURED |
-| 2 | store / canonical truth | SignalTree owns truth; PREPARE precedes PRIVATE COMMIT | FROZEN | — | KEEP | FROZEN |
-| 3 | `$` state facade | one operation one protocol; no root surface | FROZEN (cutoff tests 1-2) | — | KEEP | FROZEN |
-| 4 | derived projection | read-only · direct projection of store truth · no derived→derived · no causal identity · no persistence identity · nested namespaces · composes into `$` · no terminal collision | FROZEN (RFC 0015) | ran; recorded | contract FROZEN, `.derived()` cut NOT AUTHORIZED | FROZEN + DERIVED |
-| 5 | `derivedFrom()` | — | — | ran | function PROVED, form unsettled | DERIVED |
-| 6 | `linked()` | must not re-enter `derived:` without a new falsifier | DERIVED (refutation) | **NOT RUN** | UNPROVEN ×3 (function, owner, placement) | DERIVED (refutation only) |
-| 7 | `asReadonly()` | type-only narrowing; not a bypass guard | MEASURED | — | — | MEASURED |
-| 8 | `entityMap` | SubjectId is structural lifetime | FROZEN | **NOT RUN** | strong survival candidate | CANDIDATE |
-| 10 | `stored()` | all 8 persistence invariants; execution-time truth resolution; tree-scoped gate | FROZEN | realization NULL **NOT RUN** | owner FROZEN, realization UNPROVEN | FROZEN owner |
-| 13 | `serialization` | — | — | **NOT RUN** | — | NULL NOT RUN |
-| 14 | `compared()` | — | — | **NOT RUN** | — | NULL NOT RUN |
-| 15 | `status()` | — | — | RUN (S1) | **FUNCTION DELETE**; workflow state survives as ordinary store truth | DERIVED |
-| 16 | `loader()` | entity coupling: none measured | — | RUN for cache/freshness ownership (T2); bundle **NOT RUN** | T2 OUTCOME A: cache/freshness/invalidation/tags are application cache policy | DERIVED (partial — `loader()` itself undisposed) |
-| 17 | `asyncSource()` | — | — | **NOT RUN** | — | NULL NOT RUN |
-| 18 | `asyncQuery()` | — | — | **NOT RUN** | — | NULL NOT RUN |
-| 19 | `batching()` | observational atomicity | FROZEN | blocked on MUT | — | T1 |
-| 20 | `transactions()` | tree-local gate; foreign scopes never interfere; refusal FLUSHES; scope settlement must survive a throwing compensation | FROZEN | MUT-3 two-tree falsifier | — | partially FROZEN |
-| 21-24 | `timeTravel()` / `trackHistory` / undo-redo-rollback / merge-branch | causal history owns meaning | FROZEN (invariant only) | MUT-3 | — | T1, merge preconditions FAIL |
-| 26 | enhancer protocol | `.with()` only; no escape hatch; enhancer identity and capability dependencies have separate authorities | FROZEN (cutoff tests 1-2) | MUT-0 item 2 | — | **blocking GATE B** |
-| 28 | write context | classification is caller-supplied and unverified, reachable from a published subpath, and takes effect | FROZEN (behaviour only) | ownership NULL **NOT RUN** | — | FROZEN (behaviour), owner UNPROVEN |
-| 29 | `PathNotifier` | — | — | join test already refutes promotion | **NOT the observation boundary** | DERIVED (R1) |
-| 30 | `interceptLeafSignals` | — | — | — | — | MEASURED |
-| 43 | `_` command facade | must not manufacture PositionIds for facade organization | **CANDIDATE** — proposed by the draft, not derived | **sharpened NULL above — NOT RUN** | — | CANDIDATE |
+| #     | Concept                                                             | Governing constraints it must satisfy                                                                                                                                            | Constraint status                                  | NULL / falsifier                                           | Disposition                                                                  | Evidence status                                  |
+| ----- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1     | `signalTree()` construction                                         | old grammar must fail at compile/import time                                                                                                                                     | FROZEN (cutoff test 4)                             | —                                                          | KEEP                                                                         | MEASURED                                         |
+| 2     | store / canonical truth                                             | SignalTree owns truth; PREPARE precedes PRIVATE COMMIT                                                                                                                           | FROZEN                                             | —                                                          | KEEP                                                                         | FROZEN                                           |
+| 3     | `$` state facade                                                    | one operation one protocol; no root surface                                                                                                                                      | FROZEN (cutoff tests 1-2)                          | —                                                          | KEEP                                                                         | FROZEN                                           |
+| 4     | derived projection                                                  | read-only · direct projection of store truth · no derived→derived · no causal identity · no persistence identity · nested namespaces · composes into `$` · no terminal collision | FROZEN (RFC 0015)                                  | ran; recorded                                              | contract FROZEN, `.derived()` cut NOT AUTHORIZED                             | FROZEN + DERIVED                                 |
+| 5     | `derivedFrom()`                                                     | —                                                                                                                                                                                | —                                                  | ran                                                        | function PROVED, form unsettled                                              | DERIVED                                          |
+| 6     | `linked()`                                                          | must not re-enter `derived:` without a new falsifier                                                                                                                             | DERIVED (refutation)                               | **NOT RUN**                                                | UNPROVEN ×3 (function, owner, placement)                                     | DERIVED (refutation only)                        |
+| 7     | `asReadonly()`                                                      | type-only narrowing; not a bypass guard                                                                                                                                          | MEASURED                                           | —                                                          | —                                                                            | MEASURED                                         |
+| 8     | `entityMap`                                                         | SubjectId is structural lifetime                                                                                                                                                 | FROZEN                                             | **NOT RUN**                                                | strong survival candidate                                                    | CANDIDATE                                        |
+| 10    | `stored()`                                                          | all 8 persistence invariants; execution-time truth resolution; tree-scoped gate                                                                                                  | FROZEN                                             | realization NULL **NOT RUN**                               | owner FROZEN, realization UNPROVEN                                           | FROZEN owner                                     |
+| 13    | `serialization`                                                     | —                                                                                                                                                                                | —                                                  | **NOT RUN**                                                | —                                                                            | NULL NOT RUN                                     |
+| 14    | `compared()`                                                        | —                                                                                                                                                                                | —                                                  | **NOT RUN**                                                | —                                                                            | NULL NOT RUN                                     |
+| 15    | `status()`                                                          | —                                                                                                                                                                                | —                                                  | RUN (S1)                                                   | **FUNCTION DELETE**; workflow state survives as ordinary store truth         | DERIVED                                          |
+| 16    | `loader()`                                                          | entity coupling: none measured                                                                                                                                                   | —                                                  | RUN for cache/freshness ownership (T2); bundle **NOT RUN** | T2 OUTCOME A: cache/freshness/invalidation/tags are application cache policy | DERIVED (partial — `loader()` itself undisposed) |
+| 17    | `asyncSource()`                                                     | —                                                                                                                                                                                | —                                                  | **NOT RUN**                                                | —                                                                            | NULL NOT RUN                                     |
+| 18    | `asyncQuery()`                                                      | —                                                                                                                                                                                | —                                                  | **NOT RUN**                                                | —                                                                            | NULL NOT RUN                                     |
+| 19    | `batching()`                                                        | observational atomicity                                                                                                                                                          | FROZEN                                             | blocked on MUT                                             | —                                                                            | T1                                               |
+| 20    | `transactions()`                                                    | tree-local gate; foreign scopes never interfere; refusal FLUSHES; scope settlement must survive a throwing compensation                                                          | FROZEN                                             | MUT-3 two-tree falsifier                                   | —                                                                            | partially FROZEN                                 |
+| 21-24 | `timeTravel()` / `trackHistory` / undo-redo-rollback / merge-branch | causal history owns meaning                                                                                                                                                      | FROZEN (invariant only)                            | MUT-3                                                      | —                                                                            | T1, merge preconditions FAIL                     |
+| 26    | enhancer protocol                                                   | `.with()` only; no escape hatch; enhancer identity and capability dependencies have separate authorities                                                                         | FROZEN (cutoff tests 1-2)                          | MUT-0 item 2                                               | —                                                                            | **blocking GATE B**                              |
+| 28    | write context                                                       | classification is caller-supplied and unverified, reachable from a published subpath, and takes effect                                                                           | FROZEN (behaviour only)                            | ownership NULL **NOT RUN**                                 | —                                                                            | FROZEN (behaviour), owner UNPROVEN               |
+| 29    | `PathNotifier`                                                      | —                                                                                                                                                                                | —                                                  | join test already refutes promotion                        | **NOT the observation boundary**                                             | DERIVED (R1)                                     |
+| 30    | `interceptLeafSignals`                                              | —                                                                                                                                                                                | —                                                  | —                                                          | —                                                                            | MEASURED                                         |
+| 43    | `_` command facade                                                  | must not manufacture PositionIds for facade organization                                                                                                                         | **CANDIDATE** — proposed by the draft, not derived | **sharpened NULL above — NOT RUN**                         | —                                                                            | CANDIDATE                                        |
 
 Rows omitted from Table B are those where no governing constraint and no stated
 falsifier yet exist; their Table A row already reads `NULL NOT RUN`.
@@ -7035,26 +7244,26 @@ A concept earns a category mark only from its own NULL. A row that ends up
 marked in two or more categories is a **cobbled concept** — that is the signal
 this table exists to produce.
 
-| # | Concept | Visible in `$` today (MEASURED) | Position? | Hidden behavior? | Policy? | Public command? | Lowering hypothesis |
-|---|---|---|---|---|---|---|---|
-| 2 | store / canonical truth | yes | — | — | — | — | — |
-| 4 | derived projection | yes (frozen: composes into `$`) | — | — | — | — | — |
-| 6 | `linked()` | yes, via `.derived()` | — | — | — | — | — |
-| 8 | `entityMap` | yes | — | — | — | — | — |
-| 10 | `stored()` | yes (marker surface) | — | consequence (FROZEN owner) | — | — | — |
-| 13 | `serialization` | no | — | — | — | — | — |
-| 14 | `compared()` | no | — | — | — | — | — |
-| 15 | `status()` | yes | — | — | — | — | — |
-| 16 | `loader()` | yes | — | — | — | — | — |
-| 17 | `asyncSource()` | yes | — | — | — | — | — |
-| 18 | `asyncQuery()` | yes | — | — | — | — | — |
-| 20 | `transactions()` | no | — | — | — | — | — |
-| 21 | `timeTravel()` / history | no | — | — | — | — | — |
-| 25 | `devTools()` | no | — | — | — | — | — |
-| 26 | enhancer protocol | n/a | — | — | — | — | — |
-| 32 | hydration | no | — | ingress | — | — | — |
-| 34 | lazy / incremental materialization | n/a | — | — | — | — | — |
-| 43 | `_` command facade | n/a | — | — | — | — | — |
+| #   | Concept                            | Visible in `$` today (MEASURED) | Position? | Hidden behavior?           | Policy? | Public command? | Lowering hypothesis |
+| --- | ---------------------------------- | ------------------------------- | --------- | -------------------------- | ------- | --------------- | ------------------- |
+| 2   | store / canonical truth            | yes                             | —         | —                          | —       | —               | —                   |
+| 4   | derived projection                 | yes (frozen: composes into `$`) | —         | —                          | —       | —               | —                   |
+| 6   | `linked()`                         | yes, via `.derived()`           | —         | —                          | —       | —               | —                   |
+| 8   | `entityMap`                        | yes                             | —         | —                          | —       | —               | —                   |
+| 10  | `stored()`                         | yes (marker surface)            | —         | consequence (FROZEN owner) | —       | —               | —                   |
+| 13  | `serialization`                    | no                              | —         | —                          | —       | —               | —                   |
+| 14  | `compared()`                       | no                              | —         | —                          | —       | —               | —                   |
+| 15  | `status()`                         | yes                             | —         | —                          | —       | —               | —                   |
+| 16  | `loader()`                         | yes                             | —         | —                          | —       | —               | —                   |
+| 17  | `asyncSource()`                    | yes                             | —         | —                          | —       | —               | —                   |
+| 18  | `asyncQuery()`                     | yes                             | —         | —                          | —       | —               | —                   |
+| 20  | `transactions()`                   | no                              | —         | —                          | —       | —               | —                   |
+| 21  | `timeTravel()` / history           | no                              | —         | —                          | —       | —               | —                   |
+| 25  | `devTools()`                       | no                              | —         | —                          | —       | —               | —                   |
+| 26  | enhancer protocol                  | n/a                             | —         | —                          | —       | —               | —                   |
+| 32  | hydration                          | no                              | —         | ingress                    | —       | —               | —                   |
+| 34  | lazy / incremental materialization | n/a                             | —         | —                          | —       | —               | —                   |
+| 43  | `_` command facade                 | n/a                             | —         | —                          | —       | —               | —                   |
 
 The only two pre-filled behavior cells are the ones already frozen
 independently: `stored()` has a persistence-consequence owner, and hydration is
@@ -7065,8 +7274,8 @@ hydration require DIFFERENT AUTHORITY. It does **not** prove that the surviving
 `stored()` function owns both. Those are two separate facts, and only the first
 is established.
 
-The joining claim — *"hydration is semantically part of the `stored()` authoring
-concept"* — has never been derived. Current form couples them:
+The joining claim — _"hydration is semantically part of the `stored()` authoring
+concept"_ — has never been derived. Current form couples them:
 `loadFromStorage()` in `markers/stored.ts` is shared by init and `reload()` and
 carries versioning and migration, so today one descriptor does span an outbound
 consequence and an inbound acquisition. But that is CURRENT FORM, and this RFC's
@@ -7094,23 +7303,23 @@ earned, not before.
 Blank means the NULL has not been run. `n/a` means the concept is not a state
 concept at all.
 
-| # | Concept | Identity needed? | Tree scope? | Subject scope? | Causal participation? | Lifecycle needed? |
-|---|---|---|---|---|---|---|
-| 2 | store / canonical truth | PositionId + SlotIndex (FROZEN) | yes (FROZEN) | — | yes (FROZEN) | no |
-| 4 | derived projection | **UNPROVEN** (see ledger) | — | — | **no** (FROZEN) | no |
-| 6 | `linked()` | — | — | — | **UNPROVEN — the whole question** | — |
-| 8 | `entityMap` | SubjectId (FROZEN) | — | yes (FROZEN) | — | — |
-| 10 | `stored()` | — | yes — tree-scoped durability (FROZEN) | — | no — post-commit consequence (FROZEN) | — |
-| 15 | `status()` | — | — | — | — | — |
-| 16 | `loader()` | — | — | — | — | — |
-| 17-18 | `asyncSource()` / `asyncQuery()` | — | — | — | — | — |
-| 20 | `transactions()` | — | yes — tree-local, foreign scopes never interfere (FROZEN) | — | — | — |
-| 21 | `timeTravel()` / history | PositionId (MEASURED) | MUT-3 | — | — | — |
-| 32 | hydration | — | — | — | — | — |
-| 43 | `_` command facade | must NOT manufacture PositionIds for facade organization | — | subject association is the candidate function | — | — |
+| #     | Concept                          | Identity needed?                                         | Tree scope?                                               | Subject scope?                                | Causal participation?                 | Lifecycle needed? |
+| ----- | -------------------------------- | -------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------- | ------------------------------------- | ----------------- |
+| 2     | store / canonical truth          | PositionId + SlotIndex (FROZEN)                          | yes (FROZEN)                                              | —                                             | yes (FROZEN)                          | no                |
+| 4     | derived projection               | **UNPROVEN** (see ledger)                                | —                                                         | —                                             | **no** (FROZEN)                       | no                |
+| 6     | `linked()`                       | —                                                        | —                                                         | —                                             | **UNPROVEN — the whole question**     | —                 |
+| 8     | `entityMap`                      | SubjectId (FROZEN)                                       | —                                                         | yes (FROZEN)                                  | —                                     | —                 |
+| 10    | `stored()`                       | —                                                        | yes — tree-scoped durability (FROZEN)                     | —                                             | no — post-commit consequence (FROZEN) | —                 |
+| 15    | `status()`                       | —                                                        | —                                                         | —                                             | —                                     | —                 |
+| 16    | `loader()`                       | —                                                        | —                                                         | —                                             | —                                     | —                 |
+| 17-18 | `asyncSource()` / `asyncQuery()` | —                                                        | —                                                         | —                                             | —                                     | —                 |
+| 20    | `transactions()`                 | —                                                        | yes — tree-local, foreign scopes never interfere (FROZEN) | —                                             | —                                     | —                 |
+| 21    | `timeTravel()` / history         | PositionId (MEASURED)                                    | MUT-3                                                     | —                                             | —                                     | —                 |
+| 32    | hydration                        | —                                                        | —                                                         | —                                             | —                                     | —                 |
+| 43    | `_` command facade               | must NOT manufacture PositionIds for facade organization | —                                                         | subject association is the candidate function | —                                     | —                 |
 
 Column `LIFECYCLE NEEDED?` is deliberately empty everywhere except where frozen.
-The candidate draft asserted *"lifecycle belongs to execution, not resources"* —
+The candidate draft asserted _"lifecycle belongs to execution, not resources"_ —
 plausible, and entirely unearned. Filling this column from the current
 `status()` implementation would be MUT-4's forbidden move: letting what existing
 code wants define the contract.

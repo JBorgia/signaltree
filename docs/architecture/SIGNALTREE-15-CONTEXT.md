@@ -629,6 +629,30 @@ each is compliant with its own letter and leaks where it does not reach.
 That covers premise attack, null construction, interpretation review and closure
 with one rule instead of four, and it is what every observed failure violated.
 
+### THE OPPOSITE CONTRACT MUST NOT STIPULATE AN ANSWER
+
+```text
+A pre-registered OPPOSITE CONTRACT may not contain a clause that DECIDES a
+question the row might need to decide.
+```
+
+Observed on U5b-A. The opposite contract was written as *"the grouping premise
+governs only confirmed reversal granularity"* — which handed the null the answer to
+precisely the question a reviewer then identified as undecided by the premises. Any
+closure leaning on the null's wording was leaning on a stipulation, and the phrase
+had to be recorded as **the author's wording, not a finding.**
+
+```text
+BEFORE OPENING A ROW, check the opposite contract for:
+  clauses beginning "only" / "merely" / "nothing but"
+  any clause that ASSERTS the scope of a frozen premise rather than CITING it
+  any clause that would be a FINDING if a reviewer produced it
+```
+
+A stipulation inside the instrument is indistinguishable from a result once the row
+closes. This is a defect of the INSTRUMENT, and it is the author's, not a
+reviewer's.
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
@@ -1051,6 +1075,91 @@ NEW HARD RULE
 Gate 2 may produce REOPENING CONDITIONS. It may NOT create follow-up work whose
 only purpose is to make a CLOSED CANDIDATE DECIDABLE.
 ```
+
+## U5b-A — ONE COHERENT CANONICAL TRANSITION: UNDERDETERMINED (terminal)
+
+```text
+A NOT ESTABLISHED · B coherent absence EXISTS but conditional + fails on one named
+class · GATE 2 UNDERDETERMINED, neither earned nor refuted · NULL FORBIDDEN
+TERMINAL, not "rejected". No author may report it as rejected.
+```
+
+### Established narrowly
+
+```text
+P5 does NOT grant forward-path atomicity — grouping recovers the RECORD, not
+   prevention. Any "already granted" argument is dead.
+P4 grants NO CONCEALMENT — excludes from the record, not from observation.
+The candidate's force is a RELOCATION of P3's "boundaries a user would recognize"
+   from the reversal path to the forward path.
+A large fraction of multi-position coherence needs are DECOMPOSITION ARTIFACTS and
+   dissolve under re-addressing/derivation with no transition facility.
+UNGRANTED FACTS (not defaults): whether reversion is observationally atomic;
+   whether every composed writer is restructurable by its caller.
+```
+
+### MY INSTRUMENT WAS DEFECTIVE
+
+The opposite contract said grouping "governs only confirmed reversal granularity" —
+**handing the null the answer** to the exact question later found undecided. That
+phrase is the AUTHOR'S WORDING, NOT A FINDING. New rule installed: an opposite
+contract may not stipulate an answer to a question the row might need to decide.
+
+### CONFLICT — mostly charter artifact, ONE genuine residuum
+
+A answered "required by the premises?" (no); B answered "can absence be built?"
+(yes, with a non-empty uncovered class). That class is characterised by exactly the
+grants A's falsifier names missing, and B lists them as its OWN falsifier — so B's
+forced case is the sharpest SPECIFICATION of the missing grant, not a counterexample.
+
+```text
+UNRESOLVED, internal to the premises: is P3's "boundaries a user would recognize"
+OBSERVATIONAL or DESCRIPTIVE? B's F7 needs no external grant, and A CONCEDES the
+premise B needs. Neither was asked; neither answered.
+```
+
+### LADDER — only rung 3, OUT OF ORDER
+
+```text
+1 measured NOT ENTERED · 2 model-vs-MEASURED NOT ENTERED (B's construction LOOKS
+like rung 2 and is not) · 3 function required ENTERED NOT PASSED · 4,5 NOT ENTERED
+Rung 3 entered with 1-2 empty is why the row is UNDECIDABLE, not merely unresolved.
+```
+
+### BRANCH A STRUCK — A's case collapses to ONE leg
+
+"Write the common ancestor" fails on PREMISE-INTERNAL grounds: writes replace
+values, so an ancestor write's extent exceeds intent; it is one recorded write
+spanning siblings, so reverting reverts siblings never in the operation; and it
+CANNOT HONOUR a P4 exclusion on any sibling. A conflict with P3 and P4, not a cost
+note. Consequence: A's F2 collapses into F1.
+
+### CORROBORATION: NO for the verdict
+
+Both read the SAME stipulated text; agreement on an absence in shared input is
+common-cause. And A's breadth shrinks once Branch A is struck. Weakly YES only for
+WHERE the gap is: B reached the same wall by a different failure route and reported
+against its own interest that two of its scaffoldings "reconstitute the candidate."
+
+### PARKED REOPENING CONDITIONS — conditions, NOT tasks
+
+```text
+- P3's "boundaries a user would recognize" settled as OBSERVATIONAL
+- a grant that a read may occur between two writes by the same caller
+- a grant that a write sequence may terminate partway
+- a grant that composed writers may be UNRESTRUCTURABLE by their caller
+NONE may be pursued to make this candidate decidable.
+```
+
+### STRONGEST ALTERNATIVE — may be right
+
+P3 may ALREADY contain the observer: neither "configuration" nor "a user would
+recognize" is per-position, and if such an observer exists it was granted FOR
+REVERSION, independently of this candidate. Then reverting a group as several writes
+exhibits a configuration NEVER HELD, which P3 forbids on its face — so the
+obligation propagates BACKWARD to the forward path with no new grant. It does not
+close the row; it relocates the undecidability from "is there an observer?" to "what
+is P3's observational content?"
 
 ## Frozen invariants — do not re-derive
 
