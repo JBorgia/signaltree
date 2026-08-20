@@ -95,7 +95,15 @@ describe('E-INT — write-path authority', () => {
         await Promise.resolve();
         if (e.n < 0) {
           blockAttempted = true;
-          ctx.block('negative');
+          // The throw is caught HERE only so it does not surface as an
+          // unhandled rejection and fail the run. In production nothing catches
+          // it: the rejection is the entire trace the fail-open ever left,
+          // which is why the defect was invisible.
+          try {
+            ctx.block('negative');
+          } catch {
+            /* swallowed by the promise, exactly as in production */
+          }
         }
       },
     });
