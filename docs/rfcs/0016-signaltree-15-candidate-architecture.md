@@ -7290,6 +7290,314 @@ this method, which is a semantic choice about the standard of evidence, not a re
 NOT A WORK ORDER.
 ```
 
+> **SUPERSEDED 2026-08-20 — the defender charter was GRANTED, constrained to public
+> API / DX / core-semantic rows. See the DEFENDER CHARTER section. The paragraph
+> above is retained because its account of WHY the choice was not the implementer's
+> is unchanged.**
+
+## U5b-D — SHARED ATTRIBUTION: PREREGISTRATION PACKET
+
+**STATUS: OPENABLE. The packet below is the repaired instrument.** Two defects were
+found in the frozen preregistration; both are repairable **without semantic choice**,
+both repairs are **strictly weakening**, and — following the U5b-B precedent — the
+frozen wording is retained verbatim beside each repair rather than edited in place.
+
+### ROW CLASS DECLARATION — required before the row opens
+
+```text
+ROW CLASS   CORE SEMANTIC
+            The candidate asks what the container MEANS by a group of writes: is
+            grouping exhausted by reversal granularity, or does a group carry
+            anything else?
+
+DEFENDER    SEATED. Core-semantic rows are in the charter's scope.
+            This is the FIRST row to open with three Gate 1 seats.
+```
+
+Declared here, before opening, as the charter requires — so the class cannot be
+chosen afterward to fit a desired seating.
+
+### DEFECT 1 — the DECISIVE QUESTION borrows U5b-A's failed antecedent
+
+**This is the defect that made U5b-C unopenable, and it is present in D.** The
+cheap check performed when C was closed quoted **only D's candidate line** and
+concluded `NO BORROWED ANTECEDENT FOUND`. D's decisive line was never quoted, and
+the borrowed noun is in it.
+
+```text
+AS PREREGISTERED (frozen wording, retained, not edited in place)
+  what becomes impossible if the only surviving fact is the grouped canonical
+  transition?
+```
+
+```text
+"the grouped canonical TRANSITION"
+   "canonical transition" is U5b-A's candidate noun — "several related writes must
+   become one externally coherent canonical transition". U5b-A is TERMINAL —
+   UNDERDETERMINED. The noun names a thing this family has NOT established exists.
+
+As worded, D asks what becomes impossible if the only surviving fact is a thing
+whose existence is undetermined. That is C's defect exactly, and the rule against
+it is symmetric: struck for A into B, for B into C, and now for A into D.
+```
+
+**Why the repair involves no semantic choice.** P5 supplies its own words for what
+is granted. Substituting them removes A's noun and **puts nothing in its place**:
+
+```text
+REPAIRED DECISIVE QUESTION — the borrowed noun replaced with P5's granted content
+  what independently valuable workflow becomes impossible if the only fact that
+  survives about several grouped writes is that they revert as one step?
+```
+
+```text
+WHAT CHANGED     a noun naming an unestablished thing -> the premise's own wording
+WHAT WAS ADDED   nothing
+DIRECTION        strictly weakening: the question now demands an IMPOSSIBLE
+                 workflow, matching the burden form used on every other row
+```
+
+### DEFECT 2 — the CANDIDATE carries an unearned qualifier
+
+```text
+AS PREREGISTERED (frozen wording, retained)
+  several writes must retain a shared semantic fact beyond merely reverting as one
+  confirmed step
+```
+
+```text
+"CONFIRMED" appears in NEITHER P5 NOR P6.
+  P5 grants: "Several writes may be GROUPED so that they revert as one step."
+  P6 grants: LIFO stepping; selective or arbitrary earlier-step reversion NOT
+             granted.
+
+Neither premise qualifies a step as confirmed or unconfirmed. The qualifier's
+nearest source in this ledger is U5b-A's opposite contract — "P5 governs only
+confirmed reversal granularity" — which was STRUCK as an author stipulation that
+handed the null its answer. Carrying the word into D risks carrying the struck
+stipulation with it.
+
+"MERELY" is mildly loaded. It presupposes that reverting as one step is a lesser
+thing. Recorded; not decisive on its own.
+```
+
+```text
+REPAIRED CANDIDATE — qualifier dropped, nothing substituted
+  several writes must retain a shared fact beyond reverting as one step
+```
+
+```text
+DIRECTION  strictly weakening. "One step" is a WIDER class than "one confirmed
+           step", so the fact must now exceed MORE, and the candidate is
+           correspondingly harder to establish.
+```
+
+**Left alone deliberately:** _"shared semantic fact"_ stays unnamed. The original
+preregistration's note — _"stated deliberately without a name for the fact; only if
+the answer is yes should vocabulary for it emerge"_ — is the strongest thing about
+this row's wording and is preserved intact.
+
+### INDEPENDENCE CLAIM — a construction property, FALSIFIABLE, not a finding
+
+```text
+U5b-A closed on a missing grant: an entity able to observe the interval between two
+writes.
+
+D'S CLAIM TO INDEPENDENCE
+  D asks what a group RETAINS. A retained fact is examinable at rest — before any
+  reversal, after one, or with no reversal ever occurring. D never asks what is
+  true DURING a sequence.
+
+IF GATE 1 FINDS D cannot be stated without an interval observer
+  -> D CLOSES as inheriting U5b-A's blocker. It does NOT become a request to
+     establish the observer. That move has been struck three times.
+```
+
+Exposed to Gate 1 as the first thing to attack.
+
+### THE FROZEN PREMISES THIS ROW IS OPENED AGAINST
+
+Quoted verbatim from the frozen section, **including P3 as frozen by the 2026-08-20
+product decision**. This is the first row opened against a P3 that is not split.
+
+```text
+P1. A state container holds canonical application state as addressable positions.
+    Reads observe positions; writes replace values at positions immutably.
+P2. A collection of members with dynamic keyed membership is required: members
+    addressable by key, key set enumerable, a key's absence is itself a
+    representable value.
+P3. An operation may be REVERTED: canonical state returns to a configuration it
+    previously held, at boundaries a user would recognize as discrete steps, and
+    can be advanced again afterwards.
+P4. Some positions may be excluded from the revertible record.
+P5. Several writes may be GROUPED so that they revert as one step. This is already
+    granted. The candidate must exceed it.
+P6. Reversion currently grants last-in-first-out stepping. Selective or arbitrary
+    earlier-step reversion is NOT GRANTED, and a row may not require it unless that
+    function independently earns itself.
+```
+
+```text
+WHAT THE P3 FREEZE GIVES THIS ROW
+  the TEXT, unsplit. Both killers and the defender read the same clause.
+
+WHAT IT DOES NOT GIVE THIS ROW
+  any grant that the perceiving entity observes between writes, or at finer
+  resolution than a step. The freeze settled the words, not their observational
+  content, and U5b-A's parked condition #1 remains parked.
+
+If any seat's argument turns on P3's agent having sub-step resolution, that is a
+FINDING that the row needs an ungranted condition — recorded, never pursued.
+```
+
+### OPPOSITE POSITION — UNPROVEN, symmetric with the candidate
+
+```text
+OPPOSITE POSITION — UNPROVEN. Offered for attack on the same footing as the
+candidate. NOT a verdict, NOT a premise reading, NOT the author's view.
+
+  Grouping is exhausted by reversal granularity. A group of writes retains nothing
+  beyond reverting as one step, and the container owes nothing further.
+```
+
+Deliberately silent about what callers can or cannot do instead. An opposite that
+asserted _"callers can hold such a fact at a canonical position"_ would answer a
+question this row may need to decide.
+
+**Does a route to its invalidity exist?** The stop-condition requires one be
+_available_, not correct.
+
+```text
+ROUTE, UNEVALUATED — P4 grants that some positions may be excluded from the
+revertible record. The premises therefore already recognize that a position's
+RELATIONSHIP TO THE RECORD is itself a decision with two settings.
+
+Consider a fact describing a group, held at a canonical position under P1. It is
+either inside the revertible record or outside it (P4). Inside: reverting the group
+also reverts the description. Outside: the description survives a reversal that
+removed what it describes. If NEITHER placement is coherent, the incoherence sits in
+the container's own record rather than in caller data, and "the container owes
+nothing further" would not reach it.
+
+NOT ASSERTED: that either placement is incoherent. That is the row's question.
+```
+
+Because a route exists, **the packet clears the stop-condition.**
+
+### ANTI-STIPULATION LEDGER — what the packet is silent on
+
+Every item is a question this row might need to decide.
+
+```text
+NOT ASSERTED  that any consumer of a shared fact exists
+NOT ASSERTED  that a fact shared by several writes is desirable, or that its
+              absence is a loss. "It would be better to have one" is a value
+              judgement that supplies the requirement by assumption — the
+              invented-P3-theorem error in a new costume
+NOT ASSERTED  that "semantic fact" names anything. The candidate withholds a name
+              and no seat may supply one
+NOT ASSERTED  that a group has any identity distinct from its member writes
+NOT ASSERTED  that grouping IS confined to reversal granularity
+NOT ASSERTED  that grouping is NOT confined to reversal granularity
+              — the symmetric pair is deliberate. A's struck stipulation would
+                DECIDE this row outright, and so would its negation
+NOT ASSERTED  that a group persists as a durable thing at all, before or after
+              reversal
+NOT ASSERTED  that reversal ever in fact occurs for a given group
+NOT ASSERTED  that a caller may choose a position's placement relative to the
+              revertible record. P4 grants that SOME positions may be excluded; who
+              decides, and on what basis, is not granted
+NOT ASSERTED  that the container currently has or lacks such a fact. Implementation
+              behaviour is not in evidence on this row at any rung
+```
+
+### STIPULATION-LEAKAGE SELF-CHECK
+
+```text
+STANDING TEST, per clause
+  Would this sentence COUNT AS A FINDING if a reviewer produced it?
+  If yes, it does not belong in the packet.
+```
+
+```text
+CLAUSE                                   ANSWERS A ROW QUESTION?   DISPOSITION
+candidate, frozen wording                YES — "confirmed"         DEFECT RECORDED,
+                                         imports a struck          wording retained,
+                                         stipulation               repair alongside
+decisive question, frozen wording        YES — presumes A's        DEFECT RECORDED,
+                                         canonical transition      repair alongside
+                                         exists
+repaired candidate                       NO                        admissible
+repaired decisive question               NO                        admissible
+opposite position                        NO — asserts nothing      admissible
+                                         about caller capability
+route-to-invalidity                      NO — marked UNEVALUATED   admissible
+independence claim                       NO — marked FALSIFIABLE   admissible
+P3-freeze scope note                     NO — restates a recorded  admissible
+                                         decision's limits
+```
+
+Applied and **rejected from this packet**: _"P1-P6 give a group no content beyond
+reversal"_ — that is Reviewer A's verdict, and seating it in the instrument would
+hand A its conclusion. Also rejected: _"a caller can simply store the fact"_ — that
+is the defender's obstacle to clear or the killer's rival to offer, not the
+author's assertion.
+
+### FORBIDDEN IMPORTED CONCEPTS
+
+```text
+FAMILY-LEVEL (U5b preregistration)
+  prepare · commit · publish · effect · transaction · turn · pending rollback
+  causal attribution · speculation
+
+ROW-SPECIFIC — each NAMES THE SOLUTION, and using one decides the row by vocabulary
+  label · tag · metadata · annotation · reason · intent · description · provenance
+  correlation id · batch id · changeset · commit message · audit trail · history
+  entry · group name · undo label
+
+U5b-A's VOCABULARY (importing any re-opens A's blocker inside D)
+  observer · interleaving · intermediate configuration · torn ·
+  observationally atomic · forward-path coherence
+
+INCUMBENT
+  entityMap · SubjectId · effect log · turn store · reversal planner · time-travel
+
+PERMITTED
+  several writes · grouped · revert as one step · the record · a position · a value
+  a caller · what is true afterward · the container
+```
+
+If the row cannot be stated in the permitted vocabulary, **that is a finding about
+the row**, not a licence to widen the vocabulary.
+
+### WHAT MUST NOT BE INHERITED FROM A, B, OR C
+
+Siblings, not parents. They grant this row nothing.
+
+```text
+1  A's "grouping governs only confirmed reversal granularity"
+     Author stipulation, STRUCK, never a finding. It would DECIDE D outright and is
+     the single most dangerous import into this row.
+2  A's UNDERDETERMINED disposition, as a prior or a prediction
+3  A's blocker (the missing interval observer), as a settled bar on the family.
+     Whether D needs it is what the independence claim exposes.
+4  A's struck Branch A, the common-ancestor write
+5  B's FUNCTION NOT ESTABLISHED, as a prior or a prediction
+6  B's five ungranted conditions — writer identity, multiple writers, an
+     unmodifiable writer, caller mortality, state outliving its writer.
+     If a D casualty needs one, that is a RECORDED CONDITION, not a foundation.
+7  C's non-openability finding. It is about C's INSTRUMENT, not about any function
+8  Any framing in which two or three seats agreeing corroborates a verdict when
+     they read the same premises. Premise-correlated. Struck four times; the
+     defender charter is the structural answer, and it does not license the old
+     reading between the two killers
+9  From the P3 freeze: any reading that the perceiving entity was DERIVED, or that
+     it observes at finer resolution than a step
+
+MAY BE CITED — only as what it is
+  "the U5b-A closure records X", never "X is established".
+```
+
 ## P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED. Transcribed here.
 
 **This section is TRANSCRIPTION, not authorship.** Every packet in this derivation
