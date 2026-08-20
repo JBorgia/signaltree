@@ -344,7 +344,34 @@ serialization                 NOT EARNED for its core function, and it CLEARS
                               reconstruct by the uniform rule. The mechanism under
                               sentence cannot be its own equivalence proof — same
                               error class as the changeId reversal.
-  M3/M4 PHYSICAL DELETION     **BLOCKED** on the conforming-collection prototype.
+  M3/M4 PHYSICAL DELETION     **BLOCKED**, but the blocker MOVED. The
+                              conforming-collection prototype RAN
+                              (conforming-collection-prototype.spec.ts, no marker
+                              anywhere) and established SIX properties: read,
+                              membership, granularity, representation with NO
+                              envelope, reconstruction with NO hydrate hook, and
+                              a full JSON round trip. The 7th, canonicality, is
+                              unmeasurable here because of a 15-branch UNDO
+                              REGRESSION (below). So the remaining blocker is the
+                              regression, not the theorem.
+  UNDO REGRESSION (15)        `isSupportedEffect` (time-travel.ts:1680-1694, from
+                              06785300 — the SubjectId commit) refuses any
+                              NON-SCALAR leaf effect: arrays, Date, Map, Set,
+                              object leaves. `tree.undo()` THROWS "Unsupported
+                              scoped undo effect at rows". The identical scenario
+                              PASSES on main/14.x. GATE-RELEVANT.
+  DERIVATION E REOPENED       E's granularity row measured NAIVE WHOLE-ARRAY
+                              REPLACEMENT (`rows.set([{a},{b}])` — fresh literals
+                              for both). Under REFERENCE-PRESERVING update
+                              (`c.map(r => r.id===id ? {...r,...ch} : r)`) plus a
+                              memoised per-key computed, an ordinary array IS
+                              granular. The conjunction was the SOLE argument for
+                              the collection function surviving, so E's positive
+                              verdict is CHALLENGED — not overturned, because the
+                              canonicality leg is unmeasurable here. NOTE: byId
+                              via find() is O(n) vs entityMap's O(1) Map — a FORM
+                              pressure at 10k-50k widths, not a function
+                              difference.
                               Remaining theorem: can the earned collection
                               semantics be realized through a uniform accessor
                               read/write contract with NO snapshot/hydrate

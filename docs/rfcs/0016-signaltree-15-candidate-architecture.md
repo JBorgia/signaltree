@@ -3958,6 +3958,153 @@ fields are actually CONSUMED rather than merely emitted. Most of that is covered
 above; the consumed-metadata enumeration is not, and deletion does not complete
 the discovery proof.
 
+## THE CONFORMING-COLLECTION PROTOTYPE — six properties uncontaminated, and it CHALLENGES E
+
+Evidence: `conforming-collection-prototype.spec.ts`, 7 rows. **Nothing in it
+touches `entityMap`, `loader`, or any marker** — that constraint is the point,
+since the contaminated serialization row proved only that the envelope carries
+nothing the *current hydrate hook* needs.
+
+The collection is an ORDINARY ARRAY LEAF plus ordinary derived helpers:
+
+```ts
+all:    () => leaf()
+ids:    computed(() => leaf().map(r => r.id))
+byId:   memoised per key — computed(() => leaf().find(r => r.id === id))
+addOne: leaf.update(c => [...c, row])
+removeOne: leaf.update(c => c.filter(r => r.id !== id))
+updateOne: leaf.update(c => c.map(r => r.id === id ? {...r, ...changes} : r))
+```
+
+### Results
+
+```text
+READ            ✓  the accessor yields the value
+MEMBERSHIP      ✓  add / remove dynamic post-construction
+GRANULARITY     ✓  watcher on byId('a') does NOT recompute when 'b' updates,
+                   NOR when another member is added or removed — and still
+                   reacts to its own member
+REPRESENTATION  ✓  tree() === { rows: [...], n: 1, user: {...} }
+                   NO ENVELOPE. Same generic rule as the sibling leaf and the
+                   sibling branch, because the walk sees an ordinary signal.
+RECONSTRUCTION  ✓  tree({ rows: [...], n: 5 }) restores by the ordinary write
+                   path. NO hydrate hook exists for this position.
+ROUND TRIP      ✓  full JSON boundary, and granularity survives it
+CANONICALITY    ✗  CONTINGENT — see the regression below
+IDENTITY        —  deferred; rekey NECESSITY is withdrawn and unproven
+```
+
+**Six properties are established with no marker in the picture.** That is the
+uncontaminated evidence the deletion required, for everything except canonicality.
+
+### The 7th property is blocked by a REGRESSION, not by array leaves
+
+```text
+this branch   tree.undo() THROWS "Unsupported scoped undo effect at rows"
+main (14.x)   the identical scenario PASSES — array row AND scalar control
+```
+
+Measured by running the same scenario on both branches. The gate is
+`isSupportedEffect`, `time-travel.ts:1680-1694`:
+
+```ts
+case 'set':
+  return (isScalarValue(before) && isScalarValue(after))
+      || (subject === undefined && ownerPath !== path);
+```
+
+An array is not scalar, and a top-level leaf is its own owner, so both clauses
+fail. Introduced by **`06785300` (2026-08-11 22:29, "feat(history): cut over
+public undo to frontier authority")** — the same third-bucket commit that
+introduced `SubjectId`.
+
+```text
+FINDING — 15-BRANCH UNDO REGRESSION
+  Undo refuses ANY non-scalar leaf write: arrays, and by the same rule Date /
+  Map / Set / plain-object leaves. Works on the published 14.x lineage. Not a
+  property of the shapes; a property of the new undo engine.
+  GATE-RELEVANT. Blocks the prototype's canonicality row and must be fixed or
+  consciously accepted before the M cut.
+```
+
+### AND IT CONTAMINATES DERIVATION E
+
+On this branch, `entityMap` passes canonicality because it emits
+**subject-bearing** effects, which `isSupportedEffect` admits, while an ordinary
+array does not. E's canonicality column was therefore measuring the undo engine's
+admission rule, not a difference between the two shapes.
+
+### The bigger challenge: E's GRANULARITY row
+
+E recorded the conjunction that justified the collection function surviving at
+all:
+
+```text
+                    dynamic     granular      canonical
+ordinary array         YES         NO           YES
+ordinary record        NO          YES          YES
+entityMap              YES         YES          YES
+```
+
+The prototype passes granularity **on an ordinary array**. The two measurements
+differ in the WRITE, not the read:
+
+```text
+E's row          tree.$.rows.set([{id:'a',n:1}, {id:'b',n:99}])
+                 -> fresh object literals for BOTH members, so 'a' changes
+                    reference and every observer of 'a' recomputes
+
+the prototype    c.map(r => r.id === id ? {...r, ...changes} : r)
+                 -> only the TARGET member is replaced; every other reference is
+                    carried across, so byId('a') yields an identical value and
+                    Object.is stops propagation
+```
+
+E measured **naive whole-array replacement**, which is what a careless array write
+looks like — not the array leaf's ceiling. Reference-preserving immutable update
+is ordinary application code, and with a memoised per-key `computed` it delivers
+granularity.
+
+```text
+E's ARRAY row, corrected
+  granular under whole-array replacement        NO
+  granular under reference-preserving update    YES
+
+CONSEQUENCE
+  The CONJUNCTION was the sole argument for the collection function surviving.
+  If an ordinary array leaf provides dynamic membership AND granular observation
+  AND canonicality (the last on 14.x), then no declaration kind is required to
+  hold a collection, and E's positive verdict is CHALLENGED — not yet overturned,
+  because the canonicality leg is currently unmeasurable on this branch.
+```
+
+### What is NOT established, stated plainly
+
+**Performance is a real difference and it is a FORM question, not a function
+one.** `byId` here is `find()` — O(n) per read against `entityMap`'s O(1) Map
+lookup, and `ids` is an O(n) map on every membership change. At the widths this
+repo benchmarks (10k–50k rows) that is not a footnote. It does not bear on
+whether the FUNCTION requires a declaration kind, which is what the prototype
+was built to test, but it will dominate the FORM decision.
+
+The prototype also does not attempt `changeId`; rekey necessity is withdrawn and
+unproven, so there is nothing yet to satisfy.
+
+### Disposition
+
+```text
+M3/M4 PHYSICAL DELETION   still BLOCKED, but the blocker has MOVED:
+                          not "can a conforming collection reconstruct by the
+                          uniform rule" — measured, yes, six ways — but the
+                          undo regression that makes the canonicality leg
+                          unmeasurable here.
+
+DERIVATION E              REOPENED on the granularity row. The conjunction needs
+                          re-deriving against reference-preserving writes.
+
+NEW GATE ITEM             the 15-branch non-scalar-leaf undo regression.
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside
