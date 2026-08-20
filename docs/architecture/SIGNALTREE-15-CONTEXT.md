@@ -250,9 +250,16 @@ collections FORM              **DERIVED — E CLOSED.** All 31 public members
                               projections (all count empty asMap find where has).
                               Thirteen are bulk/convenience — atomicity across
                               them belongs to the TRANSACTION KERNEL, not the
-                              collection. One more is EARNED: `changeId`, which
-                              survives its null because remove+add ORPHANS a held
-                              reference. Ordering is a real function the
+                              collection. `changeId` was recorded as EARNED
+                              and is **WITHDRAWN**: the row proved it behaves
+                              differently from remove+add, never that any
+                              workflow REQUIRES a held reference to follow — and
+                              the behaviour it measured REVERSES shipped 14.1.2
+                              (ST2031 "resolves undefined and always will", added
+                              by 80f41e94 WITH rationale, removed by b47598a1
+                              with an EMPTY BODY). Only the five minimum members
+                              are established; E's positive verdict is confined
+                              to the FUNCTION. Ordering is a real function the
                               zero-state under-derived, but the intrinsic order
                               is WEAKER than an ordinary array of keys (no move /
                               reorder / sort / swap; only setAll, which rebuilds
@@ -416,6 +423,25 @@ entityMap     the snapshot hook exists because the walk must guess which member
 In each case the machinery is *correct*, and what it corrects was introduced one
 layer down. **Never ask "is this machinery right?" — ask "what made it
 necessary?"** If the answer is another SignalTree choice, both can leave together.
+
+## Provenance applies to BEHAVIOUR, not only to code
+
+Dating a mechanism is not dating its semantics. The `SubjectId` machinery was
+correctly classified third-bucket and audited; the **behaviour it produces** was
+never checked against what ships — and it reverses a documented shipped decision
+(`changeId` + ST2031). A positive derivation verdict was built on that reversal
+and had to be withdrawn.
+
+**Before treating a measured behaviour as evidence of a function:**
+
+```text
+npm view @signaltree/core versions --json      git tags are NOT the record —
+npm view @signaltree/core time --json          14.1.2 shipped with NO tag
+npm pack @signaltree/core@<latest>             then read package/dist/*.js
+```
+
+HEAD is not what users have, and `main` is not either — the 14.1.2 version bump
+was never committed, so `main/package.json` still reads 14.1.1.
 
 ## Do not reopen without a deterministic counterexample
 
