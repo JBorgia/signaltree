@@ -6163,6 +6163,180 @@ SERIES 3 — DERIVATION E, collections
 must carry its series prefix, or name the row in words. Bare letters-plus-digits
 are forbidden.
 
+## UNDO-E3 — PARTIAL REVERSAL: NOT GRANTED ON BURDEN GROUNDS. Bounded by Gate 2.
+
+```text
+ROW        "reversing LESS than the whole confirmed step, while some other
+            contribution survives"
+A (killer)          FUNCTION SURVIVAL NOT ESTABLISHED
+B (absence)         A COHERENT ABSENCE ARCHITECTURE EXISTS
+GATE 2              NOT GRANTED ON BURDEN GROUNDS — and that is the whole of it
+NULL                FORBIDDEN
+```
+
+**This is a BURDEN verdict, not a refutation.** Nothing here shows partial reversal
+is incoherent, unnecessary in general, or unimplementable.
+
+### What was established, narrowly
+
+```text
+1  no workflow was NAMED that becomes impossible under whole-step LIFO only
+2  the candidate is NOT AN INSTANCE OF P3 — P3 grants return to a configuration
+   PREVIOUSLY HELD; partial reversal SYNTHESIZES one never held, so it inherits no
+   justification from the granted premise
+3  as worded it is not testable on these premises: no selection unit, no overlap
+   rule, no effect on subsequent order or re-advance, no statement of whether the
+   partial reversal is itself revertible
+4  state-completeness holds CONDITIONALLY  <-- see below
+5  the strongest motivator is UNDECIDED, not refuted
+```
+
+### THE CONDITION NOBODY PRICED
+
+Whole-step reversal plus forward writes reaches every configuration partial
+reversal would — **provided the application can obtain the target value.** Three
+routes, and none is a granted premise:
+
+```text
+a  the application already holds it
+b  the container exposes prior recorded values   <- B's SCAFFOLDING, not a premise
+c  a transient revert -> observe -> advance excursion, which A conceded "briefly
+   exposes the reverted configuration to readers" and explicitly called NOT a
+   record-shape difference
+```
+
+**Nobody priced that condition.** The central result is conditional on an unopened
+question.
+
+### LADDER — rungs 1 and 2 NOT ENTERED
+
+```text
+Rung 1  measured current behaviour     NOT ENTERED — no measurement anywhere
+Rung 2  model vs MEASURED behaviour    NOT ENTERED — B's model was compared against
+                                       the PREMISES. Model-vs-premise is not rung 2.
+Rung 3  the function is required       ENTERED AS A QUESTION, closed NEGATIVELY
+Rungs 4-5                              NOT ENTERED
+```
+
+A negative rung-3 close is legitimate with rungs 1-2 empty **only because nothing
+is being advanced** — declining to grant needs no evidence. The same reasoning
+could not support a POSITIVE rung-3 claim. Consequence:
+
+```text
+THE REFUSAL IS PROVISIONAL AGAINST MEASUREMENT, NOT AGAINST ARGUMENT.
+```
+
+### SCAFFOLDING WEIGHT — B labelled five; four carry nothing
+
+```text
+VALUE-AT-BOUNDARY   LOAD-BEARING, and the only one. It is a CONDITION on the
+                    conclusion, NOT an established requirement. Highest promotion
+                    risk: it must not be read as "so we need a boundary-read
+                    accessor."
+LAST-WRITER         ZERO weight. No surviving claim uses it, and it is PROVENANCE
+                    IN DISGUISE — the thing A said the premises do not grant.
+REVERT-NOTICE       LOW. Attaches to a real P4 obligation, but nothing establishes
+                    it must be a container facility. Convenience, not requirement.
+author tag          ZERO weight, HIGHEST CONTAMINATION RISK — the thin end of the
+                    multi-contributor premise both reviewers refused to supply.
+                    Adding it "because it's cheap" would make an undecided question
+                    read as answered.
+record redaction    ZERO weight here. The underlying gap is real but SYMMETRIC — it
+                    defeats the candidate equally. Different row.
+```
+
+### CORROBORATION — NO
+
+```text
+A and B agreement is NOT independent corroboration of the negative verdict.
+```
+
+Shared premises, shared decisive question, shared instructions — nothing was
+withheld between them, and independence on this protocol comes from withholding.
+Their shared point that value-replacement leaves selective undo without canonical
+meaning is **a restatement of P1**, not two observations of the world; both named
+the same single escape (intent-bearing writes), which is the signature of a shared
+premise rather than two converging lines.
+
+**Severity aggregation is unsafe here.** Several apparently distinct findings are
+one observation twice, with divergent labels: overlap semantics (A FROZEN /
+BLOCKS-CLOSE, B DERIVABLE / MAJOR); P4-already-obliges (A POLICY / MAJOR, B FROZEN
+/ MINOR); state-completeness (both BLOCKS-CLOSE).
+
+**AND THEY CONFLICT — recorded, not flattened:**
+
+```text
+A's strongest finding is that the candidate is UNFALSIFIABLE (BLOCKS-CLOSE).
+B produced THREE CONCRETE FALSIFIERS on adjacent claims.
+UNRESOLVED. The defensible form of A's claim is "unfalsifiable AS WORDED", not in
+principle.
+```
+
+What *is* weakly corroborated: both independently located the **same single
+vulnerability** — the granularity dial conflict, both classed POLICY — and the
+**same missing premise**. That is convergence about *where the open question sits*,
+not about the candidate being unnecessary.
+
+### TWO OBLIGATIONS — bounded, neither reopens this row
+
+```text
+1  RECORD THE MULTI-CONTRIBUTOR QUESTION EXPLICITLY.
+   Either a later row supplies the contributor/provenance premise and re-poses the
+   decisive question, or a decision is recorded that multi-contributor histories
+   are OUT OF SCOPE. If left unrecorded, a bounded "not established" will silently
+   harden into "refuted", which the evidence does not support.
+
+2  RUN OR EXPLICITLY ACCEPT B's FALSIFIER.
+   Exhibit-or-rule-out a position RESTORABLE via the container's reversal path but
+   NOT WRITABLE by the application — a container-internal, opaque, or
+   non-reconstructible identity held only inside the record.
+   B: ONE SUCH POSITION MAKES THE CANDIDATE NECESSARY.
+   It is a cheap rung-1 check. It was never run. The negative verdict is
+   PROVISIONAL against it.
+```
+
+### THE STRONGEST ALTERNATIVE INTERPRETATION — recorded because it may be right
+
+> The row never compared partial reversal against forward writes. It compared
+> partial reversal against **forward writes plus an unpriced value-recovery path.**
+
+Under P1-P6 as frozen, a prior recorded value is reachable only through the
+reversal path. And both reviewers, from opposite assignments, **independently
+invented a mechanism at the same spot** — B named a boundary read, A named the
+transient excursion.
+
+```text
+Convergent independent invention at one point is evidence THE NEED IS REAL.
+It bears only on WHICH CARRIER serves it.
+```
+
+On that reading the finding is *"the candidate is not the uniquely necessary way to
+discharge a need both reviewers reached for a mechanism to meet"* — not *"there is
+no need."*
+
+### FORBIDDEN on this row
+
+```text
+"partial reversal is refuted / unnecessary / incoherent"
+"forward writes are EQUIVALENT to partial reversal"     (state only; A did NOT
+                                                         establish equality of
+                                                         observation history)
+"the forward-write route is free or just as convenient"
+"whole-step LIFO reversal is SUFFICIENT"                (B: state-completeness is
+                                                         not sufficiency)
+"multi-contributor undo is impossible"
+"P4 already provides the candidate's function"
+"P5 grouping destroys constituents, so sub-step selection is meaningless"
+"novel unconfirmed configurations are unacceptable"
+"the candidate is unfalsifiable"                        (only AS WORDED; conflicts
+                                                         with B, unresolved)
+"redaction / the leaked-value gap counts against the candidate"  (symmetric)
+"the step-atomic history model is validated or is the design"
+"the granularity conflict is settled"
+"twenty findings is a large converging body"            (double-counted)
+"the row is closed permanently"
+```
+
 ## Table G — DX PRESSURE LEDGER
 
 **Deliberately a SEPARATE table, not a column.** An `OPTIMAL DX` column inside

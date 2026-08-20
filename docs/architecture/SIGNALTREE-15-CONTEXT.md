@@ -944,6 +944,82 @@ tested — two of which had already survived an external review of the corrected
 write-up. That justifies keeping it given the low downside; it does NOT establish a
 general error-reduction rate from one trial.
 
+## UNDO-E3 — PARTIAL REVERSAL: NOT GRANTED ON BURDEN GROUNDS
+
+```text
+A NOT ESTABLISHED · B COHERENT ABSENCE EXISTS · GATE 2 not granted on BURDEN
+NULL FORBIDDEN
+```
+
+**A burden verdict, NOT a refutation.** Nothing shows partial reversal is
+incoherent, unnecessary in general, or unimplementable. The candidate is also not
+an instance of P3 — P3 grants return to a configuration PREVIOUSLY HELD, while
+partial reversal SYNTHESIZES one never held.
+
+### THE CONDITION NOBODY PRICED
+
+State-completeness (whole-step reversal + forward writes reaches everything) holds
+only if the application can OBTAIN the target value: it already holds it, or the
+container exposes prior recorded values (SCAFFOLDING, not a premise), or it accepts
+a transient revert→observe→advance excursion that briefly exposes the reverted
+configuration to readers — which the killer conceded is NOT a record-shape
+difference. **Unpriced.**
+
+### LADDER
+
+```text
+Rung 1 measured behaviour   NOT ENTERED     Rung 3 function required  ENTERED as a
+Rung 2 model vs MEASURED    NOT ENTERED            question, closed NEGATIVELY
+       (model-vs-premise is not rung 2)     Rungs 4-5                 NOT ENTERED
+```
+
+A negative rung-3 close is legitimate with 1-2 empty ONLY because nothing is
+advanced. **The refusal is PROVISIONAL AGAINST MEASUREMENT, not against argument.**
+
+### SCAFFOLDING WEIGHT
+
+```text
+VALUE-AT-BOUNDARY  LOAD-BEARING and the only one — a CONDITION on the conclusion,
+                   not a requirement. Highest promotion risk.
+LAST-WRITER        ZERO — provenance in disguise, the thing the premises don't grant
+REVERT-NOTICE      LOW — convenience, not requirement
+author tag         ZERO, HIGHEST CONTAMINATION RISK — thin end of the
+                   multi-contributor premise both reviewers REFUSED to supply
+record redaction   ZERO here — the gap is real but SYMMETRIC, different row
+```
+
+### CORROBORATION: NO
+
+Shared premises and instructions; nothing withheld between reviewers, and
+independence comes from withholding. Their shared point is **a restatement of P1**.
+Severity aggregation is UNSAFE — several findings are one observation twice with
+divergent labels.
+
+**AND THEY CONFLICT, recorded not flattened:** A's strongest finding is that the
+candidate is UNFALSIFIABLE; B produced three concrete falsifiers. Unresolved. A's
+claim is defensible only as "unfalsifiable AS WORDED".
+
+Weakly corroborated: both located the same single vulnerability (the granularity
+dial conflict, both POLICY) and the same missing premise — convergence about WHERE
+the question sits, not that the candidate is unnecessary.
+
+### TWO OBLIGATIONS
+
+```text
+1  RECORD THE MULTI-CONTRIBUTOR QUESTION explicitly, or a bounded "not
+   established" will silently harden into "refuted".
+2  RUN OR EXPLICITLY ACCEPT the falsifier: a position RESTORABLE via reversal but
+   NOT WRITABLE by the application. ONE SUCH POSITION MAKES THE CANDIDATE
+   NECESSARY. Cheap rung-1 check, never run, verdict provisional against it.
+```
+
+### STRONGEST ALTERNATIVE — may be right
+
+The row compared partial reversal against **forward writes PLUS an unpriced
+value-recovery path**. Both reviewers, from opposite assignments, independently
+invented a mechanism at the same spot. **Convergent independent invention at one
+point is evidence the NEED is real** — it bears only on which carrier serves it.
+
 ## Frozen invariants — do not re-derive
 
 ```text
