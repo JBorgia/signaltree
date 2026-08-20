@@ -1258,31 +1258,96 @@ STRONGEST ALTERNATIVE: "not established" may be a verdict that P1-P6 lacks the
   EVIDENCE ABOUT THE ROW — not a licence to widen P1-P6.
 ```
 
-## TWO ITEMS RESERVED TO THE HUMAN AUTHOR — an implementer may not settle either
+## TWO ITEMS RESERVED TO THE HUMAN AUTHOR — BOTH DECIDED 2026-08-20
+
+Both were reserved because an implementer settling them would supply by fiat the
+kind of premise this method exists to stop being supplied. **The author has decided
+both.** Full records in RFC 0016: the P3 **freeze event** and the **defender
+charter**.
+
+### 1 — P3 IS FROZEN ON THE AGENTFUL WORDING
 
 ```text
-1  WHICH P3 WORDING IS FROZEN
-     "at boundaries a user would recognize as discrete steps"   (issued to A)
-     "at recognizable step boundaries"                          (issued to B)
-   Deciding this decides whether the premise set contains a PERCEIVING ENTITY. It
-   bears on U5b-A's terminal disposition and on every future row in the family.
-   Choosing it either way supplies by fiat the premise this method exists to stop
-   being supplied.
-
-2  WHETHER GATE 1 GETS A DEFENDER CHARTER
-   Gate 1 has never had one. FUNCTION KILLER and ABSENCE ARCHITECT both succeed by
-   defeating the candidate, so every "not established" so far was reached by two
-   SAME-DIRECTION adversaries. This does not invalidate the closures — a candidate
-   that cannot name its own casualty fails regardless of who asks — but it does
-   invalidate any reading of A/B agreement as INDEPENDENT CORROBORATION. That
-   reading has now been struck four times as if it were a fresh error each time,
-   when the cause is structural.
-   Adding a defender changes what SURVIVAL MEANS. That is a semantic choice about
-   the standard of evidence, not a repair.
+P3. An operation may be REVERTED: canonical state returns to a configuration it
+    previously held, at boundaries a user would recognize as discrete steps, and
+    can be advanced again afterwards.
 ```
 
-**NEITHER IS A WORK ORDER.** Rows that do not depend on them proceed. Nothing may be
-measured, benchmarked or archaeologically dug to settle either one.
+The agentless variant issued to Reviewer B — _"at recognizable step boundaries"_ —
+is **RETIRED**. It is not a fallback reading.
+
+```text
+THIS IS      a PRODUCT / DX FREEZE, made on the author's product authority.
+             Stipulating premises IS the author's job.
+THIS IS NOT  a theorem. No reviewer derived it, no gate established it, no
+             experiment produced it. It is an INPUT to the method, not an output.
+
+CITE IT AS   "P3, as frozen by product decision on 2026-08-20, reads ..."
+NEVER AS     "the reviewers established the perceiving entity" · "the agentful
+             wording survived Gate 1" · "A and B agreed on the observational
+             reading"
+```
+
+**The freeze settles WHICH WORDS ARE IN P3. It does not settle WHAT THEY GRANT.**
+
+```text
+NOT GRANTED by the freeze, and not to be read in:
+  an entity able to observe the interval BETWEEN two writes inside one step
+  that a mid-sequence configuration is observable at all
+  that "recognize a boundary" and "observe a state" are the same capability
+
+U5b-A therefore STAYS TERMINAL — UNDERDETERMINED. Its parked reopening condition
+("P3's boundaries settled as OBSERVATIONAL") is STILL PARKED. A reading under which
+the frozen text supplies the observer is AVAILABLE — A's own strongest alternative
+records it — and an available reading is NOT A GRANT.
+```
+
+The freeze touches P3 only. The separate P2/P6 drift on the continuation rows
+(five premises, weaker P2, no P6) is **not** repaired by it and remains disclosed.
+
+### 2 — GATE 1 GAINS A DEFENDER, ON NAMED ROW CLASSES ONLY
+
+```text
+APPLIES TO      public API rows · DX rows · CORE SEMANTIC rows
+DOES NOT APPLY  mechanical cleanup — deletions, renames, dead code, moves,
+                vocabulary fixes, packaging, version hygiene
+
+The row class is DECLARED IN THE PACKET BEFORE THE ROW OPENS. Declaring it after
+would let the class be chosen to fit the desired seating.
+```
+
+The defender argues the function is REQUIRED — a workflow that becomes
+**impossible**, not harder — and is bound by **the same burden rules as the
+killers, with no exemptions**:
+
+```text
+quote frozen premises VERBATIM, never paraphrase
+NO repository archaeology, NO measurement, NO citing the implementation
+a missing premise is a STOP and may become a reopening CONDITION — never a work
+  order, task, experiment, or request that the author grant it
+no implementation-incumbent leakage; same withheld packet as the killers
+may NOT propose the mechanism (Rule 0j applies symmetrically)
+
+INADMISSIBLE: ergonomics, familiarity, "users expect" -> Table G, zero function
+weight.
+```
+
+```text
+DEFENDER FINDS NOTHING      the closure STRENGTHENS — and this is the first
+                            legitimate corroboration available, because the A/B
+                            pair are SAME-DIRECTION and never supplied it
+DEFENDER NAMES A CASUALTY   the row does NOT survive; the casualty goes to the
+                            killers to answer on the frozen premises
+BOTH HIT THE SAME GAP       UNDERDETERMINED, and more strongly than a
+                            same-direction pair could establish
+```
+
+**NOT RETROACTIVE.** U5b-A and U5b-B were closed without a defender and are not
+reopened. Running a defender at a closed row to see whether it reopens is a work
+order generated from a method change, and is forbidden.
+
+**NEITHER DECISION IS A WORK ORDER.** Nothing may be measured, benchmarked or
+archaeologically dug on the strength of either.
 
 ### PREMISES: QUOTE, NEVER PARAPHRASE
 

@@ -6487,6 +6487,12 @@ B (absence)   A COHERENT ABSENCE EXISTS — but conditional on three things it c
 GATE 2        UNDERDETERMINED — NEITHER EARNED NOR REFUTED
 NULL          FORBIDDEN
 DISPOSITION   TERMINAL. Not "rejected". No author may report it as rejected.
+DEFENDER      NONE. This row was closed BEFORE the defender charter existed. Both
+              seats were same-direction. The charter is NOT retroactive and this
+              row is NOT reopened by it.
+P3            Closed against a SPLIT P3. Frozen 2026-08-20 on the agentful wording,
+              which does NOT satisfy this row's parked reopening condition #1 —
+              the freeze settles the text, not its observational content.
 ```
 
 ### What is established, narrowly
@@ -7048,6 +7054,13 @@ GATE 2  DISPOSITION                      FUNCTION NOT ESTABLISHED
 NULL    FORBIDDEN
 NEXT    NOTHING for this function
 MEASUREMENT  NONE PERFORMED on this row, at any rung
+DEFENDER     NONE. Closed before the defender charter existed; both seats were
+             same-direction. The charter is NOT retroactive and does not reopen
+             this row.
+P3           Divergence was DISCLOSED to both reviewers and left unresolved. The
+             2026-08-20 freeze does not disturb the closure: no leg of it runs
+             through P3's perceiving entity, and both reviewers affirmed the row
+             needs no interval observer.
 ```
 
 **Not "refuted".** Gate 2's qualification is part of the disposition: this is the
@@ -7326,6 +7339,13 @@ a restatement of the same grant — **not material.**
 
 ### THE MATERIAL DIVERGENCE IS P3, AND IT IS THE WORST POSSIBLE CLAUSE
 
+> **RESOLVED 2026-08-20 by the human author — see
+> [FREEZE EVENT — P3 is frozen on the AGENTFUL wording](#freeze-event--2026-08-20-p3-is-frozen-on-the-agentful-wording-as-a-product-decision).
+> The agentful text is the premise; the agentless variant is RETIRED. What follows
+> is the AUDIT RECORD of what each reviewer was actually shown, and it stays here
+> unedited for that purpose. Do not quote P3 from this section — quote it from the
+> freeze event.**
+
 ```text
 A RECEIVED   "at boundaries A USER WOULD RECOGNIZE as discrete steps"
 B RECEIVED   "at RECOGNIZABLE step boundaries"
@@ -7377,10 +7397,10 @@ Any change to premise TEXT is a FREEZE EVENT: it is committed here, dated, with
 the rows already closed against the previous text listed.
 ```
 
-### RESERVED — not a defect this ledger may repair
+### RESERVED — not a defect this ledger may repair [RESOLVED 2026-08-20 by the human author]
 
 ```text
-P3's wording is UNRESOLVED and the resolution is RESERVED TO THE HUMAN AUTHOR.
+P3's wording was UNRESOLVED and RESERVED TO THE HUMAN AUTHOR.
 
 Picking a variant decides whether the premise set contains a perceiving entity.
 That single choice bears on U5b-A's terminal disposition, on the observational
@@ -7390,6 +7410,301 @@ premise the whole method exists to stop being supplied.
 
 NOT A WORK ORDER. Nothing may be pursued, measured, or benchmarked in order to
 settle it. It is recorded as reserved, and rows that do not depend on it proceed.
+```
+
+**The author has now decided it.** The record of that decision is the freeze event
+immediately below. The paragraph above is retained unedited because it states why
+the decision was not the implementer's to make, and that reasoning is still the
+reason the decision had to come from outside this ledger.
+
+## FREEZE EVENT — 2026-08-20. P3 is frozen on the AGENTFUL wording, as a PRODUCT DECISION.
+
+**Authority: the human author. This is the first freeze event under the rule
+installed above, and it is the template for any future one.**
+
+### THE FROZEN TEXT
+
+```text
+P3. An operation may be REVERTED: canonical state returns to a configuration it
+    previously held, at boundaries a user would recognize as discrete steps, and
+    can be advanced again afterwards.
+```
+
+The variant issued to Reviewer B — _"at recognizable step boundaries"_ — is
+**RETIRED**. It is not an alternative reading, a fallback, or a weaker form that a
+row may fall back to. It was a transcription divergence, and it no longer exists in
+the premise set. It remains visible in the transcription section above **only as the
+audit record of what B was actually shown.**
+
+### WHAT KIND OF ACT THIS IS — read this before citing P3 anywhere
+
+```text
+THIS IS        a PRODUCT / DX FREEZE. The author is stipulating what SignalTree
+               must offer its users, in the author's own voice, on product
+               authority. Stipulating the premises is exactly the author's job;
+               that is what makes them premises.
+
+THIS IS NOT    a theorem. No reviewer derived it. No gate established it. No
+               experiment produced it. It is not the output of this method — it is
+               an INPUT to it.
+```
+
+**The distinction is load-bearing and is the whole reason the freeze is worded this
+way.** A premise that arrives as a product decision may be _used_; a premise that is
+narrated as a _finding_ acquires evidentiary weight it never earned, and the next
+row inherits it as established. That inheritance is the failure this ledger has
+recorded more times than any other.
+
+```text
+FORBIDDEN FORMS OF CITATION
+  "the reviewers established that P3 contains a perceiving entity"
+  "P3's agentful wording survived Gate 1"
+  "A and B agreed on the observational reading"
+  "the perceiving entity is earned"
+
+REQUIRED FORM
+  "P3, as frozen by product decision on 2026-08-20, reads '... at boundaries a
+   user would recognize as discrete steps ...'"
+```
+
+Reviewer B's silence about a perceiving entity remains **not evidence** — B was
+never shown the phrase. Freezing the phrase does not retroactively convert that
+silence into assent. Reviewer A's acceptance of the phrase is likewise **not
+evidence** that it is right; A was handed it as a premise, and reviewers do not
+validate premises by working from them.
+
+### WHAT THIS FREEZE DOES NOT DECIDE — the parked condition is STILL PARKED
+
+This is the trap the freeze is most likely to be misread into, so it is stated
+before any row is allowed to cite it.
+
+```text
+U5b-A's parked reopening condition #1 reads:
+
+    "P3's 'boundaries a user would recognize' settled as OBSERVATIONAL"
+
+That condition is NOT satisfied by this freeze.
+
+SETTLED BY THE FREEZE      WHICH WORDS ARE IN P3
+NOT SETTLED BY THE FREEZE  WHAT THOSE WORDS GRANT
+```
+
+The freeze settles the **text**. It does not settle the **observational content** of
+the text, and those are different questions:
+
+```text
+GRANTED, because it is now in the frozen text
+  P3 speaks of a user recognizing step boundaries.
+
+NOT GRANTED, and NOT to be read in
+  that an entity may observe the interval BETWEEN two writes inside one step
+  that a configuration exhibited mid-sequence is observable at all
+  that "recognize a boundary" and "observe a state" are the same capability
+  that the perceiving entity has any resolution finer than the step
+```
+
+U5b-A closed UNDERDETERMINED on a missing grant of **an entity able to observe the
+interval between two writes.** Nothing above supplies that entity. A reading under
+which it does supply it is _available_ — U5b-A's own STRONGEST ALTERNATIVE records
+it — but **an available reading is not a grant**, and an implementer adopting it
+would be committing the exact substitution this freeze event exists to prevent:
+turning a product stipulation about reversal granularity into a derived
+observational model of the forward path.
+
+```text
+CONSEQUENTLY
+  U5b-A stays TERMINAL — UNDERDETERMINED. It is NOT reopened by this freeze.
+  Whether P3's frozen wording is OBSERVATIONAL is a SEPARATE question, still
+  reserved, and still not a work order.
+```
+
+### ROWS ALREADY CLOSED AGAINST THE PREVIOUS TEXT
+
+Required by the freeze rule. **Listing a row here is disclosure, not
+re-adjudication.** No disposition below is changed by this freeze; each is recorded
+with the specific reason the freeze does not disturb it.
+
+```text
+ROW                          PREMISE TEXT IT SAW              EFFECT OF THE FREEZE
+
+U5b-A                        A: agentful · B: agentless       NONE on the
+  TERMINAL — UNDERDETERMINED SPLIT AT THE DECISIVE CLAUSE     disposition.
+                                                              UNDERDETERMINED is a
+                                                              non-verdict; it does
+                                                              not become a verdict
+                                                              because the text
+                                                              settled. The two
+                                                              false record entries
+                                                              were already
+                                                              corrected in
+                                                              4f263c4a.
+
+U5b-B                        divergence DISCLOSED to both     NONE. B closed on the
+  CLOSED — NOT ESTABLISHED   reviewers, unresolved            absence of any
+                                                              workflow, and both
+                                                              reviewers AFFIRMED
+                                                              that B needs no
+                                                              interval observer. No
+                                                              leg of that closure
+                                                              runs through P3's
+                                                              agent.
+
+GATE 1 FIRST APPLICATION     five premises, weaker P2,        NOT ASSESSED. These
+GATE 1 SECOND APPLICATION    NO P6 AT ALL                     rows diverge from the
+UNDO-E4-G                                                     frozen set in P2 and
+  all NOT ESTABLISHED                                         P6, which THIS freeze
+                                                              does not touch. Their
+                                                              premise-set drift is
+                                                              recorded above and
+                                                              remains open as a
+                                                              separate disclosure.
+```
+
+**The last line is deliberate.** Fixing P3 does not repair the P2/P6 drift, and
+this freeze event must not be cited as having tidied the premise set generally. It
+froze one clause.
+
+## DEFENDER CHARTER — Gate 1 gains a third seat, on named rows only
+
+**Authority: the human author, 2026-08-20.** This resolves reserved item 2. Like
+the P3 freeze it is a **decision about the standard of evidence**, not a finding,
+and it changes what SURVIVAL MEANS from this point forward. It is **not
+retroactive** — see the non-retroactivity clause below.
+
+### THE PROBLEM IT ADDRESSES, restated without overstating it
+
+```text
+FUNCTION KILLER and ABSENCE ARCHITECT both succeed by DEFEATING the candidate.
+Every "not established" so far was therefore reached by two SAME-DIRECTION
+adversaries.
+
+THIS DID NOT INVALIDATE THOSE CLOSURES. A candidate that cannot name its own
+casualty fails no matter who asks.
+
+WHAT IT DID INVALIDATE is any reading of A/B agreement as INDEPENDENT
+CORROBORATION. That misreading has been struck four times as though it were a
+fresh error on each occasion. The cause is structural, and the charter is the
+structural answer.
+```
+
+### SCOPE — the charter applies to NAMED ROW CLASSES ONLY
+
+```text
+APPLIES TO
+  PUBLIC API rows          what consumers can express, and how
+  DX rows                  what a consumer must do to express it
+  CORE SEMANTIC rows       what the container MEANS by a state, a write, a
+                           reversal, a membership, an identity
+
+DOES NOT APPLY TO
+  mechanical cleanup       deletions, renames, dead-code removal, file moves,
+                           vocabulary corrections, packaging, version hygiene
+```
+
+Seating a defender on a cleanup row would manufacture a reason to keep something
+whose only claim is that it exists — which is Rule 0j inverted, and legacy
+surviving by default is the exact failure the burden rule was written against.
+
+```text
+THE ROW CLASS IS DECLARED IN THE PACKET, BEFORE THE ROW OPENS.
+Declaring it afterward would let the class be chosen to fit the desired seating.
+```
+
+### THE DEFENDER IS BOUND BY THE SAME BURDEN RULES — no exemptions
+
+This is the part that makes the seat safe. **A defender who may reach for anything
+the killers may not would not be a third perspective; it would be a licence to
+manufacture premises, dressed as balance.**
+
+```text
+1  QUOTE THE FROZEN PREMISES VERBATIM
+     Same rule, same section, same prohibition on paraphrase. A defender who
+     restates a premise "in effect" has widened it, and widening a premise is how
+     a defence wins without arguing.
+
+2  NO REPOSITORY ARCHAEOLOGY, NO MEASUREMENT
+     The defender may not cite the implementation, git history, a benchmark, a
+     shipped API, an issue, or a downstream consumer. Those establish that
+     something EXISTS, never that it is REQUIRED. This prohibition is identical to
+     the killers' and is the single most likely place a defender would cheat,
+     because the incumbent is the most available evidence in the room.
+
+3  A MISSING PREMISE IS A STOP, NOT A WORK ORDER
+     "This would be established if we also granted X" is a FINDING that the row is
+     not decidable as posed. It may be recorded as a reopening CONDITION. It may
+     never be converted into a task, an experiment, a measurement, or a request
+     that the author grant X. The defender has no more standing to generate work
+     from a gap than a reviewer does.
+
+4  NO IMPLEMENTATION-INCUMBENT LEAKAGE
+     The defender receives the same packet as the killers, under the same
+     withholding: no author rationale, no expected outcome, no proposed design, no
+     incumbent vocabulary, no sibling row's verdict. A defence built from the
+     incumbent's shape is an argument that the incumbent exists.
+
+5  THE DEFENDER MAY NOT PROPOSE THE MECHANISM
+     Rule 0j, unchanged and applied symmetrically. Kill first, derive later — and
+     defend first, derive later. A defender who starts designing the mechanism has
+     granted the function, exactly as a reviewer who does so has.
+```
+
+### WHAT A DEFENDER MUST PRODUCE — and what it may not
+
+```text
+THE CHARGE
+  Argue, from the frozen premises alone, that the candidate function is REQUIRED:
+  name a concrete workflow that becomes IMPOSSIBLE — not harder, not uglier, not
+  more verbose — if the function does not exist.
+
+ADMISSIBLE OUTPUT
+  a named casualty workflow, expressible in the permitted vocabulary
+  a demonstration that a rival construction the killers rely on is unavailable
+    under the frozen premises
+  an explicit statement that NO admissible defence was found
+
+INADMISSIBLE OUTPUT
+  ergonomics, familiarity, "users expect", "every other library"
+    -> these belong in Table G (DX PRESSURE LEDGER) and carry NO function weight
+  a casualty that requires an ungranted condition
+    -> record the condition, do not lean on it
+  the incumbent's behaviour offered as the requirement
+```
+
+### HOW A DEFENCE INTERACTS WITH A CLOSURE
+
+```text
+DEFENDER FINDS NOTHING ADMISSIBLE
+  The closure STRENGTHENS, and for the first time legitimately: the row was
+  attacked from two directions AND defended from the third, and no casualty
+  appeared. This is the corroboration the A/B pair never actually supplied.
+
+DEFENDER NAMES A CASUALTY
+  The row does NOT thereby survive. The casualty goes to the killers, who must
+  answer it on the frozen premises. A defence is a challenge to the closure, not a
+  verdict against it.
+
+DEFENDER AND KILLERS REACH THE SAME MISSING GRANT
+  The row is UNDERDETERMINED, and this is a STRONGER underdetermination result
+  than a same-direction pair could produce — the gap survived an attempt to
+  exploit it as well as attempts to widen it.
+```
+
+```text
+STILL FORBIDDEN, and the charter does not soften it:
+  the defender's report is EVIDENCE ABOUT THE DEFENCE. It is not a premise, not a
+  prior for any sibling row, and not citable as "the defender established X".
+```
+
+### NON-RETROACTIVITY
+
+```text
+No closed row is reopened by this charter. U5b-A and U5b-B were closed WITHOUT a
+defender, and each record now carries a note saying so.
+
+A closed row may be reopened by a defence ONLY if the author reopens it. Running a
+defender at a closed row in order to see whether it reopens is a WORK ORDER
+GENERATED FROM A METHOD CHANGE, and it is forbidden on the same grounds as every
+other work order generated from a gap.
 ```
 
 ## Table G — DX PRESSURE LEDGER
