@@ -10,18 +10,6 @@
     "type": "on-demand",
     "runAllTestsOnStartup": false
   },
-  "jest.virtualFolders": [
-    {
-      "name": "ng-forms",
-      "rootPath": "packages/ng-forms",
-      "jestCommandLine": "pnpm exec jest --config jest.config.ts"
-    },
-    {
-      "name": "demo",
-      "rootPath": "apps/demo",
-      "jestCommandLine": "cd ../.. && pnpm exec jest --config apps/demo/jest.config.ts"
-    }
-  ],
   "files.watcherExclude": {
     "**/.angular/cache/**": true,
     "**/.nx/cache/**": true,
