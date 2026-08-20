@@ -949,6 +949,52 @@ the derived projection contract (RFC 0015), in full
 
 GATE A is SATISFIED; the kernel is frozen at `4f7a2169`.
 
+## ROW NAMING KEY — three distinct E-series collide. Always qualify.
+
+A bare `E2` / `E3` / `E4` is **ambiguous across three unrelated series** in this
+ledger. This is a live contamination hazard: conflating rows is how an unearned
+conclusion from one series gets inherited by another. **Qualify every reference.**
+
+```text
+SERIES 1 — EXTENSION / DECLARATION inventory   (RFC 0016, the E1-E7 table)
+  E1  inline authoring                      E5  compiler integration
+  E2  type transformation                   E6  representation participation
+  E3  writable state through the tree        E7  package encapsulation
+  E3b canonical SignalTree truth
+  E4  derived / public surface contribution
+  QUALIFY AS: EXT-E1 .. EXT-E7
+
+SERIES 2 — FRONTIER UNDO derivation
+  E2  precision                E3  scoped undo (survival not yet asked)
+  E4  transaction semantics at U5b  — STILL OPEN
+  E2-S / E2-S0 / E2-S00 / E2-C   identity + member-access sub-rows
+  E2-B                            falsifiers of E2's own null
+  E4-G                            group concealment / conclusion  — CLOSED
+  QUALIFY AS: UNDO-E2 .. UNDO-E4, and UNDO-E4-G
+
+SERIES 3 — DERIVATION E, collections
+  E-ORD · E-REKEY · E-TAP · E-INT · E5-fork · E-granularity · E-membership
+  (already prefixed — no collision)
+```
+
+### Known conflations to guard against
+
+```text
+"E4 survives"        EXT-E4 (derived/public surface) was measured YES.
+                     UNDO-E4 (transaction semantics) is OPEN and untested.
+                     These are unrelated. A bare "E4 survives" is unusable.
+
+"E2 precision"       UNDO-E2. NOT EXT-E2 (type transformation), which is MOOT for
+                     an unrelated reason.
+
+"E3"                 EXT-E3 measured YES (writable state). UNDO-E3 (scoped undo)
+                     has not even had its survival question asked.
+```
+
+**Rule:** a row reference in any commit message, spec docblock or ledger entry
+must carry its series prefix, or name the row in words. Bare letters-plus-digits
+are forbidden.
+
 ## Current matrix
 
 ```text
