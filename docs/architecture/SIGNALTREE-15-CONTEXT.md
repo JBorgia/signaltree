@@ -1162,6 +1162,37 @@ THE NARROW RULE
 Illegitimate is filling a PREMISE GAP with measurement — not an empty rung.
 ```
 
+### WHAT MEASUREMENT CAN AND CANNOT DO — the load-bearing form
+
+This rule has now been re-derived twice from opposite directions — UNDO-E3's
+"provisional against measurement", then U5b-A's ladder framing — so it is stated
+once, at full strength, and referenced rather than rediscovered.
+
+```text
+MEASUREMENT MAY   SUPPORT a derivation that is INDEPENDENTLY MOTIVATED — one whose
+                  function requirement is already carried by premises earned
+                  without reference to the measurement. It may then supply
+                  magnitude, feasibility, cost, or a counterexample to a claim the
+                  derivation actually made.
+
+MEASUREMENT MAY   MANUFACTURE THE FUNCTION REQUIREMENT. No quantity of observed
+NOT               behaviour converts "the premises do not require this" into "this
+                  is required" — the observation's subject is an implementation
+                  that was never the authority on what is necessary.
+```
+
+The test is the **direction of dependence, not the order of operations**:
+
+```text
+LEGITIMATE   the requirement stands without the measurement, which informs its
+             magnitude or realizability
+FORBIDDEN    the requirement does not stand until the measurement is admitted
+```
+
+"Measure first, then derive" is not itself the error, and "derive first, then
+measure" is not itself a defence. **Ask what the requirement rests on, not what
+happened first.**
+
 ### BRANCH A STRUCK — A's case collapses to ONE leg
 
 "Write the common ancestor" fails on PREMISE-INTERNAL grounds: writes replace
@@ -1196,6 +1227,71 @@ exhibits a configuration NEVER HELD, which P3 forbids on its face — so the
 obligation propagates BACKWARD to the forward path with no new grant. It does not
 close the row; it relocates the undecidability from "is there an observer?" to "what
 is P3's observational content?"
+
+## U5b FAMILY — current status. Read this before citing any U5b row.
+
+```text
+U5b-A  ONE COHERENT CANONICAL TRANSITION   TERMINAL — UNDERDETERMINED
+                                           NOT rejected. NULL FORBIDDEN.
+U5b-B  REFUSAL / FAILURE                   PACKET DRAFTED. GATE 1 NOT OPEN.
+                                           No reviewer, no null, no disposition.
+U5b-C  CONSEQUENCE COORDINATION            UNOPENED
+U5b-D  SHARED ATTRIBUTION                  UNOPENED
+U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL    UNOPENED
+```
+
+The family's original preregistration block in RFC 0016 still shows A as `[OPENED]`
+in its frozen wording. **That block is HISTORICAL.** It is marked as superseded in
+place; the terminal record later in the same document governs.
+
+### U5b-B stands on its own footing — do not treat A's blocker as the family's
+
+A closed on a missing grant: **an entity able to observe the interval between two
+writes.** B's packet claims independence from that grant on one ground, recorded as
+a FALSIFIABLE construction property and not as a finding:
+
+```text
+A asks about state DURING a sequence · B asks about state AT REST AFTER a sequence
+that did not run to completion — reachable by an ordinary read
+IF GATE 1 REJECTS THIS -> B CLOSES as inheriting A's blocker. It does NOT become a
+request to establish the observer.
+```
+
+**B inherits nothing else from A.** Specifically not: "grouping is confined to
+reversal granularity" (A's author stipulation, never a finding); "reversion is
+observationally atomic" or "torn" (premises decide neither); A's UNDERDETERMINED as
+any kind of prior for B; A's uncovered class (specified over INTERMEDIATE states);
+A's struck Branch A; "callers can pre-validate a whole configuration"; A's four
+parked reopening conditions. Citations of A's record must read _"the U5b-A closure
+records X"_, never _"X is established"_.
+
+### The packet records two defects in its own frozen preregistration
+
+Both were caught **before** the row opened — the first time this has happened.
+
+```text
+CANDIDATE  "such that none of its canonical consequences occur" writes an
+           ALL-OR-NOTHING shape into the candidate, so a reviewer would evaluate a
+           remedy rather than a function.
+DECISIVE   "rather than validation occurring before canonical mutation" offers
+           pre-write validation as THE rival — and its availability is itself
+           disputed, per A's own warning about P1.
+```
+
+Neither was repaired in place. **Rewording a frozen preregistration to be more
+answerable IS the contamination.** Strictly weaker restatements travel alongside,
+each removing the defective clause and replacing it with nothing.
+
+```text
+NEW REQUIRED FIELD, from A's instrument defect: ANTI-STIPULATION LEDGER
+  enumerate what the opposite position does NOT assert — one line per question the
+  row might need to decide.
+
+NEW STANDING PER-CLAUSE TEST
+  Would this sentence COUNT AS A FINDING if a reviewer produced it?
+  If yes, it may not appear in the packet. The instrument would be pre-empting the
+  reviewer's output with the author's wording.
+```
 
 ## Frozen invariants — do not re-derive
 

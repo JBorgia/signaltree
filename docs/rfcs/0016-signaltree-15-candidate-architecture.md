@@ -6292,11 +6292,25 @@ only purpose is to make a CLOSED CANDIDATE DECIDABLE.
 A gate is not exempt from the rules it enforces.
 ```
 
-## UNDO-E4 / U5b — PREREGISTERED AS A FAMILY. Only U5b-A is opened.
+## UNDO-E4 / U5b — PREREGISTERED AS A FAMILY
+
+> **⚠️ HISTORICAL PREREGISTRATION — SUPERSEDED IN PART. Do not read the sub-row
+> statuses below as current.** This section records the family as it was
+> preregistered. **U5b-A has since reached a TERMINAL disposition of
+> UNDERDETERMINED** — see
+> [U5b-A — ONE COHERENT CANONICAL TRANSITION: UNDERDETERMINED. Terminal.](#u5b-a--one-coherent-canonical-transition-underdetermined-terminal)
+> below, which also records that this section's own opposite contract for A was
+> **defective as written**. Current status of the family:
+>
+> ```text
+> U5b-A   TERMINAL — UNDERDETERMINED. Not rejected. NULL FORBIDDEN.
+> U5b-B   PREREGISTRATION PACKET DRAFTED. Gate 1 NOT opened.
+> U5b-C   UNOPENED       U5b-D  UNOPENED       U5b-E  UNOPENED
+> ```
 
 The previous failure came partly from bundling several functions under one row
 name. These five can survive or die **independently**, so they are preregistered
-separately and opened one at a time. **U5b-A is opened now; B through E remain
+separately and opened one at a time. **A is opened first; B through E remain
 UNOPENED until A reaches a disposition.** That keeps the family from
 cross-contaminating itself.
 
@@ -6309,7 +6323,11 @@ FORBIDDEN in every packet — incumbent vocabulary:
    premise, in which case cite the freeze)
 ```
 
-### U5b-A — ONE COHERENT CANONICAL TRANSITION [OPENED]
+### U5b-A — ONE COHERENT CANONICAL TRANSITION [SUPERSEDED — see the terminal record]
+
+**The wording below is the AS-PREREGISTERED text, retained for audit. Its opposite
+contract was later found to stipulate an answer.** The disposition is
+UNDERDETERMINED and TERMINAL.
 
 ```text
 CANDIDATE   several related writes must become one externally coherent canonical
@@ -6328,7 +6346,7 @@ value exists for the write being performed. The absence argument is burden-based
 P1-P6 do not yet establish a forward-path observation/interleaving model under
 which mid-sequence incoherence is an earned SignalTree-owned concern.
 
-### U5b-B — REFUSAL / FAILURE [UNOPENED]
+### U5b-B — REFUSAL / FAILURE [packet drafted — Gate 1 NOT opened]
 
 ```text
 CANDIDATE   an attempted multi-write transition may fail such that none of its
@@ -6336,6 +6354,10 @@ CANDIDATE   an attempted multi-write transition may fail such that none of its
 DECISIVE    what requires failure to be container-governed rather than validation
             occurring before canonical mutation?
 ```
+
+**Both lines above are DEFECTIVE AS WRITTEN.** The full packet, with the defects
+recorded rather than silently repaired, is at
+[U5b-B — REFUSAL / FAILURE: PREREGISTRATION PACKET](#u5b-b--refusal--failure-preregistration-packet).
 
 ### U5b-C — CONSEQUENCE COORDINATION [UNOPENED]
 
@@ -6572,6 +6594,38 @@ not prerequisites for a function verdict.
 So a rung-3 verdict on sufficient premises is legitimate with rungs 1-2 empty. What
 is illegitimate is filling a PREMISE GAP with measurement.
 
+**What measurement CAN and CANNOT do — stated at the strength the evidence allows,
+because the weaker form of this rule has now been re-derived twice from opposite
+directions (UNDO-E3's "provisional against measurement", then U5b-A's ladder
+framing).**
+
+```text
+MEASUREMENT MAY
+  SUPPORT a derivation that is INDEPENDENTLY MOTIVATED — one whose function
+  requirement is already carried by premises earned without reference to the
+  measurement. There it supplies magnitude, feasibility, cost, or a
+  counterexample to a claim the derivation actually made.
+
+MEASUREMENT MAY NOT
+  MANUFACTURE THE FUNCTION REQUIREMENT. No quantity of observed behaviour
+  converts "the premises do not require this" into "this is required", because
+  the observation's subject is an implementation that was never the authority on
+  what is necessary.
+```
+
+The test is the DIRECTION OF DEPENDENCE, not the order of operations:
+
+```text
+LEGITIMATE    the requirement stands without the measurement, and the measurement
+              informs the requirement's magnitude or its realizability
+FORBIDDEN     the requirement does not stand until the measurement is admitted
+```
+
+So _"measure first, then derive"_ is not itself the error, and _"derive first,
+then measure"_ is not itself a defence. A measurement taken before a derivation may
+legitimately inform it; a measurement taken after one may still be the only thing
+holding it up. **Ask what the requirement rests on, not what happened first.**
+
 ### CORROBORATION — NO for the verdict; weakly YES for the gap's location
 
 Both read the **same stipulated text** and noticed the same silence. Agreement on an
@@ -6642,6 +6696,272 @@ _"what is P3's observational content?"_
                                                             candidate's language would
                                                             make it a promise)
 "two reviewers agreeing corroborates the verdict"
+```
+
+## U5b-B — REFUSAL / FAILURE: PREREGISTRATION PACKET
+
+**STATUS: PACKET ONLY. Gate 1 is NOT open. No reviewer has seen this. No null may
+be constructed, and no disposition exists.** This section is the instrument, written
+before the row is opened, because U5b-A established that a defective instrument
+contaminates every result downstream of it and cannot be repaired retroactively.
+
+### Why this row is openable at all despite U5b-A's blocker
+
+U5b-A closed UNDERDETERMINED on a specific missing grant: **an entity able to
+observe the interval between two writes.** If U5b-B needed that same grant it would
+be closed before it opened, and opening it would be resurrection by relabelling.
+
+The packet's claim to independence — **marked as a construction property of this
+row, NOT as a finding, and explicitly exposed to Gate 1 rejection**:
+
+```text
+U5b-A asks about a state DURING a sequence.
+U5b-B asks about the state AT REST AFTER a sequence that did not complete.
+
+A terminal state is reachable by an ordinary read. So the row can be stated
+WITHOUT an interval observer.
+```
+
+```text
+IF GATE 1 FINDS this row cannot be stated without an interval observer
+  -> U5b-B CLOSES as inheriting U5b-A's blocker. It does not become a request to
+     establish the observer. That is the forbidden move, already struck twice.
+```
+
+This is a **falsifiable premise of the packet**, not a granted one. It is the first
+thing Gate 1 should attack.
+
+### CANDIDATE — as preregistered, retained verbatim, and DEFECTIVE
+
+```text
+AS PREREGISTERED (frozen wording, do not edit in place)
+  an attempted multi-write transition may fail such that none of its canonical
+  consequences occur
+```
+
+**Recorded defect, not repaired:** _"such that none of its canonical consequences
+occur"_ is an **all-or-nothing shape written into the candidate.** It states a
+property of the remedy, so a reviewer evaluating the candidate as worded is
+evaluating a solution rather than a function. This is the same class of defect as
+U5b-A's opposite contract, caught this time before the row opened.
+
+The defect is recorded rather than silently corrected because rewording a frozen
+preregistration to be more answerable **is** the contamination. Gate 1 receives
+both the frozen wording and this note, and **may reject the candidate on the
+strength of the defect alone.**
+
+```text
+STRICTLY WEAKER RESTATEMENT — offered alongside, not substituted
+  a sequence of writes may not run to completion, and the container may owe
+  semantics for what is then true
+```
+
+It removes the all-or-nothing clause and **replaces it with nothing.** It does not
+say what those semantics are, whether any are owed, or that "not running to
+completion" is a state the premises admit.
+
+### DECISIVE QUESTION — as preregistered, and DEFECTIVE
+
+```text
+AS PREREGISTERED (frozen wording)
+  what requires failure to be container-governed rather than validation occurring
+  before canonical mutation?
+```
+
+**Recorded defect, not repaired:** the clause _"rather than validation occurring
+before canonical mutation"_ presents pre-write validation as **the** alternative.
+U5b-A's own closure states that P1 grants only that a value exists for the write
+being performed, and warns in terms against reading anything as _"callers can
+validate a whole candidate configuration before the container is touched."_ So the
+frozen question offers a rival whose availability is **itself disputed** — a
+disputed-scope clause of exactly the kind that must not appear.
+
+```text
+STRICTLY WEAKER RESTATEMENT — the disputed rival REMOVED, nothing put in its place
+  what independently valuable workflow becomes impossible if the container has no
+  semantics for a sequence of writes that does not run to completion?
+```
+
+Gate 1 answers the restatement. The frozen wording travels with it so the reviewer
+can see what was removed and object to the removal.
+
+### OPPOSITE POSITION — symmetric with the candidate, and UNPROVEN
+
+U5b-A's instrument failed because its opposite contract carried a **premise
+reading** presented as background rather than as a proposition under test. The fix
+is symmetry: both sides are unproven positions offered for attack, and neither is
+stated in the voice of an established fact.
+
+```text
+OPPOSITE POSITION — UNPROVEN. Offered for attack on the same footing as the
+candidate. NOT a verdict, NOT a premise reading, NOT the author's view.
+
+  Failure of a write sequence is a caller-side concern, and the container owes no
+  semantics for it.
+```
+
+**Does a route to its invalidity exist?** The gate's stop-condition requires that
+one be _available_, not that it be correct. One is available and is recorded
+unevaluated:
+
+```text
+ROUTE, UNEVALUATED — P4 (exclusion from the revertible record) and P5 (grouping
+several writes into one confirmed step) already place the container in the business
+of deciding what constitutes one step. A sequence that does not run to completion
+may have no step boundary the container can have recorded. If so, the container's
+own record — not the caller's data — is left in a condition the premises do not
+describe, and "caller-side concern" would not reach it.
+
+NOT ASSERTED: that the premises fail to describe it. That is the row's question.
+```
+
+Because a route exists, **the packet clears the stop-condition.** No answer would
+have meant STOP.
+
+### WHAT THE OPPOSITE POSITION DOES NOT ASSERT — the anti-stipulation ledger
+
+This field did not exist for U5b-A. It is the direct repair. **Every item is a
+question this row might need to decide, and the opposite position is therefore
+silent on it.**
+
+```text
+NOT ASSERTED  that pre-write validation of a whole candidate configuration is
+              available to callers under P1-P6
+NOT ASSERTED  that reversal is available as a remedy for a sequence that did not
+              run to completion — whether such a sequence is a "confirmed step"
+              under P5/P6 is open
+NOT ASSERTED  that a sequence CAN terminate partway. U5b-A parked exactly this as
+              a reopening condition; the row must not assume it, and must not
+              pursue it in order to become decidable
+NOT ASSERTED  that "failure" is one thing rather than several unrelated things
+NOT ASSERTED  that the container currently has, or lacks, such semantics.
+              Implementation behaviour is not in evidence on this row at all
+NOT ASSERTED  that the caller is capable of repairing partial consequences
+NOT ASSERTED  that partial consequences are undesirable
+```
+
+The last is deliberate. _"Partial consequences are bad"_ is a value judgement that
+would supply the function requirement by assumption, which is the P3-invented-theorem
+error in a new costume.
+
+### STIPULATION-LEAKAGE SELF-CHECK
+
+The check U5b-A did not have, run against this packet. **The test: does any clause
+ANSWER a question the row might need to decide?**
+
+```text
+CLAUSE                                    ANSWERS A ROW QUESTION?   DISPOSITION
+candidate, frozen wording                 YES — all-or-nothing      DEFECT RECORDED,
+                                          shape                     wording retained
+decisive question, frozen wording         YES — offers a disputed   DEFECT RECORDED,
+                                          rival as THE rival        weaker restatement
+                                                                    supplied
+weaker candidate restatement              NO                        admissible
+weaker decisive restatement               NO                        admissible
+opposite position, one sentence           NO — asserts nothing      admissible
+                                          about P1-P6
+route-to-invalidity                       NO — marked UNEVALUATED   admissible
+independence claim (state at rest)        NO — marked FALSIFIABLE,  admissible
+                                          Gate 1 may reject it
+```
+
+```text
+STANDING TEST, applied per clause
+  Would this sentence COUNT AS A FINDING if a reviewer produced it?
+  If yes, it does not belong in the packet — the packet would be pre-empting the
+  reviewer's output with the author's wording.
+```
+
+Applied: _"the premises do not establish container-owned failure semantics"_ is
+**rejected from this packet.** It would be Reviewer A's verdict, and putting it in
+the instrument would hand A its conclusion. The admitted form asserts nothing about
+the premises at all.
+
+### FORBIDDEN IMPORTED CONCEPTS
+
+Family-level, from the U5b preregistration:
+
+```text
+prepare · commit · publish · effect · transaction · turn · pending rollback
+causal attribution · speculation
+```
+
+Row-specific, because each names a solution shape or a foreign discipline's
+semantics, and using one would smuggle in the answer:
+
+```text
+SOLUTION-SHAPED     rollback · all-or-nothing · atomic · partial commit ·
+                    compensating action · saga · two-phase · retry · idempotent
+FOREIGN DISCIPLINE  isolation level · durability guarantee · ACID · journal ·
+                    write-ahead · savepoint
+U5b-A's VOCABULARY  observer · interleaving · intermediate configuration · torn ·
+                    observationally atomic · forward-path coherence
+                    (importing any of these re-opens A's blocker inside B)
+INCUMBENT           entityMap · SubjectId · effect log · turn store ·
+                    reversal planner
+```
+
+```text
+PERMITTED   the container · a sequence of writes · did not run to completion ·
+            what is true afterwards · the record · a caller
+```
+
+If the row cannot be stated in the permitted vocabulary, **that is a finding about
+the row**, not a licence to widen the vocabulary.
+
+### WHAT MUST NOT BE INHERITED FROM U5b-A
+
+U5b-A is a sibling, not a parent. It grants this row nothing.
+
+```text
+DO NOT INHERIT
+1  "grouping is confined to reversal granularity"
+     A's author stipulation. Never was a finding. Carries into no row.
+2  "reversion is observationally atomic" OR "observably torn"
+     The premises decide neither. Both remain unavailable here.
+3  A's UNDERDETERMINED disposition
+     A verdict about A's candidate. It is not a prior, a presumption, or a
+     prediction for B. B may survive, die, or be underdetermined on its own
+     evidence.
+4  A's blocker as a settled bar on the family
+     The missing interval observer blocks candidates that NEED it. Whether B needs
+     it is the first thing Gate 1 decides — see the independence claim above.
+5  B's uncovered class (opaque writer + illegal intermediate + unmediated observer)
+     It is specified in terms of INTERMEDIATE states. Importing it drags the
+     observer problem in through the side door.
+6  A's Branch A, the common-ancestor write
+     STRUCK on premise-internal grounds. Not available as an argument here.
+7  "callers can validate a whole candidate configuration before the container is
+   touched"
+     Explicitly warned against on A. It is in this packet's anti-stipulation
+     ledger, not its premises.
+8  A's four parked reopening conditions
+     They are A's conditions for A. They are not preconditions for B, and B must
+     not be framed as the row that establishes them.
+9  Any framing in which two reviewers agreeing corroborates a verdict
+     Premise-correlated. Struck three times now.
+
+MAY BE CITED — but only as what it is
+  A's record is EVIDENCE ABOUT A. If B cites it, B cites it as "the U5b-A closure
+  records X", never as "X is established".
+```
+
+### WHAT OPENING GATE 1 WOULD REQUIRE
+
+Recorded so the next step is unambiguous and **nothing here reads as authorization**:
+
+```text
+1  a Gate 1 packet built from this section, carrying: the frozen premises; the
+   frozen candidate AND its recorded defect; the weaker restatements; the opposite
+   position; the independence claim marked falsifiable
+2  WITHHELD from the reviewer: this packet's own reasoning about why the row is
+   openable, the author's expectations, and U5b-A's synthesis
+3  Reviewer A (function killer) and the absence architect, independently
+4  Gate 2 on the raw reports before any conclusion — and Gate 2 may produce
+   reopening conditions ONLY, never work orders
+
+NOT AUTHORIZED BY THIS SECTION: any of the above. The packet is the instrument.
+Opening the row is a separate decision.
 ```
 
 ## Table G — DX PRESSURE LEDGER
