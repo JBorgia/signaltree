@@ -466,6 +466,96 @@ WHAT THIS DOES NOT ESTABLISH
 The primary agent owns synthesis and commits. Otherwise competing architectural
 truths accumulate in the repo and the ledger stops being a single record.
 
+## THE THREE GUIDELINE GAPS THAT PERMITTED THE E4 SYNTHESIS ERRORS
+
+Recorded because the corrections alone would not prevent a recurrence. Each gap is
+stated with the failure it allowed.
+
+### GAP 1 — Gate 2 was routed only after a MEASUREMENT
+
+The protocol flow read:
+
+```text
+... null pre-registration -> experiment -> RAW ARTIFACT -> GATE 2 -> conclusion
+```
+
+E4-G produced **no experiment** — Gate 1 forbade construction. So the flow appeared
+to terminate before Gate 2, and skipping it looked compliant. It was not: the row
+still produced a **synthesis**, and that synthesis is where every overclaim entered.
+
+```text
+CORRECTED ROUTING — Gate 2 applies to a SYNTHESIS, not to a measurement.
+
+Any row that produces a written conclusion passes Gate 2, including:
+  a row closed NOT ESTABLISHED with no experiment
+  a row closed by measurement
+  a row closed by arbitration
+
+THE RAW MATERIAL for Gate 2 is whatever the row actually produced:
+  reviewer reports, or the measurement artifact, or both.
+  NEVER the author's synthesis.
+
+A row that reaches NULL FORBIDDEN is NOT exempt. It is the case most in need of
+review, because there is no measurement to discipline the prose.
+```
+
+### GAP 2 — nothing required the row CLOSED to be the row OPENED
+
+E4/U5b was a broad transaction-semantics row. The packet tested concealment,
+conclusion modes and nesting. The closure was then written against the broad name.
+No rule forbade the rename.
+
+```text
+SCOPE INVARIANCE — the row closed MUST be the row opened.
+
+At closure, restate the pre-registered question VERBATIM and answer only it.
+If the packet tested a narrower question than the row name, the row is RENAMED to
+what was tested and the original row REMAINS OPEN with its untested contracts
+enumerated.
+
+A closure may never be broader than its packet. Widening is a NEW row.
+```
+
+### GAP 3 — an absence architecture's PARTS were treated as findings
+
+Reviewer B's job is to exhibit a coherent world without the candidate. Nothing said
+what weight the components of that world carry. So `turn-coalesced notification`,
+invented because B needed *something* in that slot, was recorded as a "surviving
+container obligation."
+
+```text
+AN ABSENCE ARCHITECTURE IS AN EXISTENCE PROOF, NOT A DESIGN.
+
+Its function: to show the candidate is not necessary.
+Its parts carry NO derivation weight. Each is a DEFERRED CANDIDATE that must pass
+its own row — premise attack included — before it is anything.
+
+Specifically FORBIDDEN: recording a component as "surviving", "earned", "derived",
+or "the answer" because the absence architect required it to build a coherent
+world. That inverts the reviewer's role from killing into designing, which Rule 0j
+forbids: kill first, derive later.
+
+The same applies symmetrically to the function killer: its supporting arguments are
+not theorems. See the DO NOT INFER precedent.
+```
+
+### CLOSURE CHECKLIST — run before writing any row conclusion
+
+```text
+[ ] restate the pre-registered question VERBATIM
+[ ] is the conclusion answering exactly that question, no wider?     (GAP 2)
+[ ] list every claim in the conclusion. For each: which reviewer output or
+    measurement supports it, quoted?
+[ ] does any claim rest on a component of an absence architecture?   (GAP 3)
+    -> demote to DEFERRED CANDIDATE
+[ ] does any claim promote a reviewer's supporting argument to a theorem?
+    -> demote, per DO NOT INFER
+[ ] how many evidence-ladder steps does the conclusion advance?      (must be <= 1)
+[ ] has GATE 2 seen the raw material without this synthesis?         (GAP 1)
+```
+
+The checklist is not a substitute for Gate 2. It is what makes Gate 2's job small.
+
 ## MANDATORY INDEPENDENT REVIEW — two gates, not optional tools
 
 > **No architectural null may run without an independent PREMISE ATTACK, and no
@@ -494,6 +584,10 @@ BLOCKER? -- yes --> resolve BEFORE any conclusion
       v no
 architectural conclusion
 ```
+
+**A row that reaches NULL CONSTRUCTION FORBIDDEN does NOT exit this flow.** It skips
+the experiment and goes straight to GATE 2 with the reviewer reports as its raw
+material. Gate 2 gates the SYNTHESIS, not the measurement.
 
 ### GATE 1 — premise review. The reviewer MAY REJECT THE FUNCTION ITSELF.
 
