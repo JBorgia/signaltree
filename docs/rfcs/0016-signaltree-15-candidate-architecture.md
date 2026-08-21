@@ -6308,8 +6308,13 @@ A gate is not exempt from the rules it enforces.
 > U5b-C   UNOPENED — and NOT OPENABLE AS WORDED (borrowed antecedents)
 > U5b-D   TERMINAL — UNDERDETERMINED, not decidable as posed. NULL FORBIDDEN.
 >         Both gates run, three seats. See the U5b-D disposition record.
-> U5b-E   UNOPENED
+> U5b-E   NOT OPENED — and NOT OPENABLE AS WORDED. Five contaminants, none
+>         implementer-repairable. NO SEAT RAN, no verdict on the function.
 > ```
+>
+> **THE FAMILY IS EXHAUSTED UNDER THIS PREREGISTRATION.** Every row is terminal or
+> not openable. Rewording C or E is RESERVED TO THE AUTHOR, and "no row was
+> openable" is a fact about five instruments — never a verdict on the functions.
 
 The previous failure came partly from bundling several functions under one row
 name. These five can survive or die **independently**, so they are preregistered
@@ -8803,6 +8808,381 @@ An AUDIT of a closed row against the repaired procedure is permitted and is a
 different act: it classifies what the row already produced, and may not alter the
 disposition. The U5b-D audit immediately below is that, and nothing more.
 ```
+
+## U5b-D — AUDIT UNDER THE REPAIRED DEFENDER PROCEDURE. Disposition UNDISTURBED.
+
+**This is a CLASSIFICATION EXERCISE, not a re-adjudication.** It asks one question:
+what would the repaired procedure have recorded, given what the row actually
+produced? It runs no seat, invents no evidence, and changes no verdict.
+
+```text
+WHAT THIS AUDIT MAY DO        classify existing output against the new taxonomy
+                              identify which new provisions the row would have
+                                tripped
+                              state whether the disposition is disturbed
+
+WHAT IT MAY NOT DO            re-run any seat, including a pass-2 defender
+                              simulate what a pass-2 defender WOULD have found
+                              alter, soften, or strengthen the disposition
+                              reopen the row
+```
+
+**The refusal to simulate pass 2 is deliberate and is the audit's main
+self-restriction.** Asking "what would the defender have said if handed A's and B's
+rivals?" is running the seat with the author's own hand, and its output would be
+indistinguishable from a retroactive rewrite by fiat. The charter's non-retroactivity
+clause bars it and so does the standing rule that no stage may manufacture the
+premise the next stage needs.
+
+### CLASSIFICATION — what D's defender output becomes under the closed set
+
+```text
+AS RECORDED   "NO ADMISSIBLE DEFENCE FOUND"
+              plus, buried and not in the headline, "the row is not decidable as
+              posed"
+
+UNDER THE CLOSED SET
+
+PRIMARY       D4 — DEFENCE BLOCKED BY UNNAMED / UNDERSPECIFIED CANDIDATE
+              The packet required the shared fact to remain unnamed and forbade
+              every available name for it. Seat A observed such a claim has no
+              failing case; Gate 2 drew the symmetric half — no succeeding case
+              either. A defence was NOT STATEABLE. That is the D4 definition
+              verbatim.
+
+SECONDARY     D3 in part — the alternating-groupings casualty WAS built, kept, and
+              dismissed on conditions the premises do not grant (C1's silence in
+              P5, and per the unresolved dispute possibly P3 as well). A casualty
+              that exists but needs a grant is D3, not "nothing found".
+
+NOT           D2. The seat was never in a position to succeed.
+NOT           D1. No casualty survived its own rival, and the surviving rival is
+              now quarantined by repair 1 anyway.
+```
+
+**The as-recorded headline was neither of these**, which is the concrete cost repair
+3 was written against: a D4-plus-D3 row reported itself as a bare null.
+
+### THE STRENGTHENING BRANCH — it fails ALL THREE conditions, not one
+
+Gate 2 already blocked the branch on this row, by an explicit override: _"the
+charter's 'DEFENDER FINDS NOTHING -> THE CLOSURE STRENGTHENS' branch MUST NOT FIRE on
+this row."_ That override was correct and was reached ad hoc. Under the repaired
+procedure the same result is REACHED BY RULE:
+
+```text
+C-i    DISPOSITION IS D2               FAILS — it is D4, with a D3 component
+C-ii   CANDIDATE NAMEABLE / TESTABLE   FAILS — the packet could not have completed
+                                       the stateability declaration; the fact was
+                                       required to stay unnamed
+C-iii  DEFENDER SAW ACTUAL RIVALS      FAILS — pass 2 did not exist. Both killers
+                                       relied on rival constructions (A's dichotomy,
+                                       B's caller-side relocation), so pass 2 would
+                                       have been REQUIRED, not merely available
+```
+
+```text
+THE AUDIT'S ONE SUBSTANTIVE FINDING
+
+The Gate 2 override was an EXCEPTION granted by one gate on one row. It is now a
+CLASSIFICATION any gate must reach on any row with these properties. An exception
+protects the row it is granted on; a rule protects the rows nobody thought to
+examine.
+
+This does not make the override retroactively better-founded. It was correct on its
+own reasoning and remains exactly as well-founded as it was.
+```
+
+### WHAT THE AUDIT DOES NOT CHANGE
+
+```text
+DISPOSITION            UNDERDETERMINED, not decidable as posed, TERMINAL.
+                       UNDISTURBED.
+NULL                   still FORBIDDEN
+THE PIVOT              still dissolving rather than deciding — under either setting
+                       of record-readability no function is established
+THE THREE-WAY DISPUTE  still UNRESOLVED and still not pursued
+D's QUARANTINED RIVAL  still quarantined; D's verdict still stands on Rival A alone
+```
+
+```text
+AND IT ESTABLISHES NOTHING NEW ABOUT THE CANDIDATE. Not one clause above bears on
+whether several writes must retain a shared fact. The row produced no information
+about that on the day, and an audit of the procedure cannot produce information the
+procedure did not gather.
+```
+
+### ONE THING THE AUDIT FOUND THAT IS NOT A CLASSIFICATION
+
+```text
+C-iii FAILED ON D IN THE STRONGEST POSSIBLE WAY: pass 2 would have been REQUIRED.
+
+Both killers' central reasoning ran through a rival construction — A's "no third
+case under the granted premises", B's caller-side relocation of the fact. Under the
+repaired procedure a defender WOULD have been handed both, stripped of verdict,
+rationale and identity, and charged with showing them unavailable.
+
+WHAT FOLLOWS FROM THIS: nothing about the row. It is a fact about the PROCEDURE'S
+COVERAGE — the first row it ran on was a row where the missing pass was not
+optional. It is recorded because it bounds how much the charter's first outing can
+be cited for at all, in EITHER direction.
+
+WHAT DOES NOT FOLLOW, and may not be written anywhere: that the row would have
+closed differently. Nobody knows, nobody may find out, and the disposition does not
+depend on it.
+```
+
+## U5b-E — UNCONFIRMED TRANSITION WITHDRAWAL: NOT OPENABLE AS WORDED.
+
+**STATUS: NOT OPENED. NO SEAT RAN. NO DISPOSITION ON THE FUNCTION.** This is an
+INSTRUMENT FINDING, in the same class as U5b-C's, and it is emphatically not a
+verdict. The row's function may survive, die, or be underdetermined on its own
+evidence once it has wording that does not carry the defects below.
+
+### HOW THIS CHECK WAS RUN — both lines, independently, deliberately uninformed
+
+The cheap check that cleared D quoted **only D's candidate line** and missed a
+borrowed antecedent sitting in D's decisive line. That failure is the reason this
+check was constructed differently:
+
+```text
+BOTH LINES inspected with equal weight
+INSPECTED BY a reader given the frozen premises VERBATIM, the family's forbidden
+             vocabulary, the four sibling BARE DISPOSITIONS with no reasoning
+             attached, and E's two lines quoted exactly
+WITHHELD     this ledger's own reading of E, the author's expectation, every
+             sibling row's rationale, the repository, the implementation
+FORBIDDEN    archaeology, measurement, proposing a rewording, proposing an
+             experiment
+ASKED FOR    per-clause hazard classification, a repair-routing classification, a
+             single verdict, EXPLICIT FALSE-POSITIVE GUARDS, and a self-audit
+```
+
+The false-positive requirement earned its place immediately — see the NOT-A-DEFECT
+list below, which overturned two flags this ledger was carrying.
+
+### THE CONTAMINANTS — five, across both lines
+
+```text
+CANDIDATE, frozen wording
+  "an unconfirmed transition requires container-owned semantics for later acceptance
+   or withdrawal"
+
+E1  "an unconfirmed transition" + "for later acceptance or withdrawal"
+    BORROWED ANTECEDENT, from U5b-B. An "unconfirmed" transition is one whose
+    canonical consequences have not occurred, and "withdrawal" presupposes the same
+    non-occurrence — P3 returns canonical state to "a configuration it previously
+    held", which presupposes the write DID occur. The object both clauses
+    presuppose is U5b-B's candidate: "an attempted multi-write transition may fail
+    such that none of its canonical consequences occur." B is FUNCTION NOT
+    ESTABLISHED. P1 grants only that "writes replace values at positions
+    immutably"; a write issued but not applied is granted nowhere.
+
+E2  "semantics"
+    UNNAMED FACT — U5b-D's terminal defect, verbatim in shape. "requires ...
+    semantics" asserts a requirement without naming what is required, so it
+    quantifies over arbitrary content: no failing case AND no succeeding case.
+    A row cannot complete the DEFENCE-STATEABILITY DECLARATION with this wording,
+    which makes it D4 BY CONSTRUCTION before any seat runs.
+
+E3  "unconfirmed" · "acceptance" · "withdrawal", AS A SET
+    BANNED VOCABULARY, reconstituted. The family bans `prepare · commit · publish ·
+    effect · transaction · turn · pending rollback · causal attribution ·
+    speculation`. "unconfirmed" does the work of PREPARE and PENDING; "acceptance"
+    the work of COMMIT; "withdrawal" the work of PENDING ROLLBACK. The set spells
+    TRANSACTION in unbanned syllables.
+
+E4  "container-owned"
+    CARRIER / OWNER CLAUSE. It names what holds the capability before the
+    capability is established to be required — the top rung asked at the bottom.
+    Same species as the struck row wording "Does `structural` need more than
+    canonical truth?", which named the incumbent's field.
+```
+
+```text
+DECISIVE QUESTION, frozen wording
+  "what independently valuable workflow cannot be expressed using currently earned
+   canonical state plus whatever speculative semantics have ALREADY independently
+   survived?"
+
+E5  "plus whatever speculative semantics have ALREADY independently survived"
+    THREE DEFECTS IN ONE CLAUSE.
+      (a) BANNED WORD, not a near-synonym — "speculative" is the stem of
+          "speculation", which the family preregistration bans outright.
+      (b) DEFERRAL TO AN EMPTY SET. Every sibling disposition is negative: A
+          UNDERDETERMINED, B NOT ESTABLISHED, C NOT OPENABLE, D UNDERDETERMINED.
+          Nothing speculative has independently survived. The family
+          preregistration said so when E was written — "which is currently
+          NOTHING" — and recorded it as a hazard rather than a bar.
+      (c) PRESUPPOSES ITS OWN CATEGORY. It treats "speculative semantics" as a
+          coherent kind that may already have survived, which is the thing E exists
+          to test.
+```
+
+### THE DEFECTS ARE NOT SEVERABLE — two structural findings
+
+```text
+1  NO SINGLE-WORD EXCISION REPAIRS THE CANDIDATE.
+   The B-borrowing is carried REDUNDANTLY. Delete "unconfirmed" and "later
+   acceptance or withdrawal" re-imports it; delete the purpose clause and
+   "unconfirmed" re-imports it. Only a restatement removes it, and a restatement is
+   a semantic act.
+
+2  THE INSTRUMENT IS NON-DISCRIMINATING — rigged in BOTH directions at once.
+   If E5's addend is empty, the baseline collapses to P1-P6 and any
+   unconfirmed-transition workflow is inexpressible BY CONSTRUCTION — the candidate
+   wins on the packet's arithmetic. If instead a seat leans on the unstated value
+   bar, every offered workflow can be refused as not independently valuable — the
+   null wins on the packet's bar. Neither outcome would be evidence about the
+   function.
+```
+
+### REPAIR ROUTING — and this is what separates E from D
+
+D was OPENABLE because both its defects were repairable **without semantic choice**:
+each substituted a premise's own words for a borrowed noun, or dropped an unearned
+qualifier, and both were strictly weakening. **Not one of E's five is in that class.**
+
+```text
+E1  "unconfirmed" / "acceptance or withdrawal"   SEMANTIC CHOICE. Removal dissolves
+                                                 the subject and repairs nothing.
+E2  "semantics"                                  SEMANTIC CHOICE. Not removable,
+                                                 only FILLABLE — and any name the
+                                                 premises do not grant creates a
+                                                 FRESH borrowed antecedent.
+E3  banned-vocabulary set                        NEITHER. Relexicalising a banned
+                                                 concept LAUNDERS it. The
+                                                 contaminant is the concept.
+E4  "container-owned"                            DUAL. Strictly weakening on
+                                                 content, but it changes the row's
+                                                 question from LOCUS to EXISTENCE.
+                                                 Routed up on the second reading.
+E5  the addend clause                            UNCLASSIFIABLE BY AN IMPLEMENTER.
+                                                 Empty set -> removal is a no-op.
+                                                 Non-empty -> removal changes the
+                                                 baseline in the candidate's
+                                                 favour. Deciding which is deciding
+                                                 the row.
+```
+
+```text
+VERDICT: NOT OPENABLE AS WORDED.
+
+MINIMUM SUFFICIENT SET, on its own: { E5 }.
+  Load-bearing, referent empty on the recorded dispositions, uses a banned word
+  directly, and presupposes the category under test.
+
+TWO FURTHER INDEPENDENTLY SUFFICIENT SETS — so curing E5 would not rescue the row:
+  { E2 } alone           — unnamed fact; any verdict is an artefact of the wording
+  { E1a, E1b } jointly   — and only jointly, since neither is excisable alone
+```
+
+### WHAT IS NOT A DEFECT — recorded because a false positive costs as much as a miss
+
+**Two of these overturn flags this ledger was carrying before the check ran.**
+
+```text
+"transition" IN ISOLATION — NOT a borrowed antecedent.
+  This ledger had it flagged as U5b-A's candidate noun, by analogy with C, where
+  "the canonical transition" was decisive. WRONG for E. A single write producing a
+  new configuration is inside P1. What E borrows is not the noun; it is the
+  NON-OCCURRENCE that "unconfirmed" and "withdrawal" presuppose, and that comes
+  from B, not A. Flagging the noun would have mis-attributed the defect to the
+  wrong sibling and pointed any future repair at the wrong clause.
+
+"currently earned canonical state" — NOT an unknowable deferral.
+  Symmetry with E5 makes this look like the same defect. It is not: the granted set
+  is frozen and exhaustive, so the referent resolves to exactly P1-P6. Determinate.
+
+"requires" — the requirement frame is the CORRECT burden direction. The defect is
+  the object of the verb, never the verb.
+"cannot be expressed" — the what-becomes-impossible frame is legitimate and is the
+  form used on every row in this family.
+"later" — ordinary temporal ordering. P3 already grants "can be advanced again
+  afterwards". Carries no presupposition of its own.
+"workflow" — broader than P3's "boundaries a user would recognize as discrete
+  steps", but a user-recognizable unit is partly granted. MARGINAL, not decisive.
+```
+
+### CONSEQUENCE FOR THE FAMILY — and it is a DECISION REQUIRED, not a work order
+
+```text
+U5b-A  TERMINAL — UNDERDETERMINED
+U5b-B  CLOSED — FUNCTION NOT ESTABLISHED
+U5b-C  NOT OPENABLE AS WORDED — borrowed antecedents from A and B
+U5b-D  TERMINAL — UNDERDETERMINED, not decidable as posed
+U5b-E  NOT OPENABLE AS WORDED — five contaminants, none implementer-repairable
+
+THE FAMILY IS EXHAUSTED UNDER ITS OWN PREREGISTRATION. Every row is either
+terminal or not openable, and the two unopenable rows can be reworded only by the
+author.
+```
+
+```text
+WHAT AN IMPLEMENTER MAY NOT DO HERE, and the temptation is strongest at exactly
+this point:
+
+  REWORD C or E to make them answerable
+    -> the frozen preregistration would be edited to fit the instrument that can
+       process it. That IS the contamination, stated in the C record and unchanged.
+  DECLARE the family closed because every row failed
+    -> "no row was openable" is a fact about five instruments. Reading it as
+       "transaction-shaped functions are not required" would convert an
+       instrument-quality result into an architectural verdict, which is the
+       four-times-struck move in its purest available form.
+  OPEN a sixth row of the author's own devising to cover the ground
+    -> a work order generated from a gap.
+```
+
+### THE CROSS-CUTTING FINDING THIS CHECK PRODUCED — bigger than E
+
+The inspection flagged `"independently valuable"` in E's decisive question as an
+**unstated evidentiary standard**: no test for value, and none for what makes value
+independent, so any produced workflow can be denied as not independently valuable and
+any absence attributed to the bar rather than to the premises.
+
+**That clause is not E's. It is family boilerplate.**
+
+```text
+U5b-A  "what independently valuable workflow becomes impossible if applications
+        instead use the currently earned canonical write and grouping semantics?"
+U5b-D  "what independently valuable workflow becomes impossible if the only fact
+        that survives about several grouped writes is that they revert as one step?"
+        (the REPAIRED question, which that packet's own leakage self-check passed as
+        ADMISSIBLE)
+U5b-E  "what independently valuable workflow cannot be expressed using ..."
+```
+
+The inspecting reader flagged it in E only because it had no cross-row context. With
+that context the finding does not become smaller — it becomes **wider**, and it
+changes what it is:
+
+```text
+IT IS NOT      a reason E specifically is unopenable. E is unopenable on E1-E5, all
+               of which are E's own, and the verdict does not use this clause.
+IT IS          an open question about the standard EVERY decisive question in this
+               family was asked against, including two rows already closed.
+```
+
+```text
+HANDLING — deliberately conservative, in three parts
+
+1  NOTHING IS REOPENED. A and D stay terminal. This finding does not disturb a
+   disposition, and per the non-retroactivity rule it may not be used to.
+2  IT IS NOT SILENTLY REPAIRED. Supplying a test for "independently valuable" sets
+   what counts as evidence of a function across the whole family. That is the
+   author's, on the same footing as seating a defender.
+3  IT IS RECORDED AS A LIVE UNCERTAINTY over closed rows, not as a defect in them.
+   The honest statement is: two terminal rows were asked a question containing an
+   unstated bar, and nobody has established whether any seat's reasoning turned on
+   it. Nobody may go and find out — that would be re-adjudicating closed rows.
+```
+
+**Why it is recorded rather than acted on.** The alternative was to say nothing,
+since it bears on rows this session may not touch. But an unstated bar in the
+standard question form is exactly the kind of thing that survives long enough for
+the next derivation to inherit, and this ledger has recorded that failure more times
+than any other. Recording it costs nothing and creates no task.
 
 ## Table G — DX PRESSURE LEDGER
 

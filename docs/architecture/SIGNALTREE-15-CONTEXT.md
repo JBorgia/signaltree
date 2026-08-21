@@ -1238,10 +1238,77 @@ U5b-B  REFUSAL / FAILURE                   CLOSED — FUNCTION NOT ESTABLISHED.
                                            and the opposite position is EQUALLY
                                            UNPROVEN.
 U5b-C  CONSEQUENCE COORDINATION            UNOPENED — and NOT OPENABLE AS WORDED
+                                           borrowed antecedents from A and B
 U5b-D  SHARED ATTRIBUTION                  TERMINAL — UNDERDETERMINED.
                                            Not decidable as posed. NULL FORBIDDEN.
                                            First row with three Gate 1 seats.
-U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL    UNOPENED
+U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL   NOT OPENED — and NOT OPENABLE AS WORDED
+                                           five contaminants, NONE
+                                           implementer-repairable. NO SEAT RAN.
+```
+
+```text
+THE FAMILY IS EXHAUSTED UNDER ITS OWN PREREGISTRATION. Every row is terminal or not
+openable, and the two unopenable rows can be reworded ONLY BY THE AUTHOR.
+
+THREE MOVES ARE FORBIDDEN HERE, and this is where they are most tempting:
+  rewording C or E to make them answerable — that IS the contamination
+  reading "no row was openable" as "transaction-shaped functions are not required"
+    — an instrument result converted into an architectural verdict
+  opening a sixth row to cover the ground — a work order generated from a gap
+```
+
+### U5b-E — why it did not open. INSTRUMENT FINDING, no verdict on the function.
+
+```text
+E1  "an unconfirmed transition" + "for later acceptance or withdrawal"
+      BORROWED ANTECEDENT from U5b-B (not A). Both clauses presuppose a write that
+      did not occur; P1 grants only writes that replace values, and P3's reversion
+      presupposes the write DID occur. B is FUNCTION NOT ESTABLISHED.
+E2  "semantics"          UNNAMED FACT — U5b-D's terminal defect in shape. No failing
+                         case AND no succeeding case. D4 BY CONSTRUCTION.
+E3  "unconfirmed" · "acceptance" · "withdrawal" AS A SET — spells the banned word
+                         TRANSACTION in unbanned syllables (prepare/commit/pending
+                         rollback).
+E4  "container-owned"    CARRIER clause: names what holds it before it is required.
+E5  "whatever speculative semantics have ALREADY independently survived"
+                         (a) "speculative" is the banned stem "speculation"
+                         (b) deferral to an EMPTY set — every sibling is negative
+                         (c) presupposes its own category
+
+NOT SEVERABLE  the B-borrowing is REDUNDANT — delete either clause and the other
+               re-imports it. Only a restatement removes it, and that is semantic.
+NON-DISCRIMINATING  empty addend -> candidate wins by construction; lean on the
+               value bar -> null wins. Neither outcome would be evidence.
+```
+
+```text
+FALSE POSITIVES — two flags this ledger was carrying, both WRONG
+
+"transition" in isolation is NOT a borrowed antecedent. A single write producing a
+  new configuration is inside P1. E borrows the NON-OCCURRENCE, from B — not A's
+  noun. Flagging the noun mis-attributes the defect and would point a repair at the
+  wrong clause.
+"currently earned canonical state" is NOT an unknowable deferral. The granted set is
+  frozen and exhaustive, so it resolves to exactly P1-P6.
+Also not defects: "requires" · "cannot be expressed" · "later" · "workflow".
+```
+
+### CROSS-CUTTING — "independently valuable" is an UNSTATED BAR, family-wide
+
+```text
+It appears in A's, D's and E's decisive questions. No test for value, none for what
+makes value independent — so any workflow can be denied as not independently
+valuable, and any absence attributed to the bar rather than to the premises.
+
+NOT     a reason E is unopenable. E fails on E1-E5, all its own.
+IS      an open question about the standard EVERY decisive question in this family
+        was asked against, including two CLOSED rows.
+
+HANDLING  nothing is reopened · it is NOT silently repaired (supplying a test sets
+          what counts as evidence family-wide — the author's) · recorded as a LIVE
+          UNCERTAINTY over closed rows, not a defect in them. Whether any seat's
+          reasoning turned on it is UNKNOWN and may not be investigated.
 ```
 
 ### U5b-D — read this before citing it, and before seating another defender
@@ -1263,6 +1330,31 @@ design in advance**.
 THE "DEFENDER FINDS NOTHING -> CLOSURE STRENGTHENS" BRANCH DID NOT FIRE, AND MUST
 NOT BE CITED AS THOUGH IT DID. The defender was not in a position to fail
 informatively.
+```
+
+**AUDITED 2026-08-20 under the repaired procedure — CLASSIFICATION ONLY, disposition
+UNDISTURBED.** No seat was re-run and no pass-2 defender was simulated; doing either
+would be a retroactive rewrite by fiat and is forbidden.
+
+```text
+D's defender output, under the closed disposition set:
+  PRIMARY    D4 — DEFENCE BLOCKED BY UNNAMED / UNDERSPECIFIED CANDIDATE
+  SECONDARY  D3 in part — the alternating-groupings casualty WAS built and kept,
+             then dismissed on conditions the premises do not grant
+  NOT        D2, and not D1
+
+THE STRENGTHENING BRANCH FAILS ALL THREE CONDITIONS, not one:
+  C-i    disposition is D2         FAILS — D4 with a D3 component
+  C-ii   candidate nameable        FAILS — the fact was required to stay unnamed, so
+                                   the stateability declaration was uncompletable
+  C-iii  defender saw real rivals  FAILS — pass 2 did not exist, and BOTH killers
+                                   relied on rivals, so it would have been REQUIRED
+
+WHAT THE AUDIT ADDS  Gate 2's block was an EXCEPTION on one row; it is now a
+                     CLASSIFICATION any gate must reach on any row with these
+                     properties. An exception protects the row it is granted on.
+WHAT IT DOES NOT ADD anything about the candidate. Not one clause bears on whether
+                     several writes must retain a shared fact.
 ```
 
 **Which branch did fire, and why it is not the corroboration error again.** All three
