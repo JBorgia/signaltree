@@ -7901,6 +7901,13 @@ disposition is safe even though the reasoning under it is contested.
 
 ## DEFENDER CHARTER — FIRST-OUTING AUDIT. Three repairs applied, two RESERVED.
 
+> **⚠️ R1 AND R2 WERE RESOLVED BY THE AUTHOR ON 2026-08-20.** This section is the
+> AUDIT RECORD and is retained unedited, because the reasoning that identified the
+> two gaps is still the reason they had to be settled from outside this ledger. The
+> decision itself is in
+> [DEFENDER PROCESS REPAIR](#defender-process-repair--2026-08-20-r1-and-r2-resolved-by-the-author).
+> Cite the repair, not this section, for what the procedure now is.
+
 The charter was granted and used on the same day. An independent audit of **the seat
 as an instrument** — given the charter and the defender's report only, and
 deliberately NOT the killers' reports — returned:
@@ -8015,6 +8022,12 @@ R2  THE DEFENDER HAS NO STATED DISPOSITION.
 NEITHER IS A WORK ORDER. Rows may open under the charter as it stands, carrying this
 audit. The next defender outing inherits repairs 1-3 and the unrepaired R1/R2.
 ```
+
+> **⚠️ THE LAST SENTENCE IS SUPERSEDED.** "Rows may open under the charter as it
+> stands" was REVERSED by author decision on 2026-08-20: no further U5b row opens
+> until the procedure is repaired, and it now is. The clause is retained because the
+> reasoning behind it — a gap may not become a task — remains correct; what it got
+> wrong was inferring that a defective instrument may therefore keep running.
 
 ## P1-P6 — THE FROZEN PREMISES WERE NEVER RECORDED. Transcribed here.
 
@@ -8431,6 +8444,364 @@ A closed row may be reopened by a defence ONLY if the author reopens it. Running
 defender at a closed row in order to see whether it reopens is a WORK ORDER
 GENERATED FROM A METHOD CHANGE, and it is forbidden on the same grounds as every
 other work order generated from a gap.
+```
+
+## DEFENDER PROCESS REPAIR — 2026-08-20. R1 AND R2 RESOLVED BY THE AUTHOR.
+
+**Authority: the human author, 2026-08-20.** This resolves both items the
+first-outing audit reserved. Like the P3 freeze and the charter itself this is a
+**decision about the standard of evidence**, not a finding. No reviewer produced it,
+no gate established it, no experiment supports it. It is an INPUT to the method.
+
+```text
+CITE IT AS   "the defender procedure, as repaired by author decision on 2026-08-20"
+NEVER AS     "the audit established that two passes are required"
+             "the defender charter was validated and extended"
+             "R1/R2 were resolved by the first outing"
+```
+
+The audit **exposed** R1 and R2. It had no standing to settle either, said so, and
+did not. What follows is the author's answer, and the reasons given below are the
+author's reasons — they are not evidence for the decision, they are the content of it.
+
+### THE ORDERING DECISION — the instrument is repaired BEFORE the next row opens
+
+```text
+DECIDED   No further U5b row opens until the defender procedure is repaired.
+```
+
+This reverses the audit's own closing line — _"rows may open under the charter as it
+stands, carrying this audit"_ — and the reversal is deliberate. That line was written
+to avoid generating a work order from a method gap, which was the correct instinct
+about **tasks** and the wrong conclusion about **sequence**.
+
+```text
+WHAT THE AUDIT WAS RIGHT ABOUT
+  a gap may not become a task. Nothing may be measured, dug, or benchmarked to
+  settle R1 or R2, and nothing was.
+
+WHAT IT GOT WRONG
+  it treated "do not generate work from a gap" as implying "proceed with the
+  defective instrument". Those are different. Declining to ACT on a gap is
+  discipline; declining to WAIT for the author to close one is haste.
+```
+
+The concrete cost of not waiting is on the record: U5b-D was the charter's first
+outing and it produced a defender null that **could not have been informative**, plus
+two unsound legs, and the row consumed three seats to reach a disposition that is
+partly an artefact of its own instrument. Opening U5b-E under the same instrument
+would have bought a second such row.
+
+```text
+THIS IS A SEQUENCING DECISION, NOT A WORK ORDER
+  It creates no task. It stops one.
+```
+
+### R1 — RESOLVED. THE DEFENDER RUNS IN TWO PASSES.
+
+The contradiction the audit found stands as stated: admissible output #2 asks the
+defender to disqualify **a rival the killers rely on**, while burden rule 4 withholds
+the killers' reports, so output #2 was unreachable and a defender could return a null
+having never touched a killer. That is the structural gap the seat exists to close,
+and it was open on the seat's first outing.
+
+```text
+PASS 1 — SEALED. Unchanged from the charter as granted.
+
+  RECEIVES   the frozen premises, QUOTED VERBATIM
+             the candidate / opposite packet, exactly as the killers receive it
+  RECEIVES NOTHING ELSE. No killer output of any kind exists in pass 1's input,
+             because at the time pass 1 runs it may not exist at all.
+  PRODUCES   a named casualty workflow, or an explicit statement that none was found
+```
+
+```text
+PASS 2 — CONDITIONAL. Fires ONLY IF a killer raised a RIVAL CLAIM.
+
+  TRIGGER    at least one killer's reasoning relies on a rival construction or an
+             absence alternative — i.e. on the assertion that some other way of
+             obtaining the capability is AVAILABLE under the frozen premises.
+             No rival raised -> pass 2 DOES NOT RUN, and the packet records that it
+             was NOT REQUIRED rather than skipped.
+
+  RECEIVES   the pass 1 input, AND
+             the rival claims and absence alternatives, and ONLY those — stated as
+             bare constructions, stripped to what is needed to test whether each is
+             available under the frozen premises
+
+  DOES NOT RECEIVE
+             any killer's VERDICT or disposition
+             any killer's RATIONALE, reasoning chain, or self-audit
+             REVIEWER IDENTITY — which seat produced which rival
+             IMPLEMENTATION DETAIL of any kind, current or proposed
+             the author's expectation, the sibling rows' outcomes, the packet's own
+               anti-stipulation reasoning
+```
+
+```text
+WHAT PASS 2 MAY PRODUCE — and this list is CLOSED
+
+  1  a demonstration that a specific rival is UNAVAILABLE under the frozen premises
+     (admissible output #2, now reachable for the first time)
+  2  an explicit statement that no rival is disqualifiable
+  3  a finding that disqualifying a rival would require an ungranted condition
+     -> the condition is RECORDED. It is not pursued, and it is not leaned on.
+
+WHAT PASS 2 MAY NOT PRODUCE
+
+  a NEW casualty. Casualties are pass 1 work, and only pass 1 work.
+```
+
+**Why the new-casualty bar is load-bearing rather than tidiness.** A casualty
+invented after seeing the opposition is reverse-engineered to evade it, and it would
+arrive with no way to tell whether the frozen premises produced it or the rivals did.
+Pass 1's seal is what makes a casualty attributable to the premises. Pass 2 exists to
+test a defence that already exists, not to grow one.
+
+```text
+AMENDMENT TO BURDEN RULE 4 — the only rule this repair changes
+
+  BEFORE  "the defender receives the same packet as the killers, under the same
+           withholding"
+  AFTER   Rule 4 governs PASS 1 ABSOLUTELY and is unchanged there.
+          In PASS 2 the withholding is NARROWED TO EXACTLY the four exclusions
+          listed above, and to nothing less.
+
+Rules 1, 2, 3 and 5 are UNCHANGED AND APPLY TO BOTH PASSES. In particular pass 2
+may not cite the implementation, may not convert a missing premise into a work
+order, and may not propose a mechanism — including the RIVAL's mechanism, per
+repair 2.
+```
+
+**Two asymmetries this creates, recorded rather than smoothed over.**
+
+```text
+1  THE DEFENDER SEES THE KILLERS' RIVALS; THE KILLERS NEVER SEE THE DEFENDER'S
+   CASUALTY IN A SECOND PASS.
+   Accepted, because the charter already routes a named casualty back to the
+   killers — "the casualty goes to the killers, who must answer it on the frozen
+   premises." That answer-back channel is the killers' pass 2 and predates this
+   repair. What was missing was the defender's, and this supplies it. The seats are
+   symmetric at the charter level even though the mechanisms differ in name.
+
+2  PASS 2 DISCLOSES THAT OPPOSITION EXISTS.
+   A defender told "here are rival constructions" learns that a killer found
+   something to rely on. That is a genuine leak and it is bounded: a killer may
+   rely on a rival whether its verdict lands for or against, so the existence of a
+   rival discloses NO VERDICT. Reviewer identity is withheld precisely so the leak
+   cannot be resolved into "the absence architect built this, therefore the absence
+   held."
+```
+
+### R2 — RESOLVED IN PART. THE DEFENDER'S DISPOSITIONS ARE A CLOSED SET OF FIVE.
+
+The audit found the defender had no stated disposition, defaulted to the room's, and
+**said so out loud** — _"where finer resolution would have helped a defence, I closed
+it against the candidate instead."_ The author's answer is a disposition **taxonomy**
+rather than a presumption. Exactly one is PRIMARY, and per repair 3 the headline
+carries it.
+
+```text
+D1  SURVIVAL ESTABLISHED
+      An admissible casualty was found: a named workflow that becomes IMPOSSIBLE
+      under the frozen premises if the function does not exist, depending on NO
+      ungranted condition, stated in the permitted vocabulary.
+
+D2  SURVIVAL NOT ESTABLISHED
+      Pass 1 found no admissible casualty, and — where pass 2 ran — no rival was
+      disqualifiable. The candidate was STATEABLE and TESTABLE throughout, so the
+      seat was in a position to have succeeded and did not.
+
+D3  DEFENCE AVAILABLE BUT PREMISE-DEPENDENT
+      A casualty exists and is coherent, but it requires a condition the frozen
+      premises do not grant. The condition is RECORDED as a reopening condition and
+      NOT LEANED ON. This is the disposition that must not be silently collapsed
+      into D2 — "found nothing" and "found something that needs a grant" are
+      different facts about the row, and only the first is a fact about the seat.
+
+D4  DEFENCE BLOCKED BY UNNAMED / UNDERSPECIFIED CANDIDATE
+      No defence is STATEABLE because the candidate does not say what it asserts is
+      required. It quantifies over arbitrary content, so it has no failing case AND
+      no succeeding case. The seat could not have failed informatively.
+      THIS IS A FINDING ABOUT THE INSTRUMENT, NOT ABOUT THE FUNCTION.
+
+D5  OUT-OF-ROW
+      The defensible thing the seat located is not what the row asks about — a
+      different function, a different carrier, a different owner. Recorded and
+      PARKED. It is not evidence for or against this row's candidate, and it is not
+      a licence to open the row it points at.
+```
+
+```text
+D1 DOES NOT MAKE THE ROW SURVIVE — and this preserves the charter unchanged.
+
+The charter reads: "DEFENDER NAMES A CASUALTY -> The row does NOT thereby survive.
+The casualty goes to the killers, who must answer it on the frozen premises. A
+defence is a challenge to the closure, not a verdict against it."
+
+That clause is UNTOUCHED. D1 is the DEFENDER'S disposition — "I discharged my
+charge" — not the ROW's. A row reaches survival only after the killers answer the
+casualty and fail to defeat it.
+
+The naming tension is recorded rather than resolved by renaming: "survival
+established" is the author's term for D1, and it means survival of the DEFENCE, not
+of the row. Any citation must say which.
+```
+
+### HOW EACH DISPOSITION AFFECTS GATE 2
+
+```text
+DISPOSITION  WHAT GATE 2 DOES WITH IT
+
+D1           The casualty is RAW MATERIAL routed to the killers. Gate 2 does not
+             adjudicate it and does not treat it as a verdict against the closure.
+             If the killers cannot answer it on the frozen premises, Gate 2 records
+             the closure as CHALLENGED and the row does not close as NOT ESTABLISHED.
+
+D2           The ONLY disposition that can strengthen a closure, and only under the
+             three conditions below. Absent them, Gate 2 records the null as
+             NON-INFORMATIVE and closure strength is unchanged.
+
+D3           Closure DOES NOT STRENGTHEN. The condition is recorded. Gate 2 must
+             state explicitly that a premise-dependent defence was found, because
+             a D3 read as a D2 converts "the premises are silent here" into "there
+             is nothing here" — the argument-from-silence move every seat on U5b-D
+             committed.
+
+D4           Closure DOES NOT STRENGTHEN, and Gate 2 must additionally record that
+             THE ROW'S INSTRUMENT IS DEFECTIVE. A D4 is grounds to question whether
+             the row was openable, independently of any verdict it received.
+
+D5           Carries NO weight in either direction. Gate 2 records it and parks it.
+```
+
+### THE STRENGTHENING BRANCH IS NOW CONDITIONAL — three conditions, ALL required
+
+The charter's original branch read: _"DEFENDER FINDS NOTHING ADMISSIBLE -> the
+closure STRENGTHENS, and for the first time legitimately."_ That is now gated.
+
+```text
+CLOSURE STRENGTHENS ONLY IF ALL THREE HOLD
+
+C-i    THE DISPOSITION IS D2. Not D3, not D4, not D5.
+
+C-ii   THE CANDIDATE WAS NAMEABLE AND TESTABLE — a succeeding case was statable in
+       principle, in the permitted vocabulary, before the seat ran.
+
+C-iii  THE DEFENDER HAD ACCESS TO ACTUAL RIVAL CLAIMS — pass 2 RAN, or the packet
+       records that no killer relied on a rival so pass 2 was NOT REQUIRED.
+       A defender that never saw a rival because the procedure could not deliver
+       one has not tested the closure; it has restated the packet.
+
+ANY ONE FAILING -> the null is NON-INFORMATIVE. Recorded as such, in the headline.
+```
+
+**C-ii is assessed from the PACKET, never from the outcome.** Deciding nameability
+after seeing a null would be circular in the most convenient possible direction —
+every uninformative null would be reclassified as informative, or every inconvenient
+one as blocked, depending on which the author preferred. So:
+
+### DEFENCE-STATEABILITY DECLARATION — a new REQUIRED PACKET FIELD
+
+**Status: DERIVED, MECHANICAL.** This is not a further semantic decision; it is the
+only non-circular way to evaluate C-ii, and it is recorded as an implementer's
+construction so it can be struck if the author disagrees.
+
+```text
+REQUIRED IN EVERY PACKET THAT SEATS A DEFENDER, DECLARED BEFORE THE ROW OPENS
+
+  A SUCCEEDING CASE WOULD LOOK LIKE
+    the SHAPE — not the content — of a workflow whose impossibility would establish
+    this candidate. Stated in the permitted vocabulary. No name for the thing under
+    test is supplied or implied.
+
+  IF THIS FIELD CANNOT BE COMPLETED
+    the row is D4 BY CONSTRUCTION, before any seat runs, and the packet says so.
+```
+
+The field is answerable without deciding the row: it asks what a win would look
+like, not whether one exists. U5b-D's packet could not have completed it — the fact
+was required to stay unnamed, and an unnamed existential admits no shape — which is
+precisely the diagnosis Gate 2 reached **after** three seats had run.
+
+```text
+WHAT THE FIELD IS NOT
+  not a requirement to NAME the thing under test. Refusing to name it remains
+    available and remains the strongest defence against deciding a row by
+    vocabulary.
+  not a stipulation. A shape is not a claim that anything has that shape.
+```
+
+### WHAT R2 DOES NOT SETTLE — carried forward as RESERVED ITEM R2b
+
+The audit's R2 proposed a **presumption** — _"the candidate stands as required until
+a rival is shown available from the frozen text ... the defender may not close a
+silence against the candidate."_ The author supplied a **disposition taxonomy**
+instead. These are different objects and only one of them has been decided.
+
+```text
+DECIDED    the CLASSIFICATION of what a defender returns, and what Gate 2 may do
+           with each class
+
+NOT DECIDED  the seat's DEFAULT LEAN. When the premises are silent on a fact a
+           casualty needs, does the defender:
+             (a) record the silence as a condition and return D3 — or
+             (b) close the silence against the candidate and return D2?
+
+The taxonomy makes the two OUTCOMES distinguishable, which the charter did not, and
+that is a real repair: a defender that closes silences against the candidate can no
+longer have its output consumed as a clean D2 without saying so.
+
+But it does not tell the seat WHICH TO DO. The observed drift — "where finer
+resolution would have helped a defence, I closed it against the candidate instead" —
+is a choice between (a) and (b), and it is STILL UNGOVERNED.
+```
+
+```text
+R2b  RESERVED TO THE HUMAN AUTHOR. Setting the defender's default lean sets the
+     burden of proof for every row in scope, in the same way seating the defender
+     at all did. An implementer choosing it would be supplying the standard of
+     evidence by fiat.
+
+     NOT A WORK ORDER. Rows may open under the repaired procedure carrying R2b
+     open, because the taxonomy makes an unsettled lean VISIBLE in the output: a
+     seat that closed a silence against the candidate now has to return D2 and a
+     seat that recorded it has to return D3, and Gate 2 treats those differently.
+     The unrepaired gap is no longer silent, which is the condition under which
+     proceeding is legitimate.
+```
+
+There is one further consequence R2b does not reach, and it is flagged here as a
+question rather than answered:
+
+```text
+DOES A D4 BAR THE ROW FROM OPENING AT ALL?
+
+U5b-D opened with its central fact deliberately unnamed, and its own packet called
+that "the strongest thing about this row's wording". Gate 2 later found the same
+choice guaranteed the defender's null. BOTH ARE TRUE. Leaving the fact unnamed
+prevented the row being decided by vocabulary AND made a defence unstateable.
+
+Whether an unnameable candidate is:
+    NOT OPENABLE, like U5b-C's borrowed antecedents — or
+    OPENABLE, with the defender seat simply declared uninformative in advance
+is a SEMANTIC CHOICE about what this method is for. Not decided here. Recorded with
+R2b.
+```
+
+### NON-RETROACTIVITY — unchanged, and it binds this repair too
+
+```text
+No closed row is reopened by this repair. U5b-A, U5b-B and U5b-D stay closed on
+their recorded dispositions.
+
+Re-running a defender at U5b-D under the two-pass procedure to see whether it
+reopens is FORBIDDEN — a work order generated from a method change, on exactly the
+grounds the charter already states.
+
+An AUDIT of a closed row against the repaired procedure is permitted and is a
+different act: it classifies what the row already produced, and may not alter the
+disposition. The U5b-D audit immediately below is that, and nothing more.
 ```
 
 ## Table G — DX PRESSURE LEDGER
