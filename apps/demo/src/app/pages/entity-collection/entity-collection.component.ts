@@ -440,6 +440,102 @@ tree.$.tenants.load({ tenantId: 'tenant-d' });
 // → tenant-a's persisted entry is evicted; only b, c, d remain in storage.`,
     },
   ];
+
+  // =========================================================================
+  // PANEL 7 — clear() vs reset(): emptying rows is not dropping the cache
+  // =========================================================================
+  // Two identical cache-aware collections, emptied two different ways. The
+  // point is the asymmetry on the NEXT load(): `clear()` is a mutator and
+  // mutators never touch freshness, so the collection is empty AND still
+  // "fresh" — load() no-ops for the rest of the staleTime window. `reset()`
+  // drops the cache entry too, so the next load() actually fetches.
+  readonly P7_STALE_MS = 30_000;
+  readonly p7ClearFetches = signal(0);
+  readonly p7ResetFetches = signal(0);
+  readonly p7Emptied = signal(false);
+  readonly p7Reloaded = signal(false);
+
+  readonly p7 = signalTree({
+    viaClear: entityMap<Item, string>({
+      load: loader(
+        () => {
+          this.p7ClearFetches.update((n) => n + 1);
+          return of(CATALOG).pipe(delay(500));
+        },
+        { staleTime: this.P7_STALE_MS, lazy: true }
+      ),
+      selectId: (i) => i.id,
+    }),
+    viaReset: entityMap<Item, string>({
+      load: loader(
+        () => {
+          this.p7ResetFetches.update((n) => n + 1);
+          return of(CATALOG).pipe(delay(500));
+        },
+        { staleTime: this.P7_STALE_MS, lazy: true }
+      ),
+      selectId: (i) => i.id,
+    }),
+  });
+
+  async loadP7(): Promise<void> {
+    await Promise.all([
+      this.p7.$.viaClear.load(),
+      this.p7.$.viaReset.load(),
+    ]);
+  }
+
+  emptyP7(): void {
+    this.p7.$.viaClear.clear(); // rows gone — cache entry UNTOUCHED
+    this.p7.$.viaReset.reset(); // rows gone — cache entry DROPPED
+    this.p7Emptied.set(true);
+    this.p7Reloaded.set(false);
+  }
+
+  async reloadP7(): Promise<void> {
+    await this.loadP7();
+    this.p7Reloaded.set(true);
+  }
+
+  startOverP7(): void {
+    this.p7.$.viaClear.reset();
+    this.p7.$.viaReset.reset();
+    this.p7ClearFetches.set(0);
+    this.p7ResetFetches.set(0);
+    this.p7Emptied.set(false);
+    this.p7Reloaded.set(false);
+  }
+
+  readonly p7Code: CodeFile[] = [
+    {
+      label: 'clear-vs-reset.ts',
+      language: 'typescript',
+      source: `plants: entityMap<Plant, string>({
+  selectId: (p) => p.id,
+  load: loader(() => plantApi.list$(), { staleTime: '30s' }),
+})
+
+await tree.$.plants.load();      // 6 rows, fresh for 30s
+
+// clear() is a MUTATOR. staleTime records when this collection last
+// SYNCED WITH THE SERVER — not whether the local rows still match it.
+tree.$.plants.clear();
+tree.$.plants.count();           // 0
+tree.$.plants.loaded();          // true  ← still "fresh"
+await tree.$.plants.load();      // NO-OP — stays empty for 30s
+
+// removeWhere(() => true) does exactly the same thing. The rule is
+// uniform on purpose: a local delete must never provoke a refetch.
+
+// reset() is the explicit "forget this collection" — rows AND cache.
+tree.$.plants.reset();
+tree.$.plants.loaded();          // false
+tree.$.plants.lastLoadedAt();    // null
+await tree.$.plants.load();      // refetches
+
+// Want empty-then-refetch without dropping the cache? clear() + refresh().`,
+    },
+  ];
 }
 
 function nowMs(): number {

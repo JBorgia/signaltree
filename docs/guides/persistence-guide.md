@@ -172,6 +172,14 @@ const tree = signalTree({
 // Then the loader settles and loaded() flips true.
 ```
 
+With an **asynchronous** adapter (IndexedDB is one) a load begins by awaiting
+`getItem`, and that hydration window counts as part of the load: a `load()` or
+`refresh()` for the same scope arriving during it joins the same flight rather
+than starting a second fetch, so the seed always lands before the fetch it
+precedes. Two consequences: the promise such a call returns may be waiting on
+storage rather than the network (`loading()` still reports only the fetch), and
+`reset()` abandons a load that is still in this phase.
+
 Persistence here is best-effort by design: a storage failure never breaks the
 load path.
 

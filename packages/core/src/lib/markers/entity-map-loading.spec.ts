@@ -378,6 +378,578 @@ describe('persist (offline-first)', () => {
   });
 });
 
+// =============================================================================
+// clear() vs reset() — the mutator/cache boundary
+// =============================================================================
+
+describe('mutators do not touch cache freshness', () => {
+  function cached(onLoad: () => Plant[], staleTime: string | number = '30m') {
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => {
+          calls++;
+          return of(onLoad());
+        }, { staleTime, lazy: true }),
+        selectId,
+      }),
+    });
+    return { tree, calls: () => calls };
+  }
+
+  it('clear() leaves the freshness key intact — load() stays guarded', async () => {
+    const { tree, calls } = cached(() => [P1, P2]);
+    await tree.$.plants.load();
+    expect(calls()).toBe(1);
+
+    tree.$.plants.clear();
+    expect(tree.$.plants.count()).toBe(0);
+    // `staleTime` records when we last synced with the server, not whether the
+    // local rows still match — emptying locally does not make the scope stale.
+    expect(tree.$.plants.loaded()).toBe(true);
+    expect(tree.$.plants.lastLoadedAt()).not.toBeNull();
+
+    await tree.$.plants.load();
+    expect(calls()).toBe(1);
+    expect(tree.$.plants.count()).toBe(0);
+  });
+
+  it('removeWhere(() => true) behaves identically to clear() — the rule is uniform', async () => {
+    const { tree, calls } = cached(() => [P1, P2]);
+    await tree.$.plants.load();
+    tree.$.plants.removeWhere(() => true);
+    expect(tree.$.plants.count()).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(true);
+    await tree.$.plants.load();
+    expect(calls()).toBe(1);
+  });
+
+  it('clear() + refresh() is the refetch-now path', async () => {
+    const { tree, calls } = cached(() => [P1, P2]);
+    await tree.$.plants.load();
+    tree.$.plants.clear();
+    await tree.$.plants.refresh();
+    expect(calls()).toBe(2);
+    expect(tree.$.plants.all()).toEqual([P1, P2]);
+  });
+});
+
+describe('reset()', () => {
+  it('empties the rows AND drops the cache entry, so the next load() fetches', async () => {
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => {
+          calls++;
+          return of([P1, P2]);
+        }, { staleTime: '30m', lazy: true }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    expect(calls).toBe(1);
+
+    tree.$.plants.reset();
+    expect(tree.$.plants.count()).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(false);
+    expect(tree.$.plants.lastLoadedAt()).toBeNull();
+    expect(tree.$.plants.params()).toBeUndefined();
+    expect(tree.$.plants.loading()).toBe(false);
+    // reset() does not fetch on its own.
+    expect(calls).toBe(1);
+
+    await tree.$.plants.load();
+    expect(calls).toBe(2);
+    expect(tree.$.plants.all()).toEqual([P1, P2]);
+  });
+
+  it('drops loaded() under swr, where invalidate() cannot', async () => {
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1, P2]), {
+          staleTime: '30m',
+          swr: true,
+          lazy: true,
+        }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+
+    tree.$.plants.invalidate();
+    expect(tree.$.plants.loaded()).toBe(true); // swr serves the last value
+
+    tree.$.plants.reset();
+    expect(tree.$.plants.count()).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('abandons an in-flight fetch — a late response cannot repopulate', async () => {
+    const d = deferred<Plant[]>();
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => d.promise, { lazy: true }),
+        selectId,
+      }),
+    });
+    const held = tree.$.plants.load();
+    expect(tree.$.plants.loading()).toBe(true);
+
+    tree.$.plants.reset();
+    expect(tree.$.plants.loading()).toBe(false);
+    // The caller-held promise settles rather than hanging forever.
+    await expect(held).resolves.toBeUndefined();
+
+    d.resolve([P1, P2]);
+    await d.promise;
+    await Promise.resolve();
+    expect(tree.$.plants.count()).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('clears a previous error', async () => {
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(
+          () => Promise.reject(new Error('boom')) as Promise<Plant[]>,
+          { lazy: true }
+        ),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    expect(tree.$.plants.error()).toBeInstanceOf(Error);
+    tree.$.plants.reset();
+    expect(tree.$.plants.error()).toBeNull();
+  });
+
+  it('fires onRemove for every entity, like clear()', async () => {
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1, P2]), { lazy: true }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    const removed: string[] = [];
+    tree.$.plants.tap({ onRemove: (id) => removed.push(String(id)) });
+    tree.$.plants.reset();
+    expect(removed.sort()).toEqual(['a', 'b']);
+  });
+
+  it('drops the persisted snapshot so hydrateThenRevalidate cannot seed it back', async () => {
+    const store = new Map<string, string>();
+    const adapter: EntityStorageAdapter = {
+      getItem: (k) => store.get(k) ?? null,
+      setItem: (k, v) => {
+        store.set(k, v);
+      },
+      removeItem: (k) => {
+        store.delete(k);
+      },
+    };
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1, P2]), {
+          lazy: true,
+          persist: { adapter, key: 'plants', hydrateThenRevalidate: true },
+        }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    expect(store.get('plants')).toBe(JSON.stringify([P1, P2]));
+
+    // clear() alone leaves the snapshot behind…
+    tree.$.plants.clear();
+    expect(store.get('plants')).toBe(JSON.stringify([P1, P2]));
+
+    // …reset() removes it.
+    tree.$.plants.reset();
+    await Promise.resolve();
+    expect(store.has('plants')).toBe(false);
+  });
+
+  it('scoped: resets the loaded scope, and refresh() still knows it', async () => {
+    let calls = 0;
+    const tree = signalTree({
+      customers: entityMap<Cust, string, Scope>({
+        load: loader(({ region }: Scope) => {
+          calls++;
+          return of(ROWS[region]);
+        }, { staleTime: '30m' }),
+        selectId: custId,
+      }),
+    });
+    await tree.$.customers.load({ region: 'west' });
+    expect(calls).toBe(1);
+    expect(tree.$.customers.all()).toEqual(WEST);
+
+    tree.$.customers.reset();
+    expect(tree.$.customers.count()).toBe(0);
+    expect(tree.$.customers.params()).toBeUndefined();
+
+    // `lastParams` survives, so a bare refresh() re-runs the same scope.
+    await tree.$.customers.refresh();
+    expect(calls).toBe(2);
+    expect(tree.$.customers.all()).toEqual(WEST);
+  });
+
+  it('scoped: reset() before any load is a no-op, not a crash', () => {
+    const tree = signalTree({
+      customers: entityMap<Cust, string, Scope>({
+        load: loader(({ region }: Scope) => of(ROWS[region])),
+        selectId: custId,
+      }),
+    });
+    expect(() => tree.$.customers.reset()).not.toThrow();
+    expect(tree.$.customers.loaded()).toBe(false);
+  });
+
+  // An ASYNC persist adapter (IndexedDB — the documented one) makes a load
+  // spend its first phase awaiting `getItem`, before any run exists. `runId`
+  // cannot cancel that phase: its continuation seeds the snapshot and then
+  // STARTS the run, which the bumped `runId` belongs to. Both cases below
+  // repopulated the collection after a `reset()` until `resetGen` was added.
+  it('abandons a SCOPED load still in its async hydrate window', async () => {
+    const gate = deferred<string | null>();
+    let calls = 0;
+    const adapter: EntityStorageAdapter = {
+      getItem: () => gate.promise,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    const tree = signalTree({
+      plants: entityMap<Plant, string, { region: string }>({
+        load: loader(
+          (_p: { region: string }) => {
+            calls++;
+            return of([P2]);
+          },
+          {
+            persist: { adapter, key: 'plants', hydrateThenRevalidate: true },
+          }
+        ),
+        selectId,
+      }),
+    });
+
+    const held = tree.$.plants.load({ region: 'west' });
+    expect(calls).toBe(0); // still awaiting getItem — no run exists yet
+
+    tree.$.plants.reset();
+    gate.resolve(JSON.stringify([P1])); // the snapshot reset() just disowned
+    await held;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tree.$.plants.count()).toBe(0);
+    expect(calls).toBe(0); // the queued fetch never starts
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('cancels a GLOBAL auto-load still in its async kickoff window', async () => {
+    const gate = deferred<string | null>();
+    let calls = 0;
+    const adapter: EntityStorageAdapter = {
+      getItem: () => gate.promise,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(
+          () => {
+            calls++;
+            return of([P2]);
+          },
+          { persist: { adapter, key: 'plants', hydrateThenRevalidate: true } }
+        ),
+        selectId,
+      }),
+    });
+    tree.$.plants.all(); // materialize
+    await Promise.resolve(); // kickoff runs, now awaiting getItem
+
+    tree.$.plants.reset();
+    gate.resolve(JSON.stringify([P1]));
+    await gate.promise;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tree.$.plants.count()).toBe(0);
+    expect(calls).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+
+  it('cancels a non-lazy auto-load that has not reached its kickoff microtask', async () => {
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => {
+          calls++;
+          return of([P1, P2]);
+        }),
+        selectId,
+      }),
+    });
+    tree.$.plants.all(); // materialize — kickoff queued, not yet run
+    tree.$.plants.reset();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // reset() means "forget this collection"; an auto-load firing immediately
+    // afterwards would contradict it. An explicit load() still works.
+    expect(calls).toBe(0);
+    expect(tree.$.plants.count()).toBe(0);
+    await tree.$.plants.load();
+    expect(calls).toBe(1);
+    expect(tree.$.plants.count()).toBe(2);
+  });
+
+  it('a blocking beforeRemove aborts the WHOLE reset, not just the rows', async () => {
+    const store = new Map<string, string>();
+    const adapter: EntityStorageAdapter = {
+      getItem: (k) => store.get(k) ?? null,
+      setItem: (k, v) => {
+        store.set(k, v);
+      },
+      removeItem: (k) => {
+        store.delete(k);
+      },
+    };
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1, P2]), {
+          staleTime: '30m',
+          lazy: true,
+          persist: { adapter, key: 'plants' },
+        }),
+        selectId,
+        hooks: {
+          beforeRemove: () => {
+            throw new Error('pinned');
+          },
+        },
+      }),
+    });
+    await tree.$.plants.load();
+
+    expect(() => tree.$.plants.reset()).toThrow('pinned');
+    // Rows intact — and so is everything underneath them. A cache dropped out
+    // from under a collection that still holds its rows is the half-state this
+    // ordering exists to prevent.
+    expect(tree.$.plants.count()).toBe(2);
+    expect(tree.$.plants.loaded()).toBe(true);
+    expect(tree.$.plants.lastLoadedAt()).not.toBeNull();
+    await Promise.resolve();
+    expect(store.get('plants')).toBe(JSON.stringify([P1, P2]));
+  });
+
+  it('survives an adapter that throws on removeItem', async () => {
+    const adapter: EntityStorageAdapter = {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => {
+        throw new Error('storage full');
+      },
+    };
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(() => of([P1, P2]), {
+          lazy: true,
+          persist: { adapter, key: 'plants' },
+        }),
+        selectId,
+      }),
+    });
+    await tree.$.plants.load();
+    expect(() => tree.$.plants.reset()).not.toThrow();
+    expect(tree.$.plants.count()).toBe(0);
+    expect(tree.$.plants.loaded()).toBe(false);
+  });
+});
+
+// =============================================================================
+// The async-adapter hydration window
+// =============================================================================
+//
+// With an async persist adapter (IndexedDB — the documented one) a load spends
+// its first phase awaiting `getItem`, before any run exists. Nothing recorded
+// that a load was underway during that window, and two defects fell out of it.
+
+describe('hydrate window (async persist adapter) is part of the load', () => {
+  function asyncStore(gate: Promise<string | null>) {
+    const adapter: EntityStorageAdapter = {
+      getItem: () => gate,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    return adapter;
+  }
+
+  it('single-flight holds: two concurrent load(sameScope) issue ONE fetch', async () => {
+    const gate = deferred<string | null>();
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string, { region: string }>({
+        load: loader(
+          (_p: { region: string }) => {
+            calls++;
+            return of([P2]);
+          },
+          {
+            persist: {
+              adapter: asyncStore(gate.promise),
+              key: 'plants',
+              hydrateThenRevalidate: true,
+            },
+          }
+        ),
+        selectId,
+      }),
+    });
+
+    // The scope is marked hydrated synchronously, so before the fix the second
+    // caller skipped hydration and ran straight into its own fetch.
+    const a = tree.$.plants.load({ region: 'west' });
+    const b = tree.$.plants.load({ region: 'west' });
+    gate.resolve(null);
+    await Promise.all([a, b]);
+    expect(calls).toBe(1);
+  });
+
+  it('refresh() during the window joins the same flight', async () => {
+    const gate = deferred<string | null>();
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string, { region: string }>({
+        load: loader(
+          (_p: { region: string }) => {
+            calls++;
+            return of([P2]);
+          },
+          {
+            persist: {
+              adapter: asyncStore(gate.promise),
+              key: 'plants',
+              hydrateThenRevalidate: true,
+            },
+          }
+        ),
+        selectId,
+      }),
+    });
+    const a = tree.$.plants.load({ region: 'west' });
+    const b = tree.$.plants.refresh({ region: 'west' });
+    gate.resolve(null);
+    await Promise.all([a, b]);
+    expect(calls).toBe(1);
+  });
+
+  it('a DIFFERENT scope during the window still gets its own fetch', async () => {
+    const gate = deferred<string | null>();
+    const seen: string[] = [];
+    const tree = signalTree({
+      plants: entityMap<Plant, string, { region: string }>({
+        load: loader(
+          (p: { region: string }) => {
+            seen.push(p.region);
+            return of([P2]);
+          },
+          {
+            persist: {
+              adapter: asyncStore(gate.promise),
+              key: 'plants',
+              hydrateThenRevalidate: true,
+            },
+          }
+        ),
+        selectId,
+      }),
+    });
+    const a = tree.$.plants.load({ region: 'west' });
+    const b = tree.$.plants.load({ region: 'east' });
+    gate.resolve(null);
+    await Promise.all([a, b]);
+    await Promise.resolve();
+    // Dedup is per scope — a second scope must never be swallowed by the first.
+    expect(seen.sort()).toEqual(['east', 'west']);
+  });
+
+  it('the seed cannot clobber fresh rows fetched during the window', async () => {
+    const gate = deferred<string | null>();
+    const fetchGate = deferred<Plant[]>();
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(
+          () => {
+            calls++;
+            return fetchGate.promise;
+          },
+          {
+            staleTime: '30m',
+            persist: {
+              adapter: asyncStore(gate.promise),
+              key: 'plants',
+              hydrateThenRevalidate: true,
+            },
+          }
+        ),
+        selectId,
+      }),
+    });
+    tree.$.plants.all(); // materialize
+    await Promise.resolve(); // auto-load kickoff → awaiting getItem
+
+    const appLoad = tree.$.plants.load(); // app asks during the window
+    gate.resolve(JSON.stringify([P1])); // the STALE persisted snapshot
+    fetchGate.resolve([P2]); // the FRESH server rows
+    await appLoad;
+    await Promise.resolve();
+
+    // Before the fix the racing fetch settled first and the snapshot landed on
+    // top of it: rows went stale while `loaded()` reported the fresh load, and
+    // under a real staleTime nothing ever revalidated it away.
+    expect(calls).toBe(1);
+    expect(tree.$.plants.all()).toEqual([P2]);
+    expect(tree.$.plants.loaded()).toBe(true);
+  });
+
+  it('same, with a synchronous loader (seed resolves last)', async () => {
+    const gate = deferred<string | null>();
+    let calls = 0;
+    const tree = signalTree({
+      plants: entityMap<Plant, string>({
+        load: loader(
+          () => {
+            calls++;
+            return of([P2]);
+          },
+          {
+            staleTime: '30m',
+            persist: {
+              adapter: asyncStore(gate.promise),
+              key: 'plants',
+              hydrateThenRevalidate: true,
+            },
+          }
+        ),
+        selectId,
+      }),
+    });
+    tree.$.plants.all();
+    await Promise.resolve();
+    const appLoad = tree.$.plants.load();
+    gate.resolve(JSON.stringify([P1]));
+    await appLoad;
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    expect(tree.$.plants.all()).toEqual([P2]);
+  });
+});
+
 describe('entityMap({ load }) — scoped (per-params freshness)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -896,6 +1468,10 @@ describe('entityMap loading — typing (compile-time)', () => {
       global.$.c.load({ region: 'west' });
       // @ts-expect-error plain entityMap has no load()
       plain.$.c.load();
+      void scoped.$.c.reset();
+      void global.$.c.reset();
+      // @ts-expect-error plain entityMap has no reset() — clear() is its reset
+      plain.$.c.reset();
     }
 
     expect(scoped.$.c.params()).toBeUndefined();

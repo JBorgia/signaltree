@@ -1,3 +1,90 @@
+## Unreleased (14.1.3)
+
+### Fixed — the async-adapter hydration window was outside the load
+
+Found while auditing the `reset()` work below, then confirmed against `main`:
+both defects predate it.
+
+With an **async** `persist` adapter — IndexedDB, the documented one — a
+`hydrateThenRevalidate` load spends its first phase awaiting the adapter's
+`getItem`. Nothing recorded that a load was underway during that window, and
+two things went wrong in it:
+
+- **Single-flight did not hold.** A second `load(sameScope)` saw no flight and
+  ran straight into its own fetch — the scope is marked hydrated synchronously,
+  so it skipped hydration and raced ahead. Two requests, against a documented
+  "N callers = one fetch". Because IndexedDB is async by nature, this was the
+  ordinary startup path for offline-first collections, not an edge case.
+- **The persisted snapshot could overwrite fresh server data.** When the racing
+  fetch settled BEFORE `getItem` resolved, the seed landed on top of it: rows
+  reverted to what was on disk while `lastLoadedAt`/`loaded()` still reported
+  the fresh load. Under a real `staleTime` nothing revalidates, so the
+  collection served stale rows and called them loaded — measured, and the more
+  damaging of the two.
+
+The hydration chain is now published as the in-flight load, which fixes both:
+concurrent callers dedup onto it, so the seed always precedes the one fetch it
+is meant to precede. Dedup stays per scope — a different scope requested during
+the window still gets its own fetch.
+
+One consequence worth knowing: `load()` issued during a hydration window now
+resolves when that whole load finishes, so its promise may be waiting on
+storage rather than the network. `loading()` is unchanged and still reports only
+the fetch.
+
+### Added — `reset()` on the cache-aware `entityMap` loader surface
+
+`entityMap({ load: loader(…) })` gains `.reset()`: empty the rows AND drop the
+cache entry.
+
+The question that produced it: does `entities.clear()` reset the loader's
+freshness key, so the next `load()` refetches? It does not, and the answer is
+not a bug. `staleTime` records **when this collection last synced with the
+server**, not whether the local rows still match it, so no mutator touches it —
+`clear()` and `removeWhere(() => true)` behave identically, and a local delete
+must never provoke a refetch. That rule was correct and written down nowhere:
+no RFC line, no guide, no test covered `clear()` on a loading collection. It is
+now stated on `clear()` itself, in the cookbook, and pinned by tests.
+
+What was genuinely missing is the other intent. Expressing "forget this
+collection" required `clear()` + `refresh()`, and even that could not do three
+things:
+
+- **Abandon an in-flight fetch.** A request already in flight at `clear()` time
+  settles and `setAll`s the rows straight back into the collection you just
+  emptied.
+- **Say "there is nothing here" under `swr`.** `loaded()` is
+  `lastLoadedAt !== null && (swr || !invalidated())`, so `invalidate()` leaves
+  it TRUE for an swr collection — it can mark stale, but it cannot unload.
+- **Drop the persisted snapshot.** `clear()` does not write through, so
+  `hydrateThenRevalidate` seeds the deleted rows back on next materialize.
+
+`reset()` does all of it: abandons the in-flight run (resolving the caller's
+promise rather than leaving it dangling, same shape as the destroy hook), fires
+`onRemove` per entity, nulls `lastLoadedAt` / `hasEverLoaded` — the pair
+`clearOnParamsChange` already uses, so `loaded()` drops in both swr modes —
+clears the error, and removes the current scope's persisted entry. It does not
+fetch; the next `load()` does, unguarded. `lastParams` survives, so a bare
+`refresh()` after a `reset()` still knows its scope.
+
+Two ordering details are load-bearing and tested. Rows are cleared FIRST, so a
+`beforeRemove` that blocks throws with the whole reset aborted rather than
+half-applied — the alternative leaves a collection holding its rows on top of a
+cache that has already been deleted. And cancellation needs a second counter
+beyond the run id: with an **async** persist adapter (IndexedDB, the documented
+one) a load spends its first phase awaiting `getItem`, before any run exists, so
+bumping the run id cannot reach it — that continuation would go on to seed the
+snapshot `reset()` just deleted and start a fetch into the collection it just
+emptied. A reset generation now covers the pre-run phases: the hydration window
+and a non-lazy collection's not-yet-run auto-load.
+
+It lives on the loader surface, not on `EntitySignal`, for the reason above: a
+mutator that carried cache semantics would have to carry them consistently into
+`removeMany`/`removeWhere`, at which point deleting the last row locally
+triggers a refetch. Plain `entityMap()` collections are unaffected and pay
+nothing — `clear()` is their reset. `reset()` is a writer, so it is absent from
+`ReadonlyEntityLoaderSurface` alongside `load`/`refresh`/`invalidate`.
+
 ## 14.1.2 (2026-08-17)
 
 Patch release. One class of defect, found by auditing what the public types

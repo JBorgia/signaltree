@@ -1003,7 +1003,18 @@ export interface EntitySignal<E, K extends string | number = string> {
   removeOne(id: K, opts?: MutationOptions): void;
   removeMany(ids: K[], opts?: MutationOptions): void;
   removeWhere(predicate: (entity: E) => boolean): number;
-  /** Empty the collection. There is no `removeAll` alias — this is the one name. */
+  /**
+   * Empty the collection. There is no `removeAll` alias — this is the one name.
+   *
+   * On a cache-aware collection (`entityMap({ load: loader(…) })`) this does
+   * NOT drop the cache entry: `loaded()` stays true, `lastLoadedAt()` keeps its
+   * timestamp, and the next `load()` is still guarded by `staleTime`. That is
+   * deliberate and shared by every mutator — `staleTime` records when the
+   * collection last synced with the server, not whether the local rows still
+   * match it, so `clear()` and `removeWhere(() => true)` behave identically and
+   * a local delete never provokes a refetch. Use `reset()` (loader surface) to
+   * empty the rows AND drop the cache entry, or `refresh()` to refetch now.
+   */
   clear(): void;
   setAll(entities: E[], opts?: AddOptions<E, K>): void;
 

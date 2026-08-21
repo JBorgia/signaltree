@@ -178,6 +178,7 @@ export type _ReadonlyViewChecks = [
   Expect<NotOffered<ROCached, 'loadOrThrow'>>,
   Expect<NotOffered<ROCached, 'refresh'>>,
   Expect<NotOffered<ROCached, 'invalidate'>>,
+  Expect<NotOffered<ROCached, 'reset'>>,
 
   // derived merged INTO a marker node survives the readonly view
   // (readonly×merged-derived gap, M3): the extra key is kept as a Signal…

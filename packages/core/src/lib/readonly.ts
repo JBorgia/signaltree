@@ -60,8 +60,9 @@ export const ENTITY_READERS = [
 
 /**
  * Readers on {@link EntityLoaderSurface}. `load`/`loadOrThrow`/`refresh`/
- * `invalidate` all mutate loader state (they fetch, or mark the scope stale)
- * and are deliberately absent — triggering a load is an Ops-service concern.
+ * `invalidate`/`reset` all mutate loader state (they fetch, mark the scope
+ * stale, or drop the cache entry outright) and are deliberately absent —
+ * triggering a load is an Ops-service concern.
  */
 export const ENTITY_LOADER_READERS = [
   'loading',

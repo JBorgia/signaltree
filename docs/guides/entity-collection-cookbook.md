@@ -18,9 +18,37 @@ real-time push — so you don't reinvent the interplay.
 | "Is this collection fresh enough to skip a call?"                              | `entityMap`'s `staleTime`                                    | Application-level freshness, not transport-level                   |
 | "N subsystems asked to load — send one request"                                | `entityMap`'s `.load()` guard                                | Single-flight coalescing                                           |
 | "The server says this data changed — refetch"                                  | `invalidate()` / `invalidateTag()` + your SSE/SignalR wiring | Push freshness                                                     |
+| "Forget this collection entirely — rows and cache"                             | `reset()`                                                    | Logout, tenant switch, "start over"                                |
 
 The rule of thumb: **`staleTime` decides whether to _ask_; the ETag decides whether the answer
 costs bytes.** They stack — a re-fetch that the browser satisfies with a `304` is nearly free.
+
+### Mutations do not affect freshness
+
+`staleTime` records **when this collection last synced with the server** — not whether the local
+rows still match it. So every mutator, `clear()` included, leaves the freshness key alone:
+
+```typescript
+tree.$.plants.clear();
+tree.$.plants.loaded(); // still true
+await tree.$.plants.load(); // no-op — still fresh, collection stays empty
+```
+
+That is deliberate and uniform: `clear()` and `removeWhere(() => true)` behave identically, and a
+local delete must never provoke a refetch. When you want the other intent, say so:
+
+| You want                                | Call                                            |
+| --------------------------------------- | ----------------------------------------------- |
+| Refetch now, keep rows until it settles | `refresh()`                                     |
+| Empty now, then refetch                 | `clear()` then `refresh()`                      |
+| Mark stale, fetch on next read          | `invalidate()`                                  |
+| Forget everything — rows _and_ cache    | `reset()`                                       |
+
+`reset()` is on the loader surface, so it exists only on cache-aware collections. It empties the
+rows (firing `onRemove` per entity), nulls `lastLoadedAt` so `loaded()` goes false even under
+`swr`, clears any error, **abandons an in-flight fetch** so a late response cannot repopulate what
+you just emptied, and **removes the current scope's persisted snapshot** so `hydrateThenRevalidate`
+cannot seed the deleted rows back. It does not fetch — the next `load()` does, unguarded.
 
 ## 1. Baseline: a self-loading collection
 

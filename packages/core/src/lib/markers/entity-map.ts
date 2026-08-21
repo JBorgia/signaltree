@@ -181,8 +181,8 @@ export type DefaultKey<E> = E extends { id: infer I extends string | number }
  *
  * Passing a `load` — as a `loader()` feature (preferred) or a raw function
  * (deprecated, [ST2004]) — makes the collection **cache-aware**: it loads
- * itself, exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.loading()/
- * .loaded()/.error()/.lastLoadedAt()/.params()`, guards refetches by
+ * itself, exposes `.load()/.loadOrThrow()/.refresh()/.invalidate()/.reset()/
+ * .loading()/.loaded()/.error()/.lastLoadedAt()/.params()`, guards refetches by
  * `staleTime`, coalesces concurrent loads, and (with a loader that declares a
  * param) is scoped per `params` (one scope retained at a time — not a multi-key
  * cache). Wrapping with `loader()` keeps the loader machinery tree-shakeable —

@@ -166,6 +166,12 @@ export interface EntityLoaderSurface<P = void> {
    * Guarded load: no-op if fresh OR the same scope is already in flight.
    * If the materializing injector is destroyed while a load is in flight,
    * the promise resolves (rows are dropped, `loading()` flips false).
+   *
+   * "In flight" includes the hydration phase: with an async `persist` adapter
+   * and `hydrateThenRevalidate`, a load first awaits the adapter's `getItem`,
+   * and a caller arriving during that window joins it rather than starting a
+   * second fetch. So the returned promise can be waiting on storage rather
+   * than the network — `loading()` still reports only the fetch.
    */
   load(params: P): Promise<void>;
   /**
@@ -181,6 +187,34 @@ export interface EntityLoaderSurface<P = void> {
   refresh(params?: P): Promise<void>;
   /** Mark the current scope stale. Does not fetch — the next `load()` does. */
   invalidate(): void;
+  /**
+   * Forget everything about this collection: empty the rows AND drop the cache
+   * entry. Does not fetch — the next `load()` does, unconditionally.
+   *
+   * This is deliberately NOT what `clear()` does. Mutators never touch cache
+   * freshness: `staleTime` records *when this collection last synced with the
+   * server*, not whether the local rows still match it, so `clear()`,
+   * `removeWhere(() => true)` and `removeMany(ids())` all leave the freshness
+   * key intact and behave identically. That consistency is the point — a local
+   * delete must not provoke a refetch. `reset()` is the explicit opt-in for the
+   * other intent, and it does three things `clear()` structurally cannot:
+   *
+   * - **Abandons any in-flight fetch.** After a bare `clear()` a request that
+   *   was already in flight settles and `setAll`s the rows straight back. This
+   *   covers the phase before a request exists too: an async persist adapter's
+   *   hydration window, and a non-lazy collection's not-yet-run auto-load.
+   * - **Resets the freshness key** (`lastLoadedAt` → null, `loaded()` → false)
+   *   rather than only marking it stale — `invalidate()` leaves `loaded()`
+   *   TRUE under `swr: true`, so it cannot express "there is nothing here".
+   * - **Drops the persisted snapshot** for the current scope, so
+   *   `hydrateThenRevalidate` does not seed the deleted rows back.
+   *
+   * The in-memory cache is single-scope (RFC 0003 §5), so this resets the
+   * loaded scope and its persisted entry only; other scopes' persisted
+   * snapshots survive and still hydrate when you load them. `lastParams` is
+   * kept, so a bare `refresh()` after `reset()` still knows its scope.
+   */
+  reset(): void;
   /** True while a fetch is in flight. */
   readonly loading: Signal<boolean>;
   /** True once loaded and considered fresh (see `swr`). */
@@ -311,6 +345,15 @@ export function attachLoader<
   let hasInFlight = false;
   let inFlightResolve: (() => void) | null = null;
   let runId = 0;
+  /**
+   * Bumped by `reset()`. `runId` alone cannot cancel a load that has not
+   * reached `runLoad` yet: with an ASYNC persist adapter (IndexedDB — the
+   * documented one) a load spends its first phase awaiting `getItem`, and that
+   * continuation goes on to seed the snapshot and START a fresh run, which
+   * `runId` then belongs to. Deferred work captures this generation and bails
+   * if `reset()` moved it.
+   */
+  let resetGen = 0;
   let currentSub: Subscription | null = null;
   let destroyed = false;
 
@@ -545,6 +588,68 @@ export function attachLoader<
     }
   }
 
+  /**
+   * Publish a hydrate-then-fetch chain as THE in-flight load for `params`.
+   *
+   * With an async persist adapter (IndexedDB) a load spends its first phase
+   * awaiting `getItem`, and until this was published nothing recorded that a
+   * load was underway. Two defects fell out of that gap, both measured:
+   *
+   * 1. **Single-flight did not hold.** A second `load(sameScope)` during the
+   *    window saw no flight, skipped hydration (the scope is marked hydrated
+   *    synchronously) and ran straight to its own fetch — two requests for the
+   *    documented "N callers = one fetch". With IndexedDB, async by nature,
+   *    that is the ordinary startup path, not an edge case.
+   * 2. **The snapshot clobbered fresh data.** When the racing fetch settled
+   *    BEFORE `getItem` resolved, the seed landed on top of it and overwrote
+   *    server rows with disk rows — while `lastLoadedAt`/`loaded()` still
+   *    reported the fresh load. Under a real `staleTime` nothing revalidates,
+   *    so the collection serves stale rows and calls them loaded.
+   *
+   * Publishing the whole chain fixes both: concurrent callers dedup onto it,
+   * so the seed always precedes the one fetch it is meant to precede.
+   */
+  function trackHydration(params: P, chain: Promise<void>): Promise<void> {
+    inFlight = chain;
+    hasInFlight = true;
+    inFlightParams = params;
+    void chain.finally(() => {
+      // `runLoad` installs its own promise mid-chain, and a different scope may
+      // have superseded us — only retract what is still ours.
+      if (inFlight === chain) {
+        inFlight = null;
+        hasInFlight = false;
+      }
+    });
+    return chain;
+  }
+
+  /**
+   * The async-adapter half of hydrate-then-revalidate, shared by `beginLoad`
+   * (scoped) and the auto-load `kickoff` (global). Runs `runLoad` directly
+   * rather than re-entering `load()`: the chain is registered as the in-flight
+   * load, so `load()` would dedup onto it and the chain would await itself.
+   */
+  function hydrateThenRun(
+    params: P,
+    got: Promise<string | null>
+  ): Promise<void> {
+    const gen = resetGen;
+    return trackHydration(
+      params,
+      got
+        .then(
+          (raw) => {
+            if (gen === resetGen) seedFromSnapshot(raw);
+          },
+          () => undefined
+        )
+        .then(() =>
+          gen === resetGen && !destroyed ? runLoad(params) : undefined
+        )
+    );
+  }
+
   function beginLoad(params: P): Promise<void> {
     lastParams = params;
     maybeClearOnParamsChange(params);
@@ -558,11 +663,10 @@ export function attachLoader<
         } catch {
           got = null;
         }
-        if (got instanceof Promise) {
-          return got
-            .then((raw) => seedFromSnapshot(raw), () => undefined)
-            .then(() => runLoad(params));
-        }
+        // Async adapter: mid-hydration, not yet in flight. `reset()` must be
+        // able to abandon this window (it seeds a snapshot and starts a fetch),
+        // and concurrent callers must dedup onto it — see `hydrateThenRun`.
+        if (got instanceof Promise) return hydrateThenRun(params, got);
         seedFromSnapshot(got);
       }
     }
@@ -605,23 +709,92 @@ export function attachLoader<
     invalidated.set(true);
   }
 
+  /** See {@link EntityLoaderSurface.reset}. */
+  function reset(): void {
+    // Rows FIRST, and deliberately so. `clear()` pre-flights every
+    // `beforeRemove` before touching storage, so a hook that blocks throws with
+    // the collection still whole. Running it first makes that throw abort the
+    // WHOLE reset — abandoning the in-flight fetch or deleting the persisted
+    // snapshot ahead of it would leave a blocked reset half-applied: rows and
+    // freshness intact, but the cache underneath them gone. Also fires
+    // `onRemove` per entity (14.1.2), so entity-owned resources tear down
+    // exactly as they do on any other removal.
+    entity.clear();
+
+    // Abandon any in-flight run. Bumping `runId` makes both settle callbacks
+    // no-op (they guard on `myRun !== runId`), which is what stops a late
+    // response from repopulating the collection we just emptied. The
+    // caller-held promise is RESOLVED, not left dangling — same reasoning and
+    // same shape as the `onDestroy` hook above. `resetGen` covers the phase
+    // BEFORE a run exists — an async persist adapter's hydration window, and
+    // the not-yet-run auto-load kickoff — which `runId` cannot reach.
+    runId++;
+    resetGen++;
+    currentSub?.unsubscribe();
+    currentSub = null;
+    const pendingResolve = inFlightResolve;
+    inFlight = null;
+    hasInFlight = false;
+    inFlightResolve = null;
+    inFlightParams = undefined;
+
+    // The full freshness reset, not `invalidate()`: nulling `lastLoadedAt`
+    // trips `isStale`'s first branch unconditionally and drops `loaded()` in
+    // BOTH swr modes. Same pair `maybeClearOnParamsChange` already uses.
+    // `lastParams` is deliberately kept — a bare `refresh()` after a `reset()`
+    // must still know its scope.
+    lastLoadedAtSignal.set(null);
+    hasEverLoaded = false;
+    loadedParams = undefined;
+    errorSignal.set(null);
+    loadingSignal.set(false);
+    invalidated.set(false);
+    paramsSignal.set(undefined);
+
+    // Drop the persisted snapshot for the loaded scope, so an offline-first
+    // collection cannot seed the deleted rows back. Skipped for a scoped
+    // collection that never loaded — there is no scope, and
+    // `scopeStorageKey(undefined)` would name a `key::undefined` entry that was
+    // never written. Best-effort, exactly like `writeThrough`: a storage
+    // failure must never break the reset. The scope's slot in the
+    // `${key}::__scopes` index is deliberately left alone — it now points at a
+    // missing key, `getItem` returns null, nothing seeds, and `maxScopes` GC
+    // reclaims the slot in due course.
+    if (persist && (!scoped || lastParams !== undefined)) {
+      try {
+        void Promise.resolve(
+          persist.adapter.removeItem(scopeStorageKey(lastParams as P))
+        ).catch(() => undefined);
+      } catch {
+        // Persistence is best-effort; never let a storage failure break reset.
+      }
+    }
+    // Re-arm offline-first seeding. The current scope's snapshot is gone, so it
+    // seeds nothing and loads fresh; other scopes hydrate as before.
+    hydratedScopes.clear();
+
+    pendingResolve?.();
+  }
+
   // Deferred initial work (NG0600-safe: no signal writes at materialize).
   if (!lazy) {
     const kickoff = (): void => {
       if (destroyed) return;
+      // `reset()` before the kickoff microtask ran cancels the auto-load: the
+      // user said forget this collection, and an auto-load that fires straight
+      // afterwards contradicts that. The next explicit `load()` fetches.
+      if (resetGen !== 0) return;
       if (persist && persist.hydrateThenRevalidate && !scoped) {
         try {
           const got = persist.adapter.getItem(scopeStorageKey(undefined as P));
           if (got instanceof Promise) {
-            void got.then(
-              (raw) => {
-                seedFromSnapshot(raw);
-                if (!destroyed) void load(undefined as P);
-              },
-              () => {
-                if (!destroyed) void load(undefined as P);
-              }
-            );
+            // Same window, same treatment as the scoped path: publishing the
+            // chain is what stops an app `load()` issued during the auto-load's
+            // hydration from racing ahead into a second fetch — and, when that
+            // fetch settled first, from having its fresh rows overwritten by
+            // the snapshot landing afterwards.
+            lastParams = undefined as P;
+            void hydrateThenRun(undefined as P, got);
             return;
           }
           seedFromSnapshot(got);
@@ -641,6 +814,7 @@ export function attachLoader<
   target.loadOrThrow = loadOrThrow;
   target.refresh = refresh;
   target.invalidate = invalidate;
+  target.reset = reset;
   Object.defineProperty(target, 'loading', {
     value: loadingSignal.asReadonly(),
   });

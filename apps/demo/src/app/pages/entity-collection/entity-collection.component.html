@@ -364,6 +364,76 @@
     <st-code-tabs [files]="p6Code" />
   </section>
 
+  <!-- ================= PANEL 7 — clear() vs reset() ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">07</span>
+      <div>
+        <h2>clear() vs reset(): emptying rows is not dropping the cache</h2>
+        <p>
+          <code>staleTime</code> records when the collection last <em>synced with the
+          server</em> — not whether the local rows still match it. So
+          <code>clear()</code>, like every mutator, leaves the cache entry alone: the
+          collection is empty <em>and</em> still fresh. <code>reset()</code> is the
+          explicit “forget this collection”. Load both, empty both, then load again.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz tag">
+      @for (col of [
+        { key: 'clear', label: '🧹 clear()', count: p7.$.viaClear.count(), loaded: p7.$.viaClear.loaded(), seeded: p7.$.viaClear.lastLoadedAt() !== null, fetches: p7ClearFetches() },
+        { key: 'reset', label: '♻️ reset()', count: p7.$.viaReset.count(), loaded: p7.$.viaReset.loaded(), seeded: p7.$.viaReset.lastLoadedAt() !== null, fetches: p7ResetFetches() }
+      ]; track col.key) {
+        <div class="tagcard" [class.stale]="col.seeded && !col.loaded" [class.fresh]="col.loaded">
+          <div class="tagcard-head">
+            <span class="tagcard-title">{{ col.label }}</span>
+            @if (!col.seeded) {
+              <span class="pill-badge idle">cache empty</span>
+            } @else if (col.loaded) {
+              <span class="pill-badge ok">fresh</span>
+            } @else {
+              <span class="pill-badge bad">stale</span>
+            }
+          </div>
+          <div class="tagcard-body">
+            <span class="tagcard-count">{{ col.count }} rows</span>
+            <span class="tagcard-meta">
+              lastLoadedAt: {{ col.seeded ? 'set' : 'null' }} · fetches: {{ col.fetches }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (p7Emptied() && !p7Reloaded()) {
+      <div class="callout center">
+        Both are empty — but <code>clear()</code> still reports
+        <strong>fresh</strong> with <code>lastLoadedAt</code> set. Now press
+        <code>load()</code> on both.
+      </div>
+    }
+    @if (p7Reloaded()) {
+      <div class="callout center">
+        <code>clear()</code> → <strong>{{ p7.$.viaClear.count() }} rows</strong>, still
+        {{ p7ClearFetches() }} fetch(es): <code>load()</code> was a no-op, the window
+        hasn’t expired. <code>reset()</code> →
+        <strong>{{ p7.$.viaReset.count() }} rows</strong> after
+        {{ p7ResetFetches() }} fetches. Use <code>clear()</code> +
+        <code>refresh()</code> to empty and refetch without dropping the cache.
+      </div>
+    }
+
+    <div class="actions">
+      <button class="btn primary" (click)="loadP7()">1 · Load both</button>
+      <button class="btn warn" (click)="emptyP7()">2 · clear() ┃ reset()</button>
+      <button class="btn ghost" (click)="reloadP7()">3 · load() both</button>
+      <button class="btn ghost" (click)="startOverP7()">Start over</button>
+    </div>
+
+    <st-code-tabs [files]="p7Code" />
+  </section>
+
   <footer class="foot">
     <p>
       Full recipe (HTTP-cache / ETag interplay + SSE/SignalR wiring):
