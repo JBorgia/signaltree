@@ -6310,6 +6310,7 @@ A gate is not exempt from the rules it enforces.
 >         Both gates run, three seats. See the U5b-D disposition record.
 > U5b-E   NOT OPENED — and NOT OPENABLE AS WORDED. Five contaminants, none
 >         implementer-repairable. NO SEAT RAN, no verdict on the function.
+>         OPENS ONLY on a NEW HUMAN-AUTHORED candidate statement (author, 2026-08-20).
 > ```
 >
 > **THE FAMILY IS EXHAUSTED UNDER THIS PREREGISTRATION.** Every row is terminal or
@@ -7659,6 +7660,21 @@ being decided by vocabulary, and it **also** made a defence unstateable. A row t
 forbids every name for the thing it is testing has bought neutrality at the price of
 decidability.
 
+```text
+⚠️ THE TENSION IS RESOLVED FOR THIS ROW BY AUTHOR DECISION 2026-08-20, AGAINST THE
+   FIRST HALF. Two clauses of that decision bear on it: the naming rule
+   ("incumbent-neutral does not mean function-anonymous") and its explicit finding
+   that U5b-D "supplied no sufficiently named semantic proposition to defend". So
+   the unnamedness is a DEFECT IN THE CANDIDATE, not a purchase of neutrality.
+
+   AND THE ROW'S TERMINAL ISSUE IS THEREFORE TWO-PART: the instrument guaranteed the
+   null AND the row supplied no sufficiently named semantic proposition to defend.
+   NEITHER RESCUES THE OTHER — the corrected D1's requirement (1) is not satisfiable
+   by this candidate, so repairing the procedure would not make the row answerable.
+
+   DISPOSITION UNDISTURBED. Not reopened, no seat re-run, no rewording.
+```
+
 ### WHICH DISPOSITION BRANCH FIRED — both readings argued, then chosen
 
 All three seats independently located the row's decision on the same unmade grant:
@@ -8400,6 +8416,17 @@ THE CHARGE
   name a concrete workflow that becomes IMPOSSIBLE — not harder, not uglier, not
   more verbose — if the function does not exist.
 
+  ⚠️ WIDENED 2026-08-20: "becomes IMPOSSIBLE OR WRONG".
+  The author stated the widening at requirement (2) OF D1. It REACHES THIS CHARGE
+  because the charge is the ONLY channel through which a casualty is produced — a
+  defender held to IMPOSSIBLE here could never produce the casualty (2) contemplates,
+  which would scope the author's widening out of operation entirely.
+  ENTAILED, and recorded rather than smuggled: D3 is defined over CASUALTIES, so
+  widening what counts as one reaches D3 too. That is a consequence of the decision,
+  not a separate widening, and it is disclosed here so nobody has to rediscover it.
+  "Not harder / not uglier / not more verbose" is UNCHANGED and still excludes
+  ergonomics.
+
 ADMISSIBLE OUTPUT
   a named casualty workflow, expressible in the permitted vocabulary
   a demonstration that a rival construction the killers rely on is unavailable
@@ -8434,9 +8461,35 @@ DEFENDER AND KILLERS REACH THE SAME MISSING GRANT
 ```
 
 ```text
+⚠️ AND THE RULE THAT GOVERNS ALL THREE BRANCHES — author, 2026-08-20:
+
+    OPPOSITION FAILURE ALONE IS NEVER SURVIVAL.
+
+A candidate does not survive because the killers failed to defeat it, because a
+rival was disqualified, because the premises are silent, or because the defence
+was not refuted. Survival requires the POSITIVE burden to be discharged: a named
+workflow, impossible or wrong without the function, possible with it, supplied by
+THIS candidate. Absence of refutation is not establishment — in either direction.
+```
+
+```text
 STILL FORBIDDEN, and the charter does not soften it:
   the defender's report is EVIDENCE ABOUT THE DEFENCE. It is not a premise, not a
   prior for any sibling row, and not citable as "the defender established X".
+
+⚠️ NARROWED 2026-08-20. The third clause is the ONLY text in this ledger that can be
+  READ as saying the defender may not establish survival — read literally it bars the
+  seat from establishing anything at all. Nothing SAYS that, and nothing proposed
+  removing D1; this clause is over-broad, not wrong in intent.
+  WHAT IS FORBIDDEN, and it is unchanged: citing a defender report as establishing a
+  fact about the ARCHITECTURE — "the defender established that a shared fact must be
+  retained". It remains not a premise and not a sibling prior.
+
+IMPLEMENTER CONSTRUCTION, FLAGGED AND STRIKEABLE: the author's decision addresses
+  what D1 REQUIRES, not how a D1 is cited, and supplied no citation formula. The
+  wording below is the implementer's minimal reading of a corrected D1 and may be
+  struck without disturbing the decision:
+      "the defence was adversarially confirmed on the frozen premises"
 ```
 
 ### NON-RETROACTIVITY
@@ -8618,6 +8671,10 @@ carries it.
 
 ```text
 D1  SURVIVAL ESTABLISHED
+      ⚠️ AS WRITTEN HERE THIS IS SUPERSEDED. The author corrected D1 on 2026-08-20
+      to ADVERSARIAL CONFIRMATION ONLY, under five conjunctive requirements. See
+      "D1 CORRECTED" below and use that text. The disposition is KEPT, not removed.
+
       An admissible casualty was found: a named workflow that becomes IMPOSSIBLE
       under the frozen premises if the function does not exist, depending on NO
       ungranted condition, stated in the permitted vocabulary.
@@ -8661,6 +8718,12 @@ casualty and fail to defeat it.
 The naming tension is recorded rather than resolved by renaming: "survival
 established" is the author's term for D1, and it means survival of the DEFENCE, not
 of the row. Any citation must say which.
+
+⚠️ CLARIFICATION, NOT A CORRECTION — this clause never said the defender may not
+establish survival, and it is not being repaired. It separates ADMISSIBILITY from
+ADJUDICATION: a corrected D1 discharges the DEFENCE's burden; it does not decide the
+ROW. Recorded because the corrected D1 makes the distinction load-bearing, and the
+audit confirmed this separation is what keeps D1 from being a veto.
 ```
 
 ### HOW EACH DISPOSITION AFFECTS GATE 2
@@ -8757,6 +8820,11 @@ WHAT THE FIELD IS NOT
     available and remains the strongest defence against deciding a row by
     vocabulary.
   not a stipulation. A shape is not a claim that anything has that shape.
+
+⚠️ THE FIRST CLAUSE IS REVERSED BY THE AUTHOR 2026-08-20. Refusing to name the
+   observable semantic property under test is now a DEFECT IN THE CANDIDATE, not a
+   virtue: "incumbent-neutral does not mean function-anonymous." The field itself
+   stays withdrawn; this text is historical and the naming rule governs.
 ```
 
 ### WHAT R2 DOES NOT SETTLE — carried forward as RESERVED ITEM R2b
@@ -8821,6 +8889,16 @@ Whether an unnameable candidate is:
     OPENABLE, with the defender seat simply declared uninformative in advance
 is a SEMANTIC CHOICE about what this method is for. Not decided here. Recorded with
 R2b.
+
+⚠️ ONE HALF OF "BOTH ARE TRUE" IS WITHDRAWN — and note the derivation, because the
+   author did not rule on this paragraph directly. The 2026-08-20 decision records
+   U5b-D's terminal issue as including "it supplied no sufficiently named semantic
+   proposition to defend". That IS a ruling that the unnamedness was a defect in the
+   candidate. So "it prevented the row being decided by vocabulary" no longer stands
+   as a countervailing virtue for THIS row.
+   NOT CLAIMED: that the author ruled on the general even-handedness of the
+   paragraph, or supplied a verdict on packets other than U5b-D's.
+   STILL RESERVED: whether an anonymous candidate may open a row at all.
 ```
 
 ### NON-RETROACTIVITY — unchanged, and it binds this repair too
@@ -8967,6 +9045,19 @@ depend on it.
 INSTRUMENT FINDING, in the same class as U5b-C's, and it is emphatically not a
 verdict. The row's function may survive, die, or be underdetermined on its own
 evidence once it has wording that does not carry the defects below.
+
+```text
+⚠️ REAFFIRMED BY AUTHOR DECISION 2026-08-20. E DOES NOT OPEN unless a NEW
+   HUMAN-AUTHORED CANDIDATE STATEMENT is provided. Not a reworded E, not an
+   implementer restatement, not a repair derived from the naming rule.
+
+   E AS WORDED REMAINS NOT OPENABLE. And E2 is now DOUBLY disqualifying: "semantics"
+   was already an unnamed fact, and under "incumbent-neutral does not mean
+   function-anonymous" function-anonymity is a DEFECT rather than a neutral choice.
+
+   FORBIDDEN: reading the naming rule as instructions for rewording E. The rule
+   DIAGNOSES; it does not author.
+```
 
 ### HOW THIS CHECK WAS RUN — both lines, independently, deliberately uninformed
 
@@ -9451,6 +9542,11 @@ in both worlds satisfies the letter.
 TIGHTENING APPLIED: an admissible casualty must be IMPOSSIBLE without the function AND
 POSSIBLE with it. Implicit in the word "casualty"; it was not written, and the audit
 found it in one pass.
+
+⚠️ SUBSUMED AND STRENGTHENED 2026-08-20. The author's corrected D1 requires not merely
+that the workflow be possible WITH the function, but that THE CANDIDATE SUPPLIES that
+function — requirement (3). "Possible with something" was still satisfiable by a
+function the candidate does not name.
 ```
 
 **And note the shape the audit named.** The recorded first-outing error was a null that
@@ -9479,6 +9575,10 @@ cannot RETRACT W. The record stands at D1 + "no rival disqualifiable", headline
 SURVIVAL ESTABLISHED. The killers are handed a casualty the defender has already
 abandoned. D2 is explicitly conditioned on pass 2 ("where pass 2 ran"); D1 IS
 CONDITIONED ON NOTHING.
+
+⚠️ THE LAST CLAUSE IS NO LONGER TRUE. The corrected D1 is conditioned on requirement
+(4): where rivals were raised, they must be DEFEATED in pass 2. A D1 standing next to
+"no rival disqualifiable" is now unreachable, which is the hole this finding named.
 ```
 
 ```text
@@ -9674,6 +9774,299 @@ AND IT DOES NOT VALIDATE THE PROCEDURE. Fifteen leaks found on one pass by one r
 is evidence about how much was WRONG, never evidence that what remains is right. The
 next outing inherits an instrument that has been audited once, not an instrument that
 has been established.
+```
+
+## D1 CORRECTED — SURVIVAL ESTABLISHED IS ADVERSARIAL CONFIRMATION ONLY
+
+**Authority: the human author, 2026-08-20.** Like the P3 freeze and the charter
+itself this is a **decision about the standard of evidence**, not a finding. No
+reviewer derived it, no gate established it, no experiment produced it. It is an
+INPUT to the method.
+
+```text
+CITE IT AS   "D1, as corrected by author decision on 2026-08-20, requires ..."
+NEVER AS     "the audit established the five requirements" · "D1 was validated" ·
+             "the defender charter now proves survival"
+```
+
+> **READING THIS SECTION.**
+>
+> ```text
+> THE AUTHOR'S, and nothing else is
+>   the FIVE REQUIREMENTS, quoted in their own block
+>   the sentence "opposition failure alone is never survival"
+>   the NAMING RULE
+>   the two row clauses — U5b-D not reopened, U5b-E not opened
+>   the retention of the two-pass model and normalized rival packets
+>
+> THE IMPLEMENTER'S — every other block in this section, including
+>   "WHAT THE CORRECTION CHANGES, clause by clause"  (entirely)
+>   "NOTHING PROPOSED REMOVING D1"                   (entirely)
+>   the LIVE UNCERTAINTIES U1-U5                     (entirely)
+>   each block marked GLOSS / READING / UNPACKING / CONSTRUCTION
+> ```
+>
+> The blanket statement above is what governs; the per-block labels are convenience.
+> This section was audited for transcription fidelity twice, by readers given the
+> decision verbatim and the diff and nothing else. **That is a fact about process,
+> not a certificate.** The labels exist because the connective text around a quoted
+> decision is where widening enters.
+
+### THE DISPOSITION IS KEPT. It is not removed and it was never to be removed.
+
+The first-day audit found the positive side of the taxonomy ungated — _"every gate
+is built to screen the defender's NULL, and nothing screens the defender's POSITIVE,
+the killers' phrasing, or a run that never happened."_ **This correction addresses
+the POSITIVE only.** The other two branches of that sentence are untouched here and
+must not be read as repaired by it. The remedy is **not** to delete the positive; it
+is to give it a burden at least as heavy as the one the null carries.
+
+```text
+D1  SURVIVAL ESTABLISHED — ADVERSARIAL CONFIRMATION ONLY
+
+All FIVE hold, conjunctively. Any one failing -> NOT D1.
+
+  (1) THE CANDIDATE NAMES A CONCRETE SEMANTIC FUNCTION
+
+  (2) THE POSITIVE BURDEN IS MET BY A CONCRETE INDEPENDENTLY VALUABLE WORKFLOW OR
+      CAPABILITY THAT BECOMES IMPOSSIBLE OR WRONG WITHOUT IT
+
+  (3) THE CANDIDATE SUPPLIES THAT FUNCTION
+
+  (4) ACTUAL NORMALIZED RIVAL CLAIMS FROM A/B ARE DEFEATED IN PASS 2 WHEN RAISED
+
+  (5) NO UNEARNED PREMISE OR INCUMBENT CARRIER IS IMPORTED
+```
+
+The five above are the author's words. **Everything below is the implementer's
+reading of them**, recorded separately so it can be struck without touching the
+decision. None of it is a further requirement.
+
+```text
+IMPLEMENTER GLOSS — STRIKEABLE, adds nothing to the five
+
+  on (1)  a candidate that does not say what it asserts is required cannot be
+          defended, and a defence built for it defends nothing. WHICH DISPOSITION
+          such a row takes is NOT decided here — the decision says only NOT D1.
+  on (2)  "not harder, not uglier, not more verbose" is the charter's existing
+          exclusion and is untouched; those remain Table G, zero function weight.
+  on (3)  impossible-in-both-worlds fails, and so does rescued-by-a-function-the-
+          candidate-does-not-name.
+  on (4)  a casualty standing beside "no rival was disqualifiable" is not D1.
+  on (5)  reads onto the existing burden rules 1, 2 and 4 and Rule 0j. A casualty
+          impossible only under an assumed carrier is a carrier claim inside a
+          function seat.
+```
+
+### OPPOSITION FAILURE ALONE IS NEVER SURVIVAL
+
+That sentence is the author's, verbatim, and it is recorded as a rule.
+
+```text
+IMPLEMENTER UNPACKING — STRIKEABLE. Cases the sentence covers on its face:
+  the killers failed to defeat the candidate
+  a rival was disqualified and nothing positive was produced
+  the premises are silent where a refutation would have to live
+  the defence was not refuted
+
+NOT CLAIMED HERE: that the decision reaches the NULL side as well. A non-informative
+null already fails to strengthen a closure under C-i/C-ii/C-iii, on its own footing,
+and the author's sentence is about SURVIVAL — the positive. The symmetry is available
+and is NOT being asserted as part of this decision.
+```
+
+**IMPLEMENTER READING, STRIKEABLE** — the five are conjunctive either way, so
+striking this makes nothing optional: (2) and (3) are a _burden_ rather than a test
+the opposition must fail, and (4) is a _further_ hurdle on top of that burden, never
+a substitute for it.
+
+### WHAT THE CORRECTION CHANGES, clause by clause
+
+```text
+THE BAR              requirement (2) reads "IMPOSSIBLE OR WRONG". A WIDENING, and
+                     the author's to make. IT REACHES THE CHARTER'S GENERAL CHARGE,
+                     because that charge is the only channel a casualty is produced
+                     through — leaving it at IMPOSSIBLE would scope the widening out
+                     of operation. ENTAILED CONSEQUENCE, disclosed: D3 is defined
+                     over casualties, so it widens too.
+
+"WRONG"              IMPLEMENTER GLOSS, STRIKEABLE, and flagged again at U2: the
+                     reading in force is "produces an incorrect result under the
+                     frozen premises". The author supplied the word and no test.
+                     It does NOT mean unidiomatic, surprising, unfamiliar, or
+                     unlike another library — that much follows from the charter's
+                     existing ergonomics exclusion, not from a new gloss.
+
+D1's CONTRAST        the audit's "impossible without AND possible with" is subsumed
+                     by (3), which additionally requires ATTRIBUTION to the
+                     candidate.
+
+D1's CONDITIONING    the audit recorded "D1 IS CONDITIONED ON NOTHING". Now false:
+                     (4) conditions it on pass 2 wherever a rival was raised.
+
+"NOT CITABLE AS      over-broad as written — read literally it bars the seat from
+ THE DEFENDER        establishing anything. NARROWED to what it meant: no defender
+ ESTABLISHED X"      report establishes a fact about the ARCHITECTURE. Still not a
+                     premise, still not a sibling prior, still not a row verdict.
+                     THE REPLACEMENT CITATION FORMULA IS THE IMPLEMENTER'S and is
+                     flagged as strikeable at the clause itself — the decision
+                     addresses what D1 REQUIRES, not how a D1 is cited.
+
+ROW vs DEFENCE       UNCHANGED. D1 is the DEFENCE's disposition. The casualty still
+                     routes to the killers, who answer it on the frozen premises.
+                     Separating admissibility from adjudication is what keeps D1
+                     from being a veto — and it is NOT a bar on the seat
+                     establishing anything.
+
+TWO PASSES           UNCHANGED, and now load-bearing for the positive as well as
+                     the null. Pass 1 stays SEALED; pass 2 stays CONDITIONAL on a
+                     killer having relied on a rival.
+
+NORMALIZED RIVAL     NAMED, not redefined. It is the existing pass-2 delivery:
+ PACKET              rival claims and absence alternatives as bare constructions,
+                     with killer VERDICTS, killer RATIONALE, REVIEWER IDENTITY and
+                     IMPLEMENTATION DETAIL withheld.
+```
+
+### NOTHING PROPOSED REMOVING D1 — recorded so the correction is not over-claimed
+
+The ledger was searched for text saying the defender may not establish survival, or
+that SURVIVAL ESTABLISHED should be struck. **No clause SAYS either.** The first-day
+audit attacked D1's _looseness_, not its existence, and explicitly recorded D1's
+row/defence separation as SOUND.
+
+```text
+WHAT WAS ACTUALLY THERE — one clause, over-broad rather than wrong
+
+  "not citable as 'the defender established X'"
+    the only text in the ledger that CAN BE READ as barring the seat from
+    establishing anything. Narrowed above to the architectural claim it meant.
+
+NO DISPOSITION WAS RESTORED, because none had been removed. The correction adds a
+burden to D1; it does not resurrect it. Recording this is the point — a correction
+that invents the defect it repairs is the same error in the opposite direction.
+```
+
+### THE NAMING RULE — incumbent-neutral does not mean function-anonymous
+
+```text
+A CANDIDATE MUST NAME THE OBSERVABLE SEMANTIC PROPERTY BEING TESTED.
+
+INCUMBENT-NEUTRAL   states no entityMap, no SubjectId, no effect log, no carrier,
+                    no v14 noun. STILL REQUIRED.
+FUNCTION-ANONYMOUS  states no observable property at all — "semantics", "a shared
+                    fact", "coordination". NO LONGER PERMITTED.
+
+The two were conflated. Withholding the INCUMBENT'S VOCABULARY protects the
+derivation. Withholding the PROPERTY UNDER TEST destroys the instrument: an
+unnamed existential has no failing case AND no succeeding case, so every seat
+returns a null that could not have been informative.
+```
+
+```text
+WHAT THE RULE DOES   makes function-anonymity a DEFECT IN THE CANDIDATE. It is a
+                     requirement ON CANDIDATES, stated forward.
+
+WHERE SUCH A CANDIDATE LANDS — by D4's OWN unchanged definition, not by a new rule
+  D4 already reads "no defence is STATEABLE because the candidate does not say what
+  it asserts is required." A function-anonymous candidate has exactly that property,
+  so a seat facing one reaches D4 on the taxonomy as it stands. The naming rule adds
+  no disposition and needs none.
+
+WHAT THE RULE DOES NOT DO — and the implementer may not supply either
+  it does NOT re-create PACKET-TIME PRE-CLASSIFICATION. Declaring a row D4 BEFORE
+    any seat runs was the mechanism of the DEFENCE-STATEABILITY DECLARATION, and
+    that field is WITHDRAWN. D4 reached BY A SEAT is unchanged and unaffected.
+  it does NOT bar a row from OPENING. That question was already reserved to the
+    author and stays reserved.
+  it is NOT A LICENCE TO REWORD. The implementer may not restate an existing
+    candidate to satisfy the rule. Rewording is semantic authorship.
+```
+
+### U5b-D IS NOT REOPENED, and its terminal issue is TWO-PART
+
+```text
+DISPOSITION   UNDERDETERMINED, terminal. UNCHANGED. Not rejected, not refuted.
+NULL          FORBIDDEN, as before.
+NOT RE-RUN    no seat, no pass-2 simulation. Re-running a defender at a closed row
+              under a corrected procedure is a work order generated from a method
+              change, and it is forbidden.
+```
+
+```text
+THE TERMINAL ISSUE, STATED CORRECTLY — it was recorded too narrowly before
+
+  PREVIOUSLY   "the defender's null was guaranteed by the charter design in
+               advance" — i.e. the defect was in the INSTRUMENT.
+
+  ALSO TRUE, and it is the part that was under-recorded:
+               THE ROW SUPPLIED NO SUFFICIENTLY NAMED SEMANTIC PROPOSITION TO
+               DEFEND. The candidate required its central fact to stay unnamed.
+               That is a defect in the CANDIDATE, not only in the seat's charter.
+
+BOTH ARE TERMINAL AND NEITHER RESCUES THE OTHER. Repairing the defender procedure
+does not make U5b-D answerable, because a corrected D1 still requires (1) — a
+concrete named semantic function — and the row never had one.
+```
+
+This closes a reading the earlier record left open: that U5b-D was a victim of a
+defective instrument and would become decidable once the instrument was repaired.
+**It would not.** Under the corrected D1 the row fails requirement (1) before any
+seat runs.
+
+### U5b-E DOES NOT OPEN
+
+```text
+STATUS        NOT OPENED, NOT OPENABLE AS WORDED. Unchanged. Five contaminants
+              (E1-E5), none implementer-repairable. No seat has run.
+E2 IS NOW     doubly disqualifying — "semantics" was already an unnamed fact, and
+              the naming rule makes function-anonymity a defect rather than a
+              neutral wording choice.
+OPENS ONLY ON  a NEW HUMAN-AUTHORED CANDIDATE STATEMENT. Not a reworded E, not an
+              implementer restatement, not a repair derived from the naming rule.
+FORBIDDEN     treating the naming rule as instructions for how to reword E. The
+              rule diagnoses; it does not author.
+```
+
+**And the family stays exhausted.** "No U5b row was openable" still may not be read
+as "transaction-shaped functions are not required" — that converts an instrument
+result into an architectural verdict, and the correction above changes nothing about
+which functions are established.
+
+### LIVE UNCERTAINTIES THIS CORRECTION INHERITS OR CREATES
+
+Recorded, not repaired. Supplying a test for any of them would set the standard of
+evidence by fiat, which is the move this method exists to prevent.
+
+```text
+U1  "INDEPENDENTLY VALUABLE" is still an UNSTATED BAR. Requirement (2) uses it, and
+    the ledger already records it as untested family-wide — any workflow can be
+    denied as not independently valuable. The correction inherits this; it does not
+    fix it.
+
+U2  "OR WRONG" HAS NO TEST beyond the negative bar. "Produces an incorrect result
+    under the frozen premises" is the reading in force, and it is the implementer's
+    conservative gloss on the author's word, flagged as such.
+
+U3  (4) SAYS "WHERE RAISED". So a D1 reached with ZERO rivals raised satisfies (4)
+    vacuously. This is deliberately ASYMMETRIC with C-iii, which the audit narrowed
+    so that no rival raised -> C-iii FAILS. The asymmetry is coherent (C-iii gates
+    the strengthening of a CLOSURE; (4) gates a POSITIVE) but whether the author
+    intends the positive to be reachable without opposition is NOT SETTLED.
+    IMPLEMENTER-ADDED DISCLOSURE, strikeable: a D1 record MUST state whether any
+    rival was raised, so no later citation reads it as having survived opposition
+    that never existed. This changes no disposition.
+
+U4  R2b — the defender's DEFAULT LEAN on a silence — remains reserved and untouched.
+
+U5  C-ii's assessment mechanism remains withdrawn, so the STRENGTHENING BRANCH FOR
+    NULLS IS STILL INOPERATIVE. The correction is about D1 and does not revive it.
+```
+
+```text
+NO CLAUSE HERE IS A WORK ORDER. Nothing may be measured, benchmarked, or dug out of
+repository history on the strength of any of it. No row is reopened. No candidate is
+reworded.
 ```
 
 ## Table G — DX PRESSURE LEDGER

@@ -1245,6 +1245,8 @@ U5b-D  SHARED ATTRIBUTION                  TERMINAL — UNDERDETERMINED.
 U5b-E  UNCONFIRMED TRANSITION WITHDRAWAL   NOT OPENED — and NOT OPENABLE AS WORDED
                                            five contaminants, NONE
                                            implementer-repairable. NO SEAT RAN.
+                                           OPENS ONLY on a NEW HUMAN-AUTHORED
+                                           candidate statement.
 ```
 
 ```text
@@ -1280,6 +1282,20 @@ NOT SEVERABLE  the B-borrowing is REDUNDANT — delete either clause and the oth
                re-imports it. Only a restatement removes it, and that is semantic.
 NON-DISCRIMINATING  empty addend -> candidate wins by construction; lean on the
                value bar -> null wins. Neither outcome would be evidence.
+```
+
+```text
+⚠️ REAFFIRMED 2026-08-20, alongside the naming rule.
+
+E DOES NOT OPEN unless a NEW HUMAN-AUTHORED CANDIDATE STATEMENT is provided. Not a
+reworded E, not an implementer restatement, not a repair derived from the naming
+rule. E2 is now DOUBLY disqualifying: "semantics" was already an unnamed fact, and
+function-anonymity is now a DEFECT rather than a neutral wording choice.
+
+FORBIDDEN: reading the naming rule as instructions for how to reword E. The rule
+DIAGNOSES; it does not author. And "no U5b row was openable" still may not be read
+as "transaction-shaped functions are not required" — that converts an instrument
+result into an architectural verdict.
 ```
 
 ```text
@@ -1330,6 +1346,24 @@ design in advance**.
 THE "DEFENDER FINDS NOTHING -> CLOSURE STRENGTHENS" BRANCH DID NOT FIRE, AND MUST
 NOT BE CITED AS THOUGH IT DID. The defender was not in a position to fail
 informatively.
+```
+
+```text
+⚠️ AND THE TERMINAL ISSUE IS TWO-PART. Recorded 2026-08-20; the earlier record was
+   too narrow.
+
+  RECORDED     the defender's null was guaranteed by the charter design in advance
+               — a defect in the INSTRUMENT.
+  ALSO TRUE    THE ROW SUPPLIED NO SUFFICIENTLY NAMED SEMANTIC PROPOSITION TO
+               DEFEND. Its candidate required the central fact to stay unnamed.
+               That is a defect in the CANDIDATE.
+
+NEITHER RESCUES THE OTHER. Repairing the defender procedure does NOT make U5b-D
+answerable: the corrected D1 requires a concrete named semantic function
+(requirement 1), and this row never had one. So "victim of a defective instrument,
+decidable once the instrument is fixed" is NOT AN AVAILABLE READING.
+
+NOT REOPENED. No seat re-run, no pass-2 simulation, no rewording.
 ```
 
 **AUDITED 2026-08-20 under the repaired procedure — CLASSIFICATION ONLY, disposition
@@ -1439,13 +1473,15 @@ STRONGEST ALTERNATIVE: "not established" may be a verdict that P1-P6 lacks the
   EVIDENCE ABOUT THE ROW — not a licence to widen P1-P6.
 ```
 
-## ITEMS RESERVED TO THE HUMAN AUTHOR — FOUR DECIDED 2026-08-20, ONE STILL OPEN
+## ITEMS RESERVED TO THE HUMAN AUTHOR — FIVE DECIDED 2026-08-20, ONE STILL OPEN
 
 Each was reserved because an implementer settling it would supply by fiat the kind of
-premise this method exists to stop being supplied. **The author has decided four.**
-Full records in RFC 0016: the P3 **freeze event**, the **defender charter**, and the
-**defender process repair** (which resolves the charter audit's R1 and R2). One new
-item — **R2b, the defender's default lean** — is open and is listed below.
+premise this method exists to stop being supplied. **The author has decided five.**
+Full records in RFC 0016: the P3 **freeze event**, the **defender charter**, the
+**defender process repair** (which resolves the charter audit's R1 and R2), and the
+**D1 correction** (decision 4 below, which closes the audit's ungated-positive
+finding). One item — **R2b, the defender's default lean** — is open and is listed
+below.
 
 ### 1 — P3 IS FROZEN ON THE AGENTFUL WORDING
 
@@ -1502,6 +1538,11 @@ The defender argues the function is REQUIRED — a workflow that becomes
 **impossible**, not harder — and is bound by **the same burden rules as the
 killers, with no exemptions**:
 
+> ⚠️ **WIDENED: the bar reads "impossible OR WRONG"** — decision 4 below. The author
+> stated it at requirement (2) of D1, and it REACHES THIS CHARGE because the charge
+> is the only channel a casualty is produced through. **Entailed and disclosed:** D3
+> is defined over casualties, so it widens too.
+
 ```text
 quote frozen premises VERBATIM, never paraphrase
 NO repository archaeology, NO measurement, NO citing the implementation
@@ -1521,6 +1562,16 @@ DEFENDER NAMES A CASUALTY   the row does NOT survive; the casualty goes to the
                             killers to answer on the frozen premises
 BOTH HIT THE SAME GAP       UNDERDETERMINED, and more strongly than a
                             same-direction pair could establish
+```
+
+```text
+⚠️ GOVERNING ALL THREE BRANCHES — author, 2026-08-20:
+
+    OPPOSITION FAILURE ALONE IS NEVER SURVIVAL.
+
+Not the killers failing to defeat the candidate, not a rival disqualified with no
+positive produced, not silence where a refutation would live, not a defence left
+unrefuted. Absence of refutation is not establishment, IN EITHER DIRECTION.
 ```
 
 **NOT RETROACTIVE.** U5b-A and U5b-B were closed without a defender and are not
@@ -1560,9 +1611,11 @@ exactly those four exclusions. Rules 1, 2, 3, 5 are UNCHANGED in both passes.
 ```text
 THE CLOSED DISPOSITION SET — exactly one is PRIMARY, and the headline carries it
 
-D1  SURVIVAL ESTABLISHED       an admissible casualty depending on NO ungranted
-                               condition. ⚠️ This is survival of the DEFENCE, not of
-                               the ROW — the casualty still goes to the killers.
+D1  SURVIVAL ESTABLISHED       ⚠️ CORRECTED BY THE AUTHOR — see decision 4. It is
+                               ADVERSARIAL CONFIRMATION ONLY, under five
+                               conjunctive requirements. The disposition is KEPT.
+                               This is survival of the DEFENCE, not of the ROW —
+                               the casualty still goes to the killers.
 D2  SURVIVAL NOT ESTABLISHED   nothing found, and the candidate was STATEABLE
                                throughout, so the seat could have succeeded
 D3  DEFENCE AVAILABLE BUT      a coherent casualty needing an ungranted condition.
@@ -1653,6 +1706,8 @@ PRIMACY WAS UNASSIGNED, so whoever picked it picked whether closure could streng
 D1 HAD NO CONTRAST REQUIREMENT — a workflow impossible in BOTH worlds satisfied it.
   -> an admissible casualty must be IMPOSSIBLE without the function AND POSSIBLE with
      it. Implicit in "casualty"; unwritten until the audit found it in one pass.
+  -> SUBSUMED by the author's corrected D1, requirement (3), which adds ATTRIBUTION:
+     possible with THIS CANDIDATE, not merely possible with something.
 ```
 
 ```text
@@ -1738,6 +1793,123 @@ ALSO NOT DECIDED: whether a D4 BARS a row from opening at all, as C's and E's
 borrowed antecedents do, or merely renders the defender seat uninformative. U5b-D
 opened with its fact deliberately unnamed and its packet called that its strongest
 feature; Gate 2 later found the same choice guaranteed the null. BOTH ARE TRUE.
+  ⚠️ ONE HALF IS WITHDRAWN FOR THIS ROW, and note the derivation: decision 4 records
+  U5b-D's terminal issue as including "no sufficiently named semantic proposition to
+  defend", which IS a ruling that the unnamedness was a candidate defect. So "it
+  prevented the row being decided by vocabulary" is no longer a countervailing virtue
+  HERE. NOT claimed: a general ruling on the paragraph's even-handedness. Whether an
+  anonymous candidate may OPEN a row is still reserved.
+```
+
+### 4 — D1 CORRECTED: SURVIVAL ESTABLISHED IS ADVERSARIAL CONFIRMATION ONLY
+
+**The disposition is KEPT.** The audit found the positive side of the taxonomy
+ungated; the remedy is a heavier burden, not a deletion. Full record in RFC 0016.
+
+```text
+WHAT IS THE AUTHOR'S HERE   the five requirements · "opposition failure alone is
+                            never survival" · the naming rule · the two row clauses
+                            · the retention of two passes and normalized packets
+EVERYTHING ELSE             the implementer recording consequences, including all of
+                            "WHAT ELSE MOVED" and the LIVE UNCERTAINTIES
+```
+
+```text
+D1 REQUIRES ALL FIVE, CONJUNCTIVELY. Any one failing -> NOT D1.
+THE FIVE BELOW ARE THE AUTHOR'S WORDS.
+
+  (1) the candidate names a concrete semantic function
+  (2) the positive burden is met by a concrete independently valuable workflow /
+      capability that becomes impossible or wrong without it
+  (3) the candidate supplies that function
+  (4) actual normalized rival claims from A/B are defeated in pass 2 when raised
+  (5) no unearned premise or incumbent carrier is imported
+```
+
+```text
+OPPOSITION FAILURE ALONE IS NEVER SURVIVAL.   <- the author's sentence, verbatim
+
+IMPLEMENTER READING, STRIKEABLE — the five are conjunctive either way, so striking
+this makes nothing optional: (2) and (3) are a BURDEN, not a test the opposition must
+fail. (4) is a FURTHER hurdle on top of them, never a substitute. NOT CLAIMED:
+that the sentence reaches the NULL side — a non-informative null already fails to
+strengthen a closure on its own footing, under C-i/C-ii/C-iii.
+```
+
+```text
+WHAT ELSE MOVED
+  THE BAR         requirement (2) reads "IMPOSSIBLE OR WRONG". An author WIDENING.
+                  It REACHES the charter's general charge, which is the only channel
+                  a casualty is produced through. ENTAILED AND DISCLOSED: D3 is
+                  defined over casualties, so it widens too.
+  "WRONG"         no test was supplied. IMPLEMENTER GLOSS in force, strikeable:
+                  "produces an incorrect result under the frozen premises". NOT
+                  unidiomatic, surprising, unfamiliar, or unlike another library —
+                  which follows from the existing ergonomics exclusion anyway.
+  CONDITIONING    the audit's "D1 IS CONDITIONED ON NOTHING" is now FALSE — (4).
+  CITABILITY      "not citable as 'the defender established X'" is over-broad: read
+                  literally it bars the seat from establishing anything. NARROWED to
+                  what it meant — no defender report establishes a fact about the
+                  ARCHITECTURE. Still not a premise, still not a sibling prior,
+                  still not a row verdict. The replacement citation wording is the
+                  IMPLEMENTER'S and is flagged strikeable in RFC 0016; the decision
+                  addresses what D1 REQUIRES, not how a D1 is cited.
+  UNCHANGED       two passes · pass 1 SEALED · pass 2 CONDITIONAL · row-vs-defence
+                  separation · the casualty routing to the killers.
+  NAMED, NOT NEW  "NORMALIZED RIVAL PACKET" is the existing pass-2 delivery: rival
+                  claims as bare constructions, with killer verdicts, killer
+                  rationale, reviewer identity and implementation detail withheld.
+
+AND NO CLAUSE EVER SAID THE DEFENDER MAY NOT ESTABLISH SURVIVAL, or proposed striking
+the disposition. The one clause that could be READ that way is the citability clause
+above, and it is over-broad rather than wrong. NO DISPOSITION WAS RESTORED, because
+none had been removed — a correction that invents the defect it repairs is the same
+error in the opposite direction.
+```
+
+### THE NAMING RULE — incumbent-neutral does not mean function-anonymous
+
+```text
+A CANDIDATE MUST NAME THE OBSERVABLE SEMANTIC PROPERTY BEING TESTED.
+
+INCUMBENT-NEUTRAL   no entityMap, no SubjectId, no effect log, no carrier, no v14
+                    noun. STILL REQUIRED.
+FUNCTION-ANONYMOUS  no observable property at all — "semantics", "a shared fact",
+                    "coordination". NO LONGER PERMITTED.
+
+Withholding the INCUMBENT'S VOCABULARY protects the derivation. Withholding the
+PROPERTY UNDER TEST destroys the instrument: an unnamed existential has no failing
+case AND no succeeding case, so every seat returns a null that could not have been
+informative.
+```
+
+```text
+WHERE SUCH A CANDIDATE LANDS — by D4's OWN unchanged definition, not a new rule.
+  D4 already reads "no defence is STATEABLE because the candidate does not say what
+  it asserts is required", which is exactly the property. A seat facing a
+  function-anonymous candidate reaches D4 on the taxonomy as it stands.
+
+WHAT THE RULE DOES NOT DO — and the implementer may not supply any of it
+  it does NOT re-create PACKET-TIME PRE-CLASSIFICATION. Declaring a row D4 before
+    any seat runs was the WITHDRAWN stateability field's mechanism. D4 reached BY A
+    SEAT is unchanged and unaffected.
+  it does NOT bar a row from OPENING. Already reserved, still reserved.
+  it is NOT A LICENCE TO REWORD an existing candidate to satisfy it. Rewording is
+    semantic authorship and belongs to the author.
+```
+
+```text
+LIVE UNCERTAINTIES the correction inherits or creates — recorded, NOT repaired
+  U1  "independently valuable" is still an UNSTATED BAR, and (2) uses it
+  U2  "or wrong" has no test beyond the negative bar; the gloss in force is the
+      implementer's conservative one, flagged as such
+  U3  (4) says "where raised", so a D1 with ZERO rivals raised satisfies it
+      vacuously — deliberately ASYMMETRIC with C-iii, which FAILS on no rival.
+      IMPLEMENTER-ADDED DISCLOSURE, strikeable: a D1 record must state whether any
+      rival was raised. Changes no disposition.
+  U4  R2b (the default lean on a silence) untouched and still reserved
+  U5  C-ii has no assessment mechanism, so the NULL strengthening branch stays
+      INOPERATIVE. This correction is about D1 and does not revive it.
 ```
 
 **NO DECISION HERE IS A WORK ORDER.** Nothing may be measured, benchmarked or
