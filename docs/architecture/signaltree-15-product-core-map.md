@@ -51,7 +51,14 @@ None of that is evidence that transaction, speculative or coordinated-mutation
 functions are unnecessary, and **this document may not be read as converting the
 family's exhaustion into an `app responsibility` placement.** Where a product
 property depends on one of those functions, the row here reads `⚠ UNPLACED` and
-is listed under [DECISION REQUIRED](#decision-required).
+is listed under
+[DECISION REQUIRED](#decision-required--️-all-four-were-decided-2026-08-21).
+
+**The prohibition survives the four decisions and extends to them.** `DR-2`
+promising failed-mutation neutrality is not a verdict on the speculative
+function, and `DR-4`'s app-responsibility half is not a verdict on
+coordinated mutation. A product promise and a kernel function are different
+things in both directions.
 
 ---
 
