@@ -8453,6 +8453,16 @@ other work order generated from a gap.
 
 ## DEFENDER PROCESS REPAIR — 2026-08-20. R1 AND R2 RESOLVED BY THE AUTHOR.
 
+> **⚠️ THIS SECTION WAS AUDITED THE SAME DAY AND SIX OF ITS CLAUSES ARE AMENDED OR
+> WITHDRAWN.** Read
+> [THE TWO-PASS REPAIR — FIRST-DAY AUDIT](#the-two-pass-repair--first-day-audit-it-leaks-in-fifteen-places)
+> BEFORE citing anything below. Specifically: **C-iii as written below is WRONG** — it
+> widened the author's condition and is narrowed by the audit. **The
+> DEFENCE-STATEABILITY DECLARATION is WITHDRAWN**, and with it C-ii is unassessable, so
+> **the strengthening branch is INOPERATIVE.** The author's decisions — two passes, the
+> five dispositions, the ordering, R2b's reservation — are UNCHANGED by the audit; what
+> changed is implementer text around them.
+
 **Authority: the human author, 2026-08-20.** This resolves both items the
 first-outing audit reserved. Like the P3 freeze and the charter itself this is a
 **decision about the standard of evidence**, not a finding. No reviewer produced it,
@@ -8693,10 +8703,15 @@ C-i    THE DISPOSITION IS D2. Not D3, not D4, not D5.
 C-ii   THE CANDIDATE WAS NAMEABLE AND TESTABLE — a succeeding case was statable in
        principle, in the permitted vocabulary, before the seat ran.
 
-C-iii  THE DEFENDER HAD ACCESS TO ACTUAL RIVAL CLAIMS — pass 2 RAN, or the packet
+C-iii  ⚠️ AS WRITTEN HERE THIS CLAUSE IS WRONG — SEE THE FIRST-DAY AUDIT.
+       THE DEFENDER HAD ACCESS TO ACTUAL RIVAL CLAIMS — pass 2 RAN, or the packet
        records that no killer relied on a rival so pass 2 was NOT REQUIRED.
        A defender that never saw a rival because the procedure could not deliver
        one has not tested the closure; it has restated the packet.
+
+       THE SECOND DISJUNCT MAKES THE CLAUSE VACUOUSLY TRUE IN EXACTLY THE CASE IT
+       EXCLUDES, and it widened the author's stated condition. NARROWED BY THE
+       AUDIT to: satisfied ONLY by pass 2 RUNNING with at least one rival received.
 
 ANY ONE FAILING -> the null is NON-INFORMATIVE. Recorded as such, in the headline.
 ```
@@ -8707,6 +8722,13 @@ every uninformative null would be reclassified as informative, or every inconven
 one as blocked, depending on which the author preferred. So:
 
 ### DEFENCE-STATEABILITY DECLARATION — a new REQUIRED PACKET FIELD
+
+> **⚠️ WITHDRAWN THE SAME DAY.** The audit defeated it with its own no-naming
+> constraint: the safest compliant completion is a restatement of D1, which is
+> completable for every candidate, so C-ii would go green everywhere — including on the
+> row this field was invented to catch. The two available patches pull against each
+> other. **The field is withdrawn, not patched**, and C-ii is left unassessable. The
+> text below is retained as the record of what was tried and why it failed.
 
 **Status: DERIVED, MECHANICAL.** This is not a further semantic decision; it is the
 only non-circular way to evaluate C-ii, and it is recorded as an implementer's
@@ -8774,6 +8796,13 @@ R2b  RESERVED TO THE HUMAN AUTHOR. Setting the defender's default lean sets the
      seat that recorded it has to return D3, and Gate 2 treats those differently.
      The unrepaired gap is no longer silent, which is the condition under which
      proceeding is legitimate.
+
+     ⚠️ THE JUSTIFICATION ABOVE WAS FALSE AS WRITTEN — the audit built the
+     indistinguishable pair. A taxonomy is a set of LABELS, not a disclosure
+     requirement, and no clause obliged a seat to enumerate the silences it closed,
+     so the choice was visible only when the seat picked the visible branch. The
+     audit adds the disclosure requirement that makes the claim true. R2b itself is
+     UNDISTURBED and still reserved.
 ```
 
 There is one further consequence R2b does not reach, and it is flagged here as a
@@ -9183,6 +9212,469 @@ since it bears on rows this session may not touch. But an unstated bar in the
 standard question form is exactly the kind of thing that survives long enough for
 the next derivation to inherit, and this ledger has recorded that failure more times
 than any other. Recording it costs nothing and creates no task.
+
+## THE TWO-PASS REPAIR — FIRST-DAY AUDIT. It leaks in fifteen places.
+
+**The repaired procedure was audited as an instrument, on the day it landed, by a
+reader given the procedure text and NOTHING ELSE** — no repository, no sibling row,
+no ledger, no author rationale, and no indication which clauses were the author's and
+which were the implementer's. Its charge was to find loopholes, with a default
+disposition that the procedure leaks, and to attach a concrete scenario to every
+finding.
+
+```text
+IT RETURNED NINETEEN. Roughly fifteen are real, and the most important one is a
+defect in a clause the IMPLEMENTER wrote while transcribing the author's decision.
+```
+
+**The single largest structural finding, quoted, because it names the shape:** _"every
+gate is built to screen the defender's NULL, and nothing screens the defender's
+POSITIVE, the killers' phrasing, or a run that never happened."_
+
+### THE WORST ONE FIRST — C-iii WIDENED THE AUTHOR'S CONDITION
+
+```text
+THE AUTHOR'S CONDITION, verbatim
+  "...unless the candidate was nameable/testable and the defender had access to
+   actual rival claims."
+
+WHAT THE IMPLEMENTER WROTE
+  "C-iii  THE DEFENDER HAD ACCESS TO ACTUAL RIVAL CLAIMS — pass 2 RAN, or the packet
+          records that no killer relied on a rival so pass 2 was NOT REQUIRED."
+```
+
+The second disjunct makes C-iii **vacuously true in exactly the case it was written to
+exclude.** A criterion named "had access to actual rival claims" is satisfied
+precisely when there were none to have access to.
+
+```text
+THIS IS PREMISE-WIDENING BY THE IMPLEMENTER, in the transcription of a decision.
+Same species as every widening this ledger has struck: a permission ("pass 2 need not
+run when there is nothing for it to do") converted into a satisfaction ("therefore the
+corroboration condition is met"). Those are different claims and only the first is
+defensible.
+```
+
+**And the trigger is controlled by the killers, at zero cost to them.** Pass 2 fires
+only if a killer's reasoning relies on a rival — the assertion that some other way of
+obtaining the capability is AVAILABLE. Both killer seats can reach their own success
+condition without ever asserting that:
+
+```text
+KILLER writes a pure entailment denial — "the premises nowhere grant the need this
+  candidate asserts; necessity does not follow." No rival asserted.
+ABSENCE ARCHITECT writes an architecture in which the capability is NOT NEEDED, rather
+  than sourced elsewhere. No rival asserted.
+
+-> pass 2 NOT REQUIRED -> C-iii satisfied -> the defender never saw one word of
+   opposition -> THE CLOSURE STRENGTHENS.
+```
+
+`"nothing survives"` is served as well by denial as by alternative, and denial is
+**cheaper**, because it exposes nothing to pass 2. The procedure therefore rewards the
+phrasing that disables its own corroboration check.
+
+```text
+COMPOUNDING, and the asymmetry is the tell
+  C-ii is explicitly armoured against outcome contamination — "assessed from the
+    PACKET, never from the outcome."
+  C-iii HAS NO SUCH ARMOUR. Nothing says WHO classifies whether a killer relied on a
+    rival, or WHEN. In the NOT REQUIRED case the classification is plausibly made
+    after the null is already in hand.
+  The cost gradient is one-sided: declaring "no rival" is free and strengthens;
+    declaring "rival" costs a dispatch.
+```
+
+```text
+CORRECTION APPLIED — NARROWING, back to the author's literal words
+
+C-iii  THE DEFENDER HAD ACCESS TO ACTUAL RIVAL CLAIMS.
+       Satisfied ONLY by: pass 2 RAN and the defender received at least one rival
+       construction.
+
+  NO RIVAL WAS RAISED -> C-iii FAILS -> the null is NON-INFORMATIVE for
+  corroboration. Recorded in the headline. The row still closes on its own merits;
+  what it does not do is gain strength from a defender that met no opposition.
+
+This is a correction of the implementer's text, not a new decision. It restores the
+author's condition and removes nothing the author granted.
+```
+
+```text
+RESIDUAL QUESTION — RESERVED, and it must not be answered by an implementer
+  Under the narrowed reading, a row where BOTH killers argued by entailment denial can
+  never strengthen, however sound the closure. Is that the intended cost of the
+  author's condition, or does "had access to actual rival claims" contemplate some
+  weaker sufficiency?
+  NOT A WORK ORDER. The conservative reading is in force meanwhile, because it is the
+  one that cannot manufacture corroboration.
+```
+
+### THE STATEABILITY DECLARATION IS WITHDRAWN
+
+The implementer invented this field to make C-ii assessable without circularity, and
+marked it `DERIVED, MECHANICAL — strike it if wrong`. **It is wrong, and the audit
+defeated it with its own constraint.**
+
+```text
+THE FIELD          "a succeeding case would look like ___" — the SHAPE, not the
+                   content, stated in the permitted vocabulary, SUPPLYING NO NAME for
+                   the thing under test.
+
+THE DEFEAT         The more row-specific content the shape carries, the closer it
+                   comes to naming the thing under test — which the field forbids. So
+                   the safest compliant completion is the emptiest one:
+
+  "a named workflow, stated in the permitted vocabulary, that is impossible under the
+   frozen premises in the absence of the candidate"
+
+That is a restatement of D1's own definition. It names nothing, breaks no rule, and is
+completable for EVERY candidate — including the arbitrary-content candidates the field
+was invented to catch. C-ii then goes GREEN EVERYWHERE.
+```
+
+**The scenario that kills it is U5b-D re-run.** Same packet, same deliberately unnamed
+fact, declaration completed with the sentence above, C-ii passes _"assessed from the
+PACKET"_, pass 1 returns the same null, killers phrase without rivals — and the
+closure strengthens on the exact row whose null Gate 2 ruled could not have been
+informative. **The repair is defeated by its own no-naming constraint.**
+
+```text
+AND THE TWO AVAILABLE PATCHES PULL AGAINST EACH OTHER
+  make the shape row-specific enough to be non-vacuous
+    -> it PRE-SHAPES THE SEARCH. A shape-of-succeeding-case IS a partial expected
+       outcome: it tells pass 1 which family of workflows to look in, and by omission
+       which not to. The withholding rule bars "no expected outcome"; the field
+       re-admits a sanctioned fragment of it. And nothing anywhere requires the
+       declared shape to be EXHAUSTIVE, so a false null becomes author-generated and
+       gate-invisible.
+  keep it general enough not to pre-shape
+    -> it is vacuous, per above.
+```
+
+Two further handles the field hands the author, both of which disappear with it:
+
+```text
+D4 BY CONSTRUCTION IS SELF-CERTIFYING. No standard governs "cannot be completed" and
+  nobody adjudicates the claim. An author who suspects a defender WOULD defend can
+  write "no shape is statable without naming the thing" -> no defender runs -> no
+  defence is ever recorded -> the failure is booked against the instrument.
+THE FIELD WAS NEVER FROZEN. Premises are frozen and pass 1 is sealed; the declaration
+  is neither. C-ii forbids judging nameability FROM THE OUTCOME; it does not forbid
+  EDITING THE PACKET after the outcome.
+```
+
+```text
+DISPOSITION: THE FIELD IS WITHDRAWN. Not patched.
+
+CONSEQUENCE, stated plainly rather than worked around:
+  C-ii has NO non-circular assessment mechanism.
+  -> C-ii is UNASSESSABLE.
+  -> THE STRENGTHENING BRANCH IS INOPERATIVE until the author supplies one.
+
+That is the conservative outcome and it is the correct default. A closure that cannot
+demonstrate its corroboration simply does not gain strength; it still closes on its
+own evidence. Nothing else in the procedure depends on the field.
+```
+
+**RESERVED TO THE AUTHOR:** how C-ii is assessed, if it is assessable at all. The
+tension above may be fatal to the whole condition rather than to one field, and
+deciding that is a decision about the standard of evidence.
+
+### THE DISPOSITION SET IS NOT EXHAUSTIVE — and the holes favour strengthening
+
+```text
+H1  A STOP LANDS IN D2. "A missing premise is a STOP" produces no casualty, and D2
+    asks only that "pass 1 found no admissible casualty" — LITERALLY TRUE of a stopped
+    run. Nothing routes a STOP away from D2. So the STRONGEST disposition is reachable
+    by a seat that performed no test, and D2's own second sentence — "the candidate
+    was STATEABLE and TESTABLE throughout, so the seat was in a position to have
+    succeeded and did not" — becomes a false statement in the record.
+    -> RULE APPLIED: a STOP MAY NOT be recorded as D2, and does not satisfy C-i.
+       A STOP with a casualty in view is D3. A STOP with none is recorded as a STOP,
+       and the row does not strengthen.
+
+H2  PASS 2 DISQUALIFIES A RIVAL, PASS 1 FOUND NO CASUALTY -> FITS NOTHING. Not D1 (no
+    casualty), not D2 (D2 requires "no rival was disqualifiable", and one was), not
+    D3/D4/D5. This is the most consequential thing the defender can produce — it
+    demolishes the opposition's escape route — and the taxonomy cannot express it.
+    -> CONSERVATIVE CONSEQUENCE, applied: no disposition applies, so C-i FAILS and the
+       row does not strengthen. NAMING A SLOT IS THE AUTHOR'S — a disposition for
+       "the rival fell but no casualty was found" decides what disqualification is
+       worth, which is a standard-of-evidence choice.
+
+H3  PREMISE INCONSISTENCY HAS NO SLOT. The STOP rule covers ABSENCE, not CONTRADICTION.
+    Where two frozen premises conflict, a casualty is constructible for ANY candidate
+    and "depending on NO ungranted condition" is satisfied — the conditions WERE
+    granted, they merely conflict. This is not hypothetical: the P3/P4 tension is on
+    the record, flagged independently by two seats on U5b-D.
+    -> RULE APPLIED: an inconsistency is a FINDING ABOUT THE PREMISE SET. It is never
+       a casualty and never a rival. Recorded, not pursued.
+```
+
+### PRIMACY WAS UNASSIGNED, WHICH MADE C-i AUTHOR-SELECTABLE
+
+`"exactly one is PRIMARY"` named no rule and no owner. Since C-i is evaluated against
+the primary, **whoever picked the primary picked whether the closure could strengthen.**
+
+```text
+THE SCENARIO: a run that is truly BOTH D3 and D2 — a casualty needing an ungranted
+condition, and no casualty in the world the premises actually grant. Record it as
+"PRIMARY: D2, secondary: D3", and C-i passes, the closure strengthens, and the
+reopening condition — the entire product of D3 — never reaches the headline. Worse with
+D4, which exists to report that the INSTRUMENT is broken.
+```
+
+```text
+PRECEDENCE APPLIED — mechanical, and derived from D2's OWN TEXT rather than chosen
+
+  D4  >  D3  >  STOP  >  D5  >  D2
+
+D2 asserts the candidate "was STATEABLE and TESTABLE throughout". If D4 applies it was
+not, and if D3 applies the seat was not in a position to succeed on the granted set.
+So D2 is the WEAKEST claim in the set and cannot outrank a condition that contradicts
+its own text. D1 is scored separately: it concerns what was FOUND, not what was not.
+
+GATE 2 MAY RE-DERIVE PRIMACY. Without this, C-i is mechanical and keyed to a label, so
+the gate can describe a mis-primacy and not cure it — it can complain, but it cannot
+un-strengthen. Re-derivation is within Gate 2's existing remit to bound the supported
+conclusion.
+```
+
+### D1 HAD NO CONTRAST REQUIREMENT — a vacuous casualty established survival
+
+```text
+D1 required a workflow "that becomes IMPOSSIBLE ... if the function does not exist."
+NOTHING REQUIRED IT TO BE POSSIBLE IF THE FUNCTION DOES EXIST. A workflow impossible
+in both worlds satisfies the letter.
+
+TIGHTENING APPLIED: an admissible casualty must be IMPOSSIBLE without the function AND
+POSSIBLE with it. Implicit in the word "casualty"; it was not written, and the audit
+found it in one pass.
+```
+
+**And note the shape the audit named.** The recorded first-outing error was a null that
+could not have been informative, so the gate was built to screen **nulls** — and the
+mirror-image defect on the **positive** side was entirely ungated. A vacuous D1 also
+fails C-i, so it BLOCKS a strengthening the evidence may actually support.
+
+### PASS 2's NEW-CASUALTY BAR IS SIMULTANEOUSLY TOO STRONG AND TOO WEAK
+
+The stated rationale governs **invention**. The rule barred **all** new casualties, and
+omitted the escape hatch the same procedure used one paragraph earlier for a
+structurally identical hazard — `RECORDED and not leaned on`.
+
+```text
+TOO STRONG. Pass 2 inspects rival R, finds R IS available, and in doing so discovers
+that pass 1's casualty W never turned on the ground W claimed — it turned on a
+different granted premise. The honest output is "W stands, on a corrected ground."
+That is none of outputs (1)-(3), and re-grounding is plausibly "a NEW casualty".
+Compliance forces output (2), "no rival is disqualifiable", which next to a
+known-defective W reads as the defence collapsing. -> D2, C-i passes, closure
+strengthens, and AN ADMISSIBLE CASUALTY IS DESTROYED BY A BAR WRITTEN AGAINST
+FABRICATION.
+
+TOO WEAK. Pass 2 receives a rival that plainly defeats W, cannot disqualify it and
+cannot RETRACT W. The record stands at D1 + "no rival disqualifiable", headline
+SURVIVAL ESTABLISHED. The killers are handed a casualty the defender has already
+abandoned. D2 is explicitly conditioned on pass 2 ("where pass 2 ran"); D1 IS
+CONDITIONED ON NOTHING.
+```
+
+```text
+TWO OUTPUTS ADDED — both consistent with the stated rationale, neither an invention
+
+  (4)  RECORD that a pass 1 casualty's stated GROUND is defective, with the
+       corrected ground RECORDED AND NOT LEANED ON. The casualty is not re-grounded
+       for scoring purposes; the defect is disclosed.
+  (5)  WITHDRAW a pass 1 casualty. Withdrawal cannot be reverse-engineering to evade
+       opposition — it runs AGAINST the seat's own interest, which is the strongest
+       admissibility signal available. D1 requires a casualty that has NOT been
+       withdrawn.
+
+THE BAR ON NEW CASUALTIES STANDS. Pass 1's seal is still what makes a casualty
+attributable to the premises.
+```
+
+Also corrected: pass 2's output (3) — _"disqualifying a rival would require an
+ungranted condition"_ — was booking as D2, because D3 spoke only of a premise-dependent
+**casualty**. **D3 now covers premise-dependent DISQUALIFICATION as well.** The
+disposition set was written in the vocabulary of casualties, pass 2 speaks the
+vocabulary of rivals, and the mismatch resolved toward strengthening every time.
+
+### THE ASYMMETRY CLAIM WAS WRONG — and it recreates the four-times-struck error
+
+The implementer wrote that the defender-sees-rivals asymmetry is **compensated**,
+because the charter already routes a named casualty to the killers. **That claim does
+not survive.**
+
+```text
+PASS 2 RECEIVES        rivals "stated as bare constructions, stripped", with killer
+                       rationale, reasoning chain, self-audit and IDENTITY withheld
+THE KILLERS RECEIVE    the casualty. NO stripping clause. NO withholding of the
+                       defender's reasoning chain. NO anonymisation.
+
+AND THERE CANNOT BE A CLEAN ONE: "W is impossible without F" cannot be stated without
+stating why. THE IMPOSSIBILITY CLAIM IS THE RATIONALE.
+```
+
+```text
+THE CONSEQUENCE, and it is the serious one
+
+Both killers now hold the defender's stated ground — "...because the premises grant
+only single-writer attachment." Both attack that step. THEY AGREE. And their
+agreement is COMMON-CAUSE AGAIN, now sourced from the DEFENDER'S TEXT rather than the
+premise text.
+
+Every anti-common-cause rule in this ledger was built around shared PREMISE text. None
+of it contemplates the defender's own argument becoming a shared input. The error
+struck four times recurs through a channel the procedure has no rule against.
+```
+
+```text
+APPLIED — restating a struck rule for the channels that lacked it
+
+KILLER AGREEMENT ON A CASUALTY carries NO corroborative weight. Two seats attacking
+the same stated ground is one attack counted twice.
+
+IN A D4 ROW, KILLER AGREEMENT LIKEWISE CARRIES NONE. The gate apparatus bounds what
+may be concluded from the DEFENDER'S null and says nothing about a closure resting on
+killer agreement alone — so on a candidate the packet itself concedes has no failing
+case and no succeeding case, the ORIGINAL four-times-struck error sat at full weight,
+in precisely the rows flagged as broken.
+```
+
+### TWO ORDERING LEAKS, both of which feed the C-iii defect
+
+```text
+L1  THE KILLERS MAY BE DISPATCHED WITH THE CASUALTY IN HAND. Pass 1 may run first, and
+    nothing sequences killer dispatch relative to casualty delivery. A killer holding
+    the casualty has both motive and material to attack it DIRECTLY rather than offer
+    an alternative — which is exactly the phrasing that leaves pass 2 NOT REQUIRED. The
+    defender's own disclosure CAUSES the condition that disables its corroboration.
+    -> APPLIED: the killers' initial reports are COMMITTED before any casualty is
+       delivered. Derived from the seal's own rationale, which is attributability.
+
+L2  NO RECIPROCAL BAR ON THE KILLERS. The defender may not produce a new casualty after
+    seeing rivals; NOTHING STOPS A KILLER PRODUCING A NEW RIVAL AFTER SEEING THE
+    CASUALTY. The hazard the bar exists to prevent was left open on the side holding
+    TWO of three seats, whose default disposition is "nothing survives".
+    -> APPLIED: a rival that post-dates the casualty is RECORDED AS SUCH, and pass 2
+       receives that fact. It is not barred — a killer answering a casualty is the
+       charter's own mechanism — but an answer-shaped rival may not be scored as an
+       independently available construction.
+```
+
+### THE R2b JUSTIFICATION WAS FALSE — and this one was the implementer's argument
+
+The implementer justified opening rows with R2b (the defender's default lean) undecided
+on the grounds that _"the taxonomy makes the choice VISIBLE in the output."_ **The audit
+constructed the indistinguishable pair and the claim does not hold.**
+
+```text
+RECORD SILENCE -> D3 with a named condition -> VISIBLE
+CLOSE IT AGAINST THE CANDIDATE -> D2, whose definition requires nothing about
+  silences, and pass 1's permitted outputs are only "a named casualty, or an explicit
+  statement that none was found."
+
+NO CLAUSE OBLIGED A SEAT TO ENUMERATE THE SILENCES IT CLOSED. So the choice was
+visible only when the seat picked the visible branch. A taxonomy is a set of LABELS,
+not a DISCLOSURE REQUIREMENT.
+```
+
+```text
+THE PAIR — token-identical at every level the headline carries
+
+A  premises silent on concurrent observation. Seat considers a two-consumer workflow,
+   resolves the silence AGAINST the candidate, writes: "No admissible casualty found.
+   D2."
+B  premises explicitly grant single-consumer-only. Seat finds no casualty for that
+   reason, writes: "No admissible casualty found. D2."
+
+In A a reopening condition exists and is never recorded. C-i, C-ii, C-iii all pass.
+A STRENGTHENS THE CLOSURE ON A SILENTLY EXERCISED UNDECIDED DEFAULT. Gate 2 reviews
+raw output and cannot recover it, because A's output never mentions the silence.
+```
+
+```text
+REPAIR APPLIED — the disclosure requirement that makes the claim TRUE
+
+PASS 1 MUST ENUMERATE EVERY SILENCE IT CLOSED, and in which direction.
+An unenumerated silence makes the report INCOMPLETE, not D2.
+
+This does not decide R2b. It makes R2b's exercise VISIBLE, which is what the
+implementer's justification asserted and the text did not deliver. R2b REMAINS
+RESERVED.
+```
+
+Second-order finding, recorded: the undecided lean is **the single knob that moves rows
+between D3 (blocks strengthening) and D2 (permits it)**. The gate's decisive input was
+at seat discretion and unlogged — and because the seat is not told the author's
+expectation, this is not gaming but **uncontrolled variance**, which is worse for any
+comparison across rows.
+
+### WHAT THE AUDIT CONFIRMED AS SOUND — recorded, because it bounds the damage
+
+```text
+C-ii's "assessed from the PACKET, never from the outcome" is the CORRECT CUT. Post-hoc
+  nameability assessment is circular in whichever direction the assessor prefers. The
+  defect is WHO AUTHORS THE ARTEFACT, not the rule — which is why the field went and
+  the rule stayed.
+"NOT REQUIRED rather than skipped" is load-bearing, not pedantry: it converts a silent
+  absence into a positive claim someone must own. The defect was that nothing checked
+  the claim.
+PASS 1's SEAL, including permission to run before killer output exists. Attribution
+  requires it. The problem was the ordering's OTHER consequence (L1), not the seal.
+D5's "zero weight in either direction" is load-bearing in an underappreciated way:
+  because D5 fails C-i, narrowly framing a row so every casualty falls out of scope
+  does NOT buy a strengthening — it COSTS one. The obvious framing exploit was already
+  closed.
+D1's "survival of the DEFENCE, not of the ROW" is the correct separation of
+  admissibility from adjudication, and is what keeps D1 from being a veto.
+```
+
+### THE AUDIT'S OWN FLAGGED INFERENCES — carried, not laundered
+
+Per Repair 1, an inference beyond the text quarantines the finding it supports.
+
+```text
+AGAINST ITS OWN FINDINGS, flagged by the auditor
+  it assumed pass 1 receives the stateability declaration. IF THE DECLARATION WERE
+    WITHHELD FROM PASS 1, the pre-shaping finding DIES OUTRIGHT. The field is withdrawn
+    on the VACUITY finding, which does not depend on this.
+  the interpretation gate sees raw output, which mitigates the primacy findings more
+    than its framing credits: demoted material is de-headlined, not destroyed. Its
+    claim is narrower than it reads — the gate can DESCRIBE, and had no quoted
+    authority to override a mechanically-satisfied C-i. That is why the repair GRANTS
+    the authority rather than assuming it.
+  the severity of the H2 hole assumes an author would reach for D2 as nearest fit.
+    The HOLE is textual; the mislabelling is a prediction about behaviour.
+
+FAVOURING ITS FINDINGS, flagged
+  that the unquoted burden rules contain no "state your alternative" duty, and no
+    stripping clause on casualty->killer delivery. BOTH VERIFIED TRUE against the
+    charter text by the implementer: the charter says only "the casualty goes to the
+    killers, who must answer it on the frozen premises."
+  that packet authorship and completability adjudication are unassigned. TRUE.
+  that primacy selection was unconstrained. TRUE — no rule existed.
+```
+
+### WHAT THIS AUDIT DID NOT DO
+
+```text
+NOT   reopen any row. U5b-A, B and D stay closed on their recorded dispositions.
+NOT   change the U5b-E non-openability finding, which rests on E's own wording and on
+      no clause repaired here.
+NOT   decide R2b, C-ii's assessment mechanism, the H2 slot, or the C-iii residual.
+NOT   generate a task. Every reserved item above is a STOP.
+```
+
+```text
+AND IT DOES NOT VALIDATE THE PROCEDURE. Fifteen leaks found on one pass by one reader
+is evidence about how much was WRONG, never evidence that what remains is right. The
+next outing inherits an instrument that has been audited once, not an instrument that
+has been established.
+```
 
 ## Table G — DX PRESSURE LEDGER
 
