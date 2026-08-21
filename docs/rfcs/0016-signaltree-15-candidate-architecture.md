@@ -7,6 +7,11 @@ still being gathered.
 Companion to [RFC 0015](0015-derived-projection-contract.md), which is the only
 part of this picture that is actually frozen.
 
+The product-side view of the same surface is
+[signaltree-15-product-core-map.md](../architecture/signaltree-15-product-core-map.md)
+— a **checkpoint, not a derivation**. It cites this ledger; it never amends it.
+Where the two disagree, this document wins.
+
 ## Why this is a matrix and not a design
 
 A candidate architecture was drafted that framed `signalTree()` as a compiler

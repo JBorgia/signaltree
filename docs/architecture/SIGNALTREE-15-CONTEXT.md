@@ -48,6 +48,19 @@ legitimately reopen something frozen; that is the stated reopen condition. A
 _passing legacy test_ is not a counterexample — it demonstrates that current code
 does what current code does, which is layer 7 wearing a green check.
 
+### The product-core map is a CHECKPOINT, at layer 5
+
+[signaltree-15-product-core-map.md](signaltree-15-product-core-map.md) lays the
+user-visible product surface against the agnostic kernel concepts and names the
+six product properties the architecture has to serve. It is a **product
+architecture checkpoint, not a derivation** — it opens no row, closes no row and
+produces no evidence. Its `PRODUCT CLASS` column is an editorial placement; where
+it and a recorded disposition disagree, the disposition wins and the map is wrong.
+
+Read it for orientation before touching the product surface, and never as a
+source of dispositions. Its four `DECISION REQUIRED` items are reserved to the
+human author and are listed alongside the other reserved items below.
+
 ## North star
 
 ```text
@@ -1473,7 +1486,7 @@ STRONGEST ALTERNATIVE: "not established" may be a verdict that P1-P6 lacks the
   EVIDENCE ABOUT THE ROW — not a licence to widen P1-P6.
 ```
 
-## ITEMS RESERVED TO THE HUMAN AUTHOR — FIVE DECIDED 2026-08-20, ONE STILL OPEN
+## ITEMS RESERVED TO THE HUMAN AUTHOR — FIVE DECIDED 2026-08-20, FIVE STILL OPEN
 
 Each was reserved because an implementer settling it would supply by fiat the kind of
 premise this method exists to stop being supplied. **The author has decided five.**
@@ -1482,6 +1495,37 @@ Full records in RFC 0016: the P3 **freeze event**, the **defender charter**, the
 **D1 correction** (decision 4 below, which closes the audit's ungated-positive
 finding). One item — **R2b, the defender's default lean** — is open and is listed
 below.
+
+**Four more were reserved on 2026-08-21**, by the product-core checkpoint rather
+than by a derivation. They are recorded in
+[signaltree-15-product-core-map.md](signaltree-15-product-core-map.md) §
+DECISION REQUIRED and summarised immediately below.
+
+### 0 — FOUR PRODUCT DECISIONS RESERVED BY THE PRODUCT-CORE MAP
+
+```text
+DR-1  Which member-access contract does the product promise?
+        ADDRESS (lookup resolves the current occupant; reuse retargets) or
+        REFERENCE (a handle follows one membership and refuses to retarget).
+        The ledger's own words: "NOT decided: which contract is required."
+
+DR-2  Does the product promise FAILED-MUTATION NEUTRALITY?
+        The greenfield target asserts it (criterion 2c). U5b-B closed FUNCTION
+        NOT ESTABLISHED. A product may promise a property whose kernel function
+        is unestablished — but the promise must be made or withheld.
+
+DR-3  Is the USER-RECOGNIZABLE HISTORY STEP a kernel or an adapter obligation?
+        Turn indivisibility and "causal history owns meaning" settle neither.
+        Decides whether PositionId needs an intention companion in the kernel.
+
+DR-4  Does the product promise ASYNC ACCEPTANCE / CANCELLATION?
+        The antecedent is UNPROVEN and three scenarios are NOT CLEARED.
+        Decides whether the property belongs on the list at all.
+```
+
+**None of these is a measurement, an archaeology task, or a row.** None may be
+settled by running something, and an implementer settling one would supply by
+fiat exactly the kind of premise this section exists to stop being supplied.
 
 ### 1 — P3 IS FROZEN ON THE AGENTFUL WORDING
 
