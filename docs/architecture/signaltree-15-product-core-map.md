@@ -3,6 +3,16 @@
 **Status:** product architecture checkpoint, 2026-08-21. **Not a derivation row,
 not a gate series, and not a source of dispositions.**
 
+> ⚠️ **All four `DECISION REQUIRED` items were decided on 2026-08-21**, by the
+> author on product authority. The decisions, their entailments, and the
+> resulting placement changes are in
+> [signaltree-15-product-decisions.md](signaltree-15-product-decisions.md) —
+> which is where an authoritative product input belongs, since this file's own
+> preamble declares its cells weightless. Class cells below have been updated;
+> the reserved-question text at the end is retained verbatim as the record of
+> what was asked. **DR-4's scope is BLOCKED** and is the one live
+> `DECISION REQUIRED`.
+
 This document lays the user-visible product surface against the agnostic kernel
 vocabulary, once, in one place. It exists because the derivation has been running
 function-first for many rows and has never assembled a product-side view — so
@@ -133,8 +143,10 @@ FROZEN        durability authority is TREE-SCOPED; unresolved scopes hold that
 
 > A deferred completion either lands on what it began against, or is refused.
 
-The conditional is load-bearing and is not a hedge: no row has established that
-SignalTree owns this.
+The conditional was load-bearing and was not a hedge: no row established that
+SignalTree owns this. **DR-4 DISCHARGED THE CONDITIONAL BY DECISION, not by
+evidence** — the property stays on the list of six, the antecedent stays
+derivationally unproven, and P-D may never be cited as derived.
 
 ```text
 MISSING WHEN  a save begun against a member writes its result onto a DIFFERENT
@@ -142,7 +154,12 @@ MISSING WHEN  a save begun against a member writes its result onto a DIFFERENT
               (e2s00-member-access.kernel.spec.ts, "the deferred completion")
 LEDGER        the only shape in which retargeting is observable at all. Every
               other exercised shape is expressible under ADDRESS semantics
-STILL OPEN    whether the product PROMISES this, or routes it to the application
+DR-4 ANSWERED PROMISED for SignalTree-owned async helpers; APP RESPONSIBILITY for
+              arbitrary app promises. The APP half is decided; the HELPER SCOPE is
+              BLOCKED — its named carriers are frozen DELETE
+DR-1 REACHES  a consumer holding an ACQUIRED HANDLE gets refusal from DR-1, inside
+              a helper or not. So "app responsibility" is the COORDINATION, not
+              building an identity mechanism
 ```
 
 ### P-E — entity structural lifecycle
@@ -280,18 +297,18 @@ document's provisional placement and carries no weight.
 
 ### C — collections and entity structural lifecycle
 
-| Feature                                                                   | Property  | Kernel concepts                      | Class | Ledger state                                                                                                        |
-| ------------------------------------------------------------------------- | --------- | ------------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------- |
-| `entityMap()` — dynamic membership                                        | P-E       | dynamic structural store · SubjectId | ⚠     | FUNCTION **SURVIVES** (first positive result) — then **CHALLENGED** by DERIVATION E REOPENED                        |
-| the five minimum members (`addOne` `removeOne` `byId` `byIdOrFail` `ids`) | P-E       | dynamic structural store             | ⚠     | the only members established; all 31 accounted for                                                                  |
-| seven derived projections (`all` `count` …)                               | P-E       | —                                    | AS    | derived projections of the above                                                                                    |
-| thirteen bulk / convenience members                                       | P-E       | frame commit                         | ⚠     | atomicity across them belongs to the TRANSACTION KERNEL, not the collection                                         |
-| `changeId` (re-key)                                                       | P-E       | SubjectId · dynamic structural store | LC    | recorded EARNED and **WITHDRAWN**; the measured behaviour REVERSES shipped 14.1.2                                   |
-| `activeId` / `activeEntity` / setters                                     | P-E       | —                                    | AR    | **NO FUNCTION** — docblock records it as elf/Akita parity; a plain position + `byId` is identical                   |
-| `byKeys` / entity computed slices                                         | P-E       | —                                    | AS    | entity key selection                                                                                                |
-| `tap`                                                                     | P-A · P-E | dynamic structural store · publish   | ⚠     | deletion **WITHDRAWN**; the function EXISTS, its OWNER is undecided, kernel-scope null UNRUN                        |
-| `intercept`                                                               | P-B       | frame commit                         | LC    | no function — a write-path guard is the same category error as `status`; deletion STANDS. Its async form FAILS OPEN |
-| member access contract (ADDRESS vs REFERENCE)                             | P-D · P-E | SubjectId · dynamic structural store | ⚠     | **NOT DECIDED — which contract is required.** Both escapes are application choices                                  |
+| Feature                                                                   | Property  | Kernel concepts                         | Class | Ledger state                                                                                                                                                                 |
+| ------------------------------------------------------------------------- | --------- | --------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entityMap()` — dynamic membership                                        | P-E       | dynamic structural store · SubjectId    | ⚠     | FUNCTION **SURVIVES** (first positive result) — then **CHALLENGED** by DERIVATION E REOPENED                                                                                 |
+| the five minimum members (`addOne` `removeOne` `byId` `byIdOrFail` `ids`) | P-E       | dynamic structural store                | ⚠     | the only members established; all 31 accounted for                                                                                                                           |
+| seven derived projections (`all` `count` …)                               | P-E       | —                                       | AS    | derived projections of the above                                                                                                                                             |
+| thirteen bulk / convenience members                                       | P-E       | frame commit                            | ⚠     | atomicity across them belongs to the TRANSACTION KERNEL, not the collection                                                                                                  |
+| `changeId` (re-key)                                                       | P-E       | SubjectId · dynamic structural store    | LC    | recorded EARNED and **WITHDRAWN**; the measured behaviour REVERSES shipped 14.1.2                                                                                            |
+| `activeId` / `activeEntity` / setters                                     | P-E       | —                                       | AR    | **NO FUNCTION** — docblock records it as elf/Akita parity; a plain position + `byId` is identical                                                                            |
+| `byKeys` / entity computed slices                                         | P-E       | —                                       | AS    | entity key selection                                                                                                                                                         |
+| `tap`                                                                     | P-A · P-E | dynamic structural store · publish      | ⚠     | deletion **WITHDRAWN**; the function EXISTS, its OWNER is undecided, kernel-scope null UNRUN                                                                                 |
+| `intercept`                                                               | P-B       | frame commit                            | LC    | no function — a write-path guard is the same category error as `status`; deletion STANDS. Its async form FAILS OPEN                                                          |
+| member access contract (ADDRESS vs REFERENCE)                             | P-D · P-E | dynamic structural store · carrier open | KA    | **DR-1**: REFERENCE for acquired handles, ADDRESS for keyed lookup. `KP` is false as measured (E2-S0 built it above the kernel); no carrier settled, `SubjectId` NOT revived |
 
 ### D — durability
 
@@ -308,43 +325,43 @@ document's provisional placement and carries no weight.
 
 ### E — async
 
-| Feature                          | Property | Kernel concepts          | Class | Ledger state                                                                                                        |
-| -------------------------------- | -------- | ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------- |
-| `status()`                       | —        | —                        | LC    | **FUNCTION DELETE** — physically gone; workflow state is ordinary truth                                             |
-| `loader()`                       | P-D      | —                        | AR    | T2 Outcome A: cache / freshness / invalidation / tags are application cache policy                                  |
-| `asyncSource()` / `asyncQuery()` | P-D      | —                        | LC    | DELETE — frozen, still physically present                                                                           |
-| `invalidateTag` / tags           | P-D      | —                        | ⚠     | A3 (tree-scoped registry-free addressing of policy holders) is the one un-run remainder                             |
-| deferred-completion acceptance   | P-D      | SubjectId · frame commit | ⚠     | the antecedent is **UNPROVEN**; NOT CLEARED for transaction/undo, persistence, or a consumer that never had the key |
+| Feature                          | Property | Kernel concepts             | Class  | Ledger state                                                                                                                                                                                                                            |
+| -------------------------------- | -------- | --------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status()`                       | —        | —                           | LC     | **FUNCTION DELETE** — physically gone; workflow state is ordinary truth                                                                                                                                                                 |
+| `loader()`                       | P-D      | —                           | AR     | T2 Outcome A: cache / freshness / invalidation / tags are application cache policy                                                                                                                                                      |
+| `asyncSource()` / `asyncQuery()` | P-D      | —                           | ⚠      | DELETE — frozen, still physically present. **DR-4 names them as promise carriers → DECISION REQUIRED on its scope**                                                                                                                     |
+| `invalidateTag` / tags           | P-D      | —                           | ⚠      | A3 (tree-scoped registry-free addressing of policy holders) is the one un-run remainder                                                                                                                                                 |
+| deferred-completion acceptance   | P-D      | carrier open · frame commit | AR · ⚠ | **DR-4 SPLITS IT**: arbitrary app promises → `AR` (coordination, not identity — DR-1 supplies refusal). Helper scope ⚠ pending DR-4's scope. DR-1 CLEARED the never-had-the-key case; transaction/undo and persistence stay NOT CLEARED |
 
 ### F — history, causality, transactions
 
-| Feature                                     | Property  | Kernel concepts                     | Class | Ledger state                                                                                                  |
-| ------------------------------------------- | --------- | ----------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
-| causal turn atomicity                       | P-A · P-B | frame commit / publish              | KP    | **FROZEN** — a turn is indivisible everywhere it participates                                                 |
-| observable atomicity (not a revision count) | P-A       | frame commit / publish              | KP    | **FROZEN** — a semantic transaction may span more than one substrate commit                                   |
-| rollback-refusal semantics                  | P-B       | frame commit · consequence adapters | KP    | **FROZEN** — a refusal is not a success; surviving truth FLUSHES                                              |
-| `batching()`                                | P-A       | frame commit                        | KA    | observational atomicity FROZEN; the enhancer's own null is blocked on MUT                                     |
-| `transactions()` / `PendingTransaction`     | P-B       | frame commit · consequence adapters | ⚠     | tree-local gate FROZEN; the speculative FUNCTION is not established. **U5b exhaustion is not a verdict here** |
-| user-facing scoped undo / redo              | P-A       | PositionId · frame commit           | ⚠     | U5b-A UNDERDETERMINED (terminal). A 15-branch REGRESSION blocks measurement                                   |
-| the history STEP (what one Ctrl+Z means)    | P-A       | PositionId · publish                | ⚠     | the greenfield target names a declared user action; nothing froze it                                          |
-| `timeTravel()` / `jumpTo` / `getHistory`    | —         | static child table                  | KA    | a devtools instrument, explicitly separated from undo. End users never see it                                 |
-| `trackHistory` / form history               | P-A       | PositionId                          | LC    | survives in `lib/form-history/` after FORM-DEL; **retained mechanically, not an audited survivor**            |
-| merge / branch                              | —         | —                                   | AR    | deferred product question; preconditions MEASURED and DO NOT HOLD                                             |
-| write context (`causalMode`)                | P-A · P-B | PositionId · frame commit           | KP    | FROZEN as BEHAVIOUR (caller-supplied, unverified, and it takes effect); OWNER UNPROVEN                        |
+| Feature                                     | Property  | Kernel concepts                     | Class  | Ledger state                                                                                                                                                                     |
+| ------------------------------------------- | --------- | ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| causal turn atomicity                       | P-A · P-B | frame commit / publish              | KP     | **FROZEN** — a turn is indivisible everywhere it participates                                                                                                                    |
+| observable atomicity (not a revision count) | P-A       | frame commit / publish              | KP     | **FROZEN** — a semantic transaction may span more than one substrate commit                                                                                                      |
+| rollback-refusal semantics                  | P-B       | frame commit · consequence adapters | KP     | **FROZEN** — a refusal is not a success; surviving truth FLUSHES                                                                                                                 |
+| `batching()`                                | P-A       | frame commit                        | KA     | observational atomicity FROZEN; the enhancer's own null is blocked on MUT                                                                                                        |
+| `transactions()` / `PendingTransaction`     | P-B       | frame commit · consequence adapters | KA · ⚠ | **DR-2 SPLITS IT**: refusal/neutrality role → `KA` over frozen kernel refusal semantics; SPECULATIVE role still ⚠. **U5b exhaustion is not a verdict here, and neither is DR-2** |
+| user-facing scoped undo / redo              | P-A       | PositionId · frame commit           | KA     | **DR-3**: an adapter obligation. U5b-A UNDERDETERMINED (terminal) and a 15-branch REGRESSION still blocks measurement — DR-3 changed the OWNER, not the block                    |
+| the history STEP (what one Ctrl+Z means)    | P-A       | commit · publish · position facts   | KA     | **DR-3**: the history adapter owns it. The kernel owes a CLOSED list of three facts and no intention companion to `PositionId`                                                   |
+| `timeTravel()` / `jumpTo` / `getHistory`    | —         | static child table                  | KA     | a devtools instrument, explicitly separated from undo. End users never see it                                                                                                    |
+| `trackHistory` / form history               | P-A       | PositionId                          | LC     | survives in `lib/form-history/` after FORM-DEL; **retained mechanically, not an audited survivor**                                                                               |
+| merge / branch                              | —         | —                                   | AR     | deferred product question; preconditions MEASURED and DO NOT HOLD                                                                                                                |
+| write context (`causalMode`)                | P-A · P-B | PositionId · frame commit           | KP     | FROZEN as BEHAVIOUR (caller-supplied, unverified, and it takes effect); OWNER UNPROVEN                                                                                           |
 
 ### G — observation, tooling, errors
 
-| Feature                                                    | Property | Kernel concepts      | Class | Ledger state                                                                |
-| ---------------------------------------------------------- | -------- | -------------------- | ----- | --------------------------------------------------------------------------- |
-| `devTools()`                                               | —        | observer adapter     | KA    | MUT-0 hypothesis: a diagnostic projection                                   |
-| `createAuditTracker` / `createAuditCallback`               | —        | consequence adapters | KA    | explicitly NOT the same feature as undo (append-only, different authority)  |
-| `PathNotifier`                                             | —        | publish              | LC    | **NOT the observation boundary** — ordinary leaf writes produce ZERO events |
-| `interceptLeafSignals`                                     | P-B      | frame commit         | LC    | does not wrap a leaf's `.set` at all                                        |
-| error authority (`onTreeError`, `SignalTreeRollbackError`) | P-B      | frame commit         | ⚠     | branded factories were RFC 0004 plan-of-record; no 15 derivation ran        |
-| `isDev` / dev-only gating                                  | —        | —                    | ⚠     | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION         |
-| `edit-session`                                             | P-B      | frame commit         | ⚠     | NULL NOT RUN                                                                |
-| `security` subpath                                         | —        | —                    | KA    | emits **no** external imports                                               |
-| `lazy` / incremental materialization                       | P-F      | static child table   | ⚠     | threshold-driven; unassigned to any layer                                   |
+| Feature                                                    | Property | Kernel concepts      | Class | Ledger state                                                                                                                                                  |
+| ---------------------------------------------------------- | -------- | -------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devTools()`                                               | —        | observer adapter     | KA    | MUT-0 hypothesis: a diagnostic projection                                                                                                                     |
+| `createAuditTracker` / `createAuditCallback`               | —        | consequence adapters | KA    | explicitly NOT the same feature as undo (append-only, different authority)                                                                                    |
+| `PathNotifier`                                             | —        | publish              | LC    | **NOT the observation boundary** — ordinary leaf writes produce ZERO events                                                                                   |
+| `interceptLeafSignals`                                     | P-B      | frame commit         | LC    | does not wrap a leaf's `.set` at all                                                                                                                          |
+| error authority (`onTreeError`, `SignalTreeRollbackError`) | P-B      | frame commit         | KA    | **DR-2**: a promise that a refusal is encounterable AS a refusal needs a reportable refusal. FORM undisposed — branded factories were RFC 0004 plan-of-record |
+| `isDev` / dev-only gating                                  | —        | —                    | ⚠     | **blocking GATE B**; "guardrails dead in prod" NEEDS RECONCILIATION                                                                                           |
+| `edit-session`                                             | P-B      | frame commit         | ⚠     | NULL NOT RUN                                                                                                                                                  |
+| `security` subpath                                         | —        | —                    | KA    | emits **no** external imports                                                                                                                                 |
+| `lazy` / incremental materialization                       | P-F      | static child table   | ⚠     | threshold-driven; unassigned to any layer                                                                                                                     |
 
 ### H — Angular realization and extension
 
@@ -380,11 +397,19 @@ have, and it means the capability surface is entirely `KA` / `AS` / `⚠`, which
 in turn means **the 15 product is mostly adapter design, and the adapter layer
 has had almost no derivation attention.**
 
-**2. `⚠ UNPLACED` is the largest class** — 22 of 64 rows, against 12 `KA`,
-11 `LC`, 10 `KP`, 6 `AS` and 3 `AR`. That is the honest state of a derivation
+**2. `⚠ UNPLACED` was the largest class** — 22 of 64 rows, against 12 `KA`,
+11 `LC`, 10 `KP`, 6 `AS` and 3 `AR`. That was the honest state of a derivation
 this far from closure, and inflating those into provisional classes would
 manufacture exactly the dispositions the method exists to prevent. The count is
 the useful number, not a defect to reduce.
+
+> **AFTER THE FOUR DECISIONS: 19.** Four rows fully placed (member access,
+> the history STEP, scoped undo/redo, error authority), one newly unplaced
+> (`asyncSource`/`asyncQuery`, on DR-4's scope conflict), and two rows now SPLIT
+> with one half placed. Arithmetic in
+> [signaltree-15-product-decisions.md](signaltree-15-product-decisions.md) §
+> "Feature placement delta". **The reduction came from product decisions, not
+> from evidence** — no row closed and no function was established.
 
 **3. Of the six named properties, one is frozen, one has a frozen owner, and
 four have no owner at all.** P-F is frozen outright. P-C has a **frozen owner**
@@ -392,6 +417,13 @@ four have no owner at all.** P-F is frozen outright. P-C has a **frozen owner**
 P-D and P-E are each named and each falsifiable, and nothing owns any of them.
 **A product cannot ship a property nobody owns**, and this is the first document
 to say which four those are.
+
+> **AFTER THE FOUR DECISIONS: one owned by nothing, one owned in part.** P-A →
+> the history adapter (DR-3). P-B → the product, as a promise, with the truth
+> half leaning on frozen kernel refusal semantics and the history half landing on
+> the adapter (DR-2). P-D → the application for arbitrary promises; the helper
+> scope is BLOCKED (DR-4). **P-E still has no owner** — DERIVATION E is REOPENED,
+> and DR-1 touched the access FORM, not the store.
 
 **4. The `⚠` rows cluster.** They are not scattered: they concentrate on
 speculation/transactions, member-access identity, and the history step. Those
@@ -401,18 +433,45 @@ open it. The family is exhausted; the region is not resolved.
 ## Explicitly not decided here
 
 ```text
-any spelling. Not `features:`, not `tree._.x()`, not any derived access form
-whether entityMap survives — DERIVATION E is REOPENED and CHALLENGED
-whether identity beyond values is required — the antecedent is UNPROVEN
-whether the speculative function survives — U5b is exhausted, not answered
+any spelling. Not `features:`, not `tree._.x()`, not any derived access form.
+  DR-1 now REQUIRES that acquiring a handle be a distinct act from resolving a
+  key — and does NOT settle how either is spelled
+whether entityMap survives — DERIVATION E is REOPENED and CHALLENGED. DR-1
+  widened the RIVAL's burden; it did not repair E's verdict
+which CARRIER supplies identity — per-key generation is sufficient-in-model and
+  not minimal; SubjectId's necessity stays UNPROVEN; DR-1 settles no carrier
+whether the speculative function survives — U5b is exhausted, not answered, and
+  DR-2's promise is not a verdict on it either
 the 15-branch undo regression, which is untouched by design
 ```
 
-## DECISION REQUIRED
+## DECISION REQUIRED — ⚠️ ALL FOUR WERE DECIDED, 2026-08-21
 
-Four questions block placement of the `⚠` rows. Each is a **semantic or product
-decision reserved to the human author** — none is a measurement, none is an
-archaeology task, and none of them may be settled by running something.
+**The four items below were reserved by this document and decided the same day by
+the author on product/DX authority.** They are recorded, with their entailments
+and the resulting placement changes, in
+[signaltree-15-product-decisions.md](signaltree-15-product-decisions.md).
+
+```text
+DR-1  REFERENCE semantics for ACQUIRED entity/member handles; keyed lookup
+      remains ADDRESS semantics. NOT the binary this section posed — two
+      contracts on two access forms
+DR-2  failed-mutation neutrality IS a SignalTree product promise
+DR-3  the user-recognizable history step is a kernel-supported ADAPTER
+      obligation; the kernel supplies commit / publish / position facts
+DR-4  promised for SignalTree-owned async helpers; APP RESPONSIBILITY for
+      arbitrary app promises. ⚠ ITS SCOPE IS BLOCKED — the named carriers
+      collide with a frozen deletion. See that document's DECISION REQUIRED
+```
+
+**They are product INPUTS, not theorems**, exactly like the P3 freeze — no
+reviewer derived them, no gate established them, no experiment produced them.
+Cite them as _"DR-n, decided by the author on product authority 2026-08-21"_ and
+never as _"U5b established"_, _"the derivation showed"_ or _"Gate 1 granted"_.
+
+**The question text below is retained verbatim** as the record of what was
+reserved and how it was framed — DR-1's framing in particular was answered with a
+shape the question did not have, which the decisions document tracks.
 
 ### DR-1 — Which member-access contract does the product promise?
 

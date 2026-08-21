@@ -58,8 +58,12 @@ produces no evidence. Its `PRODUCT CLASS` column is an editorial placement; wher
 it and a recorded disposition disagree, the disposition wins and the map is wrong.
 
 Read it for orientation before touching the product surface, and never as a
-source of dispositions. Its four `DECISION REQUIRED` items are reserved to the
-human author and are listed alongside the other reserved items below.
+source of dispositions. Its four `DECISION REQUIRED` items **were decided by the
+author on 2026-08-21** and are recorded, with their entailments, in
+[signaltree-15-product-decisions.md](signaltree-15-product-decisions.md) — which
+sits at the authority level of a **product INPUT** (the P3-freeze level), not at
+the map's layer 5. Its ENTAILED / INFERRED distinction is load-bearing: an
+`INFERRED` entailment is citable only as a candidate.
 
 ## North star
 
@@ -1486,7 +1490,7 @@ STRONGEST ALTERNATIVE: "not established" may be a verdict that P1-P6 lacks the
   EVIDENCE ABOUT THE ROW — not a licence to widen P1-P6.
 ```
 
-## ITEMS RESERVED TO THE HUMAN AUTHOR — FIVE DECIDED 2026-08-20, FIVE STILL OPEN
+## ITEMS RESERVED TO THE HUMAN AUTHOR — NINE DECIDED, ONE OPEN, ONE NEW
 
 Each was reserved because an implementer settling it would supply by fiat the kind of
 premise this method exists to stop being supplied. **The author has decided five.**
@@ -1496,36 +1500,74 @@ Full records in RFC 0016: the P3 **freeze event**, the **defender charter**, the
 finding). One item — **R2b, the defender's default lean** — is open and is listed
 below.
 
-**Four more were reserved on 2026-08-21**, by the product-core checkpoint rather
-than by a derivation. They are recorded in
-[signaltree-15-product-core-map.md](signaltree-15-product-core-map.md) §
-DECISION REQUIRED and summarised immediately below.
+**Four more were reserved on 2026-08-21** by the product-core checkpoint rather
+than by a derivation — and **all four were decided the same day.** Decision 0
+below records them. Their entailments, the resulting kernel-responsibility and
+adapter-seam changes, and one NEW reservation they produced are in
+[signaltree-15-product-decisions.md](signaltree-15-product-decisions.md).
 
-### 0 — FOUR PRODUCT DECISIONS RESERVED BY THE PRODUCT-CORE MAP
+### 0 — FOUR PRODUCT DECISIONS, DECIDED 2026-08-21
 
 ```text
-DR-1  Which member-access contract does the product promise?
-        ADDRESS (lookup resolves the current occupant; reuse retargets) or
-        REFERENCE (a handle follows one membership and refuses to retarget).
-        The ledger's own words: "NOT decided: which contract is required."
+DR-1  The product supports REFERENCE semantics for ACQUIRED entity/member
+      handles, while KEYED LOOKUP remains ADDRESS semantics.
 
-DR-2  Does the product promise FAILED-MUTATION NEUTRALITY?
-        The greenfield target asserts it (criterion 2c). U5b-B closed FUNCTION
-        NOT ESTABLISHED. A product may promise a property whose kernel function
-        is unestablished — but the promise must be made or withheld.
+DR-2  Failed-mutation neutrality IS a SignalTree product promise.
 
-DR-3  Is the USER-RECOGNIZABLE HISTORY STEP a kernel or an adapter obligation?
-        Turn indivisibility and "causal history owns meaning" settle neither.
-        Decides whether PositionId needs an intention companion in the kernel.
+DR-3  The user-recognizable history step is a kernel-supported ADAPTER
+      obligation, NOT a kernel primitive. The kernel supplies commit / publish /
+      position facts; the history adapter owns the user-action step.
 
-DR-4  Does the product promise ASYNC ACCEPTANCE / CANCELLATION?
-        The antecedent is UNPROVEN and three scenarios are NOT CLEARED.
-        Decides whether the property belongs on the list at all.
+DR-4  Async acceptance/cancellation is PROMISED for SignalTree-owned async
+      helpers (asyncSource, asyncQuery, loader-backed entityMap), and is
+      APPLICATION RESPONSIBILITY for arbitrary app promises.
+      ⚠ ITS SCOPE IS BLOCKED — see the NEW reservation below.
 ```
 
-**None of these is a measurement, an archaeology task, or a row.** None may be
-settled by running something, and an implementer settling one would supply by
-fiat exactly the kind of premise this section exists to stop being supplied.
+```text
+THESE ARE      PRODUCT / DX DECISIONS on the author's product authority.
+               Stipulating premises IS the author's job. Same status as the P3
+               freeze.
+THESE ARE NOT  theorems. No reviewer derived them, no gate established them, no
+               experiment produced them, and NONE was derived by U5b.
+
+CITE AS   "DR-n, decided by the author on product authority 2026-08-21, reads ..."
+NEVER AS  "U5b established" · "the derivation showed" · "Gate 1 granted" ·
+          "E2-S0 proved identity is required" · "the map decided"
+```
+
+**What the four do NOT do.** They answer nothing in U5b — the family stays
+EXHAUSTED, NOT ANSWERED, in both directions. They revive no frozen deletion:
+naming a mechanism is not reviving it. They establish no kernel function — a
+promise says which layer answers to the user, never which layer implements. And
+they settle no carrier and no spelling.
+
+**DR-1 was not answered in the shape it was asked.** The map posed it as
+`ADDRESS` **xor** `REFERENCE` for one contract; the decision returns **two
+contracts on two access forms**. Anything that pre-computed on the binary — the
+map's own _"`dynamic structural store` alone or `+ SubjectId`"_ framing included —
+must be re-read rather than translated.
+
+**NEW RESERVATION, produced by DR-4 — its SCOPE.** DR-4 names three carriers.
+Two (`asyncSource`, `asyncQuery`) are **frozen DELETE**; the third (`loader()`) is
+classed `AR` by T2 Outcome A. Two readings are available and they cost
+differently:
+
+```text
+READING A  SCOPE-CONDITIONAL. The promise binds whichever SignalTree-owned async
+           helper EXISTS in 15; the three names are cited as the v14 EXAMPLES OF
+           THE CATEGORY. If none survives, the promise binds nothing.
+           Changes no disposition.
+READING B  CARRIER-COMMITTING. 15 must HAVE such helpers, which REVERSES the
+           asyncSource / asyncQuery deletion and REOPENS loader()'s Outcome A.
+```
+
+The decision cannot be applied without choosing, and **an implementer choosing
+would supply by fiat exactly the premise class this section exists to stop.** The
+APP half of DR-4 holds under both readings and is decided.
+
+**None of the four was a measurement, an archaeology task, or a row**, and none
+was settled by running something.
 
 ### 1 — P3 IS FROZEN ON THE AGENTFUL WORDING
 

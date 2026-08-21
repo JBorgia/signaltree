@@ -12,6 +12,50 @@ The product-side view of the same surface is
 — a **checkpoint, not a derivation**. It cites this ledger; it never amends it.
 Where the two disagree, this document wins.
 
+### FOUR PRODUCT DECISIONS ARE NOW INPUTS TO THIS LEDGER — 2026-08-21
+
+[signaltree-15-product-decisions.md](../architecture/signaltree-15-product-decisions.md)
+records four decisions the author made on product authority. They are **INPUTS**,
+at the same status as the P3 freeze — not theorems, not derived by U5b, and not
+evidence. What they touch here:
+
+```text
+DR-1  REFERENCE semantics for ACQUIRED handles; ADDRESS for keyed lookup.
+      SUPPLIES the antecedent E2-S0 recorded as unproven, so E2-S0's CONSEQUENT
+      holds for the acquired-handle form — cite it as "DR-1 supplied the
+      antecedent", NEVER as "E2-S0 established identity is required".
+      SETTLES NO CARRIER. SubjectId's necessity stays UNPROVEN, per-key
+      generation stays sufficient-in-model and NOT minimal.
+      WIDENS the burden on DERIVATION E's rival (E2-S0's B′ retargets silently).
+      DOES NOT repair E's verdict — E stays REOPENED and CHALLENGED.
+
+DR-2  Failed-mutation neutrality IS a product promise.
+      P-B gets an OWNER; U5b-B's FUNCTION NOT ESTABLISHED is UNTOUCHED.
+      `intercept` deletion STANDS — deletion DISCHARGES the guard clause
+      vacuously. The shipped async-intercept fail-open is reclassified from
+      "published-surface drift" to a PROMISE VIOLATION on the 14.x surface.
+      NOT a verdict on the speculative function.
+
+DR-3  The user-recognizable history step is an ADAPTER obligation.
+      WITHDRAWS the prospective requirement that PositionId carry an
+      intention/authorship companion. The kernel's P-A obligation becomes a
+      CLOSED list: commit · publish · position facts.
+      Gives the causalMode write context's OPEN OWNER question a shape — as a
+      CANDIDACY for a turn-demarcation seam, not a finding.
+
+DR-4  Promised for SignalTree-owned async helpers; APP RESPONSIBILITY for
+      arbitrary app promises.
+      ⚠ THE HELPER SCOPE IS BLOCKED. It names asyncSource / asyncQuery, both
+      frozen DELETE under this document's Rule 0j-2 constraint, and loader(),
+      classed AR by T2 Outcome A. Two readings differ by two frozen deletions
+      and one closed row. NOTHING HERE CHOOSES, and no deletion is reversed.
+      The APP half is decided and holds under both readings.
+```
+
+**No disposition in this document is amended by any of the four.** Where a
+decision bears on a recorded disposition, it is recorded as a **live decision
+requirement over that disposition**, never as its replacement.
+
 ## Why this is a matrix and not a design
 
 A candidate architecture was drafted that framed `signalTree()` as a compiler
