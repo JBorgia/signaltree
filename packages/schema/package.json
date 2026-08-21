@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/schema",
-  "version": "14.1.2",
+  "version": "14.1.3",
   "description": "Schema-driven validation for SignalTree. StandardSchema-compatible, async-first, observe-only.",
   "type": "module",
   "sideEffects": false,

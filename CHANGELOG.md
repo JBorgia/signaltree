@@ -1,4 +1,4 @@
-## Unreleased (14.1.3)
+## 14.1.3 (2026-08-21)
 
 ### Fixed — the async-adapter hydration window was outside the load
 
