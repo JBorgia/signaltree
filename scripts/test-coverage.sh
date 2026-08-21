@@ -38,10 +38,16 @@ print_coverage() {
 # List of packages to test
 # Note: batching, middleware, entities, devtools, time-travel were consolidated
 # into @signaltree/core in v4.0.0. Memoization & presets were removed in v10.0.0.
+# `enterprise` was retired in 13.5.0 (RFC 0010) and its source deleted, but it
+# stayed in this list — so every release since printed
+# `Cannot find project 'enterprise'` → `✗ enterprise - Tests failed`, non-fatal,
+# in the middle of an otherwise green log. Removed: a permanently-red line
+# trains you to skim past the real ones. The package stays PUBLISHED and
+# deprecated on npm (see scripts/npm-deprecate.sh) — that is deliberate and
+# unrelated to whether there is a project here to test.
 PACKAGES=(
     "core"
     "ng-forms"
-    "enterprise"
     "guardrails"
     "schema"
 )

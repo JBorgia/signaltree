@@ -76,7 +76,8 @@ const SIGNALTREE_PATH_MAP = {
   '@signaltree/core/edit-session': ['dist/packages/core/src/edit-session.d.ts'],
   '@signaltree/core/storage': ['dist/packages/core/src/storage.d.ts'],
   '@signaltree/core/authoring': ['dist/packages/core/src/authoring.d.ts'],
-  '@signaltree/enterprise': ['dist/packages/enterprise/src/index.d.ts'],
+  // '@signaltree/enterprise' retired in 13.5.0 (RFC 0010) — no project, so this
+  // only ever produced "could not be resolved to a built d.ts" on every run.
   '@signaltree/ng-forms': ['dist/packages/ng-forms/src/index.d.ts'],
   '@signaltree/ng-forms/audit': ['dist/packages/ng-forms/src/audit/index.d.ts'],
   '@signaltree/ng-forms/signals': ['dist/packages/ng-forms/src/signals/index.d.ts'],
