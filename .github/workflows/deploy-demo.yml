@@ -27,6 +27,7 @@ jobs:
       - name: Checkout v14 archive
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          path: legacy-site
           persist-credentials: false
 
       - name: Checkout current v15 site
@@ -39,6 +40,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.17.0
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -46,13 +49,15 @@ jobs:
           node-version: '24.3.0'
           cache: pnpm
           cache-dependency-path: |
-            pnpm-lock.yaml
+            legacy-site/pnpm-lock.yaml
             current-site/pnpm-lock.yaml
 
       - name: Install v14 dependencies
+        working-directory: legacy-site
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build preserved v14 site
+        working-directory: legacy-site
         env:
           NX_CLOUD: 'false'
           NX_DAEMON: 'false'
