@@ -1,4 +1,3 @@
-
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -13,7 +12,7 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
       <!-- Full-width top bar — desktop only -->
       <header class="app-topbar">
         <a routerLink="/" class="topbar-brand" title="SignalTree home">
-          <img src="/signaltree.svg" alt="SignalTree Logo" class="topbar-logo" />
+          <img src="signaltree.svg" alt="SignalTree Logo" class="topbar-logo" />
           <div class="topbar-brand-text">
             <span class="topbar-brand-name">SignalTree</span>
             <span class="topbar-brand-tagline">Reactive JSON</span>
@@ -27,14 +26,16 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
             rel="noopener noreferrer"
             class="topbar-link"
             title="View source on GitHub"
-          >🔗 GitHub</a>
+            >🔗 GitHub</a
+          >
           <a
             href="https://www.npmjs.com/org/signaltree"
             target="_blank"
             rel="noopener noreferrer"
             class="topbar-link"
             title="View packages on npm"
-          >📦 npm</a>
+            >📦 npm</a
+          >
         </nav>
       </header>
 
@@ -43,6 +44,17 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
 
       <!-- Page content -->
       <main class="main-content">
+        <aside class="legacy-banner" aria-label="SignalTree version notice">
+          <strong>SignalTree v14 archive</strong>
+          <span>
+            This preserved site documents the historical
+            <code>@signaltree/*</code> packages. Version 15 is a ground-up
+            causal rewrite with different package names and architecture.
+          </span>
+          <a href="/"
+            >Open the current v15 site <span aria-hidden="true">→</span></a
+          >
+        </aside>
         <router-outlet></router-outlet>
       </main>
     </div>
@@ -157,6 +169,47 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
         overflow-x: hidden;
       }
 
+      .legacy-banner {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-warning-300);
+        background: var(--color-warning-100);
+        color: var(--color-neutral-800);
+      }
+
+      .legacy-banner strong {
+        font-size: 0.78rem;
+        white-space: nowrap;
+      }
+
+      .legacy-banner > span {
+        min-width: 0;
+        color: var(--color-neutral-700);
+        font-size: 0.76rem;
+        line-height: 1.45;
+      }
+
+      .legacy-banner code {
+        font-size: 0.9em;
+      }
+
+      .legacy-banner a {
+        color: var(--color-primary-700);
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .legacy-banner a:hover,
+      .legacy-banner a:focus-visible {
+        color: var(--color-primary-900);
+        text-decoration: underline;
+      }
+
       /* ── Mobile (<1024px): collapse to single-column block layout ───────── */
       @media (max-width: 1023px) {
         .app-shell {
@@ -169,6 +222,16 @@ import { SIGNALTREE_VERSION_SUMMARY } from './version';
 
         .main-content {
           padding-top: 56px; /* clear the navigation component's mobile topbar */
+        }
+
+        .legacy-banner {
+          grid-template-columns: 1fr;
+          gap: 0.35rem;
+        }
+
+        .legacy-banner strong,
+        .legacy-banner a {
+          white-space: normal;
         }
       }
     `,
