@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  V15_COMMIT: fe6d13b70c940c8e7424e20888791e8fc1f39fe5
+  V15_COMMIT: 35980f1fa7fc35f16dad072bf040f9b8461d4d9b
 
 jobs:
   build-and-deploy:
