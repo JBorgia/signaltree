@@ -1,3 +1,35 @@
+## 14.1.4 (2026-09-24)
+
+**TL;DR** — **SECURITY patch. No API changes, no behaviour changes for correct
+input.** `resolveCircularReferences` could be driven to write to
+`Object.prototype` by a crafted `circularRefs` path in serialized metadata.
+Upgrade if you deserialize anything you did not produce yourself.
+
+### Prototype pollution in `resolveCircularReferences`
+
+`fromJSON`'s circular-reference resolution walked caller-supplied metadata paths
+with plain property access and no guards, then assigned through them. A payload
+whose `circularRefs` path is `constructor.prototype.isAdmin` therefore wrote to
+`Object.prototype`, and every object in the process inherited the property.
+
+Reproduced against the PUBLISHED `@signaltree/core@14.1.1` tarball, so this is
+not a source-only finding. 14.1.2 and 14.1.3 carry the same code.
+
+The walk now refuses `__proto__`, `constructor` and `prototype` as segments,
+traverses only own data properties via `getOwnPropertyDescriptor`, and
+preflights the whole path before assigning anything — so a rejected payload
+changes nothing rather than partially applying.
+
+Entity field signals were hardened in the same pass: reading a field now
+requires an OWN property, so `byId(x).constructor` no longer resolves a
+prototype member as if it were data.
+
+### Upgrading
+
+Drop-in. No configuration and no call-site changes. If you only ever deserialize
+payloads your own application produced, you were not exposed, but there is no
+cost to taking it.
+
 ## 14.1.3 (2026-08-21)
 
 ### Fixed — the async-adapter hydration window was outside the load

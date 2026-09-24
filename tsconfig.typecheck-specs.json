@@ -1,7 +1,10 @@
 {
   "//": "Typechecks SPEC files, which tsconfig.typecheck-all.json excludes and core's tsconfig.typecheck.json covers only for *.typing.spec.ts. Consumed by tools/check-spec-types.mjs as a RATCHET, not a clean gate — see that file for the baseline and why.",
   "extends": "./tsconfig.base.json",
+  "//target": "target/lib are raised ABOVE tsconfig.base.json here, deliberately. Specs run under vitest on CI Node; the base config pins the library's ES2015 SHIP floor, and those are two different questions. The serialization security spec reaches for `Object.hasOwn` and BigInt literals to build hostile inputs, and typechecking them at the ship floor produced 7 errors about the toolchain rather than about the code. Raised HERE ONLY — nothing about the published target changes.",
   "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022", "dom"],
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"],

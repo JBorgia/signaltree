@@ -118,7 +118,35 @@ function resolveBase() {
   const candidates = isPrerelease
     ? tags.filter((t) => t !== `v${current}`)
     : tags.filter((t) => t !== `v${current}` && !/-/.test(t));
-  const base = candidates[0];
+  /**
+   * ...AND THE BASE MUST BE ON THIS RELEASE LINE.
+   *
+   * `--sort=-v:refname` ranks tags across the WHOLE tag namespace, which is not
+   * the same set as "releases this commit descends from". A checkout that has
+   * fetched a second remote — or any repository carrying more than one line —
+   * therefore resolves a base from a line this commit never touched. Measured
+   * while preparing the 14.1.4 security patch in a worktree that had both
+   * remotes: the base came out `v15.3.0` and the delta was 405 symbols, every
+   * one an ordinary 14.x export that the 15.x line renamed or dropped.
+   *
+   * ANCESTRY is the version-independent form of the question already asked
+   * above — "what reaches a user upgrading from the last version they could
+   * install" means the last release THIS COMMIT DESCENDS FROM. On a single
+   * linear line it selects exactly what the old rule selected, so nothing about
+   * a normal release changes; here it selects v14.1.3 and the delta drops to
+   * what 14.1.4 actually adds.
+   *
+   * Third correction to this selector, and the first where it returned a WRONG
+   * answer rather than a blind one. The two before it are documented above.
+   */
+  const base = candidates.find((tag) => {
+    try {
+      git('merge-base', '--is-ancestor', tag, 'HEAD');
+      return true;
+    } catch {
+      return false;
+    }
+  });
   if (!base) {
     console.error(
       'No prior version tag found to diff against.\n' +
