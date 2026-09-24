@@ -199,6 +199,10 @@ export interface SerializedState<T = unknown> {
 
     /**
      * Circular reference paths
+     *
+     * Paths containing __proto__, constructor or prototype are rejected,
+     * even when these are own data properties. This security restriction also
+     * applies to previously serialized data containing those path segments.
      */
     circularRefs?: Array<{ path: string; targetPath: string }>;
     /**
@@ -365,8 +369,11 @@ export interface PersistenceMethods {
 /**
  * Custom replacer that handles circular references only
  */
-function createReplacer(config: InternalSerializationConfig) {
-  const seen = new WeakSet<object>();
+function createReplacer(
+  config: InternalSerializationConfig,
+  dataRoot: unknown
+) {
+  const ancestors: object[] = [];
   const circularPaths = new Map<object, string>();
 
   return function replacer(
@@ -386,22 +393,65 @@ function createReplacer(config: InternalSerializationConfig) {
 
     // Handle circular references
     if (value && typeof value === 'object') {
-      if (seen.has(value)) {
+      // JSON visits shared acyclic objects more than once. Only an ancestor
+      // is a backreference; replacing every repeated object loses sibling data.
+      while (ancestors.length && ancestors[ancestors.length - 1] !== this) {
+        ancestors.pop();
+      }
+      if (ancestors.includes(value)) {
         if (config.handleCircular) {
           const targetPath = circularPaths.get(value) || '';
           return { [TYPE_MARKERS.CIRCULAR]: targetPath };
         }
         return undefined;
       }
-      seen.add(value);
-      const currentPath = key || '';
+      const parentPath = circularPaths.get(this) ?? '';
+      const currentPath =
+        value === dataRoot || ancestors.length === 0
+          ? ''
+          : Array.isArray(this)
+          ? `${parentPath}[${key}]`
+          : parentPath
+          ? `${parentPath}.${key}`
+          : key;
+      ancestors.push(value);
       circularPaths.set(value, currentPath);
     }
 
-    // Special-type handling happens in `tree()`'s walk, not here. (It used to
-    // live in a private `unwrapObjectSafely`, deleted in 14.0.0.)
+    // Special types are encoded before this replacer runs.
     return value;
   };
+}
+
+/** Collect inline backreferences from JSON data when metadata was omitted. */
+function findCircularMarkers(
+  value: unknown,
+  path = '',
+  references: Array<{ path: string; targetPath: string }> = []
+): Array<{ path: string; targetPath: string }> {
+  if (value === null || typeof value !== 'object') return references;
+  const keys = Object.keys(value);
+  if (keys.length === 1 && keys[0] === TYPE_MARKERS.CIRCULAR) {
+    // The same resolver validates this value's type and both path addresses.
+    references.push({
+      path,
+      targetPath: (value as Record<string, string>)[TYPE_MARKERS.CIRCULAR],
+    });
+    return references;
+  }
+  for (const key of keys) {
+    const childPath = Array.isArray(value)
+      ? `${path}[${key}]`
+      : path
+      ? `${path}.${key}`
+      : key;
+    findCircularMarkers(
+      (value as Record<string, unknown>)[key],
+      childPath,
+      references
+    );
+  }
+  return references;
 }
 
 /**
@@ -411,28 +461,72 @@ function resolveCircularReferences(
   obj: Record<string, unknown>,
   circularPaths: Array<{ path: string; targetPath: string }>
 ): void {
-  for (const { path, targetPath } of circularPaths) {
-    const pathParts = path.split(/\.|\[|\]/).filter(Boolean);
-    const targetParts = targetPath.split(/\.|\[|\]/).filter(Boolean);
-
-    // Navigate to the circular reference location
-    let current: Record<string, unknown> = obj;
-    for (let i = 0; i < pathParts.length - 1; i++) {
-      current = current[pathParts[i]] as Record<string, unknown>;
-      if (!current) break;
+  const invalid = (): never => {
+    throw new Error('Invalid circular reference metadata');
+  };
+  const partsOf = (path: unknown): string[] => {
+    if (typeof path !== 'string') return invalid();
+    const parts = path.split(/\.|\[|\]/).filter(Boolean);
+    if (
+      parts.some(
+        (part) =>
+          part === '__proto__' || part === 'constructor' || part === 'prototype'
+      )
+    )
+      return invalid();
+    return parts;
+  };
+  const ownData = (value: object, key: string): PropertyDescriptor => {
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    if (!property || !('value' in property)) return invalid();
+    return property;
+  };
+  // A virtual graph preserves ordered-reference semantics without changing
+  // caller-owned objects until the entire metadata list has passed preflight.
+  // Key by object identity so writes through aliases are visible to all paths.
+  const pending = new WeakMap<object, Map<string, Record<string, unknown>>>();
+  const objectAt = (parts: readonly string[]): Record<string, unknown> => {
+    let value: unknown = obj;
+    for (const part of parts) {
+      if (typeof value !== 'object' || value === null) return invalid();
+      // Never traverse prototypes or invoke an accessor supplied to restore().
+      const property = ownData(value, part);
+      value = pending.get(value)?.get(part) ?? property.value;
     }
+    if (typeof value !== 'object' || value === null) return invalid();
+    return value as Record<string, unknown>;
+  };
 
-    // Navigate to the target
-    let target: Record<string, unknown> = obj;
-    for (const part of targetParts) {
-      target = target[part] as Record<string, unknown>;
-      if (!target) break;
+  if (!Array.isArray(circularPaths)) return invalid();
+  const assignments: Array<{
+    parent: Record<string, unknown>;
+    key: string;
+    target: Record<string, unknown>;
+  }> = [];
+  for (let index = 0; index < circularPaths.length; index++) {
+    // Reject holes and accessors in metadata as well as in the data graph.
+    const reference: unknown = ownData(circularPaths, String(index)).value;
+    if (reference === null || typeof reference !== 'object') return invalid();
+    const parts = partsOf(ownData(reference, 'path').value);
+    const targetParts = partsOf(ownData(reference, 'targetPath').value);
+    const key = parts.pop();
+    if (key === undefined) return invalid();
+    const parent = objectAt(parts);
+    // Array length is a writable own data property, but assigning an object
+    // invokes numeric coercion and can throw after earlier writes committed.
+    if (Array.isArray(parent) && key === 'length') return invalid();
+    if (!ownData(parent, key).writable) return invalid();
+    const target = objectAt(targetParts);
+    let writes = pending.get(parent);
+    if (!writes) {
+      writes = new Map();
+      pending.set(parent, writes);
     }
-
-    // Set the circular reference
-    if (current && target) {
-      current[pathParts[pathParts.length - 1]] = target;
-    }
+    writes.set(key, target);
+    assignments.push({ parent, key, target });
+  }
+  for (const { parent, key, target } of assignments) {
+    parent[key] = target;
   }
 }
 
@@ -477,11 +571,13 @@ export function serialization(
       data: T,
       metadata?: SerializedState<T>['metadata']
     ): void => {
+      const decoding = new WeakMap<object, unknown>();
       // Convert special type markers back to their actual types
       const restoreSpecialTypes = (value: unknown): unknown => {
         if (!value || typeof value !== 'object') {
           return value;
         }
+        if (decoding.has(value)) return decoding.get(value);
 
         // Check for type markers
         if (TYPE_MARKERS.UNDEFINED in value) {
@@ -513,23 +609,58 @@ export function serialization(
           return new RegExp(regexpData.source, regexpData.flags);
         }
         if (TYPE_MARKERS.MAP in value) {
-          return new Map(value[TYPE_MARKERS.MAP] as Array<[unknown, unknown]>);
+          const result = new Map<unknown, unknown>();
+          decoding.set(value, result);
+          try {
+            const entries = restoreSpecialTypes(
+              value[TYPE_MARKERS.MAP]
+            ) as Array<[unknown, unknown]>;
+            for (const [key, item] of entries) result.set(key, item);
+            return result;
+          } finally {
+            decoding.delete(value);
+          }
         }
         if (TYPE_MARKERS.SET in value) {
-          return new Set(value[TYPE_MARKERS.SET] as Array<unknown>);
+          const result = new Set<unknown>();
+          decoding.set(value, result);
+          try {
+            const entries = restoreSpecialTypes(
+              value[TYPE_MARKERS.SET]
+            ) as unknown[];
+            for (const item of entries) result.add(item);
+            return result;
+          } finally {
+            decoding.delete(value);
+          }
         }
 
-        // Handle arrays
-        if (Array.isArray(value)) {
-          return value.map(restoreSpecialTypes);
+        // Allocate before descending so array leaves can contain backedges.
+        // Keep this map scoped to ancestors: acyclic occurrences still get
+        // independent copies, matching the existing codec's value semantics.
+        const result: unknown[] | Record<string, unknown> = Array.isArray(value)
+          ? new Array(value.length)
+          : {};
+        decoding.set(value, result);
+        try {
+          if (Array.isArray(value)) {
+            value.forEach((item, index) => {
+              (result as unknown[])[index] = restoreSpecialTypes(item);
+            });
+          } else {
+            for (const [k, v] of Object.entries(value)) {
+              Object.defineProperty(result, k, {
+                value: restoreSpecialTypes(v),
+                writable: true,
+                enumerable: true,
+                configurable: true,
+              });
+            }
+          }
+          return result;
+        } finally {
+          decoding.delete(value);
         }
-
-        // Handle objects
-        const result: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(value)) {
-          result[k] = restoreSpecialTypes(v);
-        }
-        return result;
       };
 
       // Restore special types in the data
@@ -713,7 +844,11 @@ export function serialization(
     };
 
     // Encode/decode helpers that work on already-unwrapped plain data
-    function encodeSpecials(v: unknown, preserveTypes: boolean): unknown {
+    function encodeSpecials(
+      v: unknown,
+      preserveTypes: boolean,
+      encoding = new WeakMap<object, unknown>()
+    ): unknown {
       if (!preserveTypes) return v;
       if (v === undefined) return { [TYPE_MARKERS.UNDEFINED]: true };
       if (typeof v === 'number') {
@@ -724,24 +859,57 @@ export function serialization(
       }
       if (typeof v === 'bigint') return { [TYPE_MARKERS.BIGINT]: String(v) };
       if (typeof v === 'symbol') return { [TYPE_MARKERS.SYMBOL]: String(v) };
+      if (v && typeof v === 'object' && encoding.has(v)) return encoding.get(v);
 
       if (v instanceof Date) return { [TYPE_MARKERS.DATE]: v.toISOString() };
       if (v instanceof RegExp)
         return {
           [TYPE_MARKERS.REGEXP]: { source: v.source, flags: v.flags },
         };
-      if (v instanceof Map)
-        return { [TYPE_MARKERS.MAP]: Array.from(v.entries()) };
-      if (v instanceof Set)
-        return { [TYPE_MARKERS.SET]: Array.from(v.values()) };
-
-      if (Array.isArray(v))
-        return v.map((x) => encodeSpecials(x, preserveTypes));
-      if (v && typeof v === 'object') {
+      if (v instanceof Map || v instanceof Set) {
+        const marker = v instanceof Map ? TYPE_MARKERS.MAP : TYPE_MARKERS.SET;
         const out: Record<string, unknown> = {};
-        for (const [k, val] of Object.entries(v as Record<string, unknown>))
-          out[k] = encodeSpecials(val, preserveTypes);
-        return out;
+        encoding.set(v, out);
+        try {
+          out[marker] = encodeSpecials(
+            v instanceof Map ? Array.from(v.entries()) : Array.from(v.values()),
+            preserveTypes,
+            encoding
+          );
+          return out;
+        } finally {
+          encoding.delete(v);
+        }
+      }
+
+      if (v && typeof v === 'object') {
+        const out: unknown[] | Record<string, unknown> = Array.isArray(v)
+          ? new Array(v.length)
+          : {};
+        encoding.set(v, out);
+        try {
+          if (Array.isArray(v)) {
+            v.forEach((item, index) => {
+              (out as unknown[])[index] = encodeSpecials(
+                item,
+                preserveTypes,
+                encoding
+              );
+            });
+          } else {
+            for (const [k, val] of Object.entries(v)) {
+              Object.defineProperty(out, k, {
+                value: encodeSpecials(val, preserveTypes, encoding),
+                writable: true,
+                enumerable: true,
+                configurable: true,
+              });
+            }
+          }
+          return out;
+        } finally {
+          encoding.delete(v);
+        }
       }
       return v;
     }
@@ -842,7 +1010,7 @@ export function serialization(
       }
 
       // Serialize with custom replacer
-      const replacer = createReplacer(fullConfig);
+      const replacer = createReplacer(fullConfig, state);
       const json = JSON.stringify(data, replacer, 2);
       // Extra debug: if JSON contains MAP or SET markers, print compact preview
       return json;
@@ -869,10 +1037,10 @@ export function serialization(
         const { data, metadata } = parsed;
 
         // Resolve circular references if present
-        if (metadata?.circularRefs && fullConfig.handleCircular) {
+        if (fullConfig.handleCircular) {
           resolveCircularReferences(
             data as unknown as Record<string, unknown>,
-            metadata.circularRefs
+            metadata?.circularRefs ?? findCircularMarkers(data)
           );
         }
 
@@ -917,7 +1085,9 @@ export function serialization(
       const circularPaths = detectCircularReferences(state);
 
       return {
-        data: JSON.parse(JSON.stringify(state)) as T, // Deep clone
+        data: JSON.parse(
+          JSON.stringify(state, createReplacer(DEFAULT_CONFIG, state))
+        ) as T,
         metadata: {
           // `timestamp` answers "when was this written" — useful for
           // staleness ("this draft is three weeks old, discard it"), which is

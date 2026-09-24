@@ -548,7 +548,14 @@ export function createEntitySignal<
     // Writes delegate to api.updateOne which runs interceptors and tap handlers.
     for (const key of Object.keys(entity)) {
       const fieldKey = key as keyof E;
-      const fieldSignal = computed(() => entitySig()?.[fieldKey]);
+      const readField = (): E[typeof fieldKey] | undefined => {
+        const current = entitySig();
+        return current !== undefined &&
+          Object.prototype.hasOwnProperty.call(current, fieldKey)
+          ? current[fieldKey]
+          : undefined;
+      };
+      const fieldSignal = computed(readField);
 
       Object.assign(fieldSignal, {
         set: (value: E[typeof fieldKey]) => {
@@ -558,7 +565,7 @@ export function createEntitySignal<
           fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]
         ) => {
           api.updateOne(id, {
-            [fieldKey]: fn(entitySig()?.[fieldKey]),
+            [fieldKey]: fn(readField()),
           } as Partial<E>);
         },
         asReadonly: () => fieldSignal,
