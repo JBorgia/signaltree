@@ -452,6 +452,10 @@ const GATES = [
       find: 'asMap',
       replace: '__gateRemovedFromPriming',
     },
+    // This gate's coverage set is "public symbols added since the last
+    // release", which is EMPTY for a patch that adds no API — and then no
+    // mutation can make it fail. See `coverageProbe` in the self-test loop.
+    coverageProbe: ['node', 'tools/check-release-claims.mjs', '--coverage-count'],
   },
   {
     name: 'demo-coverage',
@@ -884,16 +888,33 @@ function buildOnceIfNeeded() {
 
 buildOnceIfNeeded();
 
+/**
+ * Run a gate and KEEP ITS OUTPUT.
+ *
+ * This used to return a bare exit code and drop stdout/stderr on the floor, so
+ * a red gate in the battery printed one line — its name and `FAIL (exit 1)` —
+ * and nothing about why. Diagnosing one meant re-running it by hand outside the
+ * battery, which is the worst possible instruction to give someone looking at a
+ * red release: the reflex it trains is "run it again", and a gate that passes
+ * on the second run has taught you nothing except to stop reading.
+ *
+ * Found while releasing 14.1.4, when `test:all` went red inside the battery and
+ * green standalone and there was no way to tell which.
+ */
 function run(gate) {
   try {
-    execFileSync(gate.cmd[0], gate.cmd.slice(1), {
+    const output = execFileSync(gate.cmd[0], gate.cmd.slice(1), {
       cwd: ROOT,
       stdio: 'pipe',
+      encoding: 'utf8',
       env: process.env,
     });
-    return 0;
+    return { code: 0, output };
   } catch (err) {
-    return err.status ?? 1;
+    return {
+      code: err.status ?? 1,
+      output: `${err.stdout ?? ''}${err.stderr ?? ''}`,
+    };
   }
 }
 
@@ -972,6 +993,32 @@ function withMutation(mutation, fn) {
 
 const results = [];
 
+/**
+ * How many things a gate covers RIGHT NOW, or null when it cannot say.
+ *
+ * Only a gate that declares a `coverageProbe` can answer, and the answer must
+ * be a clean non-negative integer on stdout. Anything else — no probe, a
+ * non-zero exit, unparseable output — returns null, which the caller treats as
+ * "cannot claim vacuity" and reports BLIND. Fail closed: the whole point of the
+ * self-test is that a gate cannot quietly stop covering things, and a probe
+ * that excuses a gate must be harder to satisfy than the gate itself.
+ */
+function coverageOf(gate) {
+  if (!gate.coverageProbe) return null;
+  try {
+    const out = execFileSync(gate.coverageProbe[0], gate.coverageProbe.slice(1), {
+      cwd: ROOT,
+      stdio: 'pipe',
+      encoding: 'utf8',
+      env: process.env,
+    });
+    const n = Number(String(out).trim());
+    return Number.isInteger(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 if (has('--self-test')) {
   console.log(
     `\nGate self-test — each gate must FAIL against its own mutation\n`
@@ -997,7 +1044,7 @@ if (has('--self-test')) {
     );
     let code;
     try {
-      code = withMutation(gate.mutation, () => run(gate));
+      code = withMutation(gate.mutation, () => run(gate).code);
     } catch (err) {
       results.push({ gate, state: 'error' });
       console.log(`ERROR\n      ${err.message}`);
@@ -1006,12 +1053,26 @@ if (has('--self-test')) {
     if (code !== 0) {
       results.push({ gate, state: 'proven' });
       console.log(`caught it (exit ${code}) ✓`);
+    } else if (coverageOf(gate) === 0) {
+      // VACUOUS, not blind. The gate has nothing to check on this tree, so no
+      // mutation of its target could have been caught. That is a true report
+      // about this release, not a defect in the gate — and it is NOT silent:
+      // it is named here and counted separately in the summary.
+      //
+      // Fail-closed by construction: `coverageOf` returns null unless a probe
+      // exists AND answers with a clean integer, and only an explicit 0 gets
+      // here. A missing, erroring or unparseable probe still reports BLIND.
+      results.push({ gate, state: 'vacuous' });
+      console.log(
+        `\n      VACUOUS: nothing to cover on this tree, so nothing to catch.\n` +
+          `      It covers: ${gate.covers}\n` +
+          `      Its own coverage probe reports 0.`
+      );
     } else {
       results.push({ gate, state: 'blind' });
       console.log(
         `\n      BLIND: the gate passed while its own target was broken.\n` +
-          `      It covers: ${gate.covers}\n` +
-          `      Right now it covers nothing.`
+          `      It covers: ${gate.covers}`
       );
     }
   }
@@ -1019,7 +1080,8 @@ if (has('--self-test')) {
   console.log(`\nRunning ${selected.length} gates\n`);
   for (const gate of selected) {
     process.stdout.write(`  · ${gate.name.padEnd(20)} `);
-    const code = run(gate);
+    const result = run(gate);
+    const code = result.code;
     const ok = code === 0;
     results.push({
       gate,
@@ -1032,6 +1094,13 @@ if (has('--self-test')) {
         ? `RED, known ✗  ${gate.knownFailing}`
         : `FAIL (exit ${code}) ✗  ${gate.covers}`
     );
+    // A red gate prints WHY, here, in the battery — see `run`.
+    if (!ok && result.output.trim()) {
+      const diagnostic = result.output.trim();
+      console.log(
+        `\n${diagnostic.slice(Math.max(0, diagnostic.length - 100000))}\n`
+      );
+    }
   }
 }
 
@@ -1044,12 +1113,20 @@ if (has('--self-test')) {
   console.log(
     `${proven}/${selected.length} gates PROVEN able to fail ` +
       `(${count('proven-by')} indirectly, via a companion self-test gate). ` +
-      `${count('unproven')} unproven, ${count('blind')} blind, ${count(
-        'error'
-      )} errored.`
+      `${count('unproven')} unproven, ${count('vacuous')} vacuous, ` +
+      `${count('blind')} blind, ${count('error')} errored.`
   );
   for (const r of results.filter((r) => r.state === 'unproven')) {
     console.log(`  unproven: ${r.gate.name} — ${r.gate.unproven}`);
+  }
+  // Listed every time, never folded into the pass count. A vacuous gate is not
+  // a passing gate — it is a gate that had nothing to say about this release,
+  // and the reader is entitled to know which ones those were before trusting a
+  // green self-test as evidence the release was checked.
+  for (const r of results.filter((r) => r.state === 'vacuous')) {
+    console.log(
+      `  vacuous:  ${r.gate.name} — covered nothing on this tree, so proved nothing`
+    );
   }
   for (const r of results.filter((r) => r.state === 'blind')) {
     console.log(`  BLIND:    ${r.gate.name} — passed while broken`);

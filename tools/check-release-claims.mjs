@@ -429,6 +429,25 @@ const added = [
     .map((name) => ({ name, kind: 'value', pkg: 'core', isCode: true })),
 ].sort((a, b) => a.name.localeCompare(b.name));
 
+/**
+ * COVERAGE PROBE — how many things this gate is checking right now.
+ *
+ * The self-test harness mutates a gate's target and requires the gate to fail.
+ * That premise silently assumes the gate HAS something to check. This one's
+ * coverage set is "public symbols added since the last release", which is
+ * legitimately EMPTY for a patch that adds no API — and then no mutation of a
+ * claim surface can make it fail, so the harness reported it BLIND: "passed
+ * while broken". Nothing was broken. There was nothing to break.
+ *
+ * Reporting the size lets the harness tell those apart. It is deliberately the
+ * gate's OWN count rather than a guess made by the harness, because only the
+ * gate knows what it covers.
+ */
+if (process.argv.includes('--coverage-count')) {
+  console.log(String(added.length));
+  process.exit(0);
+}
+
 console.log(
   `\nRelease-delta claim coverage — ${BASE} -> ${HEAD}\n` +
     `${barrelCount} published barrels across ${pkgDirs.length} packages; ` +
